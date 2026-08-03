@@ -25,6 +25,13 @@
               url: hotel_folio_action_post_transaction_path(current_hotel, booking),
               method: :post,
               class: "flex h-full min-h-0 flex-col" do |form| %>
+          <% if @extra_charge_options.present? %>
+            <div class="flex h-full min-h-0 flex-col" data-controller="extra-charge-posting"
+                 data-extra-charge-posting-charges-value="<%= @extra_charge_config.to_json %>"
+                 data-extra-charge-posting-currency-value="<%= @active_folio.currency %>"
+                 data-extra-charge-posting-quote-url-value="<%= hotel_folio_action_extra_charge_quote_path(current_hotel, booking) %>"
+                 data-action="change->extra-charge-posting#update input->extra-charge-posting#update">
+          <% end %>
           <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
           <% if @checkout_settlement.present? %>
             <%= hidden_field_tag :settlement_token, params[:settlement_token] %>
@@ -73,13 +80,15 @@
               <%= render PanelsUI::FormField.new(form: form, attribute: :refund_source, label: "Refund source", required: true) do |field| %>
                 <% field.with_select_menu(@refund_source_options, prompt: "Select a refund source", required: true) %>
               <% end %>
-            <% elsif @transaction_code_options.present? %>
-              <%= render PanelsUI::FormField.new(form: form, attribute: :transaction_code_id, label: "Transaction code", required: true,
+            <% elsif @extra_charge_options.present? %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :hotel_extra_charge_id, label: "Extra charge", required: true,
                     hint: "Keyboard: type to jump, arrows to move, Enter to pick.") do |field| %>
                 <% field.with_select_menu(
-                     @transaction_code_options.map { |code| { label: "#{code.code} · #{code.name}", value: code.id } },
-                     prompt: "Select a transaction code",
-                     required: true) %>
+                     @extra_charge_options.map { |charge| { label: "#{charge.code} · #{charge.name}", value: charge.id } },
+                     selected: params.dig(:folio_transaction, :hotel_extra_charge_id),
+                     prompt: "Select an extra charge",
+                     required: true,
+                     data: { extra_charge_posting_target: "charge" }) %>
               <% end %>
             <% elsif @category.present? %>
               <%= form.hidden_field :category, value: @category %>
@@ -99,28 +108,84 @@
                 <p class="rounded-md border border-border bg-muted px-3 py-2 text-sm font-semibold tabular-nums"><%= @active_folio.currency %> <%= format("%.2f", @amount.to_d.abs) %></p>
               </div>
             <% else %>
-              <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: "Amount", required: true,
-                    hint: (@signed_amount ? "Use a negative amount for discounts, write-offs, or rebates." : nil)) do |field| %>
-                <% field.with_input(type: :number, step: "0.01", min: (@signed_amount ? nil : "0.01"), value: @amount, required: true) %>
+              <% if @extra_charge_options.present? %>
+                <div data-extra-charge-posting-target="quantityField" hidden>
+                  <%= render PanelsUI::FormField.new(form: form, attribute: :quantity, label: "Quantity", required: true) do |field| %>
+                    <% field.with_input(type: :number, min: 1, step: 1, value: params.dig(:folio_transaction, :quantity).presence || 1,
+                         data: { extra_charge_posting_target: "quantity" }) %>
+                  <% end %>
+                </div>
+                <%= form.hidden_field :pricing_fingerprint,
+                      value: @pricing_fingerprint || params.dig(:folio_transaction, :pricing_fingerprint),
+                      data: { extra_charge_posting_target: "fingerprint" } %>
+                <div class="grid gap-4 sm:grid-cols-2" data-extra-charge-posting-target="scheduleFields" hidden>
+                  <%= render PanelsUI::FormField.new(form: form, attribute: :starts_on, label: "First charge date", required: true) do |field| %>
+                    <% field.with_input(type: :date, disabled: true, data: { extra_charge_posting_target: "startsOn" }) %>
+                  <% end %>
+                  <%= render PanelsUI::FormField.new(form: form, attribute: :ends_on, label: "Last charge date", required: true) do |field| %>
+                    <% field.with_input(type: :date, disabled: true, data: { extra_charge_posting_target: "endsOn" }) %>
+                  <% end %>
+                </div>
+                <div data-extra-charge-posting-target="scheduleFields" hidden>
+                  <%= render PanelsUI::FormField.new(form: form, attribute: :unit_rate, label: "Rate per unit", required: true) do |field| %>
+                    <% field.with_input(type: :number, min: 0.01, step: 0.01, disabled: true,
+                         data: { extra_charge_posting_target: "unitRate" }) %>
+                    <% field.with_addon(align: :inline_start) { @active_folio.currency } %>
+                  <% end %>
+                </div>
+              <% end %>
+              <div data-extra-charge-posting-target="immediateField">
+                <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: "Amount", required: true,
+                      hint: (@signed_amount ? "Use a negative amount for discounts, write-offs, or rebates." : nil)) do |field| %>
+                  <% field.with_input(type: :number, step: "0.01", min: (@signed_amount ? nil : "0.01"), value: @amount, required: true,
+                       data: (@extra_charge_options.present? ? { extra_charge_posting_target: "amount" } : {})) %>
+                <% end %>
+                <% if @extra_charge_options.present? %>
+                  <p class="mt-1 text-xs text-muted-foreground" data-extra-charge-posting-target="pricingHint">Select an extra charge to see its pricing.</p>
+                <% end %>
+              </div>
+              <% if @extra_charge_options.present? %>
+                <section class="space-y-3 rounded-md border border-border bg-muted p-3" data-extra-charge-posting-target="schedulePreview" hidden aria-live="polite" aria-busy="false">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 class="text-sm font-semibold text-foreground">Dated breakdown</h2>
+                      <p class="text-xs text-muted-foreground" data-extra-charge-posting-target="scheduleStatus">Select dates to preview.</p>
+                    </div>
+                    <span class="text-sm font-semibold tabular-nums text-foreground" data-extra-charge-posting-target="scheduleTotal"></span>
+                  </div>
+                  <div class="space-y-3" data-extra-charge-posting-target="scheduleRows"></div>
+                  <dl class="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-border pt-3 text-xs">
+                    <dt class="text-muted-foreground">Base charges</dt><dd class="text-right tabular-nums" data-extra-charge-posting-target="baseTotal"></dd>
+                    <dt class="text-muted-foreground">Taxes</dt><dd class="text-right tabular-nums" data-extra-charge-posting-target="taxTotal"></dd>
+                    <dt class="font-semibold text-foreground">Projected total</dt><dd class="text-right font-semibold tabular-nums text-foreground" data-extra-charge-posting-target="projectedTotal"></dd>
+                  </dl>
+                </section>
               <% end %>
             <% end %>
 
-            <%= render PanelsUI::FormField.new(form: form, attribute: :posting_date, label: "Posting date", required: true) do |field| %>
-              <% field.with_input(type: :date, value: current_hotel.current_business_date, required: true) %>
-            <% end %>
-
-            <%= render PanelsUI::FormField.new(
-                  form: form,
-                  attribute: :description,
-                  label: "Description",
-                  required: true,
-                  readonly: @checkout_settlement.present?) do |field| %>
-              <% if @checkout_settlement.present? %>
-                <% field.with_input(value: @description, required: true) %>
-              <% else %>
-                <% field.with_input(placeholder: "e.g., Mini-bar, Late Checkout Fee", required: true) %>
+            <div <%= "data-extra-charge-posting-target=immediateField" if @extra_charge_options.present? %>>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :posting_date, label: "Posting date", required: true) do |field| %>
+                <% field.with_input(type: :date, value: current_hotel.current_business_date, required: true) %>
               <% end %>
-            <% end %>
+            </div>
+
+            <div <%= "data-extra-charge-posting-target=descriptionField hidden" if @extra_charge_options.present? %>>
+              <%= render PanelsUI::FormField.new(
+                    form: form,
+                    attribute: :description,
+                    label: "Description",
+                    hint: (@extra_charge_options.present? ? "Optional operational detail; the charge name is used when left blank." : nil),
+                    required: @extra_charge_options.blank?,
+                    readonly: @checkout_settlement.present?) do |field| %>
+                <% if @checkout_settlement.present? %>
+                  <% field.with_input(value: @description, required: true) %>
+                <% else %>
+                  <% field.with_input(value: @description || params.dig(:folio_transaction, :description),
+                       placeholder: "e.g., Room 204 · two damaged towels", required: @extra_charge_options.blank?,
+                       data: (@extra_charge_options.present? ? { extra_charge_posting_target: "description" } : {})) %>
+                <% end %>
+              <% end %>
+            </div>
 
             <%= render PanelsUI::FormField.new(form: form, attribute: :reference, label: "Reference") do |field| %>
               <% field.with_input(placeholder: "e.g., Receipt or approval number") %>
@@ -133,8 +198,10 @@
 
           <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
             <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
-            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Posting…" }) do %><%= @submit_label %><% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary,
+                  data: { turbo_submits_with: "Posting…", extra_charge_posting_target: (@extra_charge_options.present? ? "submit" : nil) }) do %><%= @submit_label %><% end %>
           </div>
+          <% if @extra_charge_options.present? %></div><% end %>
         <% end %>
       <% end %>
     <% end %>

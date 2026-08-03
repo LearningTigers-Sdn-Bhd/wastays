@@ -31,11 +31,11 @@ module HotelPortal
       end
 
       def transaction_code
-        transaction.transaction_code&.code.presence || "—"
+        transaction.posted_transaction_code.presence || "—"
       end
 
       def service_name
-        transaction.transaction_code&.name.presence || description.presence || category.to_s.humanize
+        transaction.posted_transaction_code_name.presence || description.presence || category.to_s.humanize
       end
 
       def settlement_mode

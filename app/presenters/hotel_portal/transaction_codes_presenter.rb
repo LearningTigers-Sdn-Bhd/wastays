@@ -67,7 +67,10 @@ module HotelPortal
     end
 
     def additional_service_codes
-      @additional_service_codes ||= hotel.transaction_codes.where(system_required: false).where.not(kind: "tax").where.not(id: hotel_tax_transaction_code_ids).order(:kind, :code)
+      @additional_service_codes ||= hotel.transaction_codes.where(system_required: false).where.not(kind: "tax")
+        .where.not(id: hotel_tax_transaction_code_ids)
+        .where.not(id: extra_charge_transaction_code_ids)
+        .order(:kind, :code)
     end
 
     def transaction_configuration
@@ -80,12 +83,17 @@ module HotelPortal
       relation = hotel.transaction_codes.where(system_key: section[:system_keys])
       relation = relation.or(hotel.transaction_codes.where(kind: section[:kind])) if section[:kind]
       relation = relation.or(hotel.transaction_codes.where(id: hotel_tax_transaction_code_ids)) if section[:action] == :taxes_fees
+      relation = relation.where.not(id: extra_charge_transaction_code_ids)
 
       order_by_system_keys(relation, section[:system_keys])
     end
 
     def hotel_tax_transaction_code_ids
       @hotel_tax_transaction_code_ids ||= hotel.hotel_taxes.where.not(transaction_code_id: nil).select(:transaction_code_id)
+    end
+
+    def extra_charge_transaction_code_ids
+      @extra_charge_transaction_code_ids ||= hotel.hotel_extra_charges.select(:transaction_code_id)
     end
 
     def order_by_system_keys(relation, system_keys)

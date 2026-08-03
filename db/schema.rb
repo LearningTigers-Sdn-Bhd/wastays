@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_02_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_03_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -947,7 +947,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_02_090000) do
     t.date "posting_date", null: false
     t.bigint "reversal_of_transaction_id"
     t.bigint "split_from_transaction_id"
+    t.string "transaction_code_code_snapshot"
     t.bigint "transaction_code_id"
+    t.string "transaction_code_name_snapshot"
     t.string "transaction_type", null: false
     t.string "transfer_group_id"
     t.datetime "updated_at", null: false
@@ -1166,6 +1168,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_02_090000) do
     t.index ["hotel_id", "counter_type", "sequence_year"], name: "idx_hotel_counters_type_year", unique: true
     t.index ["hotel_id"], name: "index_hotel_counters_on_hotel_id"
     t.check_constraint "sequence_year >= 2000 AND sequence_year <= 2099", name: "hotel_counters_sequence_year_range"
+  end
+
+  create_table "hotel_extra_charges", force: :cascade do |t|
+    t.boolean "allow_amount_override", default: true, null: false
+    t.string "charging_unit", default: "per_item", null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "hotel_id", null: false
+    t.string "percentage_basis"
+    t.integer "position", default: 0, null: false
+    t.string "pricing_type", default: "manual", null: false
+    t.decimal "rate_value", precision: 12, scale: 4
+    t.bigint "transaction_code_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "position"], name: "index_hotel_extra_charges_on_hotel_id_and_position"
+    t.index ["hotel_id"], name: "index_hotel_extra_charges_on_hotel_id"
+    t.index ["transaction_code_id"], name: "index_hotel_extra_charges_on_transaction_code_id", unique: true
+    t.check_constraint "charging_unit::text = ANY (ARRAY['per_item'::character varying, 'per_stay'::character varying, 'per_night'::character varying, 'per_room'::character varying, 'per_room_night'::character varying, 'per_person'::character varying, 'per_person_night'::character varying]::text[])", name: "hotel_extra_charges_charging_unit_allowed"
+    t.check_constraint "percentage_basis IS NULL OR (percentage_basis::text = ANY (ARRAY['room_charges'::character varying, 'non_tax_charges'::character varying]::text[]))", name: "hotel_extra_charges_percentage_basis_allowed"
+    t.check_constraint "pricing_type::text = ANY (ARRAY['manual'::character varying, 'fixed'::character varying, 'percentage'::character varying]::text[])", name: "hotel_extra_charges_pricing_type_allowed"
+    t.check_constraint "rate_value IS NULL OR rate_value > 0::numeric", name: "hotel_extra_charges_rate_value_positive"
   end
 
   create_table "hotel_general_ledger_maps", force: :cascade do |t|
@@ -2320,6 +2343,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_02_090000) do
   add_foreign_key "hotel_corporate_accounts", "accounts", column: "corporate_account_id"
   add_foreign_key "hotel_corporate_accounts", "hotels"
   add_foreign_key "hotel_counters", "hotels"
+  add_foreign_key "hotel_extra_charges", "hotels"
+  add_foreign_key "hotel_extra_charges", "transaction_codes"
   add_foreign_key "hotel_general_ledger_maps", "hotels"
   add_foreign_key "hotel_knowledge_chunks", "hotel_knowledge_documents"
   add_foreign_key "hotel_knowledge_diagnostics", "hotels"

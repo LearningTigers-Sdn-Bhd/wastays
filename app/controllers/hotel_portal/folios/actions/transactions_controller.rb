@@ -41,6 +41,25 @@ module HotelPortal
           render :show, layout: false
         end
 
+        def quote
+          folio = scoped_booking_folios.open.find_by(id: params[:booking_folio_id]) || default_folio
+          extra_charge = current_hotel.hotel_extra_charges.active.includes(transaction_code: :transaction_code_taxes)
+            .find_by(id: params[:hotel_extra_charge_id])
+          return render json: { error: "Select an available extra charge." }, status: :unprocessable_content if folio.blank? || extra_charge.blank?
+
+          result = ::ExtraCharges::ForecastQuote.call(
+            extra_charge: extra_charge,
+            folio: folio,
+            booking: @booking,
+            starts_on: params[:starts_on],
+            ends_on: params[:ends_on],
+            unit_rate: params[:unit_rate]
+          )
+          return render json: { error: result.error, allowed_dates: Array(result.allowed_dates).map(&:iso8601) }, status: :unprocessable_content unless result.success?
+
+          render json: schedule_quote_json(result)
+        end
+
         private
 
         # Two questions, two answers: opening a form is gated on the posting
@@ -53,6 +72,8 @@ module HotelPortal
         end
 
         def permitted_to_open_form?
+          return current_user.has_permission?("post_folio_charges", hotel: current_hotel) if action_name == "quote"
+
           case [ requested_transaction_type, requested_category ]
           when [ "payment", "refund" ] then current_user.has_permission?("execute_folio_refunds", hotel: current_hotel)
           when [ "payment", "" ]       then current_user.has_permission?("post_folio_payments", hotel: current_hotel)
@@ -100,11 +121,14 @@ module HotelPortal
 
           result = checkout_settlement? ? post_locked_checkout_settlement(target_folio) : post_staff_transaction(target_folio)
 
-          return checkout_settlement? ? render_checkout_settlement_error(result.error) : complete_action(alert: result.error) unless result.success?
+          unless result.success?
+            return render_transaction_error(result.error) if @extra_charge_posting_error
+            return checkout_settlement? ? render_checkout_settlement_error(result.error) : complete_action(alert: result.error)
+          end
 
           return complete_checkout_settlement if checkout_settlement?
 
-          complete_action(notice: "Folio transaction posted.")
+          complete_action(notice: @extra_charge_scheduled ? "Extra charge scheduled." : "Folio transaction posted.")
         end
 
         def default_folio
@@ -150,8 +174,10 @@ module HotelPortal
             @submit_label = "Post payment"
           when [ "charge", "" ]
             @form_title = "Add charge"
-            @form_description = "Record a manual charge using a transaction code preset."
-            @transaction_code_options = current_hotel.transaction_codes.active.charge.order(:code)
+            @form_description = "Select an extra charge and review its calculated amount before posting."
+            Financials::EnsureDefaultExtraCharges.call(current_hotel)
+            @extra_charge_options = current_hotel.hotel_extra_charges.active.includes(:transaction_code).ordered.to_a
+            @extra_charge_config = build_extra_charge_config
             @signed_amount = false
             @submit_label = "Add charge"
           when [ "adjustment", "" ]
@@ -231,17 +257,155 @@ module HotelPortal
         end
 
         def post_staff_transaction(folio)
+          extra_charge = nil
+          quote = nil
+          if folio_transaction_params[:transaction_type].to_s == "charge"
+            extra_charge = current_hotel.hotel_extra_charges.active
+              .includes(transaction_code: :transaction_code_taxes)
+              .find_by(id: folio_transaction_params[:hotel_extra_charge_id])
+            unless extra_charge
+              @extra_charge_posting_error = true
+              return ::Folios::Transactions::TransactionResult.failure("Select an available extra charge.")
+            end
+
+
+            if extra_charge.fixed? && extra_charge.nightly?
+              scheduled = ::ExtraCharges::CreateForecasts.call(
+                extra_charge: extra_charge,
+                folio: folio,
+                booking: @booking,
+                user: current_user,
+                starts_on: folio_transaction_params[:starts_on],
+                ends_on: folio_transaction_params[:ends_on],
+                unit_rate: folio_transaction_params[:unit_rate],
+                expected_fingerprint: folio_transaction_params[:pricing_fingerprint],
+                description: folio_transaction_params[:description],
+                reference: folio_transaction_params[:reference],
+                note: folio_transaction_params[:note]
+              )
+              unless scheduled.success?
+                @extra_charge_posting_error = true
+                @pricing_fingerprint = scheduled.quote&.fingerprint
+                return ::Folios::Transactions::TransactionResult.failure(scheduled.error)
+              end
+
+              @extra_charge_scheduled = true
+
+              return ::Folios::Transactions::TransactionResult.success(
+                transaction: nil,
+                transactions: [],
+                tax_transactions: []
+              )
+            end
+
+            quote = ::ExtraCharges::Quote.call(
+              extra_charge: extra_charge,
+              folio: folio,
+              booking: @booking,
+              requested_amount: folio_transaction_params[:amount],
+              quantity: folio_transaction_params[:quantity],
+              expected_fingerprint: folio_transaction_params[:pricing_fingerprint]
+            )
+            unless quote.success?
+              @extra_charge_posting_error = true
+              @amount = quote.amount
+              @pricing_fingerprint = quote.fingerprint
+              return ::Folios::Transactions::TransactionResult.failure(quote.error)
+            end
+          end
+
+          options = posting_options
+          options[:metadata] = options.fetch(:metadata, {}).merge(quote.metadata) if quote
+          description = if extra_charge
+            ::ExtraCharges::Description.call(
+              extra_charge: extra_charge,
+              currency: folio.currency,
+              amount: quote.amount,
+              calculated_amount: quote.calculated_amount,
+              quantity: quote.quantity,
+              base_amount: quote.base_amount,
+              submitted_description: folio_transaction_params[:description]
+            )
+          else
+            checkout_settlement? ? checkout_settlement_description : folio_transaction_params[:description]
+          end
           ::Folios::Transactions::PostStaffTransaction.call(
             folio: folio,
             user: current_user,
             transaction_type: folio_transaction_params[:transaction_type],
             category: folio_transaction_params[:category],
-            amount: posting_amount,
-            description: checkout_settlement? ? checkout_settlement_description : folio_transaction_params[:description],
+            amount: quote&.amount || posting_amount,
+            description: description,
             posting_date: folio_transaction_params[:posting_date],
-            transaction_code_id: folio_transaction_params[:transaction_code_id],
-            options: posting_options
+            transaction_code_id: extra_charge&.transaction_code_id || folio_transaction_params[:transaction_code_id],
+            options: options
           )
+        end
+
+        def render_transaction_error(error)
+          @active_folio = posting_folio
+          @open_folios = scoped_booking_folios.open.order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc).to_a
+          @transaction_type = requested_transaction_type
+          @category = requested_category.presence
+          @description = folio_transaction_params[:description]
+          @transaction_error = error
+          assign_form_config
+          render :show, formats: :html, layout: false, status: :unprocessable_content
+        end
+
+        def build_extra_charge_config
+          folios = @open_folios.presence || [ @active_folio ].compact
+          @extra_charge_options.to_h do |extra_charge|
+            bases = folios.to_h do |folio|
+              preview = ::ExtraCharges::Quote.call(
+                extra_charge: extra_charge,
+                folio: folio,
+                booking: @booking,
+                quantity: 1,
+                preview: true
+              )
+              [ folio.id.to_s, {
+                amount: preview.amount&.to_d&.to_s("F"),
+                base_amount: preview.base_amount&.to_d&.to_s("F"),
+                quantity: preview.quantity&.to_d&.to_s("F"),
+                fingerprint: preview.fingerprint
+              } ]
+            end
+            [ extra_charge.id.to_s, {
+              name: extra_charge.name,
+              pricing_type: extra_charge.pricing_type,
+              rate_value: extra_charge.rate_value&.to_d&.to_s("F"),
+              charging_unit: extra_charge.charging_unit,
+              allow_amount_override: extra_charge.allow_amount_override?,
+              nightly: extra_charge.fixed? && extra_charge.nightly?,
+              bases: bases
+            } ]
+          end
+        end
+
+
+        def schedule_quote_json(result)
+          {
+            allowed_dates: result.allowed_dates.map(&:iso8601),
+            starts_on: result.starts_on.iso8601,
+            ends_on: result.ends_on.iso8601,
+            unit_rate: result.unit_rate.to_s("F"),
+            configured_rate: result.configured_rate.to_s("F"),
+            base_total: result.base_total.to_s("F"),
+            tax_total: result.tax_total.to_s("F"),
+            grand_total: result.grand_total.to_s("F"),
+            fingerprint: result.fingerprint,
+            dates: result.dates.map do |row|
+              row.merge(
+                date: row[:date].iso8601,
+                unit_rate: row[:unit_rate].to_s("F"),
+                base_amount: row[:base_amount].to_s("F"),
+                tax_total: row[:tax_total].to_s("F"),
+                total: row[:total].to_s("F"),
+                taxes: row[:taxes].map { |tax| tax.merge(amount: tax[:amount].to_s("F"), rate: tax[:rate].to_s("F")) }
+              )
+            end
+          }
         end
 
         def checkout_settlement_balance(folio)
@@ -330,6 +494,12 @@ module HotelPortal
             :transaction_type,
             :category,
             :transaction_code_id,
+            :hotel_extra_charge_id,
+            :quantity,
+            :starts_on,
+            :ends_on,
+            :unit_rate,
+            :pricing_fingerprint,
             :amount,
             :description,
             :posting_date,

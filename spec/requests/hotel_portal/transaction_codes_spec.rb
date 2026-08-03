@@ -127,6 +127,16 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/transaction-codes/:id/edit" do
+    it "redirects registry-owned codes to the Extra Charge editor" do
+      Financials::EnsureDefaultExtraCharges.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+      extra_charge = code.hotel_extra_charge
+
+      get hotel_edit_transaction_code_path(hotel, code)
+
+      expect(response).to redirect_to(edit_hotel_extra_charge_path(hotel, extra_charge))
+    end
+
     it "renders the transaction code offcanvas form" do
       Financials::EnsureDefaultTransactionCodes.call(hotel)
       code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")

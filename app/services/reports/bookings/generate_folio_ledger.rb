@@ -260,7 +260,7 @@ module Reports
       def transaction_code(transaction)
         return payment_code(transaction) if transaction.payment?
 
-        transaction.transaction_code&.code.presence || transaction.category.to_s.upcase
+        transaction.posted_transaction_code.presence || transaction.category.to_s.upcase
       end
 
       def payment_code(transaction)
@@ -272,7 +272,7 @@ module Reports
         when "gateway" then "GATEWAY"
         when "ota" then "OTA"
         else
-          transaction.transaction_code&.code.presence || transaction.category.to_s.upcase
+          transaction.posted_transaction_code.presence || transaction.category.to_s.upcase
         end
       end
 
@@ -294,7 +294,7 @@ module Reports
         source = transaction.metadata.to_h["payment_source"].presence
         return PAYMENT_SOURCE_LABELS[source] if PAYMENT_SOURCE_LABELS.key?(source)
 
-        transaction.transaction_code&.name.presence || transaction.category.to_s.humanize
+        transaction.posted_transaction_code_name.presence || transaction.category.to_s.humanize
       end
 
       def reference_text(transaction)

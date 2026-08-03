@@ -420,6 +420,7 @@ Rails.application.routes.draw do
 
     scope "folio-actions", as: :folio_action, module: "folios/actions" do
       match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
+      get "extra-charge-quote/:booking_id", to: "transactions#quote", as: :extra_charge_quote
       match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
       match "split-transaction/:booking_id/:transaction_id", to: "transaction_splits#show", via: [ :get, :post ], as: :split_transaction
       match "reverse-transaction/:booking_id/:transaction_id", to: "transaction_reversals#show", via: [ :get, :post ], as: :reverse_transaction
@@ -614,6 +615,12 @@ Rails.application.routes.draw do
         patch "transaction-codes/:id/preview-hotel-tax-rules", to: "transaction_codes#preview_hotel_tax_rules", as: :preview_transaction_code_hotel_tax_rules
         patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
         resources :general_ledger_maps, path: "general-ledger-mappings", only: [ :index, :edit, :update ]
+      end
+
+      scope "commercial" do
+        resources :extra_charges, path: "extra-charges", only: %i[index new create edit update] do
+          patch :status, action: :update_status, on: :member
+        end
       end
 
       scope "guest-content" do

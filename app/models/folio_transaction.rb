@@ -77,6 +77,7 @@ class FolioTransaction < ApplicationRecord
   validate :night_audit_matches_metadata, on: :create
 
   before_validation :assign_transaction_code, on: :create
+  before_validation :snapshot_transaction_code, on: :create
   before_validation :assign_gl_code, on: :create
   before_update :prevent_immutable_changes
   before_destroy :prevent_destroy
@@ -100,11 +101,26 @@ class FolioTransaction < ApplicationRecord
     mapping&.[](category.to_s)
   end
 
+  def posted_transaction_code
+    transaction_code_code_snapshot.presence || transaction_code&.code
+  end
+
+  def posted_transaction_code_name
+    transaction_code_name_snapshot.presence || transaction_code&.name
+  end
+
   def reversed?
     voided_by_transaction_id.present?
   end
 
   private
+
+  def snapshot_transaction_code
+    return if transaction_code.blank?
+
+    self.transaction_code_code_snapshot ||= transaction_code.code
+    self.transaction_code_name_snapshot ||= transaction_code.name
+  end
 
   def issue_payment_receipt
     Receipts::Issue.call!(source: self)

@@ -67,7 +67,10 @@ class BookingFolio < ApplicationRecord
     return folio_forecasted_charges.none if booking.status.in?(%w[cancelled completed no_show voided])
 
     unsettled_forecasts
-      .where(FolioForecastedCharge.arel_table[:stay_date].lt(booking.check_out.to_date))
+      .where(
+        FolioForecastedCharge.arel_table[:charge_kind].in(%w[extra_charge extra_charge_tax])
+          .or(FolioForecastedCharge.arel_table[:stay_date].lt(booking.check_out.to_date))
+      )
       .order(:stay_date, :charge_kind, :identity)
   end
 

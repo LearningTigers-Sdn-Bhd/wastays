@@ -275,7 +275,7 @@ module Folios
                 parent_transaction_id: parent_transaction.id,
                 parent_folio_transaction_id: parent_transaction.id,
                 parent_transaction_code_id: parent_transaction.transaction_code_id,
-                parent_transaction_code_code: parent_transaction.transaction_code&.code,
+                parent_transaction_code_code: parent_transaction.posted_transaction_code,
                 source_transaction_code_id: @transaction_code.id,
                 source_transaction_code_code: @transaction_code.code,
                 tax_line: tax_line(tax_rule, amount)

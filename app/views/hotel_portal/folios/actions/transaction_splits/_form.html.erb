@@ -33,7 +33,7 @@
             <div class="rounded-lg border border-border bg-muted p-4">
               <p class="text-sm font-semibold text-foreground"><%= @transaction.description %></p>
               <p class="mt-1 text-xs text-muted-foreground">
-                <%= @transaction.transaction_code&.code || @transaction.category.to_s.humanize %> ·
+                <%= @transaction.posted_transaction_code || @transaction.category.to_s.humanize %> ·
                 <%= @transaction.posting_date.strftime("%d %b %Y") %> ·
                 <%= @transaction.currency %> <%= format_number(@transaction.amount, precision: 2) %>
               </p>

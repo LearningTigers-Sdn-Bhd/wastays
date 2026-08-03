@@ -59,6 +59,14 @@ module Reports
           transaction_type == "adjustment"
         end
 
+        def posted_transaction_code
+          transaction_code&.code
+        end
+
+        def posted_transaction_code_name
+          transaction_code&.name
+        end
+
         private
 
         def parse_date(value)
@@ -377,12 +385,12 @@ module Reports
       def transaction_code(transaction)
         return derived_tax_transaction_code(transaction) if tax_transaction?(transaction)
 
-        transaction.transaction_code&.code.presence || payment_code(transaction) || FALLBACK_CODES.dig(transaction.category, 0) || transaction.category.to_s.upcase
+        transaction.posted_transaction_code.presence || payment_code(transaction) || FALLBACK_CODES.dig(transaction.category, 0) || transaction.category.to_s.upcase
       end
 
       def transaction_label(transaction)
         tax_name = tax_line(transaction)["name"].presence if tax_transaction?(transaction)
-        tax_name || transaction.transaction_code&.name.presence || payment_label(transaction) || FALLBACK_CODES.dig(transaction.category, 1) || transaction.category.to_s.humanize
+        tax_name || transaction.posted_transaction_code_name.presence || payment_label(transaction) || FALLBACK_CODES.dig(transaction.category, 1) || transaction.category.to_s.humanize
       end
 
       def display_description(transaction)
@@ -409,7 +417,7 @@ module Reports
         source = transaction.metadata.to_h["payment_source"].presence
         return PAYMENT_SOURCE_LABELS[source] if PAYMENT_SOURCE_LABELS.key?(source)
 
-        transaction.transaction_code&.name.presence ||
+        transaction.posted_transaction_code_name.presence ||
           FALLBACK_CODES.dig(transaction.category, 1) ||
           "Payment"
       end
@@ -572,11 +580,11 @@ module Reports
       end
 
       def derived_tax_transaction_code(transaction)
-        child_code = tax_line(transaction)["transaction_code_code"].presence || transaction.transaction_code&.code.presence
+        child_code = tax_line(transaction)["transaction_code_code"].presence || transaction.posted_transaction_code.presence
         source_code = source_transaction_code_for(transaction)&.code.presence
         return "#{source_code}_#{child_code}" if source_code.present? && child_code.present?
 
-        child_code || transaction.transaction_code&.code.presence || FALLBACK_CODES.dig(transaction.category, 0) || transaction.category.to_s.upcase
+        child_code || transaction.posted_transaction_code.presence || FALLBACK_CODES.dig(transaction.category, 0) || transaction.category.to_s.upcase
       end
 
       def source_transaction_category(transaction)

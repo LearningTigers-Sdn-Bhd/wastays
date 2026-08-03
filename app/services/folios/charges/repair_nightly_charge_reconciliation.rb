@@ -61,7 +61,8 @@ module Folios
 
         canonical = entry[:valid_transactions].min_by(&:id)
         (entry[:transactions] - [ canonical ]).each { |transaction| reverse_transaction!(transaction, entry) }
-        post_expected_line!(entry, moved_from: entry[:transactions].min_by(&:id)) if canonical.blank?
+        canonical ||= post_expected_line!(entry, moved_from: entry[:transactions].min_by(&:id))
+        actualize_forecast!(entry, canonical)
       end
 
       def reverse_transaction!(transaction, entry)
@@ -113,6 +114,16 @@ module Folios
         raise "Failed to repost nightly charge #{entry[:nightly_charge_key]}: #{result.error}" unless result.success?
 
         @posted_transactions << result.transaction
+        result.transaction
+      end
+
+      def actualize_forecast!(entry, transaction)
+        line = entry[:line]
+        forecast = FolioForecastedCharge.joins(:booking_folio)
+          .where(booking_folios: { booking_id: @booking.id })
+          .forecast
+          .find_by(stay_date: line[:stay_date], charge_kind: line[:charge_kind], identity: line[:identity])
+        forecast&.actualize!(transaction: transaction)
       end
 
       def transaction_options
@@ -124,7 +135,7 @@ module Folios
 
       def expected_metadata(entry)
         line = entry[:line]
-        repair_metadata(entry).merge(
+        line.fetch(:metadata, {}).symbolize_keys.merge(repair_metadata(entry)).merge(
           tax_line: line[:tax_line],
           route_source: entry[:route].route_source,
           route_metadata: entry[:route].route_metadata,

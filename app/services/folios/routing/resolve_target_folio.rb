@@ -63,7 +63,7 @@ module Folios
         metadata = {
           parent_transaction_id: @parent_transaction.id,
           parent_transaction_code_id: @parent_transaction.transaction_code_id,
-          parent_transaction_code_code: @parent_transaction.transaction_code&.code
+          parent_transaction_code_code: @parent_transaction.posted_transaction_code
         }.compact
         return [ nil, "follows_parent", metadata, error ] if error.present?
 

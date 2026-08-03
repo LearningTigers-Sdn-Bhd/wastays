@@ -107,14 +107,14 @@ module HotelPortal
 
       def mode_label_for(transaction)
         if transaction.category == "refund"
-          original_mode = transaction.reversal_of_transaction&.transaction_code&.name.presence
+          original_mode = transaction.reversal_of_transaction&.posted_transaction_code_name.presence
           return original_mode if original_mode
 
           refund_source = ::Folios::Payments::RefundSource.fetch(transaction.metadata.to_h.stringify_keys["refund_source"])
           return refund_mode_label(refund_source) if refund_source
         end
 
-        transaction.transaction_code&.name.presence || transaction.category.to_s.humanize
+        transaction.posted_transaction_code_name.presence || transaction.category.to_s.humanize
       end
 
       def classification_transaction(transaction)
