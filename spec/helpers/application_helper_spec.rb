@@ -43,6 +43,14 @@ RSpec.describe ApplicationHelper, type: :helper do
     end
   end
 
+  describe "#display_housekeeping_datetime" do
+    it "uses day/month/year and 24-hour time" do
+      value = Time.zone.local(2026, 7, 31, 16)
+
+      expect(helper.display_housekeeping_datetime(value)).to eq("31/07/2026, 16:00")
+    end
+  end
+
   describe "#toast_flash_messages" do
     it "maps notice and alert flashes to RailsBlocks toast variants" do
       messages = helper.toast_flash_messages(ActionDispatch::Flash::FlashHash.new.tap { |flash| flash[:notice] = "Saved"; flash[:alert] = "Failed" })
@@ -57,6 +65,19 @@ RSpec.describe ApplicationHelper, type: :helper do
       end)
 
       expect(messages).to eq([ { message: "Booking saved", options: { type: "success", description: "Guest checked in" } } ])
+    end
+
+    it "preserves a same-origin action and rejects an external action URL" do
+      allow(helper).to receive(:request).and_return(instance_double(ActionDispatch::Request, base_url: "http://test.host"))
+      safe_flash = ActionDispatch::Flash::FlashHash.new.tap do |flash|
+        flash[:toast] = { message: "Done", action: { label: "View details", url: "/hotel/1/reports/night-audits/2" } }
+      end
+      unsafe_flash = ActionDispatch::Flash::FlashHash.new.tap do |flash|
+        flash[:toast] = { message: "Done", action: { label: "View details", url: "https://evil.example/steal" } }
+      end
+
+      expect(helper.toast_flash_messages(safe_flash).sole.dig(:options, :action)).to eq(label: "View details", url: "/hotel/1/reports/night-audits/2")
+      expect(helper.toast_flash_messages(unsafe_flash).sole.dig(:options, :action)).to be_nil
     end
   end
 

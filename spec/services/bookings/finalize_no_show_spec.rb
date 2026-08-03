@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Bookings::FinalizeNoShow do
-  it "posts the standard charge and finalizes a reviewed booking" do
+  it "posts the standard charge and finalizes a detected no-show booking" do
     hotel = create(:hotel)
     user = create(:user, account: hotel.account)
     room_type = create(:room_type, hotel: hotel)
@@ -11,8 +11,8 @@ RSpec.describe Bookings::FinalizeNoShow do
     booking = create(
       :booking,
       hotel: hotel,
-      status: "review_no_show",
-      no_show_review_business_date: business_date,
+      status: "no_show_detected",
+      no_show_detected_business_date: business_date,
       check_in: business_date,
       check_out: business_date + 2.days,
       tax_lines: []
@@ -37,8 +37,8 @@ RSpec.describe Bookings::FinalizeNoShow do
     booking = create(
       :booking,
       hotel: hotel,
-      status: "review_no_show",
-      no_show_review_business_date: business_date,
+      status: "no_show_detected",
+      no_show_detected_business_date: business_date,
       check_in: business_date,
       check_out: business_date + 1.day,
       tax_lines: []
@@ -59,8 +59,8 @@ RSpec.describe Bookings::FinalizeNoShow do
     booking = create(
       :booking,
       hotel: hotel,
-      status: "review_no_show",
-      no_show_review_business_date: business_date,
+      status: "no_show_detected",
+      no_show_detected_business_date: business_date,
       check_in: business_date,
       check_out: business_date + 1.day,
       tax_posting_snapshot: {
@@ -87,8 +87,8 @@ RSpec.describe Bookings::FinalizeNoShow do
     booking = create(
       :booking,
       hotel: hotel,
-      status: "review_no_show",
-      no_show_review_business_date: business_date,
+      status: "no_show_detected",
+      no_show_detected_business_date: business_date,
       check_in: business_date,
       check_out: business_date + 1.day,
       tax_lines: []
@@ -121,8 +121,8 @@ RSpec.describe Bookings::FinalizeNoShow do
     booking = create(
       :booking,
       hotel: hotel,
-      status: "review_no_show",
-      no_show_review_business_date: business_date,
+      status: "no_show_detected",
+      no_show_detected_business_date: business_date,
       check_in: business_date,
       check_out: business_date + 1.day,
       tax_lines: []
@@ -151,8 +151,8 @@ RSpec.describe Bookings::FinalizeNoShow do
     booking = create(
       :booking,
       hotel: hotel,
-      status: "review_no_show",
-      no_show_review_business_date: business_date,
+      status: "no_show_detected",
+      no_show_detected_business_date: business_date,
       check_in: business_date,
       check_out: business_date + 1.day,
       tax_lines: []
@@ -171,13 +171,13 @@ RSpec.describe Bookings::FinalizeNoShow do
   end
 
   it "blocks staff no-show finalization while night audit is running" do
-    booking = create(:booking, status: "review_no_show", no_show_review_business_date: Date.current)
+    booking = create(:booking, status: "no_show_detected", no_show_detected_business_date: Date.current)
     start_business_date_audit(booking.hotel)
 
     result = described_class.call(booking: booking, user: create(:user))
 
     expect(result.success?).to be(false)
     expect(result.error).to eq(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
-    expect(booking.reload.status).to eq("review_no_show")
+    expect(booking.reload.status).to eq("no_show_detected")
   end
 end

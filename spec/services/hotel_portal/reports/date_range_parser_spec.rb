@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelPortal::Reports::DateRangeParser do
+RSpec.describe HotelPortal::Reports::DateRangeParser, frozen_time: Time.zone.local(2026, 8, 15, 12) do
   let(:hotel) { double("Hotel", business_date_for: Date.new(2026, 5, 10)) }
 
   describe ".parse_date" do

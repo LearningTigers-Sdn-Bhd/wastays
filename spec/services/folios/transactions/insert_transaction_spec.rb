@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::Transactions::InsertTransaction do
-  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
-
+RSpec.describe Folios::Transactions::InsertTransaction, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:hotel) { create(:hotel) }
   let(:booking) { create(:booking, hotel: hotel) }
   let(:folio) { create(:booking_folio, booking: booking) }

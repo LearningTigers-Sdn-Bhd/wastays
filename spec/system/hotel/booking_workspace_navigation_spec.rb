@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Booking workspace navigation", :business_day, type: :system do
+RSpec.describe "Booking workspace navigation", frozen_time: :business_day, type: :system do
   include_context "booking workspace system setup"
 
   it "uses standard and entity layouts while navigating the workspace" do

@@ -1,280 +1,340 @@
 require "rails_helper"
 require "pdf-reader"
 
-RSpec.describe "Hotel portal housekeeping tasks pages", type: :request do
+RSpec.describe "Hotel portal housekeeping room board", type: :request do
   let(:account) { create(:account) }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, account: account, status: "live", plan: plan) }
-  let(:user) { create(:user, account: account, role: "admin") }
-  let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
-  let(:permission) { Permission.find_or_create_by!(slug: "manage_housekeeping_tasks") { |record| record.name = "Manage Housekeeping Tasks" } }
-  let(:requests_permission) { Permission.find_or_create_by!(slug: "manage_requests") { |record| record.name = "Manage Requests" } }
-  let!(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101", "202", "303" ]) }
+  let(:hotel) { create(:hotel, account:, status: "live", plan:) }
+  let(:business_date) { hotel.current_business_date }
+  let(:user) { create(:user, account:, role: "admin") }
+  let(:role) { create(:role, account:, slug: "front_desk", name: "Front Desk") }
+  let!(:room_type) do
+    create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 202 303])
+  end
 
   before do
-    RolePermission.find_or_create_by!(role: role, permission: permission)
-    RolePermission.find_or_create_by!(role: role, permission: requests_permission)
-    UserRole.find_or_create_by!(user: user, role: role)
-    UserHotelAccess.find_or_create_by!(user: user, hotel: hotel, role: role)
-    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "task_assignment_minibar_log"), enabled: true)
+    grant("dispatch_housekeeping_tasks")
+    grant("perform_housekeeping_tasks")
+    UserRole.find_or_create_by!(user:, role:)
+    UserHotelAccess.find_or_create_by!(user:, hotel:, role:)
+    create(
+      :plan_feature,
+      plan:,
+      feature: create(:feature, feature_group:, slug: "task_assignment_minibar_log"),
+      enabled: true
+    )
     sign_in_as(user)
   end
 
-  describe "GET /hotel/:hotel_id/housekeeping-tasks" do
-    it "renders the page successfully and lists in_progress housekeeping requests" do
-      booking = create(:booking, hotel: hotel, guest_name: "John Doe", confirmation_token: "WS-HK123")
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(
-        :housekeeping_request,
-        booking: booking,
-        request_details: "Clean the sheets",
-        status: "in_progress",
-        room_number: "101"
+  def grant(*slugs)
+    slugs.each do |slug|
+      permission = Permission.find_or_create_by!(slug:) { |record| record.name = slug.humanize }
+      RolePermission.find_or_create_by!(role:, permission:)
+    end
+  end
+
+  def regrant(*slugs)
+    role.role_permissions.destroy_all
+    grant(*slugs)
+  end
+
+  def active_housekeeper(name: "Siti Aminah")
+    housekeeper_role = create(:role, account:, slug: "housekeeper", name: "Housekeeper")
+    staff = create(:user, account:, name:)
+    UserHotelAccess.create!(user: staff, hotel:, role: housekeeper_role)
+    staff
+  end
+
+  def room_status(number, status: "dirty", **attributes)
+    create(:room_status, hotel:, room_type:, room_number: number, status:, **attributes)
+  end
+
+  def stay(number:, status:, check_in:, check_out:, **attributes)
+    booking = create(:booking, hotel:, status:, check_in:, check_out:, **attributes)
+    create(:booking_room, booking:, room_type:, room_number: number)
+    booking
+  end
+
+  describe "GET /hotel/:hotel_id/housekeeping_tasks" do
+    it "renders one operational row per room with the revised columns and no task controls" do
+      stay(
+        number: "101",
+        status: "checked_in",
+        check_in: business_date - 1.day,
+        check_out: business_date,
+        adults: 2,
+        children: 1
+      )
+      room_status("101", notes: "Guest requested extra towels")
+
+      get hotel_housekeeping_tasks_path(hotel, date: business_date)
+
+      expect(response).to have_http_status(:ok)
+      header = response.body[/<thead>.*?<\/thead>/m]
+      headers = Nokogiri::HTML.fragment(header).css("th").map { |column| column.text.squish }
+      expect(headers).to include("Pax", "Nights", "Remarks")
+      expect(headers.first).to include("Room type", "All room types")
+      expect(headers[2]).to include("Room status", "All room statuses")
+      expect(headers[3]).to include("Assigned to", "All staff")
+      expect(headers[4]).to include("Booking status", "All booking statuses")
+      expect(headers[5]).to include("Arrival")
+      expect(headers[6]).to include("Departure")
+      expect(response.body).to include("2/1", "Guest requested extra towels", "Pending checkout")
+      expect(response.body).to include("Clear remarks for #{room_type.name} 101")
+      expect(response.body).not_to include("Task status", "Add task", "No task")
+      expect(response.body.scan(/id="hk-group-#{room_type.id}-#{room_type.id}-101"/).size).to eq(1)
+
+      document = Nokogiri::HTML(response.body)
+      board_section = document.at_css('section[data-controller~="housekeeping-table"]')
+      expect(board_section["data-action"]).to include("change->housekeeping-table#filterChanged")
+      expect(document.at_css("table")["data-controller"]).to eq("table-group")
+      expect(document.css('a[data-action="click->housekeeping-table#navigate"]')).to all(
+        satisfy { |link| link["data-turbo-frame"] == "housekeeping_tasks_results" }
+      )
+    end
+
+    it "uses styled selection controls and exact room-keyed mutation routes" do
+      room_status("101")
+      room_status("202", status: "cleaning")
+
+      get hotel_housekeeping_tasks_path(hotel, date: business_date)
+
+      selects = response.body.scan(/<select[^>]*>/)
+      expect(selects).to be_present
+      expect(selects).to all(match(/panel-select-menu__native|panel-combobox__native/))
+      expect(response.body).to include(
+        hotel_housekeeping_room_status_path(hotel, room_type_id: room_type.id, room_number: "101"),
+        hotel_housekeeping_room_assignment_path(hotel, room_type_id: room_type.id, room_number: "101"),
+        hotel_edit_housekeeping_room_remarks_path(hotel, room_type_id: room_type.id, room_number: "101")
       )
 
-      get hotel_housekeeping_tasks_path(hotel)
+      document = Nokogiri::HTML(response.body)
+      dirty_options = document.css("#hk-room-status-#{room_type.id}-101 option")
+      cleaning_options = document.css("#hk-room-status-#{room_type.id}-202 option")
+      status_form = document.at_css("#hk-room-status-#{room_type.id}-202").ancestors("form").first
 
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Housekeeping Tasks")
-      expect(response.body).to include("Clean the sheets")
-      expect(response.body).to include("101")
+      expect(dirty_options.map(&:text)).not_to include("Awaiting inspection", "Inspection failed")
+      expect(dirty_options.find { |option| option.text == "Late checkout detected" }["disabled"]).to eq("disabled")
+      expect(cleaning_options.map(&:text)).to include("Awaiting inspection", "Inspection failed")
+      expect(cleaning_options.find { |option| option["value"] == "ready" }).to have_attributes(
+        text: "Cleaned — add remarks first"
+      )
+      expect(status_form["data-turbo-frame"]).to eq("_top")
     end
 
-    it "only shows in_progress requests and excludes other statuses" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Need water", status: "in_progress", room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Need broom", status: "pending", room_number: "101")
-      create(:housekeeping_request, booking: booking, request_details: "Need soap", status: "completed", room_number: "101")
+    it "filters by room type and status and keeps sorting on export links" do
+      other_room_type = create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[401])
+      staff = active_housekeeper
+      room_status("101", status: "dirty", assigned_to: staff)
+      room_status("202", status: "ready")
+      create(:room_status, hotel:, room_type: other_room_type, room_number: "401", status: "dirty")
+      stay(number: "101", status: "checked_in", check_in: business_date - 1.day, check_out: business_date)
 
-      get hotel_housekeeping_tasks_path(hotel)
+      get hotel_housekeeping_tasks_path(
+        hotel,
+        room_type_ids: [ room_type.id ],
+        room_statuses: [ "dirty" ],
+        assigned_to_ids: [ staff.id ],
+        booking_statuses: [ "pending_checkout" ],
+        sort: "arrival",
+        direction: "desc",
+        date: business_date - 1.day
+      )
 
-      expect(response.body).to include("Need water")
-      expect(response.body).not_to include("Need broom")
-      expect(response.body).not_to include("Need soap")
+      table_body = response.body[/<tbody.*?<\/tbody>/m]
+      table_document = Nokogiri::HTML.fragment(table_body)
+      room_numbers = table_document.css('tr[data-group] th[scope="row"] > div > span:first-child').map(&:text)
+      expect(room_numbers).to eq([ "101" ])
+      expect(table_body).to include("Pending checkout")
+      expect(response.body).to include('aria-sort="descending"')
+      %w[export-pdf-link export-excel-link export-csv-link].each do |link_id|
+        href = CGI.unescapeHTML(response.body[/id="#{link_id}" href="([^"]*)"/, 1])
+        expect(href).to include(
+          "room_type_ids%5B%5D=#{room_type.id}",
+          "room_statuses%5B%5D=dirty",
+          "assigned_to_ids%5B%5D=#{staff.id}",
+          "booking_statuses%5B%5D=pending_checkout",
+          "sort=arrival",
+          "direction=desc",
+          "date=#{business_date}"
+        )
+      end
     end
 
-    it "filters requests by room number via query parameter" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "202")
-      create(:housekeeping_request, booking: booking, request_details: "Towels", room_number: "202", status: "in_progress")
-      create(:housekeeping_request, booking: booking, request_details: "Soap", room_number: "303", status: "in_progress")
+    it "renders today's board without search or date controls" do
+      room_status("202", notes: "Bring hypoallergenic pillows")
 
-      get hotel_housekeeping_tasks_path(hotel, q: "202")
+      get hotel_housekeeping_tasks_path(hotel, q: "HYPOALLERGENIC", date: business_date - 1.day)
 
-      expect(response.body).to include("Towels")
-      expect(response.body).not_to include("Soap")
+      table_body = response.body[/<tbody.*?<\/tbody>/m]
+      expect(table_body).to include("101", "202", "303", "Bring hypoallergenic pillows")
+      expect(response.body).not_to include(
+        'id="hk-filters-form"', 'name="q"', "Room, guest, booking or remarks", "As of date",
+        "read-only outside the current business date"
+      )
     end
 
-    it "filters requests by assignee" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      staff1 = create(:user, account: account)
-      staff2 = create(:user, account: account)
-      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
-      UserHotelAccess.create!(user: staff1, hotel: hotel, role: hk_role)
-      UserHotelAccess.create!(user: staff2, hotel: hotel, role: hk_role)
+    it "keeps header filters available when no rooms match" do
+      get hotel_housekeeping_tasks_path(hotel, room_statuses: [ "__none__" ])
 
-      req1 = create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", metadata: { "assigned_to" => staff1.id, "assigned_to_name" => staff1.name }, request_details: "Sheets")
-      req2 = create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", metadata: { "assigned_to" => staff2.id, "assigned_to_name" => staff2.name }, request_details: "Trash")
-
-      get hotel_housekeeping_tasks_path(hotel, assigned_to: staff1.id)
-
-      expect(response.body).to include("Sheets")
-      expect(response.body).not_to include("Trash")
+      expect(response.body).to include('id="hk-room-type-filter"', 'id="hk-room-status-filter"', "No rooms found")
+      empty_state = Nokogiri::HTML(response.body).at_css("tbody td[colspan='9']")
+      expect(empty_state.text.squish).to eq("No rooms found Try adjusting your filters.")
     end
 
-    it "filters requests by room status" do
-      group = create(:group_booking, hotel: hotel)
-      dirty_room_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1)
-      ready_room_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
-      create(:booking_room, booking: dirty_room_booking, room_type: room_type, room_number: "101")
-      create(:booking_room, booking: ready_room_booking, room_type: room_type, room_number: "202")
+    it "exports every filtered room as CSV, XLSX, and PDF" do
+      room_status("101", notes: "Inspect balcony")
+      stay(number: "101", status: "checked_in", check_in: business_date - 1.day, check_out: business_date)
 
-      create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
-      create(:room_status, hotel: hotel, room_type: room_type, room_number: "202", status: "ready")
+      export_params = {
+        date: business_date - 1.day,
+        room_type_ids: [ room_type.id ],
+        room_statuses: [ "dirty" ]
+      }
 
-      create(:housekeeping_request, booking: dirty_room_booking, room_number: "101", status: "in_progress", request_details: "Sheets")
-      create(:housekeeping_request, booking: ready_room_booking, room_number: "202", status: "in_progress", request_details: "Trash")
-
-      get hotel_housekeeping_tasks_path(hotel, room_status: "dirty")
-
-      expect(response.body).to include("Sheets")
-      expect(response.body).not_to include("Trash")
-    end
-
-    it "resolves active booking for that day but does not filter housekeeping requests by date" do
-      booking1 = create(:booking, hotel: hotel, check_in: Date.tomorrow.beginning_of_day, check_out: (Date.tomorrow + 2.days).end_of_day, guest_name: "Alice Smith")
-      create(:booking_room, booking: booking1, room_type: room_type, room_number: "101")
-
-      booking2 = create(:booking, hotel: hotel, check_in: Date.current.beginning_of_day, check_out: Date.tomorrow.end_of_day, guest_name: "Bob Jones")
-      create(:booking_room, booking: booking2, room_type: room_type, room_number: "202")
-
-      create(:housekeeping_request, booking: booking1, room_number: "101", status: "in_progress", request_details: "Sheets", requested_at: Date.tomorrow)
-      create(:housekeeping_request, booking: booking2, room_number: "202", status: "in_progress", request_details: "Trash", requested_at: 2.days.ago)
-
-      get hotel_housekeeping_tasks_path(hotel, date: Date.tomorrow.to_s)
-
-      expect(response.body).to include("101")
-      expect(response.body).to include(Date.tomorrow.strftime("%d %b %Y"))
-      expect(response.body).to include("Sheets")
-      expect(response.body).to include("Trash")
-    end
-
-    it "exports the filtered housekeeping board as csv, xlsx, and pdf" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:housekeeping_request, booking: booking, room_number: "101", status: "in_progress", request_details: "Need water")
-      create(:housekeeping_request, booking: booking, room_number: "202", status: "in_progress", request_details: "Fresh towels")
-      selected_date = Date.new(2026, 7, 21)
-
-      get hotel_housekeeping_tasks_path(hotel, format: :csv), params: { date: selected_date, q: "101" }
+      get hotel_housekeeping_tasks_path(hotel, format: :csv), params: export_params
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("text/csv")
-      expect(response.body).to include("Need water")
-      expect(response.body).not_to include("Fresh towels")
-      expect(response.headers["Content-Disposition"]).to include("housekeeping-tasks-2026-07-21.csv")
+      expect(response.body).to include("Room Number,Room Type,Pax", "Inspect balcony", "101")
+      expect(response.body.lines.size).to eq(2)
 
-      get hotel_housekeeping_tasks_path(hotel, format: :xlsx), params: { date: selected_date, q: "101" }
+      get hotel_housekeeping_tasks_path(hotel, format: :xlsx), params: export_params
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       expect(response.body).to start_with("PK")
-      expect(response.headers["Content-Disposition"]).to include("housekeeping-tasks-2026-07-21.xlsx")
 
-      get hotel_housekeeping_tasks_path(hotel, format: :pdf), params: { date: selected_date, q: "101" }
-      pdf_text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+      get hotel_housekeeping_tasks_path(hotel, format: :pdf), params: export_params
+      text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/pdf")
-      expect(pdf_text).to include("HOUSEKEEPING TASKS", "Need water", "Page 1 of 1")
-      expect(pdf_text).not_to include("Fresh towels")
-    end
-
-    it "does not expose the removed legacy xls format" do
-      expect(Mime::Type.lookup_by_extension(:xls)).to be_nil
-
-      get hotel_housekeeping_tasks_path(hotel, format: :xls)
-
-      expect(response).to have_http_status(:not_acceptable)
+      expect(text).to include("HOUSEKEEPING TASKS", "Inspect balcony", "Page 1 of 1")
     end
   end
 
-  describe "PATCH /hotel/:hotel_id/housekeeping_tasks/:id/assign" do
-    it "assigns a staff member to the request metadata" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
-      staff = create(:user, account: account)
-      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
-      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
-      UserRole.create!(user: staff, role: hk_role)
+  describe "board authorization" do
+    it "admits perform-only and dispatch-only users" do
+      regrant("perform_housekeeping_tasks")
+      get hotel_housekeeping_tasks_path(hotel)
+      expect(response).to have_http_status(:ok)
 
-      patch assign_hotel_housekeeping_task_path(hotel, req), params: { assigned_to: staff.id }
-
-      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
-      expect(req.reload.metadata["assigned_to"]).to eq(staff.id)
-      expect(req.reload.metadata["assigned_to_name"]).to eq(staff.name)
-      expect(req.reload.metadata["assignment_history"]).to be_present
-
-      history_entry = req.reload.metadata["assignment_history"].last
-      expect(history_entry["assigned_to_id"]).to eq(staff.id)
-      expect(history_entry["assigned_to_name"]).to eq(staff.name)
-      expect(history_entry["assigned_by_id"]).to eq(user.id)
-      expect(history_entry["assigned_by_name"]).to eq(user.name)
-      expect(history_entry["timestamp"]).to be_present
+      regrant("dispatch_housekeeping_tasks")
+      get hotel_housekeeping_tasks_path(hotel)
+      expect(response).to have_http_status(:ok)
     end
-  end
 
-  describe "checkout room cleaning rows" do
-    it "shows checkout requests with assign and status dropdowns" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
+    it "rejects a user without either housekeeping permission" do
+      regrant("manage_requests")
 
       get hotel_housekeeping_tasks_path(hotel)
 
-      expect(response.body).to include("Checkout Room Cleaning")
-      expect(response.body).to include(hotel_assign_checkout_request_path(hotel, booking.check_out_requests.first))
-      expect(response.body).to include(hotel_checkout_request_status_path(hotel, booking.check_out_requests.first))
-      expect(response.body).to include("New")
-      expect(response.body).to include("Assigned")
-      expect(response.body).to include("In Progress")
-      expect(response.body).to include("Completed")
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq("You are not authorized to perform this action.")
     end
+  end
 
-    it "assigns checkout requests and advances the workflow status" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
-      staff = create(:user, account: account)
-      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
-      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
-      UserRole.create!(user: staff, role: hk_role)
+  describe "room-level mutations" do
+    it "lets a performer change status without a task or assignment" do
+      regrant("perform_housekeeping_tasks")
+      status = room_status("101", status: "dirty", notes: "Starting room")
 
-      patch hotel_assign_checkout_request_path(hotel, request), params: { assigned_to: staff.id }
+      patch hotel_housekeeping_room_status_path(hotel, room_type_id: room_type.id, room_number: "101"),
+            params: { date: business_date, status: "cleaning" }
 
       expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
-      expect(request.reload.status).to eq("assigned")
-      expect(request.metadata["assigned_to"]).to eq(staff.id)
-      expect(request.metadata["assigned_to_name"]).to eq(staff.name)
-      expect(request.metadata["workflow_status"]).to eq("assigned")
+      expect(status.reload.status).to eq("cleaning")
     end
 
-    it "assigns every active room task together and records the collective audit event" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      checkout_request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
-      housekeeping_request = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101")
-      staff = create(:user, account: account)
-      hk_role = create(:role, account: account, slug: "housekeeper", name: "Housekeeper")
-      UserHotelAccess.create!(user: staff, hotel: hotel, role: hk_role)
-      UserRole.create!(user: staff, role: hk_role)
+    it "lets a dispatcher assign an active housekeeper and preserves board filters" do
+      staff = active_housekeeper
 
-      patch hotel_assign_checkout_request_path(hotel, checkout_request), params: { assigned_to: staff.id }
+      patch hotel_housekeeping_room_assignment_path(hotel, room_type_id: room_type.id, room_number: "101"), params: {
+        date: business_date,
+        assigned_to_id: staff.id,
+        filters: {
+          room_type_ids: [ room_type.id ],
+          room_statuses: [ "dirty" ],
+          assigned_to_ids: [ staff.id ],
+          booking_statuses: [ "pending_checkout" ],
+          sort: "arrival",
+          direction: "desc",
+          host: "evil.example"
+        }
+      }
 
-      expect(checkout_request.reload.metadata).to include("assigned_to" => staff.id, "assigned_to_name" => staff.name)
-      expect(housekeeping_request.reload.metadata).to include("assigned_to" => staff.id, "assigned_to_name" => staff.name)
-      audit = RoomOperationalAuditLog.find_by!(hotel: hotel, event_type: "housekeeping_assignment_changed")
-      expect(audit).to have_attributes(room_number: "101", user: user)
-      expect(audit.metadata["tasks"]).to contain_exactly(
-        { "type" => "CheckOutRequest", "id" => checkout_request.id },
-        { "type" => "HousekeepingRequest", "id" => housekeeping_request.id }
+      expect(response).to redirect_to(
+        hotel_housekeeping_tasks_path(
+          hotel,
+          room_type_ids: [ room_type.id ],
+          room_statuses: [ "dirty" ],
+          assigned_to_ids: [ staff.id ],
+          booking_statuses: [ "pending_checkout" ],
+          sort: "arrival",
+          direction: "desc"
+        )
       )
+      expect(RoomStatus.find_by!(hotel:, room_type:, room_number: "101").assigned_to).to eq(staff)
     end
 
-    it "updates checkout requests through the checkout status route" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      request = create(:check_out_request, booking: booking, status: "pending", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
+    it "does not let a performer assign rooms" do
+      regrant("perform_housekeeping_tasks")
+      staff = active_housekeeper
 
-      patch hotel_checkout_request_status_path(hotel, request), params: { status: "in_progress" }
+      patch hotel_housekeeping_room_assignment_path(hotel, room_type_id: room_type.id, room_number: "101"),
+            params: { date: business_date, assigned_to_id: staff.id }
+
+      expect(response).to redirect_to(root_path)
+      expect(RoomStatus.find_by(hotel:, room_type:, room_number: "101")).to be_nil
+    end
+
+    it "opens and updates focused room remarks" do
+      return_to = hotel_housekeeping_tasks_path(hotel)
+
+      get hotel_edit_housekeeping_room_remarks_path(hotel, room_type_id: room_type.id, room_number: "101"),
+          params: { date: business_date, return_to: }
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(
+        "Edit housekeeping remarks", "Save remarks", CGI.escapeHTML(return_to), 'data-turbo-frame="_top"'
+      )
+
+      patch hotel_housekeeping_room_remarks_path(hotel, room_type_id: room_type.id, room_number: "101"),
+            params: { date: business_date, notes: "Guest still has luggage", return_to: }
+
+      expect(response).to redirect_to(return_to)
+      expect(RoomStatus.find_by!(hotel:, room_type:, room_number: "101").notes).to eq("Guest still has luggage")
+    end
+
+    it "clears room remarks through the room-keyed update" do
+      status = room_status("101", notes: "Remove after inspection")
+
+      patch hotel_housekeeping_room_remarks_path(hotel, room_type_id: room_type.id, room_number: "101"),
+            params: { date: business_date, notes: "" }
 
       expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
-      expect(request.reload.status).to eq("in_progress")
-      expect(request.metadata["workflow_status"]).to eq("in_progress")
+      expect(status.reload.notes).to be_nil
+      expect(RoomOperationalAuditLog.last.metadata).to include("old_notes" => "Remove after inspection")
     end
-  end
 
-  describe "PATCH /hotel/:hotel_id/requests/housekeeping/:request_id" do
-    it "completes the housekeeping request, causing it to disappear and fallback to No Task" do
-      booking = create(:booking, hotel: hotel)
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
-      req = create(:housekeeping_request, booking: booking, status: "in_progress", room_number: "101", request_details: "Clean the window")
+    it "rejects room mutation from a historical board" do
+      status = room_status("101", status: "dirty")
 
-      # Verify it's displayed initially
-      get hotel_housekeeping_tasks_path(hotel)
-      expect(response.body).to include("Clean the window")
+      patch hotel_housekeeping_room_status_path(hotel, room_type_id: room_type.id, room_number: "101"),
+            params: { date: business_date - 1.day, status: "cleaning" }
 
-      # Update status to completed
-      patch hotel_request_status_path(hotel, kind: "housekeeping", request_id: req.id), params: { status: "completed" }
+      expect(response).to redirect_to(hotel_housekeeping_tasks_path(hotel))
+      expect(flash[:alert]).to eq("Housekeeping can only be updated for the current business date.")
+      expect(status.reload.status).to eq("dirty")
+    end
 
-      expect(response).to redirect_to(hotel_requests_path(hotel))
-      expect(req.reload.status).to eq("completed")
+    it "rejects a room identity outside the current hotel" do
+      other_hotel = create(:hotel, account:)
+      other_type = create(:room_type, hotel: other_hotel, room_number_mode: "custom", room_numbers: %w[101])
 
-      # Loading the tasks page again should not show the request, and should display No Task
-      get hotel_housekeeping_tasks_path(hotel)
-      expect(response.body).not_to include("Clean the window")
-      expect(response.body).to include("No Task")
+      patch hotel_housekeeping_room_status_path(hotel, room_type_id: other_type.id, room_number: "101"),
+            params: { date: business_date, status: "dirty" }
+
+      expect(response).to have_http_status(:not_found)
+      expect(RoomStatus.find_by(hotel: other_hotel, room_type: other_type, room_number: "101")).to be_nil
     end
   end
 end

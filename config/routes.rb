@@ -354,6 +354,7 @@ Rails.application.routes.draw do
 
       resources :refund_requests, only: [ :new, :create ]
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
+      resource :guest_registration_card_pdf, only: [ :show ], module: :bookings
       resources :guest_registration_note_templates, only: [ :index, :new, :create, :edit, :update, :destroy ], module: :bookings
       resource :reservation_voucher, only: [ :show ], module: :bookings
       resource :tourism_tax_voucher, only: [ :show ], module: :bookings do
@@ -400,6 +401,8 @@ Rails.application.routes.draw do
       match "repair-no-show-folio/:booking_id", to: "no_show_folio_repairs#show", via: [ :get, :post ], as: :repair_no_show_folio
       match "reinstate-no-show/:booking_id", to: "reinstatements#show", via: [ :get, :post ], as: :reinstate_no_show
       match "late-checkout/:booking_id", to: "late_checkouts#show", via: [ :get, :post ], as: :late_checkout
+      get "checkout/:booking_id/folio-status", to: "checkouts#folio_status", as: :checkout_folio_status
+      match "checkout/:booking_id/deposits/:deposit_id", to: "deposit_settlements#show", via: [ :get, :post ], as: :checkout_deposit_settlement
       match "checkout/:booking_id", to: "checkouts#show", via: [ :get, :post ], as: :checkout
       match "manage-guest/:booking_id", to: "guests#show", via: [ :get, :post, :patch ], as: :manage_guest
       match "manage-billing-party/:booking_id", to: "billing_parties#show", via: [ :get, :post, :patch, :delete ], as: :manage_billing_party
@@ -407,6 +410,12 @@ Rails.application.routes.draw do
       patch "set-primary-guest/:booking_id/:booking_guest_id", to: "guests#set_primary", as: :set_primary_guest
       match "internal-notes/:booking_id", to: "internal_notes#show", via: [ :get, :post, :patch ], as: :internal_notes
       match "internal-notes/:booking_id/:note_id/delete", to: "internal_notes#delete", via: [ :get, :delete ], as: :delete_internal_note
+    end
+
+    scope "request-actions", as: :request_action, module: "requests/actions" do
+      # A request is one of three tables, so it travels as its kind and its id
+      # the way it does everywhere else on the board.
+      get "show-request/:kind/:request_id", to: "details#show", as: :show_request
     end
 
     scope "folio-actions", as: :folio_action, module: "folios/actions" do
@@ -432,19 +441,25 @@ Rails.application.routes.draw do
     get "folio-documents/:folio_id/ledger", to: "folios#ledger", as: :folio_ledger
 
     get "requests", to: "requests#index", as: :requests
-    get "requests/archive", to: "requests#archive", as: :request_archive
-    resources :housekeeping_tasks, only: [ :index ] do
-      member do
-        patch :assign
-      end
-    end
+    # The rest of one column, read from a cursor rather than a page number.
+    get "requests/columns/:column", to: "requests#column", as: :requests_column
+    # Putting a request in a lane -- dragged there, or asked for by the button on
+    # the card. One endpoint, so the two gestures cannot mean different things.
+    patch "requests/move", to: "requests#move", as: :requests_move
+    resources :housekeeping_tasks, only: [ :index ]
+    patch "housekeeping-tasks/rooms/:room_type_id/:room_number/status",
+          to: "housekeeping_tasks#update_room_status", as: :housekeeping_room_status
+    patch "housekeeping-tasks/rooms/:room_type_id/:room_number/assignment",
+          to: "housekeeping_tasks#update_room_assignment", as: :housekeeping_room_assignment
+    get "housekeeping-tasks/rooms/:room_type_id/:room_number/remarks/edit",
+        to: "housekeeping_tasks#edit_remarks", as: :edit_housekeeping_room_remarks
+    patch "housekeeping-tasks/rooms/:room_type_id/:room_number/remarks",
+          to: "housekeeping_tasks#update_remarks", as: :housekeeping_room_remarks
     patch "requests/:kind/:request_id", to: "requests#update_status", as: :request_status
     post "requests/:kind/:request_id/cancel", to: "requests#cancel_request", as: :cancel_request
     patch "requests/:kind/:request_id/archive", to: "requests#archive_request", as: :archive_request
     patch "requests/:kind/:request_id/unarchive", to: "requests#unarchive_request", as: :unarchive_request
 
-    patch "checkout-requests/:id/assign", to: "checkout_requests#assign", as: :assign_checkout_request
-    patch "checkout-requests/:id/status", to: "checkout_requests#update_status", as: :checkout_request_status
     patch "checkout-requests/:id/complete", to: "checkout_requests#complete", as: :complete_checkout_request
 
     resources :room_locks, only: [ :create ] do
@@ -505,15 +520,23 @@ Rails.application.routes.draw do
         }
       end
     end
-    resources :night_audits, only: [ :index, :show, :create ] do
-      member do
-        get :resolve
-        get :blockers
-        post :resolve_missing_folio
-        post :resolve_missing_nightly_charges
-        post :repair_completed_nightly_charges
-      end
+    namespace :reports do
+      resources :night_audits, only: [ :index, :show ]
     end
+    resource :night_audit_run, only: [ :show, :create ] do
+      get :status
+      get :booking_timestamp
+      get :force_close_confirmation
+      post :start_review
+      post :resolve_missing_folio
+      post :resolve_missing_nightly_charges
+      post :resolve_unsynced_payment
+      post :resolve_unsynced_refund
+      patch :resolve_booking_timestamp
+      post :resolve_missed_arrival
+      post :force_close
+    end
+    resources :night_audits, only: [ :index, :show ]
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         get :occupancy_details

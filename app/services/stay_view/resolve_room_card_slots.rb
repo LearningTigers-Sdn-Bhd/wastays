@@ -2,7 +2,7 @@
 
 module StayView
   class ResolveRoomCardSlots
-    OCCUPIED_STATUSES = %i[checked_in review_due_out checkout_required].freeze
+    OCCUPIED_STATUSES = %i[checked_in due_out_detected checkout_required].freeze
     Result = Data.define(:departure, :current_booking, :current_block, :state)
 
     def self.call(hotel:, room:, date:, operational_date: date, log_conflicts: true)

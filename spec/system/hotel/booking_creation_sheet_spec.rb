@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Hotel booking creation sheet", type: :system, js: true do
-  around { |example| travel_to(Time.zone.local(2026, 7, 23, 10, 0, 0)) { example.run } }
-
+RSpec.describe "Hotel booking creation sheet", type: :system, js: true, frozen_time: Time.zone.local(2026, 7, 23, 10) do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account:, status: "approved", accounting_business_date: Date.current) }
   let(:user) { create(:user, account:, role: "hotel_staff") }

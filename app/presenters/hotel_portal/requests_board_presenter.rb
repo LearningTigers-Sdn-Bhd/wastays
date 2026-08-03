@@ -2,80 +2,191 @@
 
 module HotelPortal
   class RequestsBoardPresenter
-    attr_reader :board_columns, :board_counts, :current_hotel
+    LANE_TONES = {
+      housekeeping: { header: "bg-info/10", marker: "bg-info" },
+      complaint: { header: "bg-destructive/10", marker: "bg-destructive" },
+      checkout: { header: "bg-warning/10", marker: "bg-warning" },
+      completed: { header: "bg-success/10", marker: "bg-success" },
+      archived: { header: "bg-muted", marker: "bg-muted-foreground" }
+    }.freeze
 
-    def initialize(board_columns:, board_counts:, current_hotel:, view_context:)
-      @board_columns = board_columns
+    attr_reader :board_counts, :current_hotel, :date_window, :pages
+
+    def initialize(pages:, board_counts:, current_hotel:, view_context:, date_window:, selected_lanes: [])
+      @pages = pages
       @board_counts = board_counts
       @current_hotel = current_hotel
       @view_context = view_context
+      @date_window = date_window
+      # Only lanes that exist. These reach the toolbar's toggle group, which
+      # refuses a selected value it has no item for -- so a hand-edited `lanes`
+      # in the query string would otherwise take the page down rather than being
+      # ignored the way the board already ignores it.
+      lane_keys = Requests::Column.keys.map(&:to_s)
+      requested_lanes = Array(selected_lanes).map(&:to_s)
+      @selected_lanes = requested_lanes & lane_keys
+      @all_lanes_selected = requested_lanes.include?("all") ||
+                            @selected_lanes.empty? ||
+                            @selected_lanes.size == lane_keys.size
     end
 
+    def page_for(bucket_key)
+      pages.fetch(bucket_key)
+    end
+
+    def board_columns
+      @board_columns ||= pages.transform_values(&:cards)
+    end
+
+    # A frame is named for the cursor it was asked for, so the page that arrives
+    # replaces the placeholder that asked for it. The first page has no cursor.
+    def column_frame_id(bucket_key, cursor)
+      suffix = cursor ? Digest::SHA256.hexdigest(cursor.to_param).first(12) : "start"
+
+      "requests_column_#{bucket_key}_#{suffix}"
+    end
+
+    # The rest of a column, carrying the filters the column was read under.
+    def column_page_path(bucket_key, cursor)
+      @view_context.hotel_requests_column_path(
+        current_hotel,
+        bucket_key,
+        @view_context.preserved_request_filters.merge(date_window.query_params).merge(cursor: cursor.to_param)
+      )
+    end
+
+    def window_label
+      @view_context.request_window_label(date_window)
+    end
+
+    # Where a card opens its detail sheet.
+    def detail_path(card)
+      @view_context.hotel_request_action_show_request_path(
+        current_hotel,
+        kind: card.record_kind,
+        request_id: card.request_id
+      )
+    end
+
+    def previous_window_path
+      @view_context.requests_board_path_for(date_window.previous)
+    end
+
+    def next_window_path
+      @view_context.requests_board_path_for(date_window.next)
+    end
+
+    def today_window_path
+      @view_context.requests_board_path_for(date_window.at_today)
+    end
+
+    # The lanes drawn on the board: the ones switched on, or all of them.
     def columns
-      [
-        { key: :housekeeping, label: "Housekeeping", accent_class: "border-t-blue-500", draggable: true },
-        { key: :complaint, label: "Complaints", accent_class: "border-t-rose-500", draggable: true },
-        { key: :completed, label: "Recently Completed", accent_class: "border-t-green-500", draggable: true },
-        { key: :checkout, label: "Checkout Requests", accent_class: "border-t-amber-500", draggable: false }
-      ]
+      @columns ||= Requests::Column.all.select { |column| pages.key?(column.key) }
     end
 
-    def column_count_badge_class(column)
-      column[:key] == :checkout ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"
+    # Every lane, for the control that switches them. It names them all whichever
+    # ones are showing, or a lane switched off could never be switched back on.
+    def lane_options = Requests::Column.all
+
+    def selected_lanes = @selected_lanes
+
+    def lane_selected?(column) = @selected_lanes.include?(column.key.to_s)
+
+    def lane_toggle_values = all_lanes_selected? ? [ "all" ] : selected_lanes
+
+    def all_lanes_selected? = @all_lanes_selected
+
+    def lane_count(column)
+      board_counts[column.key].to_i
     end
 
-    def column_request_label(column)
-      column[:key] == :checkout ? "pending request" : "active request"
+    def lane_count_label(column)
+      @view_context.abbreviated_count(lane_count(column))
     end
 
-    def kind_badge_class(card)
-      case card[:kind]
-      when "housekeeping" then "border-blue-100 bg-blue-50 text-blue-700"
-      when "checkout" then "border-amber-100 bg-amber-50 text-amber-700"
-      else "border-rose-100 bg-rose-50 text-rose-700"
+    def all_lanes_count_label
+      @view_context.abbreviated_count(board_counts.values.sum(&:to_i))
+    end
+
+    def lane_header_class(column)
+      LANE_TONES.fetch(column.key).fetch(:header)
+    end
+
+    def lane_marker_class(column)
+      LANE_TONES.fetch(column.key).fetch(:marker)
+    end
+
+    # Where a card is dropped, and what the board calls that column.
+    def move_path(column)
+      @view_context.hotel_requests_move_path(current_hotel, to: column.to_param)
+    end
+
+    def kind_badge_variant(card)
+      case card.kind
+      when "housekeeping" then :info
+      when "checkout" then :warning
+      else :destructive
       end
     end
 
-    def target_status(card)
-      card[:kind] == "housekeeping" ? "completed" : "resolved"
+    def status_badge_variant(card)
+      case card.status
+      when "completed", "resolved" then :success
+      when "pending" then :warning
+      when "new", "in_progress" then :info
+      else :neutral
+      end
     end
 
-    def pagination_param_name(bucket_key)
-      :"#{bucket_key}_page"
+    # Where a card's status is written, and where a checkout is completed. These
+    # were built into the card by the board and the archive, which meant two
+    # services holding url_helpers to do a view's job. The card carries what it
+    # is; the path is made here, from that.
+    def status_path(card)
+      @view_context.hotel_request_status_path(
+        current_hotel,
+        kind: card.record_kind,
+        request_id: card.request_id
+      )
     end
 
-    def page_params
-      @view_context.request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page, :checkout_page)
+    def complete_checkout_path(card)
+      @view_context.hotel_complete_checkout_request_path(current_hotel, card.request_id)
     end
 
-    def card_actionable?(card)
-      card[:update_url].present? || card[:complete_url].present? || card[:archive_url].present?
+    # A card can be dragged when some other lane would take it. Asked of the
+    # lanes, because they are what decides: gating this on the card having an
+    # update_url instead made a completed checkout undraggable, since completing
+    # a checkout has an endpoint of its own and no status URL to show for it.
+    def card_draggable?(card, column)
+      Requests::Column.all.any? { |other| other.key != column.key && other.accepts?(card.kind) }
     end
 
     def card_shows_room_number?(card)
-      card[:kind] == "checkout" && card[:room_number].present?
+      card.kind == "checkout" && card.room_number.present?
     end
 
     def card_token_label(card)
-      label = card[:booking_token].to_s
-      label += " · Room #{card[:room_number]}" if card_shows_room_number?(card)
+      label = card.booking_token.to_s
+      label += " · Room #{card.room_number}" if card_shows_room_number?(card)
       label
     end
 
     def formatted_requested_at(card)
-      helpers.display_housekeeping_datetime(card[:requested_at])
+      helpers.display_housekeeping_datetime(card.requested_at)
     end
 
     def formatted_completed_at(card)
-      helpers.display_housekeeping_datetime(card[:completed_at])
+      helpers.display_housekeeping_datetime(card.completed_at)
     end
 
     def completed_at?(card)
-      card[:completed_at].present?
+      card.completed_at.present?
     end
 
     def internal_notes_for(card)
-      Array(card[:internal_notes])
+      card.internal_notes_list
     end
 
     def internal_notes?(card)
@@ -84,16 +195,16 @@ module HotelPortal
 
     # Returns the action button config for a card, or nil if no action is available.
     # Each config is a hash with :type, :url, :params, :css, :icon, :label, :title
-    def card_action(card, bucket_key)
-      if bucket_key == :completed && card[:archive_url].present?
+    def card_action(card, column)
+      if column.archives?
+        restore_action(card)
+      elsif column.key == :completed
         archive_action(card)
-      elsif card[:complete_url].present? && !card[:update_url].present?
+      elsif card.checkout_record?
         complete_action(card)
-      elsif card[:kind] == "housekeeping" && card[:status] == "pending"
+      elsif card.status == "pending"
         dispatch_action(card)
-      elsif card[:status] == "pending"
-        dispatch_action(card)
-      elsif card[:update_url].present?
+      elsif card.status_updatable?
         done_action(card)
       end
     end
@@ -106,10 +217,9 @@ module HotelPortal
 
     def archive_action(card)
       {
-        url: card[:archive_url],
-        params: {},
-        css: "flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 " \
-             "shadow-sm transition-all hover:border-slate-900 hover:text-slate-900",
+        url: move_path(Requests::Column.find(:archived)),
+        params: move_params(card),
+        css: icon_action_css,
         icon: "cube",
         icon_opts: { library: "phosphor", variant: "regular" },
         label: nil,
@@ -117,13 +227,35 @@ module HotelPortal
       }
     end
 
+    # Carrying a card back out of the archive is the only thing left to do with
+    # it from here.
+    def restore_action(card)
+      {
+        url: move_path(restored_column_for(card)),
+        params: move_params(card),
+        css: secondary_action_css,
+        icon: "rotate-ccw",
+        icon_opts: { stroke_width: 3 },
+        label: "Restore",
+        title: "Restore Request"
+      }
+    end
+
+    def move_params(card)
+      { kind: card.record_kind, display_kind: card.kind, request_id: card.request_id }
+    end
+
+    # Where restoring puts a card back: the lane it would have been in had it
+    # never been archived.
+    def restored_column_for(card)
+      Requests::Column.for_record(kind: card.kind, status: card.status, archived: false)
+    end
+
     def dispatch_action(card)
       {
-        url: card[:update_url],
+        url: status_path(card),
         params: { status: "new" },
-        css: "flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 " \
-             "text-[10px] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all " \
-             "hover:border-blue-500 hover:bg-blue-500 hover:text-white",
+        css: primary_action_css,
         icon: "arrow-right",
         icon_opts: { stroke_width: 3 },
         label: "Dispatch",
@@ -133,11 +265,9 @@ module HotelPortal
 
     def done_action(card)
       {
-        url: card[:update_url],
-        params: { status: target_status(card) },
-        css: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 " \
-             "text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all " \
-             "hover:border-emerald-500 hover:bg-emerald-500 hover:text-white",
+        url: status_path(card),
+        params: { status: card.kind == "complaint" ? "resolved" : "completed" },
+        css: primary_action_css,
         icon: "check",
         icon_opts: { stroke_width: 3 },
         label: "Done",
@@ -147,16 +277,32 @@ module HotelPortal
 
     def complete_action(card)
       {
-        url: card[:complete_url],
+        url: complete_checkout_path(card),
         params: {},
-        css: "flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 " \
-             "text-[10px] font-black uppercase tracking-wider text-emerald-700 shadow-sm transition-all " \
-             "hover:border-emerald-500 hover:bg-emerald-500 hover:text-white",
+        css: primary_action_css,
         icon: "check",
         icon_opts: { stroke_width: 3 },
         label: "Complete",
         title: "Complete Request"
       }
+    end
+
+    def primary_action_css
+      "inline-flex h-7 items-center gap-1.5 rounded-md border border-primary bg-primary px-2.5 text-xs " \
+        "font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none " \
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    end
+
+    def secondary_action_css
+      "inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs " \
+        "font-medium text-foreground transition-colors hover:border-border-interactive hover:bg-muted " \
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    end
+
+    def icon_action_css
+      "inline-flex size-7 items-center justify-center rounded-md border border-border bg-card text-muted-foreground " \
+        "transition-colors hover:border-border-interactive hover:bg-muted hover:text-foreground " \
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     end
   end
 end

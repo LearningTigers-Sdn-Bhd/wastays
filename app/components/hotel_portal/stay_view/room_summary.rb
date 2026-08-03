@@ -3,14 +3,7 @@
 module HotelPortal
   module StayView
     class RoomSummary < PanelsUI::BaseComponent
-      STATUS_VARIANTS = {
-        ready: :success,
-        dirty: :warning,
-        cleaning: :info,
-        awaiting_inspection: :info,
-        inspection_failed: :destructive,
-        out_of_service: :destructive
-      }.freeze
+      STATUS_VARIANTS = ::Rooms::StatusPresentation::BADGE_VARIANTS
       STATUS_ICONS = {
         ready: "circle-check",
         dirty: "spray-can",

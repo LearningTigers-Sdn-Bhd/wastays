@@ -12,7 +12,7 @@ module Concierge
       return Result.failure(message: "Invalid request type.") unless ALLOWED_KINDS.include?(@kind)
       return Result.failure(message: "Details cannot be blank.") if @details.blank?
 
-      unless @booking.status.in?(%w[confirmed review_no_show checked_in])
+      unless Bookings::Occupancy.accepts_guest_requests?(@booking)
         return Result.failure(message: "Requests can only be submitted for active bookings.")
       end
 
@@ -32,6 +32,7 @@ module Concierge
         @booking.housekeeping_requests.build(
           request_details: @details,
           status: "pending",
+          work_context: "guest_request",
           requested_at: Time.current,
           metadata: meta
         )

@@ -76,7 +76,7 @@
           <% if @grouped_bookings.any? %>
             <% status_variants = {
               "confirmed" => :success,
-              "review_no_show" => :warning,
+              "no_show_detected" => :warning,
               "checked_in" => :info,
               "completed" => :success,
               "cancelled" => :destructive,

@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe NightAudits::RunScheduledJob, type: :job do
-  include ActiveSupport::Testing::TimeHelpers
-
   let(:business_date) { Date.new(2026, 4, 23) }
 
   it "runs only for approved and live hotels using yesterday's business date" do
@@ -27,22 +25,16 @@ RSpec.describe NightAudits::RunScheduledJob, type: :job do
     expect(live_audit.status).to eq("pending")
     expect(live_audit.trigger_mode).to eq("scheduled")
 
-    expect(NightAudits::RunJob).to have_received(:perform_later).with(approved_audit.id, nil)
-    expect(NightAudits::RunJob).to have_received(:perform_later).with(live_audit.id, nil)
+    expect(NightAudits::RunJob).to have_received(:perform_later).with(approved_audit.id, nil, allow_unclosable_date: false, force_roll: false)
+    expect(NightAudits::RunJob).to have_received(:perform_later).with(live_audit.id, nil, allow_unclosable_date: false, force_roll: false)
   end
 
   it "continues when one hotel raises" do
     failing_hotel = create(:hotel, :without_current_business_date, status: "approved")
     succeeding_hotel = create(:hotel, :without_current_business_date, status: "live")
 
-    allow_any_instance_of(NightAudit).to receive(:save).and_wrap_original do |original_method, *args|
-      instance = original_method.receiver
-      if instance.hotel_id == failing_hotel.id
-        raise StandardError, "boom"
-      else
-        original_method.call(*args)
-      end
-    end
+    allow(NightAudits::Schedule).to receive(:call).and_call_original
+    allow(NightAudits::Schedule).to receive(:call).with(hash_including(hotel: failing_hotel)).and_raise("boom")
     allow(NightAudits::RunJob).to receive(:perform_later)
 
     expect { described_class.perform_now(business_date) }.not_to raise_error
@@ -55,13 +47,13 @@ RSpec.describe NightAudits::RunScheduledJob, type: :job do
     create(:hotel_business_date, hotel: hotel, business_date: Date.new(2026, 5, 18), status: "open")
     allow(NightAudits::RunJob).to receive(:perform_later)
 
-    travel_to(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 35)) do
+    with_frozen_time(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 35)) do
       described_class.perform_now
     end
 
     audit = hotel.night_audits.find_by(business_date: Date.new(2026, 5, 18))
     expect(audit).to be_present
-    expect(NightAudits::RunJob).to have_received(:perform_later).with(audit.id, nil)
+    expect(NightAudits::RunJob).to have_received(:perform_later).with(audit.id, nil, allow_unclosable_date: false, force_roll: false)
   end
 
   it "does not schedule the current accounting date before it is closable" do
@@ -69,7 +61,7 @@ RSpec.describe NightAudits::RunScheduledJob, type: :job do
     create(:hotel_business_date, hotel: hotel, business_date: Date.new(2026, 5, 18), status: "open")
     allow(NightAudits::RunJob).to receive(:perform_later)
 
-    travel_to(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 25)) do
+    with_frozen_time(Time.find_zone("Kuala Lumpur").local(2026, 5, 19, 2, 25)) do
       described_class.perform_now
     end
 
@@ -92,7 +84,7 @@ RSpec.describe NightAudits::RunScheduledJob, type: :job do
     described_class.perform_now(business_date + 2.days)
     described_class.perform_now(business_date + 3.days)
 
-    expect(NightAudits::RunJob).to have_received(:perform_later).with(blocked_audit.id, nil)
+    expect(NightAudits::RunJob).to have_received(:perform_later).with(blocked_audit.id, nil, allow_unclosable_date: false, force_roll: false)
     expect(NightAudits::RunJob).not_to have_received(:perform_later).with(failed_audit.id, nil)
     expect(NightAudits::RunJob).not_to have_received(:perform_later).with(running_audit.id, nil)
     expect(NightAudits::RunJob).not_to have_received(:perform_later).with(completed_audit.id, nil)

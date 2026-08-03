@@ -39,13 +39,13 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body).to include("#{hotel.hotel_prefix}-#{year.to_s.last(2)}200001")
     end
 
-    it "keeps the existing official print button and printable document" do
+    it "links the official print button to the GRC PDF preview" do
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
       expect(response.body).not_to include('data-official-print="true"')
       expect(response.body.scan("Print official form").size).to eq(1)
-      expect(response.body).to include('onclick="window.print()"')
+      expect(response.body).to include(hotel_booking_guest_registration_card_pdf_path(hotel, booking))
       expect(response.body).to include("grc-print grc-print-page")
     end
 
@@ -56,7 +56,8 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
 
       actions = Nokogiri::HTML(response.body).at_css("aside section")
       expect(actions.text).to include("Configure displayed details")
-      expect(actions.at_xpath("./a")["href"]).to eq("#{hotel_settings_path(hotel, tab: "general")}#guest-registration-card")
+      configure_link = actions.at_xpath(".//a[contains(., 'Configure displayed details')]")
+      expect(configure_link["href"]).to eq("#{hotel_settings_path(hotel, tab: "general")}#guest-registration-card")
     end
 
     it "hides display configuration from staff without profile permission" do
@@ -82,6 +83,33 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
 
       expect(response.body).to include("Stay Name", "stay@example.com", "222", "Malaysia")
       expect(response.body).not_to include("Profile Name", "profile@example.com", "Singapore")
+    end
+
+    it "hides the boat transfer section when the guest has no boat data" do
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).not_to include("Boat-in")
+      expect(response.body).not_to include("Boat-out")
+    end
+
+    it "shows the primary guest's boat transfer times on screen and print card" do
+      hotel.update!(time_zone: "Asia/Kuala_Lumpur")
+      create(
+        :booking_guest,
+        booking: booking,
+        is_primary: true,
+        boat_in_at: ActiveSupport::TimeZone["Asia/Kuala_Lumpur"].parse("2026-08-01 08:00"),
+        boat_out_at: ActiveSupport::TimeZone["Asia/Kuala_Lumpur"].parse("2026-08-05 15:30")
+      )
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      document = Nokogiri::HTML(response.body)
+      [ document.at_css("section.grc-no-print"), document.at_css("article.grc-print") ].each do |card|
+        text = card.text
+        expect(text).to include("Boat-in", "01 Aug 2026, 08:00 AM")
+        expect(text).to include("Boat-out", "05 Aug 2026, 03:30 PM")
+      end
     end
 
     it "shows room type by default on screen and print card" do
@@ -124,7 +152,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(card.reload.display_fields_snapshot).to eq(%w[email room_type])
     end
 
-    it "renders the booking's special requests as Remark and internal notes as Notes under check-in time" do
+    it "renders the booking's special requests as Remark and internal notes as Please Note, with check-in/check-out times combined into the date" do
       create(:property_policy, hotel: hotel, check_in_time: "3:00 PM", check_out_time: "11:00 AM")
       booking.update!(special_requests: "Please provide a quiet room.", internal_notes: "VIP guest, prioritize service.")
 
@@ -135,9 +163,9 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body).to include("Please provide a quiet room.")
       expect(response.body).to include("Please Note")
       expect(response.body).to include("VIP guest, prioritize service.")
-      expect(response.body).to include("Check-in time")
+      expect(response.body).not_to include("Check-in time")
+      expect(response.body).not_to include("Check-out time")
       expect(response.body).to include("3:00 PM")
-      expect(response.body).to include("Check-out time")
       expect(response.body).to include("11:00 AM")
 
       document = Nokogiri::HTML(response.body)

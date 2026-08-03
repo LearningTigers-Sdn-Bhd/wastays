@@ -105,10 +105,25 @@ module HotelPortal
     def allocate_deposit
       deposit = accessible_deposits.find(params[:deposit_id] || params[:group_deposit_id])
       folio = eligible_folios_for(deposit).find(params[:booking_folio_id])
-      result = ::Deposits::Apply.call(
-        deposit: deposit, booking_folio: folio, amount: params[:amount], actor: current_user,
-        reason: params[:reason], operation_key: params[:operation_key]
-      )
+      result = if deposit.kind_security?
+        code = current_hotel.transaction_codes.active.charge
+          .where(system_key: Deposits::Deduct::ALLOWED_REASON_KEYS).find_by(id: params[:transaction_code_id])
+        ::Deposits::Deduct.call(
+          deposit: deposit,
+          booking_folio: folio,
+          amount: params[:amount],
+          transaction_code: code,
+          actor: current_user,
+          posting_date: current_hotel.current_business_date,
+          details: params[:details],
+          operation_key: params[:operation_key]
+        )
+      else
+        ::Deposits::Apply.call(
+          deposit: deposit, booking_folio: folio, amount: params[:amount], actor: current_user,
+          reason: params[:reason], operation_key: params[:operation_key]
+        )
+      end
       redirect_with_result(result, tab: "folio_operations", folio_id: folio.id)
     end
 

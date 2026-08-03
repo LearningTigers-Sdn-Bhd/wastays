@@ -1,0 +1,46 @@
+<% details = item.details %>
+<% path = case action.key
+  when :late_checkout then hotel_booking_action_late_checkout_path(current_hotel, item.booking_id, return_to:)
+  when :checkout then hotel_booking_action_checkout_path(current_hotel, item.booking_id, return_to:)
+  when :backdated_check_in then hotel_booking_action_review_backdated_check_in_path(current_hotel, item.booking_id, return_to:)
+  when :mark_no_show then hotel_booking_action_mark_no_show_path(current_hotel, item.booking_id, return_to:)
+  when :open_booking, :open_folio then hotel_booking_action_show_booking_path(current_hotel, item.booking_id, return_to:)
+  when :booking_timestamp then booking_timestamp_hotel_night_audit_run_path(current_hotel, booking_id: item.booking_id, timestamp_kind: item.type == "completed_missing_timestamp" ? "check_out" : "check_in", return_to:, parent_frame: turbo_frame_request_id)
+  when :record_payment then hotel_folio_action_post_transaction_path(current_hotel, item.booking_id, transaction_type: "payment", return_to:)
+  when :create_folio then resolve_missing_folio_hotel_night_audit_run_path(current_hotel)
+  when :add_room_charges then resolve_missing_nightly_charges_hotel_night_audit_run_path(current_hotel)
+  when :add_payment then resolve_unsynced_payment_hotel_night_audit_run_path(current_hotel)
+  when :add_refund then resolve_unsynced_refund_hotel_night_audit_run_path(current_hotel)
+  when :refresh then start_review_hotel_night_audit_run_path(current_hotel)
+  end %>
+<% direct_post = action.key.in?(%i[create_folio add_room_charges add_payment add_refund refresh]) %>
+<% variant = action.variant == :destructive ? :danger : :default %>
+<% item_data = if direct_post
+  { turbo_frame: turbo_frame_request_id, turbo_method: :post, turbo_submits_with: "Working…" }
+else
+  { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }
+end %>
+<% query_params = {
+  return_to: @return_to,
+  night_audit_run: {
+    booking_id: item.booking_id,
+    payment_transaction_id: details["payment_transaction_id"],
+    refund_request_id: details["refund_request_id"]
+  }.compact
+} %>
+<% href = direct_post ? "#{path}?#{query_params.to_query}" : path %>
+
+<% if local_assigns[:menu] %>
+  <% menu.with_item(href:, method: (direct_post ? :post : nil), variant:, data: item_data) do %>
+    <span><%= action.label %></span>
+  <% end %>
+<% else %>
+  <%= render PanelsUI::Button.new(
+        as: :a,
+        href:,
+        variant: action.variant == :destructive ? :destructive : action.variant,
+        size: :sm,
+        data: item_data) do %>
+    <%= action.label %>
+  <% end %>
+<% end %>

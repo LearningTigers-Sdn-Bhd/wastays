@@ -10,7 +10,7 @@ module Concierge
         return Result.failure(message: "Checkout requests can only be submitted for checked-in bookings.")
       end
 
-      if @booking.check_out_requests.where(status: %w[new assigned in_progress pending acknowledged]).exists?
+      if @booking.check_out_requests.open_tasks.exists?
         return Result.failure(message: "A checkout request is already pending for this booking.")
       end
 

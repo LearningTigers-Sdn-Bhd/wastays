@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal::Bookings::Actions booking dates", :business_day, type: :request do
+RSpec.describe "HotelPortal::Bookings::Actions booking dates", frozen_time: :business_day, type: :request do
   let(:hotel) { create(:hotel, status: "approved") }
   let(:other_hotel) { create(:hotel, status: "approved") }
   let(:user) { create(:user, account: hotel.account) }
@@ -75,7 +75,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking dates", :business_day, ty
     }, headers: { "Turbo-Frame" => "booking_action_sheet" }
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Review the proposed stay dates", "Nothing changes until you save")
+    expect(response.body).to include("Check the proposed stay dates", "Nothing changes until you save")
     expect([ booking.reload.check_in, booking.check_out ]).to eq(original)
   end
 

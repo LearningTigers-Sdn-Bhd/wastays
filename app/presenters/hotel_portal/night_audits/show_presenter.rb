@@ -18,7 +18,7 @@ module HotelPortal
       [ "Failed Items", "failed_items", "danger" ]
     ].freeze
     BLOCKER_LABELS = { "missing_folio" => "Accounting blocker" }.freeze
-    WARNING_LABELS = { "review_due_out" => "Due-out review carried forward" }.freeze
+    WARNING_LABELS = { "due_out_detected" => "Due-out detected and carried forward" }.freeze
 
     attr_reader :night_audit, :adjustments, :completed_nightly_review, :current_user, :view
 

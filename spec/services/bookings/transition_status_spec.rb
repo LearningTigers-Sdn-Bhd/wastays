@@ -413,7 +413,7 @@ RSpec.describe Bookings::TransitionStatus do
 
       it "checks out a checkout-required booking" do
         folio = create_settled_folio
-        booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+        booking.transition_status_to!("due_out_detected", event: "detect_due_out")
         booking.transition_status_to!("checkout_required", event: "reject_late_checkout")
 
         result = subject.call
@@ -424,15 +424,15 @@ RSpec.describe Bookings::TransitionStatus do
         expect(folio.reload.status).to eq("closed")
       end
 
-      it "does not check out directly from due-out review" do
+      it "does not check out directly from a detected due-out" do
         folio = create_settled_folio
-        booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+        booking.transition_status_to!("due_out_detected", event: "detect_due_out")
 
         result = subject.call
 
         expect(result.success?).to be false
-        expect(result.error).to eq("Cannot check out booking with status review_due_out")
-        expect(booking.reload.status).to eq("review_due_out")
+        expect(result.error).to eq("Cannot check out booking with status due_out_detected")
+        expect(booking.reload.status).to eq("due_out_detected")
         expect(folio.reload.status).to eq("open")
       end
 
@@ -494,20 +494,11 @@ RSpec.describe Bookings::TransitionStatus do
         expect(room_status.dnd).to be false
         expect(room_status.dnd_date).to be_nil
 
-        # Verify checkout request is created (not a housekeeping request)
-        checkout_req = CheckOutRequest.find_by(booking: booking)
-        expect(checkout_req).to be_present
-        expect(checkout_req.status).to eq("new")
-        expect(checkout_req.guest_notes).to eq("Checkout Room Cleaning")
-        expect(checkout_req.metadata["room_number"]).to eq("101")
-
-        # Verify no HousekeepingRequest is created at checkout time
-        # (it will be backfilled on-demand by the housekeeping tasks controller)
-        hk_req = HousekeepingRequest.find_by(booking: booking, room_number: "101")
-        expect(hk_req).to be_nil
+        expect(CheckOutRequest.find_by(booking: booking)).to be_nil
+        expect(HousekeepingRequest.operational_tasks.where(booking: booking, room_number: "101")).to be_empty
       end
 
-      it "creates one checkout request per child in a group booking" do
+      it "creates one turnover per room across a group booking" do
         group_booking = create(:group_booking, hotel: booking.hotel)
         booking.update!(group_booking: group_booking, group_position: 1)
         sibling = create(
@@ -532,12 +523,9 @@ RSpec.describe Bookings::TransitionStatus do
         expect(first_result.success?).to be(true)
         expect(second_result.success?).to be(true)
         expect(group_booking.bookings.reload).to all(satisfy { |child| child.booking_rooms.one? })
-        expect(booking.reload.check_out_requests.count).to eq(1)
-        expect(booking.check_out_requests.first.guest_notes).to eq("Checkout Room Cleaning")
-        expect(booking.check_out_requests.first.metadata["room_number"]).to eq("101")
-        expect(sibling.reload.check_out_requests.count).to eq(1)
-        expect(sibling.check_out_requests.first.metadata["room_number"]).to eq("102")
-        expect(HousekeepingRequest.where(booking: [ booking, sibling ], request_details: "Checkout Room Cleaning")).to be_empty
+
+        expect(HousekeepingRequest.operational_tasks.where(booking: [ booking, sibling ])).to be_empty
+        expect(CheckOutRequest.where(booking: [ booking, sibling ])).to be_empty
       end
     end
 
@@ -586,14 +574,14 @@ RSpec.describe Bookings::TransitionStatus do
         expect(booking.reload.status).to eq("checked_in")
       end
 
-      it "cancels a no-show review without charges and releases its assigned room" do
+      it "cancels a detected no-show without charges and releases its assigned room" do
         room_type = create(:room_type, hotel: booking.hotel, room_numbers: [ "101" ])
         create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
         room_status = create(:room_status, hotel: booking.hotel, room_type: room_type, room_number: "101", status: "dirty")
         booking.transition_status_to!(
-          "review_no_show",
-          event: "review_no_show",
-          attributes: { no_show_review_business_date: booking.check_in.to_date }
+          "no_show_detected",
+          event: "detect_no_show",
+          attributes: { no_show_detected_business_date: booking.check_in.to_date }
         )
 
         result = described_class.new(booking: booking, status: "cancelled", user: user, options: { reason: "Guest cancelled" }).call
@@ -632,9 +620,9 @@ RSpec.describe Bookings::TransitionStatus do
       context "when booking was finalized as no_show" do
         it "requires the dedicated reinstatement workflow" do
           booking.transition_status_to!(
-            "review_no_show",
-            event: "review_no_show",
-            attributes: { no_show_review_business_date: business_date }
+            "no_show_detected",
+            event: "detect_no_show",
+            attributes: { no_show_detected_business_date: business_date }
           )
           booking.transition_status_to!("no_show", event: "mark_no_show")
 

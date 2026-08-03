@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::VoidBooking, :business_day do
+RSpec.describe Bookings::VoidBooking, frozen_time: :business_day do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, account: hotel.account) }
 
@@ -16,7 +16,7 @@ RSpec.describe Bookings::VoidBooking, :business_day do
         :booking,
         hotel:,
         status:,
-        no_show_review_business_date: (Date.current if status == "review_no_show")
+        no_show_detected_business_date: (Date.current if status == "no_show_detected")
       )
 
       result = described_class.call(booking:, user:, reason: "Administrative correction")

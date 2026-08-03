@@ -18,7 +18,7 @@ class Guest::BookingsController < Guest::BaseController
     end
 
     if @status_filter.present? && @status_options.include?(@status_filter)
-      scope = @status_filter == "confirmed" ? scope.where(status: %w[confirmed review_no_show]) : scope.where(status: @status_filter)
+      scope = @status_filter == "confirmed" ? scope.where(status: %w[confirmed no_show_detected]) : scope.where(status: @status_filter)
     end
 
     @all_bookings = scope.order(check_in: :desc)

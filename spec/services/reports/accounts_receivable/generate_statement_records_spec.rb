@@ -43,7 +43,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateStatementRecords do
   end
 
   it "uses inclusive boundaries and deterministic invoice-before-payment ordering" do
-    travel_to Time.zone.local(2026, 6, 1, 10, 0, 0) do
+    with_frozen_time Time.zone.local(2026, 6, 1, 10, 0, 0) do
       create_invoice(amount: 75, issued_on: start_date, due_on: end_date, token: "BOUNDARY")
       create_payment(amount: 25, received_at: start_date, reference: "PAY-BOUNDARY")
     end
@@ -57,10 +57,10 @@ RSpec.describe Reports::AccountsReceivable::GenerateStatementRecords do
   it "reconstructs allocations and reversals as of the statement end date" do
     invoice = create_invoice(amount: 100, issued_on: Date.new(2026, 6, 1), due_on: Date.new(2026, 6, 15), token: "ALLOC")
     payment = create_payment(amount: 100, received_at: Date.new(2026, 6, 10), reference: "PAY-ALLOC")
-    allocation = travel_to(Time.zone.local(2026, 6, 10, 12, 0, 0)) do
+    allocation = with_frozen_time(Time.zone.local(2026, 6, 10, 12, 0, 0)) do
       create(:ar_payment_allocation, ar_payment: payment, ar_invoice: invoice, amount: 60)
     end
-    travel_to Time.zone.local(2026, 7, 1, 9, 0, 0) do
+    with_frozen_time Time.zone.local(2026, 7, 1, 9, 0, 0) do
       create(:ar_payment_allocation_reversal, ar_payment_allocation: allocation, reversed_by: create(:user), reversed_at: Time.current)
     end
 

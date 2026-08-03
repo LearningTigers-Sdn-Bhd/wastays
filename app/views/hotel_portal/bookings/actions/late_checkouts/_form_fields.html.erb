@@ -1,12 +1,25 @@
 <%= render PanelsUI::RadioGroup.new(
-      form: form, attribute: :charge_type,
-      label: "Do you approve this booking late checkout?",
-      orientation: :horizontal,
+      form: form, attribute: :resolution,
+      label: "Choose what should happen.",
+      variant: :card,
       size: :sm,
-      selected: params[:charge_type] || "charge",
+      selected: params[:resolution] || "charge",
       options: [
-        { label: "Yes, approve with charges", value: "charge" },
-        { label: "No, reject it", value: "none" }
+        {
+          label: "Allow later checkout and add a charge",
+          value: "charge",
+          description: "Extend the scheduled checkout and post the calculated late-checkout charge."
+        },
+        {
+          label: "Allow later checkout without a charge",
+          value: "waive",
+          description: "Extend the scheduled checkout without adding a late-checkout charge."
+        },
+        {
+          label: "Require checkout now",
+          value: "reject",
+          description: "Keep the scheduled checkout unchanged and require the guest to check out."
+        }
       ],
       data: { action: "change->booking-actions--late-checkout#updateUI" }) %>
 

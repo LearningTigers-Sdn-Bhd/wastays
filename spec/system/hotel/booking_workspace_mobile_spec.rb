@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Booking workspace mobile entity selection", :business_day, type: :system do
+RSpec.describe "Booking workspace mobile entity selection", frozen_time: :business_day, type: :system do
   include_context "booking workspace system setup"
 
   it "selects a folio from the mobile Sheet and focuses its heading", :mobile, js: true do

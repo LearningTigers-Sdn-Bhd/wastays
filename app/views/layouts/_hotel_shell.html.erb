@@ -64,7 +64,7 @@
             </div>
           <% end %>
 
-          <div class="flex min-h-0 flex-1 flex-col <%= content_for?(:full_height_page) ? '' : 'overflow-y-auto [scrollbar-gutter:stable]' %> overscroll-contain custom-scrollbar">
+          <div class="flex min-h-0 flex-1 flex-col <%= content_for?(:full_height_page) ? '' : 'overflow-y-auto [scrollbar-gutter:stable]' %> <%= content_for?(:page_overscroll_class) ? content_for(:page_overscroll_class) : 'overscroll-contain' %> custom-scrollbar">
             <div class="panel-page <%= content_for?(:full_height_page) ? 'panel-page--workspace' : 'space-y-5' %>">
               <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : 'grid grid-cols-1' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:grid-cols-4 gap-6' : '' %>">
                 <div class="<%= content_for?(:full_height_page) ? 'flex min-h-0 flex-1 flex-col' : '' %> <%= (!locked_hotel_portal_shell? && content_for?(:right_sidebar)) ? 'xl:col-span-3' : '' %>">
@@ -89,6 +89,8 @@
     <%= render "shared/offcanvas_drawer_secondary" %>
     <%= turbo_frame_tag "booking_action_sheet" %>
     <%= turbo_frame_tag "booking_action_sheet_secondary" %>
+    <%= turbo_frame_tag "housekeeping_action_sheet" %>
+    <%= turbo_frame_tag "requests_action_sheet" %>
     <%= turbo_frame_tag "folio_action_sheet" %>
     <%= turbo_frame_tag "folio_action_sheet_secondary" %>
     <%= turbo_frame_tag "external_account_sheet" %>

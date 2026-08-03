@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_02_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -247,7 +247,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.bigint "user_id"
     t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
-    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
     t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
     t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
@@ -529,7 +528,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.decimal "margin_amount", precision: 15, scale: 2
     t.decimal "margin_rate", precision: 10, scale: 4
     t.decimal "net_amount", precision: 15, scale: 2
-    t.date "no_show_review_business_date"
+    t.date "no_show_detected_business_date"
     t.string "payment_status", default: "pending", null: false
     t.datetime "payout_at"
     t.bigint "payout_batch_id"
@@ -570,7 +569,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.index ["hotel_id", "receipt_number"], name: "idx_bookings_on_hotel_receipt_number", unique: true, where: "(receipt_number IS NOT NULL)"
     t.index ["hotel_id", "reservation_reference"], name: "index_bookings_on_hotel_id_and_reservation_reference", unique: true, where: "(reservation_reference IS NOT NULL)"
     t.index ["hotel_id", "reservation_year", "reservation_number"], name: "idx_bookings_reservation_year_number", unique: true, where: "(reservation_number IS NOT NULL)"
-    t.index ["hotel_id", "status", "no_show_review_business_date"], name: "index_bookings_on_hotel_status_no_show_review_date"
+    t.index ["hotel_id", "status", "no_show_detected_business_date"], name: "index_bookings_on_hotel_status_no_show_detected_date"
     t.index ["hotel_id", "tourism_tax_voucher_reference"], name: "index_bookings_on_hotel_id_and_tourism_tax_voucher_reference", unique: true, where: "(tourism_tax_voucher_reference IS NOT NULL)"
     t.index ["hotel_id", "tourism_tax_voucher_year", "tourism_tax_voucher_number"], name: "idx_bookings_tourism_voucher_year_number", unique: true, where: "(tourism_tax_voucher_number IS NOT NULL)"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
@@ -655,6 +654,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.datetime "acknowledged_at"
     t.bigint "acknowledged_by_user_id"
     t.bigint "booking_id", null: false
+    t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.text "guest_notes"
     t.jsonb "metadata", default: {}, null: false
@@ -662,6 +662,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.index ["acknowledged_by_user_id"], name: "index_check_out_requests_on_acknowledged_by_user_id"
+    t.index ["booking_id", "completed_at"], name: "index_check_out_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_check_out_requests_on_booking_id_and_requested_at"
     t.index ["booking_id", "status"], name: "index_check_out_requests_on_booking_id_and_status"
     t.index ["booking_id"], name: "index_check_out_requests_on_booking_id"
@@ -1372,15 +1373,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.bigint "room_type_id"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.string "work_context", default: "guest_request", null: false
     t.index ["booking_id", "archived_at"], name: "index_housekeeping_requests_on_booking_id_and_archived_at"
+    t.index ["booking_id", "completed_at"], name: "index_housekeeping_requests_on_booking_id_and_completed_at"
     t.index ["booking_id", "requested_at"], name: "index_housekeeping_requests_on_booking_id_and_requested_at"
     t.index ["booking_id", "status"], name: "index_housekeeping_requests_on_booking_id_and_status"
     t.index ["booking_id"], name: "index_housekeeping_requests_on_booking_id"
     t.index ["external_id"], name: "index_housekeeping_requests_on_external_id", unique: true
+    t.index ["hotel_id", "completed_at"], name: "index_housekeeping_requests_on_hotel_id_and_completed_at"
+    t.index ["hotel_id", "requested_at"], name: "index_housekeeping_requests_on_hotel_id_and_requested_at"
     t.index ["hotel_id", "room_number"], name: "index_housekeeping_requests_on_hotel_id_and_room_number"
     t.index ["hotel_id", "status"], name: "index_housekeeping_requests_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_housekeeping_requests_on_hotel_id"
     t.index ["room_type_id"], name: "index_housekeeping_requests_on_room_type_id"
+    t.index ["work_context", "status", "requested_at"], name: "idx_housekeeping_requests_context_status_requested"
+    t.index ["work_context"], name: "index_housekeeping_requests_on_work_context"
   end
 
   create_table "inventory_audit_logs", force: :cascade do |t|
@@ -2024,6 +2031,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
   end
 
   create_table "room_statuses", force: :cascade do |t|
+    t.bigint "assigned_to_id"
     t.datetime "created_at", null: false
     t.boolean "dnd", default: false, null: false
     t.date "dnd_date"
@@ -2037,6 +2045,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
     t.bigint "room_type_id", null: false
     t.string "status", default: "ready", null: false
     t.datetime "updated_at", null: false
+    t.index ["assigned_to_id"], name: "index_room_statuses_on_assigned_to_id"
     t.index ["hotel_id", "dnd", "dnd_date"], name: "index_room_statuses_on_hotel_id_and_dnd_and_dnd_date"
     t.index ["hotel_id", "priority"], name: "index_room_statuses_on_hotel_id_and_priority"
     t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_statuses_on_hotel_room_type_number", unique: true
@@ -2399,6 +2408,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_112056) do
   add_foreign_key "room_rates", "room_types"
   add_foreign_key "room_statuses", "hotels"
   add_foreign_key "room_statuses", "room_types"
+  add_foreign_key "room_statuses", "users", column: "assigned_to_id"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
   add_foreign_key "room_type_rate_plans", "rate_plans"
   add_foreign_key "room_type_rate_plans", "room_types"

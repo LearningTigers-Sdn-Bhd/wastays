@@ -45,6 +45,11 @@ Turbo.StreamActions.complete_sheet = function() {
   const dialog = frame?.querySelector("dialog")
   const controller = dialog && window.Stimulus?.getControllerForElementAndIdentifier(dialog, "panels-ui--sheet")
   const url = this.getAttribute("url")
+  let parentFrameId = null
+  if (url) {
+    const destination = new URL(url, window.location.origin)
+    parentFrameId = destination.searchParams.get("parent_frame")
+  }
 
   if (dialog && url) dialog.dataset.panelsNavigationPending = "true"
 
@@ -54,7 +59,15 @@ Turbo.StreamActions.complete_sheet = function() {
     dialog?.close()
   }
 
-  if (url) {
+  if (url && parentFrameId) {
+    setTimeout(() => {
+      const parentFrame = document.getElementById(parentFrameId)
+      if (!parentFrame) return refreshPage(url)
+
+      parentFrame.src = url
+      parentFrame.reload()
+    }, 325)
+  } else if (url) {
     setTimeout(() => refreshPage(url), 325)
   }
 }

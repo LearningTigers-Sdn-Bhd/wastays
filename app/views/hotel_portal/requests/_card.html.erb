@@ -1,0 +1,62 @@
+<%#
+  One card on the board, shared by the first page and every page scrolled after
+  it, and by the archive.
+
+  Locals: card, column, presenter
+%>
+<% draggable = presenter.card_draggable?(card, column) %>
+<article
+  id="<%= card.dom_id %>"
+  draggable="<%= draggable %>"
+  data-requests-board-target="card"
+  data-request-kind="<%= card.kind %>"
+  data-record-kind="<%= card.record_kind %>"
+  data-request-id="<%= card.request_id %>"
+  data-card-column="<%= column.key %>"
+  data-current-status="<%= card.status %>"
+  <% if draggable %>
+    tabindex="0"
+    role="button"
+    aria-label="<%= "#{card.kind} request for #{card.guest_name}. Press Enter to pick up and move." %>"
+    data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd keydown->requests-board#cardKeydown"
+  <% end %>
+  class="group rounded-lg border border-border bg-card p-3 transition-colors hover:border-border-interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-grabbed:opacity-60 <%= "cursor-grab active:cursor-grabbing" if draggable %>"
+>
+  <div class="mb-2.5 flex items-center justify-between gap-2">
+    <div class="flex min-w-0 items-center gap-2">
+      <%= render PanelsUI::Badge.new(
+            label: card.kind.humanize,
+            variant: presenter.kind_badge_variant(card),
+            size: :sm,
+            shape: :rounded
+          ) %>
+      <span class="truncate font-mono text-xs text-muted-foreground"><%= presenter.card_token_label(card) %></span>
+    </div>
+    <%= render PanelsUI::Badge.new(
+          label: card.status.to_s.humanize,
+          variant: presenter.status_badge_variant(card),
+          size: :sm,
+          shape: :rounded,
+          class: "shrink-0"
+        ) %>
+  </div>
+
+  <%= link_to presenter.detail_path(card), class: "block w-full text-left", data: { turbo_frame: "requests_action_sheet" } do %>
+    <p class="line-clamp-2 text-sm font-semibold leading-5 text-foreground transition-colors group-hover:text-primary"><%= card.title %></p>
+  <% end %>
+
+  <div class="mt-3 flex items-end justify-between gap-2 border-t border-border pt-2.5">
+    <div class="flex min-w-0 flex-col">
+      <span class="max-w-[140px] truncate text-xs font-medium text-foreground"><%= card.guest_name %></span>
+      <span class="text-xs text-muted-foreground"><%= presenter.formatted_requested_at(card) %></span>
+    </div>
+    <% if (action = presenter.card_action(card, column)) %>
+      <div class="flex shrink-0 items-center gap-2">
+        <%= button_to action[:url], params: action[:params], method: :patch, class: action[:css], title: action[:title] do %>
+          <%= cached_icon action[:icon], **(action[:icon_opts] || {}), class: "size-3.5" %>
+          <%= action[:label] %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</article>

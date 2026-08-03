@@ -38,9 +38,9 @@ RSpec.describe Financials::EnsureDefaultGlMaps, type: :service do
       expect(booking_payment.gl_code).to eq('2020')
       expect(booking_payment.description).to eq('Booking Payment Liability')
 
-      security_deposits = hotel.hotel_general_ledger_maps.find_by(transaction_category: 'security_deposits')
-      expect(security_deposits.gl_code).to eq('2030')
-      expect(security_deposits.description).to eq('Security Deposit Liability')
+      security_deposit = hotel.hotel_general_ledger_maps.find_by(transaction_category: 'security_deposit')
+      expect(security_deposit.gl_code).to eq('2030')
+      expect(security_deposit.description).to eq('Security Deposit Liability')
 
       write_off = hotel.hotel_general_ledger_maps.find_by(transaction_category: 'write_off')
       expect(write_off.gl_code).to eq('5040')

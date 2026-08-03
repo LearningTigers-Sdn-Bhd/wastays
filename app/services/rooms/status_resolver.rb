@@ -1,22 +1,31 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
 module Rooms
   class StatusResolver
-    def initialize(hotel:, room_type:, room_number:, date:, bookings_scope: nil, blocks_scope: nil)
+    # What resolving a room on a date answers. A named type rather than an
+    # OpenStruct, so a caller asking for something it does not have fails loudly
+    # instead of quietly reading nil.
+    Resolution = Data.define(:status, :assignable, :room_status, :booking_state, :booking_details) do
+      # The stay the room is shown against: whoever is in it, or last was.
+      def active_booking
+        booking_details[:active]&.first || booking_details[:completed]&.first
+      end
+    end
+
+    def initialize(hotel:, room_type:, room_number:, date:, bookings_scope: nil, blocks_scope: nil, statuses_scope: nil)
       @hotel = hotel
       @room_type = room_type
       @room_number = room_number.to_s
       @date = date
       @provided_bookings = bookings_scope
       @provided_blocks = blocks_scope
+      @provided_statuses = statuses_scope
     end
 
     def call
       booking_info = resolve_booking_info
 
-      OpenStruct.new(
+      Resolution.new(
         status: physical_status,
         assignable: physical_status == "ready",
         room_status: persisted_status,
@@ -49,13 +58,13 @@ module Rooms
       covering_bks = bks.select { |b| @date >= b.check_in.to_date && @date < b.check_out.to_date }
 
       # Priority 1: Checked In (Occupied/Red)
-      checked_in_bks = covering_bks.select { |b| b.status.in?(%w[checked_in review_due_out checkout_required]) }
+      checked_in_bks = covering_bks.select { |b| b.status.in?(%w[checked_in due_out_detected checkout_required]) }
       if checked_in_bks.any?
         return { state: :occupied, details: { active: checked_in_bks } }
       end
 
       # Priority 2: Confirmed (Arriving/Yellow)
-      confirmed_bks = covering_bks.select { |b| b.status.in?(%w[confirmed review_no_show]) }
+      confirmed_bks = covering_bks.select { |b| b.status.in?(%w[confirmed no_show_detected]) }
       if confirmed_bks.any?
         return { state: :arrival, details: { active: confirmed_bks } }
       end
@@ -74,7 +83,7 @@ module Rooms
       # We check checked_in status specifically for the "occupied" physical status
       # This is different from the timeline colors which show "stay" for any confirmed booking
       bks = bookings
-      bks.any? { |b| b.status.in?(%w[checked_in review_due_out checkout_required]) && b.check_in.to_date <= @date && b.check_out.to_date > @date }
+      bks.any? { |b| b.status.in?(%w[checked_in due_out_detected checkout_required]) && b.check_in.to_date <= @date && b.check_out.to_date > @date }
     end
 
     def bookings
@@ -83,7 +92,7 @@ module Rooms
           @provided_bookings
         else
           @hotel.bookings
-            .where(status: %w[confirmed review_no_show checked_in review_due_out checkout_required completed])
+            .where(status: %w[confirmed no_show_detected checked_in due_out_detected checkout_required completed])
             .joins(:booking_rooms)
             .where(booking_rooms: { room_type_id: @room_type.id, room_number: @room_number })
             .distinct
@@ -103,7 +112,11 @@ module Rooms
     end
 
     def persisted_status
-      @persisted_status ||= @hotel.room_statuses.find_by(room_type_id: @room_type.id, room_number: @room_number)
+      @persisted_status ||= if @provided_statuses
+        @provided_statuses.first
+      else
+        @hotel.room_statuses.find_by(room_type_id: @room_type.id, room_number: @room_number)
+      end
     end
   end
 end

@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Hotel Stay View", type: :system, js: true do
-  around { |example| travel_to(Time.zone.local(2026, 7, 16, 10, 0, 0)) { example.run } }
-
+RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zone.local(2026, 7, 16, 10) do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account:, status: "approved", accounting_business_date: Date.current) }
   let(:user) { create(:user, account:, role: "hotel_staff") }
@@ -381,7 +379,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true do
     hotel.update!(plan:)
     feature = create(:feature, slug: "task_assignment_minibar_log")
     create(:plan_feature, plan:, feature:, enabled: true)
-    %w[manage_housekeeping_tasks manage_requests].each do |slug|
+    %w[dispatch_housekeeping_tasks manage_requests].each do |slug|
       permission = Permission.find_or_create_by!(slug:) { |record| record.name = slug.humanize }
       RolePermission.find_or_create_by!(role:, permission:)
     end

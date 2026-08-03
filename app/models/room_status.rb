@@ -14,6 +14,7 @@ class RoomStatus < ApplicationRecord
   end
   belongs_to :room_type
   belongs_to :last_changed_by, class_name: "User", optional: true
+  belongs_to :assigned_to, class_name: "User", optional: true
 
   validates :room_number, presence: true, uniqueness: { scope: [ :hotel_id, :room_type_id ] }
   validates :status, presence: true, inclusion: { in: STATUSES }

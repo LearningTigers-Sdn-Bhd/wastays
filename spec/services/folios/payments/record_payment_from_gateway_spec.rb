@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Folios::Payments::RecordPaymentFromGateway do
-  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
-
+RSpec.describe Folios::Payments::RecordPaymentFromGateway, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:booking) { create(:booking) }
   let(:folio) { create(:booking_folio, booking: booking) }
   let(:payment_transaction) do

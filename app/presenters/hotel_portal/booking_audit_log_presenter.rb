@@ -5,9 +5,9 @@ module HotelPortal
     STATUS_LABELS = {
       "pending" => "Pending",
       "confirmed" => "Confirmed",
-      "review_no_show" => "Pending no-show review",
+      "no_show_detected" => "No-show detected",
       "checked_in" => "Checked in",
-      "review_due_out" => "Pending late-checkout review",
+      "due_out_detected" => "Due-out detected",
       "cancelled" => "Cancelled",
       "completed" => "Checked out",
       "overbooked" => "Overbooked",

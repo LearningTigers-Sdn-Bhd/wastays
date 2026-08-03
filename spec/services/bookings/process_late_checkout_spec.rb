@@ -11,7 +11,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
   let!(:folio) { Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user) }
 
   before do
-    booking.transition_status_to!("review_due_out", event: "detect_late_checkout")
+    booking.transition_status_to!("due_out_detected", event: "detect_due_out")
   end
 
   it "updates the checkout period, posts a charge, and resolves the booking" do
@@ -20,7 +20,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { charge_type: "charge", amount: "150.00", check_out: new_check_out.to_s }
+      params: { resolution: "charge", amount: "150.00", check_out: new_check_out.to_s }
     )
 
     expect(result).to be_success
@@ -30,11 +30,59 @@ RSpec.describe Bookings::ProcessLateCheckout do
     expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(150.0)
   end
 
+  it "updates the checkout period and resolves the booking without a charge" do
+    new_check_out = Date.current + 2.days
+
+    result = described_class.call(
+      booking: booking,
+      user: user,
+      params: { resolution: "waive", check_out: new_check_out.to_s }
+    )
+
+    expect(result).to be_success
+    expect(result).not_to be_charged
+    expect(result).not_to be_rejected
+    expect(booking.reload.status).to eq("checked_in")
+    expect(booking.check_out.to_date).to eq(new_check_out)
+    expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+  end
+
+  it "restores the physical room status recorded before housekeeping detected the late checkout" do
+    room_status = create(
+      :room_status,
+      hotel: hotel,
+      room_type: room_type,
+      room_number: "101",
+      status: "late_checkout_detected",
+      notes: "Guest still in room"
+    )
+    create(
+      :room_operational_audit_log,
+      hotel: hotel,
+      room_type: room_type,
+      booking: booking,
+      user: user,
+      room_number: "101",
+      event_type: "room_status_changed",
+      old_status: "dirty",
+      new_status: "late_checkout_detected"
+    )
+
+    result = described_class.call(
+      booking: booking,
+      user: user,
+      params: { resolution: "waive", check_out: (Date.current + 2.days).to_s }
+    )
+
+    expect(result).to be_success
+    expect(room_status.reload.status).to eq("dirty")
+  end
+
   it "rejects late checkout and marks checkout required without posting a charge" do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { charge_type: "none", check_out: (Date.current + 2.days).to_s }
+      params: { resolution: "reject", check_out: (Date.current + 2.days).to_s }
     )
 
     expect(result).to be_success
@@ -45,12 +93,27 @@ RSpec.describe Bookings::ProcessLateCheckout do
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
   end
 
+  it "retains the late checkout room alert when Front Desk rejects the request" do
+    room_status = create(
+      :room_status,
+      hotel: hotel,
+      room_type: room_type,
+      room_number: "101",
+      status: "late_checkout_detected"
+    )
+
+    result = described_class.call(booking: booking, user: user, params: { resolution: "reject" })
+
+    expect(result).to be_success
+    expect(room_status.reload.status).to eq("late_checkout_detected")
+  end
+
   it "allows a later Night Audit to post normal charges after the stay is extended" do
     next_business_date = Date.current + 1.day
     described_class.call(
       booking: booking,
       user: user,
-      params: { charge_type: "charge", amount: "150.00", check_out: (Date.current + 2.days).to_s }
+      params: { resolution: "charge", amount: "150.00", check_out: (Date.current + 2.days).to_s }
     )
     audit = create(:night_audit, hotel: hotel, business_date: next_business_date, status: "running", performed_by_user: user)
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: next_business_date)
@@ -63,17 +126,17 @@ RSpec.describe Bookings::ProcessLateCheckout do
     expect(booking.reload.status).to eq("checked_in")
   end
 
-  it "fails when the booking is not pending late checkout review" do
+  it "fails when the booking does not have a detected due-out" do
     booking.transition_status_to!("checked_in", event: "resolve_late_checkout")
 
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { charge_type: "charge", amount: "150.00" }
+      params: { resolution: "charge", amount: "150.00" }
     )
 
     expect(result).not_to be_success
-    expect(result.error).to eq("Booking is not pending late checkout review.")
+    expect(result.error).to eq("Booking does not have a detected due-out.")
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
   end
 
@@ -81,12 +144,20 @@ RSpec.describe Bookings::ProcessLateCheckout do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { charge_type: "charge", amount: "0" }
+      params: { resolution: "charge", amount: "0" }
     )
 
     expect(result).not_to be_success
     expect(result.error).to eq("Charge amount must be greater than zero.")
-    expect(booking.reload.status).to eq("review_due_out")
+    expect(booking.reload.status).to eq("due_out_detected")
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+  end
+
+  it "fails when a resolution is not selected" do
+    result = described_class.call(booking: booking, user: user, params: {})
+
+    expect(result).not_to be_success
+    expect(result.error).to eq("Choose how to resolve this late checkout.")
+    expect(booking.reload.status).to eq("due_out_detected")
   end
 end

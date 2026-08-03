@@ -16,14 +16,14 @@ module Reports
         page_layout: :landscape
       )
       builder.add_header
-      builder.add_summary([ [ "Tasks", @table.task_count.to_s ], [ "Assigned", @table.assigned_count.to_s ] ])
+      builder.add_summary([ [ "Rooms", @table.room_count.to_s ], [ "Assigned", @table.assigned_count.to_s ] ])
       builder.add_table(
-        section_title: "Task Details",
+        section_title: "Room Details",
         headers: HousekeepingTasksExportTable::PDF_HEADERS,
         rows: @table.pdf_rows,
         numeric_columns: [],
         total_row: nil,
-        empty_message: "No housekeeping tasks found for the selected filters.",
+        empty_message: "No rooms found for the selected filters.",
         column_widths: HousekeepingTasksExportTable::PDF_COLUMN_WIDTHS
       )
       builder.render

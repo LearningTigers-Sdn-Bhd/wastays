@@ -23,8 +23,8 @@ module HotelPortal
         private
 
         def create
-          unless selected_lifecycle_batch?(@booking) || @booking.status == "review_no_show"
-            return complete_action(alert: "Backdated check-in is only available while reviewing a missed arrival.")
+          unless selected_lifecycle_batch?(@booking) || @booking.status == "no_show_detected"
+            return complete_action(alert: "An earlier check-in is only available for a missed arrival.")
           end
 
           if reason_error

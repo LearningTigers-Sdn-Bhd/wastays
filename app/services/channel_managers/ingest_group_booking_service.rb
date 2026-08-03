@@ -153,7 +153,7 @@ module ChannelManagers
         booking.save!
         sync_room!(booking, unit)
         sync_guest(booking)
-        release_review_rooms(booking) if previous_status == "review_no_show" && booking.status == "cancelled"
+        release_detected_no_show_rooms(booking) if previous_status == "no_show_detected" && booking.status == "cancelled"
         booking
       end
 
@@ -161,7 +161,7 @@ module ChannelManagers
         previous_status = booking.status
         assign_status_transition!(booking, previous_status, "cancelled")
         booking.update!(status: "cancelled", group_position: units.size + index + 1)
-        release_review_rooms(booking) if previous_status == "review_no_show"
+        release_detected_no_show_rooms(booking) if previous_status == "no_show_detected"
       end
       historical_children.each_with_index do |booking, index|
         booking.update_columns(group_position: units.size + removed_children.size + index + 1, updated_at: Time.current)
@@ -191,19 +191,19 @@ module ChannelManagers
         currency: @data[:currency],
         source: @data[:source],
         payment_status: payment_status_for(booking, child_status),
-        no_show_review_business_date: child_status == "review_no_show" ? check_in.to_date : nil
+        no_show_detected_business_date: child_status == "no_show_detected" ? check_in.to_date : nil
       }
     end
 
     def resolved_child_status(previous_status, incoming_status)
-      return "review_no_show" if previous_status == "review_no_show" && incoming_status == "confirmed"
+      return "no_show_detected" if previous_status == "no_show_detected" && incoming_status == "confirmed"
 
       incoming_status
     end
 
     def assign_status_transition!(booking, previous_status, incoming_status)
       return if previous_status.blank? || previous_status == incoming_status
-      return if previous_status == "review_no_show" && incoming_status == "confirmed"
+      return if previous_status == "no_show_detected" && incoming_status == "confirmed"
 
       event = status_transition_event_for(previous_status, incoming_status)
       raise IngestionFailure, "Unsupported status transition from #{previous_status} to #{incoming_status}" unless event
@@ -238,13 +238,13 @@ module ChannelManagers
     end
 
     def inventory_held_status?(status)
-      status.in?(%w[confirmed review_no_show checked_in review_due_out checkout_required])
+      status.in?(%w[confirmed no_show_detected checked_in due_out_detected checkout_required])
     end
 
     def status_transition_event_for(previous_status, new_status)
       case [ previous_status, new_status ]
       when [ "pending", "confirmed" ] then "confirm"
-      when [ "pending", "cancelled" ], [ "confirmed", "cancelled" ], [ "overbooked", "cancelled" ], [ "review_no_show", "cancelled" ] then "cancel"
+      when [ "pending", "cancelled" ], [ "confirmed", "cancelled" ], [ "overbooked", "cancelled" ], [ "no_show_detected", "cancelled" ] then "cancel"
       when [ "confirmed", "overbooked" ] then "mark_overbooked"
       when [ "overbooked", "confirmed" ] then "resolve_overbooking"
       end
@@ -258,12 +258,12 @@ module ChannelManagers
       booking.payment_status.presence || "pending"
     end
 
-    def release_review_rooms(booking)
+    def release_detected_no_show_rooms(booking)
       result = Bookings::ReleaseAssignedRooms.call(
         booking: booking,
         user: nil,
-        event_type: "review_no_show_cancelled",
-        reason: "Channel manager cancelled booking pending no-show review",
+        event_type: "no_show_detection_cancelled",
+        reason: "Channel manager cancelled booking with detected no-show",
         metadata: { "source" => "channel_manager", "external_reference" => @data[:external_reference] }
       )
       raise IngestionFailure, result.error unless result.success?

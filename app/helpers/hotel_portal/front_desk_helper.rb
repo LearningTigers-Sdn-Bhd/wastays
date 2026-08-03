@@ -38,7 +38,7 @@ module HotelPortal
       case [ tab, booking.status ]
       in [ "arrivals", "confirmed" ] then [ sheet_action(booking, "Check in", :check_in) ]
       in [ "arrivals", "checked_in" ] then [ sheet_action(booking, "Edit check-in time", :check_in) ]
-      in [ _, "review_due_out" ] then [ sheet_action(booking, "Review late checkout", :late_checkout) ]
+      in [ _, "due_out_detected" ] then [ sheet_action(booking, "Resolve due-out", :late_checkout) ]
       in [ _, "checkout_required" ] then [ sheet_action(booking, "Complete checkout", :checkout) ]
       in [ "in_house" | "departures", "checked_in" ] then [ sheet_action(booking, "Check out", :checkout) ]
       else []

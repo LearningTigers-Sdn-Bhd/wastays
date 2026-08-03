@@ -23,8 +23,8 @@
 
 <section aria-labelledby="folio-resolver-heading" class="space-y-4">
   <div>
-    <h3 id="folio-resolver-heading" class="text-base font-semibold">Resolve folios</h3>
-    <p class="mt-1 text-sm text-muted-foreground">Choose how each folio settles. Guest folios default to Pay Now.</p>
+    <h3 id="folio-resolver-heading" class="text-base font-semibold">Finish guest bills</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Choose how each guest bill will be paid or closed. Guest bills default to Pay now.</p>
   </div>
 
   <div class="space-y-4" data-testid="folio-resolver-list">
@@ -61,31 +61,39 @@
               <%= app_icon "chevron-down", class: "panel-collapsible__indicator size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
             <% end %>
             <% group_card.with_body do %>
-              <div class="divide-y divide-border px-4">
-                <% if early_departure %>
-                  <div class="py-3">
-                    <%= render "hotel_portal/bookings/actions/checkouts/early_departure", **early_departure_locals %>
-                  </div>
-                <% end %>
-                <% sheet.folio_rows.each do |row| %>
-                  <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: false,
-                        credit_exposure: credit_exposures[[ checkout_booking.id, row.folio.id ]] %>
-                <% end %>
+              <% if early_departure %>
+                <div class="border-b border-border px-4 py-3">
+                  <%= render "hotel_portal/bookings/actions/checkouts/early_departure", **early_departure_locals %>
+                </div>
+              <% end %>
+              <div role="table" aria-label="Folios for room <%= room_number %>">
+                <%= render "hotel_portal/bookings/actions/checkouts/folio_ledger_header" %>
+                <div class="divide-y divide-border" role="rowgroup">
+                  <% sheet.folio_rows.each do |row| %>
+                    <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row,
+                          credit_exposure: credit_exposures[[ checkout_booking.id, row.folio.id ]] %>
+                  <% end %>
+                </div>
               </div>
             <% end %>
           <% end %>
         </div>
       <% else %>
-        <div class="space-y-3">
+        <div class="overflow-hidden rounded-lg border border-border bg-card">
           <% if early_departure %>
-            <div class="rounded-lg border border-border bg-card p-3">
+            <div class="border-b border-border px-4 py-3">
               <%= render "hotel_portal/bookings/actions/checkouts/early_departure", **early_departure_locals %>
             </div>
           <% end %>
-          <% sheet.folio_rows.each do |row| %>
-            <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row, bordered: true,
-                  credit_exposure: credit_exposures[[ checkout_booking.id, row.folio.id ]] %>
-          <% end %>
+          <div role="table" aria-label="Booking folios">
+            <%= render "hotel_portal/bookings/actions/checkouts/folio_ledger_header" %>
+            <div class="divide-y divide-border" role="rowgroup">
+              <% sheet.folio_rows.each do |row| %>
+                <%= render "hotel_portal/bookings/actions/checkouts/folio_card", **card_locals, row: row,
+                      credit_exposure: credit_exposures[[ checkout_booking.id, row.folio.id ]] %>
+              <% end %>
+            </div>
+          </div>
         </div>
       <% end %>
     <% end %>

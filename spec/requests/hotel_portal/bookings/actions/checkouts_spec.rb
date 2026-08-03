@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: :request do
+RSpec.describe "HotelPortal::Bookings::Actions checkouts", frozen_time: :business_day, type: :request do
   let(:hotel) { create(:hotel, status: "approved") }
   let(:other_hotel) { create(:hotel, status: "approved") }
   let(:user) { create(:user, account: hotel.account) }
@@ -51,14 +51,20 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
 
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("bottom")
-      expect(dialog.text).to include("Checkout", "Resolve folios")
+      expect(dialog.text).to include("Checkout", "Finish guest bills")
       expect(dialog.text).not_to include("Folio List", "Settlement Details")
       expect(dialog.at_css("[data-controller~='booking-actions--checkout-settlement']")).to be_present
       expect(dialog.at_css("input[name='booking[checked_out_at]']")).to be_present
       expect(dialog.at_css(".panel-date-time-picker")).to be_present
-      expect(dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] .panel-select-menu")).to be_present
-      # Settlement controls render inline on the folio row (no expand step)
-      expect(dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] [data-booking-actions--checkout-settlement-target='paymentFields']")).to be_present
+      expect(dialog.text).to include("Folio reference", "Holder name", "Total balance", "Settlement", "Action", "Closes at checkout")
+      expect(dialog.css("[data-booking-actions--checkout-settlement-target~='folioRow'] .panel-select-menu")).to be_empty
+      expect(dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] [data-booking-actions--checkout-settlement-target~='settlementButton']")).to be_present
+      reference_link = dialog.at_css("[data-booking-actions--checkout-settlement-target~='folioRow'] a[target='_blank']")
+      expect(reference_link).to be_present
+      expect(reference_link["class"]).to include("underline")
+      expect(dialog.at_css("[data-booking-actions--checkout-settlement-status-url-value]")).to be_present
+      expect(dialog.css("[data-booking-actions--checkout-settlement-target='paymentFields']")).to be_empty
+      expect(dialog.css("[data-testid='folio-resolver-list'] .panel-badge, [data-testid='folio-resolver-list'] .panel-alert")).to be_empty
       expect(dialog.css("[data-booking-actions--checkout-settlement-target~='folioRow'] .panel-collapsible")).to be_empty
       expect(dialog.at_css("button.panel-button[type='submit'][form='booking-checkout-form']")).to be_present
       expect(dialog.css("section.bg-card")).to be_empty
@@ -68,17 +74,17 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       expect(response.body).not_to include("offcanvas")
     end
 
-    it "renders held-deposit controls through PanelsUI with top-level parameter names" do
-      folio = booking.booking_folios.first
-      create(:deposit, booking: booking, hotel: hotel, amount: 125, status: "held")
+    it "renders live deposit settlement rows for available deposits" do
+      deposit = create(:deposit, booking: booking, hotel: hotel, amount: 125, status: "held")
 
       get hotel_booking_action_checkout_path(hotel, booking),
         headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-checkout-sheet")
-      expect(dialog.at_css("input.panel-switch__input[name='release_security_deposit'][role='switch']")).to be_present
-      expect(dialog.at_css("select[name='security_deposit_release_method']")).to be_present
-      expect(dialog.at_css("input[name='security_deposit_release_reference']")).to be_present
+      expect(dialog.text).to include("Deposits", "Original", "Applied", "Returned", "Available", "Apply", "Release")
+      expect(dialog.text).to include("MYR 125.00")
+      expect(dialog.at_css("tr[data-deposit-id='#{deposit.id}'][data-blocking='true']")).to be_present
+      expect(dialog.at_css("a[data-turbo-frame='booking_action_sheet_secondary'][href*='/deposits/#{deposit.id}']")).to be_present
     end
 
     it "renders authorized credit override controls for Direct Bill above the limit" do
@@ -93,6 +99,7 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-checkout-sheet")
       prefix = "checkout_bookings[#{booking.id}][folios][#{folio.id}]"
       expect(dialog.text).to include("authorized override is required")
+      expect(dialog.text).to include("Invoice to holder")
       expect(dialog.at_css("input[name='#{prefix}[credit_override]']")).to be_present
       expect(dialog.at_css("input[name='#{prefix}[credit_override_reason]']")).to be_present
     end
@@ -118,9 +125,67 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       document = Nokogiri::HTML(response.body)
       expect(document.at_css("turbo-frame#booking_action_sheet_secondary dialog#booking-checkout-sheet")).to be_present
     end
+
+    it "reports current folio balances for polling" do
+      folio = booking.booking_folios.first
+      booking.update_columns(check_in: booking.check_out - 1.hour)
+      folio.folio_forecasted_charges.destroy_all
+      create(:folio_transaction, booking_folio: folio, amount: 75, transaction_type: "charge")
+
+      get hotel_booking_action_checkout_folio_status_path(hotel, booking),
+        params: { adjustments: { folio.id => "999.00" } },
+        headers: { "Accept" => "application/json" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.fetch("folios")).to include(
+        hash_including("booking_id" => booking.id, "folio_id" => folio.id, "balance" => "75.0", "status" => "open")
+      )
+    end
+
+    it "excludes future forecasts when an early checkout has no preview charges" do
+      booking.update!(check_out: Date.current + 2.days)
+      folio = booking.booking_folios.first
+      create(:folio_forecasted_charge, booking_folio: folio, stay_date: Date.current + 1.day, amount: 75)
+      allow(Folios::Charges::PostEarlyCheckoutCharges).to receive(:pending_preview).and_return([])
+
+      get hotel_booking_action_checkout_folio_status_path(hotel, booking), headers: { "Accept" => "application/json" }
+
+      expect(response).to have_http_status(:success)
+      status = response.parsed_body.fetch("folios").find { |item| item.fetch("folio_id") == folio.id }
+      expect(status.fetch("balance")).to eq("0.0")
+    end
+
+    it "returns live deposit amounts and blocks group deposits only for final group checkout" do
+      group = create(:group_booking, hotel: hotel, name: "Conference Group")
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create_group_child(group, position: 2, room_number: "102", guest_name: "Grace Hopper")
+      group_deposit = create(:deposit, :group_owned, group_booking: group, hotel: hotel, amount: 150, currency: booking.currency)
+
+      get hotel_booking_action_checkout_folio_status_path(hotel, booking),
+        params: { booking_ids: [ booking.id ] }, headers: { "Accept" => "application/json" }
+      partial = response.parsed_body.fetch("deposits").find { |item| item.fetch("deposit_id") == group_deposit.id }
+      expect(partial).to include("available_amount" => "150.0", "blocking" => false)
+
+      get hotel_booking_action_checkout_folio_status_path(hotel, booking),
+        params: { booking_ids: [ booking.id, sibling.id ] }, headers: { "Accept" => "application/json" }
+      final = response.parsed_body.fetch("deposits").find { |item| item.fetch("deposit_id") == group_deposit.id }
+      expect(final).to include("available_amount" => "150.0", "blocking" => true)
+    end
   end
 
   describe "POST the checkout" do
+    it "blocks checkout until a booking deposit has no available balance" do
+      deposit = create(:deposit, booking: booking, hotel: hotel, amount: 100, status: "held")
+
+      post hotel_booking_action_checkout_path(hotel, booking),
+        params: { booking: { checked_out_at: Time.current.strftime("%Y-%m-%dT%H:%M") } },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Resolve the remaining MYR 100.00 deposit balance before checkout")
+      expect(booking.reload.status).to eq("checkout_required")
+    end
+
     it "checks the booking out and completes the sheet on a Turbo submission" do
       stub_checkout(success: true)
 
@@ -155,12 +220,12 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
       expect(response.body).to include("dialog", "Cannot check out with Guest Folio balance of MYR 50.00.")
     end
 
-    it "preserves submitted resolver, early-departure, timestamp, and deposit values after failure" do
+    it "preserves submitted resolver, early-departure, and timestamp values after failure" do
       booking.update!(check_out: Date.current + 2.days)
       folio = booking.booking_folios.first
       create(:folio_transaction, booking_folio: folio, amount: 50, transaction_type: "charge")
       create(:deposit, booking: booking, hotel: hotel, amount: 125, status: "held")
-      stub_checkout(success: false, error: "Payment reference is required.")
+      stub_checkout(success: false, error: "Folio settlement is still required.")
 
       post hotel_booking_action_checkout_path(hotel, booking),
         params: {
@@ -179,22 +244,19 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", :business_day, type: 
           },
           early_departures: {
             booking.id => { apply_charge: "true", type: "percentage", value: "25", charge_amount: "12.50" }
-          },
-          release_security_deposit: "1",
-          security_deposit_release_method: "bank_transfer",
-          security_deposit_release_reference: "DEP-42"
+          }
         },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       document = Nokogiri::HTML(response.body)
       expect(response).to have_http_status(:unprocessable_content)
       expect(document.at_css("input[name='booking[checked_out_at]']")["value"]).to eq("")
-      expect(document.at_css("select[name='checkout_bookings[#{booking.id}][folios][#{folio.id}][payment_method]'] option[selected]")["value"]).to eq("bank_transfer")
-      expect(document.at_css("input[name='checkout_bookings[#{booking.id}][folios][#{folio.id}][payment_reference]']")["value"]).to eq("")
+      expect(document.at_css("input[name='checkout_bookings[#{booking.id}][folios][#{folio.id}][action]']")["value"]).to eq("pay_now")
+      expect(document.at_css("input[name='checkout_bookings[#{booking.id}][folios][#{folio.id}][amount]']")["value"]).to eq("50.00")
+      expect(document.css("[name='checkout_bookings[#{booking.id}][folios][#{folio.id}][payment_method]']")).to be_empty
       expect(document.at_css("input[name='early_departures[#{booking.id}][apply_charge]'][value='true']")).to be_present
       expect(document.at_css("input[name='early_departures[#{booking.id}][value]']")["value"]).to eq("25")
-      expect(document.at_css("select[name='security_deposit_release_method'] option[selected]")["value"]).to eq("bank_transfer")
-      expect(document.at_css("input[name='security_deposit_release_reference']")["value"]).to eq("DEP-42")
+      expect(document.text).to include("Deposits", "MYR 125.00")
     end
 
     it "blocks checkout-required submission without a timestamp" do

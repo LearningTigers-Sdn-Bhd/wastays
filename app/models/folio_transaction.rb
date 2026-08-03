@@ -2,7 +2,7 @@
 
 class FolioTransaction < ApplicationRecord
   CHARGE_CATEGORIES = %w[accommodation tax fb parking no_show_charge cancellation_charge late_checkout_charge early_departure_charge other].freeze
-  PAYMENT_CATEGORIES = %w[gateway_payment cash refund booking_payment].freeze
+  PAYMENT_CATEGORIES = %w[gateway_payment cash refund booking_payment security_deposit].freeze
   ADJUSTMENT_CATEGORIES = %w[adjustment correction discount write_off other].freeze
   CATEGORIES_BY_TYPE = {
     "charge" => CHARGE_CATEGORIES,
@@ -10,7 +10,7 @@ class FolioTransaction < ApplicationRecord
     "adjustment" => ADJUSTMENT_CATEGORIES
   }.freeze
 
-  GL_MAPPABLE_CATEGORIES = (CATEGORIES_BY_TYPE.values.flatten + %w[security_deposits]).uniq.freeze
+  GL_MAPPABLE_CATEGORIES = CATEGORIES_BY_TYPE.values.flatten.uniq.freeze
 
   PERMISSION_MAPPING = {
     "charge" => "post_folio_charges",
@@ -18,7 +18,8 @@ class FolioTransaction < ApplicationRecord
       "cash" => "post_folio_payments",
       "refund" => "execute_folio_refunds",
       "gateway_payment" => "post_folio_payments",
-      "booking_payment" => "post_folio_payments"
+      "booking_payment" => "post_folio_payments",
+      "security_deposit" => "post_folio_payments"
     },
     "adjustment" => {
       "adjustment" => "post_folio_adjustments",

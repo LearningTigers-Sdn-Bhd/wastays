@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "HotelPortal Stay View", type: :request do
-  around { |example| travel_to(Time.zone.local(2026, 7, 16, 10, 0, 0)) { example.run } }
-
+RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.local(2026, 7, 16, 10) do
   let(:hotel) { create(:hotel, accounting_business_date: Date.current) }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
@@ -197,7 +195,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       departing = create(
         :booking,
         hotel:,
-        status: "review_due_out",
+        status: "due_out_detected",
         check_in: Date.current - 1.day,
         check_out: Date.current,
         guest_name: "Departing Guest"
@@ -860,9 +858,9 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       create(:booking_room, booking:, room_type:, room_number: "101")
       expected = {
         "confirmed" => "Check-in",
-        "review_no_show" => "Mark No-show",
+        "no_show_detected" => "Mark No-show",
         "checked_in" => "Check-out",
-        "review_due_out" => "Review Late Checkout",
+        "due_out_detected" => "Resolve due-out",
         "checkout_required" => "Complete Checkout"
       }
       expected.each do |status, label|
@@ -1158,7 +1156,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
 
     before do
       enable_housekeeping_feature
-      grant("manage_housekeeping_tasks")
+      grant("dispatch_housekeeping_tasks")
       grant("manage_requests")
     end
 
@@ -1196,7 +1194,7 @@ RSpec.describe "HotelPortal Stay View", type: :request do
       expect(response.body).to include(assign_path)
       expect(response.body).not_to include(status_path)
 
-      manage_housekeeping = Permission.find_by!(slug: "manage_housekeeping_tasks")
+      manage_housekeeping = Permission.find_by!(slug: "dispatch_housekeeping_tasks")
       role.role_permissions.find_by!(permission: manage_housekeeping).destroy!
       create(:role_permission, role:, permission: manage_requests)
 

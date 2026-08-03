@@ -21,8 +21,8 @@ module HotelPortal
         private
 
         def create
-          unless selected_lifecycle_batch?(@booking) || @booking.status == "review_no_show"
-            return complete_action(alert: "Booking is not pending no-show review.")
+          unless selected_lifecycle_batch?(@booking) || @booking.status == "no_show_detected"
+            return complete_action(alert: "Booking is not waiting for a no-show decision.")
           end
 
           if no_show_reason.blank?

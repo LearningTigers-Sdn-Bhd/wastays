@@ -2,38 +2,74 @@
 
 module HotelPortal
   class RequestsController < HotelPortal::BaseController
+    include HotelPortal::HousekeepingTaskAuthorization
+
+    # Housekeeping and checkout work is advanced from the housekeeping board as
+    # well, and reaching it from here must not be the way around the line that
+    # board draws. Complaints are nobody's to hold, so they are not guarded.
+    ADVANCE_GUARDED_KINDS = %w[housekeeping checkout].freeze
+
     before_action :authorize_manage_requests!
     before_action -> { require_feature!("task_assignment_minibar_log") }
-    before_action :set_breadcrumbs, only: [ :archive ]
+    before_action :authorize_advance_request!, only: [ :update_status ]
 
     rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
 
     def index
       @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
-      @board_columns = @board.board_columns
-      @board_counts = @board.board_counts
-      @board_columns = {
-        housekeeping: Kaminari.paginate_array(@board_columns[:housekeeping]).page(params[:housekeeping_page]).per(25),
-        complaint: Kaminari.paginate_array(@board_columns[:complaint]).page(params[:complaint_page]).per(25),
-        completed: Kaminari.paginate_array(@board_columns[:completed]).page(params[:completed_page]).per(25),
-        checkout: Kaminari.paginate_array(@board_columns[:checkout]).page(params[:checkout_page]).per(25)
-      }
-      @presenter = ::HotelPortal::RequestsBoardPresenter.new(
-        board_columns: @board_columns,
-        board_counts: @board_counts,
-        current_hotel: current_hotel,
-        view_context: view_context
-      )
+      @presenter = board_presenter(@board, pages: @board.pages)
     end
 
-    def archive
-      archive = ::HotelPortal::RequestsArchive.new(current_hotel, params)
-      archive_rows = Kaminari.paginate_array(archive.rows).page(params[:page]).per(25)
+    # The rest of one column, from where it got to. Rendered into the lazy frame
+    # that asked for it rather than as a page of its own.
+    def column
+      @column = ::HotelPortal::Requests::Column.find(params[:column])
+      raise ActiveRecord::RecordNotFound if @column.nil?
 
-      @presenter = ::HotelPortal::RequestsArchivePresenter.new(
-        archive_rows: archive_rows,
-        archive_counts: archive.summary_counts
-      )
+      @board = ::HotelPortal::RequestsBoard.new(current_hotel, params)
+      @cursor = ::HotelPortal::Requests::Cursor.parse(params[:cursor])
+      @page = @board.page(@column.key, cursor: @cursor)
+      @presenter = board_presenter(@board, pages: { @column.key => @page })
+
+      render :column, layout: false
+    end
+
+    # A card put in a lane, however it was asked for. The board answers with the
+    # two lanes that changed rather than a redirect: a redirect can only refill
+    # the one frame the request came from, and a move always leaves one lane and
+    # joins another.
+    def move
+      result = ::HotelPortal::Requests::Move.new(
+        hotel: current_hotel,
+        kind: params[:kind],
+        display_kind: params[:display_kind],
+        request_id: params[:request_id],
+        to: params[:to]
+      ).call
+
+      @board = ::HotelPortal::RequestsBoard.new(current_hotel, board_filters)
+      @presenter = board_presenter(@board, pages: @board.pages)
+      @result = result
+
+      respond_to do |format|
+        format.turbo_stream do
+          if result.ok?
+            render :move, status: :ok
+          else
+            render turbo_stream: toast_stream(
+              "Request cannot be moved",
+              type: :error,
+              description: result.error
+            ), status: :unprocessable_entity
+          end
+        end
+        format.html do
+          redirect_to board_path_with_filters,
+                      notice: (result.ok? ? "Request moved." : nil),
+                      alert: result.error
+        end
+        format.json { render json: { ok: result.ok?, error: result.error }, status: (result.ok? ? :ok : :unprocessable_entity) }
+      end
     end
 
     def cancel_request
@@ -45,13 +81,13 @@ module HotelPortal
       )
 
       if (request = updater.call)
-        redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+        redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request cancelled successfully." }
           format.json { render json: { ok: true, status: request.status, archived_at: request.archived_at } }
         end
       else
-        redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+        redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
         respond_to do |format|
           format.html { redirect_to redirect_target, alert: "Cancellation note is required." }
           format.json { render json: { ok: false }, status: :unprocessable_entity }
@@ -59,15 +95,18 @@ module HotelPortal
       end
     end
 
+    # This board hands out guest requests; room work belongs to the housekeeping
+    # board and is reached through its own routes.
     def update_status
       updater = ::HotelPortal::Requests::StatusUpdater.new(
         hotel: current_hotel,
         kind: params[:kind],
         request_id: params[:request_id],
-        status: params[:status]
+        status: params[:status],
+        work_contexts: %w[guest_request]
       )
 
-      redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+      redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       if (request = updater.call)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request updated successfully." }
@@ -88,7 +127,7 @@ module HotelPortal
         request_id: params[:request_id]
       )
 
-      redirect_target = params[:redirect_to].presence || hotel_requests_path(current_hotel)
+      redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       if (request = updater.archive)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request archived successfully." }
@@ -109,7 +148,7 @@ module HotelPortal
         request_id: params[:request_id]
       )
 
-      redirect_target = params[:redirect_to].presence || hotel_request_archive_path(current_hotel)
+      redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       if (request = updater.unarchive)
         respond_to do |format|
           format.html { redirect_to redirect_target, notice: "Request restored successfully." }
@@ -125,21 +164,54 @@ module HotelPortal
 
     private
 
+    # What the board was being read under when the card was moved, so the lanes
+    # sent back are the ones the operator is actually looking at rather than an
+    # unfiltered board.
+    def board_filters
+      params.permit(
+        *::HotelPortal::RequestsHelper::PRESERVED_FILTER_KEYS,
+        :date, :days,
+        **::HotelPortal::RequestsHelper::PRESERVED_ARRAY_FILTER_KEYS
+      ).to_h.symbolize_keys
+    end
+
+    def board_path_with_filters
+      hotel_requests_path(current_hotel, board_filters.compact_blank)
+    end
+
+    def board_presenter(board, pages:)
+      ::HotelPortal::RequestsBoardPresenter.new(
+        pages: pages,
+        board_counts: board.board_counts,
+        current_hotel: current_hotel,
+        view_context: view_context,
+        date_window: board.date_window,
+        selected_lanes: Array(params[:lanes])
+      )
+    end
+
     def handle_record_not_found
-      redirect_target = params[:redirect_to].presence ||
-                        (action_name == "unarchive_request" ? hotel_request_archive_path(current_hotel) : hotel_requests_path(current_hotel))
+      redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       respond_to do |format|
         format.html { redirect_to redirect_target, alert: "Request not found." }
         format.json { render json: { ok: false }, status: :not_found }
       end
     end
 
-    def authorize_manage_requests!
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_requests", hotel: current_hotel)
+    def authorize_advance_request!
+      return unless ADVANCE_GUARDED_KINDS.include?(params[:kind].to_s)
+
+      authorize_advance!(
+        ::HotelPortal::Requests::Finder.new(
+          hotel: current_hotel,
+          kind: params[:kind],
+          request_id: params[:request_id]
+        ).call
+      )
     end
 
-    def set_breadcrumbs
-      append_breadcrumb "Archive", hotel_request_archive_path(current_hotel)
+    def authorize_manage_requests!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_requests", hotel: current_hotel)
     end
   end
 end

@@ -10,9 +10,11 @@ class RoomOperationalAuditLog < ApplicationRecord
     room_block_removed_auto_status
     no_show_released_after_night_audit
     no_show_released
-    review_no_show_cancelled
+    no_show_detection_cancelled
     housekeeping_request_dispatched
     housekeeping_assignment_changed
+    housekeeping_room_assignment_changed
+    housekeeping_room_remarks_changed
     checkout_room_cleaning_started
     checkout_room_cleaning_completed
   ].freeze

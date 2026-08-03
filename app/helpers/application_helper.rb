@@ -8,7 +8,12 @@ module ApplicationHelper
       if toast_data.is_a?(Hash) && toast_data[:message].present?
         messages << {
           message: toast_data[:message].to_s,
-          options: { type: toast_data[:type].presence || "default", description: toast_data[:description].presence }.compact
+          options: {
+            type: toast_data[:type].presence || "default",
+            description: toast_data[:description].presence,
+            action: toast_action_options(toast_data[:action]),
+            secondaryAction: toast_action_options(toast_data[:secondary_action])
+          }.compact
         }
       end
     end
@@ -20,6 +25,26 @@ module ApplicationHelper
     end
 
     messages
+  end
+
+  def toast_action_options(action)
+    return if action.blank?
+
+    action = action.with_indifferent_access if action.respond_to?(:with_indifferent_access)
+    return unless action.is_a?(Hash) && action[:label].present? && action[:url].present?
+
+    url = action[:url].to_s
+    uri = URI.parse(url)
+    safe = if uri.host.present?
+      "#{uri.scheme}://#{uri.host}#{":#{uri.port}" unless uri.default_port == uri.port}" == request.base_url
+    else
+      url.start_with?("/") && !url.start_with?("//")
+    end
+    return unless safe
+
+    { label: action[:label].to_s, url: uri.host.present? ? uri.request_uri : url }
+  rescue URI::InvalidURIError
+    nil
   end
 
   def cached_icon(name, library: RailsIcons.configuration.default_library, from: library, variant: nil, **arguments)
@@ -46,7 +71,7 @@ module ApplicationHelper
   def booking_status_class(status)
     case status
     when "confirmed" then "bg-green-100 text-green-800"
-    when "review_no_show" then "bg-amber-100 text-amber-800"
+    when "no_show_detected" then "bg-amber-100 text-amber-800"
     when "checked_in" then "bg-blue-100 text-blue-800"
     when "completed" then "bg-emerald-100 text-emerald-800"
     when "cancelled" then "bg-red-100 text-red-800"
@@ -58,7 +83,7 @@ module ApplicationHelper
   end
 
   def guest_booking_status(booking)
-    booking.status == "review_no_show" ? "confirmed" : booking.status
+    booking.status == "no_show_detected" ? "confirmed" : booking.status
   end
 
   def refund_status_class(status)
@@ -186,10 +211,10 @@ module ApplicationHelper
   def display_housekeeping_datetime(value)
     return "Not provided" if value.blank?
 
-    return value.strftime("%d %b %Y, %I:%M %p") if value.respond_to?(:strftime)
+    return value.strftime("%d/%m/%Y, %H:%M") if value.respond_to?(:strftime)
 
     parsed_value = Time.zone.parse(value.to_s)
-    parsed_value ? parsed_value.strftime("%d %b %Y, %I:%M %p") : value.to_s
+    parsed_value ? parsed_value.strftime("%d/%m/%Y, %H:%M") : value.to_s
   rescue ArgumentError, TypeError
     value.to_s
   end

@@ -20,12 +20,12 @@ RSpec.describe HotelPortal::BookingAuditLogPresenter do
       action_type: "status_change",
       category: "status",
       old_value: { "status" => "checked_in" },
-      new_value: { "status" => "review_due_out" },
-      metadata: { "from" => "checked_in", "to" => "review_due_out" }
+      new_value: { "status" => "due_out_detected" },
+      metadata: { "from" => "checked_in", "to" => "due_out_detected" }
     )
 
-    expect(presenter.title).to eq("Booking moved to Pending late-checkout review")
-    expect(presenter.summary).to eq("Booking moved from Checked in to Pending late-checkout review.")
+    expect(presenter.title).to eq("Booking moved to Due-out detected")
+    expect(presenter.summary).to eq("Booking moved from Checked in to Due-out detected.")
   end
 
   it "shows actor, reason, room, and hotel-local time for check-in" do

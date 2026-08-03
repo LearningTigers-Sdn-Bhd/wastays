@@ -336,7 +336,7 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     expect(folio_show.actions_blocked?).to be(true)
     expect(folio_show.actions_blocked_title).to eq("Normal folio posting is blocked.")
     expect(folio_show.actions_blocked_reason).to eq("Night audit is blocked. Resolve blockers from the Night Audit page, then retry audit.")
-    expect(folio_show.actions_blocked_url).to eq(Rails.application.routes.url_helpers.resolve_hotel_night_audit_path(hotel, night_audit))
+    expect(folio_show.actions_blocked_url).to eq(Rails.application.routes.url_helpers.hotel_night_audit_run_path(hotel))
     expect(folio_show.can_show_normal_folio_actions?).to be(false)
     expect(folio_show.posted_rows.first.action_kind).to eq(:none)
   end

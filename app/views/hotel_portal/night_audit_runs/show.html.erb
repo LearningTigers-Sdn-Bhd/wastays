@@ -1,0 +1,154 @@
+<% frame_id = turbo_frame_request_id.presence || "booking_action_sheet" %>
+<% confirmation = defined?(@sheet_state) ? @sheet_state.to_sym == :confirmation : !@presenter.review_started? %>
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame<%= ' night-audit-run' if @presenter.processing? %>"
+       <% if @presenter.processing? %>
+         data-night-audit-run-status-url-value="<%= status_hotel_night_audit_run_path(current_hotel, audit_id: @night_audit.id, return_to: @return_to) %>"
+       <% end %>>
+    <% if confirmation %>
+      <%= render PanelsUI::Sheet.new(
+            id: "confirm-run-night-audit-sheet",
+            side: :right,
+            size: :md,
+            title: (@presenter.closable? ? "Confirm Night Audit" : "Night Audit is not available yet"),
+            description: (@presenter.closable? ? "#{format_date(@business_date)} → #{format_date(@presenter.next_business_date)}" : "Current business date: #{format_date(@business_date)}"),
+            body_class: "p-0") do |sheet| %>
+        <% sheet.with_body do %>
+          <div class="flex min-h-full flex-col" data-testid="confirm-night-audit-sheet">
+            <div class="flex-1 space-y-4 p-4 sm:p-6">
+              <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
+              <% if @presenter.closable? %>
+                <p class="text-sm text-foreground">Night Audit checks bookings, payments, and room charges before closing the current business date.</p>
+                <p class="text-sm text-muted-foreground">Continue to fix anything that needs attention. The business date will not change until you run the final step.</p>
+              <% else %>
+                <p class="text-sm text-foreground"><%= format_date(@business_date) %> remains open.</p>
+                <p class="text-sm text-muted-foreground"><%= @presenter.availability_message %></p>
+                <p class="text-sm text-muted-foreground">Bookings, payments, and room charges will be checked when Night Audit becomes available.</p>
+              <% end %>
+            </div>
+            <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3 sm:px-6">
+              <% if @presenter.closable? %>
+                <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+                <%= form_with url: start_review_hotel_night_audit_run_path(current_hotel), method: :post do %>
+                  <%= hidden_field_tag :return_to, @return_to %>
+                  <%= render PanelsUI::Button.new(type: :submit, data: { turbo_submits_with: "Checking…" }) do %>Continue<% end %>
+                <% end %>
+              <% else %>
+                <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>Close<% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    <% else %>
+      <%= render PanelsUI::Sheet.new(
+            id: "run-night-audit-sheet",
+            side: :right,
+            size: :xl,
+            title: "Run Night Audit",
+            description: "#{format_date(@business_date)} → #{format_date(@presenter.next_business_date)}",
+            dismissible: !@presenter.processing?,
+            body_class: "p-0") do |sheet| %>
+        <% sheet.with_body do %>
+          <div class="flex min-h-full flex-col" data-testid="night-audit-run-sheet" data-active-step="<%= @presenter.steps.index { |step| step.state == :current } + 1 unless @presenter.processing? %>">
+            <div class="flex-1 space-y-6 p-4 sm:p-6">
+              <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
+
+              <% if @presenter.processing? %>
+                <section class="flex min-h-[24rem] flex-col items-center justify-center gap-4 text-center" aria-labelledby="night-audit-processing-heading" aria-live="polite">
+                  <div class="max-w-md space-y-1">
+                    <h3 id="night-audit-processing-heading" class="text-base font-semibold text-foreground">Night Audit is running</h3>
+                    <p class="text-sm text-muted-foreground">Keep this sheet open. The page will refresh automatically when the business date advances.</p>
+                  </div>
+                  <%= render PanelsUI::Progress.new(value: nil, label: "Night Audit processing", class: "max-w-sm") %>
+                </section>
+              <% else %>
+                <nav aria-label="Night Audit progress">
+                  <ol class="grid grid-cols-3 overflow-hidden rounded-md border border-border">
+                    <% @presenter.steps.each_with_index do |step, index| %>
+                      <li class="flex min-w-0 items-center gap-2 px-3 py-3 <%= 'border-l border-border' if index.positive? %> <%= 'bg-muted/50' if step.state == :current %>" <%= 'aria-current="step"'.html_safe if step.state == :current %>>
+                        <span class="flex size-6 shrink-0 items-center justify-center rounded-full <%= step.state == :current ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground' %> text-xs font-semibold">
+                          <% if step.state == :complete %><%= app_icon "check", class: "size-3.5", aria: { hidden: true } %><% else %><%= index + 1 %><% end %>
+                        </span>
+                        <span class="truncate text-xs font-medium <%= step.state == :current ? 'text-foreground' : 'text-muted-foreground' %>"><%= step.label %></span>
+                      </li>
+                    <% end %>
+                  </ol>
+                </nav>
+
+                <% if @presenter.failed? %>
+                  <%= render PanelsUI::Alert.new(tone: :destructive, title: "Night Audit did not finish", role: :alert) do |alert| %>
+                    <% alert.with_description { @presenter.failure_message } %>
+                  <% end %>
+                <% elsif @presenter.review_result_message.present? %>
+                  <%= render PanelsUI::Alert.new(tone: :info, title: "Booking checks complete") do |alert| %>
+                    <% alert.with_description { @presenter.review_result_message } %>
+                  <% end %>
+                <% end %>
+
+                <% case @presenter.current_step %>
+                <% when :bookings %>
+                  <section aria-labelledby="bookings-step-heading" class="space-y-3">
+                    <div>
+                      <h3 id="bookings-step-heading" class="text-base font-semibold text-foreground">Bookings</h3>
+                      <p class="mt-1 text-sm text-muted-foreground"><%= pluralize(@presenter.booking_items.size, "booking") %> <%= @presenter.booking_items.one? ? "needs" : "need" %> attention. Saving an action checks this list again.</p>
+                    </div>
+                    <div class="divide-y divide-border rounded-md border border-border">
+                      <% can_manage_bookings = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+                      <% @presenter.booking_items.each do |item| %>
+                        <%= render "hotel_portal/night_audit_runs/item", item:, return_to: hotel_night_audit_run_path(current_hotel, return_to: @return_to, parent_frame: frame_id), booking_permission_required: true, can_manage_bookings: %>
+                      <% end %>
+                    </div>
+                  </section>
+                <% when :payments_charges %>
+                  <section aria-labelledby="payments-step-heading" class="space-y-3">
+                    <div>
+                      <h3 id="payments-step-heading" class="text-base font-semibold text-foreground">Payments &amp; charges</h3>
+                      <p class="mt-1 text-sm text-muted-foreground"><%= pluralize(@presenter.financial_items.size, "item") %> <%= @presenter.financial_items.one? ? "needs" : "need" %> attention on guest bills.</p>
+                    </div>
+                    <div class="divide-y divide-border rounded-md border border-border">
+                      <% can_manage_bookings = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+                      <% @presenter.financial_items.each do |item| %>
+                        <%= render "hotel_portal/night_audit_runs/item", item:, return_to: hotel_night_audit_run_path(current_hotel, return_to: @return_to, parent_frame: frame_id), booking_permission_required: false, can_manage_bookings: %>
+                      <% end %>
+                    </div>
+                  </section>
+                <% when :review %>
+                  <section aria-labelledby="confirm-step-heading" class="space-y-5">
+                    <%= render PanelsUI::Alert.new(tone: :success, title: "Ready to run") do |alert| %>
+                      <% alert.with_description { "Booking and guest bill checks are clear. #{pluralize(@presenter.warning_count, 'note')} will be included in the audit report." } %>
+                    <% end %>
+                    <div>
+                      <h3 id="confirm-step-heading" class="text-base font-semibold text-foreground">Confirm Night Audit</h3>
+                      <p class="mt-1 text-sm text-muted-foreground">Night Audit will close <%= format_date(@business_date) %> and move the hotel to <%= format_date(@presenter.next_business_date) %>.</p>
+                    </div>
+                    <%= form_with url: hotel_night_audit_run_path(current_hotel), method: :post, scope: :night_audit_run, id: "night-audit-confirm-form", class: "space-y-4" do |form| %>
+                      <%= hidden_field_tag :return_to, @return_to %>
+                      <%= render PanelsUI::FormField.new(form:, attribute: :notes, label: "Notes", hint: "Optional") do |field| %>
+                        <% field.with_text_area(rows: 3, placeholder: "Add context for this run") %>
+                      <% end %>
+                    <% end %>
+                  </section>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+        <% unless @presenter.processing? %>
+          <% sheet.with_footer do %>
+            <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>Close<% end %>
+            <% if (@presenter.blockers.any? || @presenter.failed?) && current_user.has_permission?("override_financial_date_lock", hotel: current_hotel) %>
+              <%= render PanelsUI::Button.new(
+                    as: :a,
+                    href: force_close_confirmation_hotel_night_audit_run_path(current_hotel, return_to: @return_to, parent_frame: frame_id),
+                    variant: :destructive,
+                    data: { turbo_frame: "booking_action_sheet_secondary" }) do %>Close date anyway…<% end %>
+            <% elsif @presenter.ready_to_run? %>
+              <%= render PanelsUI::Button.new(type: :submit, form: "night-audit-confirm-form", data: { turbo_submits_with: "Starting…" }) do %>Run Night Audit<% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

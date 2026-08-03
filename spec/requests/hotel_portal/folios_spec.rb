@@ -1,8 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "HotelPortal::Folios", type: :request do
-  around { |example| travel_to(Time.zone.local(2026, 6, 18, 10, 0, 0)) { example.run } }
-
+RSpec.describe "HotelPortal::Folios", type: :request, frozen_time: Time.zone.local(2026, 6, 18, 10) do
   let(:hotel) { create(:hotel, status: "approved") }
   let(:other_hotel) { create(:hotel, status: "approved") }
   let(:user) { create(:user, account: hotel.account) }
@@ -354,7 +352,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("Folios")
       expect(response.body).to include("Night audit is currently running for this business date.")
       expect(response.body).to include("View Night Audit")
-      expect(response.body).to include(hotel_night_audit_path(hotel, night_audit))
+      expect(response.body).to include(hotel_night_audit_run_path(hotel))
       expect(response.body).not_to include("Add Payment")
       expect(response.body).not_to include("Add Charge")
       expect(response.body).not_to include("Add Adjustment")
@@ -385,7 +383,7 @@ RSpec.describe "HotelPortal::Folios", type: :request do
       expect(response.body).to include("Folios")
       expect(response.body).to include("Night audit is blocked. Resolve blockers from the Night Audit page, then retry audit.")
       expect(response.body).to include("View Night Audit Blockers")
-      expect(response.body).to include(resolve_hotel_night_audit_path(hotel, night_audit))
+      expect(response.body).to include(hotel_night_audit_run_path(hotel))
       expect(response.body).not_to include("Add Payment")
       expect(response.body).not_to include("Add Charge")
       expect(response.body).not_to include("Add Adjustment")

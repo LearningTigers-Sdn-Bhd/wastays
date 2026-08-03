@@ -2,56 +2,148 @@
 
 module HotelPortal
   class HousekeepingTaskRoomPresenter
-    attr_reader :room_number, :resolved_status, :active_booking, :room_type, :hotel
+    ROOM_STATUS_LABELS = ::HousekeepingTasks::BoardBuilder::ROOM_STATUS_LABELS
+    INSPECTION_STATUSES = %w[awaiting_inspection inspection_failed].freeze
+    INSPECTION_WORKFLOW_STATUSES = %w[cleaning awaiting_inspection inspection_failed].freeze
 
-    def initialize(room_data, hotel)
-      @room_number = room_data[:room_number]
-      @resolved_status = room_data[:resolved_status]
-      @active_booking = room_data[:active_booking]
-      @room_type = room_data[:room_type]
+    BOOKING_STATUS_BADGE_VARIANTS = {
+      "out_of_order" => :destructive,
+      "checked_out" => :neutral,
+      "checkout_required" => :destructive,
+      "pending_checkout" => :warning,
+      "day_use" => :info,
+      "checked_in_today" => :accent,
+      "in_house" => :accent,
+      "day_use_reservation" => :info,
+      "arriving_today" => :info,
+      "vacant" => :success
+    }.freeze
+
+    attr_reader :room_number, :resolved_status, :booking, :room_type, :hotel, :view_context,
+                :booking_status, :booking_status_label, :notes, :assigned_to, :assigned_to_id,
+                :selected_date, :pax, :late_checkout_eligible
+
+    def initialize(room_data, hotel:, view_context:, selected_date:)
+      @room_number = room_data.fetch(:room_number)
+      @resolved_status = room_data.fetch(:resolved_status)
+      @booking = room_data[:booking] || room_data[:active_booking]
+      @room_type = room_data.fetch(:room_type)
       @hotel = hotel
-      @raw_requests = room_data[:hk_requests]
+      @view_context = view_context
+      @booking_status = room_data.fetch(:booking_status)
+      @booking_status_label = room_data.fetch(:booking_status_label)
+      @notes = room_data[:notes]
+      @assigned_to = room_data[:assigned_to]
+      @assigned_to_id = room_data[:assigned_to_id]
+      @pax = room_data.fetch(:pax)
+      @late_checkout_eligible = room_data.fetch(:late_checkout_eligible, false)
+      @selected_date = selected_date.to_date
     end
-
-    # -- Room Status Presentation --
 
     def display_status
-      resolved_status == "dirty" ? "Dirty" : resolved_status.humanize.titleize
+      ROOM_STATUS_LABELS.fetch(resolved_status)
     end
 
-    def status_badge_class
-      case resolved_status
-      when "ready" then "bg-emerald-50 text-emerald-700 border-emerald-100"
-      when "dirty" then "bg-amber-50 text-amber-700 border-amber-100"
-      when "cleaning" then "bg-blue-50 text-blue-700 border-blue-100"
-      when "occupied" then "bg-rose-50 text-rose-700 border-rose-100"
-      else "bg-slate-50 text-slate-700 border-slate-100"
+    def status_badge_variant
+      ::Rooms::StatusPresentation.badge_variant(resolved_status)
+    end
+
+    def booking_status_badge_variant
+      BOOKING_STATUS_BADGE_VARIANTS.fetch(booking_status, :neutral)
+    end
+
+    def status_choices
+      allowed = ::Rooms::SetStatus::ALLOWED_TRANSITIONS.fetch(resolved_status, EMPTY_STATUSES)
+
+      ROOM_STATUS_LABELS.filter_map do |value, label|
+        next if INSPECTION_STATUSES.include?(value) && !inspection_options_visible?
+
+        eligible = allowed.include?(value)
+        eligible &&= late_checkout_eligible if value == "late_checkout_detected"
+        if value == "ready" && resolved_status != "ready" && notes.blank?
+          eligible = false
+          label = "Cleaned — add remarks first"
+        end
+        { label:, value:, disabled: value != resolved_status && !eligible }
       end
     end
 
-    # -- Booking Display --
+    EMPTY_STATUSES = [].freeze
 
-    def guest_name
-      active_booking&.guest_name
+    def inspection_options_visible?
+      INSPECTION_WORKFLOW_STATUSES.include?(resolved_status)
     end
 
-    def arrival_time
-      active_booking&.checked_in_at&.strftime("%I:%M %p") || "-"
+    def writable?
+      selected_date == (hotel.current_business_date || hotel.business_date_for(Time.current))
     end
 
-    def arrival_date
-      active_booking ? helpers.display_housekeeping_date(active_booking.check_in) : "-"
+    def status_url
+      view_context.hotel_housekeeping_room_status_path(
+        hotel,
+        room_type_id: room_type.id,
+        room_number:
+      )
     end
 
-    def departure_date
-      active_booking ? helpers.display_housekeeping_date(active_booking.check_out) : "-"
+    def assignment_url
+      view_context.hotel_housekeeping_room_assignment_path(
+        hotel,
+        room_type_id: room_type.id,
+        room_number:
+      )
+    end
+
+    def edit_remarks_url(return_to:)
+      view_context.hotel_edit_housekeeping_room_remarks_path(
+        hotel,
+        room_type_id: room_type.id,
+        room_number:,
+        date: selected_date.iso8601,
+        return_to:
+      )
+    end
+
+    def remarks_url
+      view_context.hotel_housekeeping_room_remarks_path(
+        hotel,
+        room_type_id: room_type.id,
+        room_number:
+      )
+    end
+
+    def assigned_to_value
+      assigned_to_id.to_s
+    end
+
+    def assigned_to_name
+      assigned_to&.name.presence || "Unassigned"
+    end
+
+    def remarks
+      notes.presence || "No remarks"
+    end
+
+    def has_remarks?
+      notes.present?
+    end
+
+    def arrival
+      return "—" unless booking
+
+      value = booking.checked_in_at || booking.check_in
+      booking.checked_in_at ? view_context.display_housekeeping_datetime(value) : view_context.display_housekeeping_date(value)
+    end
+
+    def departure
+      return "—" unless booking
+
+      view_context.display_housekeeping_datetime(booking.checked_out_at || booking.check_out)
     end
 
     def nights
-      active_booking ? active_booking.duration_in_nights : "-"
+      booking ? booking.duration_in_nights : "—"
     end
-
-    # -- Room Attribute Icons --
 
     def smoking_allowed?
       room_type&.smoking_allowed
@@ -61,95 +153,12 @@ module HotelPortal
       room_type&.pets_allowed
     end
 
-    # -- Task Requests --
-
-    def task_requests
-      @task_requests ||= @raw_requests.map { |req| TaskRequestPresenter.new(req, hotel) }
+    def dom_key
+      "#{room_type.id}-#{room_number}".parameterize
     end
 
-    def first_task_request
-      task_requests.first
-    end
-
-    private
-
-    def helpers
-      ApplicationController.helpers
-    end
-
-    # Wraps a single TASK_ROW to expose clean view methods for URL
-    # routing, status resolution, and assignment logic.
-    class TaskRequestPresenter
-      attr_reader :request, :hotel
-
-      delegate :id, :request_details, :status, :metadata, :created_at, to: :request
-
-      def initialize(request, hotel)
-        @request = request
-        @hotel = hotel
-      end
-
-      def assignable?
-        request&.id.present?
-      end
-
-      def checkout_request?
-        request.respond_to?(:checkout_request?) && request.checkout_request?
-      end
-
-      def assign_url
-        return unless assignable?
-
-        if checkout_request?
-          url_helpers.hotel_assign_checkout_request_path(hotel, request.id)
-        else
-          url_helpers.assign_hotel_housekeeping_task_path(hotel, request.id)
-        end
-      end
-
-      def status_url
-        return unless assignable?
-
-        if checkout_request?
-          url_helpers.hotel_checkout_request_status_path(hotel, request.id)
-        else
-          url_helpers.hotel_request_status_path(hotel, kind: "housekeeping", request_id: request.id)
-        end
-      end
-
-      def assigned_to_value
-        if request.respond_to?(:assigned_to_id)
-          request.assigned_to_id.to_s.presence&.to_i
-        else
-          request.metadata&.dig("assigned_to").to_s.presence&.to_i
-        end
-      end
-
-      def selected_status_value
-        checkout_request? ? display_status_value : request.status
-      end
-
-      def display_status_value
-        request.respond_to?(:display_status) ? request.display_status : request.status
-      end
-
-      def fallback_status_label
-        if request.respond_to?(:display_status)
-          request.display_status.to_s.humanize.titleize
-        else
-          request&.status.to_s.humanize.titleize.presence || "No Task"
-        end
-      end
-
-      def has_details?
-        request&.request_details.present? && request.request_details != "-"
-      end
-
-      private
-
-      def url_helpers
-        Rails.application.routes.url_helpers
-      end
+    def label
+      "#{room_type.name} #{room_number}"
     end
   end
 end

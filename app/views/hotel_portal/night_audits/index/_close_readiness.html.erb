@@ -17,7 +17,7 @@
         "Warnings" => { icon: "circle-alert", chip: "bg-amber-50 text-amber-700", count: counter.value.to_i.positive? ? "text-amber-700" : "text-foreground" },
         "Arrivals" => { icon: "log-in", chip: "bg-blue-50 text-blue-700", count: "text-foreground" },
         "Due Outs" => { icon: "log-out", chip: "bg-indigo-50 text-indigo-700", count: "text-foreground" },
-        "Review Queue" => { icon: "clipboard-list", chip: "bg-muted text-indigo-700", count: "text-foreground" }
+        "Detected Queue" => { icon: "clipboard-list", chip: "bg-muted text-indigo-700", count: "text-foreground" }
       }.fetch(counter.label) %>
       <div class="min-w-0 bg-card px-4 py-2.5 <%= 'col-span-2 lg:col-span-1' if index == 4 %>">
         <div class="flex items-center justify-between gap-2">

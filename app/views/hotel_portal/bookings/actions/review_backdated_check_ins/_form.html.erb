@@ -7,7 +7,7 @@
         id: "review-backdated-check-in-sheet",
         side: :right,
         size: group ? :xl : :md,
-        title: "Backdated check-in",
+        title: "Record an earlier check-in",
         description: booking.guest_name,
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
@@ -54,7 +54,7 @@
         </div>
         <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
           <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
-          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Checking in…" }) do %>Complete backdated check-in<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Recording…" }) do %>Record check-in<% end %>
         </div>
       <% end %>
     <% end %>

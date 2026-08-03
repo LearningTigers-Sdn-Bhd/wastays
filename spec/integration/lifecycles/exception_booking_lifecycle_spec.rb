@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "Exception Booking Lifecycles", type: :integration do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, :superadmin) }
-  let(:room_type) { create(:room_type, hotel: hotel) }
+  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: %w[101]) }
   let(:business_date) { hotel.current_business_date }
 
   before do
@@ -15,6 +15,10 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       permission.name = "Override Date Lock"
     end
     admin_role.role_permissions.create!(permission: lock_permission)
+    housekeeping_permission = Permission.find_or_create_by!(slug: "perform_housekeeping_tasks") do |permission|
+      permission.name = "Perform Housekeeping Tasks"
+    end
+    admin_role.role_permissions.create!(permission: housekeeping_permission)
     user.user_hotel_accesses.create!(hotel: hotel, role: admin_role)
   end
 
@@ -31,8 +35,14 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      NightAudits::ReviewMissedArrivals.call(night_audit: audit_day_1, user: user)
-      Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
+      with_frozen_time(hotel.business_day_window_for(business_date).end + 5.minutes) do
+        detection = NightAudits::DetectMissedArrivals.call(night_audit: audit_day_1, user: user)
+        finalization = Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
+
+        expect(detection).to be_success
+        expect(detection.detected_count).to eq(1)
+        expect(finalization).to be_success
+      end
       audit_day_1.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -161,8 +171,14 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
       audit_day_1 = hotel.night_audits.create!(business_date: business_date, status: "running", trigger_mode: "manual")
       biz_date_record = hotel.current_business_date_record
       start_business_date_audit(hotel)
-      NightAudits::ReviewMissedArrivals.call(night_audit: audit_day_1, user: user)
-      Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
+      with_frozen_time(hotel.business_day_window_for(business_date).end + 5.minutes) do
+        detection = NightAudits::DetectMissedArrivals.call(night_audit: audit_day_1, user: user)
+        finalization = Bookings::FinalizeNoShow.call(booking: booking, user: user, night_audit: audit_day_1)
+
+        expect(detection).to be_success
+        expect(detection.detected_count).to eq(1)
+        expect(finalization).to be_success
+      end
       audit_day_1.update!(status: "completed")
       close_and_open_next_business_date(hotel)
 
@@ -285,15 +301,24 @@ RSpec.describe "Exception Booking Lifecycles", type: :integration do
   end
 
   describe "7. Late Checkout Lifecycle" do
-    it "transitions booking to review_due_out via housekeeping and applies charge" do
-      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 1.day, total_amount: 100.0)
+    it "transitions booking to due_out_detected via housekeeping and applies charge" do
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date - 1.day, check_out: 1.hour.ago, total_amount: 100.0)
       create(:booking_room, booking: booking, room_type: room_type, subtotal: 100.0, room_number: "101")
       folio = Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user)
       room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
       # 1. Housekeeper detects guest still in room
-      Rooms::SetStatus.new(room_status: room_status, status: "late_checkout_detected", user: user).call
-      expect(booking.reload.status).to eq("review_due_out")
+      detection = HousekeepingTasks::UpdateRoomStatus.new(
+        hotel: hotel,
+        room_type_id: room_type.id,
+        room_number: "101",
+        date: business_date,
+        status: "late_checkout_detected",
+        notes: "Guest still in room",
+        current_user: user
+      ).call
+      expect(detection).to be_success
+      expect(booking.reload.status).to eq("due_out_detected")
 
       # 2. Front desk reviews and applies charge (e.g. 50.0)
       result = Folios::Charges::PostCategoryCharge.call(

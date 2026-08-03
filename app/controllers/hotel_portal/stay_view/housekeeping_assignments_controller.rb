@@ -3,7 +3,9 @@
 module HotelPortal
   module StayView
     class HousekeepingAssignmentsController < BaseController
-      before_action -> { require_capability!(:manage_housekeeping) }
+      # Either half gets you to the sheet. Whether you may assign somebody else
+      # or only take the work yourself is settled by HousekeepingTasks::AssignStaff.
+      before_action -> { require_any_capability!(:manage_housekeeping, :take_housekeeping_task) }
       before_action -> { require_feature!("task_assignment_minibar_log") }
       before_action :set_housekeeping_request
 

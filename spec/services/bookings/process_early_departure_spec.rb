@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::ProcessEarlyDeparture do
-  around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
-
+RSpec.describe Bookings::ProcessEarlyDeparture, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, :superadmin) }
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 10) }

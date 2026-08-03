@@ -4,111 +4,175 @@
 <% row = local_assigns.fetch(:row) %>
 <% form_state = local_assigns.fetch(:form_state) %>
 <% booking_visible = local_assigns.fetch(:booking_visible, true) %>
-<% bordered = local_assigns.fetch(:bordered, true) %>
-<% badge_tones = { "emerald" => :success, "amber" => :warning, "rose" => :destructive, "slate" => :neutral } %>
 <% exception_actions = HotelPortal::Bookings::Actions::Checkouts::SheetPresenter::EXCEPTION_ACTIONS %>
 <% values = form_state.folio_values(checkout_booking, row) %>
 <% field_scope = "checkout_bookings[#{checkout_booking.id}][folios][#{row.folio.id}]" %>
 <% single_action = row.action_options.one? %>
 <% credit_exposure = local_assigns[:credit_exposure] %>
+<% folio_kind = if row.folio.folio_type == "guest" && row.folio.payer_type == "guest"
+  "guest"
+elsif row.folio.payer_type == "company"
+  "company"
+else
+  "custom"
+end %>
+<% payment_path = hotel_folio_action_post_transaction_path(
+     current_hotel,
+     checkout_booking,
+     transaction_type: "payment",
+     settlement_token: sheet.settlement_token(row, "payment"),
+     return_to: hotel_booking_action_checkout_path(current_hotel, checkout_booking)) %>
+<% refund_path = hotel_folio_action_post_transaction_path(
+     current_hotel,
+     checkout_booking,
+     transaction_type: "payment",
+     category: "refund",
+     settlement_token: sheet.settlement_token(row, "refund"),
+     return_to: hotel_booking_action_checkout_path(current_hotel, checkout_booking)) %>
+<% settlement_action = values[:action].in?(%w[pay_now refund_credit_handling]) %>
+<% action_outcomes = {
+     "close" => "Closes at checkout",
+     "closed" => "Already closed",
+     "direct_bill" => "Invoice to holder",
+     "keep_open" => "Remains open",
+     "manager_review" => "Send for review",
+     "write_off_approval" => "Request approval",
+     "voided" => "Resolve voided folio"
+   } %>
 
-<article class="<%= bordered ? 'rounded-lg border border-border bg-card p-3' : 'py-3' %> <%= 'hidden' unless booking_visible %>"
+<article class="<%= 'hidden' unless booking_visible %> grid gap-x-4 gap-y-3 px-4 py-3 lg:grid-cols-[minmax(8rem,1.05fr)_minmax(10rem,1.35fr)_minmax(7.5rem,0.8fr)_minmax(11rem,1.15fr)_minmax(10rem,1fr)] lg:items-start"
+         role="row"
          data-<%= ns %>-target="bookingRow folioRow"
          data-booking-id="<%= checkout_booking.id %>"
-         data-folio-id="<%= row.folio.id %>">
-  <div class="flex items-center gap-3">
-    <span class="min-w-0 flex-1">
-      <span class="block truncate text-sm font-medium"><%= row.name %></span>
-      <span class="mt-0.5 block truncate text-xs text-muted-foreground"><%= row.folio.folio_reference_display %> · <%= row.payer_label %></span>
+         data-folio-id="<%= row.folio.id %>"
+         data-folio-kind="<%= folio_kind %>">
+  <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 lg:block" role="cell">
+    <span class="text-xs font-medium text-muted-foreground lg:hidden">Folio reference</span>
+    <%= link_to row.ledger_path,
+          target: "_blank",
+          rel: "noopener",
+          class: "inline-flex min-w-0 items-center gap-1 text-sm font-medium text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-primary",
+          data: { turbo: false } do %>
+      <span class="truncate"><%= row.folio.folio_reference_display %></span>
+      <%= app_icon "external-link", class: "size-3.5 shrink-0", aria: { hidden: true } %>
+    <% end %>
+  </div>
+
+  <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 lg:block" role="cell">
+    <span class="text-xs font-medium text-muted-foreground lg:hidden">Holder name</span>
+    <span class="min-w-0">
+      <span class="block truncate text-sm font-medium"><%= row.payer_label %></span>
+      <span class="mt-0.5 block text-xs text-muted-foreground"><%= folio_kind.humanize %></span>
     </span>
-    <span class="shrink-0 text-sm font-semibold tabular-nums"><%= sheet.money(row.balance) %></span>
-    <%= render PanelsUI::Badge.new(label: row.status_label, variant: badge_tones.fetch(row.status_tone, :neutral), size: :sm) %>
+  </div>
+
+  <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 lg:block lg:text-right" role="cell">
+    <span class="text-xs font-medium text-muted-foreground lg:hidden">Total balance</span>
+    <span class="text-sm font-semibold tabular-nums" data-<%= ns %>-target="balanceAmount"><%= sheet.money(row.balance) %></span>
   </div>
 
   <%= fields_for field_scope, OpenStruct.new(values) do |folio_form| %>
     <%= folio_form.hidden_field :amount, value: values[:amount] %>
-    <%= folio_form.hidden_field :action, value: values[:action] if single_action %>
 
-    <div class="mt-3 grid gap-3 sm:grid-cols-2 sm:items-start">
-      <%= render PanelsUI::FormField.new(
-            form: folio_form,
-            attribute: :action,
-            label: "Resolution",
-            disabled: single_action || !booking_visible,
-            size: :sm) do |field| %>
-        <% field.with_select_menu(
-             row.action_options,
-             selected: values[:action],
-             data: {
-               "#{ns}-target": "actionControl",
-               folio_id: row.folio.id,
-               permanent_disabled: single_action,
-               action: "change->#{ns}#updateSettlementDetails"
-             }) %>
-      <% end %>
-
+    <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 lg:block" role="cell">
+      <span class="text-xs font-medium text-muted-foreground lg:hidden">Settlement</span>
       <div class="min-w-0">
-        <div class="<%= 'hidden' unless values[:action] == 'pay_now' %>" data-<%= ns %>-target="paymentFields">
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div data-conditional-required="true">
-              <%= render PanelsUI::FormField.new(form: folio_form, attribute: :payment_method, label: "Payment method", size: :sm, disabled: !booking_visible) do |field| %>
-                <% field.with_select_menu(sheet.payment_method_options, selected: values[:payment_method]) %>
-              <% end %>
-            </div>
-            <%= render PanelsUI::FormField.new(form: folio_form, attribute: :payment_reference, label: "Payment reference", hint: "Optional.", size: :sm, disabled: !booking_visible) do |field| %>
-              <% field.with_input(value: values[:payment_reference], placeholder: "e.g. receipt no.") %>
+        <% if single_action %>
+          <%= folio_form.hidden_field :action,
+                value: values[:action],
+                data: { "#{ns}-target": "actionControl", folio_id: row.folio.id } %>
+          <span class="text-sm" data-<%= ns %>-target="settlementLabel"><%= values[:action].humanize %></span>
+        <% else %>
+          <div data-<%= ns %>-target="settlementControl">
+            <%= render PanelsUI::FormField.new(
+                  form: folio_form,
+                  attribute: :action,
+                  label: "Settlement for #{row.folio.folio_reference_display}",
+                  label_hidden: true,
+                  disabled: !booking_visible,
+                  size: :sm) do |field| %>
+              <% field.with_select_menu(
+                   row.action_options,
+                   selected: values[:action],
+                   data: {
+                     "#{ns}-target": "actionControl",
+                     folio_id: row.folio.id,
+                     action: "change->#{ns}#updateSettlementDetails"
+                   }) %>
             <% end %>
           </div>
-        </div>
+          <span class="hidden text-sm" data-<%= ns %>-target="settlementResolved">Close</span>
+        <% end %>
 
-        <div class="<%= 'hidden' unless exception_actions.include?(values[:action]) %>" data-<%= ns %>-target="reasonFields">
+        <div class="<%= 'hidden' unless exception_actions.include?(values[:action]) %> mt-2" data-<%= ns %>-target="reasonFields">
           <div data-conditional-required="true">
-            <%= render PanelsUI::FormField.new(form: folio_form, attribute: :reason, label: "Reason", hint: "Why this folio cannot be closed at checkout.", size: :sm, disabled: !booking_visible) do |field| %>
-              <% field.with_input(value: values[:reason], placeholder: "e.g. awaiting manager approval") %>
+            <%= render PanelsUI::FormField.new(
+                  form: folio_form,
+                  attribute: :reason,
+                  label: "Reason",
+                  label_hidden: true,
+                  hint: "Required to leave this folio open.",
+                  size: :sm,
+                  disabled: !booking_visible) do |field| %>
+              <% field.with_input(value: values[:reason], placeholder: "Add reason") %>
             <% end %>
           </div>
         </div>
 
-        <div class="<%= 'hidden' unless values[:action] == 'direct_bill' %>" data-<%= ns %>-target="directBillFields">
-          <%= render PanelsUI::Alert.new(tone: credit_exposure&.warning? ? :warning : :info, title: "Direct bill") do |alert| %>
-            <% alert.with_description do %>
-              AR invoice issued to <%= row.folio.hotel_corporate_account&.corporate_account&.name || "the company account" %>.
-              <% if credit_exposure&.warning? %><span class="mt-1 block"><%= credit_exposure.warning_message %></span><% end %>
-            <% end %>
+        <div class="<%= 'hidden' unless values[:action] == 'direct_bill' %> mt-2 space-y-2" data-<%= ns %>-target="directBillFields">
+          <% if credit_exposure&.warning? %>
+            <p class="text-xs text-warning-foreground"><%= credit_exposure.warning_message %></p>
           <% end %>
 
           <% if credit_exposure&.requires_override? && current_user.has_permission?(ArInvoices::AuthorizeCreditExposure::PERMISSION, hotel: current_hotel) %>
-            <div class="mt-3 space-y-3">
-              <%= render PanelsUI::Checkbox.new(
-                    form: folio_form,
-                    attribute: :credit_override,
-                    label: "Override corporate credit control",
-                    description: "Confirms that an authorized exception has been approved.",
-                    checked: ActiveModel::Type::Boolean.new.cast(values[:credit_override]),
-                    size: :sm,
-                    disabled: !booking_visible) %>
-              <%= render PanelsUI::FormField.new(
-                    form: folio_form,
-                    attribute: :credit_override_reason,
-                    label: "Override reason",
-                    hint: "Required when overriding the credit control.",
-                    size: :sm,
-                    disabled: !booking_visible) do |field| %>
-                <% field.with_input(value: values[:credit_override_reason], placeholder: "e.g. approved by finance manager") %>
-              <% end %>
-            </div>
+            <%= render PanelsUI::Checkbox.new(
+                  form: folio_form,
+                  attribute: :credit_override,
+                  label: "Override credit control",
+                  checked: ActiveModel::Type::Boolean.new.cast(values[:credit_override]),
+                  size: :sm,
+                  disabled: !booking_visible) %>
+            <%= render PanelsUI::FormField.new(
+                  form: folio_form,
+                  attribute: :credit_override_reason,
+                  label: "Override reason",
+                  label_hidden: true,
+                  size: :sm,
+                  disabled: !booking_visible) do |field| %>
+              <% field.with_input(value: values[:credit_override_reason], placeholder: "Add override reason") %>
+            <% end %>
           <% end %>
         </div>
       </div>
     </div>
 
-    <div class="mt-2 flex justify-end">
-      <%= link_to row.ledger_path, target: "_blank", rel: "noopener",
-            class: "inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline",
-            data: { turbo: false } do %>
-        View folio ledger
-        <%= app_icon "external-link", class: "size-3.5", aria: { hidden: true } %>
-      <% end %>
+    <div class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-3 lg:block" role="cell">
+      <span class="text-xs font-medium text-muted-foreground lg:hidden">Action</span>
+      <div class="min-w-0">
+        <div class="<%= 'hidden' unless settlement_action %>" data-<%= ns %>-target="settlementFields">
+          <%= render PanelsUI::Button.new(
+                href: values[:action] == "refund_credit_handling" ? refund_path : payment_path,
+                variant: values[:action] == "refund_credit_handling" ? :warning : :primary,
+                size: :sm,
+                data: {
+                  turbo_frame: "folio_action_sheet",
+                  "#{ns}-target": "settlementButton",
+                  payment_url: payment_path,
+                  refund_url: refund_path
+                }) do %>
+            <%= app_icon "credit-card",
+                  class: "size-3.5 #{'hidden' if values[:action] == 'refund_credit_handling'}",
+                  aria: { hidden: true },
+                  data: { "#{ns}-target": "settlementPaymentIcon" } %>
+            <%= app_icon "rotate-ccw",
+                  class: "size-3.5 #{'hidden' unless values[:action] == 'refund_credit_handling'}",
+                  aria: { hidden: true },
+                  data: { "#{ns}-target": "settlementRefundIcon" } %>
+            <span data-<%= ns %>-target="settlementButtonLabel"><%= values[:action] == "refund_credit_handling" ? "Refund #{sheet.money(row.balance.abs)}" : "Pay #{sheet.money(row.balance)}" %></span>
+          <% end %>
+        </div>
+        <span class="text-sm text-muted-foreground <%= 'hidden' if settlement_action %>" data-<%= ns %>-target="actionOutcome"><%= action_outcomes[values[:action]] || values[:action].humanize %></span>
+      </div>
     </div>
   <% end %>
 </article>

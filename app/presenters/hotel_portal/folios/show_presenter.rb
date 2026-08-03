@@ -454,21 +454,13 @@ module HotelPortal
     def night_audit_url
       return unless can_view_night_audit?
 
-      if current_business_date_night_audit
-        routes.hotel_night_audit_path(hotel, current_business_date_night_audit)
-      else
-        routes.hotel_night_audits_path(hotel)
-      end
+      routes.hotel_night_audit_run_path(hotel)
     end
 
     def night_audit_blockers_url
       return unless can_view_night_audit?
 
-      if current_business_date_night_audit&.blocked?
-        routes.resolve_hotel_night_audit_path(hotel, current_business_date_night_audit)
-      else
-        routes.hotel_night_audits_path(hotel)
-      end
+      routes.hotel_night_audit_run_path(hotel)
     end
 
     def can_show_normal_folio_actions?

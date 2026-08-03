@@ -21,7 +21,7 @@ module Bookings
 
       case @status
       when "checked_in"
-        if @booking.status == "review_due_out"
+        if @booking.status == "due_out_detected"
           simple_transition("checked_in", @options[:event] || "resolve_late_checkout")
         else
           check_in
@@ -36,8 +36,8 @@ module Bookings
         check_out
       when "cancelled"
         cancel
-      when "review_due_out"
-        simple_transition("review_due_out", @options[:event] || "detect_late_checkout")
+      when "due_out_detected"
+        simple_transition("due_out_detected", @options[:event] || "detect_due_out")
       when "checkout_required"
         simple_transition("checkout_required", @options[:event] || "reject_late_checkout")
       else
@@ -114,8 +114,8 @@ module Bookings
             next
           end
 
-          was_review_no_show = @booking.status == "review_no_show"
-          unless @booking.status.in?(%w[confirmed review_no_show])
+          was_no_show_detected = @booking.status == "no_show_detected"
+          unless @booking.status.in?(%w[confirmed no_show_detected])
             error = "Cannot check in booking with status #{@booking.status}"
             next
           end
@@ -160,7 +160,7 @@ module Bookings
 
           @booking.transition_status_to!(
             "checked_in",
-            event: was_review_no_show ? "backdated_check_in" : "check_in",
+            event: was_no_show_detected ? "backdated_check_in" : "check_in",
             attributes: attributes
           )
 
@@ -193,7 +193,7 @@ module Bookings
             @booking.update!(deposit_status: "held")
           end
 
-          if is_retroactive || was_review_no_show
+          if is_retroactive || was_no_show_detected
             Folios::Charges::ProcessCatchUpCharges.call(
               booking: @booking,
               user: @user,
@@ -207,7 +207,7 @@ module Bookings
             user: @user,
             action_type: "check_in",
             source: @options[:source],
-            old_value: { "status" => was_review_no_show ? "review_no_show" : "confirmed" },
+            old_value: { "status" => was_no_show_detected ? "no_show_detected" : "confirmed" },
             new_value: { "status" => "checked_in", "checked_in_at" => @booking.checked_in_at },
             reason: @options[:reason],
             metadata: check_in_audit_metadata(is_retroactive).merge("room_number" => @booking.booking_rooms.first&.room_number)
@@ -425,7 +425,7 @@ module Bookings
           previous_status = @booking.status
           @booking.transition_status_to!("cancelled", event: "cancel", attributes: @options[:attributes] || {})
           InventoryManager.new(@booking).release if release_inventory_on_cancel?(previous_status)
-          release_review_rooms_to_ready if previous_status == "review_no_show"
+          release_detected_no_show_rooms_to_ready if previous_status == "no_show_detected"
           Bookings::RecordAuditLog.call!(
             auditable: @booking,
             user: @user,
@@ -451,11 +451,11 @@ module Bookings
     end
 
     def cancellable_status?
-      @booking.status.in?(%w[pending confirmed review_no_show overbooked])
+      @booking.status.in?(%w[pending confirmed no_show_detected overbooked])
     end
 
     def release_inventory_on_cancel?(previous_status)
-      previous_status.in?(%w[pending confirmed review_no_show])
+      previous_status.in?(%w[pending confirmed no_show_detected])
     end
 
     def mark_assigned_rooms_dirty
@@ -466,37 +466,27 @@ module Bookings
           room_number: booking_room.room_number
         )
 
-        room_status.update!(dnd: false, dnd_date: nil)
+        room_status.update!(dnd: false, dnd_date: nil, notes: nil)
 
-        Rooms::SetStatus.new(
+        result = Rooms::SetStatus.new(
           room_status: room_status,
           status: "dirty",
           user: @user,
           booking: @booking,
           event_type: "checkout_marked_dirty",
-          reason: nil,
-          metadata: { "booking_id" => @booking.id }
+          reason: "Checkout turnover",
+          metadata: { "booking_id" => @booking.id },
+          enforce_transition: false
         ).call
+        raise result.error unless result.success?
       end
-
-      # Auto-create one checkout request for the booking.
-      # Checkout room cleaning stays in CheckOutRequest and is rendered in the housekeeping task view.
-      return if @booking.check_out_requests.where(status: %w[new assigned in_progress pending acknowledged]).exists?
-
-      checkout_room_number = @booking.booking_rooms.where.not(room_number: [ nil, "" ]).first&.room_number
-      @booking.check_out_requests.create!(
-        status: "new",
-        requested_at: Time.current,
-        guest_notes: "Checkout Room Cleaning",
-        metadata: { "source" => "auto_checkout", "room_number" => checkout_room_number }
-      )
     end
 
-    def release_review_rooms_to_ready
+    def release_detected_no_show_rooms_to_ready
       result = Bookings::ReleaseAssignedRooms.call(
         booking: @booking,
         user: @user,
-        event_type: "review_no_show_cancelled",
+        event_type: "no_show_detection_cancelled",
         reason: @options[:reason],
         metadata: { "source" => "bookings_transition_status" }
       )

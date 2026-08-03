@@ -10,6 +10,11 @@ RSpec.describe Booking, type: :model do
       expect(Booking::STATUSES).to include('no_show')
     end
 
+    it "uses detected status names instead of review status names" do
+      expect(Booking::STATUSES).to include("no_show_detected", "due_out_detected")
+      expect(Booking::STATUSES).not_to include("review_no_show", "review_due_out")
+    end
+
     it "includes voided in STATUSES" do
       expect(Booking::STATUSES).to include('voided')
     end
@@ -128,9 +133,9 @@ RSpec.describe Booking, type: :model do
       booking = create(
         :booking,
         status: from,
-        no_show_review_business_date: (Date.current if from == "review_no_show")
+        no_show_detected_business_date: (Date.current if from == "no_show_detected")
       )
-      attributes = { no_show_review_business_date: Date.current } if to == "review_no_show"
+      attributes = { no_show_detected_business_date: Date.current } if to == "no_show_detected"
 
       expect {
         booking.transition_status_to!(to, event: event, attributes: attributes || {})
@@ -142,18 +147,18 @@ RSpec.describe Booking, type: :model do
       expect_transition(from: "pending", to: "cancelled", event: "cancel")
       expect_transition(from: "confirmed", to: "checked_in", event: "check_in")
       expect_transition(from: "confirmed", to: "cancelled", event: "cancel")
-      expect_transition(from: "confirmed", to: "review_no_show", event: "review_no_show")
-      expect_transition(from: "review_no_show", to: "no_show", event: "mark_no_show")
-      expect_transition(from: "review_no_show", to: "no_show", event: "auto_mark_no_show")
-      expect_transition(from: "review_no_show", to: "checked_in", event: "backdated_check_in")
-      expect_transition(from: "review_no_show", to: "cancelled", event: "cancel")
+      expect_transition(from: "confirmed", to: "no_show_detected", event: "detect_no_show")
+      expect_transition(from: "no_show_detected", to: "no_show", event: "mark_no_show")
+      expect_transition(from: "no_show_detected", to: "no_show", event: "auto_mark_no_show")
+      expect_transition(from: "no_show_detected", to: "checked_in", event: "backdated_check_in")
+      expect_transition(from: "no_show_detected", to: "cancelled", event: "cancel")
       expect_transition(from: "confirmed", to: "overbooked", event: "mark_overbooked")
       expect_transition(from: "overbooked", to: "confirmed", event: "resolve_overbooking")
       expect_transition(from: "overbooked", to: "cancelled", event: "cancel")
       expect_transition(from: "checked_in", to: "completed", event: "check_out")
-      expect_transition(from: "checked_in", to: "review_due_out", event: "detect_late_checkout")
-      expect_transition(from: "review_due_out", to: "checked_in", event: "resolve_late_checkout")
-      expect_transition(from: "review_due_out", to: "checkout_required", event: "reject_late_checkout")
+      expect_transition(from: "checked_in", to: "due_out_detected", event: "detect_due_out")
+      expect_transition(from: "due_out_detected", to: "checked_in", event: "resolve_late_checkout")
+      expect_transition(from: "due_out_detected", to: "checkout_required", event: "reject_late_checkout")
       expect_transition(from: "checkout_required", to: "completed", event: "check_out")
       expect_transition(from: "no_show", to: "checked_in", event: "reinstate")
       (Booking::STATUSES - %w[voided]).each do |status|
@@ -220,11 +225,11 @@ RSpec.describe Booking, type: :model do
       expect(booking.reload.status).to eq("completed")
     end
 
-    it "requires a business date while pending no-show review" do
-      booking = build(:booking, status: "review_no_show", no_show_review_business_date: nil)
+    it "requires a business date when a no-show is detected" do
+      booking = build(:booking, status: "no_show_detected", no_show_detected_business_date: nil)
 
       expect(booking).not_to be_valid
-      expect(booking.errors[:no_show_review_business_date]).to include("can't be blank")
+      expect(booking.errors[:no_show_detected_business_date]).to include("can't be blank")
     end
   end
 

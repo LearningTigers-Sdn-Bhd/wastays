@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelPortal::StayViewHelper, type: :helper do
-  around { |example| travel_to(Time.zone.local(2026, 7, 16, 10, 0, 0)) { example.run } }
-
+RSpec.describe HotelPortal::StayViewHelper, type: :helper, frozen_time: Time.zone.local(2026, 7, 16, 10) do
   let(:hotel) { create(:hotel, accounting_business_date: Date.current) }
   let(:state) { StayView::BoardState.new(hotel:, params: { view: :rooms, date: Date.current }) }
   let(:capabilities) do
@@ -47,9 +45,9 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
     expected = {
       "pending" => [],
       "confirmed" => [ "Check-in", "Cancel" ],
-      "review_no_show" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
+      "no_show_detected" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
       "checked_in" => [ "Check-out", "Edit Check-In", "Undo Check-in" ],
-      "review_due_out" => [ "Review Late Checkout" ],
+      "due_out_detected" => [ "Resolve due-out" ],
       "checkout_required" => [ "Complete Checkout" ],
       "cancelled" => [],
       "completed" => [],
@@ -73,10 +71,10 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
       "Check-out" => hotel_booking_action_checkout_path(hotel, 123),
       "Edit Check-In" => hotel_booking_action_check_in_path(hotel, 123),
       "Undo Check-in" => hotel_booking_action_undo_check_in_path(hotel, 123),
-      "Review Late Checkout" => hotel_booking_action_late_checkout_path(hotel, 123),
+      "Resolve due-out" => hotel_booking_action_late_checkout_path(hotel, 123),
       "Complete Checkout" => hotel_booking_action_checkout_path(hotel, 123)
     }
-    actions = %w[confirmed review_no_show checked_in review_due_out checkout_required]
+    actions = %w[confirmed no_show_detected checked_in due_out_detected checkout_required]
       .flat_map { |status| lifecycle_actions(status) }
 
     expect(actions.map { |action| action.fetch(:label) }).to include(*expected_paths.keys)
@@ -86,7 +84,7 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper do
 
       expect(uri.path).to eq(expected_paths.fetch(action.fetch(:label)))
       expect(query).to include("source" => "stay_view", "return_to" => state.return_path(hotel))
-      sheet_actions = [ "Cancel", "Check-in", "Edit Check-In", "Mark No-show", "Undo Check-in", "Backdated Check-in", "Review Late Checkout", "Check-out", "Complete Checkout" ]
+      sheet_actions = [ "Cancel", "Check-in", "Edit Check-In", "Mark No-show", "Undo Check-in", "Backdated Check-in", "Resolve due-out", "Check-out", "Complete Checkout" ]
       expected_data = action.fetch(:label).in?(sheet_actions) ? helper.stay_view_booking_action_data : helper.stay_view_action_data
       expect(action.fetch(:data)).to eq(expected_data)
     end

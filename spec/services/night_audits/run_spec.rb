@@ -117,7 +117,7 @@ RSpec.describe NightAudits::Run do
     expect(folio.folio_transactions.charge.where("metadata->>'posting_source' = ?", "night_audit").count).to eq(2)
   end
 
-  it "places missed arrivals into no-show review before completing the audit" do
+  it "requires staff to resolve missed arrivals before processing" do
     booking = create(:booking,
       hotel: hotel,
       status: "confirmed",
@@ -128,10 +128,11 @@ RSpec.describe NightAudits::Run do
 
     result = run_audit
 
-    expect(result.success?).to be(true)
-    expect(booking.reload.status).to eq("review_no_show")
+    expect(result.success?).to be(false)
+    expect(result.night_audit).to be_preparing
+    expect(booking.reload.status).to eq("confirmed")
     expect(booking.booking_folio).to be_nil
-    expect(result.night_audit.summary["review_no_show_count"]).to eq(1)
+    expect(result.night_audit.blocked_details["missed_arrival_not_resolved"].sole["booking_id"]).to eq(booking.id)
   end
 
   it "does not keep no-shows financially relevant on later audit dates" do
@@ -148,7 +149,7 @@ RSpec.describe NightAudits::Run do
     expect(result.night_audit.blocked_details["missing_folio"]).to be_empty
   end
 
-  it "moves a missed due-out to review, records a warning, and completes without a nightly charge" do
+  it "requires staff to resolve a missed due-out without changing its status" do
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -160,18 +161,16 @@ RSpec.describe NightAudits::Run do
 
     result = run_audit
 
-    expect(result.success?).to be(true)
-    expect(booking.reload.status).to eq("review_due_out")
-    expect(result.night_audit.exceptions["review_due_out"].sole["booking_id"]).to eq(booking.id)
-    expect(result.night_audit.summary.dig("run_results", "status_changes", "count")).to eq(1)
-    expect(result.night_audit.summary.dig("run_results", "charges_posted", "count")).to eq(0)
-    expect(result.night_audit.blocked_details["due_out_not_checked_out"]).to be_empty
+    expect(result.success?).to be(false)
+    expect(result.night_audit).to be_preparing
+    expect(booking.reload.status).to eq("checked_in")
+    expect(result.night_audit.blocked_details["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
   end
 
-  it "closes with an existing review_due_out warning" do
+  it "requires staff to resolve an existing due-out detection" do
     booking = create(:booking,
       hotel: hotel,
-      status: "review_due_out",
+      status: "due_out_detected",
       payment_status: "captured",
       check_in: business_date - 1.day,
       check_out: business_date,
@@ -180,12 +179,12 @@ RSpec.describe NightAudits::Run do
 
     result = run_audit
 
-    expect(result.success?).to be(true)
-    expect(result.night_audit).to be_completed
-    expect(result.night_audit.exceptions["review_due_out"].sole["booking_id"]).to eq(booking.id)
+    expect(result.success?).to be(false)
+    expect(result.night_audit).to be_preparing
+    expect(result.night_audit.blocked_details["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
   end
 
-  it "blocks when a stale checked-in due-out fails to transition" do
+  it "does not attempt an automatic due-out transition" do
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -199,10 +198,10 @@ RSpec.describe NightAudits::Run do
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(result.night_audit).to be_blocked
+    expect(result.night_audit).to be_preparing
     expect(booking.reload.status).to eq("checked_in")
     expect(result.night_audit.blocked_details["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
-    expect(result.night_audit.summary.dig("run_results", "failed_items", "items").sole["reason"]).to eq("transition failed")
+    expect(result.night_audit.summary.dig("run_results", "failed_items", "items")).to be_nil
   end
 
   it "stores open requests as warnings and logs exceptions" do
@@ -264,10 +263,10 @@ RSpec.describe NightAudits::Run do
 
     expect(result.success?).to be(false)
     expect(result.night_audit.blocked_details["missing_folio"].first["booking_id"]).to eq(booking.id)
-    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_open
   end
 
-  it "blocks when a due-out review booking has no folio" do
+  it "blocks when a due-out detected booking has no folio" do
     booking = create(:booking,
       hotel: hotel,
       status: "checked_in",
@@ -278,9 +277,9 @@ RSpec.describe NightAudits::Run do
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(booking.reload.status).to eq("review_due_out")
+    expect(booking.reload.status).to eq("checked_in")
     expect(result.night_audit.blocked_details["missing_folio"].sole["booking_id"]).to eq(booking.id)
-    expect(result.night_audit.exceptions["review_due_out"].sole["booking_id"]).to eq(booking.id)
+    expect(result.night_audit.blocked_details["due_out_not_checked_out"].sole["booking_id"]).to eq(booking.id)
   end
 
   it "allows duplicate-protected nightly charge skips" do
@@ -438,28 +437,26 @@ RSpec.describe NightAudits::Run do
     expect(result.night_audit.blocked_details["refund_not_synced"].first["refund_request_id"]).to eq(refund_request.id)
   end
 
-  it "marks the audit failed and logs error when processing raises" do
+  it "marks the audit failed and logs error when evaluation raises" do
     allow_any_instance_of(NightAudits::Evaluate).to receive(:call).and_raise(StandardError, "boom")
 
-    expect { run_audit }.to change(NightAuditLog, :count).by(2) # process_started, failed
+    expect { run_audit }.to change(NightAuditLog, :count).by(1) # failed before processing starts
 
     result = run_audit
 
     expect(result.success?).to be(false)
     expect(result.error).to eq("boom")
     expect(result.night_audit).to be_failed
-    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_open
     expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
     expect(result.night_audit.night_audit_logs.last.action_type).to eq("failed")
     expect(result.night_audit.night_audit_logs.last.metadata["error"]).to eq("boom")
     expect(result.night_audit.summary.dig("run_results", "failed_items", "items").sole["reason"]).to eq("boom")
-    expect(result.night_audit.financial_audit_events.pluck(:event_type)).to include(
-      "night_audit_failed",
-      "business_date_audit_blocked"
-    )
+    expect(result.night_audit.financial_audit_events.pluck(:event_type)).to include("night_audit_failed")
+    expect(result.night_audit.financial_audit_events.pluck(:event_type)).not_to include("business_date_audit_blocked")
   end
 
-  it "keeps a missed arrival in review when the audit later fails" do
+  it "does not mutate a missed arrival when evaluation fails" do
     booking = create(:booking, hotel: hotel, status: "confirmed", check_in: business_date, check_out: business_date + 2.days)
     create(:booking_room, booking: booking, subtotal: 200.0)
     allow_any_instance_of(NightAudits::Evaluate).to receive(:call).and_raise(StandardError, "boom")
@@ -467,16 +464,16 @@ RSpec.describe NightAudits::Run do
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(booking.reload.status).to eq("review_no_show")
-    expect(booking.no_show_review_business_date).to eq(business_date)
+    expect(booking.reload.status).to eq("confirmed")
+    expect(booking.no_show_detected_business_date).to be_nil
   end
 
-  it "blocks an expired-review charge when its posting date has no accounting control row" do
+  it "does not finalize an expired no-show review automatically" do
     booking = create(
       :booking,
       hotel: hotel,
-      status: "review_no_show",
-      no_show_review_business_date: business_date - 1.day,
+      status: "no_show_detected",
+      no_show_detected_business_date: business_date - 1.day,
       check_in: business_date - 1.day,
       check_out: business_date + 1.day,
       tax_lines: []
@@ -487,8 +484,8 @@ RSpec.describe NightAudits::Run do
     result = run_audit
 
     expect(result.success?).to be(false)
-    expect(result.error).to include("has no accounting control record")
-    expect(booking.reload.status).to eq("review_no_show")
+    expect(result.error).to eq("boom")
+    expect(booking.reload.status).to eq("no_show_detected")
     expect(booking.booking_folio).to be_nil
   end
 
@@ -507,7 +504,7 @@ RSpec.describe NightAudits::Run do
     kl_zone = Time.find_zone("Kuala Lumpur")
     existing = create(:night_audit, hotel: hotel, business_date: unclosable_date, status: "pending", trigger_mode: "manual")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       result = described_class.new(
         hotel: hotel,
         business_date: unclosable_date,
@@ -531,7 +528,7 @@ RSpec.describe NightAudits::Run do
     kl_zone = Time.find_zone("Kuala Lumpur")
     audit_hotel = create(:hotel, :without_current_business_date, account: account, time_zone: "Kuala Lumpur", business_starts_at: "08:00", business_ends_at: "02:00")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       result = described_class.new(
         hotel: audit_hotel,
         business_date: unclosable_date,
@@ -550,7 +547,7 @@ RSpec.describe NightAudits::Run do
     unclosable_date = Date.new(2026, 5, 21)
     kl_zone = Time.find_zone("Kuala Lumpur")
 
-    travel_to(kl_zone.local(2026, 5, 21, 10, 0)) do
+    with_frozen_time(kl_zone.local(2026, 5, 21, 10, 0)) do
       result = described_class.new(
         hotel: hotel,
         business_date: unclosable_date,

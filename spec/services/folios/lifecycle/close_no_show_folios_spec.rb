@@ -9,8 +9,8 @@ RSpec.describe Folios::Lifecycle::CloseNoShowFolios do
     create(
       :booking,
       hotel: hotel,
-      status: "review_no_show",
-      no_show_review_business_date: hotel.current_business_date
+      status: "no_show_detected",
+      no_show_detected_business_date: hotel.current_business_date
     )
   end
 

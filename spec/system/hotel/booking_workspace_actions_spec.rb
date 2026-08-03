@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Booking workspace actions", :business_day, type: :system do
+RSpec.describe "Booking workspace actions", frozen_time: :business_day, type: :system do
   include_context "booking workspace system setup"
 
   it "opens and keyboard-closes a room-card audit trail Sheet", js: true do
@@ -143,14 +143,14 @@ RSpec.describe "Booking workspace actions", :business_day, type: :system do
     expect(sibling.reload.status).to eq("checked_in")
   end
 
-  it "resolves a folio beside its settlement fields and completes checkout", js: true do
+  it "settles a folio in a child Sheet and completes checkout after polling", js: true do
     role.permissions << Permission.find_or_create_by!(slug: "post_folio_payments") { |record| record.name = "Post folio payments" }
     booking.update!(check_in: 2.hours.ago, check_out: Time.current)
     booking.update_columns(status: "checkout_required", checked_in_at: 2.hours.ago)
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
 
     primary_folio = booking.booking_folios.find_by!(is_primary: true)
-    create(:deposit, booking: booking, hotel: hotel, amount: 175, status: "held")
+    deposit = create(:deposit, booking: booking, hotel: hotel, amount: 175, status: "held")
 
     relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
     company_folio = create(
@@ -178,10 +178,10 @@ RSpec.describe "Booking workspace actions", :business_day, type: :system do
     page.current_window.resize_to(1400, 1400)
 
     within("#booking-checkout-sheet") do
-      expect(page).to have_content("Resolve folios")
+      expect(page).to have_content("Finish guest bills")
       expect(page).to have_no_content("Settlement Details")
 
-      company_row = find("article", text: "Company Folio")
+      company_row = find("article", text: company_folio.folio_reference_display)
       resolution_trigger = company_row.find(
         "[data-booking-actions--checkout-settlement-target~='actionControl'] .panel-select-menu__trigger"
       )
@@ -189,15 +189,43 @@ RSpec.describe "Booking workspace actions", :business_day, type: :system do
       click_in_overlay find("[role='option']", text: "Pay Now", visible: true)
 
       within(company_row) do
-        expect(page).to have_field("Payment method", with: "cash", visible: :all)
-        fill_in "Payment reference", with: "COUNTER-42"
+        click_link "Pay MYR 60.00"
+      end
+    end
+
+    expect(page).to have_css("dialog#folio-post-transaction-sheet[open]", wait: 3)
+    within("dialog#folio-post-transaction-sheet") do
+      expect(page).to have_content("Settle checkout payment")
+      expect(page).to have_content("MYR 60.00")
+      find("[data-controller~='panels-ui--select-menu'] button").click
+      find("[role='option']", text: "Cash").click
+      expect(page).to have_field("Description", with: "Checkout payment for Company Folio", readonly: true)
+      click_button "Post checkout payment"
+    end
+
+    expect(page).to have_no_css("dialog#folio-post-transaction-sheet", wait: 3)
+    within("#booking-checkout-sheet") do
+      company_row = find("article", text: company_folio.folio_reference_display)
+      within(company_row) do
+        expect(page).to have_content("Closes at checkout", wait: 5)
+        expect(page).to have_no_link("Pay MYR 60.00")
       end
 
-      deposit_switch = find("label.panel-switch", text: "Return at checkout")
-      click_in_overlay deposit_switch
-      expect(find("select[name='security_deposit_release_method']", visible: :all)).to be_disabled
-      click_in_overlay deposit_switch
+      deposit_row = find("tr[data-deposit-id='#{deposit.id}']")
+      within(deposit_row) do
+        click_in_overlay find(".panel-select-menu__trigger")
+        click_in_overlay find("[role='option']", text: "Release", visible: true)
+        click_link "Release"
+      end
+    end
 
+    expect(page).to have_css("dialog#deposit-settlement-release-#{deposit.id}[open]", wait: 3)
+    within("dialog#deposit-settlement-release-#{deposit.id}") { click_button "Release" }
+    expect(page).to have_no_css("dialog#deposit-settlement-release-#{deposit.id}", wait: 3)
+
+    within("#booking-checkout-sheet") do
+      deposit_row = find("tr[data-deposit-id='#{deposit.id}']", text: "Complete", wait: 5)
+      expect(deposit_row).to have_content("MYR 0.00")
       click_in_overlay "Complete checkout"
     end
 

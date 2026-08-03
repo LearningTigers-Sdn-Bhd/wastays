@@ -2,8 +2,14 @@ class Api::V1::Bookings::HousekeepingRequestsController < Api::V1::BaseControlle
   before_action :set_booking
 
   def create
+    unless Bookings::Occupancy.accepts_guest_requests?(@booking)
+      render json: { error: "Housekeeping requests can only be created for active bookings." }, status: :unprocessable_entity
+      return
+    end
+
     @housekeeping_request = @booking.housekeeping_requests.build(housekeeping_params)
     @housekeeping_request.status ||= "pending"
+    @housekeeping_request.work_context = "guest_request"
     @housekeeping_request.requested_at ||= Time.current
 
     if @housekeeping_request.save

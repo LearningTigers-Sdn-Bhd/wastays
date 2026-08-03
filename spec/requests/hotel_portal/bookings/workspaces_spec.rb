@@ -700,10 +700,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       role.permissions << manage_bookings
       expected_actions = {
         "confirmed" => [ "Check-in", "Cancel" ],
-        "review_no_show" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
+        "no_show_detected" => [ "Backdated Check-in", "Mark No-show", "Cancel" ],
         "no_show" => [ "Reinstate" ],
         "checked_in" => [ "Check-out", "Edit Check-In", "Undo Check-in" ],
-        "review_due_out" => [ "Review Late Checkout" ],
+        "due_out_detected" => [ "Resolve due-out" ],
         "checkout_required" => [ "Complete Checkout" ]
       }
 
@@ -788,8 +788,6 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       footer = document.at_css('[data-testid="guest-details-footer"]')
       save_guest = footer.at_xpath(".//button[@type='submit' and normalize-space()='Save Guest']")
       view_grc = footer.at_xpath(".//a[normalize-space()='View GRC']")
-      print_grc = footer.at_xpath(".//button[normalize-space()='Guest Registration Card']")
-      print_status = footer.at_css("[data-document-print-status]")
       discard_alert = document.at_css('dialog[data-controller~="confirm-discard"]')
 
       expect(form).to be_present
@@ -808,13 +806,9 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(document.at_xpath("//a[normalize-space()='Edit Guest']")).to be_nil
       expect(save_guest["form"]).to eq("guest-details-form")
       expect(view_grc["href"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))
-      expect(print_grc).to be_present
-      expect(print_status.parent["class"]).to include("items-center")
-      expect(print_status["class"]).not_to include("mt-2")
-      print_menu = print_grc.ancestors('[data-controller="document-print"]').first
-      expect(print_menu["data-document-print-url-value"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))
+      expect(view_grc["target"]).to eq("_blank")
       expect(discard_alert["role"]).to eq("alertdialog")
-      expect(response.body).to include("Guest details", "Guest details recorded for this stay.", "GRC Actions", "Print")
+      expect(response.body).to include("Guest details", "Guest details recorded for this stay.")
       expect(response.body).not_to include("Stay Record", "Guest Profile")
       expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Enter IC or passport number", "Select date of birth")
       expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot']")).to be_present

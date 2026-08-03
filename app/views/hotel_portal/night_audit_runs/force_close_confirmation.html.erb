@@ -1,0 +1,32 @@
+<% frame_id = turbo_frame_request_id.presence || "booking_action_sheet_secondary" %>
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "night-audit-force-close-sheet",
+          side: :right,
+          size: :md,
+          title: "Close date anyway",
+          description: "#{format_date(@business_date)} → #{format_date(@presenter.next_business_date)}",
+          body_class: "p-0") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with url: force_close_hotel_night_audit_run_path(current_hotel), method: :post, scope: :night_audit_run, class: "flex min-h-full flex-col" do |form| %>
+          <%= hidden_field_tag :return_to, @return_to %>
+          <%= hidden_field_tag :parent_frame, @parent_frame %>
+          <div class="flex-1 space-y-4 p-4 sm:p-6">
+            <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Some items still need attention", role: :alert) do |alert| %>
+              <% alert.with_description { "Closing now advances the business date and records the unfinished items in the Night Audit report." } %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Manager reason", required: true, hint: "This reason is permanently recorded.") do |field| %>
+              <% field.with_text_area(rows: 4, value: params.dig(:night_audit_run, :reason), placeholder: "Explain why the business date must close now") %>
+            <% end %>
+          </div>
+          <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3 sm:px-6">
+            <%= render PanelsUI::Button.new(type: :button, variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(type: :submit, variant: :destructive, data: { turbo_submits_with: "Closing…" }) do %>Close date anyway<% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,13 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Late-checkout charge calculator for the booking-action Sheet. Pure UI: shows
-// or hides the charge/checkout sections based on approve/reject, and computes
+// or hides the charge/checkout sections based on the resolution, and computes
 // the amount (standard rate, or rate + fixed/percentage adjustment) into the
 // hidden amount field. The choice controls are PanelsUI primitives (RadioGroup,
 // SelectMenu) that own their own markup, so we read them by field name rather
 // than by per-control Stimulus targets.
 export default class extends Controller {
-  static targets = ["chargeSection", "checkoutSection", "standardSection", "customSection", "displayAmount", "amountInput"]
+  static targets = ["chargeSection", "checkoutSection", "standardSection", "customSection", "displayAmount", "amountInput", "submitButton"]
   static values = {
     baseAmount: Number,
     currency: { type: String, default: "MYR" }
@@ -17,8 +17,8 @@ export default class extends Controller {
     this.updateUI()
   }
 
-  get chargeType() {
-    const checked = this.element.querySelector('input[name="charge_type"]:checked')
+  get resolution() {
+    const checked = this.element.querySelector('input[name="resolution"]:checked')
     return checked ? checked.value : "charge"
   }
 
@@ -38,7 +38,9 @@ export default class extends Controller {
   }
 
   updateUI() {
-    if (this.chargeType === "none") {
+    if (this.resolution === "reject") {
+      this.submitButtonTarget.textContent = "Reject late checkout"
+      this.submitButtonTarget.dataset.turboSubmitsWith = "Rejecting…"
       this.chargeSectionTarget.classList.add("hidden")
       this.checkoutSectionTarget.classList.add("hidden")
       this.customSectionTarget.classList.add("hidden")
@@ -47,8 +49,21 @@ export default class extends Controller {
       return
     }
 
-    this.chargeSectionTarget.classList.remove("hidden")
     this.checkoutSectionTarget.classList.remove("hidden")
+
+    if (this.resolution === "waive") {
+      this.submitButtonTarget.textContent = "Approve without charge"
+      this.submitButtonTarget.dataset.turboSubmitsWith = "Approving…"
+      this.chargeSectionTarget.classList.add("hidden")
+      this.customSectionTarget.classList.add("hidden")
+      this.standardSectionTarget.classList.add("hidden")
+      this.amountInputTarget.value = 0
+      return
+    }
+
+    this.submitButtonTarget.textContent = "Approve and apply charges"
+    this.submitButtonTarget.dataset.turboSubmitsWith = "Approving…"
+    this.chargeSectionTarget.classList.remove("hidden")
 
     if (this.calculationType === "custom") {
       this.customSectionTarget.classList.remove("hidden")
@@ -62,7 +77,7 @@ export default class extends Controller {
   }
 
   updateCalculation() {
-    if (this.chargeType === "none") return
+    if (this.resolution !== "charge") return
 
     let finalAmount = this.baseAmountValue
 

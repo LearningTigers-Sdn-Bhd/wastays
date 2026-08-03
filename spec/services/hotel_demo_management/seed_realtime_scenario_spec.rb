@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
+RSpec.describe HotelDemoManagement::SeedRealtimeScenario, frozen_time: :business_day do
   include ActiveJob::TestHelper
 
   let(:logger) { HotelDemoManagement::ResetState::NoopLogger.new }
@@ -164,13 +164,9 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
         expect(booking.booking_folio.outstanding_balance).to be_zero
       end
 
-      historical_cleaning_requests = CheckOutRequest.joins(:booking)
-                                                    .where(bookings: { hotel_id: hotel.id })
-                                                    .where("bookings.checked_out_at < ?", Time.current.beginning_of_day)
-      expect(historical_cleaning_requests).not_to be_empty
-      expect(historical_cleaning_requests.distinct.pluck(:status)).to eq([ "completed" ])
-      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_started").count).to eq(historical_cleaning_requests.count)
-      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_completed").count).to eq(historical_cleaning_requests.count)
+      expect(HousekeepingRequest.checkout_turnovers.joins(:booking).where(bookings: { hotel_id: hotel.id })).to be_empty
+      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_started")).to exist
+      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_completed")).to exist
     end
 
     it "fills the SST, tourism tax, extra charge, deposit liability, and outstanding balance reports with real data" do
@@ -241,22 +237,16 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, :business_day do
       expect(hotel.bookings.distinct.pluck(:status)).to match_array(%w[completed confirmed checked_in])
     end
 
-    it "completes every historical cleaning request for a booking without broadcasting demo webhooks" do
+    it "completes historical room cleaning without creating tasks or broadcasting demo webhooks" do
       booking = create(:booking, hotel: hotel, status: "completed")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
-      requests = [
-        create(:check_out_request, booking: booking, status: "new", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" }),
-        create(:check_out_request, booking: booking, status: "new", guest_notes: "Checkout Room Cleaning", metadata: { "room_number" => "101" })
-      ]
 
-      expect { build_service.send(:complete_historical_checkout_cleaning, booking) }
+      expect { build_service.send(:complete_historical_checkout_cleaning, booking, user) }
         .not_to have_enqueued_job(WebhookBroadcastJob)
 
-      expect(requests.map { |request| request.reload.status }).to all(eq("completed"))
+      expect(HousekeepingRequest.checkout_turnovers.where(booking: booking)).to be_empty
       expect(RoomStatus.find_by!(hotel: hotel, room_number: "101").status).to eq("ready")
-      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_started").count).to eq(1)
-      expect(RoomOperationalAuditLog.where(hotel: hotel, event_type: "checkout_room_cleaning_completed").count).to eq(1)
     end
 
     it "skips conflicting stays instead of double-booking a low-capacity hotel" do

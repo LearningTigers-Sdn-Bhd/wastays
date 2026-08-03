@@ -42,7 +42,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
 
       it "redirects to check-in now page" do
-        travel_to kl_zone.parse("#{Date.today} 09:00") do
+        with_frozen_time kl_zone.parse("#{Date.today} 09:00") do
           post concierge_check_in_lookup_path(hotel.slug),
                params: { confirmation_token: booking.confirmation_token }
           expect(response).to redirect_to(concierge_check_in_now_path(hotel.slug))
@@ -78,11 +78,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
            params: { confirmation_token: booking.confirmation_token }
     end
 
-    context "room available" do
-      around do |example|
-        travel_to(Time.find_zone("Kuala Lumpur").parse("#{Date.today} 15:00")) { example.run }
-      end
-
+    context "room available", frozen_time: -> { Time.find_zone("Kuala Lumpur").parse("#{Date.today} 15:00") } do
       before do
         create(:room_inventory, room_type: room_type, date: Date.today,
                quantity: 1, status: "open", available_room_numbers: [ "101" ])
@@ -129,8 +125,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
     end
 
-    context "wrong date" do
-      around { |example| travel_to(Time.zone.local(2026, 6, 10, 3, 0, 0)) { example.run } }
+    context "wrong date", frozen_time: Time.zone.local(2026, 6, 10, 3) do
       before { booking.update!(check_in: Date.tomorrow, check_out: Date.tomorrow + 1) }
 
       it "re-renders with wrong date message" do
@@ -140,14 +135,9 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
     end
 
-    context "updated check-in policy after booking creation with default" do
+    context "updated check-in policy after booking creation with default",
+            frozen_time: -> { Time.find_zone("Kuala Lumpur").parse("#{Date.today} 14:25").utc } do
       let(:kl_zone) { Time.find_zone("Kuala Lumpur") }
-
-      around do |example|
-        travel_to kl_zone.parse("#{Date.today} 14:25").utc do
-          example.run
-        end
-      end
 
       before do
         hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00", currency: "MYR") unless hotel.property_policy
@@ -164,11 +154,8 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
     end
 
-    context "with geolocation check enabled" do
-      around do |example|
-        travel_to(Time.find_zone("Kuala Lumpur").parse("#{Date.today} 15:00")) { example.run }
-      end
-
+    context "with geolocation check enabled",
+            frozen_time: -> { Time.find_zone("Kuala Lumpur").parse("#{Date.today} 15:00") } do
       before do
         hotel.update!(google_map_link: "https://www.google.com/maps/place/Sample+Hotel/@5.9771228,116.0622732,15z")
         create(:room_inventory, room_type: room_type, date: Date.today,
@@ -195,15 +182,10 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     end
   end
 
-  describe "late flow — past check-in time, pre-checkin not done" do
+  describe "late flow — past check-in time, pre-checkin not done",
+           frozen_time: -> { Time.find_zone("Kuala Lumpur").parse("#{Date.today} 16:00").utc } do
     let(:kl_zone) { Time.find_zone("Kuala Lumpur") }
     let(:policy) { hotel.build_property_policy(check_in_time: "15:00", check_out_time: "12:00", currency: "MYR", usd_rate: 4.5) }
-
-    around do |example|
-      travel_to kl_zone.parse("#{Date.today} 16:00").utc do
-        example.run
-      end
-    end
 
     before do
       policy.save!
