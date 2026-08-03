@@ -35,6 +35,9 @@ RSpec.describe PanelsUI::RadioGroup, type: :component do
     expect(page).to have_css("input#profile_board_bnb[checked]")
     expect(page).to have_css("input#profile_board_full[disabled]")
     expect(page).to have_css("#profile_board-group-description", text: "Choose one.")
+    expect(page).to have_css("legend .panel-radio-group__required", count: 1)
+    expect(page).to have_css("input[required]", count: 3)
+    expect(page).to have_no_css(".panel-radio__required")
   end
 
   it "accepts [label, value] pairs and marks the selected option for a name source" do

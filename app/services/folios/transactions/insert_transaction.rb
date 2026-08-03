@@ -82,7 +82,7 @@ module Folios
       end
 
       def validate_staff_permission
-        return if @options[:system_posting] || @user.nil?
+        return if @options[:system_posting] || @options[:system_generated_payment_surcharge] || @user.nil?
         return if %w[night_audit no_show].include?(posting_source)
 
         permission = if @options[:reversal_of_transaction].present?

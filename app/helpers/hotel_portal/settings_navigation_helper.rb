@@ -135,7 +135,8 @@ module HotelPortal
       when :commercial
         [
           hotel_permission_granted?("manage_hotel_profile") ? { key: "taxes-fees", label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), icon: "receipt", active: controller_name.in?(%w[taxes_fees hotel_taxes]) } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { key: "extra-charges", label: "Extra Charges", path: hotel_extra_charges_path(current_hotel), icon: "circle-plus", active: controller_name == "extra_charges" } : nil
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "extra-charges", label: "Extra Charges", path: hotel_extra_charges_path(current_hotel), icon: "circle-plus", active: controller_name == "extra_charges" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "payment-methods", label: "Payment Methods", path: hotel_payment_methods_path(current_hotel), icon: "credit-card", active: controller_name == "payment_methods" } : nil
         ].compact
       when :finance
         [

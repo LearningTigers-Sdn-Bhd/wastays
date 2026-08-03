@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_03_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_03_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1264,6 +1264,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_090000) do
     t.index ["hotel_id"], name: "index_hotel_knowledge_documents_on_hotel_id"
   end
 
+  create_table "hotel_payment_methods", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "default_cash", default: false, null: false
+    t.boolean "guest_advance", default: false, null: false
+    t.bigint "hotel_id", null: false
+    t.string "payment_method_type", null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "surcharge_extra_charge_id"
+    t.string "surcharge_posting_type"
+    t.decimal "surcharge_value", precision: 12, scale: 4
+    t.bigint "transaction_code_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "position"], name: "index_hotel_payment_methods_on_hotel_id_and_position"
+    t.index ["hotel_id"], name: "index_hotel_payment_methods_on_default_cash", unique: true, where: "default_cash"
+    t.index ["hotel_id"], name: "index_hotel_payment_methods_on_hotel_id"
+    t.index ["surcharge_extra_charge_id"], name: "index_hotel_payment_methods_on_surcharge_extra_charge_id"
+    t.index ["transaction_code_id"], name: "index_hotel_payment_methods_on_transaction_code_id", unique: true
+    t.check_constraint "payment_method_type::text = ANY (ARRAY['cash'::character varying, 'bank_gateway'::character varying]::text[])", name: "hotel_payment_methods_type_allowed"
+    t.check_constraint "surcharge_posting_type IS NULL AND surcharge_value IS NULL AND surcharge_extra_charge_id IS NULL OR surcharge_posting_type IS NOT NULL AND surcharge_value IS NOT NULL AND surcharge_extra_charge_id IS NOT NULL", name: "hotel_payment_methods_surcharge_complete"
+    t.check_constraint "surcharge_posting_type IS NULL OR (surcharge_posting_type::text = ANY (ARRAY['fixed'::character varying, 'percentage'::character varying]::text[]))", name: "hotel_payment_methods_surcharge_type_allowed"
+    t.check_constraint "surcharge_posting_type::text <> 'percentage'::text OR surcharge_value <= 100::numeric", name: "hotel_payment_methods_percentage_maximum"
+    t.check_constraint "surcharge_value IS NULL OR surcharge_value > 0::numeric", name: "hotel_payment_methods_surcharge_value_positive"
+  end
+
   create_table "hotel_prefix_histories", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "hotel_id", null: false
@@ -2351,6 +2375,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_090000) do
   add_foreign_key "hotel_knowledge_diagnostics", "prospect_messages"
   add_foreign_key "hotel_knowledge_diagnostics", "prospects"
   add_foreign_key "hotel_knowledge_documents", "hotels"
+  add_foreign_key "hotel_payment_methods", "hotel_extra_charges", column: "surcharge_extra_charge_id"
+  add_foreign_key "hotel_payment_methods", "hotels"
+  add_foreign_key "hotel_payment_methods", "transaction_codes"
   add_foreign_key "hotel_prefix_histories", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
   add_foreign_key "hotel_taxes", "hotels"

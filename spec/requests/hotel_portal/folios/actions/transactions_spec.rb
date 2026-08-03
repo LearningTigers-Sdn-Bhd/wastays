@@ -136,6 +136,67 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
     end
 
     describe "posting payments" do
+      it "offers active configured payment methods" do
+        PaymentMethods::EnsureDefaults.call(hotel)
+
+        open_form(transaction_type: "payment", active_folio_id: folio.id)
+
+        expect(response.body).to include("Payment method", "Cash Payment", "Bank Transfer Payment")
+        expect(response.body).not_to include("Payment source")
+      end
+
+      it "posts a configured payment method by hotel-scoped id" do
+        PaymentMethods::EnsureDefaults.call(hotel)
+        payment_method = hotel.hotel_payment_methods.joins(:transaction_code)
+          .find_by!(transaction_codes: { system_key: "cash_payment" })
+
+        expect {
+          post_transaction(
+            transaction_type: "payment",
+            hotel_payment_method_id: payment_method.id,
+            amount: "100.00",
+            description: "Configured cash payment",
+            posting_date: Date.current
+          )
+        }.to change { folio.folio_transactions.payment.count }.by(1)
+
+        transaction = folio.folio_transactions.payment.last
+        expect(transaction).to have_attributes(amount: 100.to_d, category: "cash", transaction_code: payment_method.transaction_code)
+        expect(transaction.metadata["hotel_payment_method_id"]).to eq(payment_method.id)
+      end
+
+      it "posts a checkout surcharge and collects the fee without leaving a balance" do
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", amount: 100)
+        surcharge = create(:hotel_extra_charge, hotel: hotel)
+        code = hotel.transaction_codes.create!(system_key: "checkout_card", code: "CHK_CARD", name: "Checkout Card", kind: "payment", category: "gateway_payment")
+        payment_method = hotel.hotel_payment_methods.create!(
+          transaction_code: code,
+          payment_method_type: "bank_gateway",
+          surcharge_posting_type: "fixed",
+          surcharge_value: 2,
+          surcharge_extra_charge: surcharge
+        )
+        token = Checkouts::SettlementToken.issue(booking: booking, folio: folio, kind: "payment", amount: 100)
+
+        expect {
+          post_transaction_with(
+            {
+              transaction_type: "payment",
+              hotel_payment_method_id: payment_method.id,
+              description: "Checkout payment",
+              posting_date: Date.current,
+              booking_folio_id: folio.id
+            },
+            extra: { settlement_token: token },
+            headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "folio_action_sheet" }
+          )
+        }.to change { folio.folio_transactions.count }.by(2)
+
+        expect(folio.reload.outstanding_balance).to eq(0.to_d)
+        expect(folio.folio_transactions.payment.last.amount).to eq(102.to_d)
+        expect(folio.folio_transactions.charge.last).to have_attributes(amount: 2.to_d, transaction_code: surcharge.transaction_code)
+      end
+
       it "posts a cash payment" do
         expect {
           post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash payment", posting_date: Date.current)

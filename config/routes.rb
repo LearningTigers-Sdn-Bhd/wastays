@@ -621,6 +621,9 @@ Rails.application.routes.draw do
         resources :extra_charges, path: "extra-charges", only: %i[index new create edit update] do
           patch :status, action: :update_status, on: :member
         end
+        resources :payment_methods, path: "payment-methods", only: %i[index new create edit update] do
+          patch :status, action: :update_status, on: :member
+        end
       end
 
       scope "guest-content" do

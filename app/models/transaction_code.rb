@@ -31,6 +31,7 @@ class TransactionCode < ApplicationRecord
   has_many :transaction_code_taxes, dependent: :destroy
   has_many :taxes, through: :transaction_code_taxes, source: :hotel_tax
   has_one :hotel_extra_charge, dependent: :restrict_with_error
+  has_one :hotel_payment_method, dependent: :restrict_with_error
 
   validates :system_key, :code, :name, :kind, :category, presence: true
   validates :system_key, uniqueness: { scope: :hotel_id }

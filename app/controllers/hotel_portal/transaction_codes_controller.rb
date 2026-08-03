@@ -38,6 +38,7 @@ module HotelPortal
 
     def edit
       return redirect_registry_owned_extra_charge if @transaction_code.hotel_extra_charge.present?
+      return redirect_registry_owned_payment_method if @transaction_code.hotel_payment_method.present?
 
       if params[:transaction_code].present?
         @transaction_code.assign_attributes(transaction_code_attributes)
@@ -48,6 +49,7 @@ module HotelPortal
 
     def update
       return redirect_registry_owned_extra_charge if @transaction_code.hotel_extra_charge.present?
+      return redirect_registry_owned_payment_method if @transaction_code.hotel_payment_method.present?
 
       @transaction_code.assign_attributes(transaction_code_attributes)
       normalize_taxable_flag(@transaction_code)
@@ -85,6 +87,7 @@ module HotelPortal
 
     def preview_hotel_tax_rules
       return redirect_registry_owned_extra_charge if @transaction_code.hotel_extra_charge.present?
+      return redirect_registry_owned_payment_method if @transaction_code.hotel_payment_method.present?
 
       @transaction_code.assign_attributes(transaction_code_attributes)
       normalize_taxable_flag(@transaction_code)
@@ -261,6 +264,11 @@ module HotelPortal
     def redirect_registry_owned_extra_charge
       redirect_to edit_hotel_extra_charge_path(@hotel, @transaction_code.hotel_extra_charge),
         notice: "Manage this code from Extra Charges."
+    end
+
+    def redirect_registry_owned_payment_method
+      redirect_to edit_hotel_payment_method_path(@hotel, @transaction_code.hotel_payment_method),
+        notice: "Manage this code from Payment Methods."
     end
 
     def normalize_taxable_flag(transaction_code)

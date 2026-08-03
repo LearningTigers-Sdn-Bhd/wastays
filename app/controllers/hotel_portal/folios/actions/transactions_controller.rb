@@ -92,6 +92,7 @@ module HotelPortal
           type = requested_transaction_type
           category = requested_category
           return "execute_folio_refunds" if type == "payment" && category == "refund"
+          return "post_folio_payments" if type == "payment" && folio_transaction_params[:hotel_payment_method_id].present?
           return "post_folio_payments" if type == "payment" && folio_transaction_params[:payment_source].present?
           return "post_folio_payments" if type == "payment" && category != "refund"
           return "post_folio_charges" if type == "charge"
@@ -169,7 +170,11 @@ module HotelPortal
           when [ "payment", "" ]
             @form_title = "Post payment"
             @form_description = "Record a staff-posted payment against the selected folio."
-            @payment_source_options = ::Folios::Payments::PaymentSource.options
+            PaymentMethods::EnsureDefaults.call(current_hotel)
+            @payment_method_options = current_hotel.hotel_payment_methods.active
+              .includes(:transaction_code, surcharge_extra_charge: { transaction_code: :transaction_code_taxes })
+              .ordered.to_a
+            @payment_method_config = build_payment_method_config
             @signed_amount = false
             @submit_label = "Post payment"
           when [ "charge", "" ]
@@ -329,6 +334,16 @@ module HotelPortal
           else
             checkout_settlement? ? checkout_settlement_description : folio_transaction_params[:description]
           end
+          return ::Folios::Payments::PostConfiguredPayment.call(
+            folio: folio,
+            user: current_user,
+            payment_method_id: folio_transaction_params[:hotel_payment_method_id],
+            base_amount: posting_amount,
+            description: checkout_settlement? ? checkout_settlement_description : folio_transaction_params[:description],
+            posting_date: folio_transaction_params[:posting_date],
+            options: posting_options
+          ) if payment_with_configured_method?
+
           ::Folios::Transactions::PostStaffTransaction.call(
             folio: folio,
             user: current_user,
@@ -379,6 +394,25 @@ module HotelPortal
               allow_amount_override: extra_charge.allow_amount_override?,
               nightly: extra_charge.fixed? && extra_charge.nightly?,
               bases: bases
+            } ]
+          end
+        end
+
+        def build_payment_method_config
+          @payment_method_options.to_h do |payment_method|
+            extra_charge = payment_method.surcharge_extra_charge
+            taxes = if extra_charge
+              ::Folios::Routing::EffectiveTaxRules.call(booking: @booking, transaction_code: extra_charge.transaction_code)
+                .select(&:enabled_for_posting?)
+                .map { |rule| { name: rule.display_name, rate_type: rule.rate_type, amount: rule.amount.to_d.to_s("F") } }
+            else
+              []
+            end
+            [ payment_method.id.to_s, {
+              name: payment_method.name,
+              surcharge_posting_type: payment_method.surcharge_posting_type,
+              surcharge_value: payment_method.surcharge_value&.to_d&.to_s("F"),
+              taxes: taxes
             } ]
           end
         end
@@ -469,7 +503,11 @@ module HotelPortal
           options = {}
           options[:require_transaction_code] = true if folio_transaction_params[:transaction_type].to_s == "charge"
           if folio_transaction_params[:transaction_type].to_s == "payment" && !refund_transaction?
-            options[:payment_source] = folio_transaction_params[:payment_source].to_s.strip
+            if folio_transaction_params[:hotel_payment_method_id].present?
+              options[:hotel_payment_method_id] = folio_transaction_params[:hotel_payment_method_id]
+            else
+              options[:payment_source] = folio_transaction_params[:payment_source].to_s.strip
+            end
           end
 
           metadata = {}
@@ -489,6 +527,11 @@ module HotelPortal
             folio_transaction_params[:category].to_s == "refund"
         end
 
+        def payment_with_configured_method?
+          folio_transaction_params[:transaction_type].to_s == "payment" &&
+            !refund_transaction? && folio_transaction_params[:hotel_payment_method_id].present?
+        end
+
         def folio_transaction_params
           @folio_transaction_params ||= params.fetch(:folio_transaction, ActionController::Parameters.new).permit(
             :transaction_type,
@@ -506,6 +549,7 @@ module HotelPortal
             :reference,
             :note,
             :payment_source,
+            :hotel_payment_method_id,
             :refund_source,
             :booking_folio_id,
             :routing_override_reason

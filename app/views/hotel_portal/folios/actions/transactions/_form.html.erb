@@ -24,7 +24,13 @@
         <%= form_with scope: :folio_transaction,
               url: hotel_folio_action_post_transaction_path(current_hotel, booking),
               method: :post,
-              class: "flex h-full min-h-0 flex-col" do |form| %>
+              class: "flex h-full min-h-0 flex-col",
+              data: (@payment_method_options.present? ? {
+                controller: "payment-posting",
+                action: "change->payment-posting#update input->payment-posting#update",
+                payment_posting_methods_value: @payment_method_config.to_json,
+                payment_posting_currency_value: @active_folio.currency
+              } : {}) do |form| %>
           <% if @extra_charge_options.present? %>
             <div class="flex h-full min-h-0 flex-col" data-controller="extra-charge-posting"
                  data-extra-charge-posting-charges-value="<%= @extra_charge_config.to_json %>"
@@ -71,9 +77,14 @@
               </div>
             <% end %>
 
-            <% if @payment_source_options.present? %>
-              <%= render PanelsUI::FormField.new(form: form, attribute: :payment_source, label: "Payment source", required: true) do |field| %>
-                <% field.with_select_menu(@payment_source_options, prompt: "Select a payment source", required: true) %>
+            <% if @payment_method_options.present? %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :hotel_payment_method_id, label: "Payment method", required: true) do |field| %>
+                <% field.with_select_menu(
+                     @payment_method_options.map { |method| { label: "#{method.code} · #{method.name}", value: method.id } },
+                     selected: params.dig(:folio_transaction, :hotel_payment_method_id),
+                     prompt: "Select a payment method",
+                     required: true,
+                     data: { payment_posting_target: "method" }) %>
               <% end %>
             <% elsif @refund_source_options.present? %>
               <%= form.hidden_field :category, value: @category if @category.present? %>
@@ -102,7 +113,7 @@
             <% end %>
 
             <% if @checkout_settlement.present? %>
-              <%= form.hidden_field :amount, value: @amount %>
+              <%= form.hidden_field :amount, value: @amount, data: { payment_posting_target: "amount" } %>
               <div>
                 <p class="mb-1 text-sm font-medium text-foreground">Settlement amount</p>
                 <p class="rounded-md border border-border bg-muted px-3 py-2 text-sm font-semibold tabular-nums"><%= @active_folio.currency %> <%= format("%.2f", @amount.to_d.abs) %></p>
@@ -138,7 +149,13 @@
                 <%= render PanelsUI::FormField.new(form: form, attribute: :amount, label: "Amount", required: true,
                       hint: (@signed_amount ? "Use a negative amount for discounts, write-offs, or rebates." : nil)) do |field| %>
                   <% field.with_input(type: :number, step: "0.01", min: (@signed_amount ? nil : "0.01"), value: @amount, required: true,
-                       data: (@extra_charge_options.present? ? { extra_charge_posting_target: "amount" } : {})) %>
+                       data: if @extra_charge_options.present?
+                         { extra_charge_posting_target: "amount" }
+                       elsif @payment_method_options.present?
+                         { payment_posting_target: "amount" }
+                       else
+                         {}
+                       end) %>
                 <% end %>
                 <% if @extra_charge_options.present? %>
                   <p class="mt-1 text-xs text-muted-foreground" data-extra-charge-posting-target="pricingHint">Select an extra charge to see its pricing.</p>
@@ -161,6 +178,27 @@
                   </dl>
                 </section>
               <% end %>
+            <% end %>
+
+            <% if @payment_method_options.present? %>
+              <section class="space-y-2 rounded-md border border-border bg-muted p-3" data-payment-posting-target="preview" hidden aria-live="polite">
+                <div class="flex items-center justify-between gap-3 text-sm">
+                  <span class="text-muted-foreground">Amount applied</span>
+                  <span class="font-medium tabular-nums text-foreground" data-payment-posting-target="baseTotal"></span>
+                </div>
+                <div class="flex items-center justify-between gap-3 text-sm">
+                  <span class="text-muted-foreground" data-payment-posting-target="surchargeLabel">Surcharge</span>
+                  <span class="font-medium tabular-nums text-foreground" data-payment-posting-target="surchargeTotal"></span>
+                </div>
+                <div class="flex items-center justify-between gap-3 text-sm" data-payment-posting-target="taxRow" hidden>
+                  <span class="text-muted-foreground">Surcharge taxes</span>
+                  <span class="font-medium tabular-nums text-foreground" data-payment-posting-target="taxTotal"></span>
+                </div>
+                <div class="flex items-center justify-between gap-3 border-t border-border pt-2 text-sm">
+                  <span class="font-semibold text-foreground">Total to collect</span>
+                  <span class="font-semibold tabular-nums text-foreground" data-payment-posting-target="collectedTotal"></span>
+                </div>
+              </section>
             <% end %>
 
             <div <%= "data-extra-charge-posting-target=immediateField" if @extra_charge_options.present? %>>
