@@ -36,6 +36,7 @@ module Folios
         @options = options
         @require_transaction_code = !!@options[:require_transaction_code]
         @payment_source = nil
+        @payment_method = nil
       end
 
       def call
@@ -144,6 +145,8 @@ module Folios
       def apply_payment_source
         return unless staff_payment?
 
+        return apply_configured_payment_method if @options[:hotel_payment_method_id].present?
+
         source_key = @options[:payment_source].to_s
         return "Payment source is required." if source_key.blank?
 
@@ -158,6 +161,19 @@ module Folios
         return "Payment transaction code must be a payment code." unless @transaction_code.kind == "payment"
 
         @transaction_type = @transaction_code.kind
+        @category = @transaction_code.category
+        @transaction_code_id = nil
+        nil
+      end
+
+      def apply_configured_payment_method
+        @payment_method = @folio.hotel.hotel_payment_methods.includes(:transaction_code).find_by(id: @options[:hotel_payment_method_id])
+        return "Payment method is not valid." if @payment_method.blank? || !@payment_method.active?
+
+        @transaction_code = @payment_method.transaction_code
+        return "Payment transaction code must be a payment code." unless @transaction_code.kind == "payment"
+
+        @transaction_type = "payment"
         @category = @transaction_code.category
         @transaction_code_id = nil
         nil
@@ -217,6 +233,14 @@ module Folios
 
       def staff_metadata
         metadata = (@options[:metadata] || {}).dup
+        if @payment_method.present?
+          return metadata.merge(
+            hotel_payment_method_id: @payment_method.id,
+            payment_method_name: @payment_method.name,
+            payment_method_code: @payment_method.code,
+            payment_source: legacy_payment_source
+          ).compact
+        end
         return metadata if @payment_source.blank?
 
         reference = payment_source_reference.to_s.strip
@@ -225,6 +249,16 @@ module Folios
         metadata[:source_references] = source_references_metadata(metadata, reference) if reference.present?
         metadata[:manual_recovery] = true if @payment_source.manual_recovery?
         metadata
+      end
+
+      def legacy_payment_source
+        {
+          "cash_payment" => "cash",
+          "bank_payment" => "bank",
+          "card_payment" => "card",
+          "gateway_manual_recovery_payment" => "gateway",
+          "ota_collected_payment" => "ota"
+        }[@transaction_code.system_key]
       end
 
       def source_references_metadata(metadata, reference)
@@ -275,7 +309,7 @@ module Folios
                 parent_transaction_id: parent_transaction.id,
                 parent_folio_transaction_id: parent_transaction.id,
                 parent_transaction_code_id: parent_transaction.transaction_code_id,
-                parent_transaction_code_code: parent_transaction.transaction_code&.code,
+                parent_transaction_code_code: parent_transaction.posted_transaction_code,
                 source_transaction_code_id: @transaction_code.id,
                 source_transaction_code_code: @transaction_code.code,
                 tax_line: tax_line(tax_rule, amount)

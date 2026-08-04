@@ -55,10 +55,13 @@ module HotelPortal
             :collect_security_deposit,
             :boat_in_time,
             :boat_out_time,
-            security_deposit: [ :amount, :payment_method, :external_reference ]
+            security_deposit: [ :amount, :hotel_payment_method_id, :payment_method_type, :external_reference ]
           ).to_h.deep_symbolize_keys
           details[:room_assignments] = normalize_room_assignments(source[:room_assignments])
-          details[:security_deposit] = nil unless ActiveModel::Type::Boolean.new.cast(details.delete(:collect_security_deposit))
+          collect_security_deposit = ActiveModel::Type::Boolean.new.cast(details.delete(:collect_security_deposit))
+          details[:security_deposit] = if collect_security_deposit
+            details.fetch(:security_deposit, {}).reverse_merge(amount: nil, hotel_payment_method_id: nil)
+          end
           details
         end
 
@@ -90,6 +93,12 @@ module HotelPortal
           @selected_booking_ids = Array(params[:booking_ids]).reject(&:blank?)
           @target_scope = params[:target_scope].presence || "individual"
           @requires_override = requires_override?
+          PaymentMethods::EnsureDefaults.call(current_hotel)
+          @direct_payment_methods = current_hotel.hotel_payment_methods.active
+            .where(guest_advance: false)
+            .includes(:transaction_code, surcharge_extra_charge: { transaction_code: :transaction_code_taxes })
+            .ordered
+            .to_a
           @form_values = form_values
           @room_options = build_room_options
           @boat_schedule = ::Boats::Schedule.new(current_hotel)
@@ -109,7 +118,8 @@ module HotelPortal
             override_night_audit: ActiveModel::Type::Boolean.new.cast(submitted[:override_night_audit]),
             collect_security_deposit: submitted[:security_deposit].present?,
             security_deposit_amount: deposit[:amount].presence || "0.00",
-            security_deposit_payment_method: deposit[:payment_method].presence || "cash",
+            security_deposit_payment_method_id: deposit[:hotel_payment_method_id].presence || @direct_payment_methods.first&.id,
+            security_deposit_payment_method_type: deposit[:payment_method_type].presence || @direct_payment_methods.first&.payment_method_type || "cash",
             security_deposit_reference: deposit[:external_reference].to_s,
             tourism_tax_collected:,
             room_assignments: submitted[:room_assignments],

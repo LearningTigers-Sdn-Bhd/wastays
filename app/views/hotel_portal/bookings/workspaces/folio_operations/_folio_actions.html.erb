@@ -47,6 +47,14 @@
           Add Adjustment
         <% end %>
       <% end %>
+      <% if folio_show.can_apply_discount? %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_folio_action_post_transaction_path(hotel, booking, transaction_type: "adjustment", category: "discount", active_folio_id: folio_show.active_folio_id, return_to: request.fullpath),
+              variant: :secondary, size: :sm, data: sheet_data) do %>
+          <%= cached_icon "badge-percent", class: "size-3.5", aria: { hidden: true } %>
+          Apply Discount
+        <% end %>
+      <% end %>
 
       <%= render PanelsUI::DropdownMenu.new(id: "folio-more-actions", placement: :bottom_end) do |menu| %>
         <% menu.with_trigger(variant: :secondary, size: :sm) do %>

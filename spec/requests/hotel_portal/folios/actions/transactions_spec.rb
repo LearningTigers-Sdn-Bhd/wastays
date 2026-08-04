@@ -102,6 +102,28 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
         expect(response.body).to include("Post adjustment")
         expect(response.body).to include("Write off")
         expect(response.body).to include("Correction")
+        expect(response.body).not_to include('value="discount"')
+      end
+
+      it "offers active configured discounts in a dedicated sheet" do
+        discount = create(:hotel_discount, hotel: hotel)
+
+        open_form(transaction_type: "adjustment", category: "discount", active_folio_id: folio.id)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Apply discount", discount.name, discount.code, "Eligible posted charges")
+      end
+
+      it "offers active Extra Charges instead of raw transaction codes" do
+        extra_charge = create(:hotel_extra_charge, hotel: hotel)
+
+        open_form(transaction_type: "charge", active_folio_id: folio.id)
+
+        document = Nokogiri::HTML(response.body)
+        expect(response.body).to include("Extra charge", extra_charge.name, extra_charge.code)
+        expect(response.body).not_to include("Transaction code")
+        expect(document.at_css("[data-extra-charge-posting-target='descriptionField'][hidden]")).to be_present
+        expect(document.at_css("input[name='folio_transaction[description]'][data-extra-charge-posting-target='description']")).to be_present
       end
 
       it "explains the situation when the booking has no open folio" do
@@ -124,6 +146,67 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
     end
 
     describe "posting payments" do
+      it "offers active configured payment methods" do
+        PaymentMethods::EnsureDefaults.call(hotel)
+
+        open_form(transaction_type: "payment", active_folio_id: folio.id)
+
+        expect(response.body).to include("Payment method", "Cash Payment", "Bank Transfer Payment")
+        expect(response.body).not_to include("Payment source")
+      end
+
+      it "posts a configured payment method by hotel-scoped id" do
+        PaymentMethods::EnsureDefaults.call(hotel)
+        payment_method = hotel.hotel_payment_methods.joins(:transaction_code)
+          .find_by!(transaction_codes: { system_key: "cash_payment" })
+
+        expect {
+          post_transaction(
+            transaction_type: "payment",
+            hotel_payment_method_id: payment_method.id,
+            amount: "100.00",
+            description: "Configured cash payment",
+            posting_date: Date.current
+          )
+        }.to change { folio.folio_transactions.payment.count }.by(1)
+
+        transaction = folio.folio_transactions.payment.last
+        expect(transaction).to have_attributes(amount: 100.to_d, category: "cash", transaction_code: payment_method.transaction_code)
+        expect(transaction.metadata["hotel_payment_method_id"]).to eq(payment_method.id)
+      end
+
+      it "posts a checkout surcharge and collects the fee without leaving a balance" do
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", amount: 100)
+        surcharge = create(:hotel_extra_charge, hotel: hotel)
+        code = hotel.transaction_codes.create!(system_key: "checkout_card", code: "CHK_CARD", name: "Checkout Card", kind: "payment", category: "gateway_payment")
+        payment_method = hotel.hotel_payment_methods.create!(
+          transaction_code: code,
+          payment_method_type: "bank_gateway",
+          surcharge_posting_type: "fixed",
+          surcharge_value: 2,
+          surcharge_extra_charge: surcharge
+        )
+        token = Checkouts::SettlementToken.issue(booking: booking, folio: folio, kind: "payment", amount: 100)
+
+        expect {
+          post_transaction_with(
+            {
+              transaction_type: "payment",
+              hotel_payment_method_id: payment_method.id,
+              description: "Checkout payment",
+              posting_date: Date.current,
+              booking_folio_id: folio.id
+            },
+            extra: { settlement_token: token },
+            headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "folio_action_sheet" }
+          )
+        }.to change { folio.folio_transactions.count }.by(2)
+
+        expect(folio.reload.outstanding_balance).to eq(0.to_d)
+        expect(folio.folio_transactions.payment.last.amount).to eq(102.to_d)
+        expect(folio.folio_transactions.charge.last).to have_attributes(amount: 2.to_d, transaction_code: surcharge.transaction_code)
+      end
+
       it "posts a cash payment" do
         expect {
           post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash payment", posting_date: Date.current)
@@ -349,25 +432,168 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
       end
     end
 
-    describe "posting charges" do
-      it "posts an other charge" do
-        code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+    describe "posting discounts" do
+      it "previews and posts one configured credit" do
+        create(:folio_transaction, booking_folio: folio, amount: 200, category: "accommodation", posting_date: Date.current)
+        discount = create(:hotel_discount, hotel: hotel, pricing_type: "percentage", rate_value: 10,
+          application_scope: "room_charges", allow_amount_override: false)
+
+        get hotel_folio_action_discount_quote_path(hotel, booking), params: {
+          hotel_discount_id: discount.id, booking_folio_id: folio.id, posting_date: Date.current
+        }
+        expect(response).to have_http_status(:success)
+        preview = response.parsed_body
+        expect(preview).to include("base_amount" => "200.0", "amount" => "20.0")
 
         expect {
-          post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
+          post_transaction(
+            transaction_type: "adjustment", category: "discount", hotel_discount_id: discount.id,
+            booking_folio_id: folio.id, posting_date: Date.current, amount: preview["amount"],
+            discount_pricing_fingerprint: preview["fingerprint"], description: "Service recovery"
+          )
+        }.to change { folio.folio_transactions.adjustment.count }.by(1)
+
+        transaction = folio.folio_transactions.adjustment.last
+        expect(transaction).to have_attributes(amount: -20.to_d, category: "discount", transaction_code: discount.transaction_code)
+        expect(transaction.description).to include(discount.name, "Service recovery")
+      end
+
+      it "rejects a discount belonging to another hotel" do
+        create(:folio_transaction, booking_folio: folio, amount: 100)
+        foreign_discount = create(:hotel_discount, hotel: other_hotel)
+
+        expect {
+          post_transaction(transaction_type: "adjustment", category: "discount", hotel_discount_id: foreign_discount.id,
+            posting_date: Date.current, amount: 10, discount_pricing_fingerprint: "forged")
+        }.not_to change { folio.folio_transactions.adjustment.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Select an available discount")
+      end
+    end
+
+    describe "posting charges" do
+      it "previews and schedules a fixed per-night charge by date" do
+        business_date = hotel.current_business_date
+        booking.update_columns(check_in: business_date.in_time_zone, check_out: (business_date + 3.days).in_time_zone)
+        create(:booking_room, booking: booking)
+        extra_charge = create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 50,
+          charging_unit: "per_night", allow_amount_override: false)
+
+        get hotel_folio_action_extra_charge_quote_path(hotel, booking), params: {
+          hotel_extra_charge_id: extra_charge.id,
+          booking_folio_id: folio.id
+        }
+
+        expect(response).to have_http_status(:success)
+        preview = response.parsed_body
+        expect(preview["dates"].size).to eq(3)
+        expect(preview["dates"].map { |row| row["posting_state"] }).to eq(%w[upcoming upcoming upcoming])
+
+        expect {
+          post_transaction(
+            transaction_type: "charge",
+            hotel_extra_charge_id: extra_charge.id,
+            booking_folio_id: folio.id,
+            starts_on: preview["starts_on"],
+            ends_on: preview["ends_on"],
+            unit_rate: preview["unit_rate"],
+            pricing_fingerprint: preview["fingerprint"],
+            description: "Dinner buffet"
+          )
+        }.to change { folio.folio_forecasted_charges.forecast.where(charge_kind: "extra_charge").count }.by(3)
+
+        expect(folio.folio_transactions).to be_empty
+        expect(folio.folio_forecasted_charges.forecast.pluck(:stay_date)).to match_array(
+          [ business_date, business_date + 1.day, business_date + 2.days ]
+        )
+        expect(flash[:notice]).to eq("Extra charge scheduled.")
+      end
+
+      it "posts an other charge" do
+        code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+        extra_charge = create(:hotel_extra_charge, hotel: hotel, transaction_code: code)
+
+        expect {
+          post_transaction(transaction_type: "charge", hotel_extra_charge_id: extra_charge.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
         }.to change { folio.folio_transactions.charge.count }.by(1)
 
         expect(folio.folio_transactions.last.category).to eq("other")
         expect(folio.folio_transactions.last.transaction_code).to eq(code)
       end
 
+      it "calculates fixed per-item pricing and records calculation metadata" do
+        extra_charge = create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 12.50,
+          charging_unit: "per_item", allow_amount_override: false)
+
+        post_transaction(
+          transaction_type: "charge", hotel_extra_charge_id: extra_charge.id, quantity: "3",
+          amount: "1.00", description: "Forged description", posting_date: Date.current
+        )
+
+        transaction = folio.folio_transactions.charge.order(:id).last
+        expect(transaction).to have_attributes(
+          amount: 37.50.to_d,
+          description: "#{extra_charge.name} · 3 × MYR 12.50"
+        )
+        expect(transaction.metadata).to include(
+          "extra_charge_id" => extra_charge.id,
+          "extra_charge_pricing_type" => "fixed",
+          "extra_charge_rate_value" => "12.5",
+          "extra_charge_quantity" => "3.0",
+          "extra_charge_calculated_amount" => "37.5"
+        )
+      end
+
+      it "posts a percentage charge only after confirming the current folio base" do
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 200)
+        extra_charge = create(:hotel_extra_charge, hotel: hotel, pricing_type: "percentage", rate_value: 10,
+          percentage_basis: "room_charges", allow_amount_override: false)
+        preview = ExtraCharges::Quote.call(extra_charge: extra_charge, folio: folio, booking: booking, preview: true)
+
+        post_transaction(
+          transaction_type: "charge", hotel_extra_charge_id: extra_charge.id,
+          pricing_fingerprint: preview.fingerprint, amount: preview.amount, description: "Forged description",
+          posting_date: Date.current
+        )
+
+        transaction = folio.folio_transactions.charge.order(:id).last
+        expect(transaction).to have_attributes(
+          amount: 20.to_d,
+          description: "#{extra_charge.name} · 10% × MYR 200.00"
+        )
+        expect(transaction.metadata).to include(
+          "extra_charge_percentage_basis" => "room_charges",
+          "extra_charge_base_amount" => "200.0"
+        )
+      end
+
+      it "returns an updated percentage preview instead of silently posting a changed amount" do
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 100)
+        extra_charge = create(:hotel_extra_charge, hotel: hotel, pricing_type: "percentage", rate_value: 10,
+          percentage_basis: "room_charges", allow_amount_override: false)
+        preview = ExtraCharges::Quote.call(extra_charge: extra_charge, folio: folio, booking: booking, preview: true)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 50)
+
+        expect {
+          post_transaction(
+            transaction_type: "charge", hotel_extra_charge_id: extra_charge.id,
+            pricing_fingerprint: preview.fingerprint, amount: preview.amount, posting_date: Date.current
+          )
+        }.not_to change { folio.folio_transactions.where(transaction_code: extra_charge.transaction_code).count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Folio charges changed", "15.0")
+      end
+
       it "posts a charge to the selected secondary folio" do
         target_folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel)
         code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+        extra_charge = create(:hotel_extra_charge, hotel: hotel, transaction_code: code)
         primary_charge_count = folio.folio_transactions.charge.count
 
         expect {
-          post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current, booking_folio_id: target_folio.id)
+          post_transaction(transaction_type: "charge", hotel_extra_charge_id: extra_charge.id, amount: "25.00", description: "Lost key", posting_date: Date.current, booking_folio_id: target_folio.id)
         }.to change { target_folio.folio_transactions.charge.count }.by(1)
 
         expect(folio.folio_transactions.charge.count).to eq(primary_charge_count)
@@ -380,12 +606,14 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
         code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
         code.update!(is_taxable: true)
         code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+        Financials::EnsureDefaultExtraCharges.call(hotel)
+        extra_charge = hotel.hotel_extra_charges.find_by!(transaction_code: code)
 
         expect {
           post_transaction(
             transaction_type: "charge",
             category: "tax",
-            transaction_code_id: code.id,
+            hotel_extra_charge_id: extra_charge.id,
             amount: "100.00",
             description: "Restaurant charge",
             posting_date: Date.current,
@@ -412,17 +640,19 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
           post_transaction(transaction_type: "charge", category: "tax", amount: "10.00", description: "Tax", posting_date: Date.current)
         }.not_to change(FolioTransaction, :count)
 
-        expect(flash[:alert]).to eq("Transaction code is required for manual charges.")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Select an available extra charge.")
       end
 
-      it "rejects non-charge transaction codes for add charge posting" do
-        code = create(:transaction_code, hotel: hotel, kind: "payment", category: "cash")
+      it "rejects an Extra Charge belonging to another hotel" do
+        extra_charge = create(:hotel_extra_charge, hotel: other_hotel)
 
         expect {
-          post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "10.00", description: "Cash", posting_date: Date.current)
+          post_transaction(transaction_type: "charge", hotel_extra_charge_id: extra_charge.id, amount: "10.00", description: "Foreign charge", posting_date: Date.current)
         }.not_to change(FolioTransaction, :count)
 
-        expect(flash[:alert]).to eq("Transaction code must be a charge code.")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Select an available extra charge.")
       end
     end
 
@@ -587,10 +817,10 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
 
       it "rejects staff inserts while night audit is running" do
         hotel.current_business_date_record.update!(status: "audit_running")
-        code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+        extra_charge = create(:hotel_extra_charge, hotel: hotel)
 
         expect {
-          post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
+          post_transaction(transaction_type: "charge", hotel_extra_charge_id: extra_charge.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
         }.not_to change(FolioTransaction, :count)
 
         expect(flash[:alert]).to include("currently in night audit")
@@ -598,10 +828,10 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
 
       it "rejects staff inserts while night audit is blocked" do
         hotel.current_business_date_record.update!(status: "audit_blocked")
-        code = create(:transaction_code, hotel: hotel, kind: "charge", category: "other")
+        extra_charge = create(:hotel_extra_charge, hotel: hotel)
 
         expect {
-          post_transaction(transaction_type: "charge", transaction_code_id: code.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
+          post_transaction(transaction_type: "charge", hotel_extra_charge_id: extra_charge.id, amount: "25.00", description: "Lost key", posting_date: Date.current)
         }.not_to change(FolioTransaction, :count)
 
         expect(flash[:alert]).to include("blocked by night audit")

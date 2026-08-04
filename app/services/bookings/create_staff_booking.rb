@@ -56,10 +56,14 @@ module Bookings
           raise CreationFailed, group_result.error unless group_result.success?
 
           group_booking = group_result.group_booking
-          receive_group_payment!(group_booking, bookings) if record_payment?
+          if record_payment?
+            receive_group_payment!(group_booking, bookings)
+            bookings.each(&:reload)
+          end
         end
 
         transition_children!(bookings) unless @booking_type == "reservation"
+        receive_check_in_payment!(bookings) if collect_check_in_payment?
         bill_room_charges_to_company!(bookings)
       end
 
@@ -79,7 +83,7 @@ module Bookings
         source: @booking_type == "reservation" ? @common_params[:source] : "walk_in",
         require_room_number: @booking_type != "reservation"
       )
-      params[:record_payment] = false if @room_rows.many?
+      params[:record_payment] = record_payment? && !@room_rows.many?
       if backdated?
         params[:financial_posting_options] = {
           override_night_audit: true,
@@ -107,53 +111,54 @@ module Bookings
       }
     end
 
+    # One switch drives every collection on the sheet. Which service posts it
+    # depends only on the booking type: reservations prepay (guest_advance),
+    # walk-in and backdated check-ins collect on arrival (direct).
+    def collect_payment?
+      ActiveModel::Type::Boolean.new.cast(@common_params[:collect_payment])
+    end
+
     def record_payment?
-      @common_params[:record_payment].to_s == "1" || @common_params[:record_payment] == true
+      @booking_type == "reservation" && collect_payment?
     end
 
     def receive_group_payment!(group, bookings)
-      amount = @common_params[:payment_amount].presence&.to_d || bookings.sum(&:total_amount)
-      raise CreationFailed, "Payment amount must be greater than 0." unless amount.positive?
+      method_result = PaymentMethods::Eligibility.call(
+        hotel: @hotel,
+        id: @common_params[:hotel_payment_method_id],
+        purpose: :guest_advance
+      )
+      raise CreationFailed, method_result.error unless method_result.success?
 
-      receipt = Deposits::Record.call(
-        owner: group, kind: "prepayment", amount: amount, currency: bookings.first.currency || "MYR",
-        payment_method: @common_params[:payment_method].presence || "cash", actor: @user,
+      result = Deposits::ConfiguredPrepayment.call(
+        owner: group,
+        folios: bookings.map(&:booking_folio),
+        base_amount: bookings.sum(&:total_amount),
+        payment_method_id: method_result.payment_method.id,
+        actor: @user,
         external_reference: @common_params[:payment_reference].presence,
-        received_at: payment_received_at,
-        metadata: { source: "staff_booking_creation" }
+        posting_date: @posting_date,
+        operation_key: "staff-group-booking:#{group.id}:payment"
       )
-      raise CreationFailed, receipt.error unless receipt.success?
-
-      folios = bookings.map(&:booking_folio)
-      weights = folios.index_with { |folio| [ folio.projected_outstanding_balance.to_d, 0.to_d ].max }
-      total_weight = weights.values.sum
-      raise CreationFailed, "Group payment cannot be allocated until room charges are available." unless total_weight.positive?
-
-      remaining = amount
-      manual_amounts = folios.each_with_index.to_h do |folio, index|
-        value = index == folios.length - 1 ? remaining : ((amount * weights.fetch(folio)) / total_weight).round(2).clamp(0, remaining)
-        remaining -= value
-        [ folio.id.to_s, value ]
-      end
-      allocation = Deposits::ApplyAcrossFolios.call(
-        deposit: receipt.deposit, folios: folios, amount: amount, strategy: "manual", actor: @user,
-        manual_amounts: manual_amounts, operation_key: "staff-group-booking:#{group.id}:payment",
-        posting_date: @posting_date, override_night_audit: backdated?,
-        override_reason: @retroactive_reason.presence || @backdate_reason
-      )
-      raise CreationFailed, allocation.error unless allocation.success?
-
-      bookings.each do |booking|
-        allocated = manual_amounts.fetch(booking.booking_folio.id.to_s, 0).to_d
-        booking.update!(payment_status: allocated >= booking.total_amount.to_d ? "captured" : "partial") if allocated.positive?
-      end
+      raise CreationFailed, result.error unless result.success?
     end
 
     def transition_children!(bookings)
       bookings.each do |booking|
+        options = backdated? ? {
+          override_night_audit: true,
+          reason: @retroactive_reason.presence || @backdate_reason,
+          backdate_reason_category: @backdate_reason,
+          backdate_reason_details: @retroactive_reason
+        } : {}
+        if immediate_check_in_collection?
+          options[:attributes] = { tourism_tax_collected: tourism_tax_collected?(booking) }
+          options[:security_deposit] = security_deposit_options if security_deposit_requested?
+        end
+
         result = TransitionStatus.new(
           booking: booking, status: "checked_in", timestamp: booking.check_in, user: @user,
-          options: backdated? ? { override_night_audit: true, reason: @retroactive_reason.presence || @backdate_reason, backdate_reason_category: @backdate_reason, backdate_reason_details: @retroactive_reason } : {}
+          options:
         ).call
         raise CreationFailed, result.error unless result.success?
       end
@@ -161,12 +166,79 @@ module Bookings
 
     def backdated? = @booking_type == "backdated_check_in"
 
-    def payment_received_at
-      return Time.current if @posting_date.blank?
+    def immediate_check_in_collection?
+      @booking_type.in?(%w[walk_in backdated_check_in])
+    end
 
-      @posting_date.to_date.in_time_zone(@hotel.hotel_time_zone) + 12.hours
-    rescue ArgumentError, TypeError
-      Time.current
+    def tourism_tax_collected?(booking)
+      return booking.tourism_tax? unless @common_params.key?(:tourism_tax_collected)
+
+      ActiveModel::Type::Boolean.new.cast(@common_params[:tourism_tax_collected])
+    end
+
+    # The deposit shares the booking's single payment method; only the amount and
+    # reference are its own.
+    def security_deposit_options
+      return unless security_deposit_requested?
+
+      @common_params[:security_deposit].to_h.symbolize_keys
+        .slice(:amount, :external_reference)
+        .reverse_merge(amount: nil, external_reference: nil)
+        .merge(hotel_payment_method_id: @common_params[:hotel_payment_method_id])
+    end
+
+    def security_deposit_requested?
+      ActiveModel::Type::Boolean.new.cast(@common_params[:collect_security_deposit])
+    end
+
+    def collect_check_in_payment?
+      immediate_check_in_collection? && collect_payment?
+    end
+
+    def check_in_payment_options
+      {
+        hotel_payment_method_id: @common_params[:hotel_payment_method_id],
+        payment_reference: @common_params[:payment_reference]
+      }
+    end
+
+    def receive_check_in_payment!(bookings)
+      options = check_in_payment_options
+      method_result = PaymentMethods::Eligibility.call(
+        hotel: @hotel, id: options[:hotel_payment_method_id], purpose: :direct
+      )
+      raise CreationFailed, method_result.error unless method_result.success?
+
+      bookings.each do |booking|
+        result = Folios::Payments::PostConfiguredPayment.call(
+          folio: booking.booking_folio,
+          user: @user,
+          payment_method_id: method_result.payment_method.id,
+          base_amount: booking.total_amount,
+          description: "Payment collected at check-in",
+          posting_date: @posting_date,
+          options: check_in_payment_posting_options(booking, options)
+        )
+        raise CreationFailed, result.error unless result.success?
+
+        Deposits::SyncBookingPaymentStatus.call(booking)
+      end
+    end
+
+    def check_in_payment_posting_options(booking, options)
+      metadata = {
+        source: "check_in_payment",
+        reference: options[:payment_reference].to_s.strip.presence
+      }.compact
+      return { operation_key: "staff-check-in:#{booking.id}:payment", metadata: } unless backdated?
+
+      {
+        operation_key: "staff-check-in:#{booking.id}:payment",
+        override_night_audit: true,
+        correction_reason: "check_in_payment_on_retroactive_booking",
+        correction_note: @retroactive_reason.presence || @backdate_reason.presence || "Payment collected for a backdated check-in.",
+        metadata:
+      }
     end
 
     # Bill room charges to the selected billing party. Room revenue is

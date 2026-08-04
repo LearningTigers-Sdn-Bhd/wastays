@@ -62,7 +62,7 @@ module Folios
       end
 
       def supersede_active_forecasts
-        active_forecasts.update_all(status: "superseded", updated_at: Time.current)
+        booking_forecasts.forecast.update_all(status: "superseded", updated_at: Time.current)
       end
 
       def expected_lines
@@ -137,7 +137,7 @@ module Folios
       end
 
       def active_forecasts
-        booking_forecasts.forecast
+        booking_forecasts.nightly_room.forecast
       end
 
       def booking_forecasts

@@ -1,0 +1,97 @@
+<% presenter ||= @presenter %>
+
+<section aria-labelledby="taxes-fees-registry-heading" class="space-y-3">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h2 id="taxes-fees-registry-heading" class="text-base font-semibold text-foreground">Taxes &amp; Fees Registry</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Manage the taxes and mandatory fees generated for applicable hotel charges.</p>
+    </div>
+
+    <%= render PanelsUI::Button.new(
+          href: new_hotel_hotel_tax_path(current_hotel),
+          size: :sm,
+          class: "shrink-0",
+          data: { turbo_frame: "settings_action_sheet" }) do %>
+      <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+      Add Tax or Fee
+    <% end %>
+  </div>
+
+  <%= render PanelsUI::Table.new(
+        caption: "Taxes and fees registry",
+        header_style: :sentence,
+        striped: true,
+        hoverable: true,
+        bordered: true,
+        wrapper_class: "rounded-md border border-border bg-card",
+        class: "min-w-[920px]",
+        data: { testid: "taxes-fees-registry" }) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Status</th>
+        <th scope="col">Charge</th>
+        <th scope="col">Code</th>
+        <th scope="col">Applies To</th>
+        <th scope="col">Charge Rule</th>
+        <th scope="col">Charge Amount</th>
+        <th scope="col" class="text-right">Action</th>
+      </tr>
+    <% end %>
+
+    <% table.with_body do %>
+      <% presenter.registry_rows.each do |row| %>
+        <tr id="tax-registry-row-<%= row.key %>">
+          <td class="align-middle">
+            <%= form_with url: row.status_path,
+                          method: :patch,
+                          class: "inline-flex",
+                          data: {
+                            controller: "tax-registry-status",
+                            action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish",
+                            turbo_frame: "_top",
+                            turbo_confirm: row.enabled ? "Deactivate #{row.name}?" : nil,
+                            turbo_confirm_title: row.enabled ? "Deactivate #{row.name}?" : nil,
+                            turbo_confirm_text: row.enabled ? "Future applicable charges will stop generating this #{row.type_label.downcase}. Already-posted transactions will remain unchanged." : nil,
+                            turbo_confirm_tone: row.enabled ? "warning" : nil
+                          } do %>
+              <%= hidden_field_tag :registry_status, "1" %>
+              <%= hidden_field_tag row.status_param, "0" %>
+              <%= submit_tag "Update status", hidden: true, data: { tax_registry_status_target: "submit" } %>
+              <%= render PanelsUI::Switch.new(
+                    name: row.status_param,
+                    label: tag.span("#{row.enabled ? 'Deactivate' : 'Activate'} #{row.name}", class: "sr-only"),
+                    checked: row.enabled,
+                    size: :sm,
+                    data: {
+                      tax_registry_status_target: "switch",
+                      action: "change->tax-registry-status#change"
+                    }) %>
+            <% end %>
+          </td>
+          <td class="align-middle">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-medium text-foreground"><%= row.name %></span>
+              <% if row.system %>
+                <span class="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">System</span>
+              <% end %>
+            </div>
+            <p class="mt-0.5 text-xs text-muted-foreground"><%= row.type_label %></p>
+          </td>
+          <td class="align-middle font-mono text-xs text-foreground" translate="no"><%= row.code %></td>
+          <td class="align-middle text-muted-foreground"><%= row.applies_to %></td>
+          <td class="align-middle text-muted-foreground"><%= row.charge_rule %></td>
+          <td class="align-middle font-medium tabular-nums text-foreground"><%= row.charge_amount %></td>
+          <td class="text-right align-middle">
+            <%= render PanelsUI::Button.new(
+                  href: row.manage_path,
+                  variant: :secondary,
+                  size: :xs,
+                  data: { turbo_frame: "settings_action_sheet" }) do %>
+              Manage
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

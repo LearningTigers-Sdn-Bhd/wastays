@@ -1,0 +1,154 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% persisted = extra_charge.persisted? %>
+<% form_id = persisted ? "manage-extra-charge-#{extra_charge.id}-form" : "add-extra-charge-form" %>
+<% selected_tax_keys = extra_charge.transaction_code.tax_rule_keys %>
+<% currency = current_hotel.default_currency %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: persisted ? "manage-extra-charge-sheet" : "add-extra-charge-sheet",
+          side: :right,
+          size: :lg,
+          title: title,
+          description: "Configure how staff select, calculate, and post this charge.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: extra_charge,
+                      url: persisted ? hotel_extra_charge_path(current_hotel, extra_charge) : hotel_extra_charges_path(current_hotel),
+                      id: form_id,
+                      class: "space-y-6 py-2",
+                      data: {
+                        controller: "extra-charge-form",
+                        action: "input->extra-charge-form#update change->extra-charge-form#update",
+                        extra_charge_form_currency_value: currency
+                      } do |form| %>
+          <% if extra_charge.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Extra charge could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { extra_charge.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <section aria-labelledby="extra-charge-details-heading" class="space-y-4">
+            <div>
+              <h2 id="extra-charge-details-heading" class="text-base font-semibold text-foreground">Charge details</h2>
+              <p class="mt-1 text-sm text-muted-foreground">Use a short code that staff can recognize in folios and reports.</p>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Name", required: true) do |field| %>
+                <% field.with_input(placeholder: "Airport transfer", autocomplete: "off", data: { extra_charge_form_target: "name" }) %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :code, label: "Code", hint: "Maximum 10 characters.", required: true) do |field| %>
+                <% field.with_input(maxlength: 10, placeholder: "AIRPORT", autocomplete: "off", spellcheck: false,
+                     class: "font-mono uppercase", data: { extra_charge_form_target: "code", action: "input->extra-charge-form#formatCode" }) %>
+              <% end %>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :description, label: "Description", hint: "Optional guidance shown to staff.") do |field| %>
+              <% field.with_text_area(rows: 3, placeholder: "One-way transport between the hotel and airport.") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :category, label: "Reporting category", required: true) do |field| %>
+              <% field.with_select_menu(
+                   FolioTransaction::CHARGE_CATEGORIES.reject { |category| category.in?(%w[accommodation tax]) }.map { |category| { label: category.humanize, value: category } },
+                   selected: extra_charge.category.presence || "other") %>
+            <% end %>
+          </section>
+
+          <section aria-labelledby="extra-charge-pricing-heading" class="space-y-4 border-t border-border pt-5">
+            <div>
+              <h2 id="extra-charge-pricing-heading" class="text-base font-semibold text-foreground">Pricing</h2>
+              <p class="mt-1 text-sm text-muted-foreground">Choose whether staff enter the amount or the system calculates it.</p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :pricing_type, label: "Pricing method", required: true) do |field| %>
+              <% field.with_select_menu(
+                   [
+                     { label: "Enter amount when charging", value: "manual" },
+                     { label: "Fixed price", value: "fixed" },
+                     { label: "Percentage", value: "percentage" }
+                   ],
+                   selected: extra_charge.pricing_type,
+                   data: { extra_charge_form_target: "pricingType" }) %>
+            <% end %>
+
+            <div class="grid gap-4 sm:grid-cols-2" data-extra-charge-form-target="pricedFields">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :rate_value, label: "Rate", required: extra_charge.priced?) do |field| %>
+                <% field.with_input(type: :number, min: 0.01, step: 0.01, inputmode: "decimal",
+                     data: { extra_charge_form_target: "rate" }) %>
+                <% field.with_addon(align: :inline_start, data: { extra_charge_form_target: "ratePrefix" }) { currency } %>
+              <% end %>
+
+              <div data-extra-charge-form-target="unitFields">
+                <%= render PanelsUI::FormField.new(form: form, attribute: :charging_unit, label: "Charged", required: true) do |field| %>
+                  <% field.with_select_menu(
+                       HotelExtraCharge::CHARGING_UNITS.map { |unit| { label: unit.humanize, value: unit } },
+                       selected: extra_charge.charging_unit) %>
+                <% end %>
+              </div>
+            </div>
+
+            <div data-extra-charge-form-target="percentageFields">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :percentage_basis, label: "Calculated from") do |field| %>
+                <% field.with_select_menu(
+                     [
+                       { label: "Room charges", value: "room_charges" },
+                       { label: "All non-tax charges", value: "non_tax_charges" }
+                     ],
+                     selected: extra_charge.percentage_basis,
+                     prompt: "Select a calculation basis") %>
+              <% end %>
+            </div>
+
+            <div data-extra-charge-form-target="overrideFields">
+              <%= render PanelsUI::Switch.new(
+                    form: form,
+                    attribute: :allow_amount_override,
+                    label: "Allow staff to change the calculated amount",
+                    description: "The configured price remains visible in the posting audit details.") %>
+            </div>
+
+            <div class="rounded-md border border-border bg-muted px-4 py-3" aria-live="polite">
+              <p class="text-xs text-muted-foreground">Example posting</p>
+              <div class="mt-1 flex items-center justify-between gap-3 text-sm">
+                <span class="font-medium text-foreground" data-extra-charge-form-target="previewName"><%= extra_charge.name.presence || "Extra charge" %></span>
+                <span class="font-mono font-medium tabular-nums text-foreground" data-extra-charge-form-target="previewAmount">Staff enters amount</span>
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="extra-charge-tax-heading" class="space-y-4 border-t border-border pt-5">
+            <div>
+              <h2 id="extra-charge-tax-heading" class="text-base font-semibold text-foreground">Tax treatment</h2>
+              <p class="mt-1 text-sm text-muted-foreground">Selected active taxes are generated when this charge is posted.</p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :tax_rule_keys, label: "Taxes applied to this charge") do |field| %>
+              <% field.with_multi_select(
+                   @tax_rules.map { |tax| { label: "#{tax[:name]}#{' · Inactive' unless tax[:enabled]}", value: tax[:key] } },
+                   selected: selected_tax_keys,
+                   prompt: "Select taxes and fees") %>
+            <% end %>
+
+            <%= render PanelsUI::Switch.new(
+                  form: form,
+                  attribute: :active,
+                  checked: extra_charge.active?,
+                  label: "Active",
+                  description: "Active charges are available to staff when posting to a folio.") %>
+          </section>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm, data: { turbo_submits_with: "Saving…" }) do %>
+          <%= submit_label %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

@@ -93,7 +93,6 @@
     <div class="space-y-4 <%= 'opacity-50' unless values[:collect_security_deposit] %>" data-payment-toggle-target="container">
       <%= fields_for "#{form.object_name}[security_deposit]", OpenStruct.new(
             amount: values[:security_deposit_amount],
-            payment_method: values[:security_deposit_payment_method],
             external_reference: values[:security_deposit_reference]) do |deposit_form| %>
         <h3 id="security-deposit-heading-<%= booking.id %>" class="text-base font-semibold">Security deposit</h3>
         <div class="grid gap-4 sm:grid-cols-2">
@@ -101,13 +100,13 @@
             <% field.with_input(type: :number, value: values[:security_deposit_amount], min: 0, step: 0.01, data: { payment_toggle_target: "field" }) %>
             <% field.with_addon(align: :inline_start) { currency } %>
           <% end %>
-          <div data-payment-toggle-target="field">
-            <%= render PanelsUI::FormField.new(form: deposit_form, attribute: :payment_method, label: "Payment method") do |field| %>
-              <% field.with_select_menu(
-                   [["Cash", "cash"], ["Credit card", "credit_card"], ["Bank transfer", "bank_transfer"], ["Manual", "manual"]],
-                   selected: values[:security_deposit_payment_method]) %>
-            <% end %>
-          </div>
+          <%= render "hotel_portal/bookings/actions/booking_creations/partials/configured_payment_method_fields",
+                form: deposit_form,
+                method_groups: { direct: @direct_payment_methods },
+                purpose: :direct,
+                selected_method_id: values[:security_deposit_payment_method_id],
+                selected_type: values[:security_deposit_payment_method_type],
+                required: true %>
         </div>
         <%= render PanelsUI::FormField.new(form: deposit_form, attribute: :external_reference, label: "Reference", hint: "Optional receipt or payment reference.") do |field| %>
           <% field.with_input(value: values[:security_deposit_reference], data: { payment_toggle_target: "field" }) %>

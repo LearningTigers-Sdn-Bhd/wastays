@@ -235,11 +235,13 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     end
 
     it "records one group deposit and allocates it across child folios" do
+      PaymentMethods::EnsureDefaults.call(hotel)
+      method = hotel.hotel_payment_methods.active.find_by!(guest_advance: true)
       params = {
         booking: {
           guest_name: "Paying Group", guest_email: "payer@example.com", guest_phone: "60111222333",
           check_in: Date.current, check_out: Date.current + 2.days, source: "phone",
-          record_payment: "1", payment_method: "cash", payment_amount: "100.00",
+          collect_payment: "1", hotel_payment_method_id: method.id,
           rooms: {
             "0" => { room_type_id: room_type.id, room_number: "101", adults: 1, children: 0 },
             "1" => { room_type_id: room_type.id, room_number: "102", adults: 1, children: 0 }
@@ -252,8 +254,11 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
       }.to change(Deposit, :count).by(1).and change(DepositMovement.movement_type_apply, :count).by(2)
 
       group = GroupBooking.last
-      expect(group.deposits.last).to have_attributes(kind: "prepayment", amount: 100.to_d, status: "settled")
-      expect(group.bookings.pluck(:payment_status)).to all(eq("partial"))
+      # One aggregate prepayment for the whole group, allocated across both folios.
+      expect(group.deposits.last).to have_attributes(
+        kind: "prepayment", amount: group.bookings.sum(&:total_amount), status: "settled"
+      )
+      expect(group.bookings.pluck(:payment_status)).to all(eq("captured"))
     end
   end
 

@@ -11,7 +11,8 @@ module HotelPortal
     before_action :set_transaction_code, only: %i[edit update preview_hotel_tax_rules]
 
     def show
-      Financials::EnsureDefaultTransactionCodes.call(@hotel)
+      Financials::EnsureDefaultExtraCharges.call(@hotel)
+      Discounts::EnsureDefaults.call(@hotel)
       @presenter = transaction_codes_presenter
       append_transaction_codes_tab_breadcrumb
     end
@@ -37,6 +38,10 @@ module HotelPortal
     end
 
     def edit
+      return redirect_registry_owned_extra_charge if @transaction_code.hotel_extra_charge.present?
+      return redirect_registry_owned_discount if @transaction_code.hotel_discount.present?
+      return redirect_registry_owned_payment_method if @transaction_code.hotel_payment_method.present?
+
       if params[:transaction_code].present?
         @transaction_code.assign_attributes(transaction_code_attributes)
         normalize_taxable_flag(@transaction_code)
@@ -45,6 +50,10 @@ module HotelPortal
     end
 
     def update
+      return redirect_registry_owned_extra_charge if @transaction_code.hotel_extra_charge.present?
+      return redirect_registry_owned_discount if @transaction_code.hotel_discount.present?
+      return redirect_registry_owned_payment_method if @transaction_code.hotel_payment_method.present?
+
       @transaction_code.assign_attributes(transaction_code_attributes)
       normalize_taxable_flag(@transaction_code)
 
@@ -80,6 +89,10 @@ module HotelPortal
     end
 
     def preview_hotel_tax_rules
+      return redirect_registry_owned_extra_charge if @transaction_code.hotel_extra_charge.present?
+      return redirect_registry_owned_discount if @transaction_code.hotel_discount.present?
+      return redirect_registry_owned_payment_method if @transaction_code.hotel_payment_method.present?
+
       @transaction_code.assign_attributes(transaction_code_attributes)
       normalize_taxable_flag(@transaction_code)
       unless @transaction_code.valid?
@@ -250,6 +263,21 @@ module HotelPortal
         destination: hotel_transaction_codes_path(@hotel, tab: tab_for(transaction_code)),
         notice: notice
       )
+    end
+
+    def redirect_registry_owned_extra_charge
+      redirect_to edit_hotel_extra_charge_path(@hotel, @transaction_code.hotel_extra_charge),
+        notice: "Manage this code from Extra Charges."
+    end
+
+    def redirect_registry_owned_payment_method
+      redirect_to edit_hotel_payment_method_path(@hotel, @transaction_code.hotel_payment_method),
+        notice: "Manage this code from Payment Methods."
+    end
+
+    def redirect_registry_owned_discount
+      redirect_to edit_hotel_discount_path(@hotel, @transaction_code.hotel_discount),
+        notice: "Manage this code from Discounts."
     end
 
     def normalize_taxable_flag(transaction_code)

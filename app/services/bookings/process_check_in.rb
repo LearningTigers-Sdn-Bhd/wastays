@@ -5,8 +5,6 @@ require "ostruct"
 
 module Bookings
   class ProcessCheckIn
-    PAYMENT_METHODS = %w[cash credit_card bank_transfer manual].freeze
-
     class CheckInError < StandardError; end
 
     def initialize(bookings:, details:, user:, source: nil)
@@ -83,10 +81,12 @@ module Bookings
         raise CheckInError, booking_error(booking, "Security deposit amount must be greater than zero.")
       end
 
-      method = deposit[:payment_method].to_s
-      unless method.in?(PAYMENT_METHODS)
-        raise CheckInError, booking_error(booking, "Select a valid security deposit payment method.")
-      end
+      method_result = PaymentMethods::Eligibility.call(
+        hotel: booking.hotel,
+        id: deposit[:hotel_payment_method_id],
+        purpose: :direct
+      )
+      raise CheckInError, booking_error(booking, method_result.error) unless method_result.success?
     end
 
     def validate_rooms!(booking)

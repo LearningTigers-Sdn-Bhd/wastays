@@ -4,6 +4,9 @@ export default class extends Controller {
   static targets = ["chargeType", "help", "input", "prefix"]
 
   connect() {
+    this.codeGroup = this.hasInputTarget
+      ? this.inputTarget.closest(".panel-control-group")
+      : null
     this.updatePrefix()
   }
 
@@ -24,16 +27,31 @@ export default class extends Controller {
   updatePrefix() {
     if (!this.hasChargeTypeTarget) return
 
-    const isTax = this.chargeTypeTarget.value === "tax"
+    const chargeType = this.chargeTypeTarget.matches("select")
+      ? this.chargeTypeTarget
+      : this.chargeTypeTarget.querySelector("select")
+    const isTax = chargeType?.value === "tax"
+
     if (this.hasPrefixTarget) this.prefixTarget.hidden = !isTax
     if (this.hasInputTarget) {
-      this.inputTarget.classList.toggle("rounded-r-xl", isTax)
-      this.inputTarget.classList.toggle("rounded-xl", !isTax)
+      if (this.codeGroup) {
+        this.codeGroup.dataset.grouped = isTax.toString()
+
+        if (isTax) {
+          this.codeGroup.hidden = false
+          this.codeGroup.prepend(this.inputTarget)
+        } else {
+          this.codeGroup.before(this.inputTarget)
+          this.codeGroup.hidden = true
+        }
+      }
+
+      this.inputTarget.placeholder = isTax ? "DBKK" : "SC"
     }
     if (this.hasHelpTarget) {
       this.helpTarget.textContent = isTax
-        ? "Used as transaction code suffix. Example: DBKK becomes TAX_DBKK. Spaces become underscores."
-        : "Used as transaction code. Example: SC stays SC. Spaces become underscores."
+        ? "Saved as TAX_DBKK. Spaces become underscores."
+        : "Saved without a prefix. Spaces become underscores."
     }
   }
 }

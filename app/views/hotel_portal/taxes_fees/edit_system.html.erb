@@ -1,0 +1,66 @@
+<%= turbo_frame_tag(turbo_frame_request_id.presence || "settings_action_sheet") do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <% title = @system_tax == "sst" ? "Service Tax (SST)" : "Tourism Tax (TTx)" %>
+    <% form_id = "manage-#{@system_tax.dasherize}-form" %>
+    <%= render PanelsUI::Sheet.new(
+          id: "manage-#{@system_tax.dasherize}-sheet",
+          side: :right,
+          size: :md,
+          title: title,
+          description: "Manage this system tax for your property.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @hotel,
+                      url: hotel_system_tax_path(current_hotel, @system_tax),
+                      method: :patch,
+                      id: form_id,
+                      class: "space-y-5 py-2" do |form| %>
+          <% if @hotel.errors.any? %>
+            <div class="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              <%= @hotel.errors.full_messages.to_sentence %>
+            </div>
+          <% end %>
+
+          <dl class="grid gap-4 rounded-lg border border-border bg-muted/40 p-4 sm:grid-cols-2">
+            <div><dt class="text-xs text-muted-foreground">Type</dt><dd class="mt-1 font-medium text-foreground">System Tax</dd></div>
+            <div><dt class="text-xs text-muted-foreground">Code</dt><dd class="mt-1 font-mono text-sm text-foreground" translate="no"><%= @system_tax == "sst" ? "TAX_SST" : "TAX_TTX" %></dd></div>
+            <div><dt class="text-xs text-muted-foreground">Applies To</dt><dd class="mt-1 font-medium text-foreground"><%= @system_tax == "sst" ? "All guests" : "Foreign guests only" %></dd></div>
+            <div><dt class="text-xs text-muted-foreground">Charge Rule</dt><dd class="mt-1 font-medium text-foreground"><%= @system_tax == "sst" ? "Percentage" : "Fixed" %></dd></div>
+            <div><dt class="text-xs text-muted-foreground">Calculation Basis</dt><dd class="mt-1 font-medium text-foreground"><%= @system_tax == "sst" ? "Room charge" : "Per room / night" %></dd></div>
+            <% if @system_tax == "sst" %>
+              <div><dt class="text-xs text-muted-foreground">Rate</dt><dd class="mt-1 font-medium tabular-nums text-foreground">8.00%</dd></div>
+            <% end %>
+          </dl>
+
+          <% if @system_tax == "tourism_tax" %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :tourism_tax_amount,
+                  label: "Charge Amount",
+                  hint: "Applied per room, per night.",
+                  required: true) do |field| %>
+              <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+              <% field.with_addon(align: :inline_start) { "RM" } %>
+            <% end %>
+          <% else %>
+            <p class="text-xs text-muted-foreground">The SST rate is system-defined and cannot be changed here.</p>
+          <% end %>
+
+          <%= render PanelsUI::Switch.new(
+                form: form,
+                attribute: (@system_tax == "sst" ? :sst_enabled : :tourism_tax_enabled),
+                label: "Active",
+                description: "Generate this tax for future applicable charges.") %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm, data: { turbo_submits_with: "Saving…" }) do %>
+          Save Changes
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

@@ -343,6 +343,7 @@ Rails.application.routes.draw do
         get :availability, to: "bookings/availabilities#show"
         get :rate_options, to: "bookings/rate_options#show"
         get :stay_price, to: "bookings/prices#show"
+        get :payment_quote, to: "bookings/prices#payment_quote"
         get :room_row, to: "bookings/room_rows#show"
       end
 
@@ -420,6 +421,8 @@ Rails.application.routes.draw do
 
     scope "folio-actions", as: :folio_action, module: "folios/actions" do
       match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
+      get "extra-charge-quote/:booking_id", to: "transactions#quote", as: :extra_charge_quote
+      get "discount-quote/:booking_id", to: "transactions#discount_quote", as: :discount_quote
       match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
       match "split-transaction/:booking_id/:transaction_id", to: "transaction_splits#show", via: [ :get, :post ], as: :split_transaction
       match "reverse-transaction/:booking_id/:transaction_id", to: "transaction_reversals#show", via: [ :get, :post ], as: :reverse_transaction
@@ -603,6 +606,8 @@ Rails.application.routes.draw do
         get "banking-details", to: "settings#index", as: :banking_details_settings, defaults: { settings_page: "banking" }
         patch "banking-details", to: "settings#update", defaults: { settings_page: "banking" }
         resource :taxes_fees, path: "taxes-and-fees", only: [ :show, :update ]
+        get "taxes-and-fees/system/:tax_key/edit", to: "taxes_fees#edit_system", as: :edit_system_tax
+        patch "taxes-and-fees/system/:tax_key", to: "taxes_fees#update_system", as: :system_tax
         resources :hotel_taxes, path: "taxes-and-fees/fees", only: %i[index new create edit update destroy]
         get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
         get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
@@ -612,6 +617,18 @@ Rails.application.routes.draw do
         patch "transaction-codes/:id/preview-hotel-tax-rules", to: "transaction_codes#preview_hotel_tax_rules", as: :preview_transaction_code_hotel_tax_rules
         patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
         resources :general_ledger_maps, path: "general-ledger-mappings", only: [ :index, :edit, :update ]
+      end
+
+      scope "commercial" do
+        resources :extra_charges, path: "extra-charges", only: %i[index new create edit update] do
+          patch :status, action: :update_status, on: :member
+        end
+        resources :discounts, only: %i[index new create edit update] do
+          patch :status, action: :update_status, on: :member
+        end
+        resources :payment_methods, path: "payment-methods", only: %i[index new create edit update] do
+          patch :status, action: :update_status, on: :member
+        end
       end
 
       scope "guest-content" do

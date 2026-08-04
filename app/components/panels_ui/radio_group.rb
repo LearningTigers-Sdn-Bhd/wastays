@@ -119,6 +119,7 @@ module PanelsUI
         description: option[:description],
         checked: checked_for(option.fetch(:value)),
         required: @required,
+        required_marker: false,
         disabled: @disabled || option[:disabled] || false,
         size: @size,
         variant: @variant,

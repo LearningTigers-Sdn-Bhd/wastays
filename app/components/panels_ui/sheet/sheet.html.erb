@@ -9,7 +9,7 @@
         data-panels-ui-sheet-side="<%= @side %>"
         data-panels-ui-sheet-variant="<%= @variant %>"
         data-action="close->panels-ui--sheet#onClose cancel->panels-ui--sheet#onCancel click->panels-ui--sheet#backdropClose">
-  <div class="flex flex-1 min-h-0 flex-col focus:outline-none"
+  <div class="flex min-h-0 min-w-0 w-full flex-1 flex-col focus:outline-none"
        tabindex="-1"
        data-panels-ui--sheet-target="panel">
     <% if header? %>
@@ -41,7 +41,7 @@
     <% end %>
 
     <% if body? %>
-      <div class="<%= tw_merge("flex-1 min-h-0 overflow-y-auto px-4 py-2 text-sm text-card-foreground", @body_class) %>">
+      <div class="<%= tw_merge("min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-2 text-sm text-card-foreground", @body_class) %>">
         <%= body %>
       </div>
     <% end %>

@@ -22,11 +22,7 @@
     <% end %>
 
     <% table.with_body do %>
-      <% folio_show.posted_rows.each do |row| %>
-        <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, currency: folio_show.currency, booking: booking, hotel: hotel, folio_show: folio_show %>
-      <% end %>
-
-      <% folio_show.forecasted_rows.each do |row| %>
+      <% folio_show.ledger_rows.each do |row| %>
         <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, currency: folio_show.currency, booking: booking, hotel: hotel, folio_show: folio_show %>
       <% end %>
 
@@ -41,9 +37,15 @@
       <% table.with_footer do %>
         <tr>
           <td colspan="6">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Outstanding</span>
-              <span class="text-sm font-semibold tabular-nums text-foreground"><%= folio_show.money(folio_show.current_balance) %></span>
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-xs text-muted-foreground">
+                Posted <span class="font-medium tabular-nums text-foreground"><%= folio_show.money(folio_show.posted_balance) %></span>
+                <span aria-hidden="true"> · </span>
+                Upcoming <span class="font-medium tabular-nums text-foreground"><%= folio_show.money(folio_show.forecasted_charges) %></span>
+              </span>
+              <span class="text-sm font-semibold tabular-nums text-foreground">
+                Projected outstanding&nbsp; <%= folio_show.money(folio_show.current_balance) %>
+              </span>
             </div>
           </td>
         </tr>

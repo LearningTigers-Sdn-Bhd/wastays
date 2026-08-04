@@ -21,6 +21,7 @@ module PanelsUI
 
     def initialize(form: nil, attribute: nil, name: nil, label:, description: nil, error: AUTO_ERROR,
                    id: nil, value: "1", checked: nil, unchecked_value: "0", required: false,
+                   required_marker: true,
                    disabled: false, size: :md, variant: :default, class: nil, **attributes)
       validate_source!(form, attribute, name)
       raise ArgumentError, "#{control_noun} require a label" if label.blank?
@@ -36,6 +37,7 @@ module PanelsUI
       @checked = checked
       @unchecked_value = unchecked_value
       @required = required
+      @required_marker = required_marker
       @disabled = disabled
       @size = self.class::SIZES.include?(size) ? size : :md
       @variant = self.class::VARIANTS.include?(variant) ? variant : :default
@@ -118,7 +120,7 @@ module PanelsUI
       tag.span(class: "#{css_prefix}__content") do
         safe_join([
           tag.span(class: "#{css_prefix}__label") do
-            safe_join([ @label, (required_content if @required) ].compact)
+            safe_join([ @label, (required_content if @required && @required_marker) ].compact)
           end,
           (tag.span(@description, id: description_id, class: "#{css_prefix}__description") if description?),
           (tag.span(error_message, id: error_id, class: "#{css_prefix}__error", role: "alert") if invalid?)

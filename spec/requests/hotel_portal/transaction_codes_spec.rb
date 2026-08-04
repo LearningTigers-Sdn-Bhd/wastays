@@ -80,7 +80,8 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(response.body).to include("Service Charge")
       expect(response.body).to include("Inactive Levy")
       expect(response.body).to include("bg-muted text-muted-foreground ring-ring")
-      expect(response.body).to include("REBATE")
+      expect(response.body).not_to include("REBATE")
+      expect(hotel.hotel_discounts.joins(:transaction_code).where(transaction_codes: { system_key: "rebate" })).to exist
       expect(response.body).to include("GATEWAY")
       expect(response.body).to include("OTA")
       expect(response.body).to include("Gateway Manual Recovery")
@@ -127,6 +128,16 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/transaction-codes/:id/edit" do
+    it "redirects registry-owned codes to the Extra Charge editor" do
+      Financials::EnsureDefaultExtraCharges.call(hotel)
+      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+      extra_charge = code.hotel_extra_charge
+
+      get hotel_edit_transaction_code_path(hotel, code)
+
+      expect(response).to redirect_to(edit_hotel_extra_charge_path(hotel, extra_charge))
+    end
+
     it "renders the transaction code offcanvas form" do
       Financials::EnsureDefaultTransactionCodes.call(hotel)
       code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")

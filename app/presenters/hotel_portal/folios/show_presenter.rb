@@ -6,6 +6,7 @@ module HotelPortal
     include ActionView::Helpers::NumberHelper
 
     LedgerRow = Struct.new(
+      :date,
       :date_label,
       :code,
       :description,
@@ -483,7 +484,7 @@ module HotelPortal
       return [] unless can_show_normal_folio_actions?
 
       options = []
-      options += %w[adjustment discount other] if permitted?("post_folio_adjustments")
+      options += %w[adjustment other] if permitted?("post_folio_adjustments")
       options << "correction" if permitted?("post_folio_corrections")
       options << "write_off" if permitted?("post_folio_write_offs")
       options
@@ -493,8 +494,12 @@ module HotelPortal
       adjustment_category_options.any?
     end
 
+    def can_apply_discount?
+      can_show_normal_folio_actions? && permitted?("post_folio_adjustments")
+    end
+
     def normal_folio_actions_available?
-      can_post_payment? || can_post_charge? || can_post_adjustment? || can_execute_refund?
+      can_post_payment? || can_post_charge? || can_post_adjustment? || can_apply_discount? || can_execute_refund?
     end
 
     def booking_invoice_report_available?
@@ -611,6 +616,11 @@ module HotelPortal
       posted_rows.size + forecasted_rows.size
     end
 
+    def ledger_rows
+      (posted_rows + forecasted_rows)
+        .sort_by { |row| [ row.date, row.row_kind == :posted ? 0 : 1, row.transaction_id || row.forecast_id ] }
+    end
+
     def posted_section_summary
       parts = [ "#{posted_rows.size} posted" ]
       parts << "#{money(posted_charges)} charges" unless posted_charges.zero?
@@ -648,7 +658,8 @@ module HotelPortal
           description: forecast.description,
           amount: forecast.amount,
           category: forecast.charge_kind,
-          identity: forecast.identity
+          identity: forecast.identity,
+          metadata: forecast.metadata
         }
       end
     end
@@ -845,6 +856,7 @@ module HotelPortal
       action_label = suppress_normal_ledger_actions? ? "—" : policy.action_label
       action_kind = suppress_normal_ledger_actions? ? :none : policy.action_kind
       LedgerRow.new(
+        date: transaction.posting_date,
         date_label: transaction.posting_date.strftime("%d/%m/%Y"),
         code: posted_code(transaction),
         description: transaction.description,
@@ -876,6 +888,7 @@ module HotelPortal
     def forecasted_row(line, balance)
       amount = line[:amount].to_d
       LedgerRow.new(
+        date: line[:date],
         date_label: line[:date].strftime("%d/%m/%Y"),
         code: forecasted_code(line),
         description: line[:description],
@@ -897,7 +910,7 @@ module HotelPortal
         modal_title: nil,
         transaction_id: nil,
         forecast_id: line[:forecast_id],
-        movement_allowed: line[:forecast_id].present?,
+        movement_allowed: false,
         row_kind: :forecasted,
         reversed: false
       )
@@ -911,10 +924,13 @@ module HotelPortal
     def posted_code(transaction)
       return derived_tax_transaction_code(transaction) if tax_transaction?(transaction)
 
-      transaction.transaction_code&.code.presence || metadata_transaction_code(transaction) || fallback_code(transaction.transaction_type, transaction.category, transaction.description)
+      transaction.posted_transaction_code.presence || metadata_transaction_code(transaction) || fallback_code(transaction.transaction_type, transaction.category, transaction.description)
     end
 
     def forecasted_code(line)
+      metadata = line[:metadata].to_h
+      return metadata["transaction_code_code"] if metadata["transaction_code_code"].present?
+
       fallback_code("charge", line[:category], line[:description])
     end
 
@@ -941,11 +957,11 @@ module HotelPortal
     end
 
     def derived_tax_transaction_code(transaction)
-      child_code = metadata_transaction_code(transaction) || transaction.transaction_code&.code.presence
+      child_code = metadata_transaction_code(transaction) || transaction.posted_transaction_code.presence
       source_code = source_transaction_code_for(transaction)&.code.presence
       return "#{source_code}_#{child_code}" if source_code.present? && child_code.present?
 
-      child_code || transaction.transaction_code&.code.presence || fallback_code(transaction.transaction_type, transaction.category, transaction.description)
+      child_code || transaction.posted_transaction_code.presence || fallback_code(transaction.transaction_type, transaction.category, transaction.description)
     end
 
     def source_transaction_code_for(transaction)

@@ -17,6 +17,8 @@ RSpec.describe PanelsUI::Sheet, type: :component do
 
     it "renders a native modal dialog with the sheet controller" do
       expect(page).to have_css("dialog[aria-modal='true'][data-controller='panels-ui--sheet']")
+      expect(page).to have_css("[data-panels-ui--sheet-target='panel'].min-w-0.w-full")
+      expect(page).to have_css("dialog > [data-panels-ui--sheet-target='panel'] > .min-w-0")
       expect(page).to have_css("dialog[data-panels-ui-sheet-side='right']")
     end
 
