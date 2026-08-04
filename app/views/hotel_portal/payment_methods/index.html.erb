@@ -1,0 +1,112 @@
+<div class="w-full space-y-4">
+  <%= render PanelsUI::PageHeader.new(title: "Payment Methods", description: "Manage how staff collect direct payments and guest advances.") %>
+
+  <section aria-labelledby="payment-methods-heading" class="space-y-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h2 id="payment-methods-heading" class="text-base font-semibold text-foreground">Payment Methods Registry</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Assign ledger codes, advance treatment, and optional collection surcharges.</p>
+      </div>
+
+      <%= render PanelsUI::Button.new(
+            href: new_hotel_payment_method_path(current_hotel),
+            size: :sm,
+            class: "shrink-0",
+            data: { turbo_frame: "settings_action_sheet" }) do %>
+        <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+        Add Payment Method
+      <% end %>
+    </div>
+
+    <%= form_with url: hotel_payment_methods_path(current_hotel), method: :get, class: "max-w-sm" do |form| %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search payment methods", label_hidden: true) do |field| %>
+        <% field.with_input(type: :search, value: params[:q], placeholder: "Search payment methods…", autocomplete: "off") %>
+        <% field.with_addon(align: :inline_start, variant: :bare) do %>
+          <%= app_icon "search", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Table.new(
+          caption: "Payment methods registry",
+          header_style: :sentence,
+          striped: true,
+          hoverable: true,
+          bordered: true,
+          wrapper_class: "rounded-md border border-border bg-card",
+          class: "min-w-[820px]",
+          data: { testid: "payment-methods-registry" }) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Status</th>
+          <th scope="col">Payment method</th>
+          <th scope="col">Code</th>
+          <th scope="col">Type</th>
+          <th scope="col">Treatment</th>
+          <th scope="col">Surcharge</th>
+          <th scope="col" class="text-right">Action</th>
+        </tr>
+      <% end %>
+
+      <% table.with_body do %>
+        <% @payment_methods.each do |payment_method| %>
+          <tr id="payment-method-row-<%= payment_method.id %>">
+            <td class="align-middle">
+              <%= form_with url: status_hotel_payment_method_path(current_hotel, payment_method), method: :patch,
+                            class: "inline-flex",
+                            data: {
+                              controller: "tax-registry-status",
+                              action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish",
+                              turbo_frame: "_top",
+                              turbo_confirm: payment_method.active? ? "Deactivate #{payment_method.name}?" : nil,
+                              turbo_confirm_title: payment_method.active? ? "Deactivate #{payment_method.name}?" : nil,
+                              turbo_confirm_text: payment_method.active? ? "Staff will no longer be able to select this payment method. Existing folio transactions remain unchanged." : nil,
+                              turbo_confirm_tone: payment_method.active? ? "warning" : nil
+                            } do %>
+                <%= hidden_field_tag :active, "0" %>
+                <%= submit_tag "Update status", hidden: true, data: { tax_registry_status_target: "submit" } %>
+                <%= render PanelsUI::Switch.new(
+                      name: :active,
+                      label: tag.span("#{payment_method.active? ? 'Deactivate' : 'Activate'} #{payment_method.name}", class: "sr-only"),
+                      checked: payment_method.active?,
+                      size: :sm,
+                      disabled: payment_method.default_cash?,
+                      data: { tax_registry_status_target: "switch", action: "change->tax-registry-status#change" }) %>
+              <% end %>
+            </td>
+            <td class="align-middle">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-medium text-foreground"><%= payment_method.name %></span>
+                <% if payment_method.default_cash? %>
+                  <%= render PanelsUI::Badge.new(label: "Default", variant: :outline, size: :sm) %>
+                <% end %>
+              </div>
+            </td>
+            <td class="align-middle font-mono text-xs text-foreground" translate="no"><%= payment_method.code %></td>
+            <td class="align-middle text-muted-foreground"><%= payment_method.cash? ? "Cash" : "Bank / Gateway" %></td>
+            <td class="align-middle text-muted-foreground"><%= payment_method.guest_advance? ? "Guest advance" : "Direct payment" %></td>
+            <td class="align-middle text-muted-foreground">
+              <% if payment_method.surcharge? %>
+                <%= payment_method.surcharge_label %> · <%= payment_method.surcharge_extra_charge.name %>
+              <% else %>
+                None
+              <% end %>
+            </td>
+            <td class="text-right align-middle">
+              <%= render PanelsUI::Button.new(
+                    href: edit_hotel_payment_method_path(current_hotel, payment_method),
+                    variant: :secondary,
+                    size: :xs,
+                    data: { turbo_frame: "settings_action_sheet" }) do %>
+                Manage
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+        <% if @payment_methods.empty? %>
+          <tr><td colspan="7" class="py-8 text-center text-sm text-muted-foreground">No payment methods match this search.</td></tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+</div>

@@ -434,7 +434,7 @@ RSpec.describe "HotelPortal::Folios", type: :request, frozen_time: Time.zone.loc
       expect(completed_html.at_css('[data-testid="booking-workspace"]')).to be_present
     end
 
-    it "renders one horizontal ledger table with an Outstanding total and no collapse control" do
+    it "renders one horizontal ledger table with posted, upcoming, and projected totals" do
       booking = create_booking_with_folio(guest_name: "Ledger Guest", confirmation_token: "BK-LEDGER", folio_number: 603, charges: 100, payments: 40)
 
       get folio_operations_path(booking)
@@ -446,8 +446,9 @@ RSpec.describe "HotelPortal::Folios", type: :request, frozen_time: Time.zone.loc
       expect(response).to have_http_status(:success)
       expect(ledger.at_css("table.panel-table")).to be_present
       expect(headers).to eq([ "Date", "Code", "Description", "Debit (MYR)", "Credit (MYR)", "Actions" ])
-      expect(ledger.text.squish).to include("Outstanding MYR 60.00")
-      expect(ledger.text.squish).not_to include("Posted balance")
+      expect(ledger.text.squish).to include("Posted MYR 60.00")
+      expect(ledger.text.squish).to include("Upcoming MYR 0.00")
+      expect(ledger.text.squish).to include("Projected outstanding MYR 60.00")
       expect(ledger.at_css('[data-folio-ledger-section-param="forecasted"]')).to be_nil
     end
 

@@ -148,7 +148,7 @@ module Reports
           {
             transaction_type: transaction.transaction_type,
             category: transaction.category,
-            code: transaction.transaction_code&.code,
+            code: transaction.posted_transaction_code,
             description: transaction.description,
             amount: transaction.amount.to_d.to_s("F"),
             posting_date: transaction.posting_date&.iso8601,

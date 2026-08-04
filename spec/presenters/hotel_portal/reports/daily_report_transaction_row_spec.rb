@@ -19,7 +19,11 @@ RSpec.describe HotelPortal::Reports::DailyReportTransactionRow do
 
   it "falls back to category and description when a transaction code is missing" do
     transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", description: "Room charge")
-    transaction.update_column(:transaction_code_id, nil)
+    transaction.update_columns(
+      transaction_code_id: nil,
+      transaction_code_code_snapshot: nil,
+      transaction_code_name_snapshot: nil
+    )
     row = described_class.new(transaction.reload)
 
     expect(row.transaction_code).to eq("—")

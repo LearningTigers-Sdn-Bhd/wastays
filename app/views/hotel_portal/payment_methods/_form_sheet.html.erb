@@ -1,0 +1,151 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% persisted = payment_method.persisted? %>
+<% form_id = persisted ? "manage-payment-method-#{payment_method.id}-form" : "add-payment-method-form" %>
+<% surcharge_enabled = payment_method.surcharge? %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: persisted ? "manage-payment-method-sheet" : "add-payment-method-sheet",
+          side: :right,
+          size: :lg,
+          title: title,
+          description: "Configure how staff collect and post this payment option.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: payment_method,
+                      url: persisted ? hotel_payment_method_path(current_hotel, payment_method) : hotel_payment_methods_path(current_hotel),
+                      id: form_id,
+                      class: "space-y-6 py-2",
+                      data: {
+                        controller: "payment-method-form",
+                        action: "input->payment-method-form#update change->payment-method-form#update"
+                      } do |form| %>
+          <% if payment_method.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Payment method could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { payment_method.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <section aria-labelledby="payment-method-details-heading" class="space-y-4">
+            <div>
+              <h2 id="payment-method-details-heading" class="text-base font-semibold text-foreground">Payment details</h2>
+              <p class="mt-1 text-sm text-muted-foreground">The short code appears on folios, receipts, and reports.</p>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Payment option name", required: true) do |field| %>
+                <% field.with_input(placeholder: "Card terminal", autocomplete: "off") %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :code, label: "Short code", hint: "Maximum 10 characters.", required: true) do |field| %>
+                <% field.with_input(maxlength: 10, placeholder: "CARD", autocomplete: "off", spellcheck: false,
+                     class: "font-mono uppercase", data: { payment_method_form_target: "code", action: "input->payment-method-form#formatCode" }) %>
+              <% end %>
+            </div>
+
+            <%= render PanelsUI::RadioGroup.new(
+                  form: form,
+                  attribute: :payment_method_type,
+                  label: "Payment method type",
+                  selected: payment_method.payment_method_type,
+                  orientation: :horizontal,
+                  required: true,
+                  options: [
+                    { label: "Cash", value: "cash" },
+                    { label: "Bank / Gateway", value: "bank_gateway" }
+                  ],
+                  data: { payment_method_form_target: "type" }) %>
+
+            <%= render PanelsUI::Switch.new(
+                  form: form,
+                  attribute: :guest_advance,
+                  checked: payment_method.guest_advance?,
+                  label: "Guest Advance",
+                  description: "Post this option as a guest prepayment instead of a direct folio settlement.",
+                  data: { payment_method_form_target: "guestAdvance" }) %>
+
+            <div data-payment-method-form-target="defaultCash">
+              <%= render PanelsUI::Switch.new(
+                    form: form,
+                    attribute: :default_cash,
+                    checked: payment_method.default_cash?,
+                    label: "Default cash payment method",
+                    description: "Use this option as the hotel's default direct cash method.") %>
+            </div>
+          </section>
+
+          <section aria-labelledby="payment-method-surcharge-heading" class="space-y-4 border-t border-border pt-5">
+            <div>
+              <h2 id="payment-method-surcharge-heading" class="text-base font-semibold text-foreground">Surcharge</h2>
+              <p class="mt-1 text-sm text-muted-foreground">Add a separate fee charge and its configured taxes when this method is used.</p>
+            </div>
+
+            <%= render PanelsUI::Switch.new(
+                  name: "hotel_payment_method[surcharge_enabled]",
+                  checked: surcharge_enabled,
+                  label: "Apply a surcharge",
+                  description: "The collection total includes the fee and any taxes attached to the selected Extra Charge.",
+                  data: { payment_method_form_target: "surchargeEnabled" }) %>
+
+            <div class="space-y-4" data-payment-method-form-target="surchargeFields">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <%= render PanelsUI::FormField.new(form: form, attribute: :surcharge_posting_type, label: "Posting type") do |field| %>
+                  <% field.with_select_menu(
+                       [ { label: "Fixed amount", value: "fixed" }, { label: "Percentage", value: "percentage" } ],
+                       selected: payment_method.surcharge_posting_type,
+                       prompt: "Select posting type") %>
+                <% end %>
+
+                <%= render PanelsUI::FormField.new(form: form, attribute: :surcharge_value, label: "Surcharge value") do |field| %>
+                  <% field.with_input(type: :number, min: 0.01, step: 0.01, inputmode: "decimal") %>
+                <% end %>
+              </div>
+
+              <% if @surcharge_extra_charges.any? %>
+                <%= render PanelsUI::FormField.new(form: form, attribute: :surcharge_extra_charge_id, label: "Extra Charge") do |field| %>
+                  <% field.with_select_menu(
+                       @surcharge_extra_charges.map { |charge| { label: "#{charge.code} · #{charge.name}", value: charge.id } },
+                       selected: payment_method.surcharge_extra_charge_id,
+                       prompt: "Select an Extra Charge") %>
+                <% end %>
+              <% else %>
+                <%= render PanelsUI::Alert.new(tone: :warning, title: "No active Extra Charges") do |alert| %>
+                  <% alert.with_description { "Create or activate an Extra Charge before applying a surcharge." } %>
+                <% end %>
+              <% end %>
+            </div>
+          </section>
+
+          <section aria-labelledby="payment-method-availability-heading" class="space-y-4 border-t border-border pt-5">
+            <h2 id="payment-method-availability-heading" class="text-base font-semibold text-foreground">Availability</h2>
+            <% if payment_method.default_cash? %>
+              <div class="flex items-start gap-3 rounded-md border border-border bg-muted/40 px-3 py-3">
+                <%= app_icon "lock", class: "mt-0.5 size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
+                <div>
+                  <p class="text-sm font-medium text-foreground">Always active</p>
+                  <p class="mt-0.5 text-sm text-muted-foreground">Choose another default cash method before deactivating this option.</p>
+                </div>
+              </div>
+            <% else %>
+              <%= render PanelsUI::Switch.new(
+                    form: form,
+                    attribute: :active,
+                    checked: payment_method.active?,
+                    label: "Active",
+                    description: "Active payment methods are available to staff when posting to a folio.") %>
+            <% end %>
+          </section>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm, data: { turbo_submits_with: "Saving…" }) do %>
+          <%= submit_label %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

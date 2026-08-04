@@ -23,74 +23,101 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     sign_in_through_ui(user)
   end
 
-  it "shows taxes and fees inside the settings layout" do
+  it "shows the consolidated registry and URL-synced reference tab inside settings" do
     visit hotel_taxes_fees_path(hotel)
 
     expect(page).to have_css("h1", text: "Taxes & Fees")
-    within('[data-testid="settings-tabs"]') do
-      expect(page).to have_link('Taxes & Fees')
-    end
+    expect(page).to have_no_css('[data-testid="settings-tabs"]')
 
     within("#hotel-settings-sidebar") do
       expect(page).to have_no_link("Back to previous page")
-      expect(page).to have_link("Finance", href: hotel_taxes_fees_path(hotel))
-      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Finance")
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-label='Commercial']", visible: :all)
+      expect(page).to have_link("Taxes & Fees", href: hotel_taxes_fees_path(hotel), visible: :all)
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Taxes & Fees", visible: :all)
       expect(page).to have_no_link("Payouts", href: payouts_hotel_reports_path(hotel))
       expect(page).to have_no_css("summary.sidebar-group-parent", text: "Rooms & Rates")
     end
 
     expect(page).to have_css("[data-testid='taxes-fees-content']")
-    expect(page).to have_css("[data-testid='primary-tax-settings']", text: "Tourism Tax")
-    expect(page).to have_css("[data-testid='additional-taxes-fees']", text: "Heritage Fee")
-    expect(page).to have_css("[data-testid='malaysia-tax-reference']", text: "Malaysia Hotel Tax Reference Table")
-    expect(page).to have_css("input[name='hotel[tourism_tax_enabled]']", visible: :all)
-    expect(page).to have_css("input[name='hotel[sst_enabled]']", visible: :all)
-    expect(page).to have_no_button("ON")
-    expect(page).to have_no_button("OFF")
-    expect(page).to have_no_css("[data-testid='taxes-transactions-tabs']")
-    expect(page).to have_no_button("Default Transaction Code")
+    expect(page).to have_css(
+      ".panel-table__wrapper.rounded-md.border > table.panel-table[data-testid='taxes-fees-registry'][data-striped='true']"
+    )
+    expect(page).to have_css("#tax-registry-row-sst", text: "Service Tax (SST)")
+    expect(page).to have_css("#tax-registry-row-tourism_tax", text: "Tourism Tax (TTx)")
+    expect(page).to have_css("tr", text: "Heritage Fee")
+    expect(page).to have_link("Add Tax or Fee")
+    expect(page).to have_no_text("Primary Tax Settings")
+    expect(page).to have_no_text("Additional Taxes & Fees")
+
+    click_button "Malaysia Hotel Tax Reference"
+    expect(page).to have_current_path(hotel_taxes_fees_path(hotel, tab: "malaysia_reference"))
+    expect(page).to have_css("[data-testid='malaysia-tax-reference']", text: "Content last updated: 12 July 2026")
   end
 
-  it "shows inline tourism tax editing controls" do
+  it "manages system taxes in dedicated settings action sheets" do
     visit hotel_taxes_fees_path(hotel)
 
-    within("[data-testid='primary-tax-settings']") do
-      click_link "Edit", match: :first
-      expect(page).to have_field("hotel_tourism_tax_amount", with: "10.0")
-      expect(page).to have_button("Save")
-      expect(page).to have_link("Cancel")
+    within("#tax-registry-row-sst") do
+      click_link "Manage"
     end
+    expect(page).to have_css("turbo-frame#settings_action_sheet dialog#manage-sst-sheet", text: "Service Tax (SST)")
+    expect(page).to have_text("The SST rate is system-defined")
+    expect(page).to have_no_field("Charge Amount")
+    find("dialog#manage-sst-sheet button[aria-label='Close']").click
+
+    within("#tax-registry-row-tourism_tax") do
+      click_link "Manage"
+    end
+    expect(page).to have_css("turbo-frame#settings_action_sheet dialog#manage-tourism-tax-sheet", text: "Tourism Tax (TTx)")
+    expect(page).to have_field("Charge Amount", with: "10.0")
   end
 
-  xit "opens add and edit fee forms in the fullscreen offcanvas" do
+  it "opens add and edit forms in the settings action sheet" do
     visit hotel_taxes_fees_path(hotel)
 
-    within("[data-testid='additional-taxes-fees']") do
-      click_link "Add Fee"
-    end
-
-    expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Add Fee")
+    click_link "Add Tax or Fee"
+    expect(page).to have_css("turbo-frame#settings_action_sheet dialog#add-hotel-tax-sheet", text: "Add Tax or Fee")
     expect(page).to have_field("Name")
-    expect(page).to have_field("Transaction Code")
-    expect(page).to have_select("Charge Type", options: [ "Tax", "Charge", "Others" ])
-    expect(page).to have_select("Amount Type", options: [ "Fixed RM", "Percentage" ])
-    expect(page).to have_css("label", text: "Enabled")
-    expect(page).to have_css("label", text: "Foreign guests only")
-    expect(page).to have_css("span", text: "TAX_")
+    expect(page).to have_field("Code")
+    expect(page).to have_select("Type", with_options: [ "Tax", "Fee" ], visible: :all)
+    expect(page).to have_select("Applies To", with_options: [ "All guests", "Foreign guests only" ], visible: :all)
+    expect(page).to have_select("Charge Rule", with_options: [ "Percentage", "Fixed" ], visible: :all)
+    expect(page).to have_css(".panel-control-group[data-grouped='true'] [data-tax-code-field-target~='prefix']", text: "TAX_")
 
-    select "Charge", from: "Charge Type"
-    expect(page).to have_no_css("span", text: "TAX_", visible: :visible)
+    find("#hotel_tax_charge_type-trigger").click
+    find("#hotel_tax_charge_type-listbox [role='option']", text: "Fee").click
+    expect(page).to have_css(".panel-control-group[data-grouped='false'][hidden]", visible: :all)
+    expect(page).to have_css(
+      ".panel-form-field > input#hotel_tax_code.panel-input + .panel-control-group[hidden]",
+      visible: :all
+    )
+    expect(page).to have_css("[data-tax-code-field-target~='prefix'][hidden]", visible: :all)
+    expect(page).to have_text("Saved without a prefix")
 
-    click_button "Cancel"
+    find("dialog#add-hotel-tax-sheet button[aria-label='Close']").click
+    expect(page).to have_no_css("dialog#add-hotel-tax-sheet[open]")
 
-    within("[data-testid='additional-taxes-fees']", text: "Heritage Fee") do
-      click_link "Edit", match: :first
+    within("tr", text: "Heritage Fee") { click_link "Manage" }
+    expect(page).to have_css("turbo-frame#settings_action_sheet dialog#manage-hotel-tax-sheet", text: "Manage Tax or Fee")
+    expect(page).to have_field("Name", with: "Heritage Fee")
+    expect(page).to have_field("Code", with: "HF")
+    expect(page).to have_field("Charge Amount", with: "2.0")
+  end
+
+  it "confirms deactivation before updating registry status" do
+    visit hotel_taxes_fees_path(hotel)
+
+    within("#tax-registry-row-sst") do
+      find("input[type='checkbox'][name='hotel[sst_enabled]']", visible: :all).click
     end
 
-    expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Edit Fee")
-    expect(page).to have_field("Name", with: "Heritage Fee")
-    expect(page).to have_field("Transaction Code", with: "HF")
-    expect(page).to have_field("Amount", with: "2.0")
+    expect(page).to have_css("[role='alertdialog']", text: "Deactivate Service Tax (SST)?")
+    expect(page).to have_text("Already-posted transactions will remain unchanged")
+    click_button "Confirm"
+
+    expect(page).to have_text("Service Tax (SST) updated.")
+    expect(page).to have_current_path(hotel_taxes_fees_path(hotel), ignore_query: true)
+    expect(hotel.reload.sst_enabled?).to be(false)
   end
 
   it "renders default transaction codes behind tabs" do

@@ -24,6 +24,11 @@ RSpec.describe Bookings::CreateManualBooking do
     hotel.transaction_codes.find_by!(system_key: "room_revenue")
   end
 
+  def guest_advance_method
+    PaymentMethods::EnsureDefaults.call(hotel)
+    hotel.hotel_payment_methods.active.find_by!(guest_advance: true)
+  end
+
   before do
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
@@ -70,28 +75,48 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(subject.call.errors).to include(NightAudits::OperationalChangeGuard::ERROR_MESSAGE)
   end
 
-  it "allows a manually recorded partial payment" do
+  it "collects the exact billing summary and ignores a forged payment amount" do
+    method = guest_advance_method
     params.merge!(
       record_payment: "1",
       payment_amount: "25.00",
-      payment_method: "cash"
+      hotel_payment_method_id: method.id
     )
 
     result = subject.call
 
     expect(result.success?).to be true
-    expect(result.booking.payment_status).to eq("partial")
+    expect(result.booking.payment_status).to eq("captured")
     expect(result.booking.payment_transactions).to be_empty
-    expect(result.booking.deposits.sole).to have_attributes(kind: "prepayment", amount: 25.to_d, status: "settled")
-    expect(result.booking.booking_folio.folio_transactions.payment.sole.amount).to eq(25.to_d)
+    expect(result.booking.deposits.sole).to have_attributes(kind: "prepayment", amount: 200.to_d, status: "settled")
+    expect(result.booking.deposits.sole.transaction_code).to eq(method.transaction_code)
+    payment = result.booking.booking_folio.folio_transactions.payment.sole
+    expect(payment.amount).to eq(200.to_d)
+    expect(payment.metadata).to include(
+      "hotel_payment_method_id" => method.id,
+      "payment_method_name" => method.name,
+      "payment_method_code" => method.code,
+      "payment_method_type" => method.payment_method_type,
+      "payment_base_amount" => "200.0",
+      "payment_collected_total" => "200.0"
+    )
+    expect(result.booking.deposits.sole.metadata).to include(
+      "hotel_payment_method_id" => method.id,
+      "payment_method_name" => method.name,
+      "payment_method_code" => method.code,
+      "payment_method_type" => method.payment_method_type,
+      "payment_base_amount" => "200.0",
+      "payment_collected_total" => "200.0"
+    )
   end
 
   it "defaults manual payment to the stay total excluding tourism tax" do
+    method = guest_advance_method
     hotel.update!(tourism_tax_enabled: true, tourism_tax_amount: 10.0)
     room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
     room_code.update!(is_taxable: true)
     room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
-    params.merge!(record_payment: "1", payment_method: "cash", guest_country: "Singapore", guest_date_of_birth: "1990-01-01")
+    params.merge!(record_payment: "1", hotel_payment_method_id: method.id, guest_country: "Singapore", guest_date_of_birth: "1990-01-01")
 
     result = subject.call
 
@@ -104,13 +129,54 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.booking.booking_folio.folio_transactions.payment.sole.amount).to eq(200.to_d)
   end
 
-  it "rejects non-positive manual payment amounts" do
+  it "requires a configured guest-advance payment method" do
     params.merge!(record_payment: "1", payment_amount: "0")
 
     result = subject.call
 
     expect(result.success?).to be false
-    expect(result.errors).to include("Payment amount must be greater than 0.")
+    expect(result.errors).to include("Select a valid guest advance payment method.")
+  end
+
+  it "collects configured reservation surcharges and surcharge taxes" do
+    method = guest_advance_method
+    tax = create(:hotel_tax, hotel: hotel, name: "Service Tax", rate_type: "percentage", amount: 6, enabled: true)
+    extra_charge = create(:hotel_extra_charge, hotel: hotel)
+    extra_charge.transaction_code.update!(is_taxable: true)
+    extra_charge.transaction_code.taxes = [ tax ]
+    method.update!(surcharge_posting_type: "fixed", surcharge_value: 2, surcharge_extra_charge: extra_charge)
+    params.merge!(record_payment: "1", hotel_payment_method_id: method.id)
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(result.booking.deposits.sole.amount).to eq(202.12.to_d)
+    expect(result.booking.booking_folio.folio_transactions.charge.map(&:amount)).to include(2.to_d, 0.12.to_d)
+    expect(result.booking.deposits.sole.metadata).to include(
+      "payment_surcharge_amount" => "2.0",
+      "payment_surcharge_tax_amount" => "0.12",
+      "payment_collected_total" => "202.12"
+    )
+  end
+
+  it "collects a percentage reservation surcharge and surcharge tax" do
+    method = guest_advance_method
+    tax = create(:hotel_tax, hotel: hotel, name: "Service Tax", rate_type: "percentage", amount: 6, enabled: true)
+    extra_charge = create(:hotel_extra_charge, hotel: hotel)
+    extra_charge.transaction_code.update!(is_taxable: true)
+    extra_charge.transaction_code.taxes = [ tax ]
+    method.update!(surcharge_posting_type: "percentage", surcharge_value: 2, surcharge_extra_charge: extra_charge)
+    params.merge!(record_payment: "1", hotel_payment_method_id: method.id)
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    expect(result.booking.deposits.sole.amount).to eq(204.24.to_d)
+    expect(result.booking.deposits.sole.metadata).to include(
+      "payment_surcharge_amount" => "4.0",
+      "payment_surcharge_tax_amount" => "0.24",
+      "payment_collected_total" => "204.24"
+    )
   end
 
   it "associates a selected hotel guest without creating a duplicate" do

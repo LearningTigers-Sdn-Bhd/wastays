@@ -5,13 +5,13 @@ module Deposits
     STRATEGIES = %w[manual proportional outstanding_balance].freeze
 
     def self.call(deposit:, folios:, amount:, strategy:, actor: nil, manual_amounts: {}, operation_key: nil,
-      posting_date: nil, override_night_audit: false, override_reason: nil)
+      posting_date: nil, override_night_audit: false, override_reason: nil, metadata: {})
       new(deposit:, folios:, amount:, strategy:, actor:, manual_amounts:, operation_key:, posting_date:,
-        override_night_audit:, override_reason:).call
+        override_night_audit:, override_reason:, metadata:).call
     end
 
     def initialize(deposit:, folios:, amount:, strategy:, actor:, manual_amounts:, operation_key:, posting_date:,
-      override_night_audit:, override_reason:)
+      override_night_audit:, override_reason:, metadata:)
       @deposit = deposit
       @folios = Array(folios).uniq
       @amount = amount.to_d
@@ -22,6 +22,7 @@ module Deposits
       @posting_date = posting_date
       @override_night_audit = override_night_audit
       @override_reason = override_reason
+      @metadata = metadata.to_h
     end
 
     def call
@@ -50,7 +51,8 @@ module Deposits
             posting_date: @posting_date,
             override_night_audit: @override_night_audit,
             override_reason: @override_reason,
-            operation_key: @operation_key && "#{@operation_key}:#{index}:#{folio.id}"
+            operation_key: @operation_key && "#{@operation_key}:#{index}:#{folio.id}",
+            metadata: @metadata
           )
           raise ActiveRecord::Rollback, (@error = result.error) unless result.success?
 

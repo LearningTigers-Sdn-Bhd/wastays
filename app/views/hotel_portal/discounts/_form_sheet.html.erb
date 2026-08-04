@@ -1,0 +1,66 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% persisted = discount.persisted? %>
+<% form_id = persisted ? "manage-discount-#{discount.id}-form" : "add-discount-form" %>
+<% currency = current_hotel.default_currency %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(id: persisted ? "manage-discount-sheet" : "add-discount-sheet", side: :right, size: :lg,
+          title:, description: "Configure how staff calculate and apply this folio credit.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: discount, url: persisted ? hotel_discount_path(current_hotel, discount) : hotel_discounts_path(current_hotel),
+              id: form_id, class: "space-y-6 py-2", data: { controller: "discount-form", action: "input->discount-form#update change->discount-form#update", discount_form_currency_value: currency } do |form| %>
+          <% if discount.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Discount could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { discount.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <section aria-labelledby="discount-details-heading" class="space-y-4">
+            <div><h2 id="discount-details-heading" class="text-base font-semibold text-foreground">Discount details</h2><p class="mt-1 text-sm text-muted-foreground">Use a recognizable name and ledger code.</p></div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Name", required: true) do |field| %>
+                <% field.with_input(placeholder: "Manager courtesy", autocomplete: "off") %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form:, attribute: :code, label: "Code", hint: "Maximum 10 characters.", required: true) do |field| %>
+                <% field.with_input(maxlength: 10, placeholder: "MGRDISC", class: "font-mono uppercase", autocomplete: "off", spellcheck: false, data: { discount_form_target: "code", action: "input->discount-form#formatCode" }) %>
+              <% end %>
+            </div>
+            <%= render PanelsUI::FormField.new(form:, attribute: :description, label: "Description", hint: "Optional guidance shown to staff.") do |field| %>
+              <% field.with_text_area(rows: 3, placeholder: "For approved service recovery credits.") %>
+            <% end %>
+          </section>
+
+          <section aria-labelledby="discount-pricing-heading" class="space-y-4 border-t border-border pt-5">
+            <div><h2 id="discount-pricing-heading" class="text-base font-semibold text-foreground">Pricing and target</h2><p class="mt-1 text-sm text-muted-foreground">Discounts use posted, non-tax charges from the selected folio.</p></div>
+            <%= render PanelsUI::FormField.new(form:, attribute: :pricing_type, label: "Pricing method", required: true) do |field| %>
+              <% field.with_select_menu([{ label: "Enter amount when applying", value: "manual" }, { label: "Fixed amount", value: "fixed" }, { label: "Percentage", value: "percentage" }], selected: discount.pricing_type, data: { discount_form_target: "pricingType" }) %>
+            <% end %>
+            <div data-discount-form-target="rateField">
+              <%= render PanelsUI::FormField.new(form:, attribute: :rate_value, label: "Rate") do |field| %>
+                <% field.with_input(type: :number, min: 0.01, step: 0.01, inputmode: "decimal") %>
+                <% field.with_addon(align: :inline_start, data: { discount_form_target: "ratePrefix" }) { currency } %>
+              <% end %>
+            </div>
+            <%= render PanelsUI::FormField.new(form:, attribute: :application_scope, label: "Applies to", required: true) do |field| %>
+              <% field.with_select_menu([{ label: "Room charges", value: "room_charges" }, { label: "All eligible charges", value: "all_eligible_charges" }, { label: "Selected charges", value: "selected_charges" }], selected: discount.application_scope, data: { discount_form_target: "scope" }) %>
+            <% end %>
+            <div data-discount-form-target="selectedCodesField">
+              <%= render PanelsUI::FormField.new(form:, attribute: :applicable_transaction_code_ids, label: "Eligible charge codes", required: discount.selected_charges?) do |field| %>
+                <% field.with_multi_select(@charge_codes.map { |code| { label: "#{code.code} · #{code.name}", value: code.id } }, selected: discount.applicable_transaction_code_ids, prompt: "Select charge codes") %>
+              <% end %>
+            </div>
+            <div data-discount-form-target="overrideField">
+              <%= render PanelsUI::Switch.new(form:, attribute: :allow_amount_override, label: "Allow staff to change the calculated amount", description: "The configured amount remains in the audit details.") %>
+            </div>
+            <%= render PanelsUI::Switch.new(form:, attribute: :active, checked: discount.active?, label: "Active", description: "Active discounts are available when applying a folio credit.") %>
+          </section>
+        <% end %>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->panels-ui--sheet#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm, data: { turbo_submits_with: "Saving…" }) do %><%= submit_label %><% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

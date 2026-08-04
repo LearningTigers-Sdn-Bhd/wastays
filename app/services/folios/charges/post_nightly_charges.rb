@@ -32,6 +32,7 @@ module Folios
             booking.with_lock do
               post_accommodation_charges(booking)
               post_tax_charges(booking)
+              post_extra_charge_forecasts(booking)
             end
           rescue StandardError => e
             item = @failed.last || item_for(booking, "booking:#{booking.id}", reason: e.message)
@@ -94,19 +95,62 @@ module Folios
         end
       end
 
-      def insert_transaction!(booking:, amount:, category:, description:, transaction_code:, fallback_transaction_code:, metadata:)
+      def post_extra_charge_forecasts(booking)
+        base_transactions = {}
+        extra_charge_forecasts(booking).each do |forecast|
+          metadata = forecast.metadata.to_h.symbolize_keys
+          transaction_code = @hotel.transaction_codes.find_by(id: metadata[:transaction_code_id])
+          unless transaction_code
+            record_failed(item_for(booking, forecast.identity, category: metadata[:category], reason: "Scheduled extra charge transaction code is unavailable"))
+            raise "Scheduled extra charge transaction code is unavailable"
+          end
+
+          group_key = metadata[:extra_charge_posting_key]
+          parent = base_transactions[group_key]
+          transaction = insert_transaction!(
+            booking: booking,
+            amount: forecast.amount,
+            category: metadata[:category],
+            description: forecast.description,
+            transaction_code: transaction_code,
+            fallback_transaction_code: nil,
+            target_folio: forecast.booking_folio,
+            parent_transaction: (parent if parent&.booking_folio_id == forecast.booking_folio_id),
+            metadata: nightly_metadata(booking, forecast.charge_kind, forecast.identity).merge(
+              metadata,
+              forecast_id: forecast.id,
+              parent_transaction_id: parent&.id
+            ).compact
+          )
+          base_transactions[group_key] = transaction if forecast.charge_kind == "extra_charge"
+        end
+      end
+
+      def extra_charge_forecasts(booking)
+        FolioForecastedCharge.joins(:booking_folio)
+          .includes(:booking_folio)
+          .where(booking_folios: { booking_id: booking.id })
+          .scheduled_extra_charges.forecast.for_date(@business_date)
+          .order(Arel.sql("CASE charge_kind WHEN 'extra_charge' THEN 0 ELSE 1 END"), :id)
+      end
+
+      def insert_transaction!(booking:, amount:, category:, description:, transaction_code:, fallback_transaction_code:, metadata:, target_folio: nil, parent_transaction: nil)
         existing_transaction = posted_transaction(booking, metadata[:nightly_charge_key])
         if existing_transaction
           actualize_forecast!(booking, existing_transaction, metadata)
           record_skipped(item_for(booking, metadata[:nightly_charge_key], category: category, reason: "Nightly charge already posted", folio_transaction_id: existing_transaction.id))
-          return
+          return existing_transaction
         end
 
-        route = Folios::Routing::ResolveTargetFolio.call(
-          booking: booking,
-          transaction_code: transaction_code,
-          fallback_transaction_code: fallback_transaction_code
-        )
+        route = if target_folio
+          Folios::Routing::RouteResult.success(folio: target_folio, route_source: "forecast_snapshot", route_metadata: {})
+        else
+          Folios::Routing::ResolveTargetFolio.call(
+            booking: booking,
+            transaction_code: transaction_code,
+            fallback_transaction_code: fallback_transaction_code
+          )
+        end
         unless route.success?
           record_failed(item_for(booking, metadata[:nightly_charge_key], category: category, reason: route.error))
           raise "Failed to resolve nightly folio charge route: #{route.error}"
@@ -124,6 +168,7 @@ module Folios
             posting_source: "night_audit",
             night_audit: @night_audit,
             transaction_code: transaction_code,
+            parent_transaction: parent_transaction,
             metadata: metadata.merge(route_source: route.route_source, route_metadata: route.route_metadata)
           )
         ).call
@@ -131,14 +176,14 @@ module Folios
         if result.success?
           actualize_forecast!(booking, result.transaction, metadata)
           @posted << item_for(booking, metadata[:nightly_charge_key], category: category, amount: result.transaction.amount.to_s, folio_transaction_id: result.transaction.id)
-          return
+          return result.transaction
         end
 
         existing_transaction = posted_transaction(booking, metadata[:nightly_charge_key])
         if existing_transaction
           actualize_forecast!(booking, existing_transaction, metadata)
           record_skipped(item_for(booking, metadata[:nightly_charge_key], category: category, reason: "Nightly charge already posted", folio_transaction_id: existing_transaction.id))
-          return
+          return existing_transaction
         end
 
         record_failed(item_for(booking, metadata[:nightly_charge_key], category: category, reason: result.error))

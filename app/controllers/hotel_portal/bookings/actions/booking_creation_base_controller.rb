@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "ostruct"
+
 module HotelPortal
   module Bookings
     module Actions
@@ -72,6 +74,7 @@ module HotelPortal
           @room_types ||= current_hotel.room_types.order(:name)
           @corporate_accounts ||= current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).to_a.sort_by { |relationship| relationship.corporate_account.name.to_s }
           @boat_schedule ||= ::Boats::Schedule.new(current_hotel)
+          prepare_payment_methods unless transaction == :quick_booking
           render template: "hotel_portal/bookings/actions/booking_creations/show", layout: false, status: status
         end
 
@@ -84,6 +87,7 @@ module HotelPortal
           @room_types ||= current_hotel.room_types.order(:name)
           @corporate_accounts ||= current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).to_a.sort_by { |relationship| relationship.corporate_account.name.to_s }
           @boat_schedule ||= ::Boats::Schedule.new(current_hotel)
+          prepare_payment_methods unless transaction == :quick_booking
           flash.now[:alert] = alert
 
           respond_to do |format|
@@ -117,23 +121,36 @@ module HotelPortal
             :guest_name, :guest_email, :guest_phone, :checked_in_at,
             :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_date_of_birth, :guest_update_intent,
             :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
-            :record_payment, :payment_method, :payment_amount, :payment_reference,
+            :collect_payment, :hotel_payment_method_id, :payment_method_type, :payment_reference,
+            :tourism_tax_collected, :collect_security_deposit,
             :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,
             :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
             :guarantee_method, :booking_type, :backdate_reason,
             :hotel_corporate_account_id, :bill_tourism_tax_to_company,
             rooms: [ :room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override ],
-            booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ]
+            booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ],
+            security_deposit: [ :amount, :external_reference ]
           )
         end
 
         def model_booking_params
           booking_params.except(
-            :room_type_id, :room_number, :record_payment, :payment_method, :payment_amount, :payment_reference,
+            :room_type_id, :room_number, :collect_payment, :hotel_payment_method_id, :payment_method_type, :payment_reference,
+            :tourism_tax_collected, :collect_security_deposit, :security_deposit,
             :existing_guest_id, :guest_update_intent, :rate_plan_id,
             :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
             :rooms, :hotel_corporate_account_id, :bill_tourism_tax_to_company, :booking_type, :backdate_reason
           )
+        end
+
+        def prepare_payment_methods
+          PaymentMethods::EnsureDefaults.call(current_hotel)
+          methods = current_hotel.hotel_payment_methods.active
+            .includes(:transaction_code, surcharge_extra_charge: { transaction_code: :transaction_code_taxes })
+            .ordered
+            .to_a
+          @guest_advance_payment_methods = methods.select(&:guest_advance?)
+          @direct_payment_methods = methods.reject(&:guest_advance?)
         end
 
         def authorize_manage_bookings!

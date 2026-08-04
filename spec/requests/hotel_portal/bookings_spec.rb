@@ -361,6 +361,40 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
     end
   end
 
+  describe "GET /payment_quote" do
+    it "returns the base, configured surcharge, surcharge tax, and collection total" do
+      PaymentMethods::EnsureDefaults.call(hotel)
+      method = hotel.hotel_payment_methods.active.find_by!(guest_advance: true)
+      tax = create(:hotel_tax, hotel: hotel, name: "Service Tax", rate_type: "percentage", amount: 6, enabled: true)
+      extra_charge = create(:hotel_extra_charge, hotel: hotel)
+      extra_charge.transaction_code.update!(is_taxable: true)
+      extra_charge.transaction_code.taxes = [ tax ]
+      method.update!(surcharge_posting_type: "fixed", surcharge_value: 2, surcharge_extra_charge: extra_charge)
+
+      get payment_quote_hotel_bookings_path(hotel), params: { hotel_payment_method_id: method.id, base_amount: "100.00" }
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)).to include(
+        "base_amount" => "100.0",
+        "surcharge_amount" => "2.0",
+        "surcharge_tax_total" => "0.12",
+        "collected_total" => "102.12"
+      )
+    end
+
+    it "quotes an active direct method when the direct purpose is requested" do
+      PaymentMethods::EnsureDefaults.call(hotel)
+      method = hotel.hotel_payment_methods.active.find_by!(guest_advance: false)
+
+      get payment_quote_hotel_bookings_path(hotel), params: {
+        hotel_payment_method_id: method.id, base_amount: "100.00", purpose: "direct"
+      }
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)).to include("base_amount" => "100.0", "collected_total" => "100.0")
+    end
+  end
+
   describe "GET /rate_options" do
     let(:room_type) { create(:room_type, hotel: hotel, base_price: 100) }
 

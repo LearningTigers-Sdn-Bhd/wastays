@@ -1,6 +1,7 @@
 <%
   active_group = if settings_group_active?(:general) then :general
                  elsif settings_group_active?(:property) then :property
+                 elsif settings_group_active?(:commercial) then :commercial
                  elsif settings_group_active?(:finance) then :finance
                  elsif settings_group_active?(:guest_content) then :guest_content
                  elsif settings_group_active?(:team) then :team
@@ -10,7 +11,7 @@
   active_tab = settings_tabs.find { |tab| tab[:active] }
 %>
 
-<% if settings_tabs.present? %>
+<% if settings_tabs.present? && !settings_group_sidebar_menu?(active_group) %>
   <div data-testid="settings-tabs">
     <%= render PanelsUI::Tabs.new(
           id: "settings-#{active_group}-tabs",

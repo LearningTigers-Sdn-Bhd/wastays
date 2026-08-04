@@ -1,0 +1,66 @@
+<%# One payment-method picker. `method_groups` maps eligibility purpose
+    (:guest_advance / :direct) to its methods; the Stimulus controller narrows the
+    list by the active purpose and the selected type. Surcharge is not shown here —
+    it is quoted and pushed into the billing summary. %>
+<% form = local_assigns.fetch(:form) %>
+<% purpose = local_assigns.fetch(:purpose, :guest_advance).to_s %>
+<% method_groups = local_assigns.fetch(:method_groups).transform_keys(&:to_s) %>
+<% required = local_assigns.fetch(:required, false) %>
+<% options = method_groups.flat_map do |group_purpose, methods|
+     Array(methods).map do |method|
+       # Name first: when the label truncates in a narrow column, the code is the
+       # part worth losing.
+       { label: "#{method.name} · #{method.code}", value: method.id, type: method.payment_method_type, purpose: group_purpose }
+     end
+   end %>
+<% current_options = options.select { |option| option[:purpose] == purpose } %>
+<% selected_method_id = local_assigns[:selected_method_id].presence || current_options.first&.fetch(:value, nil) %>
+<% selected_option = current_options.find { |option| option[:value].to_s == selected_method_id.to_s } || current_options.first %>
+<% selected_type = local_assigns[:selected_type].presence || selected_option&.fetch(:type, nil) || "cash" %>
+
+<div class="w-full min-w-0 max-w-full space-y-4"
+     data-controller="payment-method-filter"
+     data-payment-method-filter-options-value="<%= options.to_json %>"
+     data-payment-method-filter-purpose-value="<%= purpose %>"
+     <%= tag.attributes("data-payment-method-filter-quote-url-value": local_assigns[:quote_url]) if local_assigns[:quote_url].present? %>>
+  <%= render PanelsUI::RadioGroup.new(
+        form: form,
+        attribute: :payment_method_type,
+        label: "Payment method type",
+        selected: selected_type,
+        orientation: :horizontal,
+        size: :sm,
+        options: [
+          { label: "Cash", value: "cash" },
+          { label: "Bank / Gateway", value: "bank_gateway" }
+        ],
+        data: {
+          action: "change->payment-method-filter#filter",
+          payment_method_filter_target: "type",
+          payment_toggle_target: "field"
+        }) %>
+
+  <% if options.empty? %>
+    <%# SelectMenu rejects an empty choice list, and there is nothing to pick anyway. %>
+    <p class="text-xs text-warning">No active payment methods are configured. Add one in Settings before collecting payment.</p>
+  <% else %>
+    <%# min-w-0 keeps a long label from widening a grid/flex parent (the deposit
+        field on the check-in sheet sits in a two-column grid). %>
+    <div class="w-full min-w-0" data-payment-method-filter-target="method" data-payment-toggle-target="field">
+      <%# Seed with every method when this purpose has none of its own — the select
+          must never render empty, and payment-method-filter narrows it on connect. %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :hotel_payment_method_id, label: "Payment method", required: required, class: "w-full min-w-0 max-w-full") do |field| %>
+        <%# Method labels ("Name · CODE") run long. Pin the control and its dropdown
+            to the column width so neither widens the rail; labels ellipsis instead. %>
+        <% field.with_select_menu(
+             current_options.presence || options,
+             selected: selected_method_id,
+             prompt: "Select a payment method",
+             required: required,
+             class: "min-w-0 max-w-full",
+             data: { panels_ui__select_menu_fixed_width_value: "true" }) %>
+      <% end %>
+      <p class="mt-2 <%= "hidden" if current_options.present? %> text-xs text-warning" data-payment-method-filter-target="emptyState">No active payment methods are configured for this type.</p>
+    </div>
+  <% end %>
+</div>

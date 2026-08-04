@@ -12,7 +12,11 @@ export default class extends Controller {
   static values = {
     placement: { type: String, default: "bottom-start" },
     offset: { type: Number, default: 6 },
-    placeholder: { type: String, default: "Select…" }
+    placeholder: { type: String, default: "Select…" },
+    // Pin the listbox to the trigger's width instead of letting it grow to fit
+    // the longest label. For narrow columns, where a wide popover would escape
+    // the layout; option labels ellipsis instead.
+    fixedWidth: { type: Boolean, default: false }
   }
 
   connect() {
@@ -306,6 +310,8 @@ export default class extends Controller {
   }
 
   position() {
+    const fixedWidth = this.fixedWidthValue
+
     computePosition(this.triggerTarget, this.listboxTarget, {
       placement: this.placementValue,
       strategy: "fixed",
@@ -318,7 +324,8 @@ export default class extends Controller {
           apply({ availableHeight, rects, elements }) {
             Object.assign(elements.floating.style, {
               maxHeight: `${Math.max(160, availableHeight)}px`,
-              minWidth: `${rects.reference.width}px`
+              minWidth: `${rects.reference.width}px`,
+              maxWidth: fixedWidth ? `${rects.reference.width}px` : ""
             })
           }
         })

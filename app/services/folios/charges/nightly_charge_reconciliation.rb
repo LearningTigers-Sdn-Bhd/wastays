@@ -30,7 +30,35 @@ module Folios
       private
 
       def expected_lines
-        @expected_lines ||= Reads::ForecastedChargeLines.call(booking: @booking, dates: [ @business_date ])
+        @expected_lines ||= Reads::ForecastedChargeLines.call(booking: @booking, dates: [ @business_date ]) +
+          scheduled_extra_charge_lines
+      end
+
+      def scheduled_extra_charge_lines
+        FolioForecastedCharge.joins(:booking_folio)
+          .includes(:booking_folio)
+          .where(booking_folios: { booking_id: @booking.id })
+          .scheduled_extra_charges
+          .where(status: %w[forecast actualized], stay_date: @business_date)
+          .order(:id)
+          .filter_map do |forecast|
+            metadata = forecast.metadata.to_h
+            transaction_code = @booking.hotel.transaction_codes.find_by(id: metadata["transaction_code_id"])
+            next if transaction_code.blank?
+
+            {
+              stay_date: forecast.stay_date,
+              charge_kind: forecast.charge_kind,
+              category: metadata["category"],
+              identity: forecast.identity,
+              amount: forecast.amount,
+              description: forecast.description,
+              transaction_code: transaction_code,
+              forecast_folio: forecast.booking_folio,
+              metadata: metadata,
+              tax_line: (metadata if forecast.charge_kind == "extra_charge_tax")
+            }
+          end
       end
 
       def entry_for(line)
@@ -50,6 +78,13 @@ module Folios
       end
 
       def resolve_route(line)
+        if line[:forecast_folio].present?
+          return Folios::Routing::RouteResult.success(
+            folio: line[:forecast_folio],
+            route_source: "forecast_snapshot",
+            route_metadata: {}
+          )
+        end
         return Folios::Routing::RouteResult.failure("Missing transaction code", route_metadata: {}) if line[:transaction_code].blank?
 
         Routing::ResolveTargetFolio.call(
@@ -133,7 +168,7 @@ module Folios
           "amount" => transaction.amount.to_d.to_s("F"),
           "category" => transaction.category,
           "transaction_code_id" => transaction.transaction_code_id,
-          "transaction_code_code" => transaction.transaction_code&.code
+          "transaction_code_code" => transaction.posted_transaction_code
         }.compact
       end
 

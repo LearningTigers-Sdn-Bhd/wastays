@@ -6,7 +6,7 @@
   <% tax_transaction_code = transaction_code.kind == "tax" || transaction_code.category == "tax" %>
   <% locked_kind_category = persisted && (transaction_code.system_required? || tax_transaction_code || current_hotel.hotel_taxes.exists?(transaction_code_id: transaction_code.id)) %>
   <% kind_options = TransactionCode::KINDS.reject { |kind| kind == "tax" }.map { |kind| [kind.titleize, kind] } %>
-  <% category_options = TransactionCode::CATEGORIES.reject { |category| category.in?(%w[tax security_deposit]) }.map { |category| [category.titleize, category] } %>
+  <% category_options = TransactionCode::CATEGORIES.reject { |category| category.in?(%w[tax security_deposit discount]) }.map { |category| [category.titleize, category] } %>
 
   <div class="flex h-full min-h-0 flex-col bg-muted">
     <header class="z-10 shrink-0 border-b border-border bg-card">

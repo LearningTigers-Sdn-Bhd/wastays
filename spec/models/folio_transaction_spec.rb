@@ -165,6 +165,16 @@ RSpec.describe FolioTransaction, type: :model do
       expect(transaction.transaction_code.system_key).to eq("room_revenue")
     end
 
+    it "snapshots the transaction code identity when the transaction is created" do
+      code = create(:transaction_code, hotel: hotel, code: "MINIBAR", name: "Mini Bar", kind: "charge", category: "other")
+      transaction = create(:folio_transaction, booking_folio: folio, transaction_code: code, category: "other")
+
+      code.update!(code: "SNACKS", name: "Room Snacks")
+
+      expect(transaction.reload.posted_transaction_code).to eq("MINIBAR")
+      expect(transaction.posted_transaction_code_name).to eq("Mini Bar")
+    end
+
     it "uses tax line type to assign SST transaction code" do
       transaction = create(
         :folio_transaction,

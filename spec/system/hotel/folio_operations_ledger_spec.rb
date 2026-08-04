@@ -131,6 +131,34 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     expect(folio.folio_transactions.payment.where(category: "cash")).to exist
   end
 
+  it "keeps an allowed per-item amount override while typing and posts it" do
+    role.permissions << Permission.find_or_create_by!(slug: "post_folio_charges") { |permission| permission.name = "Post folio charges" }
+    folio = booking.booking_folios.first
+    extra_charge = create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 5,
+      charging_unit: "per_item", allow_amount_override: true)
+
+    visit hotel_booking_workspace_path(hotel, booking, tab: "folio_operations", folio_id: folio.id)
+    click_link "Add Charge"
+
+    expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-post-transaction-sheet[open]")
+    within("dialog#folio-post-transaction-sheet") do
+      find("[data-controller~='panels-ui--select-menu'] button").click
+      find("[role='option']", text: extra_charge.name).click
+      fill_in "Quantity", with: "2"
+      expect(page).to have_field("Amount", with: "10.00", readonly: false)
+
+      fill_in "Amount", with: "8.00"
+      expect(page).to have_field("Amount", with: "8.00", readonly: false)
+      click_button "Add charge"
+    end
+
+    expect(page).to have_css("#folio-operations-panel")
+    expect(folio.folio_transactions.where(transaction_code: extra_charge.transaction_code).order(:id).last).to have_attributes(
+      amount: 8.to_d,
+      description: "#{extra_charge.name} · 2 × MYR 5.00 · override MYR 8.00"
+    )
+  end
+
   it "moves a posted charge through the folio-action Sheet" do
     role.permissions << Permission.find_or_create_by!(slug: "manage_folio_movements") { |permission| permission.name = "Manage folio movements" }
     source_folio = booking.booking_folios.first
