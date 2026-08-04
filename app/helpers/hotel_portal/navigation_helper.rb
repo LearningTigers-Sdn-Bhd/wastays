@@ -28,11 +28,6 @@ module HotelPortal
       ]
       accounts_receivable_nav_active = accounts_receivable_nav_items.any?(&:active)
 
-      journal_batch_items = [
-        NavItem.new(label: "Journal Batches", path: journal_batches_hotel_reports_path(current_hotel), search_text: "Journal Batches Accounting Reports", icon: "book-open", active: controller_name == "reports" && action_name == "journal_batches", permission: "view_reports")
-      ]
-      journal_batches_active = journal_batch_items.any?(&:active)
-
       front_desk_children = [
         NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2", permission: [ "view_bookings", "manage_guest_arrival" ]),
         NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile"),
@@ -77,7 +72,6 @@ module HotelPortal
           NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: controller_name == "reports" && action_name == "tax_compliance", icon: "calculator", permission: "view_reports"),
           NavItem.new(label: "Guest Reports", path: guest_reports_hotel_reports_path(current_hotel), search_text: "Reports Guest Reports Arrivals Departures Checkout Registration Cards", active: controller_name == "reports" && action_name == "guest_reports", icon: "users", permission: "view_reports", plan_feature: "arrivals_departures_list"),
           NavItem.new(label: "Night Audit History", path: hotel_reports_night_audits_path(current_hotel), search_text: "Reports Night Audit History Business Date Close", active: controller_path == "hotel_portal/reports/night_audits", icon: "moon", permission: [ "view_reports", "manage_night_audit" ], plan_feature: "no_show_auto_handling"),
-          NavItem.new(label: "Accounting", path: journal_batches_hotel_reports_path(current_hotel), search_text: "Reports Accounting Journal Batches", active: journal_batches_active, icon: "book-open", children: journal_batch_items, permission: "view_reports"),
           NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Tracking History Security", icon: "file-text", active: controller_name == "audit_logs", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
           NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs History Sent Alerts Logs", icon: "bell", active: controller_name == "notification_logs", permission: "view_audit_logs")
         ])
