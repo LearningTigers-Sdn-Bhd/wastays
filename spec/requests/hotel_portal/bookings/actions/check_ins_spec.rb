@@ -45,6 +45,11 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
     }
   end
 
+  def direct_payment_method
+    PaymentMethods::EnsureDefaults.call(hotel)
+    hotel.hotel_payment_methods.active.find_by!(guest_advance: false)
+  end
+
   before do
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
     grant_permission("manage_bookings")
@@ -66,6 +71,8 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
       expect(dialog.text).to include("Check in guest", "Arrival details", "Room assignments", "Security deposit", "Tourism tax")
       expect(dialog.at_css("input[name='check_in[checked_in_at]']")).to be_present
       expect(dialog.at_css("select[name='check_in[room_assignments][#{booking.booking_rooms.first.id}][room_number]']")).to be_present
+      expect(dialog.at_css("input[name='check_in[security_deposit][payment_method_type]'][value='cash']")).to be_present
+      expect(dialog.at_css("select[name='check_in[security_deposit][hotel_payment_method_id]']")).to be_present
       expect(response.body).not_to include("offcanvas")
     end
 
@@ -274,21 +281,33 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
     end
 
     it "records a security deposit with an allowlisted method" do
+      method = direct_payment_method
       params = valid_params.deep_merge(check_in: {
         collect_security_deposit: "1",
-        security_deposit: { amount: "75.00", payment_method: "credit_card", external_reference: "AUTH-1" }
+        security_deposit: { amount: "75.00", hotel_payment_method_id: method.id, payment_method_type: method.payment_method_type, external_reference: "AUTH-1" }
       })
 
       expect { post hotel_booking_action_check_in_path(hotel, booking), params: params }.to change(Deposit, :count).by(1)
 
       deposit = Deposit.last
-      expect(deposit).to have_attributes(amount: 75.to_d, payment_method: "credit_card", external_reference: "AUTH-1")
+      expect(deposit).to have_attributes(amount: 75.to_d, payment_method: "cash", external_reference: "AUTH-1")
+      expect(deposit.transaction_code.system_key).to eq("security_deposit")
+      expect(deposit.metadata).to include(
+        "hotel_payment_method_id" => method.id,
+        "payment_method_name" => method.name,
+        "payment_method_code" => method.code,
+        "payment_method_type" => method.payment_method_type
+      )
     end
 
-    it "rejects an unknown security deposit method" do
+    it "rejects a non-direct security deposit method" do
+      guest_advance_method = begin
+        PaymentMethods::EnsureDefaults.call(hotel)
+        hotel.hotel_payment_methods.active.find_by!(guest_advance: true)
+      end
       params = valid_params.deep_merge(check_in: {
         collect_security_deposit: "1",
-        security_deposit: { amount: "75.00", payment_method: "crypto" }
+        security_deposit: { amount: "75.00", hotel_payment_method_id: guest_advance_method.id }
       })
 
       post hotel_booking_action_check_in_path(hotel, booking),
@@ -296,7 +315,7 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Select a valid security deposit payment method.")
+      expect(response.body).to include("Select a valid direct payment method.")
       expect(booking.reload.status).to eq("confirmed")
     end
 
@@ -311,6 +330,7 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
     end
 
     it "checks in selected group children atomically from the shared static form" do
+      method = direct_payment_method
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", guest_name: "Grace Hopper", check_in: booking.check_in, check_out: booking.check_out)
@@ -324,7 +344,7 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
           checked_in_at: timestamp,
           room_assignments: { booking.booking_rooms.first.id.to_s => { room_number: "101" } },
           collect_security_deposit: "1",
-          security_deposit: { amount: "40.00", payment_method: "cash", external_reference: "GROUP" }
+          security_deposit: { amount: "40.00", hotel_payment_method_id: method.id, external_reference: "GROUP" }
         }
       }
 

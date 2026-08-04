@@ -1,0 +1,75 @@
+<%# What is taken from the guest now. One switch per collectable thing; each one
+    feeds a row in the billing summary. Tourism tax and the security deposit only
+    apply to walk-in / backdated check-ins, so booking-room-rows hides *and*
+    disables them for reservations. %>
+<% f = local_assigns.fetch(:f) %>
+<% currency = local_assigns.fetch(:currency) %>
+<% collect_payment = local_assigns.fetch(:collect_payment) %>
+<% tourism_tax_collected = local_assigns.fetch(:tourism_tax_collected) %>
+<% collect_security_deposit = local_assigns.fetch(:collect_security_deposit) %>
+<% security_deposit = local_assigns.fetch(:security_deposit) %>
+
+<section aria-labelledby="collection-heading" class="space-y-4">
+  <div>
+    <h3 id="collection-heading" class="text-base font-semibold text-foreground">Collection</h3>
+    <p class="mt-1 text-sm text-muted-foreground">What the guest pays now. Anything left off stays open on the folio.</p>
+  </div>
+
+  <%= render PanelsUI::Switch.new(
+        form: f,
+        attribute: :collect_payment,
+        checked: collect_payment,
+        label: "Collect payment now",
+        description: "Post room charges and taxes as paid on the guest folio.",
+        data: {
+          booking_room_rows_target: "collectPayment",
+          action: "change->booking-room-rows#collectionChanged"
+        }) %>
+
+  <div class="hidden" data-booking-room-rows-target="tourismTaxCollection">
+    <%= render PanelsUI::Switch.new(
+          form: f,
+          attribute: :tourism_tax_collected,
+          checked: tourism_tax_collected,
+          label: "Tourism tax collected",
+          description: "When off, the tax remains unpaid on the guest folio.",
+          data: {
+            booking_room_rows_target: "tourismTaxCollected",
+            action: "change->booking-room-rows#collectionChanged"
+          }) %>
+  </div>
+
+  <div class="hidden space-y-4" data-booking-room-rows-target="depositCollection" data-controller="payment-toggle">
+    <%= render PanelsUI::Switch.new(
+          form: f,
+          attribute: :collect_security_deposit,
+          checked: collect_security_deposit,
+          label: "Record a security deposit",
+          description: "Refundable, held separately from the guest folio.",
+          data: {
+            payment_toggle_target: "checkbox",
+            booking_room_rows_target: "depositEnabled",
+            action: "change->payment-toggle#toggle change->booking-room-rows#collectionChanged"
+          }) %>
+
+    <div class="space-y-4 <%= "opacity-50" unless collect_security_deposit %>" data-payment-toggle-target="container">
+      <%= fields_for "#{f.object_name}[security_deposit]", OpenStruct.new(
+            amount: security_deposit[:amount].presence || "0.00",
+            external_reference: security_deposit[:external_reference]) do |deposit_form| %>
+        <%= render PanelsUI::FormField.new(form: deposit_form, attribute: :amount, label: "Deposit amount") do |field| %>
+          <% field.with_input(
+               type: :number, min: 0, step: 0.01, inputmode: "decimal",
+               data: {
+                 payment_toggle_target: "field",
+                 booking_room_rows_target: "depositAmount",
+                 action: "input->booking-room-rows#collectionChanged"
+               }) %>
+          <% field.with_addon(align: :inline_start) { currency } %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: deposit_form, attribute: :external_reference, label: "Deposit reference", hint: "Optional receipt or payment reference.") do |field| %>
+          <% field.with_input(data: { payment_toggle_target: "field" }) %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>

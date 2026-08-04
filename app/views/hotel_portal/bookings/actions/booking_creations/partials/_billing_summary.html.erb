@@ -1,19 +1,47 @@
+<%# Single money display for the booking sheet. Every figure the rail shows lives
+    here; the collection switches and the payment method only feed it. Rows that
+    are not being collected stay visible but muted and drop out of the total. %>
+<% currency = local_assigns.fetch(:currency) { current_hotel.default_currency.presence || "MYR" } %>
+<% collectible = local_assigns.fetch(:collectible, false) %>
+
 <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Billing summary</p>
 <div class="mt-4 space-y-3 border-y border-border py-4 text-sm text-foreground">
-  <div class="flex justify-between">
-    <span>Room charges</span>
-    <strong class="text-foreground">MYR <span data-booking-room-rows-target="roomTotal">0.00</span></strong>
+  <div class="space-y-3" data-booking-room-rows-target="folioGroup">
+    <div class="flex justify-between">
+      <span>Room charges</span>
+      <strong class="text-foreground"><%= currency %> <span data-booking-room-rows-target="roomTotal">0.00</span></strong>
+    </div>
+    <div class="flex justify-between">
+      <span>Taxes</span>
+      <strong class="text-foreground"><%= currency %> <span data-booking-room-rows-target="taxTotal">0.00</span></strong>
+    </div>
   </div>
-  <div class="flex justify-between">
-    <span>Taxes</span>
-    <strong class="text-foreground">MYR <span data-booking-room-rows-target="taxTotal">0.00</span></strong>
+
+  <div class="hidden justify-between" data-booking-room-rows-target="tourismTaxRow">
+    <span>Tourism tax<span class="ml-1 text-xs text-muted-foreground" data-booking-room-rows-target="tourismTaxNote"></span></span>
+    <strong class="text-foreground"><%= currency %> <span data-booking-room-rows-target="tourismTaxTotal">0.00</span></strong>
   </div>
-  <div class="hidden justify-between text-amber-700" data-booking-room-rows-target="tourismTaxRow">
-    <span>Tourism tax (collect at check-in)</span>
-    <strong>MYR <span data-booking-room-rows-target="tourismTaxTotal">0.00</span></strong>
-  </div>
+
+  <% if collectible %>
+    <div class="hidden justify-between" data-booking-room-rows-target="surchargeRow">
+      <span>Payment surcharge</span>
+      <strong class="text-foreground"><%= currency %> <span data-booking-room-rows-target="surchargeTotal">0.00</span></strong>
+    </div>
+    <div class="hidden justify-between" data-booking-room-rows-target="surchargeTaxRow">
+      <span>Surcharge tax</span>
+      <strong class="text-foreground"><%= currency %> <span data-booking-room-rows-target="surchargeTaxTotal">0.00</span></strong>
+    </div>
+    <div class="hidden justify-between" data-booking-room-rows-target="depositRow">
+      <span>Security deposit<span class="ml-1 text-xs text-muted-foreground">· refundable</span></span>
+      <strong class="text-foreground"><%= currency %> <span data-booking-room-rows-target="depositTotal">0.00</span></strong>
+    </div>
+    <p class="hidden text-xs text-muted-foreground" data-booking-room-rows-target="folioNote">Room charges and taxes stay unpaid on the guest folio.</p>
+  <% end %>
+
   <div class="flex justify-between border-t border-border pt-3 text-base">
-    <span>Total</span>
-    <strong class="text-foreground">MYR <span data-booking-room-rows-target="grandTotal">0.00</span></strong>
+    <span data-booking-room-rows-target="collectedLabel">Total</span>
+    <strong class="text-foreground"><%= currency %> <span data-booking-room-rows-target="collectedTotal">0.00</span></strong>
   </div>
 </div>
+<%# Quote base for payment-method-filter. Never shown: the rows above are the display. %>
+<span class="hidden" data-booking-room-rows-target="grandTotal">0.00</span>

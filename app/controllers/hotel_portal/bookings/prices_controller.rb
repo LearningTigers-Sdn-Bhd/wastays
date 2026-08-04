@@ -37,6 +37,25 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
     render json: { error: e.message, total_amount: 0 }, status: :unprocessable_content
   end
 
+  def payment_quote
+    PaymentMethods::EnsureDefaults.call(current_hotel)
+    purpose = params[:purpose].to_s == "direct" ? :direct : :guest_advance
+    result = PaymentMethods::Quote.call(
+      hotel: current_hotel,
+      payment_method_id: params[:hotel_payment_method_id],
+      base_amount: params[:base_amount],
+      purpose:
+    )
+    return render json: { error: result.error }, status: :unprocessable_content unless result.success?
+
+    render json: {
+      base_amount: result.base_amount.to_s("F"),
+      surcharge_amount: result.surcharge_amount.to_s("F"),
+      surcharge_tax_total: result.surcharge_tax_total.to_s("F"),
+      collected_total: result.collected_total.to_s("F")
+    }
+  end
+
   private
 
   def parse_rate_selection(room_type, rate_plan_id)

@@ -15,7 +15,9 @@ module HotelPortal
 
         def create
           params[:booking] ||= {}
-          params[:booking][:record_payment] = "0"
+          # The Quick Booking sheet carries no collection UI; never honour a
+          # forged flag transferred in from the full form.
+          params[:booking][:collect_payment] = "0"
           result = create_staff_booking(booking_type: "reservation")
           return complete_new_booking(result.booking, notice: result.group_booking ? "Group booking confirmed." : "Booking confirmed.") if result.success?
 

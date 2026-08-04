@@ -12,9 +12,15 @@ module Bookings
       @require_room_number = @params.delete(:require_room_number) != false
 
       @record_payment = @params.delete(:record_payment)
-      @payment_method = @params.delete(:payment_method)
-      @payment_amount = @params.delete(:payment_amount)
+      @params.delete(:payment_method)
+      @params.delete(:payment_amount) # Legacy input is intentionally ignored.
+      @hotel_payment_method_id = @params.delete(:hotel_payment_method_id)
+      @params.delete(:payment_method_type)
       @payment_reference = @params.delete(:payment_reference)
+      @params.delete(:collect_payment)
+      @params.delete(:tourism_tax_collected)
+      @params.delete(:collect_security_deposit)
+      @params.delete(:security_deposit)
       @existing_guest_id = @params.delete(:existing_guest_id)
       @guest_update_intent = @params.delete(:guest_update_intent)
       @rate_plan_id = @params.delete(:rate_plan_id)
@@ -96,27 +102,25 @@ module Bookings
       tourism_tax = booking.tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
       booking.tourism_tax_amount = tourism_tax ? tourism_tax["amount"].to_d : 0
       booking.tourism_tax_applied = booking.tourism_tax_amount.positive?
+      # The creation service saves before the immediate check-in transition. Keep
+      # the persisted booking valid while that transition decides whether the
+      # applicable tourism tax was collected.
+      booking.tourism_tax_collected = false
 
       booking.status = "confirmed"
       booking.hotel_snapshot = @hotel.booking_snapshot.merge("room_number" => @room_number)
 
-      if @record_payment == "1" || @record_payment == true
-        payment_amount_value = @payment_amount.presence || booking.total_amount
-        if payment_amount_value.to_d <= 0
+      if record_payment?
+        if booking.total_amount.to_d <= 0
           return OpenStruct.new(success?: false, errors: [ "Payment amount must be greater than 0." ])
         end
 
-        @payment_amount_value = payment_amount_value.to_d
-        @payment_received_at = if @posting_date.present?
-          begin
-            @posting_date.to_date.in_time_zone(@hotel.hotel_time_zone) + 12.hours
-          rescue
-            Time.current
-          end
-        else
-          Time.current
-        end
+        payment_method_result = PaymentMethods::Eligibility.call(
+          hotel: @hotel, id: @hotel_payment_method_id, purpose: :guest_advance
+        )
+        return OpenStruct.new(success?: false, errors: [ payment_method_result.error ]) unless payment_method_result.success?
 
+        @hotel_payment_method_id = payment_method_result.payment_method.id
         booking.payment_status = "pending"
       else
         booking.payment_status = "pending"
@@ -146,8 +150,8 @@ module Bookings
             InventoryManager.new(booking).deduct
             sync_guest(booking, selected_guest)
             Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: @user, lock: false)
-            record_prepayment!(booking) if @payment_amount_value
-            booking.reload if @payment_amount_value
+            record_prepayment!(booking) if record_payment?
+            booking.reload if record_payment?
 
             # Record Audit Log
             Bookings::RecordAuditLog.call!(
@@ -181,30 +185,21 @@ module Bookings
     private
 
     def record_prepayment!(booking)
-      receipt = Deposits::Record.call(
+      result = Deposits::ConfiguredPrepayment.call(
         owner: booking,
-        kind: "prepayment",
-        amount: @payment_amount_value,
-        currency: booking.currency || "MYR",
-        payment_method: @payment_method.presence || "cash",
+        folios: [ booking.booking_folio ],
+        base_amount: booking.total_amount,
+        payment_method_id: @hotel_payment_method_id,
         actor: @user,
         external_reference: @payment_reference.presence,
-        received_at: @payment_received_at,
-        metadata: { source: "manual_booking" }
-      )
-      raise receipt.error unless receipt.success?
-
-      application = Deposits::Apply.call(
-        deposit: receipt.deposit,
-        booking_folio: booking.booking_folio,
-        amount: @payment_amount_value,
-        actor: @user,
         posting_date: @posting_date,
-        override_night_audit: @financial_posting_options[:override_night_audit],
-        override_reason: @financial_posting_options[:reason],
         operation_key: "manual-booking:#{booking.id}:prepayment"
       )
-      raise application.error unless application.success?
+      raise result.error unless result.success?
+    end
+
+    def record_payment?
+      @record_payment == "1" || @record_payment == true
     end
 
     def normalize_scheduled_stay!

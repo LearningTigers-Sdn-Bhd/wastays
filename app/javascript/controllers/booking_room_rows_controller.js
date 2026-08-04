@@ -1,11 +1,25 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["rows", "row", "checkIn", "checkOut", "nights", "bookingType", "backdateFields", "corporate", "guestCountry", "roomTotal", "taxTotal", "tourismTaxRow", "tourismTaxTotal", "grandTotal"]
+  static targets = [
+    "rows", "row", "checkIn", "checkOut", "nights", "bookingType", "backdateFields", "corporate", "guestCountry",
+    // Collection switches.
+    "tourismTaxCollection", "depositCollection", "collectPayment", "tourismTaxCollected", "depositEnabled", "depositAmount",
+    // Billing summary rows.
+    "folioGroup", "folioNote", "roomTotal", "taxTotal", "tourismTaxRow", "tourismTaxTotal", "tourismTaxNote",
+    "surchargeRow", "surchargeTotal", "surchargeTaxRow", "surchargeTaxTotal", "depositRow", "depositTotal",
+    "collectedLabel", "collectedTotal", "grandTotal"
+  ]
   static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String }
 
   connect() {
     this.nextIndex = this.rowTargets.length
+    this.baseTotal = 0
+    this.tourismTax = 0
+    this.surcharge = 0
+    this.surchargeTax = 0
+    this.onQuoteChanged = this.onQuoteChanged.bind(this)
+    window.addEventListener("booking:quote-changed", this.onQuoteChanged)
     if (this.rowTargets.length === 0) {
       this.add()
     } else {
@@ -19,6 +33,10 @@ export default class extends Controller {
     this.updateNights()
     this.toggleBackdate()
     this.updateRemoveButtons()
+  }
+
+  disconnect() {
+    window.removeEventListener("booking:quote-changed", this.onQuoteChanged)
   }
 
   async add() {
@@ -186,9 +204,108 @@ export default class extends Controller {
     this.updateTotals()
   }
 
+  bookingType() {
+    return this.hasBookingTypeTarget ? this.readValue(this.bookingTypeTarget) : "reservation"
+  }
+
+  // Reservations prepay; walk-in and backdated check-ins collect on arrival. That
+  // split decides which collection switches apply and which payment methods are
+  // eligible, so it is broadcast for payment-method-filter to pick up.
   toggleBackdate() {
-    if (this.hasBackdateFieldsTarget) this.backdateFieldsTarget.classList.toggle("hidden", this.readValue(this.bookingTypeTarget) !== "backdated_check_in")
+    const bookingType = this.bookingType()
+    if (this.hasBackdateFieldsTarget) this.backdateFieldsTarget.classList.toggle("hidden", bookingType !== "backdated_check_in")
+    this.toggleBookingModeSections(bookingType)
     this.updateRoomRequirements()
+  }
+
+  toggleBookingModeSections(bookingType) {
+    const onArrival = bookingType !== "reservation"
+    this.setSectionActive(this.depositCollectionTargets, onArrival)
+    this.updateTaxCollectionVisibility(bookingType)
+    window.dispatchEvent(new CustomEvent("booking:mode-changed", {
+      detail: { purpose: onArrival ? "direct" : "guest_advance" }
+    }))
+    this.updateCollection()
+  }
+
+  setSectionActive(sections, active) {
+    sections.forEach((section) => {
+      section.classList.toggle("hidden", !active)
+      section.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = !active })
+
+      if (active) {
+        section.querySelectorAll('[data-controller~="payment-toggle"]').forEach((toggleElement) => {
+          const toggleController = this.application.getControllerForElementAndIdentifier(toggleElement, "payment-toggle")
+          toggleController?.toggle()
+        })
+      }
+    })
+  }
+
+  updateTaxCollectionVisibility(bookingType = this.bookingType()) {
+    this.setSectionActive(this.tourismTaxCollectionTargets, bookingType !== "reservation" && this.tourismTax > 0)
+  }
+
+  collectionChanged() {
+    this.updateCollection()
+  }
+
+  onQuoteChanged(event) {
+    this.surcharge = Number(event.detail?.surcharge || 0)
+    this.surchargeTax = Number(event.detail?.surchargeTax || 0)
+    this.updateCollection()
+  }
+
+  switchOn(target) {
+    return Boolean(target) && !target.disabled && target.checked
+  }
+
+  // The billing summary is the sheet's only money display. Every line is listed
+  // once; lines that are not being collected stay visible but muted and are left
+  // out of the total, so the figure always matches what hits the drawer.
+  updateCollection() {
+    if (!this.hasCollectedTotalTarget) return
+
+    const onArrival = this.bookingType() !== "reservation"
+    const payingFolio = this.hasCollectPaymentTarget && this.switchOn(this.collectPaymentTarget)
+    const collectingTourism = onArrival && this.tourismTax > 0 &&
+      this.hasTourismTaxCollectedTarget && this.switchOn(this.tourismTaxCollectedTarget)
+    const depositOn = onArrival && this.hasDepositEnabledTarget && this.switchOn(this.depositEnabledTarget)
+    const deposit = depositOn && this.hasDepositAmountTarget ? Math.max(0, Number(this.depositAmountTarget.value || 0)) : 0
+
+    // Surcharge is priced on the folio payment only — Deposits::Record takes none.
+    const surcharge = payingFolio ? this.surcharge : 0
+    const surchargeTax = payingFolio ? this.surchargeTax : 0
+
+    this.toggleRow(this.surchargeRowTargets, surcharge > 0)
+    this.toggleRow(this.surchargeTaxRowTargets, surchargeTax > 0)
+    this.toggleRow(this.depositRowTargets, deposit > 0)
+    this.surchargeTotalTargets.forEach((target) => { target.textContent = surcharge.toFixed(2) })
+    this.surchargeTaxTotalTargets.forEach((target) => { target.textContent = surchargeTax.toFixed(2) })
+    this.depositTotalTargets.forEach((target) => { target.textContent = deposit.toFixed(2) })
+
+    const collecting = payingFolio || collectingTourism || deposit > 0
+    const total = (payingFolio ? this.baseTotal + surcharge + surchargeTax : 0) +
+      (collectingTourism ? this.tourismTax : 0) + deposit
+
+    this.collectedLabelTargets.forEach((target) => { target.textContent = collecting ? "Total to collect" : "Total" })
+    this.collectedTotalTargets.forEach((target) => { target.textContent = (collecting ? total : this.baseTotal).toFixed(2) })
+
+    const folioUnpaid = collecting && !payingFolio
+    this.folioGroupTargets.forEach((target) => target.classList.toggle("opacity-50", folioUnpaid))
+    this.folioNoteTargets.forEach((target) => target.classList.toggle("hidden", !folioUnpaid))
+
+    this.tourismTaxRowTargets.forEach((target) => target.classList.toggle("opacity-50", !collectingTourism))
+    this.tourismTaxNoteTargets.forEach((target) => {
+      target.textContent = collectingTourism ? "" : (onArrival ? "· not collected" : "· collect at check-in")
+    })
+  }
+
+  toggleRow(targets, visible) {
+    targets.forEach((target) => {
+      target.classList.toggle("hidden", !visible)
+      target.classList.toggle("flex", visible)
+    })
   }
 
   updateRoomRequirements() {
@@ -306,12 +423,17 @@ export default class extends Controller {
     const tourismTaxTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.tourismTaxTotal || 0), 0)
     const grandTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.grandTotal || this.roleEl(row, "rate").textContent || 0), 0)
 
+    this.baseTotal = grandTotal
+    this.tourismTax = tourismTaxTotal
+
     this.roomTotalTargets.forEach((target) => { target.textContent = roomTotal.toFixed(2) })
     this.taxTotalTargets.forEach((target) => { target.textContent = taxTotal.toFixed(2) })
     this.tourismTaxTotalTargets.forEach((target) => { target.textContent = tourismTaxTotal.toFixed(2) })
     this.grandTotalTargets.forEach((target) => { target.textContent = grandTotal.toFixed(2) })
-    this.tourismTaxRowTargets.forEach((target) => target.classList.toggle("hidden", tourismTaxTotal <= 0))
-    this.tourismTaxRowTargets.forEach((target) => target.classList.toggle("flex", tourismTaxTotal > 0))
+    this.toggleRow(this.tourismTaxRowTargets, tourismTaxTotal > 0)
+    this.updateTaxCollectionVisibility()
+    this.updateCollection()
+    window.dispatchEvent(new CustomEvent("booking:totals-changed", { detail: { amount: grandTotal } }))
   }
 
   async loadRowPrice(row) {

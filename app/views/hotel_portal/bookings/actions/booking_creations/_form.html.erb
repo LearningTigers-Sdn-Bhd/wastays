@@ -21,6 +21,13 @@ end %>
 <% check_in_value = @booking.check_in&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M") %>
 <% check_out_value = @booking.check_out&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M") %>
 <% stay_range_value = "#{check_in_value}/#{check_out_value}" %>
+<% currency = current_hotel.default_currency.presence || "MYR" %>
+<%# Re-render after a failed submit has to restore the rail's own state. %>
+<% security_deposit_params = params.dig(:booking, :security_deposit) %>
+<% security_deposit = security_deposit_params.respond_to?(:to_unsafe_h) ? security_deposit_params.to_unsafe_h : security_deposit_params.to_h %>
+<% collect_payment = ActiveModel::Type::Boolean.new.cast(params.dig(:booking, :collect_payment)) %>
+<% collect_security_deposit = ActiveModel::Type::Boolean.new.cast(params.dig(:booking, :collect_security_deposit)) %>
+<% tourism_tax_collected = params.dig(:booking, :tourism_tax_collected).nil? ? initial_type != "reservation" : ActiveModel::Type::Boolean.new.cast(params.dig(:booking, :tourism_tax_collected)) %>
 
 <div data-controller="panels-ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
@@ -202,7 +209,7 @@ end %>
 
                 <% if quick %>
                   <section>
-                    <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_summary" %>
+                    <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_summary", currency: currency %>
                   </section>
                 <% else %>
                   <section class="space-y-4">
@@ -221,37 +228,20 @@ end %>
                 <aside class="bg-muted/30">
                   <div class="space-y-8 p-4 lg:p-6 xl:sticky xl:top-0 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto">
                     <section>
-                      <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_summary" %>
+                      <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_summary",
+                            currency: currency, collectible: true %>
                     </section>
-                    <section class="space-y-4">
-                      <%= render PanelsUI::FormField.new(form: f, attribute: :bill_to, label: "Bill to") do |field| %>
-                        <% field.with_select_menu(
-                             [["Guest", "guest"], ["Corporate", "corporate"]],
-                             selected: "guest",
-                             data: { action: "change->booking-room-rows#toggleCorporate" }) %>
-                      <% end %>
-                      <div class="hidden space-y-4" data-booking-room-rows-target="corporate">
-                        <% if @corporate_accounts.any? %>
-                          <%= render PanelsUI::FormField.new(form: f, attribute: :hotel_corporate_account_id, label: "Corporate account") do |field| %>
-                            <% field.with_combobox(
-                                 @corporate_accounts.map { |relationship| [relationship.corporate_account.name, relationship.id] },
-                                 prompt: "Select account") %>
-                          <% end %>
-                        <% else %>
-                          <p class="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">No active Corporate Accounts yet. Add one in settings to bill a Corporate Account.</p>
-                        <% end %>
-                        <p class="text-xs text-muted-foreground">Room charges are billed to the company. The guest remains a billing party for incidentals.</p>
-                        <%= render PanelsUI::Switch.new(
-                              form: f,
-                              attribute: :bill_tourism_tax_to_company,
-                              checked: false,
-                              label: "Bill tourism tax to company",
-                              description: "Off: tourism tax stays on the guest folio.") %>
-                      </div>
-                    </section>
-                    <section>
-                      <%= render "hotel_portal/bookings/actions/booking_creations/partials/payment", f: f %>
-                    </section>
+                    <%= render "hotel_portal/bookings/actions/booking_creations/partials/collection",
+                          f: f,
+                          currency: currency,
+                          collect_payment: collect_payment,
+                          tourism_tax_collected: tourism_tax_collected,
+                          collect_security_deposit: collect_security_deposit,
+                          security_deposit: security_deposit %>
+                    <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_and_payment",
+                          f: f,
+                          initial_type: initial_type,
+                          corporate_accounts: @corporate_accounts %>
                   </div>
                 </aside>
               <% end %>

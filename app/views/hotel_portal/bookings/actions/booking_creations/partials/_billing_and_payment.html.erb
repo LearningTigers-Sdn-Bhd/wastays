@@ -1,0 +1,58 @@
+<%# Who the folio bills, and the single method every collection on this booking
+    goes through. The eligible method list swaps between guest-advance (reservation)
+    and direct (walk-in / backdated) as the booking type changes — the backend
+    enforces the same split in PaymentMethods::Eligibility. %>
+<% f = local_assigns.fetch(:f) %>
+<% initial_type = local_assigns.fetch(:initial_type) %>
+<% corporate_accounts = local_assigns.fetch(:corporate_accounts) %>
+<% purpose = initial_type == "reservation" ? :guest_advance : :direct %>
+
+<section aria-labelledby="billing-payment-heading" class="space-y-4">
+  <div>
+    <h3 id="billing-payment-heading" class="text-base font-semibold text-foreground">Billing &amp; payment</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Who the charges bill to, and how the money is taken.</p>
+  </div>
+
+  <%= render PanelsUI::FormField.new(form: f, attribute: :bill_to, label: "Bill to") do |field| %>
+    <% field.with_select_menu(
+         [["Guest", "guest"], ["Corporate", "corporate"]],
+         selected: "guest",
+         data: { action: "change->booking-room-rows#toggleCorporate" }) %>
+  <% end %>
+
+  <div class="hidden space-y-4" data-booking-room-rows-target="corporate">
+    <% if corporate_accounts.any? %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :hotel_corporate_account_id, label: "Corporate account") do |field| %>
+        <% field.with_combobox(
+             corporate_accounts.map { |relationship| [relationship.corporate_account.name, relationship.id] },
+             prompt: "Select account") %>
+      <% end %>
+    <% else %>
+      <p class="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">No active Corporate Accounts yet. Add one in settings to bill a Corporate Account.</p>
+    <% end %>
+    <p class="text-xs text-muted-foreground">Room charges are billed to the company. The guest remains a billing party for incidentals.</p>
+    <%= render PanelsUI::Switch.new(
+          form: f,
+          attribute: :bill_tourism_tax_to_company,
+          checked: false,
+          label: "Bill tourism tax to company",
+          description: "Off: tourism tax stays on the guest folio.") %>
+  </div>
+
+  <div class="space-y-4 border-t border-border pt-4">
+    <%= render "hotel_portal/bookings/actions/booking_creations/partials/configured_payment_method_fields",
+          form: f,
+          method_groups: {
+            guest_advance: @guest_advance_payment_methods,
+            direct: @direct_payment_methods
+          },
+          purpose: purpose,
+          selected_method_id: params.dig(:booking, :hotel_payment_method_id).presence,
+          selected_type: params.dig(:booking, :payment_method_type).presence,
+          quote_url: payment_quote_hotel_bookings_path(current_hotel) %>
+
+    <%= render PanelsUI::FormField.new(form: f, attribute: :payment_reference, label: "Reference / receipt no.") do |field| %>
+      <% field.with_input(placeholder: "Optional reference") %>
+    <% end %>
+  </div>
+</section>

@@ -238,7 +238,8 @@ module Bookings
         actor: @user,
         amount: deposit_options[:amount],
         currency: @booking.currency || @booking.hotel.default_currency || "MYR",
-        payment_method: deposit_options[:payment_method],
+        payment_method: deposit_options[:payment_method] || "cash",
+        hotel_payment_method_id: deposit_options[:hotel_payment_method_id],
         external_reference: deposit_options[:external_reference]
       )
     end

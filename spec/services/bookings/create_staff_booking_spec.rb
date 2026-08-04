@@ -13,6 +13,16 @@ RSpec.describe Bookings::CreateStaffBooking do
   end
   let(:room_rows) { [ { room_type_id: room_type.id, room_number: "" } ] }
 
+  def guest_advance_method
+    PaymentMethods::EnsureDefaults.call(hotel)
+    hotel.hotel_payment_methods.active.find_by!(guest_advance: true)
+  end
+
+  def direct_payment_method
+    PaymentMethods::EnsureDefaults.call(hotel)
+    hotel.hotel_payment_methods.active.find_by!(guest_advance: false)
+  end
+
   before do
     allow(Notifications::Dispatcher).to receive(:new).and_return(instance_double(Notifications::Dispatcher, call: []))
     create(:room_rate, room_type: room_type, date: Date.current, price: 200)
@@ -92,5 +102,137 @@ RSpec.describe Bookings::CreateStaffBooking do
     expect(result.success?).to be(false)
     expect(Booking.where(hotel: hotel)).to be_empty
     expect(room_type.room_inventories.find_by!(date: Date.current).quantity).to eq(1)
+  end
+
+  it "creates one aggregate configured prepayment and surcharge for a group reservation" do
+    method = guest_advance_method
+    extra_charge = create(:hotel_extra_charge, hotel: hotel)
+    method.update!(surcharge_posting_type: "fixed", surcharge_value: 2, surcharge_extra_charge: extra_charge)
+    params = common_params.merge(collect_payment: "1", hotel_payment_method_id: method.id)
+    rows = [
+      { room_type_id: room_type.id, room_number: "" },
+      { room_type_id: room_type.id, room_number: "" }
+    ]
+
+    result = described_class.new(hotel: hotel, common_params: params, room_rows: rows, user: nil).call
+
+    expect(result.success?).to be(true), result.errors.to_sentence
+    expect(result.group_booking).to be_present
+    deposit = result.group_booking.deposits.sole
+    expect(deposit.amount).to eq(402.to_d)
+    expect(deposit.metadata).to include("hotel_payment_method_id" => method.id, "payment_collected_total" => "402.0")
+    expect(FolioTransaction.where(transaction_code: extra_charge.transaction_code).map(&:amount)).to eq([ 2.to_d ])
+    expect(result.bookings.map(&:payment_status)).to all(eq("captured"))
+    expect(result.bookings.map { |booking| booking.booking_folio.folio_transactions.payment.sum(:amount) }).to all(eq(201.to_d))
+  end
+
+  it "ignores forged legacy payment fields for a walk-in" do
+    method = guest_advance_method
+    params = common_params.merge(hotel_payment_method_id: method.id, payment_amount: "1")
+
+    result = described_class.new(
+      hotel: hotel, common_params: params, room_rows: [ { room_type_id: room_type.id, room_number: "101" } ],
+      user: nil, booking_type: "walk_in"
+    ).call
+
+    expect(result.success?).to be(true)
+    expect(result.booking).to be_checked_in
+    expect(result.booking.deposits.kind_prepayment).to be_empty
+  end
+
+  it "collects the billing summary as a direct payment at walk-in check-in" do
+    method = direct_payment_method
+    params = common_params.merge(
+      collect_payment: "1",
+      hotel_payment_method_id: method.id,
+      payment_reference: "WALK-IN-PAYMENT"
+    )
+
+    result = described_class.new(
+      hotel: hotel, common_params: params, room_rows: [ { room_type_id: room_type.id, room_number: "101" } ],
+      user: nil, booking_type: "walk_in"
+    ).call
+
+    expect(result.success?).to be(true)
+    booking = result.booking.reload
+    payment = booking.booking_folio.folio_transactions.payment.find_by("metadata->>'source' = ?", "check_in_payment")
+    expect(booking.payment_status).to eq("captured")
+    expect(payment).to have_attributes(amount: 200.to_d, description: "Payment collected at check-in")
+    expect(payment.metadata).to include(
+      "hotel_payment_method_id" => method.id,
+      "payment_method_name" => method.name,
+      "payment_method_code" => method.code,
+      "reference" => "WALK-IN-PAYMENT",
+      "payment_base_amount" => "200.0",
+      "payment_collected_total" => "200.0"
+    )
+    expect(booking.deposits.kind_prepayment).to be_empty
+  end
+
+  it "collects canonical tourism tax and a configured direct security deposit for a walk-in" do
+    hotel.update!(tourism_tax_enabled: true, tourism_tax_amount: 10.0)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    room_code.update!(is_taxable: true)
+    room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    method = direct_payment_method
+    params = common_params.merge(
+      guest_country: "Singapore",
+      guest_date_of_birth: "1990-01-01",
+      tourism_tax_collected: "1",
+      collect_security_deposit: "1",
+      hotel_payment_method_id: method.id,
+      security_deposit: { amount: "75.00", external_reference: "WALK-IN-1" }
+    )
+
+    result = described_class.new(
+      hotel: hotel, common_params: params, room_rows: [ { room_type_id: room_type.id, room_number: "101" } ],
+      user: nil, booking_type: "walk_in"
+    ).call
+
+    expect(result.success?).to be(true)
+    booking = result.booking.reload
+    expect(booking).to be_checked_in
+    expect(booking.tourism_tax_collected?).to be(true)
+    expect(booking.booking_folio.folio_transactions.payment.where("metadata->>'source' = ?", "tourism_tax_check_in").sum(:amount)).to eq(10.to_d)
+    deposit = booking.deposits.kind_security.sole
+    expect(deposit).to have_attributes(amount: 75.to_d, payment_method: "cash", external_reference: "WALK-IN-1")
+    expect(deposit.metadata).to include("hotel_payment_method_id" => method.id)
+  end
+
+  it "rolls back walk-in creation when a guest-advance method is used for a security deposit" do
+    method = guest_advance_method
+    params = common_params.merge(
+      collect_security_deposit: "1",
+      hotel_payment_method_id: method.id,
+      security_deposit: { amount: "75.00" }
+    )
+
+    expect {
+      @result = described_class.new(
+        hotel: hotel, common_params: params, room_rows: [ { room_type_id: room_type.id, room_number: "101" } ],
+        user: nil, booking_type: "walk_in"
+      ).call
+    }.not_to change(Booking, :count)
+
+    expect(@result.success?).to be(false)
+    expect(@result.errors).to include("Select a valid direct payment method.")
+  end
+
+  it "requires a positive security deposit amount when collection is enabled" do
+    method = direct_payment_method
+    params = common_params.merge(
+      collect_security_deposit: "1",
+      hotel_payment_method_id: method.id,
+      security_deposit: {}
+    )
+
+    result = described_class.new(
+      hotel: hotel, common_params: params, room_rows: [ { room_type_id: room_type.id, room_number: "101" } ],
+      user: nil, booking_type: "walk_in"
+    ).call
+
+    expect(result.success?).to be(false)
+    expect(result.errors).to include("Security deposit amount must be greater than zero.")
+    expect(Booking.where(hotel: hotel)).to be_empty
   end
 end

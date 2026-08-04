@@ -13,6 +13,11 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
     create(:role_permission, role: role, permission: permission)
   end
 
+  def direct_payment_method
+    PaymentMethods::EnsureDefaults.call(hotel)
+    hotel.hotel_payment_methods.active.find_by!(guest_advance: false)
+  end
+
   before do
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
     grant_permission(role, "manage_bookings")
@@ -61,6 +66,10 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(dialog.at_css('input[name="booking[guest_update_intent]"][value="update_existing"]')).to be_present
       expect(dialog.at_css('[data-booking-guest-autofill-target="profileRow"]')["hidden"]).not_to be_nil
       expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
+      expect(dialog.at_css('input[name="booking[payment_method_type]"][value="cash"]')).to be_present
+      expect(dialog.at_css('input[name="booking[payment_method_type]"][value="bank_gateway"]')).to be_present
+      expect(dialog.at_css('select[name="booking[hotel_payment_method_id]"]')).to be_present
+      expect(dialog.at_css('input[name="booking[payment_amount]"]')).to be_nil
     end
 
     it "renders the Quick Booking sheet on the right" do
@@ -90,6 +99,10 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
         "return_to" => return_to,
         "source" => "stay_view"
       )
+      expect(dialog.text).not_to include("Collect payment now", "Collection", "Security deposit")
+      expect(dialog.at_css('input[name="booking[collect_payment]"]')).to be_nil
+      expect(dialog.at_css('[data-booking-room-rows-target="depositCollection"]')).to be_nil
+      expect(dialog.at_css('input[name="booking[payment_amount]"]')).to be_nil
     end
 
     it "hydrates the full form from transferred Quick Booking values" do
@@ -163,6 +176,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Backdated Check-in")
       expect(response.body).to include("data-booking-room-rows-target=\"backdateFields\"")
+      expect(response.body).to include("Collection", "Tourism tax", "Security deposit")
     end
 
     it "renders the Walk-in Check-in sheet at full size" do
@@ -172,7 +186,63 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
       expect(dialog["data-panels-ui-sheet-side"]).to eq("bottom")
       expect(dialog.text).to include("Walk-in Check-in")
+      expect(dialog.text).to include("Collection", "Collect payment now", "Tourism tax", "Security deposit")
+      expect(dialog.at_css('input[name="booking[collect_payment]"]')).to be_present
+      # One picker serves the folio payment and the deposit alike.
+      expect(dialog.css('select[name="booking[hotel_payment_method_id]"]').size).to eq(1)
+      expect(dialog.at_css('select[name="booking[security_deposit][hotel_payment_method_id]"]')).to be_nil
       expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room")
+    end
+
+    it "renders the sheet when the hotel has no method for the active purpose" do
+      PaymentMethods::EnsureDefaults.call(hotel)
+      # A hotel that has deactivated every guest-advance method still has to be
+      # able to open the New Booking sheet — SelectMenu raises on empty choices.
+      hotel.hotel_payment_methods.where(guest_advance: true).find_each do |method|
+        method.transaction_code.update!(active: false)
+      end
+
+      get hotel_booking_action_new_booking_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      rail = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet aside")
+      # Falls back to the direct methods so the control renders, with the warning shown.
+      expect(rail.at_css('select[name="booking[hotel_payment_method_id]"]')).to be_present
+      expect(rail.at_css('[data-payment-method-filter-target="emptyState"]')["class"]).not_to include("hidden")
+    end
+
+    it "renders the sheet when the hotel has no payment methods at all" do
+      hotel.hotel_payment_methods.destroy_all
+      allow(PaymentMethods::EnsureDefaults).to receive(:call)
+
+      get hotel_booking_action_new_booking_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      rail = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet aside")
+      expect(rail.at_css('select[name="booking[hotel_payment_method_id]"]')).to be_nil
+      expect(rail.text).to include("No active payment methods are configured")
+    end
+
+    it "states each figure and each control once in the right rail" do
+      get hotel_booking_action_walk_in_check_in_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      rail = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet aside")
+      expect(rail).to be_present
+
+      # The billing summary is the sheet's only money display: one grand total,
+      # one tourism tax figure, one collectable total, no per-section quote boxes.
+      expect(rail.css('[data-booking-room-rows-target="grandTotal"]').size).to eq(1)
+      expect(rail.css('[data-booking-room-rows-target="tourismTaxTotal"]').size).to eq(1)
+      expect(rail.css('[data-booking-room-rows-target="collectedTotal"]').size).to eq(1)
+      expect(rail.text.scan("Billing summary").size).to eq(1)
+
+      # One payment method picker, one type selector, one reference field.
+      expect(rail.css('[data-controller="payment-method-filter"]').size).to eq(1)
+      expect(rail.css('select[name="booking[hotel_payment_method_id]"]').size).to eq(1)
+      expect(rail.css('input[name="booking[payment_reference]"]').size).to eq(1)
+
+      # Three sections: summary, collection, billing & payment.
+      expect(rail.css("h3").map(&:text)).to eq([ "Collection", "Billing & payment" ])
     end
 
     it "offers the property's boat timetable, and hides the section when boats are off" do
@@ -225,6 +295,45 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(Booking.last).to be_checked_in
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
       expect(flash[:notice]).to eq("Walk-in guest checked in successfully.")
+    end
+
+    it "collects the walk-in billing summary when the payment toggle is enabled" do
+      grant_permission(role, "post_folio_payments")
+      method = direct_payment_method
+
+      expect {
+        post hotel_booking_action_walk_in_check_in_path(hotel), params: {
+          booking: booking_params.merge(
+            collect_payment: "1",
+            hotel_payment_method_id: method.id,
+            payment_reference: "WALK-IN-REQUEST"
+          )
+        }
+      }.to change(Booking, :count).by(1)
+
+      booking = Booking.last
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking))
+      payment = booking.booking_folio.folio_transactions.payment.find_by("metadata->>'source' = ?", "check_in_payment")
+      expect(payment).to have_attributes(amount: booking.total_amount, description: "Payment collected at check-in")
+      expect(payment.metadata).to include("reference" => "WALK-IN-REQUEST", "hotel_payment_method_id" => method.id)
+    end
+
+    it "keeps Quick Booking payment-free even when payment fields are forged" do
+      PaymentMethods::EnsureDefaults.call(hotel)
+      method = hotel.hotel_payment_methods.active.find_by!(guest_advance: true)
+
+      expect {
+        post hotel_booking_action_quick_booking_path(hotel), params: {
+          booking: booking_params.merge(
+            collect_payment: "1", hotel_payment_method_id: method.id, payment_amount: "1.00", payment_method: "cash"
+          )
+        }
+      }.to change(Booking, :count).by(1)
+
+      booking = Booking.last
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking))
+      expect(booking.deposits.kind_prepayment).to be_empty
+      expect(booking.payment_status).to eq("pending")
     end
 
     it "records the boat slots picked while creating a walk-in" do
@@ -293,7 +402,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(Booking.count).to eq(0)
     end
 
-    it "creates a backdated walk-in with historical payment, charges, and audit metadata" do
+    it "creates a backdated walk-in without reservation prepayment and keeps historical charges and audit metadata" do
       past_date = 1.day.ago.to_date
       create(:night_audit, hotel: hotel, business_date: past_date, status: "completed")
       create(:hotel_business_date, hotel: hotel, business_date: past_date, status: "closed")
@@ -306,7 +415,6 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
           booking: booking_params.merge(
             check_in: past_date,
             check_out: Date.current,
-            record_payment: "1",
             payment_method: "cash",
             payment_amount: "250.00",
             backdate_reason: "Manual offline check-in"
@@ -319,7 +427,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       booking = Booking.last
       expect(booking).to be_checked_in
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking))
-      expect(booking.deposits.kind_prepayment.sole.received_at.to_date).to eq(past_date)
+      expect(booking.deposits.kind_prepayment).to be_empty
       expect(booking.booking_folio.folio_transactions.charge).to all(have_attributes(posting_date: past_date))
       expect(BookingAuditLog.where(auditable: booking, action_type: "check_in").last.metadata).to include(
         "backdate_reason_category" => "Manual offline check-in",

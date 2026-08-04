@@ -343,6 +343,7 @@ Rails.application.routes.draw do
         get :availability, to: "bookings/availabilities#show"
         get :rate_options, to: "bookings/rate_options#show"
         get :stay_price, to: "bookings/prices#show"
+        get :payment_quote, to: "bookings/prices#payment_quote"
         get :room_row, to: "bookings/room_rows#show"
       end
 

@@ -303,7 +303,9 @@ RSpec.describe HotelPortal::Folios::ShowPresenter do
     expect(folio_show.actions_blocked?).to be(false)
     expect(folio_show.can_show_normal_folio_actions?).to be(true)
     expect(folio_show.normal_folio_actions_available?).to be(true)
-    expect(folio_show.adjustment_category_options).to eq(%w[adjustment discount other correction write_off])
+    # Discounts are their own folio action now, not an adjustment category.
+    expect(folio_show.adjustment_category_options).to eq(%w[adjustment other correction write_off])
+    expect(folio_show.can_apply_discount?).to be(true)
   end
 
   it "blocks normal actions and ledger reversals while night audit is running" do
