@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_04_093000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -247,6 +247,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
     t.bigint "user_id"
     t.index ["auditable_type", "auditable_id", "occurred_at"], name: "idx_booking_audit_logs_on_auditable_time"
     t.index ["auditable_type", "auditable_id"], name: "index_booking_audit_logs_on_auditable"
+    t.index ["category", "occurred_at"], name: "idx_booking_audit_logs_on_category_time"
     t.index ["hotel_id", "category", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_category_time"
     t.index ["hotel_id", "occurred_at"], name: "idx_booking_audit_logs_on_hotel_time"
     t.index ["hotel_id"], name: "index_booking_audit_logs_on_hotel_id"
@@ -687,6 +688,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
+  create_table "corporate_account_rates", force: :cascade do |t|
+    t.integer "allotment_quantity"
+    t.datetime "created_at", null: false
+    t.string "currency", default: "MYR", null: false
+    t.date "date", null: false
+    t.bigint "hotel_corporate_account_id", null: false
+    t.integer "max_stay"
+    t.integer "min_stay"
+    t.decimal "negotiated_price", precision: 10, scale: 2
+    t.bigint "room_type_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_corporate_account_id", "room_type_id", "date"], name: "index_corporate_account_rates_on_account_room_type_date", unique: true
+    t.index ["hotel_corporate_account_id"], name: "index_corporate_account_rates_on_hotel_corporate_account_id"
+    t.index ["room_type_id"], name: "index_corporate_account_rates_on_room_type_id"
+  end
+
   create_table "corporate_ar_payment_intents", force: :cascade do |t|
     t.decimal "amount", precision: 10, scale: 2, null: false
     t.bigint "ar_payment_id"
@@ -996,6 +1013,56 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'completed'::character varying]::text[])", name: "group_billing_change_batches_status_allowed"
   end
 
+  create_table "group_booking_request_items", force: :cascade do |t|
+    t.integer "adults", default: 1, null: false
+    t.integer "children", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.bigint "group_booking_request_id", null: false
+    t.jsonb "nightly_rate_snapshot", default: {}, null: false
+    t.integer "quantity", default: 1, null: false
+    t.bigint "room_type_id", null: false
+    t.decimal "subtotal", precision: 10, scale: 2, null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_booking_request_id"], name: "index_group_booking_request_items_on_group_booking_request_id"
+    t.index ["room_type_id"], name: "index_group_booking_request_items_on_room_type_id"
+  end
+
+  create_table "group_booking_requests", force: :cascade do |t|
+    t.date "check_in", null: false
+    t.date "check_out", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", default: "MYR", null: false
+    t.datetime "expires_at", null: false
+    t.bigint "group_booking_id"
+    t.bigint "hotel_corporate_account_id", null: false
+    t.bigint "hotel_id", null: false
+    t.string "lead_guest_country"
+    t.string "lead_guest_document_type"
+    t.string "lead_guest_email"
+    t.string "lead_guest_government_id"
+    t.string "lead_guest_name", null: false
+    t.string "lead_guest_phone"
+    t.jsonb "metadata", default: {}, null: false
+    t.string "payment_method"
+    t.text "rejection_reason"
+    t.bigint "requested_by_user_id", null: false
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_user_id"
+    t.text "special_requests"
+    t.string "status", default: "pending", null: false
+    t.decimal "total_amount", precision: 10, scale: 2, null: false
+    t.decimal "transfer_amount", precision: 10, scale: 2
+    t.date "transfer_received_at"
+    t.string "transfer_reference"
+    t.datetime "updated_at", null: false
+    t.index ["group_booking_id"], name: "index_group_booking_requests_on_group_booking_id"
+    t.index ["hotel_corporate_account_id"], name: "index_group_booking_requests_on_hotel_corporate_account_id"
+    t.index ["hotel_id"], name: "index_group_booking_requests_on_hotel_id"
+    t.index ["requested_by_user_id"], name: "index_group_booking_requests_on_requested_by_user_id"
+    t.index ["reviewed_by_user_id"], name: "index_group_booking_requests_on_reviewed_by_user_id"
+    t.index ["status"], name: "index_group_booking_requests_on_status"
+  end
+
   create_table "group_bookings", force: :cascade do |t|
     t.string "channel_manager_reference"
     t.string "confirmation_token", null: false
@@ -1138,6 +1205,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
     t.datetime "created_at", null: false
     t.string "credit_currency", null: false
     t.decimal "credit_limit", precision: 12, scale: 2
+    t.integer "deposit_percentage_override"
     t.boolean "direct_bill_enabled", default: false, null: false
     t.bigint "hotel_id", null: false
     t.integer "payment_terms_days"
@@ -1407,6 +1475,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
     t.bigint "featured_photo_attachment_id"
     t.boolean "geolocation_enabled", default: true, null: false
     t.string "google_map_link"
+    t.integer "group_booking_deposit_percentage", default: 100, null: false
+    t.integer "group_booking_request_hold_hours", default: 48, null: false
     t.jsonb "guest_registration_card_fields"
     t.string "hotel_prefix"
     t.string "name"
@@ -2332,6 +2402,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
   add_foreign_key "check_out_requests", "bookings"
   add_foreign_key "check_out_requests", "users", column: "acknowledged_by_user_id"
   add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "corporate_account_rates", "hotel_corporate_accounts"
+  add_foreign_key "corporate_account_rates", "room_types"
   add_foreign_key "corporate_ar_payment_intents", "accounts", column: "corporate_account_id"
   add_foreign_key "corporate_ar_payment_intents", "ar_payments"
   add_foreign_key "corporate_ar_payment_intents", "hotel_corporate_accounts"
@@ -2385,6 +2457,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
   add_foreign_key "group_billing_change_batches", "group_bookings"
   add_foreign_key "group_billing_change_batches", "hotels"
   add_foreign_key "group_billing_change_batches", "users", column: "actor_id"
+  add_foreign_key "group_booking_request_items", "group_booking_requests"
+  add_foreign_key "group_booking_request_items", "room_types"
+  add_foreign_key "group_booking_requests", "group_bookings"
+  add_foreign_key "group_booking_requests", "hotel_corporate_accounts"
+  add_foreign_key "group_booking_requests", "hotels"
+  add_foreign_key "group_booking_requests", "users", column: "requested_by_user_id"
+  add_foreign_key "group_booking_requests", "users", column: "reviewed_by_user_id"
   add_foreign_key "group_bookings", "guests", column: "organizer_guest_id"
   add_foreign_key "group_bookings", "hotels"
   add_foreign_key "guest_registration_cards", "bookings"
