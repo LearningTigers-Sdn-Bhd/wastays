@@ -225,8 +225,12 @@ end %>
               </main>
 
               <% unless quick %>
-                <aside class="bg-muted/30">
-                  <div class="space-y-8 p-4 lg:p-6 xl:sticky xl:top-0 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto">
+                <%# min-w-0 is required, not cosmetic: a grid item defaults to
+                    min-width:auto, so without it the rail floors at its content's
+                    min-content width and overflows the 360px track instead of
+                    letting the payment-method label truncate. %>
+                <aside class="min-w-0 bg-muted/30">
+                  <div class="min-w-0 space-y-8 p-4 lg:p-6 xl:sticky xl:top-0 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto">
                     <section>
                       <%= render "hotel_portal/bookings/actions/booking_creations/partials/billing_summary",
                             currency: currency, collectible: true %>

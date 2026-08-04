@@ -70,6 +70,12 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(dialog.at_css('input[name="booking[payment_method_type]"][value="bank_gateway"]')).to be_present
       expect(dialog.at_css('select[name="booking[hotel_payment_method_id]"]')).to be_present
       expect(dialog.at_css('input[name="booking[payment_amount]"]')).to be_nil
+
+      rail = dialog.at_css("aside")
+      payment_menu = rail.at_css('[data-payment-method-filter-target="method"] .panel-select-menu')
+      expect(rail["class"].split).to include("min-w-0")
+      expect(payment_menu["class"].split).to include("max-w-full")
+      expect(payment_menu["data-panels-ui--select-menu-fixed-width-value"]).to eq("true")
     end
 
     it "renders the Quick Booking sheet on the right" do
