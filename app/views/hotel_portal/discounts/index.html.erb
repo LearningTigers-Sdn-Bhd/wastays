@@ -1,0 +1,48 @@
+<div class="w-full space-y-4">
+  <%= render PanelsUI::PageHeader.new(title: "Discounts", description: "Manage the credits staff can apply to posted folio charges.") %>
+
+  <section aria-labelledby="discounts-heading" class="space-y-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h2 id="discounts-heading" class="text-base font-semibold text-foreground">Discounts Registry</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Set pricing and eligible charge targets for controlled folio discounts.</p>
+      </div>
+      <%= render PanelsUI::Button.new(href: new_hotel_discount_path(current_hotel), size: :sm, class: "shrink-0", data: { turbo_frame: "settings_action_sheet" }) do %>
+        <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+        Add Discount
+      <% end %>
+    </div>
+
+    <%= render PanelsUI::Table.new(caption: "Discounts registry", header_style: :sentence, striped: true,
+          hoverable: true, bordered: true, wrapper_class: "rounded-md border border-border bg-card",
+          class: "min-w-[900px]", data: { testid: "discounts-registry" }) do |table| %>
+      <% table.with_header do %>
+        <tr><th>Status</th><th>Discount</th><th>Code</th><th>Pricing</th><th>Applies to</th><th>Override</th><th class="text-right">Action</th></tr>
+      <% end %>
+      <% table.with_body do %>
+        <% @discounts.each do |discount| %>
+          <tr id="discount-row-<%= discount.id %>">
+            <td>
+              <%= form_with url: status_hotel_discount_path(current_hotel, discount), method: :patch, class: "inline-flex",
+                    data: { controller: "tax-registry-status", action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish", turbo_frame: "_top",
+                      turbo_confirm: discount.active? ? "Deactivate #{discount.name}?" : nil,
+                      turbo_confirm_text: discount.active? ? "Staff will no longer be able to select this discount. Existing folio transactions remain unchanged." : nil } do %>
+                <%= hidden_field_tag :active, "0" %>
+                <%= submit_tag "Update status", hidden: true, data: { tax_registry_status_target: "submit" } %>
+                <%= render PanelsUI::Switch.new(name: :active, label: tag.span("#{discount.active? ? 'Deactivate' : 'Activate'} #{discount.name}", class: "sr-only"),
+                      checked: discount.active?, size: :sm, data: { tax_registry_status_target: "switch", action: "change->tax-registry-status#change" }) %>
+              <% end %>
+            </td>
+            <td><span class="font-medium text-foreground"><%= discount.name %></span><p class="mt-0.5 max-w-xs truncate text-xs text-muted-foreground"><%= discount.description.presence || "No description" %></p></td>
+            <td class="font-mono text-xs text-foreground" translate="no"><%= discount.code %></td>
+            <td class="text-muted-foreground"><%= discount.pricing_label %></td>
+            <td class="text-muted-foreground"><%= discount.application_scope_label %></td>
+            <td class="text-muted-foreground"><%= discount.allow_amount_override? ? "Allowed" : "Not allowed" %></td>
+            <td class="text-right"><%= render PanelsUI::Button.new(href: edit_hotel_discount_path(current_hotel, discount), variant: :secondary, size: :xs, data: { turbo_frame: "settings_action_sheet" }) do %>Manage<% end %></td>
+          </tr>
+        <% end %>
+        <% if @discounts.empty? %><tr><td colspan="7" class="py-8 text-center text-sm text-muted-foreground">No discounts are configured.</td></tr><% end %>
+      <% end %>
+    <% end %>
+  </section>
+</div>

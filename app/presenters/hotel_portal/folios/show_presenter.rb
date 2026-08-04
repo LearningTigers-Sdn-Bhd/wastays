@@ -484,7 +484,7 @@ module HotelPortal
       return [] unless can_show_normal_folio_actions?
 
       options = []
-      options += %w[adjustment discount other] if permitted?("post_folio_adjustments")
+      options += %w[adjustment other] if permitted?("post_folio_adjustments")
       options << "correction" if permitted?("post_folio_corrections")
       options << "write_off" if permitted?("post_folio_write_offs")
       options
@@ -494,8 +494,12 @@ module HotelPortal
       adjustment_category_options.any?
     end
 
+    def can_apply_discount?
+      can_show_normal_folio_actions? && permitted?("post_folio_adjustments")
+    end
+
     def normal_folio_actions_available?
-      can_post_payment? || can_post_charge? || can_post_adjustment? || can_execute_refund?
+      can_post_payment? || can_post_charge? || can_post_adjustment? || can_apply_discount? || can_execute_refund?
     end
 
     def booking_invoice_report_available?

@@ -421,6 +421,7 @@ Rails.application.routes.draw do
     scope "folio-actions", as: :folio_action, module: "folios/actions" do
       match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
       get "extra-charge-quote/:booking_id", to: "transactions#quote", as: :extra_charge_quote
+      get "discount-quote/:booking_id", to: "transactions#discount_quote", as: :discount_quote
       match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
       match "split-transaction/:booking_id/:transaction_id", to: "transaction_splits#show", via: [ :get, :post ], as: :split_transaction
       match "reverse-transaction/:booking_id/:transaction_id", to: "transaction_reversals#show", via: [ :get, :post ], as: :reverse_transaction
@@ -619,6 +620,9 @@ Rails.application.routes.draw do
 
       scope "commercial" do
         resources :extra_charges, path: "extra-charges", only: %i[index new create edit update] do
+          patch :status, action: :update_status, on: :member
+        end
+        resources :discounts, only: %i[index new create edit update] do
           patch :status, action: :update_status, on: :member
         end
         resources :payment_methods, path: "payment-methods", only: %i[index new create edit update] do

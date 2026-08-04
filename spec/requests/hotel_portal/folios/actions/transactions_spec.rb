@@ -102,6 +102,16 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
         expect(response.body).to include("Post adjustment")
         expect(response.body).to include("Write off")
         expect(response.body).to include("Correction")
+        expect(response.body).not_to include('value="discount"')
+      end
+
+      it "offers active configured discounts in a dedicated sheet" do
+        discount = create(:hotel_discount, hotel: hotel)
+
+        open_form(transaction_type: "adjustment", category: "discount", active_folio_id: folio.id)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include("Apply discount", discount.name, discount.code, "Eligible posted charges")
       end
 
       it "offers active Extra Charges instead of raw transaction codes" do
@@ -419,6 +429,46 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("does not match the requested transaction")
+      end
+    end
+
+    describe "posting discounts" do
+      it "previews and posts one configured credit" do
+        create(:folio_transaction, booking_folio: folio, amount: 200, category: "accommodation", posting_date: Date.current)
+        discount = create(:hotel_discount, hotel: hotel, pricing_type: "percentage", rate_value: 10,
+          application_scope: "room_charges", allow_amount_override: false)
+
+        get hotel_folio_action_discount_quote_path(hotel, booking), params: {
+          hotel_discount_id: discount.id, booking_folio_id: folio.id, posting_date: Date.current
+        }
+        expect(response).to have_http_status(:success)
+        preview = response.parsed_body
+        expect(preview).to include("base_amount" => "200.0", "amount" => "20.0")
+
+        expect {
+          post_transaction(
+            transaction_type: "adjustment", category: "discount", hotel_discount_id: discount.id,
+            booking_folio_id: folio.id, posting_date: Date.current, amount: preview["amount"],
+            discount_pricing_fingerprint: preview["fingerprint"], description: "Service recovery"
+          )
+        }.to change { folio.folio_transactions.adjustment.count }.by(1)
+
+        transaction = folio.folio_transactions.adjustment.last
+        expect(transaction).to have_attributes(amount: -20.to_d, category: "discount", transaction_code: discount.transaction_code)
+        expect(transaction.description).to include(discount.name, "Service recovery")
+      end
+
+      it "rejects a discount belonging to another hotel" do
+        create(:folio_transaction, booking_folio: folio, amount: 100)
+        foreign_discount = create(:hotel_discount, hotel: other_hotel)
+
+        expect {
+          post_transaction(transaction_type: "adjustment", category: "discount", hotel_discount_id: foreign_discount.id,
+            posting_date: Date.current, amount: 10, discount_pricing_fingerprint: "forged")
+        }.not_to change { folio.folio_transactions.adjustment.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Select an available discount")
       end
     end
 

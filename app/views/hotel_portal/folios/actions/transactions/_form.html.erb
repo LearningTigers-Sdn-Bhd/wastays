@@ -30,6 +30,12 @@
                 action: "change->payment-posting#update input->payment-posting#update",
                 payment_posting_methods_value: @payment_method_config.to_json,
                 payment_posting_currency_value: @active_folio.currency
+              } : @discount_options.present? ? {
+                controller: "discount-posting",
+                action: "change->discount-posting#update input->discount-posting#update",
+                discount_posting_discounts_value: @discount_options.to_h { |discount| [ discount.id.to_s, { name: discount.name, pricing_type: discount.pricing_type, rate_value: discount.rate_value&.to_d&.to_s("F"), allow_amount_override: discount.allow_amount_override? } ] }.to_json,
+                discount_posting_quote_url_value: hotel_folio_action_discount_quote_path(current_hotel, booking),
+                discount_posting_currency_value: @active_folio.currency
               } : {}) do |form| %>
           <% if @extra_charge_options.present? %>
             <div class="flex h-full min-h-0 flex-col" data-controller="extra-charge-posting"
@@ -86,6 +92,14 @@
                      required: true,
                      data: { payment_posting_target: "method" }) %>
               <% end %>
+            <% elsif @discount_options.present? %>
+              <%= form.hidden_field :category, value: "discount" %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :hotel_discount_id, label: "Discount", required: true) do |field| %>
+                <% field.with_select_menu(@discount_options.map { |discount| { label: "#{discount.code} · #{discount.name}", value: discount.id } },
+                     selected: params.dig(:folio_transaction, :hotel_discount_id), prompt: "Select a discount", required: true,
+                     data: { discount_posting_target: "discount" }) %>
+              <% end %>
+              <%= form.hidden_field :discount_pricing_fingerprint, value: @discount_pricing_fingerprint || params.dig(:folio_transaction, :discount_pricing_fingerprint), data: { discount_posting_target: "fingerprint" } %>
             <% elsif @refund_source_options.present? %>
               <%= form.hidden_field :category, value: @category if @category.present? %>
               <%= render PanelsUI::FormField.new(form: form, attribute: :refund_source, label: "Refund source", required: true) do |field| %>
@@ -153,6 +167,8 @@
                          { extra_charge_posting_target: "amount" }
                        elsif @payment_method_options.present?
                          { payment_posting_target: "amount" }
+                       elsif @discount_options.present?
+                         { discount_posting_target: "amount" }
                        else
                          {}
                        end) %>
@@ -161,6 +177,13 @@
                   <p class="mt-1 text-xs text-muted-foreground" data-extra-charge-posting-target="pricingHint">Select an extra charge to see its pricing.</p>
                 <% end %>
               </div>
+              <% if @discount_options.present? %>
+                <section class="space-y-2 rounded-md border border-border bg-muted p-3" data-discount-posting-target="preview" hidden aria-live="polite" aria-busy="false">
+                  <div class="flex items-center justify-between gap-3 text-sm"><span class="text-muted-foreground">Eligible posted charges</span><span class="font-medium tabular-nums text-foreground" data-discount-posting-target="baseTotal"></span></div>
+                  <div class="flex items-center justify-between gap-3 border-t border-border pt-2 text-sm"><span class="font-semibold text-foreground">Discount credit</span><span class="font-semibold tabular-nums text-foreground" data-discount-posting-target="discountTotal"></span></div>
+                  <p class="text-xs text-destructive" data-discount-posting-target="error" hidden></p>
+                </section>
+              <% end %>
               <% if @extra_charge_options.present? %>
                 <section class="space-y-3 rounded-md border border-border bg-muted p-3" data-extra-charge-posting-target="schedulePreview" hidden aria-live="polite" aria-busy="false">
                   <div class="flex items-center justify-between gap-3">
@@ -203,7 +226,8 @@
 
             <div <%= "data-extra-charge-posting-target=immediateField" if @extra_charge_options.present? %>>
               <%= render PanelsUI::FormField.new(form: form, attribute: :posting_date, label: "Posting date", required: true) do |field| %>
-                <% field.with_input(type: :date, value: current_hotel.current_business_date, required: true) %>
+                <% field.with_input(type: :date, value: params.dig(:folio_transaction, :posting_date).presence || current_hotel.current_business_date, required: true,
+                     data: (@discount_options.present? ? { discount_posting_target: "postingDate" } : {})) %>
               <% end %>
             </div>
 
@@ -212,14 +236,14 @@
                     form: form,
                     attribute: :description,
                     label: "Description",
-                    hint: (@extra_charge_options.present? ? "Optional operational detail; the charge name is used when left blank." : nil),
-                    required: @extra_charge_options.blank?,
+                    hint: (@extra_charge_options.present? ? "Optional operational detail; the charge name is used when left blank." : @discount_options.present? ? "Optional operational detail; the configured discount name is used when left blank." : nil),
+                    required: @extra_charge_options.blank? && @discount_options.blank?,
                     readonly: @checkout_settlement.present?) do |field| %>
                 <% if @checkout_settlement.present? %>
                   <% field.with_input(value: @description, required: true) %>
                 <% else %>
                   <% field.with_input(value: @description || params.dig(:folio_transaction, :description),
-                       placeholder: "e.g., Room 204 · two damaged towels", required: @extra_charge_options.blank?,
+                       placeholder: @discount_options.present? ? "e.g., Air-conditioning complaint" : "e.g., Room 204 · two damaged towels", required: @extra_charge_options.blank? && @discount_options.blank?,
                        data: (@extra_charge_options.present? ? { extra_charge_posting_target: "description" } : {})) %>
                 <% end %>
               <% end %>

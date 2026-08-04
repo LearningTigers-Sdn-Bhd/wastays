@@ -60,6 +60,23 @@ module HotelPortal
           render json: schedule_quote_json(result)
         end
 
+        def discount_quote
+          folio = scoped_booking_folios.open.find_by(id: params[:booking_folio_id]) || default_folio
+          discount = current_hotel.hotel_discounts.active.includes(:transaction_code, :applicable_transaction_codes).find_by(id: params[:hotel_discount_id])
+          return render json: { error: "Select an available discount." }, status: :unprocessable_content if folio.blank? || discount.blank?
+
+          result = ::Discounts::Quote.call(
+            discount:, folio:, posting_date: params[:posting_date].presence || current_hotel.current_business_date,
+            requested_amount: params[:amount], preview: true
+          )
+          status = result.success? ? :ok : :unprocessable_content
+          render json: {
+            error: result.error, amount: result.amount&.to_d&.to_s("F"),
+            calculated_amount: result.calculated_amount&.to_d&.to_s("F"),
+            base_amount: result.base_amount&.to_d&.to_s("F"), fingerprint: result.fingerprint
+          }.compact, status:
+        end
+
         private
 
         # Two questions, two answers: opening a form is gated on the posting
@@ -73,11 +90,13 @@ module HotelPortal
 
         def permitted_to_open_form?
           return current_user.has_permission?("post_folio_charges", hotel: current_hotel) if action_name == "quote"
+          return current_user.has_permission?("post_folio_adjustments", hotel: current_hotel) if action_name == "discount_quote"
 
           case [ requested_transaction_type, requested_category ]
           when [ "payment", "refund" ] then current_user.has_permission?("execute_folio_refunds", hotel: current_hotel)
           when [ "payment", "" ]       then current_user.has_permission?("post_folio_payments", hotel: current_hotel)
           when [ "charge", "" ]        then current_user.has_permission?("post_folio_charges", hotel: current_hotel)
+          when [ "adjustment", "discount" ] then current_user.has_permission?("post_folio_adjustments", hotel: current_hotel)
           when [ "adjustment", "" ]    then adjustment_category_options.any?
           else false
           end
@@ -123,7 +142,7 @@ module HotelPortal
           result = checkout_settlement? ? post_locked_checkout_settlement(target_folio) : post_staff_transaction(target_folio)
 
           unless result.success?
-            return render_transaction_error(result.error) if @extra_charge_posting_error
+            return render_transaction_error(result.error) if @extra_charge_posting_error || @discount_posting_error
             return checkout_settlement? ? render_checkout_settlement_error(result.error) : complete_action(alert: result.error)
           end
 
@@ -185,6 +204,13 @@ module HotelPortal
             @extra_charge_config = build_extra_charge_config
             @signed_amount = false
             @submit_label = "Add charge"
+          when [ "adjustment", "discount" ]
+            @form_title = "Apply discount"
+            @form_description = "Select a configured discount and review the eligible posted charges."
+            Discounts::EnsureDefaults.call(current_hotel)
+            @discount_options = current_hotel.hotel_discounts.active.includes(:transaction_code, :applicable_transaction_codes).ordered.to_a
+            @signed_amount = false
+            @submit_label = "Apply discount"
           when [ "adjustment", "" ]
             @form_title = "Post adjustment"
             @form_description = "Record an authorized adjustment, correction, discount, write-off, or other adjustment."
@@ -262,6 +288,27 @@ module HotelPortal
         end
 
         def post_staff_transaction(folio)
+          if folio_transaction_params[:transaction_type].to_s == "adjustment" && folio_transaction_params[:category].to_s == "discount"
+            discount = current_hotel.hotel_discounts.active.includes(:transaction_code, :applicable_transaction_codes)
+              .find_by(id: folio_transaction_params[:hotel_discount_id])
+            unless discount
+              @discount_posting_error = true
+              return ::Discounts::Post::Result.failure("Select an available discount.")
+            end
+            result = ::Discounts::Post.call(
+              discount:, folio:, user: current_user,
+              posting_date: folio_transaction_params[:posting_date], requested_amount: folio_transaction_params[:amount],
+              expected_fingerprint: folio_transaction_params[:discount_pricing_fingerprint],
+              description: folio_transaction_params[:description], reference: folio_transaction_params[:reference], note: folio_transaction_params[:note]
+            )
+            unless result.success?
+              @discount_posting_error = true
+              @amount = result.quote&.amount
+              @discount_pricing_fingerprint = result.quote&.fingerprint
+            end
+            return result
+          end
+
           extra_charge = nil
           quote = nil
           if folio_transaction_params[:transaction_type].to_s == "charge"
@@ -493,7 +540,7 @@ module HotelPortal
 
         def adjustment_category_options
           options = []
-          options += %w[adjustment discount other] if current_user.has_permission?("post_folio_adjustments", hotel: current_hotel)
+          options += %w[adjustment other] if current_user.has_permission?("post_folio_adjustments", hotel: current_hotel)
           options << "correction" if current_user.has_permission?("post_folio_corrections", hotel: current_hotel)
           options << "write_off" if current_user.has_permission?("post_folio_write_offs", hotel: current_hotel)
           options
@@ -538,6 +585,8 @@ module HotelPortal
             :category,
             :transaction_code_id,
             :hotel_extra_charge_id,
+            :hotel_discount_id,
+            :discount_pricing_fingerprint,
             :quantity,
             :starts_on,
             :ends_on,

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_03_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_04_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1168,6 +1168,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_100000) do
     t.index ["hotel_id", "counter_type", "sequence_year"], name: "idx_hotel_counters_type_year", unique: true
     t.index ["hotel_id"], name: "index_hotel_counters_on_hotel_id"
     t.check_constraint "sequence_year >= 2000 AND sequence_year <= 2099", name: "hotel_counters_sequence_year_range"
+  end
+
+  create_table "hotel_discount_transaction_codes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "hotel_discount_id", null: false
+    t.bigint "transaction_code_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_discount_id", "transaction_code_id"], name: "index_discount_codes_on_discount_and_code", unique: true
+    t.index ["hotel_discount_id"], name: "index_hotel_discount_transaction_codes_on_hotel_discount_id"
+    t.index ["transaction_code_id"], name: "index_hotel_discount_transaction_codes_on_transaction_code_id"
+  end
+
+  create_table "hotel_discounts", force: :cascade do |t|
+    t.boolean "allow_amount_override", default: true, null: false
+    t.string "application_scope", default: "all_eligible_charges", null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "hotel_id", null: false
+    t.integer "position", default: 0, null: false
+    t.string "pricing_type", default: "manual", null: false
+    t.decimal "rate_value", precision: 12, scale: 4
+    t.bigint "transaction_code_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "position"], name: "index_hotel_discounts_on_hotel_id_and_position"
+    t.index ["hotel_id"], name: "index_hotel_discounts_on_hotel_id"
+    t.index ["transaction_code_id"], name: "index_hotel_discounts_on_transaction_code_id", unique: true
+    t.check_constraint "application_scope::text = ANY (ARRAY['room_charges'::character varying, 'all_eligible_charges'::character varying, 'selected_charges'::character varying]::text[])", name: "hotel_discounts_scope_allowed"
+    t.check_constraint "pricing_type::text <> 'percentage'::text OR rate_value <= 100::numeric", name: "hotel_discounts_percentage_maximum"
+    t.check_constraint "pricing_type::text = ANY (ARRAY['manual'::character varying, 'fixed'::character varying, 'percentage'::character varying]::text[])", name: "hotel_discounts_pricing_type_allowed"
+    t.check_constraint "rate_value IS NULL OR rate_value > 0::numeric", name: "hotel_discounts_rate_value_positive"
   end
 
   create_table "hotel_extra_charges", force: :cascade do |t|
@@ -2367,6 +2397,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_100000) do
   add_foreign_key "hotel_corporate_accounts", "accounts", column: "corporate_account_id"
   add_foreign_key "hotel_corporate_accounts", "hotels"
   add_foreign_key "hotel_counters", "hotels"
+  add_foreign_key "hotel_discount_transaction_codes", "hotel_discounts"
+  add_foreign_key "hotel_discount_transaction_codes", "transaction_codes"
+  add_foreign_key "hotel_discounts", "hotels"
+  add_foreign_key "hotel_discounts", "transaction_codes"
   add_foreign_key "hotel_extra_charges", "hotels"
   add_foreign_key "hotel_extra_charges", "transaction_codes"
   add_foreign_key "hotel_general_ledger_maps", "hotels"

@@ -80,7 +80,8 @@ RSpec.describe "HotelPortal::TransactionCodes", type: :request do
       expect(response.body).to include("Service Charge")
       expect(response.body).to include("Inactive Levy")
       expect(response.body).to include("bg-muted text-muted-foreground ring-ring")
-      expect(response.body).to include("REBATE")
+      expect(response.body).not_to include("REBATE")
+      expect(hotel.hotel_discounts.joins(:transaction_code).where(transaction_codes: { system_key: "rebate" })).to exist
       expect(response.body).to include("GATEWAY")
       expect(response.body).to include("OTA")
       expect(response.body).to include("Gateway Manual Recovery")
