@@ -225,6 +225,25 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.reload.room_types).not_to include(room_type)
     end
 
+    # Previously RoomTypeRatePlan's per-row callback enqueued a separate
+    # 500-day rate push for every room category on the plan.
+    it 'pushes one rate sync for the whole plan, not one per room category' do
+      hotel.update!(preferred_channel_manager: 'channex')
+      others = Array.new(2) { |i| create(:room_type, hotel: hotel, name: "Villa #{i}") }
+      all_room_types = [ room_type ] + others
+      pricing = all_room_types.to_h { |rt| [ rt.id.to_s, { enabled: "1", pricing_mode: "fixed" } ] }
+
+      ActiveJob::Base.queue_adapter = :test
+      ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+      patch hotel_rate_plan_path(hotel, rate_plan), params: { rate_plan: { room_type_pricing: pricing } }
+
+      rate_syncs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j["job_class"] == "ChannelManagers::SyncJob" }
+      expect(rate_plan.reload.room_types).to match_array(all_room_types)
+      expect(rate_syncs.size).to eq(1)
+      expect(rate_syncs.first["arguments"].last["room_type_ids"]).to match_array(all_room_types.map(&:id))
+    end
+
     it 'refuses to reassign a standard plan, even if room_type_pricing is submitted' do
       other_room_type = create(:room_type, hotel: hotel, name: 'Suite')
       standard = room_type.rate_plans.find_by(kind: 'standard')

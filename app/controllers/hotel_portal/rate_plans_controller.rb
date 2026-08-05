@@ -23,13 +23,16 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     @rate_plan.currency = current_hotel.default_currency || "MYR"
 
     saved = false
-    ActiveRecord::Base.transaction do
-      saved = @rate_plan.save
-      saved = sync_room_type_pricing!(@rate_plan, room_type_pricing) if saved
-      raise ActiveRecord::Rollback unless saved
+    with_batched_ari_sync do
+      ActiveRecord::Base.transaction do
+        saved = @rate_plan.save
+        saved = sync_room_type_pricing!(@rate_plan, room_type_pricing) if saved
+        raise ActiveRecord::Rollback unless saved
+      end
     end
 
     if saved
+      push_ari(@rate_plan, room_type_pricing)
       finish_sheet(notice: "Rate plan '#{@rate_plan.name}' created successfully.")
     else
       render :new, layout: false, status: :unprocessable_content
@@ -41,13 +44,16 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     room_type_pricing = attrs.delete(:room_type_pricing) || {}
 
     saved = false
-    ActiveRecord::Base.transaction do
-      saved = @rate_plan.update(attrs)
-      saved = sync_room_type_pricing!(@rate_plan, room_type_pricing) if saved
-      raise ActiveRecord::Rollback unless saved
+    with_batched_ari_sync do
+      ActiveRecord::Base.transaction do
+        saved = @rate_plan.update(attrs)
+        saved = sync_room_type_pricing!(@rate_plan, room_type_pricing) if saved
+        raise ActiveRecord::Rollback unless saved
+      end
     end
 
     if saved
+      push_ari(@rate_plan, room_type_pricing)
       finish_sheet(notice: "Rate plan '#{@rate_plan.name}' updated successfully.")
     else
       render :edit, layout: false, status: :unprocessable_content
@@ -132,6 +138,37 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   def sync_room_type_pricing!(rate_plan, room_type_pricing)
     return true if rate_plan.standard_rate?
 
+    sync_room_type_pricing_rows!(rate_plan, room_type_pricing)
+  end
+
+  # RoomTypeRatePlan#trigger_ari_sync fires per row, which would enqueue a
+  # separate 500-day rate push for every room category on the plan. push_ari
+  # sends one instead.
+  #
+  # This has to wrap the whole transaction, not just the writes: the callback
+  # is after_commit, so a flag reset inside the transaction block would already
+  # be cleared by the time it runs.
+  def with_batched_ari_sync
+    Thread.current[:skip_ari_sync] = true
+    yield
+  ensure
+    Thread.current[:skip_ari_sync] = nil
+  end
+
+  def push_ari(rate_plan, room_type_pricing)
+    return if rate_plan.standard_rate?
+
+    # room_type_pricing is ActionController::Parameters, which has each_pair but
+    # not the full Enumerable surface.
+    enabled_ids = []
+    room_type_pricing.each_pair do |room_type_id, attrs|
+      enabled_ids << room_type_id.to_i if ActiveModel::Type::Boolean.new.cast(attrs[:enabled])
+    end
+
+    ChannelManagers::SyncRatePlanAri.call(rate_plan: rate_plan, room_type_ids: enabled_ids)
+  end
+
+  def sync_room_type_pricing_rows!(rate_plan, room_type_pricing)
     room_type_pricing.each do |room_type_id, attrs|
       room_type = current_hotel.room_types.find_by(id: room_type_id)
       next unless room_type
