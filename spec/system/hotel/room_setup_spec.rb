@@ -22,8 +22,8 @@ RSpec.describe 'Room Setup', type: :system do
     expect(page).to have_content('No room categories found')
     first(:link, 'Create Room Category').click
 
-    fill_in 'Room Type Name', with: 'Deluxe Suite'
-    click_button 'Capacity & Rate'
+    # Every section is on one scrollable sheet now — no tab to click through.
+    fill_in 'Room Category Name', with: 'Deluxe Suite'
     fill_in 'Max Adults', with: 2
     fill_in 'Max Children', with: 1
     fill_in 'Total Number of Rooms', with: 5

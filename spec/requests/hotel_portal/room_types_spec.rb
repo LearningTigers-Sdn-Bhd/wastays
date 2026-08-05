@@ -76,6 +76,65 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
     end
   end
 
+  describe "GET #new" do
+    it "renders the flattened form as a sheet, with every section on one surface" do
+      get new_hotel_room_type_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("new-room-category-sheet")
+      expect(response.body).to include('data-panels-ui--sheet-dismissible-value="false"')
+      %w[basics capacity amenities restrictions numbering photos].each do |section|
+        expect(response.body).to include("room-category-#{section}-heading")
+      end
+      expect(response.body).not_to include('data-panels-ui--tabs-target="tab"')
+    end
+  end
+
+  describe "POST #create" do
+    let(:valid_params) do
+      { room_type: { name: "Deluxe Twin", max_adults: 2, max_children: 1, quantity: 3, base_price: 250, room_number_mode: "range" } }
+    end
+
+    it "closes the sheet and returns to the list" do
+      expect {
+        post hotel_room_types_path(hotel), params: valid_params, as: :turbo_stream
+      }.to change(RoomType, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('action="complete_sheet"')
+      expect(response.body).to include('target="settings_action_sheet"')
+      expect(response.body).to include(hotel_room_types_path(hotel))
+    end
+
+    it "re-renders the sheet with the errors when the category is invalid" do
+      post hotel_room_types_path(hotel), params: { room_type: valid_params[:room_type].merge(name: "") }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("new-room-category-sheet")
+      expect(response.body).to include("Name can&#39;t be blank")
+    end
+  end
+
+  describe "PATCH #update" do
+    it "closes the sheet and returns to the list" do
+      patch hotel_room_type_path(hotel, room_type),
+            params: { room_type: { name: "Renamed Category" } },
+            as: :turbo_stream
+
+      expect(room_type.reload.name).to eq("Renamed Category")
+      expect(response.body).to include('action="complete_sheet"')
+      expect(response.body).to include('target="settings_action_sheet"')
+    end
+
+    it "re-renders the sheet with the errors when the category is invalid" do
+      patch hotel_room_type_path(hotel, room_type), params: { room_type: { name: "" } }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("edit-room-category-#{room_type.id}-form")
+      expect(response.body).to include("Name can&#39;t be blank")
+    end
+  end
+
   describe "DELETE #destroy_photo" do
     let(:photo_attachment) { room_type.photos.first }
 
