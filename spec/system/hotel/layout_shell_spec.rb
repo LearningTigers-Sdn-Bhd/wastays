@@ -35,8 +35,9 @@ RSpec.describe 'Hotel layout shell', type: :system do
 
     expect(page).to have_link('Dashboard', href: hotel_dashboard_path(hotel))
     within("#hotel-sidebar .panel-sidebar__header") do
-      hotel_home_link = find_link(hotel.name, href: hotel_dashboard_path(hotel))
-      expect(hotel_home_link["aria-label"]).to eq("Hotel: #{hotel.name}")
+      portal_link = find_link("Hotel Portal", href: hotel_dashboard_path(hotel))
+      expect(portal_link["aria-label"]).to eq("Hotel Portal")
+      expect(portal_link).to have_no_css("svg")
     end
     expect(page).to have_css('button.panel-sidebar__group-trigger', text: 'Front Office', visible: :all)
     expect(page).to have_link('Reservations', href: hotel_front_desk_path(hotel), visible: :all)

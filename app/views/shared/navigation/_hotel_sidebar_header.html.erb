@@ -1,8 +1,0 @@
-<div class="w-full space-y-0.5 px-2 py-1">
-  <%= render PanelsUI::Tooltip.new(text: current_hotel.name, placement: :top, root_class: "w-full") do %>
-    <a href="<%= hotel_dashboard_path(current_hotel) %>" class="panel-sidebar__link" aria-label="Hotel: <%= current_hotel.name %>">
-      <%= cached_icon "building-2", class: "panel-sidebar__icon" %>
-      <span class="panel-sidebar__label truncate text-xs"><%= current_hotel.name.truncate(24) %></span>
-    </a>
-  <% end %>
-</div>

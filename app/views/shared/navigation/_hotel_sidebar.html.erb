@@ -8,6 +8,6 @@
       permanent: true
     ) do |sidebar| %>
   <% sidebar.with_header do %>
-    <%= render "shared/navigation/hotel_sidebar_header" %>
+    <%= render "shared/navigation/portal_label", label: "Hotel Portal", href: hotel_dashboard_path(current_hotel) %>
   <% end %>
 <% end %>

@@ -1,0 +1,10 @@
+<%# Sidebar header shared by every portal: the portal's own name, nothing else.
+    It stays an anchor because the settings sidebar has no other route back to
+    the dashboard — the label reads as chrome but earns its keep as a link.
+    Like every other sidebar label it hides at 48px, where pointer or focus
+    expands the rail again. %>
+<div class="w-full space-y-0.5 px-2 py-1">
+  <a href="<%= href %>" class="panel-sidebar__link" aria-label="<%= label %>">
+    <span class="panel-sidebar__label truncate text-xs font-semibold"><%= label %></span>
+  </a>
+</div>

@@ -8,13 +8,6 @@
       permanent: true
     ) do |sidebar| %>
   <% sidebar.with_header do %>
-    <div class="w-full space-y-0.5 px-2 py-1">
-      <%= render PanelsUI::Tooltip.new(text: current_user.account.name, placement: :top, root_class: "w-full") do %>
-        <a href="<%= corporate_dashboard_path %>" class="panel-sidebar__link" aria-label="Corporate account: <%= current_user.account.name %>">
-          <%= cached_icon "building-2", class: "panel-sidebar__icon" %>
-          <span class="panel-sidebar__label truncate text-xs"><%= current_user.account.name.truncate(24) %></span>
-        </a>
-      <% end %>
-    </div>
+    <%= render "shared/navigation/portal_label", label: "Corporate Portal", href: corporate_dashboard_path %>
   <% end %>
 <% end %>
