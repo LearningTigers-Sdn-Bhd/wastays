@@ -30,7 +30,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
     it 'filters out walk-in named rate plans from regular rows' do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 1)
       # room_type already has one "Standard Rate" plan from after_create callback
-      create(:rate_plan, room_type: room_type, name: "Walk-in Rate", currency: "MYR")
+      create(:rate_plan, :walk_in_tier, room_type: room_type, currency: "MYR")
 
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
 
@@ -38,6 +38,43 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
 
       expect(rate_labels).to contain_exactly("Standard Rate")
       expect(presenter.rows.select(&:walk_in_row?).size).to eq(1)
+    end
+
+    it 'identifies special tiers by kind, so a renamed tier stays a tier' do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin")
+      create(:rate_plan, :walk_in_tier, room_type: room_type, name: "Rack Rate", currency: "MYR")
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+
+      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to contain_exactly("Standard Rate")
+    end
+
+    it 'keeps an ordinary plan named like a tier as an ordinary row' do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin")
+      create(:rate_plan, :custom, room_type: room_type, name: "Corporate", currency: "MYR")
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+
+      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to contain_exactly("Standard Rate", "Corporate")
+    end
+
+    it 'leaves archived plans out of the grid and the filter list' do
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin")
+      archived = create(:rate_plan, :custom, room_type: room_type, name: "Last Season", currency: "MYR")
+      archived.archive!
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+
+      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to contain_exactly("Standard Rate")
+      expect(presenter.rate_plan_options_struct.map(&:id)).not_to include(archived.id)
+    end
+
+    it 'no longer offers an OTA tier, which has no column to store a price' do
+      create(:room_type, hotel: hotel, name: "Deluxe Twin")
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+
+      expect(presenter.rate_plan_options_struct.map(&:id).grep(/tier_ota/)).to be_empty
     end
   end
 

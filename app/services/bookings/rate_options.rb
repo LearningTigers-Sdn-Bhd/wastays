@@ -73,7 +73,11 @@ module Bookings
 
       return false if column.blank?
 
-      rate_plan.room_rates.where(date: stay_dates).where.not(column => nil).exists?
+      # Scoped to the room type: a plan shared across categories holds a row per
+      # category, so without this a walk-in price set on one category offered a
+      # Walk-in option on all of them — and CalculateStayPrice then quoted the
+      # standard price, having no tier price of its own to find.
+      rate_plan.room_rates.where(room_type: @room_type, date: stay_dates).where.not(column => nil).exists?
     end
 
     def rate_plan_option(rate_plan)

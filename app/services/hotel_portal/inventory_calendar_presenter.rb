@@ -12,7 +12,6 @@ module HotelPortal
         case kind
         when :walk_in then "Walk-in Rate"
         when :corporate then "Corporate Rate"
-        when :ota then "OTA Rates"
         when :channel_availability then "#{channel['attributes']['channel']} (#{channel['attributes']['title']})"
         when :channel_rate then "#{channel['attributes']['channel']} (#{channel['attributes']['title']})"
         when :channel_summary then "OTA Channels"
@@ -23,7 +22,6 @@ module HotelPortal
       def rate_row? = kind == :rate
       def walk_in_row? = kind == :walk_in
       def corporate_row? = kind == :corporate
-      def ota_row? = kind == :ota
       def channel_availability_row? = kind == :channel_availability
       def channel_rate_row? = kind == :channel_rate
       def channel_summary_row? = kind == :channel_summary
@@ -154,26 +152,16 @@ module HotelPortal
       @room_type_options ||= hotel.room_types.order(:id).to_a
     end
 
-    def rate_plan_options
-      @rate_plan_options ||= hotel.room_types.includes(:rate_plans).order(:id).flat_map do |room_type|
-        room_type.rate_plans.order(:id).reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }.map do |rate_plan|
-          [ "#{room_type.name} - #{rate_plan.name}", rate_plan.id ]
-        end
-      end
-    end
-
     def rate_plan_options_struct
       @rate_plan_options_struct ||= visible_room_types.flat_map do |room_type|
-        # Standard Rate Plans
-        plans = room_type.rate_plans.order(:id).reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }.map do |rate_plan|
+        plans = rate_plans_for(room_type).map do |rate_plan|
           OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id, kind: :standard)
         end
 
-        # Virtual Pricing Tiers (locked to master plan logic)
+        # Virtual Pricing Tiers, written onto the anchor plan's rate rows.
         tiers = [
           OpenStruct.new(label: "#{room_type.name} - Walk-in Rate", id: "tier_walk_in_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
-          OpenStruct.new(label: "#{room_type.name} - Corporate Rate", id: "tier_corporate_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
-          OpenStruct.new(label: "#{room_type.name} - OTA Rate", id: "tier_ota_#{room_type.id}", room_type_id: room_type.id, kind: :tier)
+          OpenStruct.new(label: "#{room_type.name} - Corporate Rate", id: "tier_corporate_#{room_type.id}", room_type_id: room_type.id, kind: :tier)
         ]
 
         plans + tiers
@@ -207,8 +195,6 @@ module HotelPortal
         tier_cell(row.room_type, date, :walk_in)
       elsif row.corporate_row?
         tier_cell(row.room_type, date, :corporate)
-      elsif row.ota_row?
-        tier_cell(row.room_type, date, :ota)
       elsif row.channel_rate_row?
         channel_rate_cell(row.room_type, row.rate_plan, row.channel_rate_plan_id, row.channel, date)
       else
@@ -358,9 +344,18 @@ module HotelPortal
       end
     end
 
+    # Special tiers get their own rows and are written through the anchor plan,
+    # so they never appear as ordinary rate rows. Identified by kind rather than
+    # by name: renaming "Walk-in Rate" used to turn it into an ordinary row that
+    # the walk-in row still read from, and naming an ordinary plan "Corporate"
+    # used to hide it from the grid while it stayed bookable.
+    #
+    # Archived plans are excluded to match the booking side, which offers only
+    # RatePlan.active — showing rows the operator can edit and push to channels
+    # for a plan no guest can book is worse than not showing them.
     def rate_plans_for(room_type)
       plans = room_type.rate_plans.sort_by(&:id)
-      plans = plans.reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }
+      plans = plans.reject { |rate_plan| rate_plan.special_tier? || rate_plan.archived? }
       plans = plans.select { |rate_plan| rate_plan.id == selected_rate_plan_id } if selected_rate_plan_id.present?
       plans
     end
@@ -510,11 +505,6 @@ module HotelPortal
       currency ||= display_currency
 
       CurrencyFormatter.format(price, currency: currency, symbol: false)
-    end
-
-    def special_tier_rate_plan_name?(name)
-      normalized = name.to_s.strip.downcase
-      normalized.in?([ "walk-in rate", "walk in rate", "walk-in", "walk in", "corporate rate", "corporate", "ota rate", "ota" ])
     end
 
     def channel_availability_cell(room_type, channel, date)

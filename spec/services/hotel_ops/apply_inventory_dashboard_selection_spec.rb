@@ -468,5 +468,81 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         expect(existing_rate.corporate_price.to_f).to eq(180.0), "Corporate price must NOT be touched"
       end
     end
+
+    context "with a plan that derives its price from the anchor" do
+      let!(:room_type) { create(:room_type, hotel: hotel, base_price: 200) }
+      let!(:package) { create(:rate_plan, :custom, hotel: hotel, currency: "MYR") }
+
+      before do
+        create(:room_type_rate_plan, rate_plan: package, room_type: room_type, pricing_mode: "multiplier", pricing_value: 20)
+      end
+
+      it "seeds a restrictions-only row at the derived price, not the anchor" do
+        described_class.new(
+          hotel: hotel,
+          selection: {
+            start_date: start_date,
+            end_date: start_date,
+            room_type_ids: [ room_type.id ],
+            rate_plan_ids: [ package.id ],
+            apply_restrictions: "1",
+            min_stay: "2",
+            currency: "MYR"
+          },
+          user: user
+        ).call
+
+        rate = package.room_rates.find_by(room_type: room_type, date: start_date)
+        expect(rate.min_stay).to eq(2)
+        expect(rate.price.to_f).to eq(240.0)
+      end
+    end
+
+    context "with an archived rate plan" do
+      let!(:room_type) { create(:room_type, hotel: hotel, base_price: 200) }
+      let!(:archived) { create(:rate_plan, :custom, hotel: hotel, room_type: room_type, currency: "MYR") }
+
+      before { archived.archive! }
+
+      it "does not price plans that are no longer bookable" do
+        described_class.new(
+          hotel: hotel,
+          selection: {
+            start_date: start_date,
+            end_date: start_date,
+            room_type_ids: [ room_type.id ],
+            apply_rates: "1",
+            price: "500.00",
+            currency: "MYR"
+          },
+          user: user
+        ).call
+
+        expect(archived.room_rates.where(room_type: room_type)).to be_empty
+      end
+    end
+
+    context "when an OTA tier id is submitted" do
+      let!(:room_type) { create(:room_type, hotel: hotel, base_price: 200) }
+
+      it "is ignored rather than written onto the anchor's nightly price" do
+        described_class.new(
+          hotel: hotel,
+          selection: {
+            start_date: start_date,
+            end_date: start_date,
+            room_type_ids: [ room_type.id ],
+            rate_plan_ids: [ "tier_ota_#{room_type.id}" ],
+            apply_rates: "1",
+            price: "999.00",
+            currency: "MYR"
+          },
+          user: user
+        ).call
+
+        anchor_rate = room_type.standard_rate_plan.room_rates.find_by(room_type: room_type, date: start_date)
+        expect(anchor_rate&.price&.to_f).not_to eq(999.0)
+      end
+    end
   end
 end
