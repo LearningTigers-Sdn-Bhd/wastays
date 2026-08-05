@@ -38,28 +38,46 @@ module ReservationPolicies
 
     private
 
+    # The sheet hides and *disables* everything beneath the gate switch when the
+    # policy is turned off, and a disabled input is not submitted at all. So an
+    # absent attribute means "leave it alone", never "clear it". Assigning what was
+    # missing would blank a nights policy's rate and fail its own validation on the
+    # way out — and quietly take the hotel's guest note and refund terms with it.
     def assign_attributes
       pricing_type = @attributes[:pricing_type].presence || @policy.pricing_type
 
       @policy.assign_attributes(
         active: boolean(:active),
         pricing_type: pricing_type,
-        rate_value: pricing_type == "manual" ? nil : @attributes[:rate_value],
-        percentage_basis: pricing_type == "percentage" ? @attributes[:percentage_basis] : nil,
         # A manual policy is nothing but the override path, so the flag is moot;
         # a computed one only offers "custom" when the hotel says it may.
-        allow_amount_override: pricing_type == "manual" || boolean(:allow_amount_override),
-        description: @attributes[:description]
+        allow_amount_override: pricing_type == "manual" || boolean(:allow_amount_override)
       )
 
+      assign_pricing(pricing_type)
+      assign_if_submitted(:description)
       assign_refund_terms if @policy.cancellation?
     end
 
+    def assign_pricing(pricing_type)
+      # Switching to manual is the one case where clearing is the intent: there is
+      # no configured amount to keep.
+      return @policy.assign_attributes(rate_value: nil, percentage_basis: nil) if pricing_type == "manual"
+
+      assign_if_submitted(:rate_value)
+      pricing_type == "percentage" ? assign_if_submitted(:percentage_basis) : @policy.percentage_basis = nil
+    end
+
     def assign_refund_terms
-      @policy.assign_attributes(
-        refund_processing_days: @attributes[:refund_processing_days].presence,
-        refund_method: @attributes[:refund_method].presence
-      )
+      assign_if_submitted(:refund_processing_days) { |value| value.presence }
+      assign_if_submitted(:refund_method) { |value| value.presence }
+    end
+
+    def assign_if_submitted(key)
+      return unless @attributes.key?(key)
+
+      value = @attributes[key]
+      @policy.public_send(:"#{key}=", block_given? ? yield(value) : value)
     end
 
     def assign_tiers

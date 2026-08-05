@@ -60,8 +60,14 @@
               <p class="text-sm text-foreground" aria-live="polite" data-reservation-policy-form-target="sentence"></p>
 
               <div data-reservation-policy-form-target="rateField" hidden>
+                <%# rate_value is a decimal column, so a night count renders as "1.0" and a
+                    browser stepping in whole numbers rejects it. min is the step basis, not
+                    just a floor, so the two must agree. The Stimulus controller keeps these
+                    in sync as the pricing type changes; these are the values for first paint. %>
                 <%= render PanelsUI::FormField.new(form:, attribute: :rate_value, label: "Amount") do |field| %>
-                  <% field.with_input(type: :number, min: 0.01, step: 0.01, inputmode: "decimal",
+                  <% field.with_input(type: :number, value: policy.rate_value_for_input,
+                       min: policy.nights? ? 1 : 0.01, step: policy.nights? ? 1 : 0.01,
+                       inputmode: policy.nights? ? "numeric" : "decimal",
                        data: { reservation_policy_form_target: "rateValue" }) %>
                   <% field.with_addon(align: :inline_start, data: { reservation_policy_form_target: "currencyAddon" }) { currency } %>
                   <% field.with_addon(align: :inline_end, data: { reservation_policy_form_target: "percentAddon" }) { "%" } %>

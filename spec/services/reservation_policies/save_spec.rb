@@ -56,6 +56,52 @@ RSpec.describe ReservationPolicies::Save do
     expect(result.error).to include("100 or less")
   end
 
+  # The sheet disables every control beneath the gate switch when a policy is
+  # switched off, and disabled inputs are not submitted. Turning a policy off
+  # therefore posts `active` and nothing else.
+  describe "turning a policy off from the sheet" do
+    it "switches no-show off without complaining about the rate it still has" do
+      result = described_class.call(policy: policy_for("no_show"), attributes: { active: "0" })
+
+      expect(result).to be_success
+      expect(result.policy).not_to be_active
+      expect(result.policy.rate_value).to eq(1)
+    end
+
+    it "keeps the guest note" do
+      policy = policy_for("late_checkout")
+      described_class.call(policy: policy, attributes: { active: "1", description: "Waived for repeat guests." })
+
+      described_class.call(policy: policy, attributes: { active: "0" })
+
+      expect(policy.reload.description).to eq("Waived for repeat guests.")
+    end
+
+    it "keeps a configured amount and basis" do
+      policy = policy_for("late_checkout")
+      described_class.call(policy: policy, attributes: {
+        active: "1", pricing_type: "percentage", rate_value: "50", percentage_basis: "first_night"
+      })
+
+      described_class.call(policy: policy, attributes: { active: "0" })
+
+      expect(policy.reload.rate_value).to eq(50)
+      expect(policy.percentage_basis).to eq("first_night")
+    end
+
+    it "keeps cancellation refund terms" do
+      policy = policy_for("cancellation")
+      described_class.call(policy: policy, attributes: {
+        active: "1", refund_processing_days: "7", refund_method: "bank_transfer"
+      })
+
+      described_class.call(policy: policy, attributes: { active: "0" })
+
+      expect(policy.reload.refund_processing_days).to eq(7)
+      expect(policy.refund_method).to eq("bank_transfer")
+    end
+  end
+
   it "refuses to make a no-show policy anything but whole nights" do
     result = described_class.call(
       policy: policy_for("no_show"),

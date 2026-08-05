@@ -103,6 +103,22 @@ RSpec.describe HotelReservationPolicy do
     expect(record.errors[:transaction_code]).to include("must belong to the same hotel")
   end
 
+  # A number input stepping in whole nights rejects "1.0", which is what the
+  # decimal column hands back.
+  describe "#rate_value_for_input" do
+    it "renders a night count without its fractional part" do
+      expect(policy(policy_type: "no_show", pricing_type: "nights", rate_value: 1).rate_value_for_input).to eq(1)
+    end
+
+    it "keeps the decimal on money and percentages" do
+      expect(policy(pricing_type: "fixed", rate_value: 45.5).rate_value_for_input).to eq(45.5)
+    end
+
+    it "is blank for a manual policy" do
+      expect(policy(pricing_type: "manual").rate_value_for_input).to be_nil
+    end
+  end
+
   describe "#pricing_label" do
     it "reads as plain language" do
       expect(policy(active: false).pricing_label).to eq("Not charged")

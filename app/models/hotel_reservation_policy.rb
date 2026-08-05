@@ -64,6 +64,15 @@ class HotelReservationPolicy < ApplicationRecord
 
   def whole_nights = rate_value.to_i
 
+  # rate_value is a decimal column, so a night count comes back as 1.0. A number
+  # input stepping in whole numbers rejects that, so nights render without the
+  # fractional part; money and percentages keep theirs.
+  def rate_value_for_input
+    return if rate_value.blank?
+
+    nights? ? whole_nights : rate_value
+  end
+
   def formatted_rate
     ActiveSupport::NumberHelper.number_to_rounded(rate_value.to_d, precision: 2, delimiter: ",", strip_insignificant_zeros: false)
   end

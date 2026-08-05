@@ -39,15 +39,31 @@ export default class extends Controller {
     if (this.hasCurrencyAddonTarget) this.currencyAddonTarget.hidden = pricing !== "fixed"
     if (this.hasPercentAddonTarget) this.percentAddonTarget.hidden = pricing !== "percentage"
     if (this.hasOverrideFieldTarget) this.overrideFieldTarget.hidden = pricing === "manual"
-    if (this.hasRateValueTarget) {
-      this.rateValueTarget.step = pricing === "nights" ? "1" : "0.01"
-      this.rateValueTarget.max = pricing === "percentage" ? "100" : ""
-    }
+    if (this.hasRateValueTarget) this.syncRateConstraints(pricing)
     this.sentenceTarget.textContent = this.sentenceFor(pricing)
+
 
     this.tierRows().forEach((row) => this.syncTierRow(row))
     if (this.hasRefundBlockTarget) this.syncRefund()
     if (this.hasExampleTarget) this.exampleTarget.textContent = this.workedExample()
+  }
+
+  // `min` is the basis a browser steps from, not just a floor: leaving min="0.01"
+  // while setting step="1" makes 1 an invalid value and only 0.01, 1.01, 2.01…
+  // acceptable. Nights are whole numbers, so both have to move together — and the
+  // stored value is a decimal column, which renders as "1.0" and would be rejected.
+  syncRateConstraints(pricing) {
+    const field = this.rateValueTarget
+    const nights = pricing === "nights"
+
+    field.min = nights ? "1" : "0.01"
+    field.step = nights ? "1" : "0.01"
+    field.max = pricing === "percentage" ? "100" : ""
+
+    if (nights && field.value !== "") {
+      const whole = Math.max(1, Math.trunc(Number(field.value) || 1))
+      if (String(whole) !== field.value) field.value = String(whole)
+    }
   }
 
   sentenceFor(pricing) {
