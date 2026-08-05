@@ -23,13 +23,18 @@ class GuestRegistrationCard < ApplicationRecord
   validates :signature_data_url, presence: true, if: :signed?
   validate :hotel_matches_booking
 
+  # The terms as they stand when the guest signs. `cancellation_policy_data` carries
+  # the tier table; `cancellation_policy` keeps the flat text for readers that have
+  # not moved over yet, and for cards signed before policies became structured.
   def capture_terms_snapshot_preview
     policy = hotel.property_policy
+    cancellation = Cancellations::PolicySummary.for_hotel(hotel)
 
     {
       "check_in_time" => policy&.check_in_time,
       "check_out_time" => policy&.check_out_time,
-      "cancellation_policy" => policy&.cancellation_policy
+      "cancellation_policy_data" => Cancellations::PolicySummary.snapshot_for(hotel).presence,
+      "cancellation_policy" => cancellation.to_text.presence || policy&.cancellation_policy
     }.compact
   end
 

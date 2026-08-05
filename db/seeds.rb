@@ -173,26 +173,13 @@ platform_permissions = [
   { name: 'Dispatch Housekeeping Tasks', slug: 'dispatch_housekeeping_tasks' }
 ]
 
-cancellation_templates = [
-  { name: 'Flexible', body: 'Full refund if cancelled at least 24 hours before check-in time. No refund if cancelled within 24 hours.' },
-  { name: 'Moderate', body: 'Full refund if cancelled at least 5 days before check-in time. 50% refund if cancelled between 2 and 5 days. No refund within 48 hours.' },
-  { name: 'Strict', body: 'No refund for cancellations.' }
-]
-
-SeedLog.section('Permissions and templates')
+SeedLog.section('Permissions')
 platform_permissions.each do |permission_attrs|
   Permission.find_or_create_by!(slug: permission_attrs[:slug]) do |permission|
     permission.name = permission_attrs[:name]
   end
 end
 SeedLog.ok("#{platform_permissions.size} permissions ready")
-
-cancellation_templates.each do |template_attrs|
-  CancellationPolicyTemplate.find_or_create_by!(name: template_attrs[:name]) do |template|
-    template.body = template_attrs[:body]
-  end
-end
-SeedLog.ok("#{cancellation_templates.size} cancellation templates ready")
 
 if Rails.env.development?
   SeedLog.section('Accounts, hotels, and users')

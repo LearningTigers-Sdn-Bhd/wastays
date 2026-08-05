@@ -73,6 +73,40 @@ RSpec.describe VoucherPdfService do
     expect(text).not_to include("BALANCE DUE")
   end
 
+  it "renders the cancellation tier table from the booking's own snapshot, with the description beneath" do
+    booking.update!(cancellation_policy_snapshot_data: {
+      "description" => "Non-refundable during Hari Raya.",
+      "refund_processing_days" => 7,
+      "refund_method" => "original_payment_method",
+      "tiers" => [
+        { "days_before_arrival" => 14, "window" => "14+ days before arrival", "charge" => "No charge" },
+        { "days_before_arrival" => 0, "window" => "Less than 1 day before arrival", "charge" => "keep 100.00% of total stay" }
+      ]
+    })
+
+    text = pdf_text(described_class.new(booking).generate)
+
+    expect(text).to include(
+      "If cancelled",
+      "14+ days before arrival",
+      "No charge",
+      "Less than 1 day before arrival",
+      "keep 100.00% of total stay",
+      "Refunds are issued to the original payment method within 7 working days.",
+      "Non-refundable during Hari Raya."
+    )
+    # The prose snapshot is never shown alongside the table it could contradict.
+    expect(text).not_to include("No refund")
+  end
+
+  it "falls back to the legacy prose for bookings taken before the policy was structured" do
+    booking.update!(cancellation_policy_snapshot: "Free cancellation up to 24 hours before arrival")
+
+    text = pdf_text(described_class.new(booking).generate)
+
+    expect(text).to include("Free cancellation up to 24 hours before arrival")
+  end
+
   it "does not count posted room charges as payments" do
     booking.update!(total_amount: 300.0)
     folio = create(:booking_folio, booking: booking, hotel: hotel)

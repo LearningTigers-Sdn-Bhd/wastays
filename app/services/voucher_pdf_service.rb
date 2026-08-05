@@ -20,6 +20,9 @@ class VoucherPdfService
     @booking_rooms = booking.booking_rooms.includes(:room_type)
     @snapshot     = booking.hotel_snapshot || {}
     @policy       = @snapshot["property_policy"] || {}
+    # The booking's own snapshot, not the hotel's current policy: a voucher must
+    # keep saying what the guest agreed to.
+    @cancellation = Cancellations::PolicySummary.for_record(booking, legacy_text: @policy["cancellation_policy"])
   end
 
   def generate
@@ -294,7 +297,7 @@ class VoucherPdfService
   end
 
   def draw_policies(pdf)
-    cancellation = @policy["cancellation_policy"]
+    cancellation = @cancellation
     return unless cancellation.present?
 
     pdf.move_down 8
@@ -304,7 +307,34 @@ class VoucherPdfService
     pdf.fill_color TEXT_MUTED
     pdf.text "• Identification required upon check-in. Local government taxes may apply.", size: 8
     pdf.move_down 4
-    pdf.text "• #{cancellation}", size: 8
+
+    draw_cancellation_tiers(pdf, cancellation.rows)
+    draw_cancellation_notes(pdf, cancellation)
+  end
+
+  # The table is generated from the same tier rows the cancellation fee is computed
+  # from, so the voucher can never quote a number the folio disagrees with.
+  def draw_cancellation_tiers(pdf, rows)
+    return if rows.empty?
+
+    pdf.fill_color TEXT_PRIMARY
+    pdf.text "Cancellation", size: 8, style: :bold
+    pdf.move_down 4
+
+    data = [ [ "If cancelled", "Charge" ] ] + rows.map { |row| [ row.window, row.charge ] }
+    pdf.table(data, width: pdf.bounds.width, cell_style: { size: 8, padding: [ 4, 6 ], border_color: BORDER_GRAY, border_width: 0.5 }) do
+      row(0).font_style = :bold
+      row(0).background_color = LIGHT_GRAY
+    end
+    pdf.move_down 6
+  end
+
+  def draw_cancellation_notes(pdf, cancellation)
+    pdf.fill_color TEXT_MUTED
+    [ cancellation.refund_note, cancellation.description, cancellation.structured? ? nil : cancellation.legacy_text ].compact.each do |note|
+      pdf.text "• #{note}", size: 8
+      pdf.move_down 4
+    end
   end
 
   def draw_footer(pdf)

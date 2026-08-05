@@ -258,10 +258,10 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-[#d9c5a0] mt-1.5 flex-none"></span>
                 <p class="font-bold">Identification required upon check-in. Local government taxes may apply.</p>
               </div>
-              <% if (policy = @booking.cancellation_policy).present? %>
-                <div class="flex items-start gap-x-3">
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#d9c5a0] mt-1.5 flex-none"></span>
-                  <p class="font-bold"><%= policy %></p>
+              <% if @booking.cancellation_summary.present? %>
+                <div class="pt-2">
+                  <p class="font-bold text-[10px] uppercase tracking-widest text-primary mb-2">Cancellation</p>
+                  <%= render "public/shared/cancellation_policy", summary: @booking.cancellation_summary %>
                 </div>
               <% end %>
             </div>

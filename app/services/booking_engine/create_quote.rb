@@ -138,6 +138,9 @@ module BookingEngine
           display_rate_source: display_snapshot[:source],
           expires_at: 15.minutes.from_now,
           hotel_snapshot: @hotel.booking_snapshot,
+          # Dual-written for one release: the structured payload is what everything
+          # reads, the text column keeps older readers alive until it is dropped.
+          cancellation_policy_snapshot_data: Cancellations::PolicySummary.snapshot_for(@hotel),
           cancellation_policy_snapshot: @hotel.property_policy&.cancellation_policy,
           guest_name: @guest_name,
           guest_email: @guest_email,

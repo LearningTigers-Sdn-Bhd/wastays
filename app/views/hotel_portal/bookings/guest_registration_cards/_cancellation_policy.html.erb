@@ -1,0 +1,28 @@
+<%#
+  Tier table first, the hotel's own terms beneath. The rows are the same ones the
+  cancellation fee is computed from, so the signed card and the folio agree.
+%>
+<% compact = local_assigns.fetch(:compact, false) %>
+<% if summary.rows.any? %>
+  <table class="w-full <%= compact ? "text-[11px]" : "text-sm" %> text-foreground">
+    <thead>
+      <tr class="text-[10px] uppercase tracking-wide text-muted-foreground">
+        <th scope="col" class="text-left font-bold pb-1">If cancelled</th>
+        <th scope="col" class="text-right font-bold pb-1">Charge</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% summary.rows.each do |row| %>
+        <tr class="border-t border-border">
+          <td class="py-1 pr-2"><%= row.window %></td>
+          <td class="py-1 text-right font-semibold"><%= row.charge %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<% notes = [ summary.refund_note, summary.description, (summary.legacy_text unless summary.structured?) ].compact_blank %>
+<% notes.each do |note| %>
+  <div class="<%= compact ? "mt-1 text-[11px]" : "mt-2 text-sm" %> leading-relaxed text-foreground"><%= simple_format(note) %></div>
+<% end %>
