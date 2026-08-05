@@ -20,6 +20,12 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
     create(:role_permission, role: role, permission: permission)
   end
 
+  def configure_late_checkout_policy(pricing_type:, rate_value:)
+    ReservationPolicies::EnsureDefaults.call(hotel)
+    hotel.hotel_reservation_policies.find_by!(policy_type: "late_checkout")
+      .update!(pricing_type: pricing_type, rate_value: rate_value)
+  end
+
   def create_group_child(group, position:, room_number:, guest_name:)
     create(:booking, hotel: hotel, group_booking: group, group_position: position, status: "due_out_detected", guest_name: guest_name, check_in: Date.yesterday, check_out: Date.current).tap do |record|
       create(:booking_room, booking: record, room_type: room_type, room_number: room_number)
@@ -56,14 +62,53 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
         "Extend the scheduled checkout and post the calculated late-checkout charge.",
         "Extend the scheduled checkout without adding a late-checkout charge.",
         "Keep the scheduled checkout unchanged and require the guest to check out.",
-        "Charge calculation",
+        "Adjustment type",
         "Save decision"
       )
+      # The seeded late-checkout policy is manual, so there is nothing to follow —
+      # the sheet offers only the staff-entered amount.
+      expect(dialog.text).not_to include("Follow the late checkout policy")
+      expect(dialog.at_css("input[type='hidden'][name='charge_source'][value='custom']")).to be_present
       expect(dialog.at_css("[data-controller~='booking-actions--late-checkout']")).to be_present
       expect(dialog.at_css("fieldset[data-variant='card'] input[type='radio'][name='resolution']")).to be_present
       expect(dialog.at_css("input[name='check_out']")).to be_present
       expect(response.body).not_to include("<!DOCTYPE html>")
       expect(response.body).not_to include("offcanvas")
+    end
+
+    it "offers follow-policy with the computed amount pre-filled and disabled" do
+      configure_late_checkout_policy(pricing_type: "fixed", rate_value: 80)
+
+      get hotel_booking_action_late_checkout_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      document = Nokogiri::HTML(response.body)
+      dialog = document.at_css("dialog#booking-late-checkout-sheet")
+
+      expect(dialog.text).to include("Charge calculation", "Follow the late checkout policy", "Custom charge")
+      policy_radio = dialog.at_css("input[type='radio'][name='charge_source'][value='policy']")
+      expect(policy_radio).to be_present
+      expect(policy_radio["checked"]).to be_present
+
+      # Never a blank greyed-out box: the figure staff are confirming is on screen.
+      amount_field = dialog.at_css("input[name='policy_amount']")
+      expect(amount_field).to be_present
+      expect(amount_field["disabled"]).to be_present
+      expect(amount_field["value"]).to eq("MYR 80.00")
+    end
+
+    it "shows policy applied per booking for a group sheet" do
+      configure_late_checkout_policy(pricing_type: "fixed", rate_value: 80)
+      group = create(:group_booking, hotel: hotel, name: "Conference Group")
+      booking.update!(group_booking: group, group_position: 1)
+      create_group_child(group, position: 2, room_number: "102", guest_name: "Grace Hopper")
+
+      get hotel_booking_action_late_checkout_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-late-checkout-sheet")
+      expect(dialog.text).to include("Policy applied per booking")
+      expect(dialog.at_css("input[name='policy_amount']")).to be_nil
     end
 
     it "renders the group target selector for a group booking" do
@@ -92,7 +137,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
   describe "POST the late-checkout resolution" do
     it "applies the charge and completes the sheet on a Turbo submission" do
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { resolution: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
+        params: { resolution: "charge", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
@@ -100,6 +145,18 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
       expect(response.body).to include('target="booking_action_sheet"')
       expect(booking.reload.status).to eq("checked_in")
       expect(flash[:notice]).to eq("Late checkout charge applied.")
+    end
+
+    it "charges the policy amount and ignores a tampered amount on the policy path" do
+      configure_late_checkout_policy(pricing_type: "fixed", rate_value: 80)
+
+      post hotel_booking_action_late_checkout_path(hotel, booking),
+        params: { resolution: "charge", charge_source: "policy", amount: "1.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      charge = booking.reload.booking_folio.folio_transactions.charge.find_by(category: "late_checkout_charge")
+      expect(charge.amount).to eq(80.0)
     end
 
     it "approves late checkout without posting a charge" do
@@ -129,7 +186,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
 
     it "redirects to the control panel on a direct request" do
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { resolution: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") }
+        params: { resolution: "charge", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") }
 
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Late checkout charge applied.")
@@ -163,7 +220,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
       sibling = create_group_child(group, position: 2, room_number: "102", guest_name: "Grace Hopper")
 
       post hotel_booking_action_late_checkout_path(hotel, booking),
-        params: { target_scope: "individual", booking_ids: [ booking.id, sibling.id ], resolution: "charge", charge_calculation: "standard", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
+        params: { target_scope: "individual", booking_ids: [ booking.id, sibling.id ], resolution: "charge", amount: "50.00", check_out: booking.check_out.strftime("%Y-%m-%dT%H:%M") },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)

@@ -139,17 +139,39 @@ class GuestRegistrationCardPdfService
   end
 
   def draw_policy_section(pdf)
+    summary = @presenter.cancellation_summary
     pdf.fill_color TEXT
-    if @presenter.terms&.dig("cancellation_policy").present?
+    if summary.present?
       pdf.text "Cancellation Policy", size: 8, style: :bold
       pdf.move_down 2
-      pdf.fill_color TEXT_MUTED
-      pdf.text @presenter.terms["cancellation_policy"], size: 9, leading: 2
+      draw_cancellation_tiers(pdf, summary.rows)
+      draw_cancellation_notes(pdf, summary)
     else
       pdf.fill_color TEXT_MUTED
       pdf.text "Hotel terms are not configured.", size: 9
     end
     pdf.move_down 12
+  end
+
+  # Generated from the stored tier rows — the schedule the guest signs against is
+  # the same one the folio charges from.
+  def draw_cancellation_tiers(pdf, rows)
+    return if rows.empty?
+
+    data = [ [ "If cancelled", "Charge" ] ] + rows.map { |row| [ row.window, row.charge ] }
+    pdf.table(data, width: pdf.bounds.width, cell_style: { size: 8, padding: [ 3, 5 ], border_color: BORDER, border_width: 0.5 }) do
+      row(0).font_style = :bold
+    end
+    pdf.move_down 4
+  end
+
+  def draw_cancellation_notes(pdf, summary)
+    pdf.fill_color TEXT_MUTED
+    notes = [ summary.refund_note, summary.description, summary.structured? ? nil : summary.legacy_text ].compact
+    notes.each do |note|
+      pdf.text note, size: 9, leading: 2
+      pdf.move_down 2
+    end
   end
 
   def draw_notes_section(pdf, title, text)

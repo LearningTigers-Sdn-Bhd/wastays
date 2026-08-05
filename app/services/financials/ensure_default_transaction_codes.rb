@@ -29,6 +29,7 @@ module Financials
     CATEGORY_SYSTEM_KEYS = {
       "accommodation" => "room_revenue",
       "no_show_charge" => "no_show_revenue",
+      "cancellation_charge" => "cancel_revenue",
       "late_checkout_charge" => "late_checkout_revenue",
       "early_departure_charge" => "early_departure_revenue",
       "fb" => "fnb_revenue",

@@ -161,10 +161,12 @@
       <section>
         <% if @presenter.terms.present? %>
           <div class="grid gap-3 md:grid-cols-2">
-            <% if @presenter.terms["cancellation_policy"].present? %>
+            <% if @presenter.cancellation_summary.present? %>
               <div class="rounded-md border border-border p-4 md:col-span-2">
                 <p class="text-xs font-bold uppercase text-muted-foreground">Cancellation Policy</p>
-                <div class="mt-2 text-sm leading-6 text-foreground"><%= simple_format(@presenter.terms["cancellation_policy"]) %></div>
+                <div class="mt-2">
+                  <%= render "hotel_portal/bookings/guest_registration_cards/cancellation_policy", summary: @presenter.cancellation_summary %>
+                </div>
               </div>
             <% end %>
           </div>
@@ -323,10 +325,12 @@
     <section>
       <% if @presenter.terms.present? %>
         <div class="grid gap-2 text-xs sm:grid-cols-2">
-          <% if @presenter.terms["cancellation_policy"].present? %>
+          <% if @presenter.cancellation_summary.present? %>
             <div class="rounded-md border border-border bg-muted p-2 sm:col-span-2">
-              <p class="text-[10px] font-bold uppercase text-muted-foreground">Policy</p>
-              <div class="mt-0.5 leading-relaxed text-foreground"><%= simple_format(@presenter.terms["cancellation_policy"]) %></div>
+              <p class="text-[10px] font-bold uppercase text-muted-foreground">Cancellation Policy</p>
+              <div class="mt-0.5">
+                <%= render "hotel_portal/bookings/guest_registration_cards/cancellation_policy", summary: @presenter.cancellation_summary, compact: true %>
+              </div>
             </div>
           <% end %>
         </div>

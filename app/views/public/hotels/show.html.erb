@@ -321,8 +321,8 @@
                 <span class="font-bold text-foreground"><%= @hotel.check_out_time %></span>
               </li>
               <li class="pt-1 border-t border-muted">
-                <p class="font-bold text-foreground mb-1 text-[10px] uppercase tracking-widest">Important Info</p>
-                <p class="text-xs leading-relaxed"><%= @hotel.cancellation_policy %></p>
+                <p class="font-bold text-foreground mb-1 text-[10px] uppercase tracking-widest">Cancellation</p>
+                <%= render "public/shared/cancellation_policy", summary: @hotel.cancellation_summary, fallback: Public::HotelPresenter::DEFAULT_CANCELLATION_TEXT %>
               </li>
             </ul>
           </div>

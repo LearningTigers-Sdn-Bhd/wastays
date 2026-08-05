@@ -63,6 +63,21 @@ RSpec.describe "HotelPortal::Bookings::Actions no-shows", frozen_time: :business
       expect(response.body).not_to include("offcanvas")
     end
 
+    it "describes what the hotel's no-show policy actually bills" do
+      ReservationPolicies::EnsureDefaults.call(hotel)
+      policy = hotel.hotel_reservation_policies.find_by!(policy_type: "no_show")
+
+      policy.update!(rate_value: 2)
+      get hotel_booking_action_mark_no_show_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
+      expect(Nokogiri::HTML(response.body).at_css("dialog#booking-no-show-sheet").text)
+        .to include("posts 2 nights of no-show room charges")
+
+      policy.update!(active: false)
+      get hotel_booking_action_mark_no_show_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
+      expect(Nokogiri::HTML(response.body).at_css("dialog#booking-no-show-sheet").text)
+        .to include("posts no no-show charge")
+    end
+
     it "renders the group target selector for a group booking" do
       group = create(:group_booking, hotel: hotel, name: "Conference Group")
       booking.update!(group_booking: group, group_position: 1)

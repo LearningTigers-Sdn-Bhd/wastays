@@ -1,0 +1,69 @@
+<div class="w-full space-y-4">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Change hotel default?",
+        description: "This changes tax inclusions for room revenue across the whole property.") %>
+
+  <section aria-labelledby="hotel-tax-rules-confirmation-heading" class="space-y-5"
+           data-testid="room-revenue-tax-rule-confirmation">
+    <h2 id="hotel-tax-rules-confirmation-heading" class="sr-only">Review hotel-wide tax rule change</h2>
+
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Hotel-wide configuration", role: :alert) do |alert| %>
+      <% alert.with_description do %>
+        Room revenue tax rules are inherited by late checkout, early departure, no-show and
+        cancellation charges. Review the change before applying it.
+      <% end %>
+    <% end %>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="rounded-md border border-border bg-card p-4">
+        <h3 class="text-sm font-medium text-foreground">Added</h3>
+        <p class="mt-1 text-sm text-muted-foreground"><%= @tax_rule_change.added_labels.presence&.to_sentence || "None" %></p>
+      </div>
+      <div class="rounded-md border border-border bg-card p-4">
+        <h3 class="text-sm font-medium text-foreground">Removed</h3>
+        <p class="mt-1 text-sm text-muted-foreground"><%= @tax_rule_change.removed_labels.presence&.to_sentence || "None" %></p>
+      </div>
+    </div>
+
+    <div class="rounded-md border border-border bg-card p-4">
+      <h3 class="text-sm font-medium text-foreground">Impact</h3>
+      <% if @tax_rule_change.forecast_policy == "open_folio_forecasts" %>
+        <p class="mt-1 text-sm text-foreground">
+          <strong><%= pluralize(@tax_rule_change.forecast_count, "upcoming transaction") %></strong>
+          totalling <strong><%= number_to_currency(@tax_rule_change.forecast_amount, unit: "#{current_hotel.default_currency} ") %></strong>
+          on eligible open folios will be recalculated.
+        </p>
+      <% elsif @tax_rule_change.forecast_policy == "new_bookings_only" %>
+        <p class="mt-1 text-sm text-foreground">New bookings will use these defaults. Existing open-folio forecasts remain unchanged.</p>
+      <% else %>
+        <p class="mt-1 text-sm text-foreground">Future postings will use these defaults. Existing forecasts remain unchanged.</p>
+      <% end %>
+      <p class="mt-2 text-sm text-muted-foreground">Posted transactions will not change.</p>
+    </div>
+
+    <%= form_with url: hotel_room_revenue_tax_rules_path(current_hotel), method: :patch,
+          id: "confirm-room-revenue-tax-rules-form", class: "space-y-5" do |form| %>
+      <%= hidden_field_tag "transaction_code[tax_rule_keys][]", "" %>
+      <% @tax_rule_change.after_keys.each do |key| %>
+        <%= hidden_field_tag "transaction_code[tax_rule_keys][]", key %>
+      <% end %>
+      <%= hidden_field_tag :confirm_hotel_tax_rules, "1" %>
+      <%= hidden_field_tag :freshness_token, @tax_rule_change.freshness_token %>
+
+      <%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", required: true,
+            hint: "Recorded on the financial audit trail.") do |field| %>
+        <% field.with_input(required: true, autofocus: true,
+             placeholder: "Why is this hotel-wide default changing?", autocomplete: "off") %>
+      <% end %>
+
+      <div class="flex justify-end gap-2">
+        <%= render PanelsUI::Button.new(href: hotel_room_revenue_path(current_hotel), variant: :secondary, size: :sm) do %>
+          Go back
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm, data: { turbo_submits_with: "Applying…" }) do %>
+          Apply hotel-wide
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+</div>

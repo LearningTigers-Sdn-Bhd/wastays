@@ -21,6 +21,46 @@
               <div class="mb-5 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert"><%= booking.errors.full_messages.to_sentence %></div>
             <% end %>
             <p class="text-sm text-muted-foreground">Cancellation releases the reservation inventory and cannot be reinstated.</p>
+
+            <% quote = cancellation_quote(booking) %>
+            <% per_booking = cancellation_policy_per_booking? %>
+            <% charges_fee = quote.success? && quote.fee_amount.to_d.positive? %>
+            <% if charges_fee %>
+              <section class="mt-5 space-y-3 rounded-md border border-border bg-muted/50 p-4" aria-labelledby="cancellation-policy-heading">
+                <h3 id="cancellation-policy-heading" class="text-sm font-medium text-foreground">Cancellation policy</h3>
+                <% if per_booking %>
+                  <p class="text-sm text-muted-foreground">Policy applied per booking. Each selected booking is charged its own cancellation fee, and its own refund balance is worked out from what that guest has paid.</p>
+                <% else %>
+                  <dl class="space-y-1 text-sm">
+                    <div class="flex items-center justify-between gap-4">
+                      <dt class="text-muted-foreground">Cancellation fee</dt>
+                      <dd class="font-medium tabular-nums"><%= booking.hotel.default_currency %> <%= number_with_precision(quote.fee_amount, precision: 2, delimiter: ",") %></dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-4">
+                      <dt class="text-muted-foreground">Paid to date</dt>
+                      <dd class="tabular-nums"><%= booking.hotel.default_currency %> <%= number_with_precision(quote.amount_paid, precision: 2, delimiter: ",") %></dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-4">
+                      <dt class="text-muted-foreground">Refund due</dt>
+                      <dd class="font-medium tabular-nums"><%= booking.hotel.default_currency %> <%= number_with_precision(quote.refund_amount, precision: 2, delimiter: ",") %></dd>
+                    </div>
+                  </dl>
+                  <p class="text-xs text-muted-foreground">Cancelled <%= pluralize(quote.days_out, "day") %> before arrival. The fee is pre-tax — taxes post separately from the room revenue rules. Any refund is returned through the deposit or refund request it was taken on.</p>
+                <% end %>
+
+                <%= render PanelsUI::RadioGroup.new(
+                      form: f, attribute: :charge_fee,
+                      label: "Cancellation fee",
+                      size: :sm,
+                      orientation: :horizontal,
+                      selected: params[:charge_fee].presence || "true",
+                      options: [
+                        { label: "Charge the fee", value: "true" },
+                        { label: "Waive the fee", value: "false" }
+                      ]) %>
+              </section>
+            <% end %>
+
             <div class="mt-5">
               <%= render PanelsUI::FormField.new(form: f, attribute: :cancellation_reason, label: "Cancellation reason", required: true) do |field| %>
                 <% field.with_text_area(value: params[:cancellation_reason], rows: 5, placeholder: "Explain why this reservation is being cancelled.") %>

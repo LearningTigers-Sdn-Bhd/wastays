@@ -66,6 +66,7 @@ module BookingEngine
           adults: @quote.adults,
           children: @quote.children,
           hotel_snapshot: @quote.hotel_snapshot,
+          cancellation_policy_snapshot_data: @quote.cancellation_policy_snapshot_data,
           cancellation_policy_snapshot: @quote.cancellation_policy_snapshot,
           status: "confirmed",
           payment_status: "captured",

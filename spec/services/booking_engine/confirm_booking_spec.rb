@@ -17,7 +17,10 @@ RSpec.describe BookingEngine::ConfirmBooking do
       children: 0,
       currency: 'MYR',
       hotel_snapshot: { 'name' => hotel.name },
-      cancellation_policy_snapshot: 'Free cancellation'
+      cancellation_policy_snapshot: 'Free cancellation',
+      cancellation_policy_snapshot_data: {
+        'tiers' => [ { 'days_before_arrival' => 14, 'window' => '14+ days before arrival', 'charge' => 'No charge' } ]
+      }
     )
   end
   let!(:quote_item) { create(:booking_quote_item, booking_quote: quote, room_type: room_type, subtotal: 200.0) }
@@ -63,6 +66,11 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(booking.guest_country).to eq('Singapore')
       expect(booking.tourism_tax_applied).to be(true)
       expect(booking.tourism_tax_amount.to_f).to eq(10.0)
+
+      # The quote's cancellation terms follow the booking, structured payload and
+      # legacy text alike, so a cancellation is judged by the policy sold.
+      expect(booking.cancellation_policy_snapshot_data).to eq(quote.cancellation_policy_snapshot_data)
+      expect(booking.cancellation_policy_snapshot).to eq('Free cancellation')
 
       expect(booking.booking_rooms.count).to eq(1)
       expect(booking.booking_rooms.first.room_type).to eq(room_type)

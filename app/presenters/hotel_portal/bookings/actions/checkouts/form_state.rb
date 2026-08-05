@@ -54,6 +54,7 @@ module HotelPortal
 
             {
               apply_charge: submitted_value(*prefix, "apply_charge", default: "false"),
+              charge_source: submitted_value(*prefix, "charge_source", default: "policy"),
               type: submitted_value(*prefix, "type", default: "amount"),
               value: submitted_value(*prefix, "value", default: nil),
               charge_amount: submitted_value(*prefix, "charge_amount", default: "0.00")

@@ -49,8 +49,14 @@ module Public
       property_policy&.check_out_time || "12:00 PM"
     end
 
+    DEFAULT_CANCELLATION_TEXT = "Cancellation policies are subject to the room type selected. Please review your quote before payment."
+
+    def cancellation_summary
+      @cancellation_summary ||= Cancellations::PolicySummary.for_hotel(@hotel)
+    end
+
     def cancellation_policy
-      property_policy&.cancellation_policy.presence || "Cancellation policies are subject to the room type selected. Please review your quote before payment."
+      cancellation_summary.to_text.presence || DEFAULT_CANCELLATION_TEXT
     end
 
     def starting_price(availability_service, room_types)

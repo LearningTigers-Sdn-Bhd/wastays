@@ -36,12 +36,8 @@ RSpec.describe "Operational Exceptions", type: :system do
       expect(page).to have_content("Resolve due-out")
       click_link "Resolve due-out"
 
-      expect(page).to have_content("Current rate charge")
-
-      # Select custom charge
-      find("label", text: "Additional charge").click
-
-      # Wait for custom section to appear
+      # The seeded late-checkout policy is manual, so there is no policy figure to
+      # follow — the staff-entered fields are the only path and render straight away.
       expect(page).to have_selector(
         "[data-booking-actions--late-checkout-target='customSection']",
         visible: true

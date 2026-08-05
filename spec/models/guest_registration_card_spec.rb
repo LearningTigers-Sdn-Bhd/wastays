@@ -46,6 +46,22 @@ RSpec.describe GuestRegistrationCard, type: :model do
       )
       expect(card.reload.terms_snapshot).to eq(snapshot)
     end
+
+    it "stores the structured cancellation tiers the guest is signing against" do
+      hotel = create(:hotel)
+      create(:property_policy, hotel: hotel, check_in_time: "3:00 PM", cancellation_policy: "No refund after check-in")
+      policy = create(:hotel_reservation_policy, :charging_cancellation, hotel: hotel, description: "Deposit transferable to a future stay.")
+      create(:hotel_cancellation_policy_tier, hotel_reservation_policy: policy, days_before_arrival: 14, rate_value: 0)
+      card = create(:guest_registration_card, hotel: hotel, booking: create(:booking, hotel: hotel))
+
+      snapshot = card.capture_terms_snapshot!
+
+      expect(snapshot["cancellation_policy_data"]["tiers"].first).to include("window" => "14+ days before arrival", "charge" => "No charge")
+      expect(snapshot["cancellation_policy_data"]["description"]).to eq("Deposit transferable to a future stay.")
+      # The flat text is generated from the same rows, never the retired prose.
+      expect(snapshot["cancellation_policy"]).to include("14+ days before arrival: No charge")
+      expect(snapshot["cancellation_policy"]).not_to include("No refund after check-in")
+    end
   end
 
   describe "display fields" do

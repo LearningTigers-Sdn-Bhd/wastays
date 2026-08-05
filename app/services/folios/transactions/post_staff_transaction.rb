@@ -77,16 +77,17 @@ module Folios
             ).merge(transaction_code: @transaction_code)
           ).call
 
-          next unless result.success? && taxable_charge?
+          next unless result.success? && @transaction_type == "charge"
 
-          tax_results = post_tax_transactions(result.transaction)
-          failed_tax = tax_results.find { |tax_result| !tax_result.success? }
-          if failed_tax
-            result = failure(failed_tax.error)
+          tax_result = post_attached_taxes(result.transaction)
+          unless tax_result.success?
+            result = failure(tax_result.error)
             raise ActiveRecord::Rollback
           end
 
-          result = result.with(tax_transactions: tax_results.map(&:transaction).compact)
+          next if tax_result.tax_transactions.empty?
+
+          result = result.with(tax_transactions: tax_result.tax_transactions)
         end
 
         result
@@ -277,98 +278,18 @@ module Folios
         @transaction_type == "charge" || @transaction_type == "payment"
       end
 
-      def taxable_charge?
-        @transaction_type == "charge" && @transaction_code&.is_taxable? && active_tax_rules.any?
-      end
-
-      def post_tax_transactions(parent_transaction)
-        active_tax_rules.map do |tax_rule|
-          amount = tax_rule.compute(@amount.abs).to_d
-          next if amount.zero?
-
-          tax_transaction_code = tax_rule.posting_transaction_code
-          routing_result = resolve_tax_folio(parent_transaction, tax_transaction_code)
-          return [ failure(routing_result.error) ] unless routing_result.success?
-
-          Folios::Transactions::InsertTransaction.new(
-            booking_folio: routing_result.folio,
-            amount: amount,
-            transaction_type: "charge",
-            category: "tax",
-            user: @user,
-            description: "Tax: #{tax_rule.display_name} for #{parent_transaction.description}",
-            posting_date: @posting_date,
-            options: @options.merge(
-              posting_source: @options[:posting_source].presence || "staff",
-              transaction_code: tax_transaction_code,
-              parent_transaction: parent_transaction_for_tax_line(parent_transaction, routing_result.folio),
-              metadata: (@options[:metadata] || {}).merge(
-                posting_source: @options[:posting_source].presence || "staff",
-                posted_from: "booking_show",
-                posted_by_user_id: @user&.id,
-                parent_transaction_id: parent_transaction.id,
-                parent_folio_transaction_id: parent_transaction.id,
-                parent_transaction_code_id: parent_transaction.transaction_code_id,
-                parent_transaction_code_code: parent_transaction.posted_transaction_code,
-                source_transaction_code_id: @transaction_code.id,
-                source_transaction_code_code: @transaction_code.code,
-                tax_line: tax_line(tax_rule, amount)
-              ).merge(route_metadata(routing_result))
-            )
-          ).call
-        end.compact
-      end
-
-      def resolve_tax_folio(parent_transaction, tax_transaction_code)
-        return parent_tax_route(parent_transaction) if tax_transaction_code.blank?
-
-        child_rule = @folio.booking.folio_routing_rules.active.find_by(transaction_code: tax_transaction_code)
-        return parent_tax_route(parent_transaction) if child_rule.blank?
-
-        Folios::Routing::ResolveTargetFolio.call(
-          booking: @folio.booking,
-          transaction_code: tax_transaction_code,
-          actor: @user,
-          permission_context: @options[:permission_context] || @user
-        )
-      end
-
-      def parent_tax_route(parent_transaction)
-        Folios::Routing::ResolveTargetFolio.call(
-          booking: @folio.booking,
-          transaction_code: parent_transaction.transaction_code,
+      def post_attached_taxes(parent_transaction)
+        Folios::Transactions::PostAttachedTaxes.call(
+          folio: @folio,
           parent_transaction: parent_transaction,
-          actor: @user,
-          permission_context: @options[:permission_context] || @user
-        )
-      end
-
-      def parent_transaction_for_tax_line(parent_transaction, target_folio)
-        parent_transaction if parent_transaction.booking_folio_id == target_folio&.id
-      end
-
-      def active_tax_rules
-        @active_tax_rules ||= Folios::Routing::EffectiveTaxRules.call(booking: @folio.booking, transaction_code: @transaction_code).select(&:enabled_for_posting?)
-      end
-
-      def tax_line(tax_rule, amount)
-        posting_transaction_code = tax_rule.posting_transaction_code
-        {
-          tax_id: tax_rule.hotel_tax_id,
-          primary_tax_key: tax_rule.primary_tax_key,
-          name: tax_rule.display_name,
-          type: tax_rule.tax_line_type,
-          transaction_code_id: posting_transaction_code&.id,
-          transaction_code_code: posting_transaction_code&.code,
-          source_transaction_code_id: @transaction_code.id,
-          source_transaction_code_code: @transaction_code.code,
-          rate_type: tax_rule.rate_type,
-          rate: tax_rule.amount.to_d.to_s("F"),
+          source_transaction_code: @transaction_code,
+          base_amount: @amount,
+          posting_date: @posting_date,
+          user: @user,
           basis: "staff_charge",
-          basis_amount: @amount.abs.to_s("F"),
-          amount: amount.to_s("F"),
-          source: "transaction_code_tax_rule"
-        }
+          extra_metadata: { posted_from: "booking_show", posted_by_user_id: @user&.id },
+          options: @options
+        )
       end
 
       def failure(error)

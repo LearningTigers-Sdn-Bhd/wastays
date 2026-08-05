@@ -120,117 +120,25 @@ RSpec.describe "Hotel taxes and fees", type: :system, js: true do
     expect(hotel.reload.sst_enabled?).to be(false)
   end
 
-  it "renders default transaction codes behind tabs" do
-    visit hotel_transaction_codes_path(hotel)
+  it "renders the room revenue page with both tabs" do
+    visit hotel_room_revenue_path(hotel)
 
-    expect(page).to have_content("Transaction Codes")
-    expect(page).to have_css("[data-testid='transaction-codes-default-codes-panel']", visible: :all)
-    expect(page).to have_content("Hotel Operations")
-    expect(page).to have_content("Booking Operations")
-    expect(page).to have_content("Utility Operations")
-    expect(page).to have_content("Taxes and Fees Operations")
+    expect(page).to have_content("Room Revenue")
+    expect(page).to have_css("[data-testid='room-revenue-tax-rules-panel']", visible: :all)
+    expect(page).to have_content("Tax rules for room revenue")
+    expect(page).to have_content("Posting preview")
+    expect(page).to have_content("Heritage Fee")
 
-    within("[data-testid='transaction-codes-hotel-operations-list']") do
-      expect(page).to have_content("ROOM")
-    end
-
-    within("[data-testid='transaction-codes-tax-operations-list']") do
-      expect(page).to have_content("TAX_SST")
-      expect(page).to have_content("TAX_TTX")
-      expect(page).to have_content("TAX_HF")
-      expect(page).to have_content("Heritage Fee")
-      expect(page).to have_link("Manage Taxes & Fees", href: hotel_taxes_fees_path(hotel))
-      expect(find_link("Manage Taxes & Fees")[:target]).to eq("_blank")
-    end
-
-    click_button "Additional Service Codes"
-    expect(page).to have_current_path(hotel_transaction_codes_path(hotel, tab: "additional_service_codes"))
-    expect(page).to have_css("[data-testid='transaction-codes-additional-service-codes-panel']", visible: :all)
-    expect(page).to have_content("Hotel-specific non-tax transaction codes for additional service postings.")
-    expect(page).to have_content("No additional service transaction codes found.")
+    click_button "Reservation policies"
+    expect(page).to have_current_path(hotel_room_revenue_path(hotel, tab: "reservation_policies"))
+    expect(page).to have_css("[data-testid='reservation-policies-registry']", visible: :all)
+    expect(page).to have_content("Late checkout")
+    expect(page).to have_content("Cancellation")
   end
 
-  xit "updates transaction code tax rules and footer preview dynamically" do
-    HotelTax.create!(hotel: hotel, name: "Service Charge", code: "SC", rate_type: "percentage", amount: 10.0, enabled: true)
+  it "redirects the retired transaction codes page" do
+    visit "/hotel/#{hotel.to_param}/settings/finance/transaction-codes"
 
-    visit hotel_transaction_codes_path(hotel)
-
-    within("tr", text: "FNB") do
-      click_link "Edit"
-    end
-
-    expect(page).to have_css("turbo-frame#offcanvas_drawer", text: "Edit Transaction Code: FNB")
-    expect(page).to have_no_text("Taxes to generate")
-
-    taxable_input = find("#transaction_code_is_taxable", visible: :all)
-    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", taxable_input)
-
-    expect(page).to have_text("Taxes to generate")
-    expect(page).to have_text("PRIMARY TAXES")
-    expect(page).to have_text("SST 8%")
-    expect(page).to have_text("Tourism Tax")
-    expect(page).to have_text("Service Charge")
-    expect(page).to have_text("Heritage Fee")
-
-    sst_input = find("label", text: "SST 8%").find("input[type='checkbox']", visible: :all)
-    tourism_tax_input = find("label", text: "Tourism Tax").find("input[type='checkbox']", visible: :all)
-    service_charge_input = find("label", text: "Service Charge").find("input[type='checkbox']", visible: :all)
-    heritage_fee_input = find("label", text: "Heritage Fee").find("input[type='checkbox']", visible: :all)
-    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", sst_input)
-    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", tourism_tax_input)
-    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", service_charge_input)
-    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", heritage_fee_input)
-
-    within("section[aria-label='Transaction code posting preview']") do
-      expect(page).to have_text("Food & Beverage")
-      expect(page).to have_text("SST 8%")
-      expect(page).to have_text("Tourism Tax")
-      expect(page).to have_text("Service Charge")
-      expect(page).to have_no_text("Heritage Fee")
-      expect(page).to have_text("MYR 69.00")
-    end
-
-    page.execute_script("arguments[0].checked = false; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", service_charge_input)
-
-    within("section[aria-label='Transaction code posting preview']") do
-      expect(page).to have_no_text("Service Charge")
-      expect(page).to have_text("MYR 64.00")
-    end
-
-    within("turbo-frame#offcanvas_drawer") do
-      category_input = find("input[type='hidden'][name='transaction_code[category]']", visible: :all)
-      expect(category_input.value).to eq("fb")
-      expect(page).to have_no_select("Category", options: [ "Tax" ])
-    end
-  end
-
-  # Flaky on CI: offcanvas redirect occasionally lands without the tab query param; not reproducible locally after 6 runs
-  xit "reviews and confirms a forecast-impacting hotel-wide transaction-code tax change" do
-    hotel.transaction_configuration.update!(room_revenue_tax_rule_application: "open_folio_forecasts")
-    room_type = create(:room_type, hotel: hotel)
-    booking = create(:booking, hotel: hotel, check_in: hotel_today(hotel), check_out: hotel_today(hotel) + 1.day)
-    create(:booking_room, booking: booking, room_type: room_type, subtotal: 150.0)
-    folio = create(:booking_folio, booking: booking, hotel: hotel)
-    create(:folio_forecasted_charge, booking_folio: folio, amount: 150.0)
-
-    visit hotel_transaction_codes_path(hotel)
-
-    within("tr", text: "ROOM") { click_link "Edit" }
-    taxable_input = find("#transaction_code_is_taxable", visible: :all)
-    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", taxable_input)
-    sst_input = find("label", text: "SST 8%").find("input[type='checkbox']", visible: :all)
-    page.execute_script("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change', { bubbles: true }))", sst_input)
-    click_button "Save"
-
-    expect(page).to have_css('[role="alertdialog"]', text: "Change hotel default?")
-    expect(page).to have_content("ROOM · Room Revenue")
-    expect(page).to have_content("SST 8%")
-    expect(page).to have_content("Posted transactions will not change")
-    fill_in "Reason", with: "Approved finance policy"
-    click_button "Apply hotel-wide"
-
-    expect(page).to have_current_path(hotel_transaction_codes_path(hotel, tab: "default_codes"))
-    room = hotel.transaction_codes.find_by!(system_key: "room_revenue")
-    expect(room.reload.tax_rule_keys).to include("primary:sst_tax")
+    expect(page).to have_current_path(hotel_room_revenue_path(hotel), ignore_query: true)
   end
 end

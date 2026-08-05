@@ -302,4 +302,78 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", frozen_time: :busines
       expect(response).to have_http_status(:not_found)
     end
   end
+
+  describe "the early-departure policy row" do
+    let(:early_booking) do
+      create(:booking, hotel: hotel, guest_name: "Grace Hopper", status: "checked_in", check_in: Date.current, check_out: Date.current + 2.days).tap do |record|
+        create(:booking_room, booking: record, room_type: room_type, room_number: "102", subtotal: 400)
+        create(:booking_folio, booking: record, hotel: hotel, status: "open")
+      end
+    end
+
+    def activate_early_departure_policy(pricing_type: "fixed", rate_value: 90)
+      ReservationPolicies::EnsureDefaults.call(hotel)
+      hotel.hotel_reservation_policies.find_by!(policy_type: "early_departure")
+        .update!(pricing_type: pricing_type, rate_value: rate_value)
+    end
+
+    it "offers follow-policy with the computed amount pre-filled and disabled" do
+      activate_early_departure_policy
+
+      get hotel_booking_action_checkout_path(hotel, early_booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("input[name='early_departures[#{early_booking.id}][charge_source]'][value='policy']")).to be_present
+      amount_field = document.at_css("input[name='early_departures[#{early_booking.id}][policy_amount]']")
+      expect(amount_field).to be_present
+      expect(amount_field["disabled"]).to be_present
+      expect(amount_field["value"]).to eq("MYR 90.00")
+    end
+
+    it "omits the policy option when the policy names no figure" do
+      get hotel_booking_action_checkout_path(hotel, early_booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("input[type='radio'][name='early_departures[#{early_booking.id}][charge_source]']")).to be_nil
+      expect(document.at_css("input[type='hidden'][name='early_departures[#{early_booking.id}][charge_source]'][value='custom']")).to be_present
+    end
+
+    # The submitted charge_amount is a hidden field the browser writes; on the
+    # policy path the server recomputes it from the policy and ignores the input.
+    it "charges the policy amount and ignores a tampered charge amount" do
+      activate_early_departure_policy
+      stub_checkout(success: true)
+
+      post hotel_booking_action_checkout_path(hotel, early_booking),
+        params: {
+          booking: { checked_out_at: Time.current.strftime("%Y-%m-%dT%H:%M") },
+          early_departures: {
+            early_booking.id => { apply_charge: "true", charge_source: "policy", type: "amount", value: "5", charge_amount: "5.00" }
+          }
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(Checkouts::ProcessBookingCheckout).to have_received(:call)
+        .with(hash_including(early_departure_params: { apply_charge: "true", charge_amount: 90.to_d }))
+    end
+
+    it "keeps the staff-entered amount on the custom path" do
+      activate_early_departure_policy
+      stub_checkout(success: true)
+
+      post hotel_booking_action_checkout_path(hotel, early_booking),
+        params: {
+          booking: { checked_out_at: Time.current.strftime("%Y-%m-%dT%H:%M") },
+          early_departures: {
+            early_booking.id => { apply_charge: "true", charge_source: "custom", type: "amount", value: "25", charge_amount: "25.00" }
+          }
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(Checkouts::ProcessBookingCheckout).to have_received(:call)
+        .with(hash_including(early_departure_params: { apply_charge: "true", charge_amount: 25.to_d }))
+    end
+  end
 end

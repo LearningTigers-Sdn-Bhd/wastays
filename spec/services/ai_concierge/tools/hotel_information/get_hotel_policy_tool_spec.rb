@@ -82,6 +82,19 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetHotelPolicyTool do
     )
   end
 
+  it "answers cancellation questions from the structured tiers rather than prose" do
+    hotel = create(:hotel, :with_ai_concierge)
+    create(:property_policy, hotel: hotel, check_in_time: "15:00", cancellation_policy: "Ask the front desk")
+    policy = create(:hotel_reservation_policy, :charging_cancellation, hotel: hotel)
+    create(:hotel_cancellation_policy_tier, hotel_reservation_policy: policy, days_before_arrival: 14, rate_value: 0)
+
+    result = described_class.new(hotel: hotel, policy_topic: "hotel_policy", query: "what is your cancellation policy?").call
+
+    expect(result["cancellation_policy"]).to start_with("14+ days before arrival: No charge")
+    expect(result["cancellation_policy"]).not_to include("Ask the front desk")
+    expect(result["answer"]).to start_with("Cancellation policy: 14+ days before arrival: No charge")
+  end
+
   it "ignores documents without chunks" do
     hotel = create(:hotel, :with_ai_concierge)
     create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Empty", embedding_status: "indexed")
