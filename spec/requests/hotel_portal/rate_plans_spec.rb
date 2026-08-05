@@ -30,7 +30,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'GET /hotel/:hotel_id/rate_plans/:id/edit' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom') }
 
     it 'renders the edit form in a sheet' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
@@ -51,7 +51,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
     it 'offers only Per Person when the hotel is pax-pricing only' do
       hotel.update!(pax_pricing_only: true)
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
@@ -104,7 +104,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     end
 
     it 'wires up a live price preview for each age band, using the room type Standard Rate and a mode choice' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
@@ -117,7 +117,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     end
 
     it 'shows the prominent empty-state Add Band button when there are no age bands yet' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
@@ -127,7 +127,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     end
 
     it 'hides the empty-state Add Band button once age bands already exist' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
@@ -202,7 +202,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'PATCH /hotel/:hotel_id/rate_plans/:id' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom') }
 
     it 'updates the rate plan' do
       patch hotel_rate_plan_path(hotel, rate_plan), params: {
@@ -225,6 +225,28 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.reload.room_types).not_to include(room_type)
     end
 
+    it 'refuses to reassign a standard plan, even if room_type_pricing is submitted' do
+      other_room_type = create(:room_type, hotel: hotel, name: 'Suite')
+      standard = room_type.rate_plans.find_by(kind: 'standard')
+
+      patch hotel_rate_plan_path(hotel, standard), params: {
+        rate_plan: { room_type_pricing: { other_room_type.id.to_s => { enabled: "1", pricing_mode: "fixed" } } }
+      }
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      expect(standard.reload.room_types).to contain_exactly(room_type)
+    end
+
+    it 'refuses to unassign a standard plan from its own room category' do
+      standard = room_type.rate_plans.find_by(kind: 'standard')
+
+      patch hotel_rate_plan_path(hotel, standard), params: {
+        rate_plan: { room_type_pricing: { room_type.id.to_s => { enabled: "0" } } }
+      }
+
+      expect(standard.reload.room_types).to contain_exactly(room_type)
+    end
+
     # An unchecked PanelsUI::Checkbox submits no `enabled` key at all — the row
     # only reaches the server because its pricing_mode field always submits.
     it 'removes a room type when the enabled key is omitted entirely' do
@@ -240,7 +262,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'DELETE /hotel/:hotel_id/rate_plans/:id' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom') }
 
     it 'deletes custom rate plan' do
       expect {
@@ -275,7 +297,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'PATCH /hotel/:hotel_id/rate_plans/:id/archive' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom') }
 
     it 'archives a custom rate plan, including one with existing bookings' do
       booking = create(:booking, hotel: hotel)
@@ -309,7 +331,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'PATCH /hotel/:hotel_id/rate_plans/:id/unarchive' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', archived_at: Time.current) }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom', archived_at: Time.current) }
 
     it 'restores an archived rate plan' do
       patch unarchive_hotel_rate_plan_path(hotel, rate_plan)

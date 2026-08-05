@@ -123,7 +123,15 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   # pricing_mode/pricing_value, from the per-room-type rows submitted by the
   # form. Returns false (adding an error onto rate_plan) if any row fails to
   # save, so the caller can roll back the whole create/update.
+  #
+  # A standard plan is created with its room category and stays bound to it:
+  # reassigning one would attach a second category to another category's anchor
+  # plan and leave the first without an anchor of its own. The form renders that
+  # section read-only, and this drops the parameters regardless of what was
+  # submitted.
   def sync_room_type_pricing!(rate_plan, room_type_pricing)
+    return true if rate_plan.standard_rate?
+
     room_type_pricing.each do |room_type_id, attrs|
       room_type = current_hotel.room_types.find_by(id: room_type_id)
       next unless room_type

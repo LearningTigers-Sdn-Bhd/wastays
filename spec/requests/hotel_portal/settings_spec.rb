@@ -305,6 +305,24 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(Nokogiri::HTML(response.body).at_css('[data-testid="rate-plans-registry"]')).to be_present
     end
 
+    it "splits standard plans onto their own tab, so system rows do not bury composed plans" do
+      room_type = create(:room_type, hotel: hotel, name: "Ocean Villa")
+      composed = create(:rate_plan, hotel: hotel, name: "Breakfast Rate", kind: "custom", room_type: room_type)
+      standard = room_type.rate_plans.find_by(kind: "standard")
+
+      get hotel_rates_settings_path(hotel)
+      plans_tab = Nokogiri::HTML(response.body)
+      expect(plans_tab.at_css('[data-testid="rate-plans-registry"]')).to be_present
+      expect(plans_tab.at_css("#rate-plan-row-#{composed.id}")).to be_present
+      expect(plans_tab.at_css("#rate-plan-row-#{standard.id}")).to be_nil
+
+      get hotel_rates_settings_path(hotel, view: "standard")
+      standard_tab = Nokogiri::HTML(response.body)
+      expect(standard_tab.at_css('[data-testid="standard-rates-registry"]')).to be_present
+      expect(standard_tab.at_css("#rate-plan-row-#{standard.id}")).to be_present
+      expect(standard_tab.at_css("#rate-plan-row-#{composed.id}")).to be_nil
+    end
+
     it "hides the Walk-in Rate plan row when the hotel is pax_pricing_only" do
       hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
       create(:rate_plan, hotel: hotel, name: "Standard Rate", sell_mode: "per_person")

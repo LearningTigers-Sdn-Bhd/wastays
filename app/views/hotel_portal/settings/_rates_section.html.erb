@@ -1,9 +1,12 @@
 <% rate_plans = @presenter.rate_plans.reject { |rp| rp.special_tier_kind == :walk_in && @hotel.pax_pricing_only? } %>
-<%# Each room type carries its own standard plan, so several rows share the name
-    "Standard Rate". Qualify them by category, otherwise they read as duplicates. %>
-<% standard_plan_count = rate_plans.count(&:standard_rate?) %>
+<%# Two shapes share this page. A standard plan is created automatically with its
+    room category and stays bound to it; everything else is a product the hotelier
+    composes across categories. Splitting them keeps the system rows from burying
+    the composed ones on properties with many room categories. %>
+<% standard_plans, composed_plans = rate_plans.partition(&:standard_rate?) %>
+<% active_view = params[:view].to_s == "standard" ? "standard" : "plans" %>
 
-<section aria-labelledby="rate-plans-heading" class="space-y-3">
+<section aria-labelledby="rate-plans-heading" class="space-y-4">
   <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
     <div>
       <h2 id="rate-plans-heading" class="text-base font-semibold text-foreground">Rate plans</h2>
@@ -16,76 +19,34 @@
     <% end %>
   </div>
 
-  <%= render PanelsUI::Table.new(caption: "Rate plans", header_style: :sentence, striped: true,
-        hoverable: true, bordered: true, wrapper_class: "rounded-md border border-border bg-card",
-        class: "min-w-[820px]", data: { testid: "rate-plans-registry" }) do |table| %>
-    <% table.with_header do %>
-      <tr>
-        <th>Name</th>
-        <th>Sell mode</th>
-        <th>Currency</th>
-        <th>Room categories</th>
-        <th class="text-right">Action</th>
-      </tr>
-    <% end %>
-    <% table.with_body do %>
-      <% rate_plans.each do |rate_plan| %>
-        <tr id="rate-plan-row-<%= rate_plan.id %>" class="<%= "opacity-60" if rate_plan.archived? %>">
-          <td>
-            <div class="flex items-center gap-2">
-              <span class="font-medium text-foreground">
-                <%= rate_plan.name %><% if rate_plan.standard_rate? && standard_plan_count > 1 && rate_plan.room_types.any? %><span class="text-muted-foreground"> · <%= rate_plan.room_types.map(&:name).join(", ") %></span><% end %>
-              </span>
-              <% if rate_plan.archived? %>
-                <%= render PanelsUI::Badge.new(label: "Archived", variant: :warning, size: :sm) %>
-              <% elsif rate_plan.special_tier? %>
-                <%= render PanelsUI::Badge.new(label: "Virtual tier", variant: :neutral, size: :sm) %>
-              <% elsif rate_plan.standard_rate? %>
-                <%= render PanelsUI::Badge.new(label: "System default", variant: :info, size: :sm) %>
-              <% end %>
-            </div>
-          </td>
-          <td class="text-muted-foreground"><%= rate_plan.sell_mode == "per_person" ? "Per person" : "Per room" %></td>
-          <td class="text-muted-foreground" translate="no"><%= rate_plan.currency %></td>
-          <td class="text-muted-foreground">
-            <% if rate_plan.room_types.any? %>
-              <%= rate_plan.room_types.map(&:name).join(", ") %>
-            <% else %>
-              None assigned
-            <% end %>
-          </td>
-          <td class="text-right">
-            <div class="inline-flex items-center gap-2">
-              <% if rate_plan.archived? %>
-                <%= render PanelsUI::Button.new(href: unarchive_hotel_rate_plan_path(@hotel, rate_plan),
-                      variant: :ghost, size: :xs,
-                      data: { turbo_method: :patch, turbo_frame: "_top" }) do %>
-                  Unarchive
-                <% end %>
-              <% elsif rate_plan.archivable? %>
-                <%= render PanelsUI::Button.new(href: archive_hotel_rate_plan_path(@hotel, rate_plan),
-                      variant: :ghost, size: :xs,
-                      data: {
-                        turbo_method: :patch,
-                        turbo_frame: "_top",
-                        turbo_confirm: "Archive '#{rate_plan.name}'? It will no longer be offered for new bookings, but existing bookings and history are kept. You can unarchive it anytime.",
-                        turbo_confirm_title: "Archive rate plan"
-                      }) do %>
-                  Archive
-                <% end %>
-              <% end %>
-              <%= render PanelsUI::Button.new(href: edit_hotel_rate_plan_path(@hotel, rate_plan),
-                    variant: :secondary, size: :xs,
-                    data: { turbo_frame: "settings_action_sheet" }) do %>
-                Manage
-              <% end %>
-            </div>
-          </td>
-        </tr>
-      <% end %>
-      <% if rate_plans.empty? %>
-        <tr><td colspan="5" class="py-8 text-center text-sm text-muted-foreground">No rate plans are configured.</td></tr>
-      <% end %>
-    <% end %>
+  <%= render PanelsUI::Tabs.new(id: "rate-plan-views", active: active_view, aria_label: "Rate plan types") do |tabs| %>
+    <% tabs.with_tab(name: "plans", label: "Rate plans", icon: "badge-dollar-sign",
+                     count: composed_plans.size,
+                     href: hotel_rates_settings_path(@hotel, view: "plans")) %>
+    <% tabs.with_tab(name: "standard", label: "Standard rates", icon: "bed",
+                     count: standard_plans.size,
+                     href: hotel_rates_settings_path(@hotel, view: "standard")) %>
+  <% end %>
+
+  <% if active_view == "standard" %>
+    <p class="text-sm text-muted-foreground">
+      One per room category, created automatically when you add the category. Each holds that room&rsquo;s anchor price
+      and its occupancy rules; the nightly figures are set in Planning &amp; Inventory.
+    </p>
+    <%= render "hotel_portal/settings/rate_plan_table",
+          rate_plans: standard_plans,
+          caption: "Standard rates",
+          testid: "standard-rates-registry",
+          qualify_names: true,
+          empty_message: "No room categories yet. Add one under Settings → Property → Room Categories." %>
+  <% else %>
+    <p class="text-sm text-muted-foreground">
+      Products you sell across one or more room categories &mdash; packages, board basis, non-refundable fares.
+    </p>
+    <%= render "hotel_portal/settings/rate_plan_table",
+          rate_plans: composed_plans,
+          caption: "Rate plans",
+          testid: "rate-plans-registry",
+          empty_message: "No rate plans yet. Create one to sell a package or board basis across your room categories." %>
   <% end %>
 </section>

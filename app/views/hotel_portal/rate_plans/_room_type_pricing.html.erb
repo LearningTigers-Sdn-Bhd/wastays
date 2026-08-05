@@ -4,12 +4,38 @@
 <section aria-labelledby="rate-plan-room-types-heading" class="space-y-4 border-t border-border pt-5">
   <div>
     <h2 id="rate-plan-room-types-heading" class="text-base font-semibold text-foreground">Room categories &amp; pricing</h2>
-    <p class="mt-1 text-sm text-muted-foreground">
-      Manual prices are entered per date in the rates calendar, the same as Standard Rate. The derived modes compute
-      from that room&rsquo;s Standard Rate for each date, so they need no calendar entry unless you want to override a
-      specific date.
-    </p>
+    <% if rate_plan.standard_rate? %>
+      <p class="mt-1 text-sm text-muted-foreground">
+        A standard plan is created with its room category and stays bound to it, so the assignment cannot be changed here.
+        Its price is the room&rsquo;s anchor rate, edited under Settings &rarr; Property &rarr; Room Categories.
+      </p>
+    <% else %>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Manual prices are entered per date in the rates calendar, the same as Standard Rate. The derived modes compute
+        from that room&rsquo;s Standard Rate for each date, so they need no calendar entry unless you want to override a
+        specific date.
+      </p>
+    <% end %>
   </div>
+
+  <%# Reassigning a standard plan would attach a second category to another
+      category's anchor plan and orphan the first, so the picker is read-only. %>
+  <% if rate_plan.standard_rate? %>
+    <ul class="space-y-2">
+      <% rate_plan.room_types.each do |room_type| %>
+        <li class="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/40 p-3">
+          <div>
+            <p class="text-sm font-medium text-foreground"><%= room_type.name %></p>
+            <p class="text-xs text-muted-foreground">Anchor price: <%= rate_plan.currency %> <%= number_with_precision(room_type.base_price, precision: 2, delimiter: ",") %></p>
+          </div>
+          <%= render PanelsUI::Badge.new(label: "Bound", variant: :neutral, size: :sm) %>
+        </li>
+      <% end %>
+      <% if rate_plan.room_types.empty? %>
+        <li class="rounded-md border border-border p-3 text-sm text-muted-foreground">No room category assigned.</li>
+      <% end %>
+    </ul>
+  <% else %>
 
   <div class="space-y-2">
     <% room_types.each do |room_type| %>
@@ -49,5 +75,6 @@
         <p class="text-right text-xs text-muted-foreground" data-room-type-pricing-row-target="preview"></p>
       </div>
     <% end %>
-  </div>
+    </div>
+  <% end %>
 </section>
