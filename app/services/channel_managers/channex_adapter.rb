@@ -536,7 +536,7 @@ module ChannelManagers
           end
 
           current_range = nil
-          rates_by_date = rate_plan.room_rates.where(date: effective_range, currency: rate_plan.currency).index_by(&:date)
+          rates_by_date = rates_for(rate_plan, room_type, effective_range)
 
           # Iterate over all dates in the effective range to ensure a full snapshot
           effective_range.each do |date|
@@ -608,7 +608,7 @@ module ChannelManagers
                   currency: rate_plan.currency
                 ).index_by(&:date)
 
-                rates_by_date = rate_plan.room_rates.where(date: effective_range, currency: rate_plan.currency).index_by(&:date)
+                rates_by_date = rates_for(rate_plan, room_type, effective_range)
 
                 current_crp_range = nil
 
@@ -670,6 +670,18 @@ module ChannelManagers
       end
 
       values
+    end
+
+    # A rate plan shared across several room categories holds one RoomRate per
+    # category per date (room_rates is unique on room_type_id, rate_plan_id,
+    # date, currency). Scoping to the category being pushed is what keeps each
+    # of its channel rate plans on its own price — without it, index_by(&:date)
+    # collapses the categories down to whichever row the database returned
+    # last, and every category is pushed at that one price.
+    def rates_for(rate_plan, room_type, date_range)
+      rate_plan.room_rates
+               .where(room_type: room_type, date: date_range, currency: rate_plan.currency)
+               .index_by(&:date)
     end
 
     def ensure_property(client)
