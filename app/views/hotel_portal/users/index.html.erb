@@ -1,20 +1,22 @@
 <div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(
-        title: "Staff Management",
-        description: "Manage access levels and roles for your hotel team.") do |header| %>
-    <% header.with_actions do %>
-      <%= render PanelsUI::Button.new(
-            href: new_hotel_user_path(current_hotel),
-            size: :sm,
-            class: "w-full sm:w-auto",
-            data: { turbo_frame: "settings_action_sheet" }) do %>
-        <%= app_icon "user-plus", class: "size-4", aria: { hidden: "true" } %>
-        <span>Invite Staff</span>
-      <% end %>
-    <% end %>
-  <% end %>
-
   <%= render "hotel_portal/settings/group_tabs" %>
+
+  <%# The page title sits below the tabs, with the rest of the page's content,
+      rather than above them where it reads as chrome for the whole tab set. %>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h1 class="text-base font-semibold tracking-tight text-foreground">Staff Management</h1>
+      <p class="mt-1 text-sm text-muted-foreground">Manage access levels and roles for your hotel team.</p>
+    </div>
+    <%= render PanelsUI::Button.new(
+          href: new_hotel_user_path(current_hotel),
+          size: :sm,
+          class: "w-full sm:w-auto",
+          data: { turbo_frame: "settings_action_sheet" }) do %>
+      <%= app_icon "user-plus", class: "size-4", aria: { hidden: "true" } %>
+      <span>Invite Staff</span>
+    <% end %>
+  </div>
 
   <% if @presenter.invitations? %>
     <section aria-labelledby="pending-invitations-heading" class="space-y-3">
