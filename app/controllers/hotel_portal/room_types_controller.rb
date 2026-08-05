@@ -69,11 +69,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
       photo_ids: [ params[:photo_id] ]
     ).call
 
-    if result.success?
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: result.message
-    else
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), alert: result.message
-    end
+    respond_to_photo_removal(result)
   end
 
   def bulk_destroy_photos
@@ -82,11 +78,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
       photo_ids: params[:photo_ids]
     ).call
 
-    if result.success?
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: result.message
-    else
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), alert: result.message
-    end
+    respond_to_photo_removal(result)
   end
 
   private
@@ -101,6 +93,27 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
 
   def set_room_type
     @room_type = @hotel.room_types.find(params[:id])
+  end
+
+  # Photos are deleted from inside the open form sheet, so only the photo grid is
+  # re-rendered: a redirect would rebuild the whole sheet and throw away
+  # everything the operator had typed but not yet saved.
+  def respond_to_photo_removal(result)
+    @room_type.photos.reload
+
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: [
+          turbo_stream.replace("room-type-photos-manager", partial: "hotel_portal/room_types/photo_manager", locals: { room_type: @room_type }),
+          toast_stream(result.message, type: result.success? ? :success : :error)
+        ], status: (result.success? ? :ok : :unprocessable_content)
+      end
+      format.html do
+        redirect_to hotel_room_types_path(@hotel),
+                    notice: (result.message if result.success?),
+                    alert: (result.message unless result.success?)
+      end
+    end
   end
 
   def finish_sheet(notice)
