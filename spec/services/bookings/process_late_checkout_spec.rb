@@ -153,6 +153,83 @@ RSpec.describe Bookings::ProcessLateCheckout do
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
   end
 
+  describe "the follow-policy charge path" do
+    def configure_policy(**attributes)
+      ReservationPolicies::EnsureDefaults.call(hotel)
+      hotel.hotel_reservation_policies.find_by!(policy_type: "late_checkout").tap { |policy| policy.update!(**attributes) }
+    end
+
+    # The submitted amount is a hidden field the browser writes. On the policy
+    # path it must not reach the folio, or anyone posting this form could name
+    # their own late-checkout fee.
+    it "ignores a tampered amount and charges what the policy computes" do
+      configure_policy(pricing_type: "fixed", rate_value: 80)
+
+      result = described_class.call(
+        booking: booking,
+        user: user,
+        params: { resolution: "charge", charge_source: "policy", amount: "1.00" }
+      )
+
+      expect(result).to be_success
+      expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(80.0)
+    end
+
+    it "charges the room rate for the nights the policy bills" do
+      booking_room.update!(subtotal: 300)
+      configure_policy(pricing_type: "nights", rate_value: 1)
+
+      result = described_class.call(
+        booking: booking,
+        user: user,
+        params: { resolution: "charge", charge_source: "policy", amount: "9999.00" }
+      )
+
+      expect(result).to be_success
+      expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(300.0)
+    end
+
+    it "falls back to the staff-entered amount when the policy is manual" do
+      configure_policy(pricing_type: "manual", rate_value: nil)
+
+      result = described_class.call(
+        booking: booking,
+        user: user,
+        params: { resolution: "charge", charge_source: "policy", amount: "45.00" }
+      )
+
+      expect(result).to be_success
+      expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(45.0)
+    end
+
+    it "refuses to charge when the policy is switched off" do
+      configure_policy(active: false)
+
+      result = described_class.call(
+        booking: booking,
+        user: user,
+        params: { resolution: "charge", charge_source: "policy", amount: "45.00" }
+      )
+
+      expect(result).not_to be_success
+      expect(result.error).to eq("The late checkout policy does not charge for this booking.")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+    end
+
+    it "still honours the staff-entered amount when no policy path was chosen" do
+      configure_policy(pricing_type: "fixed", rate_value: 80)
+
+      result = described_class.call(
+        booking: booking,
+        user: user,
+        params: { resolution: "charge", charge_source: "custom", amount: "45.00" }
+      )
+
+      expect(result).to be_success
+      expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(45.0)
+    end
+  end
+
   it "fails when a resolution is not selected" do
     result = described_class.call(booking: booking, user: user, params: {})
 

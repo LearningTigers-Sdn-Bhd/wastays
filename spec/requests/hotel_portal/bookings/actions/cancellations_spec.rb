@@ -67,6 +67,91 @@ RSpec.describe "HotelPortal::Bookings::Actions cancellations", frozen_time: :bus
     end
   end
 
+  describe "the cancellation policy" do
+    # The fee is a folio charge like any other, so posting it is gated on
+    # post_folio_charges. A user who may cancel but not post charges gets a clear
+    # refusal rather than a silently bypassed authorization check.
+    before { grant_permission(role, "post_folio_charges") }
+
+    def activate_cancellation_policy(pricing_type: "fixed", rate_value: 120)
+      ReservationPolicies::EnsureDefaults.call(hotel)
+      hotel.hotel_reservation_policies.find_by!(policy_type: "cancellation")
+        .tap { |policy| policy.update!(active: true, pricing_type: pricing_type, rate_value: rate_value) }
+    end
+
+    it "shows the fee and the refund it leaves, with a waive option" do
+      activate_cancellation_policy
+      create(:deposit, hotel: hotel, booking: booking, amount: 200, status: "held")
+
+      get hotel_booking_action_cancel_booking_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-cancellation-sheet")
+      expect(dialog.text).to include("Cancellation policy", "Cancellation fee", "Refund due")
+      expect(dialog.text).to include("120.00", "80.00")
+      expect(dialog.at_css("input[type='radio'][name='charge_fee'][value='false']")).to be_present
+    end
+
+    it "renders policy applied per booking for a group sheet" do
+      activate_cancellation_policy
+      group = create(:group_booking, hotel: hotel, name: "Conference Group")
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", guest_name: "Grace Hopper")
+      create(:booking_room, booking: sibling, room_type: room_type, room_number: "102")
+
+      get hotel_booking_action_cancel_booking_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(Nokogiri::HTML(response.body).at_css("dialog#booking-cancellation-sheet").text)
+        .to include("Policy applied per booking")
+    end
+
+    it "posts the fee under the cancellation category when staff charge it" do
+      activate_cancellation_policy
+
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Guest requested", charge_fee: "true" }
+
+      expect(booking.reload.status).to eq("cancelled")
+      charge = booking.booking_folio.folio_transactions.charge.find_by(category: "cancellation_charge")
+      expect(charge.amount).to eq(120.0)
+    end
+
+    it "posts nothing when staff waive the fee" do
+      activate_cancellation_policy
+
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Guest requested", charge_fee: "false" }
+
+      expect(booking.reload.status).to eq("cancelled")
+      expect(booking.booking_folio&.folio_transactions&.charge&.where(category: "cancellation_charge")).to be_blank
+    end
+
+    it "posts nothing when the policy is inactive, even if a fee is requested" do
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Guest requested", charge_fee: "true" }
+
+      expect(booking.reload.status).to eq("cancelled")
+      expect(booking.booking_folio&.folio_transactions&.charge&.where(category: "cancellation_charge")).to be_blank
+    end
+
+    # The fee posts inside the cancellation's own transaction, before the status
+    # change, so a cancellation that fails never leaves an orphan fee behind.
+    it "rolls the fee back when the cancellation itself fails" do
+      activate_cancellation_policy
+      allow(Bookings::TransitionStatus).to receive(:new).and_return(
+        instance_double(Bookings::TransitionStatus, call: OpenStruct.new(success?: false, error: "Cannot cancel."))
+      )
+
+      post hotel_booking_action_cancel_booking_path(hotel, booking),
+        params: { cancellation_reason: "Guest requested", charge_fee: "true" }
+
+      expect(flash[:alert]).to eq("Cannot cancel.")
+      expect(booking.reload.status).to eq("confirmed")
+      expect(FolioTransaction.where(category: "cancellation_charge")).to be_empty
+    end
+  end
+
   describe "POST the cancellation" do
     it "cancels the booking and completes the sheet on a Turbo submission" do
       post hotel_booking_action_cancel_booking_path(hotel, booking),

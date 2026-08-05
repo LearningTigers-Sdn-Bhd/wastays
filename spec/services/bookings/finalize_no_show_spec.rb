@@ -29,6 +29,83 @@ RSpec.describe Bookings::FinalizeNoShow do
     expect(result.skipped_folios.sole.balance).to eq(100.0)
   end
 
+  describe "the hotel's no-show policy" do
+    def configure_no_show_policy(hotel, **attributes)
+      ReservationPolicies::EnsureDefaults.call(hotel)
+      hotel.hotel_reservation_policies.find_by!(policy_type: "no_show").tap { |policy| policy.update!(**attributes) }
+    end
+
+    def no_show_booking(hotel, business_date, nights: 3, subtotal: 300.0)
+      create(
+        :booking,
+        hotel: hotel,
+        status: "no_show_detected",
+        no_show_detected_business_date: business_date,
+        check_in: business_date,
+        check_out: business_date + nights.days,
+        tax_lines: []
+      ).tap { |booking| create(:booking_room, booking: booking, subtotal: subtotal) }
+    end
+
+    it "posts nothing at all when the policy is switched off" do
+      hotel = create(:hotel)
+      user = create(:user, account: hotel.account)
+      business_date = Date.current
+      configure_no_show_policy(hotel, active: false)
+      booking = no_show_booking(hotel, business_date)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+
+      result = described_class.call(booking: booking, user: user)
+
+      expect(result.success?).to be(true)
+      expect(booking.reload.status).to eq("no_show")
+      expect(booking.booking_folio.folio_transactions.charge).to be_empty
+    end
+
+    # The policy is nights-only by database constraint precisely so the fee and
+    # the per-night snapshot tax lines always describe the same nights.
+    it "bills as many nights as the policy charges, with each night's snapshot tax" do
+      hotel = create(:hotel, sst_enabled: true)
+      user = create(:user, account: hotel.account)
+      business_date = Date.current
+      configure_no_show_policy(hotel, rate_value: 2)
+      booking = no_show_booking(hotel, business_date)
+      booking.update!(tax_posting_snapshot: {
+        business_date.iso8601 => [ { "name" => "SST", "amount" => "6.00", "type" => "sst_tax" } ],
+        (business_date + 1.day).iso8601 => [ { "name" => "SST", "amount" => "6.00", "type" => "sst_tax" } ],
+        (business_date + 2.days).iso8601 => [ { "name" => "SST", "amount" => "6.00", "type" => "sst_tax" } ]
+      })
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+
+      expect(described_class.call(booking: booking, user: user).success?).to be(true)
+
+      charges = booking.reload.booking_folio.folio_transactions.charge
+      room_charges = charges.where(category: "no_show_charge")
+      tax_charges = charges.where(category: "tax")
+      expect(room_charges.count).to eq(2)
+      expect(room_charges.sum(:amount)).to eq(200.0)
+      # Two nights billed, two nights of tax — never the whole stay's tax, and
+      # never one night's tax on a two-night fee.
+      expect(tax_charges.count).to eq(2)
+      expect(tax_charges.sum(:amount)).to eq(12.0)
+      expect(room_charges.map { |charge| charge.metadata["stay_date"] })
+        .to contain_exactly(business_date.iso8601, (business_date + 1.day).iso8601)
+    end
+
+    it "never bills past the end of the stay" do
+      hotel = create(:hotel)
+      user = create(:user, account: hotel.account)
+      business_date = Date.current
+      configure_no_show_policy(hotel, rate_value: 5)
+      booking = no_show_booking(hotel, business_date, nights: 2, subtotal: 200.0)
+      BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+
+      expect(described_class.call(booking: booking, user: user).success?).to be(true)
+
+      expect(booking.reload.booking_folio.folio_transactions.charge.where(category: "no_show_charge").count).to eq(2)
+    end
+  end
+
   # No-show posts its tax lines from the booking's own tax snapshot, which is the
   # right treatment for a historical night. It must never also inherit ROOM's live
   # tax rules the way late checkout and early departure do, or every no-show would

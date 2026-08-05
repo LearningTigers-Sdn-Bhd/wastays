@@ -70,24 +70,34 @@ module Bookings
 
     private
 
+    # Billed nights come from the hotel's no-show policy. Each night is charged
+    # from that night's rate snapshot together with that night's snapshot tax
+    # lines, so the tax always describes exactly the nights billed — which is why
+    # the policy is constrained (in the database) to whole nights.
     def post_no_show_charges(folio)
+      return if no_show_policy.present? && !no_show_policy.active?
+
+      billed_dates.each { |date| post_no_show_night(folio, date) }
+    end
+
+    def post_no_show_night(folio, date)
       @booking.booking_rooms.each do |booking_room|
-        amount = nightly_room_amount(booking_room, @business_date)
+        amount = nightly_room_amount(booking_room, date)
         next if amount.zero?
 
         insert_charge!(
           folio: folio,
           amount: amount,
           category: "no_show_charge",
-          description: "No-show room charge - #{@business_date}",
-          metadata: no_show_metadata("no_show_charge", booking_room.id).merge(
-            rate_source: nightly_rate_snapshot_for(booking_room, @business_date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
-            nightly_rate_snapshot: nightly_rate_snapshot_for(booking_room, @business_date)
+          description: "No-show room charge - #{date}",
+          metadata: no_show_metadata("no_show_charge", booking_room.id, date).merge(
+            rate_source: nightly_rate_snapshot_for(booking_room, date).present? ? "nightly_rate_snapshot" : "legacy_subtotal_average",
+            nightly_rate_snapshot: nightly_rate_snapshot_for(booking_room, date)
           )
         )
       end
 
-      tax_postings_for(@booking, @business_date).reject { |tax_line| Booking.tourism_tax_line?(tax_line) }.each_with_index do |tax_line, index|
+      tax_postings_for(@booking, date).reject { |tax_line| Booking.tourism_tax_line?(tax_line) }.each_with_index do |tax_line, index|
         amount = tax_line_amount(tax_line)
         next if amount.zero?
 
@@ -95,10 +105,28 @@ module Bookings
           folio: folio,
           amount: amount,
           category: "tax",
-          description: "No-show tax charge: #{tax_line_name(tax_line)} - #{@business_date}",
-          metadata: no_show_metadata("tax", tax_line_identity(tax_line, index)).merge(tax_line: tax_line)
+          description: "No-show tax charge: #{tax_line_name(tax_line)} - #{date}",
+          metadata: no_show_metadata("tax", tax_line_identity(tax_line, index), date).merge(tax_line: tax_line)
         )
       end
+    end
+
+    # The detection date first, then whatever nights of the stay follow it, capped
+    # at the number the policy bills. Every posting still lands on the detection
+    # business date — only the night being billed changes.
+    def billed_dates
+      nights = no_show_policy&.whole_nights.to_i
+      nights = 1 if nights < 1
+
+      following = booking_stay_dates(@booking).select { |date| date > @business_date }
+      ([ @business_date ] + following).first(nights)
+    end
+
+    def no_show_policy
+      return @no_show_policy if defined?(@no_show_policy)
+
+      ReservationPolicies::EnsureDefaults.call(@booking.hotel)
+      @no_show_policy = @booking.hotel.hotel_reservation_policies.find_by(policy_type: "no_show")
     end
 
     def insert_charge!(folio:, amount:, category:, description:, metadata:)
@@ -134,16 +162,16 @@ module Bookings
         .where("metadata->>'no_show_charge_key' = ?", no_show_charge_key).exists?
     end
 
-    def no_show_metadata(charge_kind, identity)
+    def no_show_metadata(charge_kind, identity, stay_date = @business_date)
       {
         posting_source: "no_show",
         night_audit_id: @night_audit&.id,
-        stay_date: @business_date.iso8601,
+        stay_date: stay_date.iso8601,
         booking_id: @booking.id,
         charge_kind: charge_kind,
         no_show_charge_key: Folios::Charges::ChargePostingKeys.no_show_charge_key(
           booking: @booking,
-          date: @business_date,
+          date: stay_date,
           charge_kind: charge_kind,
           identity: identity
         )
