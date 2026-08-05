@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_04_093000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_05_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1128,6 +1128,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_093000) do
     t.index ["hotel_id"], name: "index_hotel_business_dates_on_hotel_id"
   end
 
+  create_table "hotel_cancellation_policy_tiers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "days_before_arrival", null: false
+    t.bigint "hotel_reservation_policy_id", null: false
+    t.string "percentage_basis"
+    t.integer "position", default: 0, null: false
+    t.string "pricing_type", default: "percentage", null: false
+    t.decimal "rate_value", precision: 12, scale: 4, null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_reservation_policy_id", "days_before_arrival"], name: "index_cancellation_tiers_on_policy_and_days", unique: true
+    t.index ["hotel_reservation_policy_id", "position"], name: "index_cancellation_tiers_on_policy_and_position"
+    t.index ["hotel_reservation_policy_id"], name: "index_cancellation_tiers_on_policy"
+    t.check_constraint "days_before_arrival >= 0", name: "hotel_cancellation_policy_tiers_days_non_negative"
+    t.check_constraint "percentage_basis IS NULL OR (percentage_basis::text = ANY (ARRAY['first_night'::character varying, 'total_stay'::character varying, 'remaining_nights'::character varying]::text[]))", name: "hotel_cancellation_policy_tiers_percentage_basis_allowed"
+    t.check_constraint "pricing_type::text <> 'nights'::text OR rate_value = trunc(rate_value)", name: "hotel_cancellation_policy_tiers_nights_whole"
+    t.check_constraint "pricing_type::text <> 'percentage'::text OR rate_value <= 100::numeric", name: "hotel_cancellation_policy_tiers_percentage_maximum"
+    t.check_constraint "pricing_type::text = ANY (ARRAY['fixed'::character varying, 'percentage'::character varying, 'nights'::character varying]::text[])", name: "hotel_cancellation_policy_tiers_pricing_type_allowed"
+    t.check_constraint "rate_value >= 0::numeric", name: "hotel_cancellation_policy_tiers_rate_value_non_negative"
+  end
+
   create_table "hotel_corporate_accounts", force: :cascade do |t|
     t.string "account_type", default: "company", null: false
     t.string "agent_code"
@@ -1343,6 +1363,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_093000) do
     t.index ["hotel_id", "rule_type"], name: "index_hotel_pricing_rules_on_hotel_and_type"
     t.index ["hotel_id", "start_date", "end_date"], name: "index_hotel_pricing_rules_on_hotel_and_dates"
     t.index ["hotel_id"], name: "index_hotel_pricing_rules_on_hotel_id"
+  end
+
+  create_table "hotel_reservation_policies", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.boolean "allow_amount_override", default: true, null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "hotel_id", null: false
+    t.string "percentage_basis"
+    t.string "policy_type", null: false
+    t.integer "position", default: 0, null: false
+    t.string "pricing_type", default: "manual", null: false
+    t.decimal "rate_value", precision: 12, scale: 4
+    t.string "refund_method"
+    t.integer "refund_processing_days"
+    t.bigint "transaction_code_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "policy_type"], name: "index_hotel_reservation_policies_on_hotel_id_and_policy_type", unique: true
+    t.index ["hotel_id", "position"], name: "index_hotel_reservation_policies_on_hotel_id_and_position"
+    t.index ["hotel_id"], name: "index_hotel_reservation_policies_on_hotel_id"
+    t.index ["transaction_code_id"], name: "index_hotel_reservation_policies_on_transaction_code_id", unique: true
+    t.check_constraint "percentage_basis IS NULL OR (percentage_basis::text = ANY (ARRAY['first_night'::character varying, 'total_stay'::character varying, 'remaining_nights'::character varying]::text[]))", name: "hotel_reservation_policies_percentage_basis_allowed"
+    t.check_constraint "policy_type::text <> 'no_show'::text OR pricing_type::text = 'nights'::text", name: "hotel_reservation_policies_no_show_nights_only"
+    t.check_constraint "policy_type::text = 'cancellation'::text OR refund_processing_days IS NULL AND refund_method IS NULL", name: "hotel_reservation_policies_refund_cancellation_only"
+    t.check_constraint "policy_type::text = ANY (ARRAY['late_checkout'::character varying, 'early_departure'::character varying, 'no_show'::character varying, 'cancellation'::character varying]::text[])", name: "hotel_reservation_policies_policy_type_allowed"
+    t.check_constraint "pricing_type::text <> 'nights'::text OR rate_value IS NOT NULL AND rate_value = trunc(rate_value)", name: "hotel_reservation_policies_nights_whole"
+    t.check_constraint "pricing_type::text <> 'percentage'::text OR percentage_basis IS NOT NULL", name: "hotel_reservation_policies_percentage_basis_required"
+    t.check_constraint "pricing_type::text <> 'percentage'::text OR rate_value <= 100::numeric", name: "hotel_reservation_policies_percentage_maximum"
+    t.check_constraint "pricing_type::text = ANY (ARRAY['manual'::character varying, 'fixed'::character varying, 'percentage'::character varying, 'nights'::character varying]::text[])", name: "hotel_reservation_policies_pricing_type_allowed"
+    t.check_constraint "rate_value IS NULL OR rate_value > 0::numeric", name: "hotel_reservation_policies_rate_value_positive"
+    t.check_constraint "refund_method IS NULL OR (refund_method::text = ANY (ARRAY['original_payment_method'::character varying, 'bank_transfer'::character varying, 'credit_note'::character varying]::text[]))", name: "hotel_reservation_policies_refund_method_allowed"
+    t.check_constraint "refund_processing_days IS NULL OR refund_processing_days >= 0 AND refund_processing_days <= 365", name: "hotel_reservation_policies_refund_processing_days_range"
   end
 
   create_table "hotel_taxes", force: :cascade do |t|
@@ -2394,6 +2446,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_093000) do
   add_foreign_key "hotel_boat_settings", "hotels"
   add_foreign_key "hotel_business_dates", "hotels"
   add_foreign_key "hotel_business_dates", "users", column: "force_closed_by_id", on_delete: :nullify
+  add_foreign_key "hotel_cancellation_policy_tiers", "hotel_reservation_policies"
   add_foreign_key "hotel_corporate_accounts", "accounts", column: "corporate_account_id"
   add_foreign_key "hotel_corporate_accounts", "hotels"
   add_foreign_key "hotel_counters", "hotels"
@@ -2414,6 +2467,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_04_093000) do
   add_foreign_key "hotel_payment_methods", "transaction_codes"
   add_foreign_key "hotel_prefix_histories", "hotels"
   add_foreign_key "hotel_pricing_rules", "hotels"
+  add_foreign_key "hotel_reservation_policies", "hotels"
+  add_foreign_key "hotel_reservation_policies", "transaction_codes"
   add_foreign_key "hotel_taxes", "hotels"
   add_foreign_key "hotel_taxes", "transaction_codes"
   add_foreign_key "hotel_team_configs", "hotels"
