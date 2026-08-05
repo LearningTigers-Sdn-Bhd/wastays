@@ -578,7 +578,6 @@ Rails.application.routes.draw do
       delete "general/boat/slots/:id", to: "boat_schedules#destroy"
       patch "general/boat/slots/:id/restore", to: "boat_schedules#restore", as: :boat_schedule_slot_restore
       get "general/rates", to: "settings#index", as: :rates_settings, defaults: { settings_page: "rates" }
-      patch "general/rates", to: "settings#update", defaults: { settings_page: "rates" }
       get "general/notifications", to: "settings#index", as: :notification_settings, defaults: { settings_page: "notifications" }
       patch "general/notifications", to: "settings#update", defaults: { settings_page: "notifications" }
       get "general/plan-and-billing", to: "plans#show", as: :plan
