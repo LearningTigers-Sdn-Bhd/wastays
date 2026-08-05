@@ -1,0 +1,57 @@
+<% preview_room_types = current_hotel.room_types.order(:id).to_a %>
+<% default_preview_room_type = rate_plan.room_types.first || preview_room_types.first %>
+<% base_prices = preview_room_types.to_h { |rt| [ rt.id.to_s, rt.base_price.to_f ] } %>
+<% has_bands = rate_plan.rate_plan_age_bands.any? %>
+
+<section aria-labelledby="rate-plan-age-bands-heading"
+         class="space-y-4 border-t border-border pt-5"
+         data-controller="rate-plan-age-bands age-band-price-preview"
+         data-age-band-price-preview-currency-value="<%= rate_plan.currency %>"
+         data-age-band-price-preview-base-prices-value="<%= base_prices.to_json %>"
+         data-action="input->age-band-price-preview#update change->age-band-price-preview#update">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h2 id="rate-plan-age-bands-heading" class="text-base font-semibold text-foreground">Child age groups</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Charge different prices by age. Children whose age falls outside every group use the child price above.</p>
+    </div>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :xs,
+          class: "shrink-0 #{'hidden' unless has_bands}",
+          data: { action: "click->rate-plan-age-bands#add", rate_plan_age_bands_target: "addButton" }) do %>
+      Add age group
+    <% end %>
+  </div>
+
+  <% if preview_room_types.any? %>
+    <div class="max-w-sm" data-age-band-price-preview-target="roomTypeField">
+      <%= fields_for :rate_plan_preview, HotelPortal::RatePlansHelper::PreviewScope.new(default_preview_room_type&.id) do |pf| %>
+        <%= render PanelsUI::FormField.new(form: pf, attribute: :room_type_id,
+              label: "Preview using", size: :sm,
+              hint: "Only changes the example prices shown below.") do |field| %>
+          <% field.with_select_menu(
+               preview_room_types.map { |rt| { label: "#{rt.name} — #{rate_plan.currency} #{number_with_precision(rt.base_price, precision: 2, delimiter: ',')}", value: rt.id } },
+               selected: default_preview_room_type&.id) %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div data-rate-plan-age-bands-target="rows" class="space-y-3">
+    <% rate_plan.rate_plan_age_bands.each_with_index do |band, index| %>
+      <%= f.fields_for :rate_plan_age_bands, band, child_index: index do |band_form| %>
+        <%= render "hotel_portal/rate_plans/age_band_row", band_form: band_form, band: band, currency: rate_plan.currency %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :sm,
+        class: "w-full border border-dashed border-border py-6 #{'hidden' if has_bands}",
+        data: { action: "click->rate-plan-age-bands#add", rate_plan_age_bands_target: "emptyState" }) do %>
+    Add your first age group
+  <% end %>
+
+  <template data-rate-plan-age-bands-target="template">
+    <% f.fields_for :rate_plan_age_bands, RatePlanAgeBand.new, child_index: "NEW_RECORD" do |band_form| %>
+      <%= render "hotel_portal/rate_plans/age_band_row", band_form: band_form, band: nil, currency: rate_plan.currency %>
+    <% end %>
+  </template>
+</section>

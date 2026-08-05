@@ -15,6 +15,41 @@ RSpec.describe RatePlan, type: :model do
     it { should validate_presence_of(:sell_mode) }
     it { should validate_inclusion_of(:sell_mode).in_array(%w[per_room per_person]) }
     it { should validate_presence_of(:currency) }
+    it { should validate_inclusion_of(:kind).in_array(RatePlan::KINDS) }
+  end
+
+  describe 'kind' do
+    let(:hotel) { create(:hotel) }
+
+    it 'defaults to custom so a hotelier-created plan stays editable' do
+      expect(RatePlan.new.kind).to eq('custom')
+    end
+
+    it 'reports special_tier_kind for each tier and nil otherwise' do
+      expect(build(:rate_plan, :walk_in_tier).special_tier_kind).to eq(:walk_in)
+      expect(build(:rate_plan, :corporate_tier).special_tier_kind).to eq(:corporate)
+      expect(build(:rate_plan, :ota_tier).special_tier_kind).to eq(:ota)
+      expect(build(:rate_plan).special_tier_kind).to be_nil
+      expect(build(:rate_plan, :custom).special_tier_kind).to be_nil
+    end
+
+    # The whole point of the column: identity used to be string-matched off the
+    # name, so a rename silently changed whether a plan could be deleted.
+    it 'keeps a system plan protected after it is renamed' do
+      plan = create(:rate_plan, hotel: hotel)
+      plan.update!(name: 'House Rate')
+
+      expect(plan.standard_rate?).to be true
+      expect(plan.archivable?).to be false
+      expect(plan.deletable?).to be false
+    end
+
+    it 'does not promote an ordinary plan by naming it after a tier' do
+      plan = create(:rate_plan, hotel: hotel, name: 'Corporate Rate', kind: 'custom')
+
+      expect(plan.special_tier?).to be false
+      expect(plan.archivable?).to be true
+    end
   end
 
   describe 'custom validations' do
@@ -49,7 +84,7 @@ RSpec.describe RatePlan, type: :model do
 
     context 'when the hotel is pax_pricing_only' do
       it 'rejects a per_room rate plan that is not a special tier or the standard rate' do
-        rate_plan = build(:rate_plan, hotel: hotel, name: 'Bed & Breakfast', sell_mode: 'per_room')
+        rate_plan = build(:rate_plan, hotel: hotel, name: 'Bed & Breakfast', kind: 'custom', sell_mode: 'per_room')
 
         expect(rate_plan).not_to be_valid
         expect(rate_plan.errors[:sell_mode]).to include('must be Per Person while this hotel is set to pax-pricing only')
@@ -68,7 +103,7 @@ RSpec.describe RatePlan, type: :model do
       end
 
       it 'exempts special-tier plans like Walk-in Rate even in per_room mode' do
-        rate_plan = build(:rate_plan, hotel: hotel, name: 'Walk-in Rate', sell_mode: 'per_room')
+        rate_plan = build(:rate_plan, :walk_in_tier, hotel: hotel, sell_mode: 'per_room')
 
         expect(rate_plan).to be_valid
       end
@@ -77,7 +112,7 @@ RSpec.describe RatePlan, type: :model do
     context 'when the hotel is not pax_pricing_only' do
       it 'allows a per_room rate plan' do
         hotel.update!(pax_pricing_only: false)
-        rate_plan = build(:rate_plan, hotel: hotel, name: 'Bed & Breakfast', sell_mode: 'per_room')
+        rate_plan = build(:rate_plan, hotel: hotel, name: 'Bed & Breakfast', kind: 'custom', sell_mode: 'per_room')
 
         expect(rate_plan).to be_valid
       end
@@ -88,12 +123,12 @@ RSpec.describe RatePlan, type: :model do
     let(:hotel) { create(:hotel) }
 
     it 'is not archived by default' do
-      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable')
+      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable', kind: 'custom')
       expect(rate_plan.archived?).to be false
     end
 
     it 'archives and unarchives a custom rate plan' do
-      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable')
+      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable', kind: 'custom')
 
       rate_plan.archive!
       expect(rate_plan.archived?).to be true
@@ -105,7 +140,7 @@ RSpec.describe RatePlan, type: :model do
     end
 
     it 'is archivable for a custom rate plan' do
-      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable')
+      rate_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable', kind: 'custom')
       expect(rate_plan.archivable?).to be true
     end
 
@@ -115,13 +150,13 @@ RSpec.describe RatePlan, type: :model do
     end
 
     it 'is not archivable for a special-tier plan' do
-      rate_plan = create(:rate_plan, hotel: hotel, name: 'Walk-in Rate')
+      rate_plan = create(:rate_plan, :walk_in_tier, hotel: hotel)
       expect(rate_plan.archivable?).to be false
     end
 
     it 'scopes .active to non-archived plans and .archived to archived plans' do
-      active_plan = create(:rate_plan, hotel: hotel, name: 'Room Only')
-      archived_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable')
+      active_plan = create(:rate_plan, hotel: hotel, name: 'Room Only', kind: 'custom')
+      archived_plan = create(:rate_plan, hotel: hotel, name: 'Non-Refundable', kind: 'custom')
       archived_plan.archive!
 
       expect(RatePlan.active).to include(active_plan)

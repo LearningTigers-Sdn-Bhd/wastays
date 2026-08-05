@@ -51,7 +51,7 @@ module Bookings
     def room_rate_for(date)
       scope = @room_type.room_rates.where(date: date)
 
-      plans_to_try = [ @rate_plan, @room_type.rate_plans.first, nil ].uniq
+      plans_to_try = [ @rate_plan, @room_type.standard_rate_plan, nil ].uniq
 
       plans_to_try.each do |plan|
         rate = scope.find_by(rate_plan: plan)

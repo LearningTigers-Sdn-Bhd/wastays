@@ -563,7 +563,7 @@ class Booking < ApplicationRecord
         rate_plan_ids += booking_rooms.map(&:rate_plan_id).compact
       end
       if rate_plan_ids.include?(nil)
-        standard_plan = room_type.rate_plans.first
+        standard_plan = room_type.standard_rate_plan
         rate_plan_ids << standard_plan.id if standard_plan
       end
       rate_plan_ids.uniq!

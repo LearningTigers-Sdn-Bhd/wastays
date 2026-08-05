@@ -39,6 +39,25 @@ class RoomType < ApplicationRecord
     max_adults.to_i + max_children.to_i
   end
 
+  # The plan that anchors this category's pricing: the one ensure_standard_rate_plan
+  # creates alongside the category, and the row the pricing rules and the nightly
+  # price fallbacks write to and read from.
+  #
+  # Falls back to the oldest plan for categories that predate the kind column and
+  # whose anchor was renamed to something the backfill did not recognise — that
+  # plan was created with the category, so it still sorts first. Ordering matters:
+  # a plan shared across several categories is always added later and must never
+  # win here, or the rules would write onto the shared plan's rows.
+  # Resolved in Ruby rather than through find_by so a preloaded :rate_plans
+  # association is used as-is — AvailabilityService and the rates calendar both
+  # preload it and would otherwise pay a query per category.
+  def standard_rate_plan
+    @standard_rate_plan ||= begin
+      plans = rate_plans.sort_by(&:id)
+      plans.find { |plan| plan.kind == "standard" } || plans.first
+    end
+  end
+
   def attach_photos_with_limit(photo_files)
     photo_files = Array(photo_files).reject(&:blank?)
     remaining_slots = [ MAX_PHOTOS - photos.count, 0 ].max
@@ -78,10 +97,17 @@ class RoomType < ApplicationRecord
     return if rate_plans.exists?
 
     # Create a dedicated standard rate plan for this room type.
-    # Each room type must have its own plan; sharing one across room
-    # types would make rate updates on one room type bleed into others.
+    #
+    # Nightly prices would survive a shared plan — room_rates is unique on
+    # (room_type_id, rate_plan_id, date, currency), so each room type keeps its
+    # own price row either way. What does not survive is everything held on the
+    # plan itself: sell_mode, currency, child_price_multiplier and the age
+    # bands are single values, so a shared plan silently applies one room
+    # type's rules to another, and leaves the second without a plan of its own
+    # to edit.
     rate_plan = hotel.rate_plans.create!(
       name: "Standard Rate",
+      kind: "standard",
       sell_mode: "per_room",
       currency: hotel.default_currency || "MYR"
     )

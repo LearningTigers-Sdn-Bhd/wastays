@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_05_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1970,6 +1970,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_110000) do
     t.text "description"
     t.decimal "extra_pax_charge", precision: 10, scale: 2, default: "0.0", null: false
     t.bigint "hotel_id", null: false
+    t.string "kind", default: "custom", null: false
     t.string "name", null: false
     t.string "sell_mode", default: "per_room", null: false
     t.decimal "single_supplement", precision: 10, scale: 2, default: "0.0", null: false

@@ -184,12 +184,6 @@ module HotelOps
       }
     end
 
-    def rate_plans_for(room_type)
-      scope = room_type.rate_plans
-      scope = scope.where(id: rate_plan_ids) if rate_plan_ids.any?
-      scope
-    end
-
     def apply_inventory_to(room_type)
       room_numbers = room_numbers_for(room_type)
 
@@ -234,7 +228,9 @@ module HotelOps
       # we should only update standard plans if they are explicitly in the selection.
       # If NOTHING was selected (rate_plan_ids.empty?), then we default to updating all standard plans.
       if rate_plan_ids.empty? || real_rate_plan_ids.any?
-        rate_plans_to_update = room_type.rate_plans
+        # Archived plans are not offered for new bookings, so a bulk edit should
+        # not price them or push them to the channel manager.
+        rate_plans_to_update = room_type.rate_plans.active
         rate_plans_to_update = rate_plans_to_update.where(id: real_rate_plan_ids) if real_rate_plan_ids.any?
 
         rate_plans_to_update.find_each do |rate_plan|
@@ -242,9 +238,10 @@ module HotelOps
         end
       end
 
-      # 2. Handle Virtual Pricing Tiers (Walk-in, Corporate, OTA)
-      # These are stored on the room's master (first) rate plan
-      master_plan = room_type.rate_plans.sort_by(&:id).first
+      # 2. Handle Virtual Pricing Tiers (Walk-in, Corporate)
+      # These are stored on the category's anchor plan, which is where
+      # InventoryCalendarPresenter#tier_cell reads them back from.
+      master_plan = room_type.standard_rate_plan
       return if master_plan.blank?
 
       virtual_tier_keys = rate_plan_ids.select { |id| id.is_a?(String) && id.start_with?("tier_") }
@@ -257,7 +254,6 @@ module HotelOps
 
         tier_type = if parts[1] == "walk" then :walk_in
         elsif parts[1] == "corporate" then :corporate
-        elsif parts[1] == "ota" then :ota
         end
 
         update_rates_for_plan(room_type, master_plan, tier: tier_type) if tier_type
@@ -316,7 +312,7 @@ module HotelOps
             rate.closed_to_departure = restriction_values[:closed_to_departure]
             rate.stop_sell = restriction_values[:stop_sell]
           end
-          rate.price ||= room_type.base_price if target_currency == hotel.default_currency
+          rate.price ||= resting_price_for(room_type, rate_plan, date) if target_currency == hotel.default_currency
           next if rate.price.blank?
           rate.save!
 
@@ -347,6 +343,35 @@ module HotelOps
           )
         end
       end
+    end
+
+    # room_rates.price is NOT NULL, so applying a restriction to a date with no
+    # row yet has to write some price alongside it. That price has to be the one
+    # the plan was already selling at, or the restriction silently repriced the
+    # date.
+    #
+    # It used to be room_type.base_price unconditionally. For a plan deriving its
+    # price from the anchor (RoomTypeRatePlan multiplier/offset) that is the
+    # wrong number, and writing it is permanent: BookingEngine and
+    # CalculateStayPrice only derive while no explicit row exists, so a min-stay
+    # would drop a +20% plan back to the anchor for that date, for good.
+    def resting_price_for(room_type, rate_plan, date)
+      anchor_plan = room_type.standard_rate_plan
+      anchor = if anchor_plan.present? && anchor_plan.id != rate_plan.id
+        room_type.room_rates.find_by(rate_plan: anchor_plan, date: date, currency: currency)&.price
+      end
+      anchor ||= room_type.base_price
+
+      rtrp = room_type_rate_plan_for(room_type, rate_plan)
+      return anchor unless rtrp&.derives_price?
+
+      rtrp.derive_price(anchor) || anchor
+    end
+
+    def room_type_rate_plan_for(room_type, rate_plan)
+      @room_type_rate_plans ||= {}
+      @room_type_rate_plans[[ room_type.id, rate_plan.id ]] ||=
+        room_type.room_type_rate_plans.find_by(rate_plan: rate_plan)
     end
 
     def target_currencies_for(rate_plan, date, room_type:)

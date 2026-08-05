@@ -34,7 +34,7 @@ module HotelOps
     private
 
     def apply_for_room_type(room_type)
-      standard_plan = room_type.rate_plans.first
+      standard_plan = room_type.standard_rate_plan
       target_currency = standard_plan&.currency || @hotel.default_currency || "MYR"
 
       (@start_date..@end_date).each do |date|
@@ -42,7 +42,7 @@ module HotelOps
         walk_in_winner = winning_rule_for(date, category: :walk_in)
         corporate_winner = winning_rule_for(date, category: :corporate)
 
-        rate = room_type.room_rates.find_or_initialize_by(date: date, currency: target_currency)
+        rate = anchor_rate_for(room_type, standard_plan, date, target_currency)
         if online_winner.blank? && walk_in_winner.blank? && corporate_winner.blank?
           rate.destroy! if rate.persisted?
           next
@@ -79,6 +79,28 @@ module HotelOps
           }
         )
       end
+    end
+
+    # The row these rules own: the anchor plan's row for the date.
+    #
+    # The lookup used to carry no rate_plan at all, so it took whichever row the
+    # category returned for the date. On a category carrying a second plan that
+    # is often the second plan's row, which was then overwritten with the rule
+    # price and re-pointed at the anchor: either a unique-index violation
+    # against the anchor's own row, or — when the anchor had no row yet — the
+    # second plan silently losing its price for that date. destroy! could take
+    # it the same way.
+    #
+    # An unattributed row is still adopted rather than left behind: rows predating
+    # rate_plan_id are the anchor row in legacy data, and CalculateStayPrice
+    # reads them through its nil fallback. Only the anchor's own row outranks
+    # them, so nothing that belongs to another plan is ever claimed.
+    def anchor_rate_for(room_type, standard_plan, date, currency)
+      scope = room_type.room_rates.where(date: date, currency: currency)
+
+      scope.find_by(rate_plan: standard_plan) ||
+        scope.find_by(rate_plan: nil) ||
+        room_type.room_rates.build(rate_plan: standard_plan, date: date, currency: currency)
     end
 
     def winning_rule_for(date, category: :online)

@@ -262,7 +262,7 @@ module ChannelManagers
           },
           rooms: booking.booking_rooms.group_by { |br| [ br.room_type_id, br.rate_plan_id ] }.map do |(room_type_id, rate_plan_id), rooms|
             br = rooms.first
-            rp = br.rate_plan || br.room_type.rate_plans.first
+            rp = br.rate_plan || br.room_type.standard_rate_plan
             room_type_rate_plan = br.room_type.room_type_rate_plans.find_by(rate_plan: rp)
             {
               room_type_id: mapping_for(br.room_type).external_id,
@@ -536,7 +536,7 @@ module ChannelManagers
           end
 
           current_range = nil
-          rates_by_date = rate_plan.room_rates.where(date: effective_range, currency: rate_plan.currency).index_by(&:date)
+          rates_by_date = rates_for(rate_plan, room_type, effective_range)
 
           # Iterate over all dates in the effective range to ensure a full snapshot
           effective_range.each do |date|
@@ -608,7 +608,7 @@ module ChannelManagers
                   currency: rate_plan.currency
                 ).index_by(&:date)
 
-                rates_by_date = rate_plan.room_rates.where(date: effective_range, currency: rate_plan.currency).index_by(&:date)
+                rates_by_date = rates_for(rate_plan, room_type, effective_range)
 
                 current_crp_range = nil
 
@@ -672,6 +672,18 @@ module ChannelManagers
       values
     end
 
+    # A rate plan shared across several room categories holds one RoomRate per
+    # category per date (room_rates is unique on room_type_id, rate_plan_id,
+    # date, currency). Scoping to the category being pushed is what keeps each
+    # of its channel rate plans on its own price — without it, index_by(&:date)
+    # collapses the categories down to whichever row the database returned
+    # last, and every category is pushed at that one price.
+    def rates_for(rate_plan, room_type, date_range)
+      rate_plan.room_rates
+               .where(room_type: room_type, date: date_range, currency: rate_plan.currency)
+               .index_by(&:date)
+    end
+
     def ensure_property(client)
       mapping = @hotel.channel_mapping || @hotel.create_channel_mapping(provider: provider_name, external_id: "pending")
 
@@ -702,13 +714,19 @@ module ChannelManagers
     end
 
     def ensure_rate_plans(client, room_type)
-      # If room type has no rate plans, find or create a standard one and link it
+      # If room type has no rate plans, create a standard one of its own. The
+      # lookup must stay scoped to the room type: every room type carries its
+      # own "Standard Rate" plan, so searching hotel-wide would return another
+      # room type's plan and link the two together, making a rate edit on one
+      # bleed into the other.
       if room_type.rate_plans.empty?
-        rate_plan = @hotel.rate_plans.find_or_create_by!(name: "Standard Rate") do |rp|
-          rp.sell_mode = "per_room"
-          rp.currency = @hotel.default_currency || "MYR"
-        end
-        room_type.room_type_rate_plans.find_or_create_by!(rate_plan: rate_plan)
+        rate_plan = @hotel.rate_plans.create!(
+          name: "Standard Rate",
+          kind: "standard",
+          sell_mode: "per_room",
+          currency: @hotel.default_currency || "MYR"
+        )
+        room_type.room_type_rate_plans.create!(rate_plan: rate_plan)
       end
 
       room_type.rate_plans.all? do |rate_plan|

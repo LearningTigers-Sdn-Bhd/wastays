@@ -53,5 +53,19 @@ RSpec.describe Bookings::RateOptions do
         expect(restricted_service.call.any? { |o| o[:name] == "Special Offer" }).to be false
       end
     end
+
+    context "when a shared plan has a walk-in price on a different room type" do
+      let(:other_room_type) { create(:room_type, hotel: hotel) }
+      let(:shared_plan) { room_type.standard_rate_plan }
+
+      before do
+        create(:room_type_rate_plan, rate_plan: shared_plan, room_type: other_room_type)
+        create(:room_rate, room_type: other_room_type, rate_plan: shared_plan, date: check_in, price: 150.0, walk_in_price: 400.0)
+      end
+
+      it "does not offer a walk-in option on the room type without one" do
+        expect(service.call.any? { |o| o[:tier_kind] == :walk_in }).to be false
+      end
+    end
   end
 end

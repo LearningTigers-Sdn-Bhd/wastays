@@ -88,7 +88,7 @@ module BookingEngine
         end
 
         if (checkout_rate.nil? || checkout_rate.rate_plan_id.nil?) && room_type.rate_plans.present?
-          standard_plan = room_type.rate_plans.first
+          standard_plan = room_type.standard_rate_plan
           std_checkout_rate = room_type.room_rates.find do |rr|
             rr.date == @check_out &&
               rr.currency == currency &&
@@ -534,7 +534,7 @@ module BookingEngine
 
       # Fallback to standard rate plan if checking base plan (nil)
       if (checkout_rate.nil? || checkout_rate.rate_plan_id.nil?) && room_type.rate_plans.present?
-        standard_plan = room_type.rate_plans.first
+        standard_plan = room_type.standard_rate_plan
         std_checkout_rate = room_type.room_rates.find do |rr|
           rr.date == @check_out &&
             rr.currency == currency &&
@@ -680,7 +680,7 @@ module BookingEngine
     def standard_rate_for(date, room_type)
       @standard_rates ||= {}
       @standard_rates[room_type.id] ||= begin
-        standard_plan = room_type.rate_plans.first
+        standard_plan = room_type.standard_rate_plan
         if standard_plan
           room_type.room_rates.select { |rr| rr.rate_plan_id == standard_plan.id }.index_by(&:date)
         else
