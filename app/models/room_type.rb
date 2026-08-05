@@ -39,6 +39,20 @@ class RoomType < ApplicationRecord
     max_adults.to_i + max_children.to_i
   end
 
+  # The plan that anchors this category's pricing: the one ensure_standard_rate_plan
+  # creates alongside the category, and the row the pricing rules and the nightly
+  # price fallbacks write to and read from.
+  #
+  # Falls back to the oldest plan for categories that predate the kind column and
+  # whose anchor was renamed to something the backfill did not recognise — that
+  # plan was created with the category, so it still sorts first. Ordering matters:
+  # a plan shared across several categories is always added later and must never
+  # win here, or the rules would write onto the shared plan's rows.
+  def standard_rate_plan
+    @standard_rate_plan ||= rate_plans.order(:id).find_by(kind: "standard") ||
+                            rate_plans.order(:id).first
+  end
+
   def attach_photos_with_limit(photo_files)
     photo_files = Array(photo_files).reject(&:blank?)
     remaining_slots = [ MAX_PHOTOS - photos.count, 0 ].max

@@ -77,5 +77,33 @@ RSpec.describe HotelOps::ApplyPricingRules do
         service.call
       }.to change(RoomRate, :count).by(-1)
     end
+
+    context "when the category also carries a second rate plan" do
+      let!(:package) { create(:rate_plan, :custom, hotel: hotel, room_type: room_type, currency: "MYR") }
+
+      let!(:package_rate) do
+        create(:room_rate, room_type: room_type, rate_plan: package, date: Date.new(2026, 4, 23), price: 1350, currency: "MYR")
+      end
+
+      it "leaves the second plan's price alone" do
+        service.call
+
+        expect(package_rate.reload.price.to_f).to eq(1350.0)
+        expect(package_rate.rate_plan_id).to eq(package.id)
+      end
+
+      it "still writes the rule price onto the anchor plan" do
+        service.call
+
+        anchor_rate = room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 23))
+        expect(anchor_rate.price.to_f).to eq(100.0)
+      end
+
+      it "does not delete the second plan's price when no rule applies" do
+        hotel.pricing_rules.delete_all
+
+        expect { service.call }.not_to change { RoomRate.where(id: package_rate.id).count }
+      end
+    end
   end
 end
