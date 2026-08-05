@@ -1,0 +1,68 @@
+<%# A tier stores what the hotel RETAINS. The refund is derived (amount paid minus
+    fee), so a policy can never keep 30% and refund 50% with nobody able to say
+    where the rest went. %>
+<% tier_pricing_choices = [
+     { label: "a percentage", value: "percentage" },
+     { label: "a fixed amount", value: "fixed" },
+     { label: "nights at room rate", value: "nights" }
+   ] %>
+
+<section aria-labelledby="cancellation-tiers-heading-<%= policy.id %>" class="space-y-4 border-t border-border pt-5">
+  <div>
+    <h2 id="cancellation-tiers-heading-<%= policy.id %>" class="text-base font-semibold text-foreground">How much the hotel keeps</h2>
+    <p class="mt-1 text-sm text-muted-foreground">
+      One band per cut-off. A guest gets the tightest band they still qualify for; cancelling
+      inside every band falls back to the charge above.
+    </p>
+  </div>
+
+  <div class="space-y-3" data-reservation-policy-form-target="rows">
+    <%= form.fields_for :cancellation_tiers do |tier_form| %>
+      <%= render "tier_row", tier_form:, currency:, tier_pricing_choices:, basis_choices: %>
+    <% end %>
+  </div>
+
+  <template data-reservation-policy-form-target="template">
+    <%= form.fields_for :cancellation_tiers,
+          HotelCancellationPolicyTier.new(pricing_type: "percentage", percentage_basis: "total_stay"),
+          child_index: "NEW_RECORD" do |tier_form| %>
+      <%= render "tier_row", tier_form:, currency:, tier_pricing_choices:, basis_choices: %>
+    <% end %>
+  </template>
+
+  <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :xs,
+        data: { action: "click->reservation-policy-form#addTier" }) do %>
+    <%= app_icon "plus", class: "size-3.5", aria: { hidden: true } %>
+    Add a band
+  <% end %>
+
+  <div class="rounded-md border border-border bg-muted px-3 py-2" data-testid="cancellation-worked-example">
+    <p class="text-xs font-medium text-muted-foreground">Worked example</p>
+    <p class="mt-0.5 text-sm text-foreground" aria-live="polite" data-reservation-policy-form-target="example"></p>
+  </div>
+</section>
+
+<%# Refund terms only mean something once a band keeps less than everything —
+    when the hotel retains the lot there is nothing to send back. %>
+<section aria-labelledby="cancellation-refund-heading-<%= policy.id %>" class="space-y-4 border-t border-border pt-5"
+         data-reservation-policy-form-target="refundBlock" hidden>
+  <div>
+    <h2 id="cancellation-refund-heading-<%= policy.id %>" class="text-base font-semibold text-foreground">Returning the balance</h2>
+    <p class="mt-1 text-sm text-muted-foreground">How the guest gets back whatever the hotel does not keep.</p>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%= render PanelsUI::FormField.new(form:, attribute: :refund_method, label: "Refund by") do |field| %>
+      <% field.with_select_menu([
+           { label: "Original payment method", value: "original_payment_method" },
+           { label: "Bank transfer", value: "bank_transfer" },
+           { label: "Credit note", value: "credit_note" }
+         ], selected: policy.refund_method, include_blank: true, prompt: "Not stated") %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :refund_processing_days, label: "Processing time",
+          hint: "Working days quoted to the guest.") do |field| %>
+      <% field.with_input(type: :number, min: 0, max: 365, step: 1, inputmode: "numeric") %>
+      <% field.with_addon(align: :inline_end) { "days" } %>
+    <% end %>
+  </div>
+</section>

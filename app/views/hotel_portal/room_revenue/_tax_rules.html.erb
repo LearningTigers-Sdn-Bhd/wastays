@@ -1,0 +1,103 @@
+<% code = presenter.room_revenue_code %>
+<% currency = presenter.currency %>
+<% selected_keys = @proposed_tax_rule_keys.presence || presenter.selected_tax_rule_keys %>
+
+<% if @tax_rule_errors.present? %>
+  <%= render PanelsUI::Alert.new(tone: :destructive, title: "Tax rules could not be saved", role: :alert) do |alert| %>
+    <% alert.with_description { @tax_rule_errors.to_sentence } %>
+  <% end %>
+<% end %>
+
+<section aria-labelledby="room-revenue-tax-rules-heading" class="space-y-5">
+  <div>
+    <h2 id="room-revenue-tax-rules-heading" class="text-base font-semibold text-foreground">Tax rules for room revenue</h2>
+    <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
+      These rules apply to every night a room is billed — the nightly charge and the four stay events
+      (late checkout, early departure, no-show, cancellation), which post under their own ledger codes
+      but are taxed as room revenue.
+    </p>
+  </div>
+
+  <%= form_with model: code, url: hotel_preview_room_revenue_tax_rules_path(current_hotel), method: :patch,
+        id: "room-revenue-tax-rules-form", class: "space-y-5" do |form| %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :tax_rule_keys, label: "Taxes and fees applied",
+          hint: "Rules linked here are saved even while inactive, and skipped when a charge is posted.") do |field| %>
+      <% field.with_multi_select(presenter.tax_rule_choices, selected: selected_keys, prompt: "Select taxes and fees") %>
+    <% end %>
+
+    <section aria-labelledby="room-revenue-preview-heading"
+             class="overflow-hidden rounded-md border border-border bg-card"
+             data-testid="room-revenue-posting-preview">
+      <div class="border-b border-border bg-muted px-3 py-2">
+        <h3 id="room-revenue-preview-heading" class="text-sm font-semibold text-foreground">Posting preview</h3>
+        <p class="mt-0.5 text-xs text-muted-foreground">
+          A room night billed at <%= currency %> <%= number_with_precision(presenter.preview_amount, precision: 2, delimiter: ",") %>,
+          using the rules currently saved.
+        </p>
+      </div>
+      <div class="divide-y divide-border">
+        <div class="flex items-baseline justify-between gap-4 px-3 py-2 text-sm">
+          <span class="min-w-0 truncate font-medium text-foreground"><%= code.name %></span>
+          <span class="shrink-0 font-mono tabular-nums text-foreground"><%= currency %> <%= number_with_precision(presenter.preview_amount, precision: 2, delimiter: ",") %></span>
+        </div>
+        <% presenter.preview_lines.each do |line| %>
+          <div class="flex items-baseline justify-between gap-4 px-3 py-2 text-sm">
+            <span class="min-w-0 truncate text-muted-foreground"><%= line[:name] %> <span class="text-xs">· <%= line[:detail] %></span></span>
+            <span class="shrink-0 font-mono tabular-nums text-muted-foreground"><%= currency %> <%= number_with_precision(line[:amount], precision: 2, delimiter: ",") %></span>
+          </div>
+        <% end %>
+        <% if presenter.preview_lines.empty? %>
+          <p class="px-3 py-2 text-sm text-muted-foreground">No active tax rules — room revenue posts untaxed.</p>
+        <% end %>
+        <div class="flex items-baseline justify-between gap-4 bg-muted px-3 py-2 text-sm font-semibold text-foreground">
+          <span>Guest pays</span>
+          <span class="font-mono tabular-nums"><%= currency %> <%= number_with_precision(presenter.preview_total, precision: 2, delimiter: ",") %></span>
+        </div>
+      </div>
+    </section>
+
+    <div class="flex justify-end">
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm, data: { turbo_submits_with: "Reviewing…" }) do %>
+        Save tax rules
+      <% end %>
+    </div>
+  <% end %>
+</section>
+
+<section aria-labelledby="room-revenue-application-heading" class="space-y-5 border-t border-border pt-6">
+  <div>
+    <h2 id="room-revenue-application-heading" class="text-base font-semibold text-foreground">How far a change reaches</h2>
+    <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
+      Posted transactions never change. This decides whether a rule change also rewrites the
+      unposted forecast lines already sitting on open folios.
+    </p>
+  </div>
+
+  <% if @configuration_errors.present? %>
+    <%= render PanelsUI::Alert.new(tone: :destructive, title: "Configuration could not be saved", role: :alert) do |alert| %>
+      <% alert.with_description { @configuration_errors.to_sentence } %>
+    <% end %>
+  <% end %>
+
+  <%= form_with model: presenter.transaction_configuration, url: hotel_room_revenue_configuration_path(current_hotel),
+        method: :patch, id: "room-revenue-configuration-form", class: "space-y-5" do |form| %>
+    <%= render PanelsUI::RadioGroup.new(
+          form:, attribute: :room_revenue_tax_rule_application,
+          label: "Apply changes to",
+          selected: presenter.transaction_configuration.room_revenue_tax_rule_application,
+          options: [
+            { label: "New bookings only",
+              value: "new_bookings_only",
+              description: "New booking tax snapshots use these rules. Existing open folio forecasts stay unchanged." },
+            { label: "New bookings and upcoming transactions on open folios",
+              value: "open_folio_forecasts",
+              description: "Also recalculates unposted forecast charges on open folios immediately. This can change guest booking contract totals." }
+          ]) %>
+
+    <div class="flex justify-end">
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm, variant: :secondary, data: { turbo_submits_with: "Saving…" }) do %>
+        Save
+      <% end %>
+    </div>
+  <% end %>
+</section>
