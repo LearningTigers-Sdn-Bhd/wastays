@@ -3,68 +3,17 @@
 <div class="w-full space-y-3.5" data-controller="matrix-mode matrix-search">
   <%= render "hotel_portal/settings/group_tabs" %>
 
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
     <div>
       <h1 class="text-base font-semibold tracking-tight text-foreground">Roles &amp; Permissions</h1>
-      <p class="mt-1 text-sm text-muted-foreground">Assign capabilities to staff roles using the matrix below.</p>
+      <p class="mt-1 text-sm text-muted-foreground">Each column is a role. Grant a permission by ticking it while editing.</p>
     </div>
 
-    <%# The matrix has one set of actions per mode and they occupy the same spot:
-        reading offers Edit and New Role, editing offers only Cancel and Save. %>
-    <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row" data-matrix-mode-target="viewOnly">
-      <%= render PanelsUI::Button.new(
-            as: :button,
-            variant: :secondary,
-            size: :sm,
-            class: "w-full sm:w-auto",
-            data: { matrix_mode_target: "editTrigger", action: "matrix-mode#enableEdit" }) do %>
-        <%= app_icon "square-pen", class: "size-4", aria: { hidden: "true" } %>
-        <span>Edit Permissions</span>
-      <% end %>
-
-      <%= render PanelsUI::Button.new(
-            href: new_hotel_role_path(current_hotel),
-            size: :sm,
-            class: "w-full sm:w-auto",
-            data: { turbo_frame: "settings_action_sheet" }) do %>
-        <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
-        <span>New Role</span>
-      <% end %>
-    </div>
-
-    <div class="hidden w-full flex-col gap-2 sm:w-auto sm:flex-row" data-matrix-mode-target="editOnly">
-      <%= render PanelsUI::Button.new(
-            as: :button,
-            variant: :secondary,
-            size: :sm,
-            class: "w-full sm:w-auto",
-            data: { matrix_mode_target: "cancelTrigger", action: "matrix-mode#disableEdit" }) do %>
-        <span>Cancel</span>
-      <% end %>
-
-      <%= render PanelsUI::Button.new(
-            as: :button,
-            type: :submit,
-            form: matrix_form_id,
-            size: :sm,
-            class: "w-full sm:w-auto",
-            data: { turbo_submits_with: "Saving…" }) do %>
-        <span>Save Permissions</span>
-      <% end %>
-    </div>
-  </div>
-
-  <section aria-labelledby="permission-matrix-heading" class="space-y-3">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h2 id="permission-matrix-heading" class="text-base font-semibold text-foreground">Permission Matrix</h2>
-        <p class="mt-1 text-sm text-muted-foreground">Each column is a role. Grant a permission by ticking it while editing.</p>
-      </div>
-
+    <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
       <%# Filtering happens in the browser, so this names a control rather than a
           submitted value: `fields` gives the component a builder without a form. %>
       <%= fields :matrix_filter do |filter| %>
-        <div class="w-full sm:w-80">
+        <div class="w-full sm:w-64">
           <%= render PanelsUI::FormField.new(
                 form: filter,
                 attribute: :permission_search,
@@ -82,8 +31,56 @@
           <% end %>
         </div>
       <% end %>
-    </div>
 
+      <%# The matrix has one set of actions per mode and they occupy the same spot:
+          reading offers Edit and New Role, editing offers only Cancel and Save. %>
+      <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row" data-matrix-mode-target="viewOnly">
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              variant: :secondary,
+              size: :sm,
+              class: "w-full sm:w-auto",
+              data: { matrix_mode_target: "editTrigger", action: "matrix-mode#enableEdit" }) do %>
+          <%= app_icon "square-pen", class: "size-4", aria: { hidden: "true" } %>
+          <span>Edit Permissions</span>
+        <% end %>
+
+        <%= render PanelsUI::Button.new(
+              href: new_hotel_role_path(current_hotel),
+              size: :sm,
+              class: "w-full sm:w-auto",
+              data: { turbo_frame: "settings_action_sheet" }) do %>
+          <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
+          <span>New Role</span>
+        <% end %>
+      </div>
+
+      <div class="hidden w-full flex-col gap-2 sm:w-auto sm:flex-row" data-matrix-mode-target="editOnly">
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              variant: :secondary,
+              size: :sm,
+              class: "w-full sm:w-auto",
+              data: { matrix_mode_target: "cancelTrigger", action: "matrix-mode#disableEdit" }) do %>
+          <span>Cancel</span>
+        <% end %>
+
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: matrix_form_id,
+              size: :sm,
+              class: "w-full sm:w-auto",
+              data: { turbo_submits_with: "Saving…" }) do %>
+          <span>Save Permissions</span>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <%# No heading of its own: the page title names the matrix, and the table
+      carries its own caption for anyone reading it out of context. %>
+  <div class="space-y-3">
     <p class="sr-only" role="status" aria-live="polite" aria-atomic="true"
        data-matrix-mode-target="status" data-matrix-search-target="status"></p>
 
@@ -194,5 +191,5 @@
         <% end %>
       <% end %>
     <% end %>
-  </section>
+  </div>
 </div>

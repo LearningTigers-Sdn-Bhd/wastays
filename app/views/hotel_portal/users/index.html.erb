@@ -64,12 +64,10 @@
     </section>
   <% end %>
 
-  <section aria-labelledby="current-staff-heading" class="space-y-3">
-    <div>
-      <h2 id="current-staff-heading" class="text-base font-semibold text-foreground">Current Staff</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Users who have been granted access to this property.</p>
-    </div>
-
+  <%# No heading of its own: the page title names the staff list, and the table
+      carries its own caption for anyone reading it out of context. Pending
+      invitations keep theirs — that table is a different set of people. %>
+  <div>
     <%= render PanelsUI::Table.new(
           caption: "Staff with access to this property",
           header_style: :sentence,
@@ -126,5 +124,5 @@
         <% end %>
       <% end %>
     <% end %>
-  </section>
+  </div>
 </div>
