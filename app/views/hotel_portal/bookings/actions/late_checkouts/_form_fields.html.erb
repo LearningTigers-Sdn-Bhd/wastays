@@ -1,3 +1,12 @@
+<% policy_amount = presenter.late_checkout_policy_amount %>
+<% policy_label = presenter.late_checkout_policy_label %>
+<% per_booking = late_checkout_policy_per_booking? %>
+<%# "Follow policy" is only offered when the policy actually names a figure. A
+    manual (or inactive) policy has nothing to follow, so the sheet falls back to
+    the staff-entered amount rather than showing a blank policy box. %>
+<% policy_available = policy_amount.present? || per_booking %>
+<% charge_source = params[:charge_source].presence || (policy_available ? "policy" : "custom") %>
+
 <%= render PanelsUI::RadioGroup.new(
       form: form, attribute: :resolution,
       label: "Choose what should happen.",
@@ -24,31 +33,42 @@
       data: { action: "change->booking-actions--late-checkout#updateUI" }) %>
 
 <div data-booking-actions--late-checkout-target="chargeSection" class="space-y-4">
-  <%= render PanelsUI::RadioGroup.new(
-        form: form, attribute: :charge_calculation,
-        label: "Charge calculation",
-        variant: :card,
-        size: :sm,
-        selected: params[:charge_calculation] || "standard",
-        options: [
-          { label: "Current rate charge", value: "standard",
-            description: "Current booking property rate for the extended date. Taxes are added when the charge posts." },
-          { label: "Additional charge", value: "custom",
-            description: "Impose an additional charge on the current property rate for the extended date. Taxes are added when the charge posts." }
-        ],
-        data: { action: "change->booking-actions--late-checkout#updateUI" }) %>
+  <% if policy_available %>
+    <%= render PanelsUI::RadioGroup.new(
+          form: form, attribute: :charge_source,
+          label: "Charge calculation",
+          variant: :card,
+          size: :sm,
+          selected: charge_source,
+          options: [
+            { label: "Follow the late checkout policy", value: "policy",
+              description: per_booking ? "Each selected booking is charged by the hotel's late checkout policy. Taxes are added when the charge posts." : "#{policy_label}. Taxes are added when the charge posts." },
+            { label: "Custom charge", value: "custom",
+              description: "Name the amount yourself, on top of the current property rate for the extended date. Taxes are added when the charge posts." }
+          ],
+          data: { action: "change->booking-actions--late-checkout#updateUI" }) %>
+  <% else %>
+    <%= form.hidden_field :charge_source, value: "custom" %>
+  <% end %>
 
-  <div data-booking-actions--late-checkout-target="standardSection"
-       class="flex items-center justify-between rounded-md border border-border bg-muted/50 px-4 py-3">
-    <div>
-      <span class="text-sm text-muted-foreground">Room charge</span>
-      <p class="text-xs text-muted-foreground">Taxes are posted separately, following the room revenue rules.</p>
-    </div>
-    <span class="text-sm font-medium text-foreground"><%= presenter.currency %> <%= number_with_precision(presenter.suggested_late_checkout_amount, precision: 2, delimiter: ",") %></span>
+  <div data-booking-actions--late-checkout-target="policySection"
+       class="space-y-3 rounded-md border border-border bg-muted/50 p-4 <%= 'hidden' unless policy_available && charge_source == 'policy' %>">
+    <% if per_booking %>
+      <div>
+        <p class="text-sm text-foreground">Policy applied per booking</p>
+        <p class="text-xs text-muted-foreground">Each selected booking is charged its own policy amount. Taxes are posted separately, following the room revenue rules.</p>
+      </div>
+    <% else %>
+      <%= render PanelsUI::FormField.new(
+            form: form, attribute: :policy_amount, label: "Charge amount", size: :sm, disabled: true,
+            hint: "#{policy_label}. Taxes are posted separately, following the room revenue rules.") do |field| %>
+        <% field.with_input(type: :text, value: "#{presenter.currency} #{number_with_precision(policy_amount, precision: 2, delimiter: ',')}") %>
+      <% end %>
+    <% end %>
   </div>
 
   <div data-booking-actions--late-checkout-target="customSection"
-       class="hidden space-y-4 rounded-md border border-border bg-muted/50 p-4">
+       class="space-y-4 rounded-md border border-border bg-muted/50 p-4 <%= 'hidden' if policy_available && charge_source == 'policy' %>">
     <div class="grid grid-cols-2 gap-4">
       <%= render PanelsUI::FormField.new(form: form, attribute: :custom_type, label: "Adjustment type", size: :sm) do |field| %>
         <% field.with_select_menu(
@@ -64,7 +84,7 @@
     <div class="flex items-center justify-between border-t border-border pt-3">
       <div>
         <p class="text-sm text-foreground">Calculated total</p>
-        <p class="text-xs text-muted-foreground">Rate + taxes + adjustment</p>
+        <p class="text-xs text-muted-foreground">Room rate plus adjustment. Taxes are posted separately.</p>
       </div>
       <span class="text-sm font-medium text-foreground" data-booking-actions--late-checkout-target="displayAmount"><%= presenter.currency %> 0.00</span>
     </div>

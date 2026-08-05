@@ -6,6 +6,12 @@ module Bookings
   class ProcessLateCheckout
     RESOLUTIONS = %w[charge waive reject].freeze
 
+    # The sheet sends this when staff chose "follow policy". On that path the
+    # submitted amount is not read at all — the figure comes from the hotel's
+    # late-checkout policy, recomputed here. Any other value (including none)
+    # keeps the historical staff-entered behaviour.
+    POLICY_CHARGE_SOURCE = "policy"
+
     def self.call(booking:, user:, params: {}, options: {})
       new(booking: booking, user: user, params: params, options: options).call
     end
@@ -116,7 +122,9 @@ module Bookings
 
     def post_charge_if_requested
       return OpenStruct.new(success?: true) unless charge_requested?
-      return failure("Charge amount must be greater than zero.") unless @params[:amount].to_d.positive?
+
+      amount_result = charge_amount
+      return amount_result unless amount_result.success?
       return failure("Booking folio is missing.") unless @booking.booking_folio.present?
 
       @charged = true
@@ -124,10 +132,36 @@ module Bookings
         folio: @booking.booking_folio,
         user: @user,
         category: "late_checkout_charge",
-        amount: @params[:amount],
+        amount: amount_result.amount,
         description: "Late Checkout Charge",
         options: @options.fetch(:charge_options, {})
       )
+    end
+
+    # On the policy path the client-supplied amount is deliberately never read:
+    # it is a hidden field the browser writes, so trusting it would let anyone
+    # posting this form name their own late-checkout fee.
+    def charge_amount
+      return staff_entered_amount unless follow_policy?
+
+      quote = ReservationPolicies::Quote.call(booking: @booking, policy_type: "late_checkout")
+      return failure(quote.error) unless quote.success?
+      # A manual policy computes nothing by design — staff still name the figure.
+      return staff_entered_amount if quote.amount.blank?
+      return failure("The late checkout policy does not charge for this booking.") unless quote.amount.positive?
+
+      OpenStruct.new(success?: true, amount: quote.amount)
+    end
+
+    def staff_entered_amount
+      amount = @params[:amount].to_d
+      return failure("Charge amount must be greater than zero.") unless amount.positive?
+
+      OpenStruct.new(success?: true, amount: amount)
+    end
+
+    def follow_policy?
+      @params[:charge_source].to_s == POLICY_CHARGE_SOURCE
     end
 
     def charge_requested?

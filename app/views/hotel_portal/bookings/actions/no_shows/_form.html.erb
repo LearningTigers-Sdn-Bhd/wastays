@@ -22,7 +22,7 @@
             <% end %>
             <%= render PanelsUI::Alert.new(tone: :warning) do |alert| %>
               <% alert.with_description do %>
-                This finalizes the no-show, posts the standard first-night no-show charges, excludes tourism tax, and releases the assigned room and remaining inventory. Any settled folio closes automatically.
+                This finalizes the no-show, <%= no_show_charge_summary %> following the hotel's no-show policy, excludes tourism tax, and releases the assigned room and remaining inventory. Any settled folio closes automatically.
               <% end %>
             <% end %>
             <div class="mt-5">

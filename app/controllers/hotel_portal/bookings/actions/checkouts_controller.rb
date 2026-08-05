@@ -17,7 +17,8 @@ module HotelPortal
         include GroupLifecycleTargeting
 
         helper_method :checkout_sheet_presenter, :checkout_early_checkout_lines, :checkout_penalty_folio_id, :checkout_form_state,
-          :checkout_deposits, :checkout_deposit_action_path, :checkout_deposit_blocking?, :checkout_deposit_available_amount
+          :checkout_deposits, :checkout_deposit_action_path, :checkout_deposit_blocking?, :checkout_deposit_available_amount,
+          :early_departure_policy_amount, :early_departure_policy_label
 
         def show
           return complete if request.post?
@@ -155,7 +156,7 @@ module HotelPortal
 
         def early_departure_params_for(booking)
           scoped = params.dig(:early_departures, booking.id.to_s) || params.dig(:early_departures, booking.id)
-          return params.permit(:apply_charge, :charge_amount).to_h.symbolize_keys if scoped.blank?
+          return params.permit(:apply_charge, :charge_amount, :charge_source).to_h.symbolize_keys if scoped.blank?
 
           permitted = scoped.respond_to?(:to_unsafe_h) ? scoped.to_unsafe_h : scoped.to_h
           {
@@ -164,10 +165,39 @@ module HotelPortal
           }
         end
 
+        # What the hotel's early-departure policy charges this booking, pre-tax,
+        # or nil when the policy names no figure (manual pricing, or not charging).
+        def early_departure_policy_quote(booking)
+          (@early_departure_policy_quotes ||= {})[booking.id] ||=
+            ::ReservationPolicies::Quote.call(booking: booking, policy_type: "early_departure")
+        end
+
+        def early_departure_policy_amount(booking)
+          quote = early_departure_policy_quote(booking)
+          return nil unless quote.success?
+          return nil if quote.amount.blank? || !quote.amount.positive?
+
+          quote.amount
+        end
+
+        def early_departure_policy_label(booking)
+          quote = early_departure_policy_quote(booking)
+          quote.success? ? quote.label : nil
+        end
+
+        # Recomputed server-side on every read: the row's submitted amount is a
+        # hidden field the browser writes, and on the policy path it is ignored
+        # entirely in favour of the hotel's early-departure policy.
         def calculated_early_departure_charge(booking, values)
           values = values.to_unsafe_h if values.respond_to?(:to_unsafe_h)
           values = values.to_h.with_indifferent_access
           return 0.to_d unless ActiveModel::Type::Boolean.new.cast(values[:apply_charge])
+
+          if values[:charge_source].to_s == "policy"
+            policy_amount = early_departure_policy_amount(booking)
+            # A manual policy names no figure — fall through to the staff-entered one.
+            return policy_amount if policy_amount.present?
+          end
 
           input = values[:value].to_d
           return input unless values[:type] == "percentage"

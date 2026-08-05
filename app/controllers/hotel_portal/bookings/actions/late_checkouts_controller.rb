@@ -13,6 +13,8 @@ module HotelPortal
       class LateCheckoutsController < BaseController
         include GroupLifecycleTargeting
 
+        helper_method :late_checkout_policy_per_booking?
+
         def show
           return create if request.post?
 
@@ -63,8 +65,14 @@ module HotelPortal
           result.charged? ? "Late checkout charge applied." : "Late checkout resolved without charge."
         end
 
+        # A group sheet resolves every selected booking at once, and each one gets
+        # its own policy figure — there is no single number to show.
+        def late_checkout_policy_per_booking?
+          @booking.group_booking_id.present? || selected_lifecycle_batch?(@booking)
+        end
+
         def late_checkout_params
-          params.permit(:resolution, :amount, :check_out, :charge_calculation, :custom_type, :custom_value)
+          params.permit(:resolution, :amount, :check_out, :charge_source, :custom_type, :custom_value)
         end
       end
     end
