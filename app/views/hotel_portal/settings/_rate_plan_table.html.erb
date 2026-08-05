@@ -9,7 +9,7 @@
   <% table.with_header do %>
     <tr>
       <th>Name</th>
-      <th>Sell mode</th>
+      <th>How it's charged</th>
       <th>Currency</th>
       <th>Room categories</th>
       <th class="text-right">Action</th>
@@ -26,7 +26,7 @@
             <% if rate_plan.archived? %>
               <%= render PanelsUI::Badge.new(label: "Archived", variant: :warning, size: :sm) %>
             <% elsif rate_plan.special_tier? %>
-              <%= render PanelsUI::Badge.new(label: "Virtual tier", variant: :neutral, size: :sm) %>
+              <%= render PanelsUI::Badge.new(label: rate_tier_label(rate_plan), variant: :neutral, size: :sm) %>
             <% end %>
           </div>
         </td>

@@ -26,7 +26,7 @@ RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
 
     first(:link, 'Manage').click
 
-    expect(page).to have_content('Age bands')
+    expect(page).to have_content('Child age groups')
 
     find("input[name='rate_plan[rate_plan_age_bands_attributes][0][max_age]']").set('12')
     find("input[name='rate_plan[rate_plan_age_bands_attributes][0][price_value]']").set('35')

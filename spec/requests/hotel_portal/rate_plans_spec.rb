@@ -90,7 +90,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      expect(response.body).to include("% of Standard Rate")
+      expect(response.body).to include("% of standard rate")
       expect(response.body).to include("rate_plan[room_type_pricing][#{room_type.id}][pricing_mode]")
       expect(response.body).to include('value="-15.0"')
     end
@@ -113,20 +113,20 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('data-age-band-price-preview-currency-value="MYR"')
       expect(response.body).to include('data-age-band-price-preview-target="roomTypeField"')
       expect(response.body).to include('data-role="price-preview"')
-      expect(response.body).to include('Flat amount')
+      expect(response.body).to include('Fixed price per child')
     end
 
-    it 'shows the prominent empty-state Add Band button when there are no age bands yet' do
+    it 'shows the prominent empty-state add button when there are no age groups yet' do
       per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
       empty_state = Nokogiri::HTML(response.body).at_css('[data-rate-plan-age-bands-target="emptyState"]')
-      expect(empty_state.text).to include('Add your first age band')
+      expect(empty_state.text).to include('Add your first age group')
       expect(empty_state["class"]).not_to include("hidden")
     end
 
-    it 'hides the empty-state Add Band button once age bands already exist' do
+    it 'hides the empty-state add button once age groups already exist' do
       per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 

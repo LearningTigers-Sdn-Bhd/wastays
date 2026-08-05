@@ -11,13 +11,13 @@
          data-action="input->age-band-price-preview#update change->age-band-price-preview#update">
   <div class="flex items-start justify-between gap-3">
     <div>
-      <h2 id="rate-plan-age-bands-heading" class="text-base font-semibold text-foreground">Age bands</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Override the child price multiplier for specific age ranges. Ages outside every band fall back to it.</p>
+      <h2 id="rate-plan-age-bands-heading" class="text-base font-semibold text-foreground">Child age groups</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Charge different prices by age. Children whose age falls outside every group use the child price above.</p>
     </div>
     <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :xs,
           class: "shrink-0 #{'hidden' unless has_bands}",
           data: { action: "click->rate-plan-age-bands#add", rate_plan_age_bands_target: "addButton" }) do %>
-      Add band
+      Add age group
     <% end %>
   </div>
 
@@ -46,7 +46,7 @@
   <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :sm,
         class: "w-full border border-dashed border-border py-6 #{'hidden' if has_bands}",
         data: { action: "click->rate-plan-age-bands#add", rate_plan_age_bands_target: "emptyState" }) do %>
-    Add your first age band
+    Add your first age group
   <% end %>
 
   <template data-rate-plan-age-bands-target="template">

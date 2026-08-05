@@ -3,7 +3,7 @@
 module HotelPortal
   module RatePlansHelper
     PER_ROOM = { label: "Per room — extra guest charges", value: "per_room" }.freeze
-    PER_PERSON = { label: "Per person — pax rates plus single supplement", value: "per_person" }.freeze
+    PER_PERSON = { label: "Per person — pax rate plus single supplement", value: "per_person" }.freeze
 
     # Pax-pricing-only hotels sell exclusively per person; hotels without the
     # admin-granted allowance cannot offer it at all. RatePlan enforces both,
@@ -23,9 +23,9 @@ module HotelPortal
 
     def room_type_pricing_choices
       [
-        { label: "Manual", value: "fixed" },
-        { label: "% of Standard Rate", value: "multiplier" },
-        { label: "Amount off/on Standard Rate", value: "offset" }
+        { label: "I'll set the price myself", value: "fixed" },
+        { label: "% of standard rate", value: "multiplier" },
+        { label: "Standard rate ± an amount", value: "offset" }
       ]
     end
 
@@ -35,10 +35,18 @@ module HotelPortal
     # all require a real form builder, hence the stand-in object.
     PreviewScope = Struct.new(:room_type_id)
 
+    # "Walk-in"/"Corporate"/"OTA" say what the row is; "virtual tier" is an
+    # internal notion staff have no reason to learn.
+    TIER_LABELS = { "walk_in" => "Walk-in", "corporate" => "Corporate", "ota" => "OTA" }.freeze
+
+    def rate_tier_label(rate_plan)
+      TIER_LABELS[rate_plan.kind]
+    end
+
     def age_band_pricing_choices
       [
-        { label: "% of Standard Rate", value: "multiplier" },
-        { label: "Flat amount", value: "amount" }
+        { label: "% of the adult rate", value: "multiplier" },
+        { label: "Fixed price per child", value: "amount" }
       ]
     end
   end
