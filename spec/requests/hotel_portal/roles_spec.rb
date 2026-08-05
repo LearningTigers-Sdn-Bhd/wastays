@@ -28,6 +28,26 @@ RSpec.describe "HotelPortal::Roles", type: :request do
       expect(response.body).to include(role.name)
     end
 
+    it "renders the matrix as a pinned, striped table with a named control per cell" do
+      role = create(:role, account: account, name: "Front Desk", slug: "front_desk")
+      permission = Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings')
+
+      get hotel_roles_path(hotel)
+
+      document = Nokogiri::HTML(response.body)
+      table = document.at_css("table.panel-table[data-testid='permission-matrix']")
+      expect(table["data-sticky-column"]).to eq("true")
+      expect(table["data-sticky-header"]).to eq("true")
+      expect(table["data-striped"]).to eq("true")
+      # The matrix is taller than the viewport, so it scrolls inside itself.
+      expect(document.at_css(".panel-table__wrapper")["class"]).to include("max-h-[75dvh]")
+
+      checkbox_id = "role-#{role.id}-permission-#{permission.id}"
+      expect(document.at_css("input##{checkbox_id}[name='roles[#{role.id}][permission_ids][]'][value='#{permission.id}']")).to be_present
+      expect(document.at_css("label[for='#{checkbox_id}'] .panel-checkbox__label").text.strip)
+        .to eq("View Bookings for Front Desk")
+    end
+
     it "blocks users without manage_users permission" do
       manager_role.permissions.delete(manage_users_permission)
 

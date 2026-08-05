@@ -178,6 +178,10 @@
   .panel-checkbox[data-size="lg"] .panel-checkbox__input { width: 1.25rem; height: 1.25rem; }
   .panel-checkbox[data-size="lg"] .panel-checkbox__label { @apply text-sm; }
 
+  /* A screen-reader-only label leaves nothing to sit beside the control, so the
+     gap that would space them apart has to go with it. */
+  .panel-checkbox[data-label-hidden="true"] { gap: 0; }
+
   @media (pointer: coarse) {
     .panel-checkbox { min-height: 2.5rem; }
   }

@@ -1,156 +1,198 @@
+<% matrix_form_id = "permission-matrix-form" %>
+
 <div class="w-full space-y-3.5" data-controller="matrix-mode matrix-search">
-  <%= render PanelsUI::PageHeader.new(title: "Roles & Permissions", description: "Assign capabilities to staff roles using the matrix below.") do |header| %>
-    <% header.with_actions do %>
-      <div class="flex flex-wrap items-center gap-3">
-        <%= form_with url: hotel_roles_path(current_hotel), method: :get,
-              class: "w-full sm:w-120", data: { action: "submit->matrix-search#preventSubmit" } do |form| %>
+  <%= render "hotel_portal/settings/group_tabs" %>
+
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h1 class="text-base font-semibold tracking-tight text-foreground">Roles &amp; Permissions</h1>
+      <p class="mt-1 text-sm text-muted-foreground">Assign capabilities to staff roles using the matrix below.</p>
+    </div>
+
+    <%# The matrix has one set of actions per mode and they occupy the same spot:
+        reading offers Edit and New Role, editing offers only Cancel and Save. %>
+    <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row" data-matrix-mode-target="viewOnly">
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            variant: :secondary,
+            size: :sm,
+            class: "w-full sm:w-auto",
+            data: { matrix_mode_target: "editTrigger", action: "matrix-mode#enableEdit" }) do %>
+        <%= app_icon "square-pen", class: "size-4", aria: { hidden: "true" } %>
+        <span>Edit Permissions</span>
+      <% end %>
+
+      <%= render PanelsUI::Button.new(
+            href: new_hotel_role_path(current_hotel),
+            size: :sm,
+            class: "w-full sm:w-auto",
+            data: { turbo_frame: "settings_action_sheet" }) do %>
+        <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
+        <span>New Role</span>
+      <% end %>
+    </div>
+
+    <div class="hidden w-full flex-col gap-2 sm:w-auto sm:flex-row" data-matrix-mode-target="editOnly">
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            variant: :secondary,
+            size: :sm,
+            class: "w-full sm:w-auto",
+            data: { matrix_mode_target: "cancelTrigger", action: "matrix-mode#disableEdit" }) do %>
+        <span>Cancel</span>
+      <% end %>
+
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :submit,
+            form: matrix_form_id,
+            size: :sm,
+            class: "w-full sm:w-auto",
+            data: { turbo_submits_with: "Saving…" }) do %>
+        <span>Save Permissions</span>
+      <% end %>
+    </div>
+  </div>
+
+  <section aria-labelledby="permission-matrix-heading" class="space-y-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 id="permission-matrix-heading" class="text-base font-semibold text-foreground">Permission Matrix</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Each column is a role. Grant a permission by ticking it while editing.</p>
+      </div>
+
+      <%# Filtering happens in the browser, so this names a control rather than a
+          submitted value: `fields` gives the component a builder without a form. %>
+      <%= fields :matrix_filter do |filter| %>
+        <div class="w-full sm:w-80">
           <%= render PanelsUI::FormField.new(
-                form: form,
+                form: filter,
                 attribute: :permission_search,
                 label: "Search permissions",
-                label_hidden: true) do |field| %>
+                label_hidden: true,
+                size: :sm) do |field| %>
             <% field.with_input(
                  type: :search,
-                 placeholder: "Search permissions...",
+                 placeholder: "Search permissions…",
                  autocomplete: "off",
                  data: { action: "input->matrix-search#search", matrix_search_target: "query" }) %>
             <% field.with_addon(align: :inline_start, variant: :bare) do %>
-              <svg class="size-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+              <%= app_icon "search", class: "size-4 text-muted-foreground", aria: { hidden: "true" } %>
             <% end %>
           <% end %>
-        <% end %>
-
-        <%= render PanelsUI::Button.new(
-              as: :button,
-              type: "button",
-              variant: :secondary,
-              size: :md,
-              class: "w-full lg:w-auto",
-              data: { matrix_mode_target: "editButton", action: "click->matrix-mode#enableEdit" }) do %>
-          <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-          Edit Permissions
-        <% end %>
-        <%= render PanelsUI::Button.new(
-              href: new_hotel_role_path(current_hotel),
-              variant: :secondary,
-              size: :md,
-              class: "w-full lg:w-auto",
-              data: { turbo_frame: "settings_action_sheet" }) do %>
-          <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-          New Role
-        <% end %>
-      </div>
-    <% end %>
-  <% end %>
-
-  <%= render "hotel_portal/settings/group_tabs" %>
-
-  <div>
-    <%= form_with url: bulk_update_hotel_roles_path(current_hotel), method: :patch, local: true do %>
-      <div class="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-        <div class="overflow-x-auto rounded-2xl">
-          <table class="min-w-full divide-y divide-border border-separate border-spacing-0">
-            <thead class="bg-muted/50">
-              <tr>
-                <th scope="col" class="sticky left-0 z-10 bg-muted px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r border-border min-w-[280px] w-[280px]">
-                  Permission
-                </th>
-                <% @roles.each do |role| %>
-                  <th scope="col" class="px-4 py-4 text-center min-w-[180px] w-40">
-                    <div class="flex items-center justify-center gap-2">
-                      <span class="text-sm font-bold text-foreground"><%= role.name %></span>
-                      <%= render PanelsUI::DropdownMenu.new(
-                            id: "role-#{role.id}-actions",
-                            placement: :bottom_end,
-                            class: "w-56") do |menu| %>
-                        <% menu.with_trigger(
-                             variant: :ghost,
-                             size: :icon_sm,
-                             aria_label: "Actions for #{role.name}") do %>
-                          <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
-                        <% end %>
-
-                        <% menu.with_item(
-                             href: edit_hotel_role_path(current_hotel, role),
-                             data: { turbo_frame: "settings_action_sheet" }) do %>
-                          <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
-                          <span>Edit role</span>
-                        <% end %>
-
-                        <%# A role with staff assigned to it anywhere in the account is refused
-                            server-side too, so the menu simply does not offer the action. %>
-                        <% if role.user_hotel_accesses.empty? %>
-                          <% menu.with_item(
-                               href: hotel_role_path(current_hotel, role),
-                               method: :delete,
-                               variant: :danger,
-                               data: {
-                                 turbo_confirm: "Delete the #{role.name} role?",
-                                 turbo_confirm_title: "Delete role?",
-                                 turbo_confirm_text: "The #{role.name} role and its permissions will be removed from this account. This cannot be undone.",
-                                 turbo_confirm_tone: "destructive",
-                                 turbo_frame: "_top"
-                               }) do %>
-                            <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
-                            <span>Delete role</span>
-                          <% end %>
-                        <% end %>
-                      <% end %>
-                    </div>
-                  </th>
-                <% end %>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border bg-card">
-              <% @assignable_permissions.each do |permission| %>
-                <tr class="hover:bg-muted/50 transition"
-                    data-matrix-search-target="row"
-                    data-matrix-search-name="<%= permission.name %>">
-                  <td class="sticky left-0 z-10 bg-card px-6 py-3 border-r border-border min-w-[280px] w-[280px]">
-                    <p class="text-[13px] font-bold text-foreground"><%= permission.name %></p>
-                  </td>
-                  <% @roles.each do |role| %>
-                    <td class="px-2 py-1.5 text-center">
-                      <div data-matrix-mode-target="viewOnly" class="flex justify-center">
-                        <% if role.permission_ids.include?(permission.id) %>
-                          <svg class="w-6 h-6 text-green-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                          <path fill-rule="evenodd" d="M2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75 2.25 17.385 2.25 12Zm13.36-2.53a.75.75 0 1 0-1.22-.88l-3.73 5.18-1.94-1.94a.75.75 0 1 0-1.06 1.06l2.56 2.56a.75.75 0 0 0 1.14-.09l4.25-5.89Z" clip-rule="evenodd"/>
-                          </svg>
-                        <% else %>
-                          <svg class="size-5" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-                            <circle style="fill:#D75A4A;" cx="25" cy="25" r="25"/>
-                            <polyline style="fill:none;stroke:#FFFFFF;stroke-width:3;stroke-linecap:round;stroke-miterlimit:10;" points="16,34 25,25 34,16"/>
-                            <polyline style="fill:none;stroke:#FFFFFF;stroke-width:3;stroke-linecap:round;stroke-miterlimit:10;" points="16,16 25,25 34,34"/>
-                          </svg>
-                        <% end %>
-                      </div>
-                      <div data-matrix-mode-target="editOnly" class="hidden">
-                        <%= check_box_tag "roles[#{role.id}][permission_ids][]", permission.id, role.permission_ids.include?(permission.id), class: "rounded border-border-interactive text-foreground focus:ring-ring size-4 transition cursor-pointer" %>
-                      </div>
-                    </td>
-                  <% end %>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
         </div>
+      <% end %>
+    </div>
 
-        <div class="border-t border-border bg-muted/50 px-6 py-4 flex items-center justify-end">
-          <div class="flex items-center gap-3">
+    <p class="sr-only" role="status" aria-live="polite" aria-atomic="true"
+       data-matrix-mode-target="status" data-matrix-search-target="status"></p>
+
+    <%= form_with url: bulk_update_hotel_roles_path(current_hotel), method: :patch, id: matrix_form_id do %>
+      <%# An empty column submits nothing at all, so each role carries a blank
+          entry to distinguish "cleared" from "absent". %>
+      <% @roles.each do |role| %>
+        <%= hidden_field_tag "roles[#{role.id}][permission_ids][]", "", id: nil %>
+      <% end %>
+
+      <%= render PanelsUI::Table.new(
+            caption: "Permissions granted to each role",
+            density: :compact,
+            header_style: :sentence,
+            striped: true,
+            hoverable: true,
+            sticky_header: true,
+            sticky_column: true,
+            wrapper_class: "max-h-[75dvh] overflow-auto overscroll-none rounded-lg border border-border bg-card",
+            data: { testid: "permission-matrix" }) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col" class="w-64 min-w-64">Permission</th>
             <% @roles.each do |role| %>
-              <%= hidden_field_tag "roles[#{role.id}][permission_ids][]", "" %>
+              <th scope="col" class="min-w-40 text-center">
+                <div class="flex items-center justify-center gap-1">
+                  <span><%= role.name %></span>
+                  <%= render PanelsUI::DropdownMenu.new(
+                        id: "role-#{role.id}-actions",
+                        placement: :bottom_end,
+                        class: "w-56") do |menu| %>
+                    <% menu.with_trigger(
+                         variant: :ghost,
+                         size: :icon_sm,
+                         aria_label: "Actions for #{role.name}") do %>
+                      <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+                    <% end %>
+
+                    <% menu.with_item(
+                         href: edit_hotel_role_path(current_hotel, role),
+                         data: { turbo_frame: "settings_action_sheet" }) do %>
+                      <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
+                      <span>Edit role</span>
+                    <% end %>
+
+                    <%# A role with staff assigned to it anywhere in the account is refused
+                        server-side too, so the menu simply does not offer the action. %>
+                    <% if role.user_hotel_accesses.empty? %>
+                      <% menu.with_item(
+                           href: hotel_role_path(current_hotel, role),
+                           method: :delete,
+                           variant: :danger,
+                           data: {
+                             turbo_confirm: "Delete the #{role.name} role?",
+                             turbo_confirm_title: "Delete role?",
+                             turbo_confirm_text: "The #{role.name} role and its permissions will be removed from this account. This cannot be undone.",
+                             turbo_confirm_tone: "destructive",
+                             turbo_frame: "_top"
+                           }) do %>
+                        <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+                        <span>Delete role</span>
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                </div>
+              </th>
             <% end %>
-            <div data-matrix-mode-target="saveSection" class="hidden flex items-center gap-3">
-              <button type="button"
-                      class="inline-flex items-center rounded-xl border border-border bg-card px-6 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted cursor-pointer"
-                      data-action="click->matrix-mode#disableEdit">
-                Cancel
-              </button>
-              <%= submit_tag "Save Permissions Matrix", class: "inline-flex items-center rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover cursor-pointer" %>
-            </div>
-          </div>
-        </div>
-      </div>
+          </tr>
+        <% end %>
+
+        <% table.with_body do %>
+          <% @assignable_permissions.each do |permission| %>
+            <tr data-matrix-search-target="row" data-matrix-search-name="<%= permission.name %>">
+              <th scope="row" class="font-medium text-foreground"><%= permission.name %></th>
+              <% @roles.each do |role| %>
+                <% granted = role.permission_ids.include?(permission.id) %>
+                <td class="text-center">
+                  <div class="flex justify-center" data-matrix-mode-target="viewOnly">
+                    <% if granted %>
+                      <%= app_icon "circle-check", class: "size-4 text-success", aria: { hidden: "true" } %>
+                      <span class="sr-only">Granted</span>
+                    <% else %>
+                      <%= app_icon "minus", class: "size-4 text-muted-foreground", aria: { hidden: "true" } %>
+                      <span class="sr-only">Not granted</span>
+                    <% end %>
+                  </div>
+
+                  <div class="hidden justify-center" data-matrix-mode-target="editOnly">
+                    <%= render PanelsUI::Checkbox.new(
+                          name: "roles[#{role.id}][permission_ids][]",
+                          id: "role-#{role.id}-permission-#{permission.id}",
+                          value: permission.id,
+                          checked: granted,
+                          label: "#{permission.name} for #{role.name}",
+                          label_hidden: true) %>
+                  </div>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+
+          <tr class="hidden" data-matrix-search-target="empty">
+            <td colspan="<%= @roles.size + 1 %>" class="h-24 text-center">
+              <p class="font-medium text-foreground">No permissions match that search.</p>
+              <p class="mt-1 text-muted-foreground">Clear the search to see the whole matrix.</p>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
     <% end %>
-  </div>
+  </section>
 </div>
