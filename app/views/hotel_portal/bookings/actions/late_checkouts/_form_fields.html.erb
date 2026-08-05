@@ -32,15 +32,18 @@
         selected: params[:charge_calculation] || "standard",
         options: [
           { label: "Current rate charge", value: "standard",
-            description: "Current booking property rate for the extended date including taxes." },
+            description: "Current booking property rate for the extended date. Taxes are added when the charge posts." },
           { label: "Additional charge", value: "custom",
-            description: "Impose an additional charge on the current property rate for the extended date including taxes." }
+            description: "Impose an additional charge on the current property rate for the extended date. Taxes are added when the charge posts." }
         ],
         data: { action: "change->booking-actions--late-checkout#updateUI" }) %>
 
   <div data-booking-actions--late-checkout-target="standardSection"
        class="flex items-center justify-between rounded-md border border-border bg-muted/50 px-4 py-3">
-    <span class="text-sm text-muted-foreground">Total charge</span>
+    <div>
+      <span class="text-sm text-muted-foreground">Room charge</span>
+      <p class="text-xs text-muted-foreground">Taxes are posted separately, following the room revenue rules.</p>
+    </div>
     <span class="text-sm font-medium text-foreground"><%= presenter.currency %> <%= number_with_precision(presenter.suggested_late_checkout_amount, precision: 2, delimiter: ",") %></span>
   </div>
 

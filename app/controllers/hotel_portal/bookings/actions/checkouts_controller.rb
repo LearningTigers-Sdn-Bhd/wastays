@@ -172,8 +172,10 @@ module HotelPortal
           input = values[:value].to_d
           return input unless values[:type] == "percentage"
 
+          # Pre-tax base: the penalty posts its taxes as separate lines from ROOM's
+          # rules, so a percentage of the tax-inclusive total would be taxed twice.
           nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
-          base = nights.positive? ? booking.total_amount.to_d / nights : 0.to_d
+          base = nights.positive? ? booking.booking_rooms.sum { |room| room.subtotal.to_d } / nights : 0.to_d
           (base * input / 100).round(2)
         end
 

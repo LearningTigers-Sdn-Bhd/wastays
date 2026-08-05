@@ -344,25 +344,17 @@ module HotelPortal
       pending_housekeeping_requests_count + pending_complaint_requests_count
     end
 
+    # Pre-tax. A late-checkout charge now posts its taxes as separate lines using
+    # ROOM's rules, so a suggestion with tax folded in would be taxed twice.
     def suggested_late_checkout_amount
       primary_room = booking.booking_rooms.first
       return 0.to_d unless primary_room&.room_type
 
       room_type = primary_room.room_type
-      quantity = booking.booking_rooms.count
-
       today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date
       rate = room_type.room_rates.find_by(date: today)&.price || room_type.base_price
 
-      base_amount = (rate.to_d * quantity).round(2)
-
-      applicable_taxes = hotel.hotel_taxes.enabled.to_a
-      taxes_amount = applicable_taxes.sum { |tax| tax.compute(rooms_subtotal: base_amount) }
-
-      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
-      per_night_tourism_tax = nights.positive? ? (booking.tourism_tax_amount.to_d / nights).round(2) : 0.to_d
-
-      (base_amount + taxes_amount + per_night_tourism_tax).round(2)
+      (rate.to_d * booking.booking_rooms.count).round(2)
     end
 
     def currency

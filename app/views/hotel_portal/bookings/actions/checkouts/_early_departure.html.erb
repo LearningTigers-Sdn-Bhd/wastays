@@ -2,7 +2,10 @@
 <% values = local_assigns.fetch(:values) %>
 <% early_departure = "booking-actions--early-departure" %>
 <% nights = (booking.check_out.to_date - booking.check_in.to_date).to_i %>
-<% suggested_charge = nights.positive? ? (booking.total_amount.to_d / nights).round(2) : 0 %>
+<%# Pre-tax: booking.total_amount is a tax-inclusive grand total, and the penalty
+    now posts its taxes as separate lines from ROOM's rules. Dividing the gross
+    total here would tax the charge twice. %>
+<% suggested_charge = nights.positive? ? (booking.booking_rooms.sum { |room| room.subtotal.to_d } / nights).round(2) : 0 %>
 <% field_scope = "early_departures[#{booking.id}]" %>
 <% visible = local_assigns.fetch(:visible, true) %>
 <% room = booking.booking_rooms.first %>
