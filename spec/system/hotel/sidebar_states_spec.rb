@@ -88,7 +88,7 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       end
 
       expect(page).to have_no_link("Room Categories")
-      expect(page).to have_no_link("Transaction Codes")
+      expect(page).to have_no_link("Transaction Code Reference")
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Guest Content")
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Team Access")
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "System Logs")
@@ -170,7 +170,7 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_no_link("Taxes & Fees", href: hotel_taxes_fees_path(hotel), visible: :all)
       expect(page).to have_no_link("Audit", href: hotel_night_audits_path(hotel), visible: :all, exact: true)
       expect(page).to have_no_link("Room Categories", href: hotel_room_types_path(hotel), visible: :all)
-      expect(page).to have_no_link("Transaction Codes", href: hotel_transaction_codes_path(hotel), visible: :all)
+      expect(page).to have_no_link("Transaction Code Reference", href: hotel_transaction_code_references_path(hotel), visible: :all)
       expect(page).to have_no_link("Your Plan", href: hotel_plan_path(hotel), visible: :all)
       expect(page).to have_no_text("#<struct")
 

@@ -609,13 +609,7 @@ Rails.application.routes.draw do
         get "taxes-and-fees/system/:tax_key/edit", to: "taxes_fees#edit_system", as: :edit_system_tax
         patch "taxes-and-fees/system/:tax_key", to: "taxes_fees#update_system", as: :system_tax
         resources :hotel_taxes, path: "taxes-and-fees/fees", only: %i[index new create edit update destroy]
-        get "transaction-codes", to: "transaction_codes#show", as: :transaction_codes
-        get "transaction-codes/new", to: "transaction_codes#new", as: :new_transaction_code
-        post "transaction-codes", to: "transaction_codes#create"
-        patch "transaction-codes/configuration", to: "transaction_codes#update_configuration", as: :transaction_code_configuration
-        get "transaction-codes/:id/edit", to: "transaction_codes#edit", as: :edit_transaction_code
-        patch "transaction-codes/:id/preview-hotel-tax-rules", to: "transaction_codes#preview_hotel_tax_rules", as: :preview_transaction_code_hotel_tax_rules
-        patch "transaction-codes/:id", to: "transaction_codes#update", as: :transaction_code
+        get "transaction-code-reference", to: "transaction_code_references#index", as: :transaction_code_references
         resources :general_ledger_maps, path: "general-ledger-mappings", only: [ :index, :edit, :update ]
       end
 
@@ -627,6 +621,14 @@ Rails.application.routes.draw do
           patch :status, action: :update_status, on: :member
         end
         resources :payment_methods, path: "payment-methods", only: %i[index new create edit update] do
+          patch :status, action: :update_status, on: :member
+        end
+
+        get "room-revenue", to: "room_revenue#show", as: :room_revenue
+        patch "room-revenue/tax-rules", to: "room_revenue#update_tax_rules", as: :room_revenue_tax_rules
+        patch "room-revenue/tax-rules/preview", to: "room_revenue#preview_tax_rules", as: :preview_room_revenue_tax_rules
+        patch "room-revenue/configuration", to: "room_revenue#update_configuration", as: :room_revenue_configuration
+        resources :reservation_policies, path: "room-revenue/reservation-policies", only: %i[edit update] do
           patch :status, action: :update_status, on: :member
         end
       end
@@ -670,9 +672,10 @@ Rails.application.routes.draw do
     get "nearby_attractions/new", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/new")
     get "nearby_attractions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/%{id}/edit")
     get "taxes-fees", to: redirect("/hotel/%{hotel_id}/settings/finance/taxes-and-fees")
-    get "transaction-codes", to: redirect("/hotel/%{hotel_id}/settings/finance/transaction-codes")
-    get "transaction-codes/new", to: redirect("/hotel/%{hotel_id}/settings/finance/transaction-codes/new")
-    get "transaction-codes/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/finance/transaction-codes/%{id}/edit")
+    get "settings/finance/transaction-codes", to: redirect("/hotel/%{hotel_id}/settings/commercial/room-revenue")
+    get "transaction-codes", to: redirect("/hotel/%{hotel_id}/settings/commercial/room-revenue")
+    get "transaction-codes/new", to: redirect("/hotel/%{hotel_id}/settings/commercial/room-revenue")
+    get "transaction-codes/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/commercial/room-revenue")
     get "general-ledger-mappings", to: redirect("/hotel/%{hotel_id}/settings/finance/general-ledger-mappings")
     get "general-ledger-mappings/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/finance/general-ledger-mappings/%{id}/edit")
     get "knowledge_policies", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies")

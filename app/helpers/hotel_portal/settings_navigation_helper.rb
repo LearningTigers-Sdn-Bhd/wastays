@@ -137,12 +137,13 @@ module HotelPortal
           hotel_permission_granted?("manage_hotel_profile") ? { key: "taxes-fees", label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), icon: "receipt", active: controller_name.in?(%w[taxes_fees hotel_taxes]) } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "extra-charges", label: "Extra Charges", path: hotel_extra_charges_path(current_hotel), icon: "circle-plus", active: controller_name == "extra_charges" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "discounts", label: "Discounts", path: hotel_discounts_path(current_hotel), icon: "badge-percent", active: controller_name == "discounts" } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { key: "payment-methods", label: "Payment Methods", path: hotel_payment_methods_path(current_hotel), icon: "credit-card", active: controller_name == "payment_methods" } : nil
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "payment-methods", label: "Payment Methods", path: hotel_payment_methods_path(current_hotel), icon: "credit-card", active: controller_name == "payment_methods" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "room-revenue", label: "Room Revenue", path: hotel_room_revenue_path(current_hotel), icon: "bed-double", active: controller_name.in?(%w[room_revenue reservation_policies]) } : nil
         ].compact
       when :finance
         [
           hotel_permission_granted?("manage_account") ? { key: "banking", label: "Banking Details", path: hotel_banking_details_settings_path(current_hotel), icon: "landmark", active: controller_name == "settings" && settings_active_page == "banking" } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { key: "transaction-codes", label: "Transaction Codes", path: hotel_transaction_codes_path(current_hotel), icon: "badge-percent", active: controller_name == "transaction_codes" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "transaction-code-reference", label: "Transaction Code Reference", path: hotel_transaction_code_references_path(current_hotel), icon: "list", active: controller_name == "transaction_code_references" } : nil,
           hotel_permission_granted?("manage_general_ledger_maps") ? { key: "general-ledger-mappings", label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), icon: "git-merge", active: controller_name == "general_ledger_maps" } : nil
         ].compact
       when :guest_content

@@ -1,0 +1,24 @@
+<div class="w-full space-y-4">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Room Revenue",
+        description: "One set of tax rules for every night a room is billed, and what the hotel charges when a stay does not run as booked.") %>
+
+  <%= render "hotel_portal/settings/group_tabs" %>
+
+  <div data-testid="room-revenue-tabs">
+    <%= render PanelsUI::Tabs.new(id: "room-revenue-tabs", active: @presenter.active_tab, variant: :line,
+          url: { param: "tab" }, class: "space-y-6", aria_label: "Room revenue sections") do |tabs| %>
+      <% @presenter.tabs.each do |tab| %>
+        <% tabs.with_tab(name: tab[:name], label: tab[:label], icon: tab[:icon], panel_id: "#{tab[:name]}-panel") %>
+      <% end %>
+
+      <% tabs.with_panel(name: "tax_rules", id: "tax_rules-panel", class: "space-y-8", data: { testid: "room-revenue-tax-rules-panel" }) do %>
+        <%= render "tax_rules", presenter: @presenter %>
+      <% end %>
+
+      <% tabs.with_panel(name: "reservation_policies", id: "reservation_policies-panel", class: "space-y-6", data: { testid: "room-revenue-reservation-policies-panel" }) do %>
+        <%= render "reservation_policies", presenter: @presenter %>
+      <% end %>
+    <% end %>
+  </div>
+</div>
