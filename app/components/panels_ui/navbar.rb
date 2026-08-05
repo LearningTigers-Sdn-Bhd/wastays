@@ -3,6 +3,7 @@
 module PanelsUI
   class Navbar < PanelsUI::BaseComponent
     renders_one :brand
+    renders_one :center
     renders_one :actions
     renders_one :profile
 

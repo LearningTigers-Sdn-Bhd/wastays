@@ -36,12 +36,23 @@
     @apply size-4;
   }
 
+  /* Start and end rails both take `flex-1 basis-0`, so they split the width left
+     over by the centre slot evenly and the centre lands on the bar's midpoint.
+     The end rail keeps that balance even with nothing in it. */
+  .panel-navbar__start {
+    @apply flex min-w-0 flex-1 basis-0 items-center gap-2;
+  }
+
   .panel-navbar__brand {
     @apply flex shrink-0 items-center;
   }
 
+  .panel-navbar__center {
+    @apply flex min-w-0 shrink items-center justify-center;
+  }
+
   .panel-navbar__end {
-    @apply ml-auto flex min-w-0 items-center gap-1;
+    @apply flex min-w-0 flex-1 basis-0 items-center justify-end gap-1;
   }
 
   .panel-navbar__actions {
