@@ -1,50 +1,40 @@
 # frozen_string_literal: true
 
+# Room groups are managed entirely inside one Sheet: the list, the "add group"
+# form, and per-group rename all render from `index`. There is no separate edit
+# screen — a failed save re-renders the same sheet with the offending row open.
 class HotelPortal::RoomGroupsController < HotelPortal::BaseController
-  include OffcanvasTransactionCompletion
+  include SheetActionCompletion
 
   before_action :set_hotel
   before_action :authorize_hotel
-  before_action :set_room_group, only: [ :edit, :update, :destroy ]
+  before_action :set_room_group, only: [ :update, :destroy ]
 
   def index
-    set_room_groups
-    @room_group = @hotel.room_groups.build
+    render_sheet
   end
 
   def create
-    @room_group = @hotel.room_groups.build(room_group_params)
+    @new_room_group = @hotel.room_groups.build(room_group_params)
 
-    if @room_group.save
-      offcanvas_transaction_response(
-        destination: destination_path,
-        notice: "Room group created successfully."
-      )
+    if @new_room_group.save
+      finish_sheet("Room group created successfully.")
     else
-      set_room_groups
-      render :index, status: :unprocessable_content
+      render_sheet(status: :unprocessable_content)
     end
   end
 
-  def edit; end
-
   def update
     if @room_group.update(room_group_params)
-      offcanvas_transaction_response(
-        destination: destination_path,
-        notice: "Room group updated successfully."
-      )
+      finish_sheet("Room group updated successfully.")
     else
-      render :edit, status: :unprocessable_content
+      render_sheet(status: :unprocessable_content)
     end
   end
 
   def destroy
     if @room_group.destroy
-      offcanvas_transaction_response(
-        destination: destination_path,
-        notice: "Room group deleted successfully."
-      )
+      finish_sheet("Room group deleted successfully.")
     else
       respond_to do |format|
         format.html { redirect_to destination_path, alert: "Cannot delete room group." }
@@ -72,8 +62,20 @@ class HotelPortal::RoomGroupsController < HotelPortal::BaseController
     @room_group = @hotel.room_groups.find(params[:id])
   end
 
-  def set_room_groups
+  # `@room_group` carries the unsaved attributes of a failed rename so the view
+  # can substitute it into the list; `@new_room_group` backs the add form.
+  def render_sheet(status: :ok)
     @room_groups = @hotel.room_groups.includes(:room_types).order(:name)
+    @new_room_group ||= @hotel.room_groups.build
+    render :index, layout: false, status: status
+  end
+
+  def finish_sheet(notice)
+    complete_sheet_action(destination: destination_path, notice: notice, frame: sheet_frame)
+  end
+
+  def sheet_frame
+    turbo_frame_request_id.presence || "settings_action_sheet"
   end
 
   def destination_path

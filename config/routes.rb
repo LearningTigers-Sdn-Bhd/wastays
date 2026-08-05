@@ -324,7 +324,7 @@ Rails.application.routes.draw do
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
     end
-    resources :room_groups, except: [ :show ]
+    resources :room_groups, only: %i[index create update destroy]
     get "stay-view", to: "stay_view/board#index", as: :stay_view
     scope "stay-view", module: :stay_view, as: :stay_view do
       get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
