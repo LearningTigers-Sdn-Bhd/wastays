@@ -82,7 +82,7 @@ module AiConcierge
           end
 
           if normalized.match?(/\bcancell?ation|cancel\b/) && structured_facts["cancellation_policy"].present?
-            return "Cancellation policy: #{structured_facts['cancellation_policy']}."
+            return "Cancellation policy: #{structured_facts['cancellation_policy'].to_s.chomp('.')}."
           end
 
           nil

@@ -2,10 +2,19 @@
 <% values = local_assigns.fetch(:values) %>
 <% early_departure = "booking-actions--early-departure" %>
 <% nights = (booking.check_out.to_date - booking.check_in.to_date).to_i %>
-<% suggested_charge = nights.positive? ? (booking.total_amount.to_d / nights).round(2) : 0 %>
+<%# Pre-tax: booking.total_amount is a tax-inclusive grand total, and the penalty
+    now posts its taxes as separate lines from ROOM's rules. Dividing the gross
+    total here would tax the charge twice. %>
+<% suggested_charge = nights.positive? ? (booking.booking_rooms.sum { |room| room.subtotal.to_d } / nights).round(2) : 0 %>
 <% field_scope = "early_departures[#{booking.id}]" %>
 <% visible = local_assigns.fetch(:visible, true) %>
 <% room = booking.booking_rooms.first %>
+<%# "Follow policy" is only offered when the hotel's early-departure policy names
+    a figure. A manual or inactive policy has nothing to follow, so staff enter
+    the amount as they always have. %>
+<% policy_amount = early_departure_policy_amount(booking) %>
+<% policy_label = early_departure_policy_label(booking) %>
+<% charge_source = policy_amount.present? ? values[:charge_source].presence || "policy" : "custom" %>
 
 <article class="space-y-3 <%= 'hidden' unless visible %>"
          data-<%= ns %>-target="bookingRow"
@@ -13,6 +22,7 @@
          data-controller="<%= early_departure %>"
          data-<%= early_departure %>-booking-id-value="<%= booking.id %>"
          data-<%= early_departure %>-base-amount-value="<%= suggested_charge %>"
+         data-<%= early_departure %>-policy-amount-value="<%= policy_amount.to_d %>"
          data-<%= early_departure %>-currency-value="<%= currency %>"
          data-<%= early_departure %>-event-prefix-value="<%= ns %>"
          data-<%= early_departure %>-target-folio-id-value="<%= checkout_penalty_folio_id(booking) %>">
@@ -42,20 +52,49 @@
             data: { action: "change->#{early_departure}#updateUI" }) %>
     </div>
 
-    <div class="space-y-3 <%= 'hidden' unless values[:apply_charge] == 'true' %>" data-<%= early_departure %>-target="customFields">
-      <div class="grid gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_1fr] sm:items-end">
-        <%= render PanelsUI::FormField.new(form: departure_form, attribute: :type, label: "Charge type", size: :sm, disabled: !visible) do |field| %>
-          <% field.with_select_menu(
-               [ [ "Fixed amount", "amount" ], [ "Percentage (%)", "percentage" ] ],
-               selected: values[:type],
-               data: { action: "change->#{early_departure}#updateCalculation" }) %>
-        <% end %>
-        <%= render PanelsUI::FormField.new(form: departure_form, attribute: :value, label: "Value", size: :sm, disabled: !visible) do |field| %>
-          <% field.with_input(type: :number, value: values[:value], min: 0, step: 0.01, placeholder: "0.00", data: { action: "input->#{early_departure}#updateCalculation" }) %>
-        <% end %>
-        <div class="flex items-center justify-end gap-2 pb-1">
-          <span class="text-sm text-muted-foreground">Additional charge</span>
-          <span class="text-sm font-medium tabular-nums" data-<%= early_departure %>-target="displayAmount"><%= currency %> <%= format("%.2f", values[:charge_amount].to_d) %></span>
+    <div class="space-y-3 <%= 'hidden' unless values[:apply_charge] == 'true' %>" data-<%= early_departure %>-target="chargeFields">
+      <% if policy_amount.present? %>
+        <%= render PanelsUI::RadioGroup.new(
+              form: departure_form,
+              attribute: :charge_source,
+              label: "Charge calculation",
+              selected: charge_source,
+              disabled: !visible,
+              orientation: :horizontal,
+              size: :sm,
+              class: "[&_legend]:sr-only",
+              options: [
+                { label: "Follow the early departure policy", value: "policy" },
+                { label: "Custom charge", value: "custom" }
+              ],
+              data: { action: "change->#{early_departure}#updateUI" }) %>
+
+        <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2 <%= 'hidden' unless charge_source == 'policy' %>"
+             data-<%= early_departure %>-target="policyFields">
+          <%= render PanelsUI::FormField.new(form: departure_form, attribute: :policy_amount, label: "Charge amount", size: :sm, disabled: true,
+                hint: "#{policy_label}. Taxes are posted separately, following the room revenue rules.", class: "min-w-0 flex-1") do |field| %>
+            <% field.with_input(type: :text, value: "#{currency} #{format('%.2f', policy_amount.to_d)}") %>
+          <% end %>
+        </div>
+      <% else %>
+        <%= departure_form.hidden_field :charge_source, value: "custom" %>
+      <% end %>
+
+      <div class="space-y-3 <%= 'hidden' if charge_source == 'policy' %>" data-<%= early_departure %>-target="customFields">
+        <div class="grid gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_1fr] sm:items-end">
+          <%= render PanelsUI::FormField.new(form: departure_form, attribute: :type, label: "Charge type", size: :sm, disabled: !visible) do |field| %>
+            <% field.with_select_menu(
+                 [ [ "Fixed amount", "amount" ], [ "Percentage (%)", "percentage" ] ],
+                 selected: values[:type],
+                 data: { action: "change->#{early_departure}#updateCalculation" }) %>
+          <% end %>
+          <%= render PanelsUI::FormField.new(form: departure_form, attribute: :value, label: "Value", size: :sm, disabled: !visible) do |field| %>
+            <% field.with_input(type: :number, value: values[:value], min: 0, step: 0.01, placeholder: "0.00", data: { action: "input->#{early_departure}#updateCalculation" }) %>
+          <% end %>
+          <div class="flex items-center justify-end gap-2 pb-1">
+            <span class="text-sm text-muted-foreground">Additional charge</span>
+            <span class="text-sm font-medium tabular-nums" data-<%= early_departure %>-target="displayAmount"><%= currency %> <%= format("%.2f", values[:charge_amount].to_d) %></span>
+          </div>
         </div>
       </div>
     </div>

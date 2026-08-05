@@ -98,7 +98,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       expect(page).to have_link("Team", href: hotel_users_path(hotel))
 
       expect(page).to have_no_link("Room Categories")
-      expect(page).to have_no_link("Transaction Codes")
+      expect(page).to have_no_link("Transaction Code Reference")
       expect(page).to have_no_link("Staff Management")
       expect(page).to have_no_link("Plan & Billing")
     end
@@ -148,7 +148,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     [
       [ hotel_general_settings_path(hotel), "Notifications", hotel_notification_settings_path(hotel), "General" ],
       [ edit_hotel_profile_path(hotel), "Room Categories", hotel_room_types_path(hotel), "Property" ],
-      [ hotel_transaction_codes_path(hotel), "General Ledger Mappings", hotel_general_ledger_maps_path(hotel), "Finance" ],
+      [ hotel_transaction_code_references_path(hotel), "General Ledger Mappings", hotel_general_ledger_maps_path(hotel), "Finance" ],
       [ hotel_ai_concierge_settings_path(hotel), "Policies", hotel_knowledge_policies_path(hotel), "Guest Content" ],
       [ hotel_users_path(hotel), "Roles & Permissions", hotel_roles_path(hotel), "Team" ]
     ].each do |first_tab_path, secondary_tab_label, secondary_tab_path, sidebar_label|

@@ -34,13 +34,14 @@ RSpec.describe "HotelPortal::PaymentMethods", type: :request do
     expect(method.transaction_code).to have_attributes(code: "DUIT_NOW", category: "gateway_payment", kind: "payment")
   end
 
-  it "redirects edits of owned transaction codes to Payment Methods" do
+  it "points the code reference at Payment Methods for codes it owns" do
     PaymentMethods::EnsureDefaults.call(hotel)
     method = hotel.hotel_payment_methods.first
 
-    get hotel_edit_transaction_code_path(hotel, method.transaction_code)
+    get hotel_transaction_code_references_path(hotel)
 
-    expect(response).to redirect_to(edit_hotel_payment_method_path(hotel, method))
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(edit_hotel_payment_method_path(hotel, method))
   end
 
   it "locks availability in the edit sheet for the default cash method" do

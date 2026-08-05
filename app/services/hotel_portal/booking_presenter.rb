@@ -344,25 +344,48 @@ module HotelPortal
       pending_housekeeping_requests_count + pending_complaint_requests_count
     end
 
+    # What the hotel's late-checkout policy charges this booking, pre-tax, or nil
+    # when the policy names no figure (manual pricing, or not charging at all).
+    # The server recomputes this on submit — the sheet only displays it.
+    def late_checkout_policy_quote
+      return @late_checkout_policy_quote if defined?(@late_checkout_policy_quote)
+
+      @late_checkout_policy_quote = ReservationPolicies::Quote.call(booking: booking, policy_type: "late_checkout")
+    end
+
+    def late_checkout_policy_amount
+      quote = late_checkout_policy_quote
+      return nil unless quote.success?
+      return nil if quote.amount.blank? || !quote.amount.positive?
+
+      quote.amount
+    end
+
+    def late_checkout_policy_label
+      late_checkout_policy_quote.success? ? late_checkout_policy_quote.label : nil
+    end
+
+    # Whether the sheet may offer "follow policy" at all. A manual or inactive
+    # policy has no computed figure, so staff name the amount as they always have.
+    def late_checkout_policy_amount? = late_checkout_policy_amount.present?
+
+    # Pre-tax. A late-checkout charge now posts its taxes as separate lines using
+    # ROOM's rules, so a suggestion with tax folded in would be taxed twice.
     def suggested_late_checkout_amount
+      late_checkout_policy_amount || staff_entered_late_checkout_base
+    end
+
+    # The base the staff-entered ("custom") path builds its adjustment on when the
+    # policy names no figure: today's rate for every room on the booking.
+    def staff_entered_late_checkout_base
       primary_room = booking.booking_rooms.first
       return 0.to_d unless primary_room&.room_type
 
       room_type = primary_room.room_type
-      quantity = booking.booking_rooms.count
-
       today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date
       rate = room_type.room_rates.find_by(date: today)&.price || room_type.base_price
 
-      base_amount = (rate.to_d * quantity).round(2)
-
-      applicable_taxes = hotel.hotel_taxes.enabled.to_a
-      taxes_amount = applicable_taxes.sum { |tax| tax.compute(rooms_subtotal: base_amount) }
-
-      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
-      per_night_tourism_tax = nights.positive? ? (booking.tourism_tax_amount.to_d / nights).round(2) : 0.to_d
-
-      (base_amount + taxes_amount + per_night_tourism_tax).round(2)
+      (rate.to_d * booking.booking_rooms.count).round(2)
     end
 
     def currency

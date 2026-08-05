@@ -36,8 +36,18 @@ module Public
       @view_context.number_to_currency(total_amount, unit: "RM ", precision: 2)
     end
 
+    # The booking's own snapshot is the authority — this used to read
+    # `hotel_snapshot["property_policy"]`, a key `Hotel#booking_snapshot` never
+    # writes, so the policy silently never rendered.
+    def cancellation_summary
+      @cancellation_summary ||= Cancellations::PolicySummary.for_record(
+        @booking,
+        legacy_text: hotel_snapshot&.dig("property_policy", "cancellation_policy")
+      )
+    end
+
     def cancellation_policy
-      hotel_snapshot.dig("property_policy", "cancellation_policy")
+      cancellation_summary.to_text
     end
 
     def guest_info_items

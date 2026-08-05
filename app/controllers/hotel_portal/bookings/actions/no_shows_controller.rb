@@ -12,6 +12,8 @@ module HotelPortal
       class NoShowsController < BaseController
         include GroupLifecycleTargeting
 
+        helper_method :no_show_charge_summary
+
         def show
           return create if request.post?
 
@@ -73,6 +75,24 @@ module HotelPortal
 
         def no_show_reason
           params[:no_show_reason].to_s.strip
+        end
+
+        # What the hotel's no-show policy bills, in the sheet's own words. The
+        # policy is nights-only by database constraint, so this is always a
+        # whole number of nights or nothing at all.
+        def no_show_charge_summary
+          policy = no_show_policy
+          return "posts no no-show charge" if policy.present? && !policy.active?
+
+          nights = [ policy&.whole_nights.to_i, 1 ].max
+          "posts #{nights} #{'night'.pluralize(nights)} of no-show room charges"
+        end
+
+        def no_show_policy
+          return @no_show_policy if defined?(@no_show_policy)
+
+          ::ReservationPolicies::EnsureDefaults.call(current_hotel)
+          @no_show_policy = current_hotel.hotel_reservation_policies.find_by(policy_type: "no_show")
         end
 
         def render_no_show_failure

@@ -32,6 +32,26 @@ RSpec.describe BookingEngine::CreateQuote do
       end
     end
 
+    it "snapshots the structured cancellation policy alongside the legacy text" do
+      policy = create(:hotel_reservation_policy, :charging_cancellation, hotel: hotel, description: "Groups follow 30-day terms.")
+      create(:hotel_cancellation_policy_tier, hotel_reservation_policy: policy, days_before_arrival: 14, rate_value: 0)
+      create(:property_policy, hotel: hotel, cancellation_policy: "Free cancellation 48 hours before check-in.")
+
+      result = described_class.new(params).call
+      snapshot = result.quote.cancellation_policy_snapshot_data
+
+      expect(snapshot["tiers"].first).to include("window" => "14+ days before arrival", "charge" => "No charge")
+      expect(snapshot["description"]).to eq("Groups follow 30-day terms.")
+      # Dual-written for one release, until the text column is dropped.
+      expect(result.quote.cancellation_policy_snapshot).to eq("Free cancellation 48 hours before check-in.")
+    end
+
+    it "snapshots an empty payload when the hotel charges nothing to cancel" do
+      result = described_class.new(params).call
+
+      expect(result.quote.cancellation_policy_snapshot_data).to eq({})
+    end
+
     it "stores display currency snapshot separately from charge currency" do
       create(:exchange_rate, base_currency: "MYR", currency_code: "USD", rate: 0.25)
       service = described_class.new(params.merge(display_currency: "USD"))

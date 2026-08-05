@@ -21,6 +21,8 @@ class HotelPortal::PropertyPoliciesController < HotelPortal::BaseController
   private
 
   def property_policy_params
-    params.require(:property_policy).permit(:check_in_time, :check_out_time, :cancellation_policy)
+    # Cancellation terms are no longer free prose here — they live on the structured
+    # cancellation policy under Commercial → Room Revenue → Reservation policies.
+    params.require(:property_policy).permit(:check_in_time, :check_out_time)
   end
 end

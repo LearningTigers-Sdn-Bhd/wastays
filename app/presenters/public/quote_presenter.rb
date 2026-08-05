@@ -17,8 +17,17 @@ module Public
       @view_context.pluralize(stay_length, "night")
     end
 
+    DEFAULT_CANCELLATION_TEXT = "Standard cancellation policy applies. Refund eligibility depends on your check-in date."
+
+    # The tier table the quote was priced against, plus whatever the hotel wrote
+    # beneath it. Falls back to the legacy prose snapshot for quotes taken before
+    # the policy became structured.
+    def cancellation_summary
+      @cancellation_summary ||= Cancellations::PolicySummary.for_record(@quote)
+    end
+
     def cancellation_policy
-      cancellation_policy_snapshot.presence || "Standard cancellation policy applies. Refund eligibility depends on your check-in date."
+      cancellation_summary.to_text.presence || DEFAULT_CANCELLATION_TEXT
     end
 
     alias_method :cancellation_policy_text, :cancellation_policy

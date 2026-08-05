@@ -1,6 +1,50 @@
 require "rails_helper"
 
 RSpec.describe "Public::Quotes", type: :request do
+  describe "GET /quotes/:token" do
+    let(:hotel) { create(:hotel, status: "approved") }
+    let(:quote) { create(:booking_quote, hotel: hotel, **snapshot) }
+
+    before { create(:booking_quote_item, booking_quote: quote, room_type: create(:room_type, hotel: hotel)) }
+
+    context "with a structured cancellation policy" do
+      let(:snapshot) do
+        {
+          cancellation_policy_snapshot: "Old prose nobody should see",
+          cancellation_policy_snapshot_data: {
+            "description" => "Non-refundable during Hari Raya.",
+            "refund_processing_days" => 7,
+            "refund_method" => "original_payment_method",
+            "tiers" => [
+              { "days_before_arrival" => 14, "window" => "14+ days before arrival", "charge" => "No charge" },
+              { "days_before_arrival" => 0, "window" => "Less than 1 day before arrival", "charge" => "keep 100.00% of total stay" }
+            ]
+          }
+        }
+      end
+
+      it "renders the tier table with the hotel's own terms beneath it" do
+        get quote_path(quote.token)
+
+        expect(response.body).to include("14+ days before arrival", "No charge", "keep 100.00% of total stay")
+        expect(response.body).to include("Refunds are issued to the original payment method within 7 working days.")
+        expect(response.body).to include("Non-refundable during Hari Raya.")
+        # Prose and table can never be shown together, or they could contradict.
+        expect(response.body).not_to include("Old prose nobody should see")
+      end
+    end
+
+    context "without one" do
+      let(:snapshot) { { cancellation_policy_snapshot: "Free cancellation up to 24 hours before arrival" } }
+
+      it "falls back to the legacy prose snapshot" do
+        get quote_path(quote.token)
+
+        expect(response.body).to include("Free cancellation up to 24 hours before arrival")
+      end
+    end
+  end
+
   describe "POST /quotes" do
     let!(:account) { create(:account) }
     let!(:hotel) { create(:hotel, account: account, status: "approved") }

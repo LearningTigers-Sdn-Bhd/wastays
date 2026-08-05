@@ -11,7 +11,10 @@ RSpec.describe BookingEngine::ConfirmGroupBooking do
       adults: 2,
       children: 0,
       hotel_snapshot: { "name" => hotel.name },
-      cancellation_policy_snapshot: "Free cancellation"
+      cancellation_policy_snapshot: "Free cancellation",
+      cancellation_policy_snapshot_data: {
+        "tiers" => [ { "days_before_arrival" => 14, "window" => "14+ days before arrival", "charge" => "No charge" } ]
+      }
     )
   end
   let!(:quote_item) do
@@ -44,6 +47,13 @@ RSpec.describe BookingEngine::ConfirmGroupBooking do
     expect(result.group_booking.bookings).to contain_exactly(*result.bookings)
     expect(result.bookings.size).to eq(2)
     expect(result.bookings.map { |booking| booking.booking_rooms.sole.room_type }).to all(eq(room_type))
+  end
+
+  it "copies the quote's cancellation terms onto every child booking" do
+    result = described_class.call(quote: quote, payment_details: payment_details)
+
+    expect(result.bookings.map(&:cancellation_policy_snapshot_data)).to all(eq(quote.cancellation_policy_snapshot_data))
+    expect(result.bookings.map(&:cancellation_policy_snapshot)).to all(eq("Free cancellation"))
   end
 
   # Folio creation itself is no longer what blocks this path — Folios::Lifecycle::InitializeForBooking

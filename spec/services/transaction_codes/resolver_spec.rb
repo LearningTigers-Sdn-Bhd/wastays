@@ -129,4 +129,34 @@ RSpec.describe TransactionCodes::Resolver do
       expect(resolver.source_for_tax_line({ "type" => "sst" })).to be_nil
     end
   end
+
+  describe "#tax_rule_source_for" do
+    let(:room_code) { hotel.transaction_codes.find_by!(system_key: "room_revenue") }
+
+    it "sends the stay-event codes to ROOM so room revenue is taxed one way" do
+      %w[late_checkout_revenue early_departure_revenue cancel_revenue].each do |system_key|
+        code = hotel.transaction_codes.find_by!(system_key: system_key)
+
+        expect(resolver.tax_rule_source_for(code)).to eq(room_code)
+      end
+    end
+
+    # No-show posts its taxes from the booking's snapshot; inheriting ROOM's live
+    # rules on top of that would tax every no-show twice.
+    it "leaves no-show on its own code" do
+      code = hotel.transaction_codes.find_by!(system_key: "no_show_revenue")
+
+      expect(resolver.tax_rule_source_for(code)).to eq(code)
+    end
+
+    it "returns any other code unchanged" do
+      expect(resolver.tax_rule_source_for(room_code)).to eq(room_code)
+      expect(resolver.tax_rule_source_for(hotel.transaction_codes.find_by!(system_key: "fnb_revenue")))
+        .to have_attributes(system_key: "fnb_revenue")
+    end
+
+    it "returns nil for a blank code" do
+      expect(resolver.tax_rule_source_for(nil)).to be_nil
+    end
+  end
 end
