@@ -25,10 +25,12 @@
             <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
           </a>
         <% end %>
-        <% navbar.with_actions do %>
-          <% unless locked_hotel_portal_shell? %>
+        <% unless locked_hotel_portal_shell? %>
+          <% navbar.with_center do %>
             <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages...") %>
           <% end %>
+        <% end %>
+        <% navbar.with_actions do %>
           <a class="panel-navbar__action" href="<%= help_center_path %>">
             <%= cached_icon "circle-question-mark", class: "size-4" %>
             Help

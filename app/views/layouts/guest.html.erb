@@ -27,8 +27,10 @@
           </a>
         <% end %>
         <% if guest_logged_in? %>
-          <% navbar.with_actions do %>
+          <% navbar.with_center do %>
             <%= render PanelsUI::CommandPalette.new(endpoint: guest_global_search_index_path, placeholder: "Search dashboard pages and bookings...") %>
+          <% end %>
+          <% navbar.with_actions do %>
             <a class="panel-navbar__action" href="<%= help_center_path %>">
               <%= cached_icon "circle-question-mark", class: "size-4" %>
               Help
