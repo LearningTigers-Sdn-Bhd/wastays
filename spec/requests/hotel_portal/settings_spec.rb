@@ -301,7 +301,8 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Rate Settings")
-      expect(response.body).to include("New Rate Plan")
+      expect(response.body).to include("New rate plan")
+      expect(Nokogiri::HTML(response.body).at_css('[data-testid="rate-plans-registry"]')).to be_present
     end
 
     it "hides the Walk-in Rate plan row when the hotel is pax_pricing_only" do

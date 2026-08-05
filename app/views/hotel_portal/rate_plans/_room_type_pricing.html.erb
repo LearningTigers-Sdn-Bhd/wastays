@@ -1,0 +1,53 @@
+<% room_types = current_hotel.room_types.order(:id).to_a %>
+<% rtrp_by_room_type_id = rate_plan.room_type_rate_plans.index_by(&:room_type_id) %>
+
+<section aria-labelledby="rate-plan-room-types-heading" class="space-y-4 border-t border-border pt-5">
+  <div>
+    <h2 id="rate-plan-room-types-heading" class="text-base font-semibold text-foreground">Room categories &amp; pricing</h2>
+    <p class="mt-1 text-sm text-muted-foreground">
+      Manual prices are entered per date in the rates calendar, the same as Standard Rate. The derived modes compute
+      from that room&rsquo;s Standard Rate for each date, so they need no calendar entry unless you want to override a
+      specific date.
+    </p>
+  </div>
+
+  <div class="space-y-2">
+    <% room_types.each do |room_type| %>
+      <% rtrp = rtrp_by_room_type_id[room_type.id] %>
+      <% scope = "rate_plan[room_type_pricing][#{room_type.id}]" %>
+      <div class="rounded-md border border-border p-3 space-y-2"
+           data-controller="room-type-pricing-row"
+           data-room-type-pricing-row-anchor-price-value="<%= room_type.base_price %>"
+           data-room-type-pricing-row-currency-value="<%= rate_plan.currency %>"
+           data-action="input->room-type-pricing-row#update change->room-type-pricing-row#update">
+        <div class="flex flex-wrap items-center gap-3">
+          <%= render PanelsUI::Checkbox.new(
+                name: "#{scope}[enabled]",
+                id: "rate_plan_room_type_pricing_#{room_type.id}_enabled",
+                checked: rtrp.present?,
+                label: room_type.name,
+                description: "Standard Rate: #{rate_plan.currency} #{number_with_precision(room_type.base_price, precision: 2, delimiter: ',')}") %>
+
+          <%= fields_for scope, HotelPortal::RatePlansHelper::RoomTypePricingScope.new(rtrp&.pricing_mode || "fixed", rtrp&.pricing_value) do |pf| %>
+            <div class="ml-auto flex items-center gap-2">
+              <div class="w-52" data-role="pricing-mode">
+                <%= render PanelsUI::FormField.new(form: pf, attribute: :pricing_mode,
+                      label: "#{room_type.name} pricing mode", label_hidden: true, size: :sm) do |field| %>
+                  <% field.with_select_menu(room_type_pricing_choices, selected: rtrp&.pricing_mode || "fixed") %>
+                <% end %>
+              </div>
+
+              <div class="w-28 <%= "hidden" unless rtrp&.derives_price? %>" data-room-type-pricing-row-target="value">
+                <%= render PanelsUI::FormField.new(form: pf, attribute: :pricing_value,
+                      label: "#{room_type.name} pricing value", label_hidden: true, size: :sm) do |field| %>
+                  <% field.with_input(type: :number, step: 0.01, inputmode: "decimal", placeholder: "-10") %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+        <p class="text-right text-xs text-muted-foreground" data-room-type-pricing-row-target="preview"></p>
+      </div>
+    <% end %>
+  </div>
+</section>

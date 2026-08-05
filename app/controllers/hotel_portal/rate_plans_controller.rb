@@ -1,14 +1,18 @@
 # frozen_string_literal: true
 
 class HotelPortal::RatePlansController < HotelPortal::BaseController
+  include SheetActionCompletion
+
   before_action :authorize!
   before_action :set_rate_plan, only: %i[edit update destroy archive unarchive]
 
   def new
     @rate_plan = current_hotel.rate_plans.build(sell_mode: default_sell_mode)
+    render layout: false
   end
 
   def edit
+    render layout: false
   end
 
   def create
@@ -26,9 +30,9 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     end
 
     if saved
-      redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' created successfully."
+      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' created successfully.")
     else
-      render :new, status: :unprocessable_content
+      render :new, layout: false, status: :unprocessable_content
     end
   end
 
@@ -44,41 +48,55 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     end
 
     if saved
-      redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' updated successfully."
+      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' updated successfully.")
     else
-      render :edit, status: :unprocessable_content
+      render :edit, layout: false, status: :unprocessable_content
     end
   end
 
   def destroy
-    unless @rate_plan.deletable?
-      redirect_to hotel_rates_settings_path(current_hotel), alert: "This rate plan cannot be deleted."
-      return
-    end
+    return finish_sheet(alert: "This rate plan cannot be deleted.") unless @rate_plan.deletable?
 
     if @rate_plan.destroy
-      redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' deleted successfully."
+      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' deleted successfully.")
     else
-      redirect_to hotel_rates_settings_path(current_hotel), alert: "Failed to delete rate plan."
+      finish_sheet(alert: "Failed to delete rate plan.")
     end
   end
 
   def archive
-    unless @rate_plan.archivable?
-      redirect_to hotel_rates_settings_path(current_hotel), alert: "System rate plans cannot be archived."
-      return
-    end
+    return finish_sheet(alert: "System rate plans cannot be archived.") unless @rate_plan.archivable?
 
     @rate_plan.archive!
-    redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' archived. It will no longer be offered for new bookings."
+    finish_sheet(notice: "Rate plan '#{@rate_plan.name}' archived. It will no longer be offered for new bookings.")
   end
 
   def unarchive
     @rate_plan.unarchive!
-    redirect_to hotel_rates_settings_path(current_hotel), notice: "Rate plan '#{@rate_plan.name}' restored."
+    finish_sheet(notice: "Rate plan '#{@rate_plan.name}' restored.")
   end
 
   private
+
+  # Closes the sheet (when the request came from one) and lands back on the
+  # rates settings page. Mirrors SheetActionCompletion#complete_sheet_action,
+  # which only carries a notice — archive/delete guards need an alert too.
+  def finish_sheet(notice: nil, alert: nil)
+    destination = hotel_rates_settings_path(current_hotel)
+
+    respond_to do |format|
+      format.turbo_stream do
+        flash[:notice] = notice if notice
+        flash[:alert] = alert if alert
+        render_sheet_action_completion(destination, frame: sheet_frame)
+      end
+      format.html { redirect_to destination, notice: notice, alert: alert, status: :see_other }
+    end
+  end
+
+  def sheet_frame
+    turbo_frame_request_id.presence || "settings_action_sheet"
+  end
 
   def set_rate_plan
     @rate_plan = current_hotel.rate_plans.find(params[:id])

@@ -15,23 +15,29 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     sign_in_as(user)
   end
 
+  def delete_action_labels(body)
+    Nokogiri::HTML(body).css('a[data-turbo-method="delete"]').map { |link| link.text.strip }
+  end
+
   describe 'GET /hotel/:hotel_id/rate_plans/new' do
-    it 'renders the offcanvas create form' do
+    it 'renders the create form in a sheet' do
       get new_hotel_rate_plan_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("New Rate Plan")
+      expect(response.body).to include("New rate plan")
+      expect(Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog')).to be_present
     end
   end
 
   describe 'GET /hotel/:hotel_id/rate_plans/:id/edit' do
     let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
 
-    it 'renders the offcanvas edit form' do
+    it 'renders the edit form in a sheet' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Edit Rate Plan")
+      expect(response.body).to include("Edit rate plan")
+      expect(Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog')).to be_present
       expect(response.body).to include("Promo Rate")
     end
 
@@ -39,7 +45,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }
+      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
       expect(option_values).to contain_exactly('per_room', 'per_person')
     end
 
@@ -50,7 +56,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
       select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }
+      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
       expect(option_values).to contain_exactly('per_person')
     end
 
@@ -60,14 +66,14 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }
+      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
       expect(option_values).to contain_exactly('per_room')
     end
 
     it 'shows a delete action when the plan has no bookings' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      expect(response.body).to include("Delete Rate Plan")
+      expect(delete_action_labels(response.body)).to include("Delete")
     end
 
     it 'hides the delete action once the plan has a booking' do
@@ -76,7 +82,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      expect(response.body).not_to include("Delete Rate Plan")
+      expect(delete_action_labels(response.body)).to be_empty
     end
 
     it 'shows per-room-type pricing mode controls, pre-filled from existing derived pricing' do
@@ -105,9 +111,9 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response.body).to include('data-controller="rate-plan-age-bands age-band-price-preview"')
       expect(response.body).to include('data-age-band-price-preview-currency-value="MYR"')
-      expect(response.body).to include('data-age-band-price-preview-target="roomTypeSelect"')
+      expect(response.body).to include('data-age-band-price-preview-target="roomTypeField"')
       expect(response.body).to include('data-role="price-preview"')
-      expect(response.body).to include('Flat Amount')
+      expect(response.body).to include('Flat amount')
     end
 
     it 'shows the prominent empty-state Add Band button when there are no age bands yet' do
@@ -213,6 +219,19 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       patch hotel_rate_plan_path(hotel, rate_plan), params: {
         rate_plan: { room_type_pricing: { room_type.id.to_s => { enabled: "0" } } }
+      }
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      expect(rate_plan.reload.room_types).not_to include(room_type)
+    end
+
+    # An unchecked PanelsUI::Checkbox submits no `enabled` key at all — the row
+    # only reaches the server because its pricing_mode field always submits.
+    it 'removes a room type when the enabled key is omitted entirely' do
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: 'fixed')
+
+      patch hotel_rate_plan_path(hotel, rate_plan), params: {
+        rate_plan: { room_type_pricing: { room_type.id.to_s => { pricing_mode: "fixed" } } }
       }
 
       expect(response).to redirect_to(hotel_rates_settings_path(hotel))

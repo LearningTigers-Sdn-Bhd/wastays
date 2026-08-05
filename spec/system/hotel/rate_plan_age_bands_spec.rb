@@ -24,13 +24,13 @@ RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
   it 'lets the hotelier edit an existing age band and persists the change' do
     visit hotel_settings_path(hotel, tab: 'rates')
 
-    first(:link, 'Edit').click
+    first(:link, 'Manage').click
 
-    expect(page).to have_content('Age Bands')
+    expect(page).to have_content('Age bands')
 
     find("input[name='rate_plan[rate_plan_age_bands_attributes][0][max_age]']").set('12')
     find("input[name='rate_plan[rate_plan_age_bands_attributes][0][price_value]']").set('35')
-    click_button 'Save Changes'
+    click_button 'Save changes'
 
     expect(page).to have_content("updated successfully")
     band.reload
@@ -41,10 +41,10 @@ RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
   it 'removes an age band when marked for destruction' do
     visit hotel_settings_path(hotel, tab: 'rates')
 
-    first(:link, 'Edit').click
+    first(:link, 'Manage').click
 
     find("input[name='rate_plan[rate_plan_age_bands_attributes][0][_destroy]']", visible: false).set('1')
-    click_button 'Save Changes'
+    click_button 'Save changes'
 
     expect(page).to have_content("updated successfully")
     expect(RatePlanAgeBand.exists?(band.id)).to be false
