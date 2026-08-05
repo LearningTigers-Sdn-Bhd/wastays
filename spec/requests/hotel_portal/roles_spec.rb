@@ -38,6 +38,28 @@ RSpec.describe "HotelPortal::Roles", type: :request do
     end
   end
 
+  describe "GET /hotel/:hotel_id/roles-and-permissions/new" do
+    it "renders the role sheet" do
+      get new_hotel_role_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("New Role")
+      expect(response.body).to include("new-role-form")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/roles-and-permissions/:id/edit" do
+    it "renders the role sheet for an existing role" do
+      role = create(:role, account: account, name: "Front Desk", slug: "front_desk")
+
+      get edit_hotel_role_path(hotel, role)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("edit-role-form")
+      expect(response.body).to include("Front Desk")
+    end
+  end
+
   describe "POST /hotel/:hotel_id/roles-and-permissions" do
     it "creates a role with selected permissions" do
       view_bookings = Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings')

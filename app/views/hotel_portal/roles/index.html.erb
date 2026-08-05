@@ -1,4 +1,4 @@
-<div class="w-full space-y-3.5" data-controller="popup-modal matrix-mode matrix-search">
+<div class="w-full space-y-3.5" data-controller="matrix-mode matrix-search">
   <%= render PanelsUI::PageHeader.new(title: "Roles & Permissions", description: "Assign capabilities to staff roles using the matrix below.") do |header| %>
     <% header.with_actions do %>
       <div class="flex flex-wrap items-center gap-3">
@@ -31,12 +31,11 @@
           Edit Permissions
         <% end %>
         <%= render PanelsUI::Button.new(
-              as: :button,
-              type: "button",
+              href: new_hotel_role_path(current_hotel),
               variant: :secondary,
               size: :md,
               class: "w-full lg:w-auto",
-              data: { action: "click->popup-modal#open", popup_modal_url_value: new_hotel_role_path(current_hotel) }) do %>
+              data: { turbo_frame: "settings_action_sheet" }) do %>
           <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
           New Role
         <% end %>
@@ -60,13 +59,43 @@
                   <th scope="col" class="px-4 py-4 text-center min-w-[180px] w-40">
                     <div class="flex items-center justify-center gap-2">
                       <span class="text-sm font-bold text-foreground"><%= role.name %></span>
-                      <button type="button"
-                                  class="text-muted-foreground hover:text-muted-foreground transition"
-                                  title="Edit Role"
-                                  data-action="click->popup-modal#open"
-                                  data-popup-modal-url-value="<%= edit_hotel_role_path(current_hotel, role) %>">
-                        <svg class="size-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                      </button>
+                      <%= render PanelsUI::DropdownMenu.new(
+                            id: "role-#{role.id}-actions",
+                            placement: :bottom_end,
+                            class: "w-56") do |menu| %>
+                        <% menu.with_trigger(
+                             variant: :ghost,
+                             size: :icon_sm,
+                             aria_label: "Actions for #{role.name}") do %>
+                          <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+                        <% end %>
+
+                        <% menu.with_item(
+                             href: edit_hotel_role_path(current_hotel, role),
+                             data: { turbo_frame: "settings_action_sheet" }) do %>
+                          <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
+                          <span>Edit role</span>
+                        <% end %>
+
+                        <%# A role with staff assigned to it anywhere in the account is refused
+                            server-side too, so the menu simply does not offer the action. %>
+                        <% if role.user_hotel_accesses.empty? %>
+                          <% menu.with_item(
+                               href: hotel_role_path(current_hotel, role),
+                               method: :delete,
+                               variant: :danger,
+                               data: {
+                                 turbo_confirm: "Delete the #{role.name} role?",
+                                 turbo_confirm_title: "Delete role?",
+                                 turbo_confirm_text: "The #{role.name} role and its permissions will be removed from this account. This cannot be undone.",
+                                 turbo_confirm_tone: "destructive",
+                                 turbo_frame: "_top"
+                               }) do %>
+                            <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+                            <span>Delete role</span>
+                          <% end %>
+                        <% end %>
+                      <% end %>
                     </div>
                   </th>
                 <% end %>
@@ -123,20 +152,5 @@
         </div>
       </div>
     <% end %>
-  </div>
-
-  <%# Modal Container moved INSIDE the controller scope %>
-  <div id="role-modal"
-       class="hidden fixed inset-0 z-[150] items-center justify-center p-4 sm:p-6 bg-primary/50 backdrop-blur-sm transition-opacity duration-300"
-       data-popup-modal-target="dialog"
-       data-action="click->popup-modal#handleBackgroundClick">
-
-    <div class="modal-content w-full max-w-lg bg-card border border-border shadow-2xl rounded-2xl overflow-hidden transform transition-all duration-300 opacity-0 translate-y-4 sm:scale-95">
-      <%= turbo_frame_tag "role_modal_content", data: { popup_modal_target: "frame" } do %>
-        <div class="p-12 flex items-center justify-center">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-border-interactive"></div>
-        </div>
-      <% end %>
-    </div>
   </div>
 </div>

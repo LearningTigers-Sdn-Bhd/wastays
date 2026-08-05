@@ -1,60 +1,38 @@
-<%= turbo_frame_tag "role_modal_content" do %>
-  <div class="flex flex-col bg-card">
-    <div class="flex justify-between items-center py-3.5 px-6 border-b border-border bg-muted/50">
-      <h3 class="font-bold text-foreground">Edit Role: <%= @role.name %></h3>
-    </div>
-
-    <%= form_with model: @role, url: hotel_role_path(current_hotel, @role), method: :patch, data: { turbo_frame: "_top" } do |f| %>
-      <div class="p-4 overflow-y-auto">
-        <% if @role.errors.any? %>
-          <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
-            <h2 class="text-sm font-bold text-red-900">Role could not be saved</h2>
-            <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-red-700">
-              <% @role.errors.full_messages.each do |message| %>
-                <li><%= message %></li>
-              <% end %>
-            </ul>
-          </div>
-        <% end %>
-
-        <div>
-          <%= f.label :name, "Role Name", class: "mb-2 block text-sm font-medium text-foreground" %>
-          <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm transition focus:border-border-interactive focus:ring-0", placeholder: "e.g. Night Manager" %>
-          <p class="mt-2 text-xs text-muted-foreground">The role slug is generated from the name when the role is created.</p>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between gap-3 border-t border-border bg-muted/50 p-4">
-        <div>
-          <% if @role.user_hotel_accesses.empty? %>
-            <%= link_to hotel_role_path(current_hotel, @role),
-                          data: {
-                            turbo_method: :delete,
-                            turbo_confirm: "Are you sure you want to delete the '#{@role.name}' role? This cannot be undone.",
-                            turbo_confirm_title: "Delete Role",
-                            turbo_confirm_color: "red",
-                            turbo_frame: "_top",
-                            action: "click->popup-modal#close"
-                          },
-                          class: "inline-flex items-center rounded-xl border border-red-200 bg-card px-4 py-2.5 text-sm font-bold text-red-600 shadow-sm transition hover:bg-red-50" do %>
-              Delete Role
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "edit-role-sheet",
+             title: "Edit Role",
+             description: "Rename #{@role.name}. Its permissions are managed in the matrix.",
+             form_id: "edit-role-form",
+             submit_label: "Save Changes"
+           } do %>
+  <%= form_with model: @role,
+                url: hotel_role_path(current_hotel, @role),
+                method: :patch,
+                id: "edit-role-form",
+                class: "space-y-5" do |f| %>
+    <% if @role.errors.any? %>
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: "This role could not be saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @role.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
             <% end %>
-          <% else %>
-            <span class="inline-flex items-center rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-bold text-muted-foreground" title="Remove assigned staff before deleting this role.">
-              Delete Role
-            </span>
-          <% end %>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <button type="button"
-                  class="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted"
-                  data-action="click->popup-modal#close">
-            Cancel
-          </button>
-          <%= f.submit "Update Role", class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
-        </div>
-      </div>
+          </ul>
+        <% end %>
+      <% end %>
     <% end %>
-  </div>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :name,
+          label: "Role Name",
+          hint: "The slug was generated when the role was created and does not change.",
+          required: true) do |field| %>
+      <% field.with_input(placeholder: "Night Manager", autocomplete: "off", required: true) %>
+    <% end %>
+  <% end %>
 <% end %>

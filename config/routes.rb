@@ -697,8 +697,9 @@ Rails.application.routes.draw do
     # Invite is a Sheet over the list now, so the old deep link lands on the list.
     get "staff/new", to: redirect("/hotel/%{hotel_id}/settings/team/staff")
     get "roles-and-permissions", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
-    get "roles-and-permissions/new", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/new")
-    get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/%{id}/edit")
+    # New/edit are Sheets over the matrix now, so old deep links land on it.
+    get "roles-and-permissions/new", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
+    get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
 
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
     resources :rate_plans, only: %i[new create edit update destroy] do
