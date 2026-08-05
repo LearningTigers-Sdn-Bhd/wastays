@@ -702,13 +702,18 @@ module ChannelManagers
     end
 
     def ensure_rate_plans(client, room_type)
-      # If room type has no rate plans, find or create a standard one and link it
+      # If room type has no rate plans, create a standard one of its own. The
+      # lookup must stay scoped to the room type: every room type carries its
+      # own "Standard Rate" plan, so searching hotel-wide would return another
+      # room type's plan and link the two together, making a rate edit on one
+      # bleed into the other.
       if room_type.rate_plans.empty?
-        rate_plan = @hotel.rate_plans.find_or_create_by!(name: "Standard Rate") do |rp|
-          rp.sell_mode = "per_room"
-          rp.currency = @hotel.default_currency || "MYR"
-        end
-        room_type.room_type_rate_plans.find_or_create_by!(rate_plan: rate_plan)
+        rate_plan = @hotel.rate_plans.create!(
+          name: "Standard Rate",
+          sell_mode: "per_room",
+          currency: @hotel.default_currency || "MYR"
+        )
+        room_type.room_type_rate_plans.create!(rate_plan: rate_plan)
       end
 
       room_type.rate_plans.all? do |rate_plan|
