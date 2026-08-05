@@ -324,7 +324,7 @@ Rails.application.routes.draw do
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
     end
-    resources :room_groups, except: [ :show ]
+    resources :room_groups, only: %i[index create update destroy]
     get "stay-view", to: "stay_view/board#index", as: :stay_view
     scope "stay-view", module: :stay_view, as: :stay_view do
       get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
@@ -665,8 +665,9 @@ Rails.application.routes.draw do
     get "plan", to: redirect("/hotel/%{hotel_id}/settings/general/plan-and-billing")
     get "profile/edit", to: redirect("/hotel/%{hotel_id}/settings/property/hotel-details")
     get "room_types", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
-    get "room_types/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories/new")
-    get "room_types/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories/%{id}/edit")
+    # New/edit are Sheets over the list now, so old deep links land on the list.
+    get "room_types/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
+    get "room_types/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
     get "nearby_attractions", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions")
     get "nearby_attractions/new", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/new")
     get "nearby_attractions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/%{id}/edit")

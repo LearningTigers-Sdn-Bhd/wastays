@@ -134,6 +134,8 @@
   }
 
   /* ─── Menu ───────────────────────────────────────────────────────────────── */
+  /* Anchored by the controller through floating-ui once Tom Select initialises;
+     these values are the pre-positioning fallback for that first frame. */
   .panel-combobox .ts-dropdown {
     position: absolute;
     inset-inline: 0;
@@ -271,6 +273,11 @@
     .panel-combobox .ts-dropdown[style*="display: block"] {
       animation: combobox-enter var(--duration-fast) var(--ease-standard);
       transform-origin: top center;
+    }
+
+    /* Flipped above the control: grow from the edge nearest the control. */
+    .panel-combobox .ts-dropdown[data-placement^="top"] {
+      transform-origin: bottom center;
     }
   }
 

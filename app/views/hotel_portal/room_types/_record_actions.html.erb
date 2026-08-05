@@ -10,7 +10,7 @@
   <% end %>
   <% menu.with_item(
        href: edit_hotel_room_type_path(current_hotel, room_type),
-       data: { turbo_frame: "_top" }) do %>
+       data: { turbo_frame: "settings_action_sheet" }) do %>
     <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
     <span>Edit details</span>
   <% end %>

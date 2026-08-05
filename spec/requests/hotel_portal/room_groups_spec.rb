@@ -15,9 +15,13 @@ RSpec.describe "HotelPortal::RoomGroups", type: :request do
   end
 
   describe "GET #index" do
-    it "renders the list successfully" do
+    it "renders the manage sheet with the add form and every group inline" do
       get hotel_room_groups_path(hotel)
+
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include("manage-room-groups-sheet")
+      expect(response.body).to include("add-room-group-form")
+      expect(response.body).to include("edit-room-group-#{room_group.id}-form")
     end
   end
 
@@ -31,29 +35,24 @@ RSpec.describe "HotelPortal::RoomGroups", type: :request do
       expect(flash[:notice]).to eq("Room group created successfully.")
     end
 
-    it "creates a new room group and returns an offcanvas complete action via turbo stream" do
+    it "creates a new room group and returns a sheet complete action via turbo stream" do
       expect {
         post hotel_room_groups_path(hotel), params: { room_group: { name: "New Stream Wing" } }, as: :turbo_stream
       }.to change(RoomGroup, :count).by(1)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include('action="complete_sheet"')
+      expect(response.body).to include('target="settings_action_sheet"')
       expect(response.body).to include(hotel_room_types_path(hotel))
     end
 
-    it "renders index with unprocessable_content when parameters are invalid" do
+    it "re-renders the sheet with unprocessable_content when parameters are invalid" do
       expect {
         post hotel_room_groups_path(hotel), params: { room_group: { name: "" } }
       }.not_to change(RoomGroup, :count)
 
       expect(response).to have_http_status(:unprocessable_content)
-    end
-  end
-
-  describe "GET #edit" do
-    it "renders the edit page successfully" do
-      get edit_hotel_room_group_path(hotel, room_group)
-      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("manage-room-groups-sheet")
     end
   end
 
@@ -65,17 +64,22 @@ RSpec.describe "HotelPortal::RoomGroups", type: :request do
       expect(flash[:notice]).to eq("Room group updated successfully.")
     end
 
-    it "updates the room group and returns an offcanvas complete action via turbo stream" do
+    it "updates the room group and returns a sheet complete action via turbo stream" do
       patch hotel_room_group_path(hotel, room_group), params: { room_group: { name: "Updated Stream Wing" } }, as: :turbo_stream
       expect(room_group.reload.name).to eq("Updated Stream Wing")
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include('action="complete_sheet"')
+      expect(response.body).to include('target="settings_action_sheet"')
       expect(response.body).to include(hotel_room_types_path(hotel))
     end
 
-    it "renders edit with unprocessable_content when parameters are invalid" do
+    it "re-renders the sheet with the failing row expanded when parameters are invalid" do
       patch hotel_room_group_path(hotel, room_group), params: { room_group: { name: "" } }
+
       expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("edit-room-group-#{room_group.id}-form")
+      expect(response.body).to match(/id="room-group-#{room_group.id}"[^>]*/)
+      expect(response.body).to include("can&#39;t be blank")
     end
   end
 
@@ -93,11 +97,18 @@ RSpec.describe "HotelPortal::RoomGroups", type: :request do
       expect(flash[:notice]).to eq("Room group deleted successfully.")
     end
 
-    it "deletes the room group and returns an offcanvas complete action via turbo stream" do
+    it "deletes the room group and returns a sheet complete action via turbo stream" do
       delete hotel_room_group_path(hotel, room_group), as: :turbo_stream
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('action="complete_offcanvas"')
+      expect(response.body).to include('action="complete_sheet"')
+      expect(response.body).to include('target="settings_action_sheet"')
       expect(response.body).to include(hotel_room_types_path(hotel))
+    end
+  end
+
+  describe "removed routes" do
+    it "no longer exposes an edit screen" do
+      expect { edit_hotel_room_group_path(hotel, room_group) }.to raise_error(NameError)
     end
   end
 end

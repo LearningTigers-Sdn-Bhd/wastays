@@ -1,5 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 import TomSelect from "tom-select"
+import { autoUpdate, computePosition, flip, offset, shift, size } from "@floating-ui/dom"
+
+// Ceiling mirrors the `max-height` in panel/combobox.css: the menu is capped at a
+// readable height rather than growing to fill whatever room the viewport offers.
+// The floor keeps a usable list when it is squeezed against an edge.
+const MENU_MAX_HEIGHT = 320
+const MIN_MENU_HEIGHT = 140
 
 export default class extends Controller {
   static targets = ["native"]
@@ -28,9 +35,78 @@ export default class extends Controller {
     this.control.wrapper.classList.remove(...copiedNativeClasses)
 
     this.decorateFocusableControl()
+    this.startMenuPositioning()
     this.form = this.nativeTarget.form
     this.form?.addEventListener("reset", this.onFormReset)
     this.element.dataset.enhanced = "true"
+  }
+
+  // ── Menu positioning (floating-ui) ──────────────────────────────────────────
+  //
+  // Tom Select only positions the menu itself when it is parented to <body>,
+  // which is not an option here: these render inside Sheets, and the dialog owns
+  // the top layer, so a body-parented menu would paint behind it. Left as CSS
+  // absolute positioning, the menu could neither flip nor know how much room it
+  // had, so near the bottom of a scrolling sheet it opened downwards into the
+  // overflow. This is the same middleware stack PanelsUI::SelectMenu uses.
+  startMenuPositioning() {
+    this.onDropdownOpen = () => {
+      this.stopMenuPositioning()
+      this.cleanupPosition = autoUpdate(this.control.control, this.control.dropdown, () => this.positionMenu())
+    }
+    this.onDropdownClose = () => this.stopMenuPositioning()
+
+    this.control.on("dropdown_open", this.onDropdownOpen)
+    this.control.on("dropdown_close", this.onDropdownClose)
+  }
+
+  stopMenuPositioning() {
+    this.cleanupPosition?.()
+    this.cleanupPosition = null
+  }
+
+  positionMenu() {
+    const menu = this.control?.dropdown
+    const content = this.control?.dropdown_content
+    if (!menu || !content) return
+
+    computePosition(this.control.control, menu, {
+      placement: "bottom-start",
+      strategy: "fixed",
+      middleware: [
+        offset(6),
+        flip(),
+        shift({ padding: 8 }),
+        size({
+          padding: 8,
+          apply({ availableHeight, rects, elements }) {
+            // The menu tracks the control's width. Without this it is
+            // shrink-to-fit, and a multi-select's selected-pills panel will
+            // happily stretch it across the whole viewport.
+            Object.assign(elements.floating.style, { width: `${rects.reference.width}px` })
+
+            // availableHeight covers the whole menu; the scrollable option list
+            // gets what is left after the pinned search field and, on a
+            // multi-select, the selected-badges panel — capped at the design
+            // ceiling so a tall viewport does not produce a full-height menu.
+            const chrome = elements.floating.offsetHeight - content.offsetHeight
+            const room = Math.min(MENU_MAX_HEIGHT, availableHeight - chrome)
+            Object.assign(content.style, { maxHeight: `${Math.max(MIN_MENU_HEIGHT, room)}px` })
+          }
+        })
+      ]
+    }).then(({ x, y, placement }) => {
+      Object.assign(menu.style, {
+        position: "fixed",
+        left: `${x}px`,
+        top: `${y}px`,
+        // The stylesheet pins the menu under the control with `inset-inline: 0`;
+        // clear the trailing edge or it stretches to the old anchor's width.
+        right: "auto",
+        bottom: "auto"
+      })
+      menu.dataset.placement = placement
+    })
   }
 
   // The Tom Select configuration. Extracted so subclasses (e.g. MultiSelect) can
@@ -70,6 +146,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.stopMenuPositioning()
     this.form?.removeEventListener("reset", this.onFormReset)
     this.control?.destroy()
     this.control = null
