@@ -129,11 +129,14 @@
                     <%# A role with staff assigned to it anywhere in the account is refused
                         server-side too, so the menu simply does not offer the action. %>
                     <% if role.user_hotel_accesses.empty? %>
+                      <%# A link driving the delete, not `method:`: that renders button_to,
+                          and its form would nest inside the matrix form wrapping this
+                          table — which browsers discard, handing the click to the matrix. %>
                       <% menu.with_item(
                            href: hotel_role_path(current_hotel, role),
-                           method: :delete,
                            variant: :danger,
                            data: {
+                             turbo_method: :delete,
                              turbo_confirm: "Delete the #{role.name} role?",
                              turbo_confirm_title: "Delete role?",
                              turbo_confirm_text: "The #{role.name} role and its permissions will be removed from this account. This cannot be undone.",
