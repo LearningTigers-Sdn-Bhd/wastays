@@ -78,8 +78,14 @@ class RoomType < ApplicationRecord
     return if rate_plans.exists?
 
     # Create a dedicated standard rate plan for this room type.
-    # Each room type must have its own plan; sharing one across room
-    # types would make rate updates on one room type bleed into others.
+    #
+    # Nightly prices would survive a shared plan — room_rates is unique on
+    # (room_type_id, rate_plan_id, date, currency), so each room type keeps its
+    # own price row either way. What does not survive is everything held on the
+    # plan itself: sell_mode, currency, child_price_multiplier and the age
+    # bands are single values, so a shared plan silently applies one room
+    # type's rules to another, and leaves the second without a plan of its own
+    # to edit.
     rate_plan = hotel.rate_plans.create!(
       name: "Standard Rate",
       kind: "standard",
