@@ -665,8 +665,9 @@ Rails.application.routes.draw do
     get "plan", to: redirect("/hotel/%{hotel_id}/settings/general/plan-and-billing")
     get "profile/edit", to: redirect("/hotel/%{hotel_id}/settings/property/hotel-details")
     get "room_types", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
-    get "room_types/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories/new")
-    get "room_types/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories/%{id}/edit")
+    # New/edit are Sheets over the list now, so old deep links land on the list.
+    get "room_types/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
+    get "room_types/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
     get "nearby_attractions", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions")
     get "nearby_attractions/new", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/new")
     get "nearby_attractions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/%{id}/edit")

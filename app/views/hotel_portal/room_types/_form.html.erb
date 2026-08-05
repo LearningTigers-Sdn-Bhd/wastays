@@ -6,8 +6,8 @@
   { name: "numbering", label: "Room Numbering", icon: "grid-3x3" },
   { name: "photos", label: "Photos", icon: "image" }
 ] %>
-<%= form_with model: [@hotel, room_type], local: true, data: { controller: "room-number-generator panels-ui--tabs", "panels-ui--tabs-active-value": "basic" } do |f| %>
-  <div class="mx-auto max-w-6xl space-y-6">
+<%= form_with model: [@hotel, room_type], local: true, id: form_id, data: { controller: "room-number-generator panels-ui--tabs", "panels-ui--tabs-active-value": "basic" } do |f| %>
+  <div class="space-y-6">
     <div class="rounded-xl border border-border bg-card p-1.5 shadow-sm">
       <nav class="flex items-center gap-1 overflow-x-auto" aria-label="Room type sections" role="tablist">
         <% room_type_tabs.each do |tab| %>
@@ -315,10 +315,6 @@
       </div>
     </section>
 
-    <!-- Submit -->
-    <div class="flex justify-end border-t border-border pt-6">
-      <%= f.submit class: "cursor-pointer rounded-xl bg-blue-600 px-8 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 active:scale-[0.98]" %>
-    </div>
   </div>
 <% end %>
 

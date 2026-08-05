@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
 class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
+  include SheetActionCompletion
+
   before_action :set_hotel
   before_action :authorize_hotel
   before_action :set_room_type, only: [ :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos ]
-  before_action :set_breadcrumbs, only: [ :new, :create, :edit, :update ]
 
   def index
     @all_room_types = RoomTypesQuery.new(@hotel.room_types).call(params)
@@ -17,6 +18,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
 
   def new
     @room_type = @hotel.room_types.build
+    render layout: false
   end
 
   def create
@@ -26,14 +28,16 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     ).call
 
     if result.success?
-      redirect_to hotel_room_types_path(@hotel), notice: "Room type created successfully."
+      finish_sheet("Room category created successfully.")
     else
       @room_type = result.room_type
-      render :new, status: :unprocessable_content
+      render :new, layout: false, status: :unprocessable_content
     end
   end
 
-  def edit; end
+  def edit
+    render layout: false
+  end
 
   def update
     result = HotelPortal::RoomTypes::SaveRoomType.new(
@@ -43,9 +47,9 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     ).call
 
     if result.success?
-      redirect_to hotel_room_types_path(@hotel), notice: "Room type updated successfully."
+      finish_sheet("Room category updated successfully.")
     else
-      render :edit, status: :unprocessable_content
+      render :edit, layout: false, status: :unprocessable_content
     end
   end
 
@@ -99,13 +103,12 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     @room_type = @hotel.room_types.find(params[:id])
   end
 
-  def set_breadcrumbs
-    if @room_type&.persisted?
-      append_breadcrumb @room_type.name
-      append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
-    else
-      append_breadcrumb "New"
-    end
+  def finish_sheet(notice)
+    complete_sheet_action(destination: hotel_room_types_path(@hotel), notice: notice, frame: sheet_frame)
+  end
+
+  def sheet_frame
+    turbo_frame_request_id.presence || "settings_action_sheet"
   end
 
   def room_type_params

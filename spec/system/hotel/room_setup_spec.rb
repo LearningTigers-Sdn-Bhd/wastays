@@ -29,9 +29,9 @@ RSpec.describe 'Room Setup', type: :system do
     fill_in 'Total Number of Rooms', with: 5
     fill_in 'Standard Rate (MYR)', with: 250
 
-    click_button 'Create Room type'
+    click_button 'Create Room Category'
 
-    expect(page).to have_content('Room type created successfully.')
+    expect(page).to have_content('Room category created successfully.')
     expect(page).to have_content('Deluxe Suite')
 
     visit hotel_dashboard_path(hotel)
