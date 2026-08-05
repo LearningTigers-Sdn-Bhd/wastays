@@ -313,11 +313,18 @@ export default class extends Controller {
     return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable
   }
 
+  // The hint ships as the ⌘ icon + K. Only the modifier key is touched, so the
+  // "+ K" half of the combination survives on every platform. Off Apple the
+  // icon is replaced with the word Ctrl — assigning textContent drops the SVG.
   updateShortcutLabel() {
     if (!this.hasShortcutTarget) return
     const platform = navigator.platform || ""
     const isApple = /Mac|iPhone|iPad|iPod/.test(platform)
-    this.shortcutTarget.textContent = isApple ? "⌘K" : "Ctrl K"
+    if (isApple) return
+
+    const modifierKey = this.shortcutTarget.querySelector("kbd")
+    if (modifierKey) modifierKey.textContent = "Ctrl"
+    this.shortcutTarget.setAttribute("aria-label", "Ctrl+K")
   }
 
   // Append `text` to `element` as DOM nodes, wrapping query-term matches in a
