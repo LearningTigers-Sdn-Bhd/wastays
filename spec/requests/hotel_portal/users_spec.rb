@@ -68,6 +68,14 @@ RSpec.describe "HotelPortal::Users", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Invite Staff Member")
     end
+
+    # The sheet renders without a layout, so an old bookmark pointing straight at
+    # it would land on a bare dialog. Send those to the list instead.
+    it "sends the legacy deep link to the list rather than the bare sheet" do
+      get "/hotel/#{hotel.to_param}/staff/new"
+
+      expect(response).to redirect_to(hotel_users_path(hotel))
+    end
   end
 
   describe "GET /hotel/:hotel_id/staff/:id/edit" do

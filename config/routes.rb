@@ -694,7 +694,8 @@ Rails.application.routes.draw do
     get "knowledge_general_infos/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/%{id}/edit")
     get "knowledge_diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/knowledge-diagnostics")
     get "staff", to: redirect("/hotel/%{hotel_id}/settings/team/staff")
-    get "staff/new", to: redirect("/hotel/%{hotel_id}/settings/team/staff/new")
+    # Invite is a Sheet over the list now, so the old deep link lands on the list.
+    get "staff/new", to: redirect("/hotel/%{hotel_id}/settings/team/staff")
     get "roles-and-permissions", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
     get "roles-and-permissions/new", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/new")
     get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/%{id}/edit")
