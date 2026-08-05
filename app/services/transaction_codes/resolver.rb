@@ -54,6 +54,31 @@ module TransactionCodes
       for_key(TAX_TYPE_SYSTEM_KEYS[tax_type.to_s])
     end
 
+    # Stay events bill a room night under their own code, for GL and reporting,
+    # but they are the same revenue as the room charge and must be taxed the same
+    # way. Rather than four codes carrying four independently-editable copies of
+    # the same tax rules — which drift — they inherit ROOM's.
+    #
+    # `no_show_revenue` is deliberately absent. Bookings::FinalizeNoShow posts its
+    # own tax lines from the booking's tax snapshot, which is the right treatment
+    # for a historical night; giving it inherited rules as well would double-tax it.
+    TAX_RULE_SOURCE_SYSTEM_KEYS = {
+      "late_checkout_revenue" => "room_revenue",
+      "early_departure_revenue" => "room_revenue",
+      "cancel_revenue" => "room_revenue"
+    }.freeze
+
+    # Whose tax rules apply when posting under `transaction_code`. Usually the code
+    # itself; for the stay-event codes above, ROOM's.
+    def tax_rule_source_for(transaction_code)
+      return if transaction_code.blank?
+
+      source_key = TAX_RULE_SOURCE_SYSTEM_KEYS[transaction_code.system_key]
+      return transaction_code if source_key.blank?
+
+      for_key(source_key) || transaction_code
+    end
+
     # The code a tax line posts to: its own explicit code if the snapshot named
     # one, otherwise the standing code for its type.
     def for_tax_line(tax_line)

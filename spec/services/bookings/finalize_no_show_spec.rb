@@ -29,6 +29,40 @@ RSpec.describe Bookings::FinalizeNoShow do
     expect(result.skipped_folios.sole.balance).to eq(100.0)
   end
 
+  # No-show posts its tax lines from the booking's own tax snapshot, which is the
+  # right treatment for a historical night. It must never also inherit ROOM's live
+  # tax rules the way late checkout and early departure do, or every no-show would
+  # be taxed twice. TransactionCodes::Resolver::TAX_RULE_SOURCE_SYSTEM_KEYS omits
+  # no_show_revenue for exactly this reason.
+  it "does not attach ROOM's live tax rules on top of its snapshot taxes" do
+    hotel = create(:hotel, sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    user = create(:user, account: hotel.account)
+    room_type = create(:room_type, hotel: hotel)
+    business_date = Date.current
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    room_code = hotel.transaction_codes.find_by(system_key: "room_revenue")
+    room_code.update!(is_taxable: true)
+    room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+
+    booking = create(
+      :booking,
+      hotel: hotel,
+      status: "no_show_detected",
+      no_show_detected_business_date: business_date,
+      check_in: business_date,
+      check_out: business_date + 2.days,
+      tax_lines: []
+    )
+    create(:booking_room, booking: booking, room_type: room_type, subtotal: 200.0)
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
+
+    expect(described_class.call(booking: booking, user: user).success?).to be(true)
+
+    transactions = booking.booking_folio.folio_transactions.charge
+    expect(transactions.where(category: "no_show_charge").sole.amount).to eq(100.0)
+    expect(transactions.where(category: "tax")).to be_empty
+  end
+
   it "records the staff reason on no-show audit metadata" do
     hotel = create(:hotel)
     user = create(:user, account: hotel.account)
