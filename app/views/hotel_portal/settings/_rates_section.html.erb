@@ -1,4 +1,7 @@
 <% rate_plans = @presenter.rate_plans.reject { |rp| rp.special_tier_kind == :walk_in && @hotel.pax_pricing_only? } %>
+<%# Each room type carries its own standard plan, so several rows share the name
+    "Standard Rate". Qualify them by category, otherwise they read as duplicates. %>
+<% standard_plan_count = rate_plans.count(&:standard_rate?) %>
 
 <section aria-labelledby="rate-plans-heading" class="space-y-3">
   <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -30,7 +33,9 @@
         <tr id="rate-plan-row-<%= rate_plan.id %>" class="<%= "opacity-60" if rate_plan.archived? %>">
           <td>
             <div class="flex items-center gap-2">
-              <span class="font-medium text-foreground"><%= rate_plan.name %></span>
+              <span class="font-medium text-foreground">
+                <%= rate_plan.name %><% if rate_plan.standard_rate? && standard_plan_count > 1 && rate_plan.room_types.any? %><span class="text-muted-foreground"> · <%= rate_plan.room_types.map(&:name).join(", ") %></span><% end %>
+              </span>
               <% if rate_plan.archived? %>
                 <%= render PanelsUI::Badge.new(label: "Archived", variant: :warning, size: :sm) %>
               <% elsif rate_plan.special_tier? %>

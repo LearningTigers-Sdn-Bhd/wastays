@@ -132,6 +132,7 @@ end
 
 # 3. Rate Plans — a standard rack rate, and a discounted corporate rate
 standard_plan = RatePlan.find_or_initialize_by(hotel: hotel, name: "Standard Rate")
+standard_plan.kind = "standard"
 standard_plan.sell_mode = "per_room"
 standard_plan.currency = "MYR"
 standard_plan.save!

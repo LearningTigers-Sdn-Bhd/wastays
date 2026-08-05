@@ -82,6 +82,7 @@ class RoomType < ApplicationRecord
     # types would make rate updates on one room type bleed into others.
     rate_plan = hotel.rate_plans.create!(
       name: "Standard Rate",
+      kind: "standard",
       sell_mode: "per_room",
       currency: hotel.default_currency || "MYR"
     )

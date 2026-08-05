@@ -199,6 +199,7 @@ end
 
 # 3. Standard Rate Plan
 standard_plan = RatePlan.find_or_initialize_by(hotel: hotel, name: "Standard Rate")
+standard_plan.kind = "standard"
 standard_plan.sell_mode = "per_person"
 standard_plan.currency = "MYR"
 standard_plan.single_supplement = 20.0

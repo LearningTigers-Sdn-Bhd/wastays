@@ -308,7 +308,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     it "hides the Walk-in Rate plan row when the hotel is pax_pricing_only" do
       hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
       create(:rate_plan, hotel: hotel, name: "Standard Rate", sell_mode: "per_person")
-      create(:rate_plan, hotel: hotel, name: "Walk-in Rate", sell_mode: "per_room")
+      create(:rate_plan, :walk_in_tier, hotel: hotel, sell_mode: "per_room")
 
       get hotel_rates_settings_path(hotel)
 

@@ -11,7 +11,11 @@ class RatePlan < ApplicationRecord
 
   accepts_nested_attributes_for :rate_plan_age_bands, allow_destroy: true, reject_if: :all_blank
 
+  KINDS = %w[standard walk_in corporate ota custom].freeze
+  SPECIAL_TIER_KINDS = %w[walk_in corporate ota].freeze
+
   validates :name, presence: true
+  validates :kind, presence: true, inclusion: { in: KINDS }
   validates :sell_mode, presence: true, inclusion: { in: %w[per_room per_person] }
   validate :pax_pricing_allowed_for_person_mode
   validate :sell_mode_matches_hotel_exclusivity
@@ -34,11 +38,11 @@ class RatePlan < ApplicationRecord
   end
 
   def special_tier?
-    special_tier_kind.present?
+    kind.in?(SPECIAL_TIER_KINDS)
   end
 
   def standard_rate?
-    name.to_s.strip.downcase == "standard rate"
+    kind == "standard"
   end
 
   def deletable?
@@ -71,15 +75,10 @@ class RatePlan < ApplicationRecord
     rate_plan_age_bands.find { |band| age.to_i.between?(band.min_age, band.max_age) }
   end
 
+  # Symbol tier name for the pricing paths that key off it (rate_options,
+  # build_financial_snapshot); nil for standard and custom plans.
   def special_tier_kind
-    normalized = name.to_s.strip.downcase
-    if normalized.in?([ "walk-in rate", "walk in rate", "walk-in", "walk in" ])
-      :walk_in
-    elsif normalized.in?([ "corporate rate", "corporate" ])
-      :corporate
-    elsif normalized.in?([ "ota rate", "ota" ])
-      :ota
-    end
+    kind.to_sym if special_tier?
   end
 
   private
@@ -96,9 +95,10 @@ class RatePlan < ApplicationRecord
 
   # Per-pax hotels sell exclusively to premium/package guests: once a hotel
   # is flipped to pax_pricing_only, its bookable rate plans cannot mix
-  # per_room and per_person. Special tiers (walk-in/corporate/ota) and the
-  # system "Standard Rate" plan are exempt because they carry data (e.g.
-  # walk_in_price) other parts of the system still read regardless of mode.
+  # per_room and per_person. Special tiers and standard plans are exempt
+  # because they anchor data other parts of the system read regardless of
+  # mode — room_rates.walk_in_price and .corporate_price for the tiers, and
+  # the per-room-type base price for standard.
   def sell_mode_matches_hotel_exclusivity
     return unless hotel&.pax_pricing_only?
     return unless sell_mode == "per_room"

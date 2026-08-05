@@ -710,6 +710,7 @@ module ChannelManagers
       if room_type.rate_plans.empty?
         rate_plan = @hotel.rate_plans.create!(
           name: "Standard Rate",
+          kind: "standard",
           sell_mode: "per_room",
           currency: @hotel.default_currency || "MYR"
         )
