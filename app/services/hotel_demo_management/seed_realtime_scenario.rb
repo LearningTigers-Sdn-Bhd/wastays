@@ -156,7 +156,7 @@ module HotelDemoManagement
       )
       guest.save!
 
-      standard_plan = room_type.rate_plans.find_by(name: "Standard Rate") || room_type.rate_plans.first
+      standard_plan = room_type.standard_rate_plan
 
       assigned_rooms[room_type.id] << { check_in: check_in, check_out: check_out, room_number: room_number }
 

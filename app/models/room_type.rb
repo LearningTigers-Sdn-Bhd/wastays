@@ -48,9 +48,14 @@ class RoomType < ApplicationRecord
   # plan was created with the category, so it still sorts first. Ordering matters:
   # a plan shared across several categories is always added later and must never
   # win here, or the rules would write onto the shared plan's rows.
+  # Resolved in Ruby rather than through find_by so a preloaded :rate_plans
+  # association is used as-is — AvailabilityService and the rates calendar both
+  # preload it and would otherwise pay a query per category.
   def standard_rate_plan
-    @standard_rate_plan ||= rate_plans.order(:id).find_by(kind: "standard") ||
-                            rate_plans.order(:id).first
+    @standard_rate_plan ||= begin
+      plans = rate_plans.sort_by(&:id)
+      plans.find { |plan| plan.kind == "standard" } || plans.first
+    end
   end
 
   def attach_photos_with_limit(photo_files)

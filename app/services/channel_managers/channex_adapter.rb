@@ -262,7 +262,7 @@ module ChannelManagers
           },
           rooms: booking.booking_rooms.group_by { |br| [ br.room_type_id, br.rate_plan_id ] }.map do |(room_type_id, rate_plan_id), rooms|
             br = rooms.first
-            rp = br.rate_plan || br.room_type.rate_plans.first
+            rp = br.rate_plan || br.room_type.standard_rate_plan
             room_type_rate_plan = br.room_type.room_type_rate_plans.find_by(rate_plan: rp)
             {
               room_type_id: mapping_for(br.room_type).external_id,

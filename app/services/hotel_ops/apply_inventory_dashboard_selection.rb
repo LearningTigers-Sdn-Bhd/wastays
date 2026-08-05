@@ -243,8 +243,9 @@ module HotelOps
       end
 
       # 2. Handle Virtual Pricing Tiers (Walk-in, Corporate, OTA)
-      # These are stored on the room's master (first) rate plan
-      master_plan = room_type.rate_plans.sort_by(&:id).first
+      # These are stored on the category's anchor plan, which is where
+      # InventoryCalendarPresenter#tier_cell reads them back from.
+      master_plan = room_type.standard_rate_plan
       return if master_plan.blank?
 
       virtual_tier_keys = rate_plan_ids.select { |id| id.is_a?(String) && id.start_with?("tier_") }

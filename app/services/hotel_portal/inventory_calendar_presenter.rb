@@ -287,8 +287,9 @@ module HotelPortal
     end
 
     def tier_cell(room_type, date, tier_type)
-      # Tiers are tied to the first rate plan in our current implementation
-      rate_plan = room_type.rate_plans.sort_by(&:id).first
+      # walk_in_price/corporate_price live on the anchor plan's rate rows, which
+      # is where ApplyInventoryDashboardSelection writes them.
+      rate_plan = room_type.standard_rate_plan
       return { date: date } if rate_plan.blank?
 
       rate = rate_for(room_type, rate_plan, date)
