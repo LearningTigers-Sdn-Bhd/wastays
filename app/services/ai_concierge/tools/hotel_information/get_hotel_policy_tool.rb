@@ -12,10 +12,13 @@ module AiConcierge
           policy = hotel.property_policy
           documents = hotel.knowledge_documents.where(category: "policy", embedding_status: "indexed").includes(:chunks)
           hotel_policy_text = format_documents(documents)
+          # The concierge answers in prose, so the structured tiers are flattened to
+          # text here — from the same rows the engine charges from, never re-typed.
+          cancellation = Cancellations::PolicySummary.for_hotel(hotel)
           structured_facts = {
             "check_in_time" => policy&.check_in_time,
             "check_out_time" => policy&.check_out_time,
-            "cancellation_policy" => policy&.cancellation_policy.presence
+            "cancellation_policy" => cancellation.to_line.presence
           }
           answer_payload = HybridAnswerBuilder.new(
             hotel: hotel,
@@ -28,10 +31,13 @@ module AiConcierge
             fallback_text: hotel_policy_text.presence,
             unavailable_answer: "The hotel has not provided its policy details yet."
           ).call
-          answer_payload["answer"] = nil if answer_payload["answer_mode"] == "unavailable" && policy.present?
+          # A hotel can now have a cancellation policy without a property_policy row,
+          # so "we know something" is no longer only about property_policy.
+          policy_known = policy.present? || cancellation.present?
+          answer_payload["answer"] = nil if answer_payload["answer_mode"] == "unavailable" && policy_known
 
           {
-            "success" => answer_payload["success"] || hotel_policy_text.present? || policy.present?,
+            "success" => answer_payload["success"] || hotel_policy_text.present? || policy_known,
             "answer" => answer_payload["answer"],
             "answer_mode" => answer_payload["answer_mode"],
             "policy_text" => hotel_policy_text.presence,

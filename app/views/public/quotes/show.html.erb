@@ -364,9 +364,7 @@
 
             <div class="card p-5 bg-card border-border">
               <h4 class="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3">Cancellation Policy</h4>
-              <p class="text-xs text-muted-foreground leading-relaxed">
-                <%= @quote.cancellation_policy %>
-              </p>
+              <%= render "public/shared/cancellation_policy", summary: @quote.cancellation_summary, fallback: Public::QuotePresenter::DEFAULT_CANCELLATION_TEXT %>
             </div>
           </div>
         </aside>

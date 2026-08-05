@@ -1,0 +1,37 @@
+<%#
+  The tier table comes first and the hotel's own wording sits beneath it as
+  additional terms. The table is generated from the same rows the cancellation fee
+  is computed from, so what the guest reads and what the folio charges cannot drift.
+%>
+<% fallback = local_assigns.fetch(:fallback, nil) %>
+<% if summary.rows.any? %>
+  <table class="w-full text-xs text-muted-foreground">
+    <thead>
+      <tr class="text-[10px] uppercase tracking-widest text-muted-foreground/80">
+        <th scope="col" class="text-left font-bold pb-1">If cancelled</th>
+        <th scope="col" class="text-right font-bold pb-1">Charge</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% summary.rows.each do |row| %>
+        <tr class="border-t border-border/60">
+          <td class="py-1.5 pr-2 leading-relaxed"><%= row.window %></td>
+          <td class="py-1.5 text-right font-bold text-foreground leading-relaxed"><%= row.charge %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<% if summary.refund_note.present? %>
+  <p class="text-xs text-muted-foreground leading-relaxed <%= "mt-3" if summary.rows.any? %>"><%= summary.refund_note %></p>
+<% end %>
+
+<% notes = [ summary.description, (summary.legacy_text unless summary.structured?) ].compact_blank %>
+<% notes.each do |note| %>
+  <div class="text-xs text-muted-foreground leading-relaxed mt-3"><%= simple_format(note, {}, sanitize: true) %></div>
+<% end %>
+
+<% if summary.rows.empty? && notes.empty? && summary.refund_note.blank? && fallback.present? %>
+  <p class="text-xs text-muted-foreground leading-relaxed"><%= fallback %></p>
+<% end %>

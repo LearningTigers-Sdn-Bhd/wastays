@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_05_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_05_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -409,6 +409,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_100000) do
   create_table "booking_quotes", force: :cascade do |t|
     t.integer "adults", null: false
     t.text "cancellation_policy_snapshot"
+    t.jsonb "cancellation_policy_snapshot_data", default: {}, null: false
     t.date "check_in", null: false
     t.date "check_out", null: false
     t.integer "children", default: 0
@@ -495,6 +496,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_100000) do
     t.integer "adults", null: false
     t.bigint "booking_quote_id"
     t.text "cancellation_policy_snapshot"
+    t.jsonb "cancellation_policy_snapshot_data", default: {}, null: false
     t.string "channel_manager_reference"
     t.datetime "check_in", null: false
     t.datetime "check_out", null: false
@@ -579,13 +581,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_100000) do
     t.index ["status"], name: "index_bookings_on_status"
     t.check_constraint "(guest_registration_number IS NULL) = (guest_registration_year IS NULL)", name: "bookings_guest_registration_year_pair"
     t.check_constraint "(tourism_tax_voucher_number IS NULL) = (tourism_tax_voucher_year IS NULL)", name: "bookings_tourism_voucher_year_pair"
-  end
-
-  create_table "cancellation_policy_templates", force: :cascade do |t|
-    t.text "body"
-    t.datetime "created_at", null: false
-    t.string "name"
-    t.datetime "updated_at", null: false
   end
 
   create_table "channel_availability_rules", force: :cascade do |t|

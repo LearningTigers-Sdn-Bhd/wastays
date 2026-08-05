@@ -14,6 +14,15 @@ module HotelPortal
       @terms ||= @card.signed? ? @card.terms_snapshot : @card.capture_terms_snapshot_preview
     end
 
+    # Tier table first, the hotel's own wording beneath it. Cards signed before the
+    # policy became structured still carry prose, and fall back to it.
+    def cancellation_summary
+      @cancellation_summary ||= Cancellations::PolicySummary.call(
+        snapshot_data: terms&.dig("cancellation_policy_data"),
+        legacy_text: terms&.dig("cancellation_policy")
+      )
+    end
+
     def primary_booking_guest
       @primary_booking_guest ||= @booking.booking_guests.find(&:primary?)
     end

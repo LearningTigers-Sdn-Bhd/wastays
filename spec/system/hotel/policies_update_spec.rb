@@ -26,9 +26,13 @@ RSpec.describe 'Hotel Policies Update', type: :system do
     expect(page).to have_field('Standard Check-in Time')
     expect(page).to have_field('Standard Check-out Time')
 
+    # Cancellation terms moved to the structured reservation policy — this page
+    # no longer offers a free-text box for them.
+    expect(page).to have_no_field('property_policy[cancellation_policy]')
+    expect(page).to have_content('Reservation policies')
+
     fill_in 'Standard Check-in Time', with: '15:00'
     fill_in 'Standard Check-out Time', with: '11:00'
-    find('#property_policy_cancellation_policy').set('Full refund if cancelled 24h before.')
 
     click_button 'Save Policies'
 
