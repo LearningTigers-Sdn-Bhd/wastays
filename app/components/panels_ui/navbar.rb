@@ -18,9 +18,10 @@ module PanelsUI
 
     attr_reader :key, :sidebar_state_key
 
+    # The brand is optional: portals that name themselves in the sidebar header
+    # have nothing left to put here, and an empty start rail is a valid bar.
     def before_render
       raise ArgumentError, "Navbar key is required" if key.blank?
-      raise ArgumentError, "Navbar brand slot is required" unless brand?
     end
 
     def navigation? = @navigation

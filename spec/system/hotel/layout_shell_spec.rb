@@ -52,6 +52,11 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_css('#toast-viewport[data-controller="toast"]')
     expect(page).to have_css("header.panel-navbar[data-sticky='true']")
     expect(page).to have_css(".panel-navbar__center [data-controller='panels-ui--command-palette']")
+    within(".panel-navbar__brand") do
+      identity = find_link(hotel.name, href: hotel_dashboard_path(hotel))
+      expect(identity).to have_css(".panel-navbar__identity-meta", text: "##{hotel.id}")
+    end
+    expect(page).to have_css("#hotel-profile a[href='#{help_center_path}']", text: "Help")
     expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
     expect(page).to have_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']")
     expect(page).to have_no_css("nav[aria-label='Mobile navigation']", visible: :all)

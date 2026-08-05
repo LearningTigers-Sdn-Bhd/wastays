@@ -21,20 +21,19 @@
     <div class="flex flex-col h-screen bg-background">
 
       <%= render PanelsUI::Navbar.new(key: "guest", navigation: guest_logged_in?) do |navbar| %>
-        <% navbar.with_brand do %>
-          <a href="<%= guest_logged_in? ? guest_dashboard_path : root_path %>" class="flex items-center" aria-label="WAStays">
-            <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
-          </a>
+        <%# Signed out there is no sidebar, no profile and no palette, so the logo
+            is all that keeps the bar from rendering empty. Signed in, the sidebar
+            header names the portal and the brand would only repeat it. %>
+        <% unless guest_logged_in? %>
+          <% navbar.with_brand do %>
+            <a href="<%= root_path %>" class="flex items-center" aria-label="WAStays">
+              <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
+            </a>
+          <% end %>
         <% end %>
         <% if guest_logged_in? %>
           <% navbar.with_center do %>
             <%= render PanelsUI::CommandPalette.new(endpoint: guest_global_search_index_path, placeholder: "Search dashboard pages and bookings...") %>
-          <% end %>
-          <% navbar.with_actions do %>
-            <a class="panel-navbar__action" href="<%= help_center_path %>">
-              <%= cached_icon "circle-question-mark", class: "size-4" %>
-              Help
-            </a>
           <% end %>
           <% navbar.with_profile do %>
             <%= render PanelsUI::ProfileMenu.new(
@@ -43,6 +42,7 @@
                   secondary_text: current_guest.phone,
                   trigger_label: "Open account menu"
                 ) do |menu| %>
+              <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
               <% menu.with_sign_out(label: "Sign out", path: guest_logout_path) %>
             <% end %>
           <% end %>

@@ -54,13 +54,20 @@ RSpec.describe PanelsUI::Navbar, type: :component do
     expect(page).to have_css(".panel-navbar__end")
   end
 
-  it "requires a key and brand" do
+  it "requires a key" do
     expect do
       render_inline(described_class.new(key: "")) { |navbar| navbar.with_brand { "Brand" } }
     end.to raise_error(ArgumentError, "Navbar key is required")
+  end
 
-    expect do
-      render_inline(described_class.new(key: "hotel"))
-    end.to raise_error(ArgumentError, "Navbar brand slot is required")
+  it "renders without a brand for portals that name themselves elsewhere" do
+    render_inline(described_class.new(key: "corporate")) do |navbar|
+      navbar.with_profile { '<span data-profile>Profile</span>'.html_safe }
+    end
+
+    expect(page).to have_css("header.panel-navbar")
+    expect(page).to have_no_css(".panel-navbar__brand")
+    expect(page).to have_css(".panel-navbar__start")
+    expect(page).to have_css(".panel-navbar__profile [data-profile]")
   end
 end

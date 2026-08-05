@@ -29,7 +29,7 @@
         </button>
       <% end %>
 
-      <div class="panel-navbar__brand"><%= brand %></div>
+      <% if brand? %><div class="panel-navbar__brand"><%= brand %></div><% end %>
     </div>
 
     <% if center? %><div class="panel-navbar__center"><%= center %></div><% end %>
