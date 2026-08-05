@@ -1,0 +1,44 @@
+<% role_choices = available_roles.map { |role| { label: role.name, value: role.id } } %>
+
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "edit-staff-access-sheet",
+             title: "Edit Access",
+             description: "Change the role assigned to #{@hotel_access.user.name}.",
+             form_id: "edit-staff-access-form",
+             submit_label: "Save Changes"
+           } do %>
+  <%= form_with model: @hotel_access,
+                url: hotel_user_path(current_hotel, @hotel_access),
+                method: :patch,
+                scope: :user_hotel_access,
+                id: "edit-staff-access-form",
+                class: "space-y-5" do |f| %>
+    <% if @error.present? %>
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: "This change could not be saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %><%= @error %><% end %>
+      <% end %>
+    <% end %>
+
+    <div class="rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+      <p class="text-sm font-medium text-foreground"><%= @hotel_access.user.name %></p>
+      <p class="mt-0.5 text-xs text-muted-foreground"><%= @hotel_access.user.email %></p>
+    </div>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :role_id,
+          label: "Role",
+          hint: "This role controls what they can see and do at this specific property.",
+          required: true) do |field| %>
+      <% field.with_select_menu(
+           role_choices,
+           selected: @hotel_access.role_id,
+           prompt: "Select a role",
+           required: true) %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -648,10 +648,12 @@ Rails.application.routes.draw do
       end
 
       scope "team" do
-        resources :users, only: [ :index, :new, :create, :update, :destroy ], path: "staff" do
-          patch :reactivate, on: :member
+        # Revoke and reactivate collapsed into one status toggle on the listing
+        # row; #update owns the role. DELETE is a permanent removal.
+        resources :users, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "staff" do
+          patch :status, on: :member
         end
-        resources :staff_invitations, path: "staff-invitations", only: [ :update, :destroy ] do
+        resources :staff_invitations, path: "staff-invitations", only: [ :edit, :update, :destroy ] do
           post :resend, on: :member
         end
         resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions" do
