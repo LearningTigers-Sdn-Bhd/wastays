@@ -128,8 +128,8 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
     within("#hotel-sidebar") do
       expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
-      find("button.panel-sidebar__group-trigger", text: "Cashiering", visible: :all).click
-      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Cashiering")
+      find("button.panel-sidebar__group-trigger", text: "Front Office", visible: :all).click
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Front Office")
     end
 
     page.execute_script(<<~JS)
@@ -150,7 +150,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     within("#hotel-sidebar") do
       expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Refund Report")
       expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
-      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Cashiering")
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Front Office")
     end
   end
 

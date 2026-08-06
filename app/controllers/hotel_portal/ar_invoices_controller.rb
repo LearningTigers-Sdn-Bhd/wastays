@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class ArInvoicesController < BaseController
+  class ArInvoicesController < FinancialsBaseController
     before_action :authorize_view_reports!
 
     def index

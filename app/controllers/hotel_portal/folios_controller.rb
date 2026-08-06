@@ -5,7 +5,7 @@
 # workspace, which owns the folio UI.
 
 module HotelPortal
-  class FoliosController < BaseController
+  class FoliosController < FinancialsBaseController
     before_action :authorize_view_bookings!
 
     def index

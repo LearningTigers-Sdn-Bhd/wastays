@@ -19,15 +19,6 @@ module HotelPortal
       ]
       financial_nav_active = financial_nav_items.any?(&:active)
 
-      accounts_receivable_nav_items = [
-        NavItem.new(label: "External Accounts", path: hotel_corporate_accounts_path(current_hotel), search_text: "External Accounts Corporate Accounts Government Direct Bill Credit Terms External Payers Accounts Receivable", active: controller_name.in?(%w[corporate_accounts corporate_invitations]), icon: "building-2", permission: "manage_corporate_accounts"),
-        NavItem.new(label: "Invoices", path: hotel_ar_invoices_path(current_hotel), search_text: "Invoices AR Invoices Accounts Receivable Direct Bill Aging Finance", active: controller_name == "ar_invoices" && action_name.in?(%w[index show]), icon: "file-text", permission: "view_reports"),
-        NavItem.new(label: "Payment Record", path: hotel_ar_payments_path(current_hotel), search_text: "Payment Record AR Payments Payment Submissions Agent Slip Verification Corporate Payments Accounts Receivable Finance", active: controller_name.in?(%w[ar_payments ar_payment_submissions]), icon: "landmark", permission: "view_reports"),
-        NavItem.new(label: "Statements", path: hotel_ar_statements_path(current_hotel), search_text: "Statements AR Statements Corporate Account Statement Ledger Accounts Receivable Finance", active: controller_name == "ar_statements", icon: "file-spreadsheet", permission: "view_reports"),
-        NavItem.new(label: "Aging Report", path: hotel_ar_aging_path(current_hotel), search_text: "AR Aging Aging Report Credit Exposure Agent Summary Travel Agent Airline Accounts Receivable Finance", active: controller_name == "ar_invoices" && action_name == "aging", icon: "chart-bar", permission: "view_reports")
-      ]
-      accounts_receivable_nav_active = accounts_receivable_nav_items.any?(&:active)
-
       front_desk_children = [
         NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2", permission: [ "view_bookings", "manage_guest_arrival" ]),
         NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile"),
@@ -58,9 +49,6 @@ module HotelPortal
           NavItem.new(label: "Front Office", search_text: "Front Office Reservations Guest Operations", active: front_desk_active, icon: "monitor", children: front_desk_children),
           NavItem.new(label: "Planning & Inventory", search_text: "Planning Inventory Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
         ]),
-        NavSection.new(label: "Billing", items: [
-          NavItem.new(label: "Cashiering", search_text: "Cashiering Accounts Receivable Corporate AR Invoices Payments Billing", active: accounts_receivable_nav_active, icon: "file-text", children: accounts_receivable_nav_items, permission: [ "view_reports", "manage_corporate_accounts" ])
-        ]),
         NavSection.new(label: "Reports", items: [
           NavItem.new(label: "Financial", search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
           NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: controller_name == "reports" && action_name == "tax_compliance", icon: "calculator", permission: "view_reports"),
@@ -68,6 +56,9 @@ module HotelPortal
           NavItem.new(label: "Night Audit History", path: hotel_reports_night_audits_path(current_hotel), search_text: "Reports Night Audit History Business Date Close", active: controller_path == "hotel_portal/reports/night_audits", icon: "moon", permission: [ "view_reports", "manage_night_audit" ], plan_feature: "no_show_auto_handling"),
           NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Tracking History Security", icon: "file-text", active: controller_name == "audit_logs", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
           NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs History Sent Alerts Logs", icon: "bell", active: controller_name == "notification_logs", permission: "view_audit_logs")
+        ]),
+        NavSection.new(label: "More", items: [
+          hotel_layer_nav_item(:financials)
         ])
       ]
     end
@@ -121,18 +112,24 @@ module HotelPortal
     def hotel_breadcrumb_trail
       return @_hotel_breadcrumb_trail if defined?(@_hotel_breadcrumb_trail)
 
+      @_hotel_breadcrumb_trail = hotel_breadcrumb_trail_for(hotel_sidebar_sections)
+    end
 
-      hotel_sidebar_sections.each do |section|
+    # Walks any layer's navigation tree for the active leaf. Layers differ in
+    # what they contain, not in how a trail is built, so each one hands its own
+    # sections to this rather than restating the walk.
+    def hotel_breadcrumb_trail_for(sections)
+      sections.each do |section|
         visible_items = hotel_visible_items(section.items)
         visible_items.each do |item|
           next unless nav_item_active?(item)
 
           trail = nav_item_breadcrumb_trail(item, [], visible_items)
-          return @_hotel_breadcrumb_trail = trail if trail
+          return trail if trail
         end
       end
 
-      @_hotel_breadcrumb_trail = nil
+      nil
     end
 
     def hotel_breadcrumb_parts
