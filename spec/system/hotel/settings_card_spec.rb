@@ -60,15 +60,15 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     end
   end
 
-  it 'hides tourism tax amount when tourism tax is off' do
+  it 'keeps the tourism tax amount visible while the tax is switched off' do
     hotel.update!(tourism_tax_enabled: false, tourism_tax_amount: 10.0)
 
     visit hotel_taxes_fees_path(hotel)
 
-    within('section', text: 'Primary Tax Settings') do
-      expect(page).to have_content('Tourism Tax')
-      expect(page).to have_content('Inactive')
-      expect(page).to have_content('RM 10.00')
+    within('#tax-registry-row-tourism_tax') do
+      expect(page).to have_content('Tourism Tax (TTx)')
+      expect(page).to have_content('RM 10.00 / room / night')
+      expect(page).to have_field(type: 'checkbox', checked: false, visible: :all)
     end
   end
 

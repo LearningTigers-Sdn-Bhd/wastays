@@ -29,4 +29,33 @@ RSpec.describe 'Channex ARI push flow' do
 
     expect(result.success?).to be(true)
   end
+
+  context 'when one rate plan is shared across room categories' do
+    let(:suite) { create(:room_type, hotel: hotel, name: 'Suite') }
+
+    before do
+      create(:channel_mapping, mappable: suite, provider: 'channex', external_id: 'rt_2')
+      create(:room_type_rate_plan, rate_plan: rate_plan, room_type: suite)
+      shared_join = suite.room_type_rate_plans.find_by!(rate_plan: rate_plan)
+      create(:channel_mapping, mappable: shared_join, provider: 'channex', external_id: 'rp_2')
+
+      create(:room_inventory, room_type: suite, date: Date.new(2026, 6, 1), quantity: 1, status: 'open')
+      create(:room_rate, room_type: suite, rate_plan: rate_plan, date: Date.new(2026, 6, 1), price: 500, currency: 'MYR')
+    end
+
+    it 'pushes each room category at its own price' do
+      allow(client_double).to receive(:post).with('/availability', anything).and_return({ 'data' => [] })
+
+      pushed = nil
+      expect(client_double).to receive(:post).with('/restrictions', anything) do |_path, payload|
+        pushed = payload[:values]
+        { 'data' => [] }
+      end
+
+      ChannelManagers::SyncOrchestrator.adapter_for(hotel).push_ari(date_range: (Date.new(2026, 6, 1)..Date.new(2026, 6, 1)))
+
+      expect(pushed).to include(hash_including(rate_plan_id: 'rp_1', rate: '200.00'))
+      expect(pushed).to include(hash_including(rate_plan_id: 'rp_2', rate: '500.00'))
+    end
+  end
 end

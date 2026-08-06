@@ -33,14 +33,15 @@
               variant: :secondary,
               size: :sm,
               class: "w-full sm:w-auto",
-              data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }) do %>
+              data: { turbo_frame: "settings_action_sheet" }) do %>
           <%= app_icon "layout-grid", class: "size-4", aria: { hidden: "true" } %>
           <span>Manage Room Groups</span>
         <% end %>
         <%= render PanelsUI::Button.new(
               href: new_hotel_room_type_path(current_hotel),
               size: :sm,
-              class: "w-full sm:w-auto") do %>
+              class: "w-full sm:w-auto",
+              data: { turbo_frame: "settings_action_sheet" }) do %>
           <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
           <span>Create</span>
         <% end %>
@@ -124,7 +125,7 @@
                           label: "Create Room Category",
                           href: new_hotel_room_type_path(current_hotel),
                           size: :sm,
-                          data: { turbo_frame: "_top" }) %>
+                          data: { turbo_frame: "settings_action_sheet" }) %>
                   </div>
                 </td>
               </tr>
@@ -183,7 +184,7 @@
                         label: "Create Room Category",
                         href: new_hotel_room_type_path(current_hotel),
                         size: :sm,
-                        data: { turbo_frame: "_top" }) %>
+                        data: { turbo_frame: "settings_action_sheet" }) %>
                 </div>
               </div>
             <% end %>

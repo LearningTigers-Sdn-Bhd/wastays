@@ -76,6 +76,40 @@
     background: var(--muted);
   }
 
+  /* A pinned first column keeps each row's label readable while the rest of a
+     wide table scrolls sideways. The pinned cells need their own opaque
+     background: the row's background sits behind the scrolling content, not in
+     it, so the striped and hover colours are restated here as solid mixes over
+     the surface instead of the transparent mixes the row uses. */
+  .panel-table[data-sticky-column="true"] :is(thead, tbody, tfoot) tr > :first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background: var(--card);
+    border-inline-end: 1px solid var(--border);
+  }
+
+  .panel-table[data-sticky-column="true"] thead tr > :first-child {
+    background: var(--muted);
+  }
+
+  /* The corner cell is pinned on both axes, so it outranks either edge alone. */
+  .panel-table[data-sticky-column="true"][data-sticky-header="true"] thead tr > :first-child {
+    z-index: 2;
+  }
+
+  .panel-table[data-sticky-column="true"] tfoot tr > :first-child {
+    background: color-mix(in oklab, var(--muted) 55%, var(--card));
+  }
+
+  .panel-table[data-sticky-column="true"][data-striped="true"] tbody tr:nth-child(even) > :first-child {
+    background: color-mix(in oklab, var(--muted) 55%, var(--card));
+  }
+
+  .panel-table[data-sticky-column="true"][data-hoverable="true"] tbody tr:hover > :first-child {
+    background: var(--muted);
+  }
+
   .panel-table tfoot {
     background: color-mix(in oklab, var(--muted) 55%, transparent);
     font-weight: 600;

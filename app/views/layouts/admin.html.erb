@@ -27,16 +27,15 @@
             <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
           </a>
         <% end %>
-        <% navbar.with_actions do %>
+        <% navbar.with_center do %>
           <%= render PanelsUI::CommandPalette.new(endpoint: admin_global_search_index_path, placeholder: "Search pages, bookings, hotels...") %>
-          <a class="panel-navbar__action" href="<%= help_center_path %>">
-            <%= cached_icon "circle-question-mark", class: "size-4" %>
-            Help
-          </a>
+        <% end %>
+        <% navbar.with_actions do %>
           <a class="panel-navbar__action" href="<%= root_path %>" target="_blank" rel="noopener">
             <%= cached_icon "external-link", class: "size-3.5" %>
             Website
           </a>
+          <%= render "shared/navigation/navbar_alerts" %>
         <% end %>
         <% navbar.with_profile do %>
           <%= render PanelsUI::ProfileMenu.new(
@@ -47,6 +46,7 @@
               ) do |menu| %>
             <% menu.with_item(label: "My account", href: edit_admin_profile_path, icon: "user") %>
             <% menu.with_item(label: "Settings", href: edit_admin_profile_path, icon: "settings") %>
+            <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
             <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
           <% end %>
         <% end %>

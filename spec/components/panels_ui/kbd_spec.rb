@@ -13,7 +13,7 @@ RSpec.describe PanelsUI::Kbd, type: :component do
     render_inline(described_class.new(keys: [ "Ctrl", "Shift", "P" ], separator: "+", aria: { label: "Open command palette" }))
 
     expect(page).to have_css("span[role='group'][aria-label='Open command palette'] kbd.panel-kbd", count: 3)
-    expect(page).to have_css("span[aria-hidden='true']", text: "+", count: 2)
+    expect(page).to have_css("span.panel-kbd__separator[aria-hidden='true']", text: "+", count: 2)
   end
 
   it "supports all sizes, plain styling, and option fallbacks" do

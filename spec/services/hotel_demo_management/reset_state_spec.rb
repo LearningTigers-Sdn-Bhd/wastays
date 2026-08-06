@@ -59,6 +59,22 @@ RSpec.describe HotelDemoManagement::ResetState do
       expect(HotelKnowledgeChunk.joins(:document).where(hotel_knowledge_documents: { hotel_id: hotel.id })).to exist
     end
 
+    it "gives each room type its own rate plans rather than sharing one" do
+      other = create(:room_type, hotel: hotel, name: "Suite", quantity: 1, base_price: 400, room_numbers: %w[201])
+
+      expect(described_class.new(hotel: hotel, logger: logger).call).to be_success
+
+      %w[Standard\ Rate Non-Refundable\ Rate].each do |plan_name|
+        mine = room_type.reload.rate_plans.find_by(name: plan_name)
+        theirs = other.reload.rate_plans.find_by(name: plan_name)
+
+        expect(mine).to be_present
+        expect(theirs).to be_present
+        expect(mine.id).not_to eq(theirs.id)
+        expect(mine.room_types).to contain_exactly(room_type)
+      end
+    end
+
     it "deletes operational records for the hotel" do
       user = create(:user, account: account)
       booking = create(:booking, hotel: hotel)

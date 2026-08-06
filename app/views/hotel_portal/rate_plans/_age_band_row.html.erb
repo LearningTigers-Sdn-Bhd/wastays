@@ -1,0 +1,47 @@
+<div class="rounded-md border border-border p-3 space-y-3"
+     data-rate-plan-age-bands-target="row"
+     data-role="age-band-row">
+  <div class="grid gap-3 sm:grid-cols-3">
+    <%= render PanelsUI::FormField.new(form: band_form, attribute: :label, label: "Name", size: :sm) do |field| %>
+      <% field.with_input(placeholder: "Toddler", autocomplete: "off") %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form: band_form, attribute: :min_age, label: "Min age", size: :sm, required: true) do |field| %>
+      <% field.with_input(type: :number, min: 0, step: 1, inputmode: "numeric") %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form: band_form, attribute: :max_age, label: "Max age", size: :sm, required: true) do |field| %>
+      <% field.with_input(type: :number, min: 0, step: 1, inputmode: "numeric") %>
+    <% end %>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-3">
+    <div data-role="pricing-mode">
+      <%= render PanelsUI::FormField.new(form: band_form, attribute: :pricing_mode, label: "How it's priced", size: :sm, required: true) do |field| %>
+        <% field.with_select_menu(age_band_pricing_choices, selected: band&.pricing_mode || "multiplier") %>
+      <% end %>
+    </div>
+
+    <div>
+      <%= render PanelsUI::FormField.new(form: band_form, attribute: :price_value, label: "Amount", size: :sm, required: true) do |field| %>
+        <% field.with_input(type: :number, min: 0, step: 1, inputmode: "decimal", data: { role: "price-value" }) %>
+        <% field.with_addon(align: :inline_end, variant: :bare, data: { role: "value-unit-hint" }) do %>
+          <%= (band.nil? || band.pricing_mode != "amount") ? "%" : currency %>
+        <% end %>
+      <% end %>
+      <p class="mt-1 text-xs text-muted-foreground" data-role="price-preview"></p>
+    </div>
+
+    <div class="flex items-end justify-end pb-1">
+      <% if band&.persisted? %>
+        <%= band_form.hidden_field :id %>
+        <%= band_form.hidden_field :_destroy, value: "0", data: { role: "destroy" } %>
+      <% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :xs,
+            class: "text-destructive",
+            data: { action: "click->rate-plan-age-bands#remove" }) do %>
+        Remove
+      <% end %>
+    </div>
+  </div>
+</div>

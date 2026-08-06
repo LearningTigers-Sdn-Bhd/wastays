@@ -2,19 +2,11 @@
       key: "admin",
       home_path: admin_dashboard_path,
       sections: admin_sidebar_sections,
-      footer_items: admin_sidebar_footer_items,
       collapsible: true,
       searchable: false,
       permanent: true
     ) do |sidebar| %>
   <% sidebar.with_header do %>
-    <div class="w-full space-y-0.5 px-2 py-1">
-      <%= render PanelsUI::Tooltip.new(text: "Admin Panel", placement: :top, root_class: "w-full") do %>
-        <a href="<%= admin_dashboard_path %>" class="panel-sidebar__link" aria-label="Admin Panel">
-          <%= cached_icon "settings", class: "panel-sidebar__icon" %>
-          <span class="panel-sidebar__label truncate text-xs">Admin Panel</span>
-        </a>
-      <% end %>
-    </div>
+    <%= render "shared/navigation/portal_label", label: "Admin Portal", icon: "shield-check", href: admin_dashboard_path %>
   <% end %>
 <% end %>

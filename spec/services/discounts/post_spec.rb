@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Discounts::Post do
+RSpec.describe Discounts::Post, frozen_time: :business_day do
   it "posts one negative configured discount with calculation metadata" do
     folio = create(:booking_folio)
     user = create(:user, account: folio.hotel.account)

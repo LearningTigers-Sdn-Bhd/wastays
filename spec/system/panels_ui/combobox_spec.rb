@@ -86,4 +86,38 @@ RSpec.describe "PanelsUI::Combobox", type: :system do
     expect(root).to have_css(".ts-dropdown .option", count: 1)
     expect(root).to have_no_css(".ts-dropdown .option", text: "Bangkok, Thailand")
   end
+
+  # The menu is anchored by floating-ui rather than CSS, because these render
+  # inside Sheets where the old absolute anchoring could not see the viewport: a
+  # long list ran off the bottom, and nothing constrained the menu's width.
+  it "anchors the menu to the control, capped and inside the viewport" do
+    open_combobox
+
+    geometry = page.evaluate_script(<<~JS)
+      (() => {
+        const root = document.getElementById('#{COMBOBOX_ROOT}')
+        const menu = root.querySelector('.ts-dropdown')
+        const content = root.querySelector('.ts-dropdown-content')
+        const menuRect = menu.getBoundingClientRect()
+        const controlRect = root.querySelector('.ts-control').getBoundingClientRect()
+        return {
+          placement: menu.dataset.placement,
+          position: getComputedStyle(menu).position,
+          widthDelta: Math.abs(menuRect.width - controlRect.width),
+          maxHeight: parseInt(content.style.maxHeight, 10),
+          withinViewport: menuRect.top >= -1 && menuRect.bottom <= window.innerHeight + 1
+        }
+      })()
+    JS
+
+    expect(geometry["position"]).to eq("fixed")
+    expect(geometry["placement"]).to start_with("bottom")
+    # Tracks the control's width instead of shrink-to-fitting to its content
+    # (which let a multi-select's pills panel stretch it across the viewport).
+    # Tolerance is for sub-pixel rounding, not a real difference.
+    expect(geometry["widthDelta"]).to be <= 2
+    # Capped at the design ceiling rather than growing to fill a tall viewport.
+    expect(geometry["maxHeight"]).to be <= 320
+    expect(geometry["withinViewport"]).to be true
+  end
 end

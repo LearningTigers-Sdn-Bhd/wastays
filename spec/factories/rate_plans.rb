@@ -4,6 +4,30 @@ FactoryBot.define do
     association :hotel
     sell_mode { "per_room" }
     currency { "MYR" }
+    # Mirrors the default name. Specs that override :name to an ordinary plan
+    # should pass kind: "custom" (or use the :custom trait) so the record is
+    # deletable and archivable the way a hotelier-created plan is.
+    kind { "standard" }
+
+    trait :custom do
+      name { "Promo Rate" }
+      kind { "custom" }
+    end
+
+    trait :walk_in_tier do
+      name { "Walk-in Rate" }
+      kind { "walk_in" }
+    end
+
+    trait :corporate_tier do
+      name { "Corporate Rate" }
+      kind { "corporate" }
+    end
+
+    trait :ota_tier do
+      name { "OTA Rate" }
+      kind { "ota" }
+    end
 
     transient do
       room_type { nil }

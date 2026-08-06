@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Bookings::CreateStaffBooking do
+RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 5, room_numbers: [ "101" ]) }
   let(:common_params) do

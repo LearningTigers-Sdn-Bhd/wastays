@@ -20,16 +20,8 @@
   <body class="h-full overflow-hidden" data-theme="panel-light" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
     <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
       <%= render PanelsUI::Navbar.new(key: "corporate") do |navbar| %>
-        <% navbar.with_brand do %>
-          <a href="<%= corporate_dashboard_path %>" class="flex items-center" aria-label="WAStays">
-            <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
-          </a>
-        <% end %>
         <% navbar.with_actions do %>
-          <a class="panel-navbar__action" href="<%= help_center_path %>">
-            <%= cached_icon "circle-question-mark", class: "size-4" %>
-            Help
-          </a>
+          <%= render "shared/navigation/navbar_alerts" %>
         <% end %>
         <% navbar.with_profile do %>
           <%= render PanelsUI::ProfileMenu.new(
@@ -39,6 +31,7 @@
                 trigger_label: "Open corporate account menu",
                 trigger_icon: "building-2"
               ) do |menu| %>
+            <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
             <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
           <% end %>
         <% end %>

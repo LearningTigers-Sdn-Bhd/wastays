@@ -1,133 +1,128 @@
 <div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Staff Management", description: "Manage access levels and roles for your hotel team.") do |header| %>
-    <% header.with_actions do %>
-        <%= render PanelsUI::Button.new(as: :a, href: new_hotel_user_path(current_hotel), variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
-          <svg class="mr-2 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-          Invite Staff
-        <% end %>
-    <% end %>
-  <% end %>
-
   <%= render "hotel_portal/settings/group_tabs" %>
 
-  <% if @pending_invitations.any? %>
-    <div class="">
-      <section class="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm">
-        <div class="border-b border-amber-200 px-6 py-5">
-          <h2 class="text-lg font-bold tracking-tight text-foreground">Pending Invitations</h2>
-          <p class="mt-1 text-sm font-medium text-muted-foreground">Invited staff who have not accepted yet.</p>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left">
-            <thead class="bg-card/60 border-b border-amber-200">
-              <tr>
-                <th class="px-6 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Email</th>
-                <th class="px-6 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Role</th>
-                <th class="px-6 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Invited By</th>
-                <th class="px-6 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Expires</th>
-                <th class="px-6 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-amber-100">
-              <% @pending_invitations.each do |invitation| %>
-                <tr class="transition hover:bg-card/50">
-                  <td class="px-6 py-4 text-sm font-bold text-foreground"><%= invitation.email %></td>
-                  <td class="px-6 py-4">
-                    <%= form_with model: invitation, url: hotel_staff_invitation_path(current_hotel, invitation), method: :patch, local: true, class: "flex items-center gap-2" do |f| %>
-                      <%= f.select :role_id, options_from_collection_for_select(@available_roles, :id, :name, invitation.role_id), {}, onchange: "this.form.submit()", class: "rounded-lg border border-amber-200 bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition focus:border-border-interactive focus:ring-0" %>
-                    <% end %>
-                  </td>
-                  <td class="px-6 py-4 text-sm font-medium text-foreground"><%= invitation.invited_by_user.name %></td>
-                  <td class="px-6 py-4 text-sm font-medium text-foreground"><%= l(invitation.expires_at, format: :short) %></td>
-                  <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                      <%= button_to resend_hotel_staff_invitation_path(current_hotel, invitation), method: :post, class: "inline-flex items-center justify-center rounded-lg p-2 text-amber-600 transition hover:bg-amber-100", title: "Resend Invitation" do %>
-                        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                      <% end %>
-                      <%= button_to hotel_staff_invitation_path(current_hotel, invitation), method: :delete, data: { turbo_confirm: "Revoke this invitation?" }, class: "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground transition hover:bg-red-50 hover:text-red-600", title: "Revoke Invitation" do %>
-                        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                      <% end %>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </section>
+  <%# The page title sits below the tabs, with the rest of the page's content,
+      rather than above them where it reads as chrome for the whole tab set. %>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h1 class="text-base font-semibold tracking-tight text-foreground">Staff Management</h1>
+      <p class="mt-1 text-sm text-muted-foreground">Manage access levels and roles for your hotel team.</p>
     </div>
-      <% end %>
+    <%= render PanelsUI::Button.new(
+          href: new_hotel_user_path(current_hotel),
+          size: :sm,
+          class: "w-full sm:w-auto",
+          data: { turbo_frame: "settings_action_sheet" }) do %>
+      <%= app_icon "user-plus", class: "size-4", aria: { hidden: "true" } %>
+      <span>Invite Staff</span>
+    <% end %>
+  </div>
 
-  <div class="">
-    <!-- Staff Table -->
-    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div class="border-b border-border px-6 py-5">
-        <h2 class="text-lg font-bold tracking-tight text-foreground">Current Staff</h2>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Users who have active access to this property.</p>
+  <% if @presenter.invitations? %>
+    <section aria-labelledby="pending-invitations-heading" class="space-y-3">
+      <div>
+        <h2 id="pending-invitations-heading" class="text-base font-semibold text-foreground">Pending Invitations</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Invited staff who have not accepted yet.</p>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="bg-muted border-b border-border">
-              <tr>
-                <th class="px-6 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Name & Email</th>
-                <th class="px-6 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Role</th>
-                <th class="px-6 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border">
-              <% @hotel_accesses.each do |access| %>
-                <tr class="group transition hover:bg-muted/50 <%= 'opacity-60 bg-muted' unless access.active? %>">
-                  <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                      <div class="flex flex-col">
-                        <div class="flex items-center gap-2">
-                          <span class="text-sm font-bold text-foreground"><%= access.user.name %></span>
-                          <% unless access.active? %>
-                            <span class="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border border-border">Deactivated</span>
-                          <% end %>
-                        </div>
-                        <span class="text-xs font-medium text-muted-foreground"><%= access.user.email %></span>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4">
-                    <%= form_with model: access, url: hotel_user_path(current_hotel, access), method: :patch, local: true, class: "flex items-center gap-2" do |f| %>
-                      <%= f.select :role_id, options_from_collection_for_select(@available_roles, :id, :name, access.role_id), {}, onchange: "this.form.submit()", disabled: !access.active?, class: "rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition focus:border-border-interactive focus:ring-0 disabled:bg-muted disabled:text-muted-foreground" %>
+      <%= render PanelsUI::Table.new(
+            caption: "Pending staff invitations",
+            header_style: :sentence,
+            hoverable: true,
+            wrapper_class: "rounded-lg border border-border bg-card",
+            data: { testid: "pending-invitations" }) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Status</th>
+            <th scope="col">Email</th>
+            <th scope="col">Role</th>
+            <th scope="col">Invited By</th>
+            <th scope="col">Expires</th>
+            <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+          </tr>
+        <% end %>
+
+        <% table.with_body do %>
+          <% @presenter.invitation_rows.each do |row| %>
+            <tr id="staff-invitation-row-<%= row.id %>">
+              <td class="align-middle">
+                <%= render PanelsUI::Badge.new(label: "Pending", variant: :warning, size: :sm) %>
+              </td>
+              <th scope="row" class="align-middle font-medium text-foreground"><%= row.email %></th>
+              <td class="align-middle text-muted-foreground"><%= row.role_name %></td>
+              <td class="align-middle text-muted-foreground"><%= row.invited_by %></td>
+              <td class="align-middle whitespace-nowrap text-muted-foreground">
+                <%= l(row.expires_at, format: :short) %>
+              </td>
+              <td class="text-right align-middle">
+                <%= render "hotel_portal/users/invitation_actions", row: row %>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <%# No heading of its own: the page title names the staff list, and the table
+      carries its own caption for anyone reading it out of context. Pending
+      invitations keep theirs — that table is a different set of people. %>
+  <div>
+    <%= render PanelsUI::Table.new(
+          caption: "Staff with access to this property",
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card",
+          data: { testid: "staff-directory" }) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Status</th>
+          <th scope="col">Staff</th>
+          <th scope="col">Role</th>
+          <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+        </tr>
+      <% end %>
+
+      <% table.with_body do %>
+        <% if @presenter.staff? %>
+          <% @presenter.staff_rows.each do |row| %>
+            <tr id="staff-row-<%= row.id %>">
+              <td class="align-middle">
+                <%= render "hotel_portal/users/status_toggle", row: row %>
+              </td>
+              <th scope="row" class="align-middle">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-medium text-foreground"><%= row.name %></span>
+                    <% if row.own_row %>
+                      <%= render PanelsUI::Badge.new(label: "You", variant: :outline, size: :sm) %>
                     <% end %>
-                  </td>
-                  <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                      <% if access.user_id == current_user.id %>
-                        <span class="text-xs font-bold text-muted-foreground bg-muted px-2 py-1 rounded">You</span>
-                      <% elsif access.active? %>
-                        <%= button_to hotel_user_path(current_hotel, access),
-                            method: :delete,
-                            data: {
-                              turbo_confirm: "Revoke Access?",
-                              turbo_confirm_text: "Are you sure you want to revoke access for #{access.user.name}? They will no longer be able to access the hotel portal.",
-                              turbo_confirm_color: "red"
-                            },
-                            class: "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground transition hover:bg-red-50 hover:text-red-600",
-                            title: "Revoke Access" do %>
-                          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-                        <% end %>
-                      <% else %>
-                        <%= button_to reactivate_hotel_user_path(current_hotel, access),
-                            method: :patch,
-                            class: "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground transition hover:bg-emerald-50 hover:text-emerald-600",
-                            title: "Reactivate Access" do %>
-                          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                        <% end %>
-                      <% end %>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+                  </div>
+                  <p class="mt-0.5 text-xs font-normal text-muted-foreground"><%= row.email %></p>
+                </div>
+              </th>
+              <td class="align-middle text-muted-foreground"><%= row.role_name %></td>
+              <td class="text-right align-middle">
+                <%= render "hotel_portal/users/staff_actions", row: row %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="4" class="h-40 text-center">
+              <p class="font-medium text-foreground">No staff have access yet.</p>
+              <p class="mt-1 text-muted-foreground">Invite a team member to give them access to this property.</p>
+              <div class="mt-4">
+                <%= render PanelsUI::Button.new(
+                      label: "Invite Staff",
+                      href: new_hotel_user_path(current_hotel),
+                      size: :sm,
+                      data: { turbo_frame: "settings_action_sheet" }) %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
   </div>
+</div>

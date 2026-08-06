@@ -21,18 +21,26 @@
     <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
       <%= render PanelsUI::Navbar.new(key: navigation_key, sidebar_state_key: navigation_state_key, navigation: !locked_hotel_portal_shell?) do |navbar| %>
         <% navbar.with_brand do %>
-          <a href="<%= current_hotel ? hotel_dashboard_path(current_hotel) : '#' %>" class="flex items-center" aria-label="WAStays">
-            <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
-          </a>
+          <% if current_hotel %>
+            <a href="<%= hotel_dashboard_path(current_hotel) %>" class="panel-navbar__identity" aria-label="<%= current_hotel.name %>">
+              <span class="panel-navbar__identity-name"><%= current_hotel.name %></span>
+              <span class="panel-navbar__identity-meta">#<%= current_hotel.id %></span>
+            </a>
+          <% else %>
+            <a href="<%= root_path %>" class="flex items-center" aria-label="WAStays">
+              <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
+            </a>
+          <% end %>
         <% end %>
-        <% navbar.with_actions do %>
-          <% unless locked_hotel_portal_shell? %>
+        <% unless locked_hotel_portal_shell? %>
+          <% navbar.with_center do %>
             <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages...") %>
           <% end %>
-          <a class="panel-navbar__action" href="<%= help_center_path %>">
-            <%= cached_icon "circle-question-mark", class: "size-4" %>
-            Help
-          </a>
+        <% end %>
+        <% unless locked_hotel_portal_shell? %>
+          <% navbar.with_actions do %>
+            <%= render "shared/navigation/navbar_alerts" %>
+          <% end %>
         <% end %>
         <% navbar.with_profile do %>
           <%= render PanelsUI::ProfileMenu.new(
@@ -45,6 +53,7 @@
             <% if (settings_path = hotel_settings_landing_path) %>
               <% menu.with_item(label: "Settings", href: settings_path, icon: "settings") %>
             <% end %>
+            <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
             <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
           <% end %>
         <% end %>

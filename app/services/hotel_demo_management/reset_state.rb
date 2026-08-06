@@ -281,7 +281,7 @@ module HotelDemoManagement
 
       @logger.puts "Resetting rates and inventories from #{@start_date} to #{@end_date}..."
       @hotel.room_types.each do |room_type|
-        standard_plan = ensure_rate_plan(room_type, "Standard Rate")
+        standard_plan = ensure_rate_plan(room_type, "Standard Rate", kind: "standard")
         non_ref_plan = ensure_rate_plan(room_type, "Non-Refundable Rate")
 
         base_price = room_type.base_price
@@ -328,13 +328,21 @@ module HotelDemoManagement
       end
     end
 
-    def ensure_rate_plan(room_type, name)
-      rate_plan = @hotel.rate_plans.find_or_create_by!(name: name) do |plan|
-        plan.sell_mode = "per_room"
-        plan.currency = @hotel.default_currency || "MYR"
-      end
+    # Every room type carries its own copy of a named plan, so the lookup is
+    # scoped to the room type. Searching hotel-wide would hand the second room
+    # type the first one's plan and link them together, letting a rate edit on
+    # one bleed into the other.
+    def ensure_rate_plan(room_type, name, kind: "custom")
+      existing = room_type.rate_plans.find_by(name: name)
+      return existing if existing
 
-      room_type.room_type_rate_plans.find_or_create_by!(rate_plan: rate_plan)
+      rate_plan = @hotel.rate_plans.create!(
+        name: name,
+        kind: kind,
+        sell_mode: "per_room",
+        currency: @hotel.default_currency || "MYR"
+      )
+      room_type.room_type_rate_plans.create!(rate_plan: rate_plan)
 
       rate_plan
     end

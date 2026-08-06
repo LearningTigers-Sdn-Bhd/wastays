@@ -173,6 +173,10 @@
   .panel-switch[data-size="lg"] .panel-switch__input:checked::before { inset-inline-start: calc(100% - 0.9375rem - 0.1875rem); }
   .panel-switch[data-size="lg"] .panel-switch__label { @apply text-sm; }
 
+  /* A screen-reader-only label leaves nothing to sit beside the control, so the
+     gap that would space them apart has to go with it. */
+  .panel-switch[data-label-hidden="true"] { gap: 0; }
+
   @media (pointer: coarse) {
     .panel-switch { min-height: 2.5rem; }
   }

@@ -159,6 +159,10 @@
   .panel-radio[data-size="lg"] .panel-radio__input:checked::before { width: 0.625rem; height: 0.625rem; }
   .panel-radio[data-size="lg"] .panel-radio__label { @apply text-sm; }
 
+  /* A screen-reader-only label leaves nothing to sit beside the control, so the
+     gap that would space them apart has to go with it. */
+  .panel-radio[data-label-hidden="true"] { gap: 0; }
+
   /* ---- Group ------------------------------------------------------------ */
   .panel-radio-group {
     display: grid;

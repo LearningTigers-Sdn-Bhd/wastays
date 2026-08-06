@@ -49,13 +49,39 @@ RSpec.describe PanelsUI::Table, type: :component do
   end
 
   it "applies supported variants and boolean behaviors" do
-    render_table(density: :compact, striped: true, hoverable: true, sticky_header: true, bordered: false) do |table|
+    render_table(density: :compact, striped: true, hoverable: true, sticky_header: true,
+                 sticky_column: true, bordered: false) do |table|
       with_required_slots(table)
     end
 
     expect(page).to have_css(
       "table.panel-table[data-density='compact'][data-striped='true'][data-hoverable='true']" \
-      "[data-sticky-header='true'][data-bordered='false']"
+      "[data-sticky-header='true'][data-sticky-column='true'][data-bordered='false']"
+    )
+  end
+
+  it "leaves the first column unpinned unless asked" do
+    render_table { |table| with_required_slots(table) }
+
+    expect(page).to have_css("table.panel-table[data-sticky-column='false']")
+  end
+
+  it "restates striped and hover backgrounds on a pinned first column" do
+    stylesheet = Rails.root.join("app/assets/tailwind/panel/table.css").read
+
+    expect(stylesheet).to match(
+      /\[data-sticky-column="true"\] :is\(thead, tbody, tfoot\) tr > :first-child\s*\{[^}]*position:\s*sticky;/m
+    )
+    # Transparent row mixes would let the scrolling cells show through the
+    # pinned one, so the striped and hover states get solid equivalents.
+    expect(stylesheet).to match(
+      /\[data-sticky-column="true"\]\[data-striped="true"\][^{]*\{[^}]*color-mix\(in oklab, var\(--muted\) 55%, var\(--card\)\)/m
+    )
+    expect(stylesheet).to match(
+      /\[data-sticky-column="true"\]\[data-hoverable="true"\][^{]*:hover[^{]*\{[^}]*background:\s*var\(--muted\);/m
+    )
+    expect(stylesheet).to match(
+      /\[data-sticky-column="true"\]\[data-sticky-header="true"\][^{]*\{[^}]*z-index:\s*2;/m
     )
   end
 

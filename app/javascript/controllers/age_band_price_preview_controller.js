@@ -5,9 +5,13 @@ import { Controller } from "@hotwired/stimulus"
 // found by data-role rather than named Stimulus targets so newly cloned
 // "+ Add Band" rows (plain innerHTML, no controller of their own) work
 // without any extra wiring.
+//
+// Both selects are PanelsUI::SelectMenu, which keeps a real <select> as its
+// source of truth and re-dispatches input/change from it — hence the reads
+// through a native <select> nested inside the styled wrapper.
 export default class extends Controller {
-  static targets = ["roomTypeSelect"]
-  static values = { currency: String }
+  static targets = ["roomTypeField"]
+  static values = { currency: String, basePrices: Object }
 
   connect() {
     this.update()
@@ -22,24 +26,24 @@ export default class extends Controller {
   }
 
   currentAnchorPrice() {
-    if (!this.hasRoomTypeSelectTarget) return null
+    if (!this.hasRoomTypeFieldTarget) return null
 
-    const option = this.roomTypeSelectTarget.selectedOptions[0]
-    if (!option) return null
+    const select = this.roomTypeFieldTarget.querySelector("select")
+    if (!select) return null
 
-    const price = parseFloat(option.dataset.basePrice)
-    return Number.isNaN(price) ? null : price
+    const price = this.basePricesValue[select.value]
+    return typeof price === "number" ? price : null
   }
 
   updateRow(row, anchorPrice) {
-    const modeSelect = row.querySelector('[data-role="pricing-mode"]')
+    const modeSelect = row.querySelector('[data-role="pricing-mode"] select')
     const valueInput = row.querySelector('[data-role="price-value"]')
     const preview = row.querySelector('[data-role="price-preview"]')
     const unitHint = row.querySelector('[data-role="value-unit-hint"]')
     if (!modeSelect || !valueInput || !preview) return
 
     const isAmount = modeSelect.value === "amount"
-    if (unitHint) unitHint.textContent = isAmount ? "(currency amount)" : "(%)"
+    if (unitHint) unitHint.textContent = isAmount ? this.currencyValue : "%"
 
     const value = parseFloat(valueInput.value)
     if (Number.isNaN(value)) {

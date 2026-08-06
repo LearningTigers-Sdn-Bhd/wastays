@@ -12,7 +12,6 @@ module HotelPortal
         case kind
         when :walk_in then "Walk-in Rate"
         when :corporate then "Corporate Rate"
-        when :ota then "OTA Rates"
         when :channel_availability then "#{channel['attributes']['channel']} (#{channel['attributes']['title']})"
         when :channel_rate then "#{channel['attributes']['channel']} (#{channel['attributes']['title']})"
         when :channel_summary then "OTA Channels"
@@ -23,7 +22,6 @@ module HotelPortal
       def rate_row? = kind == :rate
       def walk_in_row? = kind == :walk_in
       def corporate_row? = kind == :corporate
-      def ota_row? = kind == :ota
       def channel_availability_row? = kind == :channel_availability
       def channel_rate_row? = kind == :channel_rate
       def channel_summary_row? = kind == :channel_summary
@@ -154,26 +152,16 @@ module HotelPortal
       @room_type_options ||= hotel.room_types.order(:id).to_a
     end
 
-    def rate_plan_options
-      @rate_plan_options ||= hotel.room_types.includes(:rate_plans).order(:id).flat_map do |room_type|
-        room_type.rate_plans.order(:id).reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }.map do |rate_plan|
-          [ "#{room_type.name} - #{rate_plan.name}", rate_plan.id ]
-        end
-      end
-    end
-
     def rate_plan_options_struct
       @rate_plan_options_struct ||= visible_room_types.flat_map do |room_type|
-        # Standard Rate Plans
-        plans = room_type.rate_plans.order(:id).reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }.map do |rate_plan|
+        plans = rate_plans_for(room_type).map do |rate_plan|
           OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id, kind: :standard)
         end
 
-        # Virtual Pricing Tiers (locked to master plan logic)
+        # Virtual Pricing Tiers, written onto the anchor plan's rate rows.
         tiers = [
           OpenStruct.new(label: "#{room_type.name} - Walk-in Rate", id: "tier_walk_in_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
-          OpenStruct.new(label: "#{room_type.name} - Corporate Rate", id: "tier_corporate_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
-          OpenStruct.new(label: "#{room_type.name} - OTA Rate", id: "tier_ota_#{room_type.id}", room_type_id: room_type.id, kind: :tier)
+          OpenStruct.new(label: "#{room_type.name} - Corporate Rate", id: "tier_corporate_#{room_type.id}", room_type_id: room_type.id, kind: :tier)
         ]
 
         plans + tiers
@@ -207,8 +195,6 @@ module HotelPortal
         tier_cell(row.room_type, date, :walk_in)
       elsif row.corporate_row?
         tier_cell(row.room_type, date, :corporate)
-      elsif row.ota_row?
-        tier_cell(row.room_type, date, :ota)
       elsif row.channel_rate_row?
         channel_rate_cell(row.room_type, row.rate_plan, row.channel_rate_plan_id, row.channel, date)
       else
@@ -286,24 +272,13 @@ module HotelPortal
       rooms.values.include?(ext_rt_id)
     end
 
-    def has_walk_in_rates?(room_type)
-      rate_plans_for(room_type).any? do |rp|
-        rates_by_rate_plan[rp.id]&.values&.any? { |r| r.walk_in_price.present? }
-      end
-    end
-
-    def has_corporate_rates?(room_type)
-      rate_plans_for(room_type).any? do |rp|
-        rates_by_rate_plan[rp.id]&.values&.any? { |r| r.corporate_price.present? }
-      end
-    end
-
     def tier_cell(room_type, date, tier_type)
-      # Tiers are tied to the first rate plan in our current implementation
-      rate_plan = room_type.rate_plans.sort_by(&:id).first
+      # walk_in_price/corporate_price live on the anchor plan's rate rows, which
+      # is where ApplyInventoryDashboardSelection writes them.
+      rate_plan = room_type.standard_rate_plan
       return { date: date } if rate_plan.blank?
 
-      rate = rates_by_rate_plan.dig(rate_plan.id, date)
+      rate = rate_for(room_type, rate_plan, date)
 
       actual_price = case tier_type
       when :walk_in then rate&.walk_in_price
@@ -363,33 +338,64 @@ module HotelPortal
 
     def visible_room_types
       @visible_room_types ||= begin
-        scope = hotel.room_types.includes(:room_inventories, rate_plans: :room_rates).order(:id)
+        scope = hotel.room_types.includes(:rate_plans).order(:id)
         scope = scope.where(id: selected_room_type_id) if selected_room_type_id.present?
         scope.to_a
       end
     end
 
+    # Special tiers get their own rows and are written through the anchor plan,
+    # so they never appear as ordinary rate rows. Identified by kind rather than
+    # by name: renaming "Walk-in Rate" used to turn it into an ordinary row that
+    # the walk-in row still read from, and naming an ordinary plan "Corporate"
+    # used to hide it from the grid while it stayed bookable.
+    #
+    # Archived plans are excluded to match the booking side, which offers only
+    # RatePlan.active — showing rows the operator can edit and push to channels
+    # for a plan no guest can book is worse than not showing them.
     def rate_plans_for(room_type)
       plans = room_type.rate_plans.sort_by(&:id)
-      plans = plans.reject { |rate_plan| special_tier_rate_plan_name?(rate_plan.name) }
+      plans = plans.reject { |rate_plan| rate_plan.special_tier? || rate_plan.archived? }
       plans = plans.select { |rate_plan| rate_plan.id == selected_rate_plan_id } if selected_rate_plan_id.present?
       plans
     end
 
     def inventories_by_room_type
-      @inventories_by_room_type ||= visible_room_types.each_with_object({}) do |room_type, memo|
-        memo[room_type.id] = room_type.room_inventories.where(date: start_date..end_date).index_by(&:date)
-      end
+      @inventories_by_room_type ||= RoomInventory
+        .where(room_type_id: visible_room_type_ids, date: start_date..end_date)
+        .group_by(&:room_type_id)
+        .transform_values { |inventories| inventories.index_by(&:date) }
     end
 
-    def rates_by_rate_plan
-      @rates_by_rate_plan ||= visible_room_types.each_with_object({}) do |room_type, memo|
-        # We load ALL rate plans for visible room types to ensure master data (OTA/Corporate/Walk-in)
-        # is always available even if the UI is currently filtered to a specific plan.
-        room_type.rate_plans.each do |rate_plan|
-          memo[rate_plan.id] = rate_plan.room_rates.where(date: start_date..end_date, currency: default_currency).index_by(&:date)
-        end
-      end
+    # Keyed by [room_type_id, rate_plan_id], because a rate plan shared across
+    # several categories holds one row per category per date — room_rates is
+    # unique on (room_type_id, rate_plan_id, date, currency). Keying on the plan
+    # alone let index_by(&:date) collapse the categories down to whichever row
+    # the database returned last, so every category on a shared plan rendered
+    # that one category's price and restrictions.
+    #
+    # Loads every plan for the visible categories, not just the filtered ones,
+    # so tier rows (walk-in/corporate) still resolve when the grid is filtered
+    # to a single plan.
+    def rates_by_room_type_and_plan
+      @rates_by_room_type_and_plan ||= RoomRate
+        .where(room_type_id: visible_room_type_ids, date: start_date..end_date, currency: default_currency)
+        .group_by { |rate| [ rate.room_type_id, rate.rate_plan_id ] }
+        .transform_values { |rates| rates.index_by(&:date) }
+    end
+
+    def rate_for(room_type, rate_plan, date)
+      rates_by_room_type_and_plan.dig([ room_type.id, rate_plan.id ], date)
+    end
+
+    # Indexed once: channel_rate_cell runs per channel rate plan per date, and
+    # looked this up on every one of those cells.
+    def derived_settings_by_channel_id
+      @derived_settings_by_channel_id ||= hotel.channel_derived_settings.index_by(&:channel_id)
+    end
+
+    def visible_room_type_ids
+      @visible_room_type_ids ||= visible_room_types.map(&:id)
     end
 
     def inventory_cell(room_type, date)
@@ -417,7 +423,7 @@ module HotelPortal
     end
 
     def rate_cell(room_type, rate_plan, date)
-      rate = rates_by_rate_plan.dig(rate_plan.id, date)
+      rate = rate_for(room_type, rate_plan, date)
       native_currency = default_currency
       price = rate&.price || (native_currency == default_currency ? room_type.base_price : nil)
 
@@ -501,11 +507,6 @@ module HotelPortal
       CurrencyFormatter.format(price, currency: currency, symbol: false)
     end
 
-    def special_tier_rate_plan_name?(name)
-      normalized = name.to_s.strip.downcase
-      normalized.in?([ "walk-in rate", "walk in rate", "walk-in", "walk in", "corporate rate", "corporate", "ota rate", "ota" ])
-    end
-
     def channel_availability_cell(room_type, channel, date)
       inventory = inventories_by_room_type.dig(room_type.id, date)
       quantity = inventory&.quantity || room_type.quantity
@@ -539,7 +540,7 @@ module HotelPortal
     end
 
     def channel_rate_cell(room_type, rate_plan, channel_rate_plan_id, channel, date)
-      parent_rate = rates_by_rate_plan.dig(rate_plan.id, date)
+      parent_rate = rate_for(room_type, rate_plan, date)
       native_currency = default_currency
 
       override_key = "rtrp-#{room_type.id}-#{rate_plan.id}-#{channel_rate_plan_id}-#{date}"
@@ -548,7 +549,7 @@ module HotelPortal
       price = override&.price.presence
       if price.blank? && (parent_rate&.price || room_type.base_price)
         base_val = parent_rate&.price || room_type.base_price
-        derived_setting = hotel.channel_derived_settings.find_by(channel_id: channel["id"])
+        derived_setting = derived_settings_by_channel_id[channel["id"]]
         if derived_setting
           case derived_setting.pricing_mode
           when "multiplier"

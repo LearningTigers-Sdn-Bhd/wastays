@@ -69,7 +69,7 @@ module HotelPortal
 
       group = active_settings_group
       active_tab = settings_tabs_for_group(group).find { |tab| tab[:active] }
-      parts = [ hotel_portal_root_breadcrumb_part, settings_root_breadcrumb_part ]
+      parts = [ settings_root_breadcrumb_part ]
       parts << settings_group_breadcrumb_part(group) if group
       if active_tab
         parts << {

@@ -1,0 +1,118 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% persisted = rate_plan.persisted? %>
+<% locked_name = persisted && (rate_plan.special_tier? || rate_plan.standard_rate?) %>
+<% form_id = persisted ? "edit-rate-plan-#{rate_plan.id}-form" : "new-rate-plan-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: persisted ? "edit-rate-plan-sheet" : "new-rate-plan-sheet",
+          side: :right,
+          size: :lg,
+          title: title,
+          description: persisted ? rate_plan.name : "Set how this plan prices rooms, extra guests, and children.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: [ current_hotel, rate_plan ],
+                      id: form_id,
+                      method: persisted ? :patch : :post,
+                      class: "space-y-6 py-2" do |f| %>
+          <% if rate_plan.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Rate plan could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { rate_plan.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <% unless locked_name %>
+            <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true) do |field| %>
+              <% field.with_input(placeholder: "Non-Refundable Rate", autocomplete: "off") %>
+            <% end %>
+          <% end %>
+
+          <section aria-labelledby="rate-plan-pricing-heading" class="space-y-4">
+            <div>
+              <h2 id="rate-plan-pricing-heading" class="text-base font-semibold text-foreground">Pricing</h2>
+              <p class="mt-1 text-sm text-muted-foreground">How the nightly price responds to occupancy.</p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: f, attribute: :sell_mode, label: "How it's charged", required: true) do |field| %>
+              <% field.with_select_menu(sell_mode_choices, selected: rate_plan.sell_mode) %>
+            <% end %>
+
+            <%# Every field carries a hint so the two columns stay on a shared
+                baseline — a hint on only some of them leaves the rows ragged. %>
+            <div class="grid items-start gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Base occupancy", hint: "Guests included in the room price.") do |field| %>
+                <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge", hint: "Per night, for each guest above base occupancy.") do |field| %>
+                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+                <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: f, attribute: :single_supplement, label: "Single supplement", hint: "Per night, when one guest occupies the room.") do |field| %>
+                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+                <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: f, attribute: :child_price_multiplier, label: "Child price", hint: "0.5 charges a child half the adult rate; 1.0 charges full.") do |field| %>
+                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+              <% end %>
+            </div>
+          </section>
+
+          <% if rate_plan.sell_mode == "per_person" %>
+            <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan %>
+          <% end %>
+
+          <%= render "hotel_portal/rate_plans/room_type_pricing", rate_plan: rate_plan %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <% if persisted && rate_plan.archived? %>
+          <%= render PanelsUI::Button.new(href: unarchive_hotel_rate_plan_path(current_hotel, rate_plan),
+                variant: :ghost, size: :sm, class: "mr-auto",
+                data: { turbo_method: :patch }) do %>
+            Unarchive
+          <% end %>
+        <% elsif persisted && (rate_plan.archivable? || rate_plan.deletable?) %>
+          <div class="mr-auto flex items-center gap-2">
+            <% if rate_plan.archivable? %>
+              <%= render PanelsUI::Button.new(href: archive_hotel_rate_plan_path(current_hotel, rate_plan),
+                    variant: :ghost, size: :sm,
+                    data: {
+                      turbo_method: :patch,
+                      turbo_confirm: "Archive '#{rate_plan.name}'? It will no longer be offered for new bookings, but existing bookings and history are kept. You can unarchive it anytime.",
+                      turbo_confirm_title: "Archive rate plan"
+                    }) do %>
+                Archive
+              <% end %>
+            <% end %>
+            <% if rate_plan.deletable? %>
+              <%= render PanelsUI::Button.new(href: hotel_rate_plan_path(current_hotel, rate_plan),
+                    variant: :ghost, size: :sm, class: "text-destructive",
+                    data: {
+                      turbo_method: :delete,
+                      turbo_confirm: "Delete '#{rate_plan.name}'? This permanently removes the rate plan.",
+                      turbo_confirm_title: "Delete rate plan",
+                      turbo_confirm_color: "red"
+                    }) do %>
+                Delete
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>
+          <%= submit_label %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

@@ -3,9 +3,10 @@
 require "rails_helper"
 
 RSpec.describe PanelsUI::Navbar, type: :component do
-  def render_navbar(navigation: true, sidebar_state_key: "hotel", sticky: true)
+  def render_navbar(navigation: true, sidebar_state_key: "hotel", sticky: true, center: true)
     render_inline(described_class.new(key: "hotel", navigation:, sidebar_state_key:, sticky:)) do |navbar|
       navbar.with_brand { '<a href="/">WAStays</a>'.html_safe }
+      navbar.with_center { '<button data-center>Search</button>'.html_safe } if center
       navbar.with_actions { '<a href="/help">Help</a>'.html_safe }
       navbar.with_profile { '<span data-profile>Profile</span>'.html_safe }
     end
@@ -16,6 +17,7 @@ RSpec.describe PanelsUI::Navbar, type: :component do
 
     expect(page).to have_css("header.panel-navbar[data-sticky='true']")
     expect(page).to have_link("WAStays", href: "/")
+    expect(page).to have_css(".panel-navbar__center [data-center]", text: "Search")
     expect(page).to have_link("Help", href: "/help")
     expect(page).to have_css("[data-profile]", text: "Profile")
     expect(page).to have_css("button[aria-label='Open navigation'][command='show-modal'][commandfor='hotel-sidebar-mobile']")
@@ -44,13 +46,28 @@ RSpec.describe PanelsUI::Navbar, type: :component do
     expect(page).to have_no_css("[data-controller='panels-ui--sidebar-toggle']")
   end
 
-  it "requires a key and brand" do
+  it "keeps the balancing end rail when the centre slot is empty" do
+    render_navbar(center: false)
+
+    expect(page).to have_no_css(".panel-navbar__center")
+    expect(page).to have_css(".panel-navbar__start .panel-navbar__brand")
+    expect(page).to have_css(".panel-navbar__end")
+  end
+
+  it "requires a key" do
     expect do
       render_inline(described_class.new(key: "")) { |navbar| navbar.with_brand { "Brand" } }
     end.to raise_error(ArgumentError, "Navbar key is required")
+  end
 
-    expect do
-      render_inline(described_class.new(key: "hotel"))
-    end.to raise_error(ArgumentError, "Navbar brand slot is required")
+  it "renders without a brand for portals that name themselves elsewhere" do
+    render_inline(described_class.new(key: "corporate")) do |navbar|
+      navbar.with_profile { '<span data-profile>Profile</span>'.html_safe }
+    end
+
+    expect(page).to have_css("header.panel-navbar")
+    expect(page).to have_no_css(".panel-navbar__brand")
+    expect(page).to have_css(".panel-navbar__start")
+    expect(page).to have_css(".panel-navbar__profile [data-profile]")
   end
 end

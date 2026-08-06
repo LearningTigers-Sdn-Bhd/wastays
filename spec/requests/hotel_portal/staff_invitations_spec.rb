@@ -33,7 +33,17 @@ RSpec.describe "HotelPortal::StaffInvitations", type: :request do
 
       patch hotel_staff_invitation_path(hotel, invitation), params: { staff_invitation: { role_id: privileged_role.id } }
       expect(invitation.reload.role).to eq(staff_role)
-      expect(flash[:alert]).to eq("Selected role cannot be assigned.")
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Selected role cannot be assigned")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/staff-invitations/:id/edit" do
+    it "renders the role sheet" do
+      get edit_hotel_staff_invitation_path(hotel, invitation)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Change Invited Role")
     end
   end
 

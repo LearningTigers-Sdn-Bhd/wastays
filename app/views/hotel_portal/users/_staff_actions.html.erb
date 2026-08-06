@@ -1,0 +1,41 @@
+<%# Own row has nothing actionable: changing or revoking your own access is the
+    fastest way to lock yourself out, so both are refused server-side too. %>
+<% if row.own_row %>
+  <span class="text-xs text-muted-foreground">&mdash;</span>
+<% else %>
+  <%= render PanelsUI::DropdownMenu.new(
+        id: "staff-#{row.id}-actions",
+        placement: :bottom_end,
+        class: "w-56") do |menu| %>
+    <% menu.with_trigger(
+         variant: :ghost,
+         size: :icon_sm,
+         aria_label: "Actions for #{row.name}") do %>
+      <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+    <% end %>
+
+    <% menu.with_item(
+         href: row.edit_path,
+         data: { turbo_frame: "settings_action_sheet" }) do %>
+      <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
+      <span>Edit access</span>
+    <% end %>
+
+    <% if row.deletable %>
+      <% menu.with_item(
+           href: row.delete_path,
+           method: :delete,
+           variant: :danger,
+           data: {
+             turbo_confirm: "Permanently delete this staff access?",
+             turbo_confirm_title: "Permanently delete access?",
+             turbo_confirm_text: "#{row.name} will lose access to this property and the record of their access will be erased. This cannot be undone — revoke instead if you may need to restore it later.",
+             turbo_confirm_tone: "destructive",
+             turbo_frame: "_top"
+           }) do %>
+        <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+        <span>Delete permanently</span>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -89,7 +89,10 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     expect(page).to have_css("dialog#turbo-confirm-dialog", visible: :all)
     click_in_overlay find("#turbo-confirm-button", visible: :all)
 
-    expect(page).to have_no_css("dialog#external-account-sheet", wait: 5)
+    # Suspending confirms, posts, and closes the sheet from a stream — three
+    # round trips, which outlast the default wait when this file shares the
+    # machine with another browser worker.
+    expect(page).to have_no_css("dialog#external-account-sheet", wait: 15)
     expect(relationship.reload).to be_suspended
   end
 

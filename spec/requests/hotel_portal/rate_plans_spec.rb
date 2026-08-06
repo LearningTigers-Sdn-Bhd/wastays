@@ -15,23 +15,29 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     sign_in_as(user)
   end
 
+  def delete_action_labels(body)
+    Nokogiri::HTML(body).css('a[data-turbo-method="delete"]').map { |link| link.text.strip }
+  end
+
   describe 'GET /hotel/:hotel_id/rate_plans/new' do
-    it 'renders the offcanvas create form' do
+    it 'renders the create form in a sheet' do
       get new_hotel_rate_plan_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("New Rate Plan")
+      expect(response.body).to include("New rate plan")
+      expect(Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog')).to be_present
     end
   end
 
   describe 'GET /hotel/:hotel_id/rate_plans/:id/edit' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom') }
 
-    it 'renders the offcanvas edit form' do
+    it 'renders the edit form in a sheet' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Edit Rate Plan")
+      expect(response.body).to include("Edit rate plan")
+      expect(Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog')).to be_present
       expect(response.body).to include("Promo Rate")
     end
 
@@ -39,18 +45,18 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }
+      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
       expect(option_values).to contain_exactly('per_room', 'per_person')
     end
 
     it 'offers only Per Person when the hotel is pax-pricing only' do
       hotel.update!(pax_pricing_only: true)
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
       select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }
+      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
       expect(option_values).to contain_exactly('per_person')
     end
 
@@ -60,14 +66,14 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }
+      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
       expect(option_values).to contain_exactly('per_room')
     end
 
     it 'shows a delete action when the plan has no bookings' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      expect(response.body).to include("Delete Rate Plan")
+      expect(delete_action_labels(response.body)).to include("Delete")
     end
 
     it 'hides the delete action once the plan has a booking' do
@@ -76,7 +82,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      expect(response.body).not_to include("Delete Rate Plan")
+      expect(delete_action_labels(response.body)).to be_empty
     end
 
     it 'shows per-room-type pricing mode controls, pre-filled from existing derived pricing' do
@@ -84,7 +90,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      expect(response.body).to include("% of Standard Rate")
+      expect(response.body).to include("% of standard rate")
       expect(response.body).to include("rate_plan[room_type_pricing][#{room_type.id}][pricing_mode]")
       expect(response.body).to include('value="-15.0"')
     end
@@ -98,30 +104,30 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     end
 
     it 'wires up a live price preview for each age band, using the room type Standard Rate and a mode choice' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
       expect(response.body).to include('data-controller="rate-plan-age-bands age-band-price-preview"')
       expect(response.body).to include('data-age-band-price-preview-currency-value="MYR"')
-      expect(response.body).to include('data-age-band-price-preview-target="roomTypeSelect"')
+      expect(response.body).to include('data-age-band-price-preview-target="roomTypeField"')
       expect(response.body).to include('data-role="price-preview"')
-      expect(response.body).to include('Flat Amount')
+      expect(response.body).to include('Fixed price per child')
     end
 
-    it 'shows the prominent empty-state Add Band button when there are no age bands yet' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+    it 'shows the prominent empty-state add button when there are no age groups yet' do
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
       empty_state = Nokogiri::HTML(response.body).at_css('[data-rate-plan-age-bands-target="emptyState"]')
-      expect(empty_state.text).to include('Add your first age band')
+      expect(empty_state.text).to include('Add your first age group')
       expect(empty_state["class"]).not_to include("hidden")
     end
 
-    it 'hides the empty-state Add Band button once age bands already exist' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', sell_mode: 'per_person', currency: 'MYR')
+    it 'hides the empty-state add button once age groups already exist' do
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
@@ -196,7 +202,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'PATCH /hotel/:hotel_id/rate_plans/:id' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom') }
 
     it 'updates the rate plan' do
       patch hotel_rate_plan_path(hotel, rate_plan), params: {
@@ -218,10 +224,64 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response).to redirect_to(hotel_rates_settings_path(hotel))
       expect(rate_plan.reload.room_types).not_to include(room_type)
     end
+
+    # Previously RoomTypeRatePlan's per-row callback enqueued a separate
+    # 500-day rate push for every room category on the plan.
+    it 'pushes one rate sync for the whole plan, not one per room category' do
+      hotel.update!(preferred_channel_manager: 'channex')
+      others = Array.new(2) { |i| create(:room_type, hotel: hotel, name: "Villa #{i}") }
+      all_room_types = [ room_type ] + others
+      pricing = all_room_types.to_h { |rt| [ rt.id.to_s, { enabled: "1", pricing_mode: "fixed" } ] }
+
+      ActiveJob::Base.queue_adapter = :test
+      ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+      patch hotel_rate_plan_path(hotel, rate_plan), params: { rate_plan: { room_type_pricing: pricing } }
+
+      rate_syncs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j["job_class"] == "ChannelManagers::SyncJob" }
+      expect(rate_plan.reload.room_types).to match_array(all_room_types)
+      expect(rate_syncs.size).to eq(1)
+      expect(rate_syncs.first["arguments"].last["room_type_ids"]).to match_array(all_room_types.map(&:id))
+    end
+
+    it 'refuses to reassign a standard plan, even if room_type_pricing is submitted' do
+      other_room_type = create(:room_type, hotel: hotel, name: 'Suite')
+      standard = room_type.rate_plans.find_by(kind: 'standard')
+
+      patch hotel_rate_plan_path(hotel, standard), params: {
+        rate_plan: { room_type_pricing: { other_room_type.id.to_s => { enabled: "1", pricing_mode: "fixed" } } }
+      }
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      expect(standard.reload.room_types).to contain_exactly(room_type)
+    end
+
+    it 'refuses to unassign a standard plan from its own room category' do
+      standard = room_type.rate_plans.find_by(kind: 'standard')
+
+      patch hotel_rate_plan_path(hotel, standard), params: {
+        rate_plan: { room_type_pricing: { room_type.id.to_s => { enabled: "0" } } }
+      }
+
+      expect(standard.reload.room_types).to contain_exactly(room_type)
+    end
+
+    # An unchecked PanelsUI::Checkbox submits no `enabled` key at all — the row
+    # only reaches the server because its pricing_mode field always submits.
+    it 'removes a room type when the enabled key is omitted entirely' do
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: 'fixed')
+
+      patch hotel_rate_plan_path(hotel, rate_plan), params: {
+        rate_plan: { room_type_pricing: { room_type.id.to_s => { pricing_mode: "fixed" } } }
+      }
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      expect(rate_plan.reload.room_types).not_to include(room_type)
+    end
   end
 
   describe 'DELETE /hotel/:hotel_id/rate_plans/:id' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom') }
 
     it 'deletes custom rate plan' do
       expect {
@@ -256,7 +316,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'PATCH /hotel/:hotel_id/rate_plans/:id/archive' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate') }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom') }
 
     it 'archives a custom rate plan, including one with existing bookings' do
       booking = create(:booking, hotel: hotel)
@@ -290,7 +350,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'PATCH /hotel/:hotel_id/rate_plans/:id/unarchive' do
-    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', archived_at: Time.current) }
+    let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: 'Promo Rate', kind: 'custom', archived_at: Time.current) }
 
     it 'restores an archived rate plan' do
       patch unarchive_hotel_rate_plan_path(hotel, rate_plan)

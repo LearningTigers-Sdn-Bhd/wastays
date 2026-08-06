@@ -790,6 +790,39 @@ looks_like_spec_target() {
   [[ "$1" == spec/* || "$1" == ./*spec/* || "$1" == /*spec/* || "$1" == *_spec.rb* ]]
 }
 
+# Migration specs migrate the schema up and down around each example, and the
+# down runs outside the transaction RSpec wraps the example in. Anything sharing
+# that process afterwards sees the reverted table — running
+# spec/migrations/move_housekeeping_operations_to_room_statuses_spec.rb before
+# spec/services/bookings/available_room_numbers_spec.rb fails 10 of its 11
+# examples, every time. Which specs land in which worker shifts run to run, so
+# the damage read as flake.
+#
+# bin/ci already keeps them apart (--exclude-pattern plus bin/test-migrations);
+# this mirrors it so a local run means the same thing as a CI run.
+MIGRATION_SPEC_PATH="spec/migrations"
+
+domain_covers_migrations() {
+  local path
+  while IFS= read -r path; do
+    [[ "$path" == "spec" || "$path" == "$MIGRATION_SPEC_PATH" ]] && return 0
+  done < <(existing_domain_paths "$1")
+  return 1
+}
+
+drop_migration_paths() {
+  local path
+  while IFS= read -r path; do
+    [[ "$path" == "$MIGRATION_SPEC_PATH" ]] && continue
+    printf "%s\n" "$path"
+  done
+}
+
+run_isolated_migrations() {
+  print_run_card "🧬" "migrations" "isolated" "" "one process per migration spec"
+  run_and_report "migrations" "isolated" "" "" "migration specs" bin/test-migrations
+}
+
 run_serial() {
   local target="${1:-selected specs}"
 
@@ -808,7 +841,7 @@ run_parallel() {
 
   while IFS= read -r path; do
     paths+=("$path")
-  done < <(existing_domain_paths "$domain")
+  done < <(existing_domain_paths "$domain" | drop_migration_paths)
 
   runtime_log=$(runtime_log_path "$domain")
   group_by=$(runtime_group_by "$domain")
@@ -825,6 +858,7 @@ run_parallel() {
     run_and_report "$domain" "parallel" "$group_by" "$runtime_log" "" \
       bundle exec parallel_rspec \
       -n "$worker_count" \
+      --exclude-pattern "$MIGRATION_SPEC_PATH" \
       --runtime-log "$runtime_log" \
       --group-by "$group_by" \
       --allowed-missing 100 \
@@ -839,6 +873,7 @@ run_parallel() {
     run_and_report "$domain" "parallel" "$group_by" "$runtime_log" "" \
       bundle exec parallel_rspec \
       -n "$worker_count" \
+      --exclude-pattern "$MIGRATION_SPEC_PATH" \
       --runtime-log "$runtime_log" \
       --group-by "$group_by" \
       --allowed-missing 100 \
@@ -848,6 +883,10 @@ run_parallel() {
       --out "$runtime_log" \
       -- \
       "${paths[@]}"
+  fi
+
+  if domain_covers_migrations "$domain"; then
+    run_isolated_migrations
   fi
 }
 
@@ -918,11 +957,21 @@ elif (( serial )); then
   paths=()
   while IFS= read -r path; do
     paths+=("$path")
-  done < <(existing_domain_paths "$domain")
+  done < <(existing_domain_paths "$domain" | drop_migration_paths)
+
+  # Domains that name spec/ wholesale still carry the migration specs after the
+  # path filter, so exclude them by pattern too.
+  if domain_covers_migrations "$domain"; then
+    paths+=(--exclude-pattern "$MIGRATION_SPEC_PATH/**/*_spec.rb")
+  fi
+
   if (( ${#rspec_args[@]} > 0 )); then
     run_serial "${paths[@]}" "${rspec_args[@]}"
   else
     run_serial "${paths[@]}"
+  fi
+  if domain_covers_migrations "$domain"; then
+    run_isolated_migrations
   fi
 else
   if (( ${#rspec_args[@]} > 0 )); then

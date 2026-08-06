@@ -1,0 +1,41 @@
+<%= render PanelsUI::DropdownMenu.new(
+      id: "staff-invitation-#{row.id}-actions",
+      placement: :bottom_end,
+      class: "w-56") do |menu| %>
+  <% menu.with_trigger(
+       variant: :ghost,
+       size: :icon_sm,
+       aria_label: "Actions for the invitation to #{row.email}") do %>
+    <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+  <% end %>
+
+  <% menu.with_item(
+       href: row.edit_path,
+       data: { turbo_frame: "settings_action_sheet" }) do %>
+    <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
+    <span>Change role</span>
+  <% end %>
+
+  <% menu.with_item(
+       href: row.resend_path,
+       method: :post,
+       data: { turbo_frame: "_top" }) do %>
+    <%= app_icon "send", class: "size-4", aria: { hidden: "true" } %>
+    <span>Resend invitation</span>
+  <% end %>
+
+  <% menu.with_item(
+       href: row.revoke_path,
+       method: :delete,
+       variant: :danger,
+       data: {
+         turbo_confirm: "Revoke this invitation?",
+         turbo_confirm_title: "Revoke invitation?",
+         turbo_confirm_text: "The link sent to #{row.email} will stop working. You can invite them again at any time.",
+         turbo_confirm_tone: "destructive",
+         turbo_frame: "_top"
+       }) do %>
+    <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+    <span>Revoke invitation</span>
+  <% end %>
+<% end %>

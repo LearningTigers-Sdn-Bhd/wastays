@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
 class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
+  include SheetActionCompletion
+
   before_action :set_hotel
   before_action :authorize_hotel
   before_action :set_room_type, only: [ :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos ]
-  before_action :set_breadcrumbs, only: [ :new, :create, :edit, :update ]
 
   def index
     @all_room_types = RoomTypesQuery.new(@hotel.room_types).call(params)
@@ -17,6 +18,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
 
   def new
     @room_type = @hotel.room_types.build
+    render layout: false
   end
 
   def create
@@ -26,14 +28,16 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     ).call
 
     if result.success?
-      redirect_to hotel_room_types_path(@hotel), notice: "Room type created successfully."
+      finish_sheet("Room category created successfully.")
     else
       @room_type = result.room_type
-      render :new, status: :unprocessable_content
+      render :new, layout: false, status: :unprocessable_content
     end
   end
 
-  def edit; end
+  def edit
+    render layout: false
+  end
 
   def update
     result = HotelPortal::RoomTypes::SaveRoomType.new(
@@ -43,9 +47,9 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     ).call
 
     if result.success?
-      redirect_to hotel_room_types_path(@hotel), notice: "Room type updated successfully."
+      finish_sheet("Room category updated successfully.")
     else
-      render :edit, status: :unprocessable_content
+      render :edit, layout: false, status: :unprocessable_content
     end
   end
 
@@ -65,11 +69,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
       photo_ids: [ params[:photo_id] ]
     ).call
 
-    if result.success?
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: result.message
-    else
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), alert: result.message
-    end
+    respond_to_photo_removal(result)
   end
 
   def bulk_destroy_photos
@@ -78,11 +78,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
       photo_ids: params[:photo_ids]
     ).call
 
-    if result.success?
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), notice: result.message
-    else
-      redirect_to edit_hotel_room_type_path(@hotel, @room_type), alert: result.message
-    end
+    respond_to_photo_removal(result)
   end
 
   private
@@ -99,13 +95,33 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     @room_type = @hotel.room_types.find(params[:id])
   end
 
-  def set_breadcrumbs
-    if @room_type&.persisted?
-      append_breadcrumb @room_type.name
-      append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
-    else
-      append_breadcrumb "New"
+  # Photos are deleted from inside the open form sheet, so only the photo grid is
+  # re-rendered: a redirect would rebuild the whole sheet and throw away
+  # everything the operator had typed but not yet saved.
+  def respond_to_photo_removal(result)
+    @room_type.photos.reload
+
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: [
+          turbo_stream.replace("room-type-photos-manager", partial: "hotel_portal/room_types/photo_manager", locals: { room_type: @room_type }),
+          toast_stream(result.message, type: result.success? ? :success : :error)
+        ], status: (result.success? ? :ok : :unprocessable_content)
+      end
+      format.html do
+        redirect_to hotel_room_types_path(@hotel),
+                    notice: (result.message if result.success?),
+                    alert: (result.message unless result.success?)
+      end
     end
+  end
+
+  def finish_sheet(notice)
+    complete_sheet_action(destination: hotel_room_types_path(@hotel), notice: notice, frame: sheet_frame)
+  end
+
+  def sheet_frame
+    turbo_frame_request_id.presence || "settings_action_sheet"
   end
 
   def room_type_params

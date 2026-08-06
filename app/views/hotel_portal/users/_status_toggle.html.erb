@@ -1,0 +1,43 @@
+<%# Status cell. The switch is the control and carries the state to assistive
+    tech through aria-checked; the word beside it carries the same state to
+    everyone else, so nothing is conveyed by switch position alone.
+
+    Rows that must not be revoked — your own, and the last account manager —
+    render a disabled switch whose accessible name says why. %>
+<div class="flex items-center gap-2">
+  <% if row.status_toggleable %>
+    <%= form_with url: row.status_path,
+                  method: :patch,
+                  class: "inline-flex",
+                  data: {
+                    controller: "tax-registry-status",
+                    action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish panels-ui:confirm-settled->tax-registry-status#settled",
+                    turbo_frame: "_top",
+                    turbo_confirm: (row.active ? "Revoke access for #{row.name}?" : nil),
+                    turbo_confirm_title: (row.active ? "Revoke access?" : nil),
+                    turbo_confirm_text: (row.active ? "#{row.name} will lose access to this property immediately. You can restore it here at any time." : nil),
+                    turbo_confirm_tone: (row.active ? "warning" : nil)
+                  } do %>
+      <%= hidden_field_tag :active, "0" %>
+      <%= submit_tag "Update access status", hidden: true, data: { tax_registry_status_target: "submit" } %>
+      <%= render PanelsUI::Switch.new(
+            name: "active",
+            label: tag.span("Access for #{row.name}", class: "sr-only"),
+            checked: row.active,
+            size: :sm,
+            data: {
+              tax_registry_status_target: "switch",
+              action: "change->tax-registry-status#change"
+            }) %>
+    <% end %>
+  <% else %>
+    <%= render PanelsUI::Switch.new(
+          name: "active_#{row.id}",
+          label: tag.span("Access for #{row.name} — #{row.status_locked_reason}", class: "sr-only"),
+          checked: row.active,
+          size: :sm,
+          disabled: true) %>
+  <% end %>
+
+  <span class="text-sm text-muted-foreground"><%= row.status_label %></span>
+</div>

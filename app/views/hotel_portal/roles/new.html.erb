@@ -1,11 +1,38 @@
-<%= turbo_frame_tag "role_modal_content" do %>
-  <div class="flex flex-col bg-card border shadow-sm rounded-2xl pointer-events-auto overflow-hidden">
-    <div class="flex justify-between items-center py-3 px-4 border-b border-border bg-muted/50">
-      <h3 class="font-bold text-foreground">New Role</h3>
-    </div>
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "new-role-sheet",
+             title: "New Role",
+             description: "Name the role now, then grant it permissions in the matrix.",
+             form_id: "new-role-form",
+             submit_label: "Create Role"
+           } do %>
+  <%= form_with model: @role,
+                url: hotel_roles_path(current_hotel),
+                method: :post,
+                id: "new-role-form",
+                class: "space-y-5" do |f| %>
+    <% if @role.errors.any? %>
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: "This role could not be created",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @role.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    <% end %>
 
-    <div class="p-4">
-      <%= render "form" %>
-    </div>
-  </div>
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :name,
+          label: "Role Name",
+          hint: "The role slug is generated from the name when the role is created.",
+          required: true) do |field| %>
+      <% field.with_input(placeholder: "Night Manager", autocomplete: "off", required: true) %>
+    <% end %>
+  <% end %>
 <% end %>

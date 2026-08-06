@@ -53,11 +53,18 @@ module PanelsUI
       Addon.new(align: align, variant: variant, **attributes)
     }
 
+    # `id` overrides the control's generated id (and the label/hint/error ids
+    # derived from it). Pass it when several forms for the same model share one
+    # page — a list of inline row forms — so their field ids stay unique. Rails'
+    # `form_with namespace:` cannot do this here: it re-prefixes the explicit id
+    # this component hands the control, leaving the label's `for` pointing at a
+    # different id. Mirrors ToggleField's `id:` override.
     def initialize(form:, attribute:, label: nil, hint: nil, error: AUTO_ERROR, size: :md,
                    required: false, disabled: false, readonly: false, label_hidden: false,
-                   class: nil, **attributes)
+                   id: nil, class: nil, **attributes)
       @form = form
       @attribute = attribute
+      @id = id
       @label = label
       @hint = hint
       @error = error
@@ -83,7 +90,7 @@ module PanelsUI
     def with_multi_select(...) = with_control_multi_select(...)
 
     def control_id
-      @form.field_id(@attribute)
+      @id || @form.field_id(@attribute)
     end
 
     def hint_id = "#{control_id}-hint"

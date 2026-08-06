@@ -40,9 +40,16 @@ RSpec.describe PanelsUI::CommandPalette, type: :component do
       )
     end
 
-    it "shows the placeholder text and the ⌘K shortcut hint on the pill" do
+    it "shows the placeholder text and the Command+K shortcut hint on the pill" do
       expect(page).to have_css(".panel-command-palette__trigger-label", text: "Search dashboard pages...")
-      expect(page).to have_css("kbd.panel-kbd[data-panels-ui--command-palette-target='shortcut']", text: "⌘K")
+
+      hint = "span[role='group'][aria-label='Command+K'][data-panels-ui--command-palette-target='shortcut']"
+      expect(page).to have_css("#{hint} kbd.panel-kbd[data-size='sm']", count: 2)
+      # The modifier is drawn, not typed, so the controller has an <svg> to swap
+      # for the word "Ctrl" off Apple.
+      expect(page).to have_css("#{hint} kbd.panel-kbd:first-of-type svg[aria-hidden='true']")
+      expect(page).to have_css("#{hint} kbd.panel-kbd", text: "K")
+      expect(page).to have_css("#{hint} .panel-kbd__separator[aria-hidden='true']", text: "+")
     end
 
     it "also renders a labelled icon-only trigger for mobile" do

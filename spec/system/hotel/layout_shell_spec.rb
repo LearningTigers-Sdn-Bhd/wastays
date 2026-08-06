@@ -35,8 +35,11 @@ RSpec.describe 'Hotel layout shell', type: :system do
 
     expect(page).to have_link('Dashboard', href: hotel_dashboard_path(hotel))
     within("#hotel-sidebar .panel-sidebar__header") do
-      hotel_home_link = find_link(hotel.name, href: hotel_dashboard_path(hotel))
-      expect(hotel_home_link["aria-label"]).to eq("Hotel: #{hotel.name}")
+      portal_link = find_link("Hotel Portal", href: hotel_dashboard_path(hotel))
+      expect(portal_link["aria-label"]).to eq("Hotel Portal")
+      # The icon is the only thing left identifying the portal once the rail
+      # collapses and the label is hidden.
+      expect(portal_link).to have_css("svg.panel-sidebar__icon")
     end
     expect(page).to have_css('button.panel-sidebar__group-trigger', text: 'Front Office', visible: :all)
     expect(page).to have_link('Reservations', href: hotel_front_desk_path(hotel), visible: :all)
@@ -51,6 +54,16 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_link('Night Audit History', href: hotel_reports_night_audits_path(hotel), visible: :all)
     expect(page).to have_css('#toast-viewport[data-controller="toast"]')
     expect(page).to have_css("header.panel-navbar[data-sticky='true']")
+    expect(page).to have_css(".panel-navbar__center [data-controller='panels-ui--command-palette']")
+    within(".panel-navbar__brand") do
+      identity = find_link(hotel.name, href: hotel_dashboard_path(hotel))
+      expect(identity).to have_css(".panel-navbar__identity-meta", text: "##{hotel.id}")
+    end
+    expect(page).to have_css("#hotel-profile a[href='#{help_center_path}']", text: "Help")
+    expect(page).to have_css(".panel-navbar__actions button[aria-label='Announcements'][aria-expanded='false']")
+    expect(page).to have_css("#announcements-panel", text: "There are no announcements right now.", visible: :all)
+    expect(page).to have_css(".panel-navbar__actions button[aria-label='Notifications'][aria-expanded='false']")
+    expect(page).to have_css("#notifications-panel", text: "You have no notifications right now.", visible: :all)
     expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
     expect(page).to have_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']")
     expect(page).to have_no_css("nav[aria-label='Mobile navigation']", visible: :all)
@@ -65,6 +78,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     visit hotel_dashboard_path(hotel)
 
     expect(page).to have_css("header.panel-navbar")
+    expect(page).to have_no_css(".panel-navbar__center", visible: :all)
     expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
     expect(page).to have_no_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']", visible: :all)

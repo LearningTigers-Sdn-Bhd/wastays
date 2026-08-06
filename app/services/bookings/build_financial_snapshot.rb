@@ -66,7 +66,7 @@ module Bookings
       all_eligible_rates = @room_type.room_rates.includes(:rate_plan).where(date: stay_dates, currency: currency)
       rates_by_plan_and_date = all_eligible_rates.group_by(&:rate_plan_id)
 
-      plans_to_try = [ @rate_plan, @room_type.rate_plans.first, nil ].uniq
+      plans_to_try = [ @rate_plan, @room_type.standard_rate_plan, nil ].uniq
       plan_ids_to_try = plans_to_try.map { |p| p.respond_to?(:id) ? p.id : p }
 
       snapshot = stay_dates.index_with do |date|

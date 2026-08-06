@@ -19,7 +19,8 @@ module PanelsUI
     VARIANTS = %i[default card].freeze
     AUTO_ERROR = Object.new.freeze
 
-    def initialize(form: nil, attribute: nil, name: nil, label:, description: nil, error: AUTO_ERROR,
+    def initialize(form: nil, attribute: nil, name: nil, label:, label_hidden: false, description: nil,
+                   error: AUTO_ERROR,
                    id: nil, value: "1", checked: nil, unchecked_value: "0", required: false,
                    required_marker: true,
                    disabled: false, size: :md, variant: :default, class: nil, **attributes)
@@ -30,6 +31,7 @@ module PanelsUI
       @attribute = attribute
       @name = name
       @label = label
+      @label_hidden = label_hidden
       @description = description
       @error = error
       @id = id
@@ -112,14 +114,23 @@ module PanelsUI
       {
         for: control_id,
         class: css_prefix,
-        data: { size: @size, variant: @variant, invalid: invalid?.to_s, disabled: @disabled.to_s }
+        data: {
+          size: @size,
+          variant: @variant,
+          invalid: invalid?.to_s,
+          disabled: @disabled.to_s,
+          label_hidden: @label_hidden.to_s
+        }
       }
     end
 
+    # A hidden label still names the control — it is read, not shown. Descriptions
+    # and errors stay visible, so a grid of unlabelled controls can still report a
+    # problem where the operator will see it.
     def label_content
       tag.span(class: "#{css_prefix}__content") do
         safe_join([
-          tag.span(class: "#{css_prefix}__label") do
+          tag.span(class: tw_merge("#{css_prefix}__label", ("sr-only" if @label_hidden))) do
             safe_join([ @label, (required_content if @required && @required_marker) ].compact)
           end,
           (tag.span(@description, id: description_id, class: "#{css_prefix}__description") if description?),

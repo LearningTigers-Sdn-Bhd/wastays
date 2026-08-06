@@ -21,9 +21,15 @@
       <%= helpers.cached_icon "search", class: "size-4 text-muted-foreground shrink-0" %>
       <span class="panel-command-palette__trigger-label"><%= placeholder %></span>
     </span>
+    <%# The modifier is an icon rather than the ⌘ character: no installed UI face
+        carries that glyph, so it renders from a substituted font and comes out
+        ragged. Off Apple the controller swaps the icon for the word "Ctrl" and
+        keeps the group's aria-label in step. %>
     <%= render PanelsUI::Kbd.new(
-          label: "⌘K",
+          keys: [ helpers.cached_icon("command", class: "size-3", aria: { hidden: "true" }), "K" ],
+          separator: "+",
           size: :sm,
+          aria: { label: "Command+K" },
           data: { panels_ui__command_palette_target: "shortcut" }
         ) %>
   </button>

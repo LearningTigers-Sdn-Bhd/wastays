@@ -74,6 +74,18 @@ RSpec.describe PanelsUI::FormField, type: :component do
     expect(page).to have_css("span.sr-only", text: "(required)", visible: :all)
   end
 
+  it "overrides the generated control id, and the ids derived from it, when given one" do
+    object = FormFieldObject.new
+    object.errors.add(:email, "is already in use")
+
+    render_field(object: object, id: "row-7-email", label: "Email") { |field| field.with_input }
+
+    expect(page).to have_css("label.panel-form-field__label[for='row-7-email']", text: "Email")
+    expect(page).to have_css("input#row-7-email[aria-describedby='row-7-email-error']")
+    expect(page).to have_css("#row-7-email-error.panel-form-field__error", text: "is already in use")
+    expect(page).to have_no_css("#profile_email")
+  end
+
   it "propagates the selected size through every typed control" do
     controls = {
       input: ".panel-input[data-size='sm']",

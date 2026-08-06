@@ -39,9 +39,10 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
     within("#hotel-settings-sidebar") do
       within(".panel-sidebar__header") do
-        expect(find_hotel_home_link["aria-label"]).to eq("Hotel: #{hotel.name}")
+        expect(find_hotel_home_link["aria-label"]).to eq("Hotel Portal")
       end
-      expect(page).to have_no_css(".panel-sidebar__footer")
+      # The footer is the system mark now, never navigation.
+      expect(page).to have_css(".panel-sidebar__footer .panel-sidebar__mark")
       expect(page).to have_link("General", href: hotel_general_settings_path(hotel))
       expect(page).to have_no_link("Dashboard", href: hotel_dashboard_path(hotel))
       expect(page).to have_no_link("Settings")
@@ -220,6 +221,6 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
   end
 
   def find_hotel_home_link(visible: :visible)
-    find_link(hotel.name, href: hotel_dashboard_path(hotel), visible: visible)
+    find_link("Hotel Portal", href: hotel_dashboard_path(hotel), visible: visible)
   end
 end
