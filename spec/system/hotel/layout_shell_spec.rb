@@ -60,6 +60,8 @@ RSpec.describe 'Hotel layout shell', type: :system do
       expect(identity).to have_css(".panel-navbar__identity-meta", text: "##{hotel.id}")
     end
     expect(page).to have_css("#hotel-profile a[href='#{help_center_path}']", text: "Help")
+    expect(page).to have_css(".panel-navbar__actions button[aria-label='Notifications'][aria-expanded='false']")
+    expect(page).to have_css("#notifications-panel", text: "You have no notifications right now.", visible: :all)
     expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
     expect(page).to have_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']")
     expect(page).to have_no_css("nav[aria-label='Mobile navigation']", visible: :all)

@@ -64,6 +64,12 @@
     color: var(--sidebar-muted-foreground);
   }
 
+  /* Icon-only actions stay put at every width — unlike the labelled ones, they
+     cost nothing on a narrow bar. */
+  .panel-navbar__action--icon {
+    @apply flex size-8 shrink-0 justify-center px-0;
+  }
+
   .panel-navbar__action:hover {
     background: var(--sidebar-accent);
     color: var(--sidebar-accent-foreground);

@@ -37,6 +37,11 @@
             <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages...") %>
           <% end %>
         <% end %>
+        <% unless locked_hotel_portal_shell? %>
+          <% navbar.with_actions do %>
+            <%= render "shared/navigation/notification_bell" %>
+          <% end %>
+        <% end %>
         <% navbar.with_profile do %>
           <%= render PanelsUI::ProfileMenu.new(
                 id: "hotel-profile",

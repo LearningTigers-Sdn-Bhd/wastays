@@ -35,6 +35,7 @@
             <%= cached_icon "external-link", class: "size-3.5" %>
             Website
           </a>
+          <%= render "shared/navigation/notification_bell" %>
         <% end %>
         <% navbar.with_profile do %>
           <%= render PanelsUI::ProfileMenu.new(
