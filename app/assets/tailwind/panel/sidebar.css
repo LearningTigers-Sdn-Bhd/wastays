@@ -32,8 +32,36 @@
   }
 
   .panel-sidebar__footer {
-    @apply shrink-0 border-t p-2 space-y-0.5;
+    @apply shrink-0 flex flex-col items-center gap-1.5 border-t p-3;
     border-color: var(--sidebar-border);
+  }
+
+  .panel-sidebar__mark {
+    @apply flex items-center justify-center rounded-md p-1;
+  }
+
+  /* Only superadmins can act on the mark, so only they get the affordance. */
+  .panel-sidebar__mark--interactive {
+    @apply cursor-pointer transition-colors;
+  }
+
+  .panel-sidebar__mark--interactive:hover {
+    background: var(--sidebar-accent);
+  }
+
+  .panel-sidebar__mark--interactive:focus-visible {
+    outline: 2px solid var(--sidebar-ring);
+    outline-offset: 2px;
+  }
+
+  .panel-sidebar__legal {
+    @apply flex items-center gap-1.5 text-[11px];
+    color: var(--sidebar-muted-foreground);
+  }
+
+  .panel-sidebar__legal a:hover {
+    color: var(--sidebar-foreground);
+    text-decoration: underline;
   }
 
   /* ── Nav ── */

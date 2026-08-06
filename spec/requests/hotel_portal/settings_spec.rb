@@ -241,9 +241,20 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       get hotel_general_settings_path(hotel)
 
       footer_link = response.parsed_body.at_css("#hotel-settings-sidebar .panel-sidebar__footer a[href='#{admin_dashboard_path}']")
-      expect(footer_link.text.squish).to eq("Go to Admin Portal")
-      expect(footer_link["target"]).to eq("_blank")
-      expect(footer_link["rel"]).to eq("noopener noreferrer")
+      expect(footer_link["aria-label"]).to eq("Go to Admin Portal")
+      expect(footer_link["class"]).to include("panel-sidebar__mark--interactive")
+    end
+
+    it "leaves the footer mark inert for everyone else" do
+      hotel.update!(status: "approved")
+
+      get hotel_general_settings_path(hotel)
+
+      footer = response.parsed_body.at_css("#hotel-settings-sidebar .panel-sidebar__footer")
+      expect(footer.at_css("a[href='#{admin_dashboard_path}']")).to be_nil
+      expect(footer.at_css(".panel-sidebar__mark").name).to eq("div")
+      expect(footer.at_css("a[href='#{terms_and_conditions_path}']")).to be_present
+      expect(footer.at_css("a[href='#{privacy_policy_path}']")).to be_present
     end
 
     it "does not expose resource-owned pages as settings panels" do

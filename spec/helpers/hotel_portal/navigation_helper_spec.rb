@@ -4,27 +4,6 @@ require "rails_helper"
 
 RSpec.describe HotelPortal::NavigationHelper, type: :helper do
   let(:hotel) { instance_double(Hotel, name: "Descendant Inn") }
-  let(:user) { instance_double(User, superadmin?: false) }
-
-  describe "#hotel_sidebar_footer_items" do
-    before do
-      current_user = user
-      helper.define_singleton_method(:current_user) { current_user }
-    end
-
-    it "has no footer items for regular hotel users" do
-      expect(helper.hotel_sidebar_footer_items).to eq([])
-    end
-
-    it "adds the external admin portal destination for superadmins" do
-      allow(user).to receive(:superadmin?).and_return(true)
-
-      items = helper.hotel_sidebar_footer_items
-
-      expect(items.map(&:label)).to eq([ "Go to Admin Portal" ])
-      expect(items.last).to be_external
-    end
-  end
 
   it "builds breadcrumbs for a two-level active navigation group" do
     leaf = described_class::NavItem.new(label: "Summary", path: "/reports", active: true)

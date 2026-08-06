@@ -8,7 +8,6 @@ module PanelsUI
   #
   #   <%= render PanelsUI::Sidebar.new(key: "hotel", home_path: hotel_dashboard_path(hotel),
   #                                    sections: hotel_sidebar_sections,
-  #                                    footer_items: hotel_sidebar_footer_items,
   #                                    searchable: true, permanent: true) do |s| %>
   #     <% s.with_header do %> … brand / context … <% end %>
   #   <% end %>
@@ -23,7 +22,7 @@ module PanelsUI
   class Sidebar < PanelsUI::BaseComponent
     renders_one :header
 
-    def initialize(key:, home_path:, sections: [], footer_items: [],
+    def initialize(key:, home_path:, sections: [],
                    collapsible: true, searchable: false, permanent: false,
                    search_placeholder: "Search navigation",
                    empty_message: "No navigation matches that search.",
@@ -31,7 +30,6 @@ module PanelsUI
       @key = key
       @home_path = home_path
       @sections = Array(sections)
-      @footer_items = Array(footer_items)
       @collapsible = collapsible
       @searchable = searchable
       @permanent = permanent
@@ -42,7 +40,7 @@ module PanelsUI
       @class = binding.local_variable_get(:class)
     end
 
-    attr_reader :key, :home_path, :sections, :footer_items,
+    attr_reader :key, :home_path, :sections,
                 :search_placeholder, :empty_message, :brand_name, :brand_initial
 
     def searchable? = @searchable

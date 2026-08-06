@@ -41,7 +41,8 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       within(".panel-sidebar__header") do
         expect(find_hotel_home_link["aria-label"]).to eq("Hotel Portal")
       end
-      expect(page).to have_no_css(".panel-sidebar__footer")
+      # The footer is the system mark now, never navigation.
+      expect(page).to have_css(".panel-sidebar__footer .panel-sidebar__mark")
       expect(page).to have_link("General", href: hotel_general_settings_path(hotel))
       expect(page).to have_no_link("Dashboard", href: hotel_dashboard_path(hotel))
       expect(page).to have_no_link("Settings")

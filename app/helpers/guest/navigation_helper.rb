@@ -34,11 +34,6 @@ module Guest::NavigationHelper
     ]
   end
 
-  def guest_sidebar_footer_items
-    @_guest_sidebar_footer_items ||= [
-      PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false)
-    ]
-  end
 
   def guest_breadcrumb_trail
     return @_guest_breadcrumb_trail if defined?(@_guest_breadcrumb_trail)
