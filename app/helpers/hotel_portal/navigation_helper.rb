@@ -52,23 +52,17 @@ module HotelPortal
       ]
       reservations_active = reservations_children.any?(&:active)
 
-      logs_children = [
-        NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Tracking History Security", icon: "file-text", active: controller_name == "audit_logs", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
-        NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs History Sent Alerts Logs", icon: "bell", active: controller_name == "notification_logs", permission: "view_audit_logs")
-      ]
-      logs_active = logs_children.any?(&:active)
-
       @_hotel_sidebar_sections = [
         NavSection.new(label: "", items: [
           NavItem.new(label: "Dashboard", path: hotel_dashboard_path(current_hotel), search_text: "Dashboard Home", active: controller_name == "dashboard", icon: "layout-dashboard", permission: "view_bookings"),
-          NavItem.new(label: "Front Office", path: hotel_front_desk_path(current_hotel), search_text: "Front Office Reservations Guest Operations", active: front_desk_active, icon: "monitor", children: front_desk_children),
-          NavItem.new(label: "Planning & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Planning Inventory Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
+          NavItem.new(label: "Front Office", search_text: "Front Office Reservations Guest Operations", active: front_desk_active, icon: "monitor", children: front_desk_children),
+          NavItem.new(label: "Planning & Inventory", search_text: "Planning Inventory Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
         ]),
         NavSection.new(label: "Billing", items: [
-          NavItem.new(label: "Cashiering", path: hotel_ar_invoices_path(current_hotel), search_text: "Cashiering Accounts Receivable Corporate AR Invoices Payments Billing", active: accounts_receivable_nav_active, icon: "file-text", children: accounts_receivable_nav_items, permission: [ "view_reports", "manage_corporate_accounts" ])
+          NavItem.new(label: "Cashiering", search_text: "Cashiering Accounts Receivable Corporate AR Invoices Payments Billing", active: accounts_receivable_nav_active, icon: "file-text", children: accounts_receivable_nav_items, permission: [ "view_reports", "manage_corporate_accounts" ])
         ]),
         NavSection.new(label: "Reports", items: [
-          NavItem.new(label: "Financial", path: hotel_reports_path(current_hotel), search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
+          NavItem.new(label: "Financial", search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
           NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: controller_name == "reports" && action_name == "tax_compliance", icon: "calculator", permission: "view_reports"),
           NavItem.new(label: "Guest Reports", path: guest_reports_hotel_reports_path(current_hotel), search_text: "Reports Guest Reports Arrivals Departures Checkout Registration Cards", active: controller_name == "reports" && action_name == "guest_reports", icon: "users", permission: "view_reports", plan_feature: "arrivals_departures_list"),
           NavItem.new(label: "Night Audit History", path: hotel_reports_night_audits_path(current_hotel), search_text: "Reports Night Audit History Business Date Close", active: controller_path == "hotel_portal/reports/night_audits", icon: "moon", permission: [ "view_reports", "manage_night_audit" ], plan_feature: "no_show_auto_handling"),
