@@ -1,0 +1,11 @@
+<% reset_path = local_assigns[:reset_path] || hotel_folios_path(current_hotel) %>
+<tr>
+  <td colspan="<%= colspan %>" class="px-6 py-12 text-center">
+    <%= cached_icon "book-open", class: "mx-auto size-6 text-muted-foreground" %>
+    <h3 class="mt-3 text-sm font-black text-foreground">No folios found</h3>
+    <p class="mx-auto mt-1 max-w-xs text-xs font-medium text-muted-foreground">Try adjusting your filters or search keywords to find the folio.</p>
+    <% if folio_index.filters_active? %>
+      <%= link_to "Reset Filters", reset_path, class: "mt-4 inline-flex items-center rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-black text-foreground shadow-sm transition hover:bg-muted", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </td>
+</tr>

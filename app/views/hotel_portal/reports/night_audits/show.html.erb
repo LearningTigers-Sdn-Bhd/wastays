@@ -1,0 +1,167 @@
+<div class="w-full space-y-5" data-slot="report-page" data-report="night-audit">
+  <%= render PanelsUI::PageHeader.new(title: @presenter.title, description: "Review the recorded outcome, financial totals, run results, and exceptions for this business date.") do |header| %>
+    <% header.with_caption do %>
+      <div class="flex flex-wrap items-center gap-2 text-sm font-medium text-muted-foreground">
+        <span><%= @presenter.caption %></span>
+        <%= render PanelsUI::Badge.new(label: @presenter.status_label, variant: @presenter.status_variant, size: :sm) %>
+      </div>
+    <% end %>
+    <% header.with_actions do %>
+      <% if @presenter.export_available? %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_reports_night_audit_path(current_hotel, @presenter.night_audit, format: :pdf),
+              target: "_blank",
+              rel: "noopener",
+              variant: :secondary,
+              size: :sm
+            ) do %>
+          <%= app_icon "file-text", class: "size-4", aria: { hidden: "true" } %>
+          <span>View audit packet</span>
+        <% end %>
+      <% end %>
+      <%= render PanelsUI::Button.new(
+            href: hotel_reports_night_audits_path(current_hotel),
+            variant: :ghost,
+            size: :sm
+          ) do %>
+        <%= app_icon "arrow-left", class: "size-4", aria: { hidden: "true" } %>
+        <span>Back to reports</span>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= render PanelsUI::Alert.new(tone: @presenter.alert[:tone], title: @presenter.alert[:title]) do |alert| %>
+    <% alert.with_description { @presenter.alert[:message] } %>
+  <% end %>
+
+  <%= render PanelsUI::Tabs.new(
+        id: "night-audit-report-tabs",
+        active: "results",
+        variant: :line,
+        aria_label: "Night audit report sections",
+        class: "space-y-5"
+      ) do |tabs| %>
+    <% tabs.with_tab(name: "results", label: "Results", icon: "list-checks", count: @presenter.result_rows.size + @presenter.issue_rows.size) %>
+    <% tabs.with_tab(name: "financial-summary", label: "Financial summary", icon: "chart-no-axes-combined") %>
+    <% tabs.with_tab(name: "adjustments", label: "Adjustments", icon: "history", count: @presenter.adjustment_rows.size) %>
+
+    <% tabs.with_panel(name: "results", class: "space-y-5") do %>
+      <%= render HotelPortal::Reports::MetricStrip.new(
+            aria_label: "Night audit operational snapshot",
+            metrics: @presenter.audit_metrics
+          ) %>
+
+      <section class="space-y-3" aria-labelledby="night-audit-details-heading">
+        <h2 id="night-audit-details-heading" class="text-base font-semibold text-foreground">Run details</h2>
+        <dl class="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+          <% @presenter.detail_rows.each do |row| %>
+            <div class="bg-card px-3 py-2.5">
+              <dt class="text-xs text-muted-foreground"><%= row.label %></dt>
+              <dd class="mt-1 text-sm font-medium text-foreground"><%= row.value %></dd>
+            </div>
+          <% end %>
+        </dl>
+      </section>
+
+      <section class="space-y-3" aria-labelledby="night-audit-run-results-heading">
+        <h2 id="night-audit-run-results-heading" class="text-base font-semibold text-foreground">Run results</h2>
+        <%= render PanelsUI::Table.new(
+              caption: "Night audit run results",
+              density: :compact,
+              header_style: :sentence,
+              wrapper_class: "rounded-lg border border-border bg-card"
+            ) do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Result</th>
+              <th scope="col">Reference</th>
+              <th scope="col">Details</th>
+              <th scope="col" class="text-right">Amount</th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% if @presenter.result_rows.any? %>
+              <% @presenter.result_rows.each do |row| %>
+                <tr>
+                  <td><%= render PanelsUI::Badge.new(label: row.result, variant: row.variant, size: :sm) %></td>
+                  <th scope="row" class="font-semibold text-foreground"><%= row.reference %></th>
+                  <td class="text-muted-foreground"><%= row.details %></td>
+                  <td class="whitespace-nowrap text-right tabular-nums"><%= row.amount %></td>
+                </tr>
+              <% end %>
+            <% else %>
+              <%= render "hotel_portal/reports/table_empty_state", colspan: 4, message: "No item-level run results were recorded." %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </section>
+
+      <%= render "hotel_portal/reports/night_audits/issues_table",
+            rows: @presenter.blocker_rows,
+            heading: "Blockers",
+            heading_id: "night-audit-blockers-heading",
+            caption: "Night audit blockers",
+            empty_message: "No hard blockers were recorded." %>
+
+      <%= render "hotel_portal/reports/night_audits/issues_table",
+            rows: @presenter.warning_rows,
+            heading: "Warnings",
+            heading_id: "night-audit-warnings-heading",
+            caption: "Night audit warnings",
+            empty_message: "No warnings were recorded." %>
+    <% end %>
+
+    <% tabs.with_panel(name: "financial-summary", class: "space-y-3") do %>
+      <h2 class="text-base font-semibold text-foreground">Financial summary</h2>
+      <% if @presenter.financial_metrics.any? %>
+        <%= render HotelPortal::Reports::MetricStrip.new(
+              aria_label: "Night audit financial summary",
+              metrics: @presenter.financial_metrics
+            ) %>
+      <% else %>
+        <%= render PanelsUI::Alert.new(tone: :default, title: "Financial summary unavailable") do |alert| %>
+          <% alert.with_description { "No financial summary was recorded for this audit run." } %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% tabs.with_panel(name: "adjustments", class: "space-y-3") do %>
+      <h2 class="text-base font-semibold text-foreground">Adjustments</h2>
+      <%= render PanelsUI::Table.new(
+            caption: "Manual adjustments recorded for the audited business date",
+            density: :compact,
+            header_style: :sentence,
+            wrapper_class: "rounded-lg border border-border bg-card"
+          ) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Guest</th>
+            <th scope="col">Reference</th>
+            <th scope="col">Category</th>
+            <th scope="col">Performed by</th>
+            <th scope="col">Reason</th>
+            <th scope="col" class="text-right">Amount</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% if @presenter.adjustment_rows.any? %>
+            <% @presenter.adjustment_rows.each do |row| %>
+              <tr>
+                <td class="whitespace-nowrap text-muted-foreground"><%= row.time %></td>
+                <th scope="row" class="font-semibold text-foreground"><%= row.guest %></th>
+                <td class="text-muted-foreground"><%= row.reference %></td>
+                <td><%= render PanelsUI::Badge.new(label: row.category, variant: :neutral, size: :sm) %></td>
+                <td class="text-muted-foreground"><%= row.performed_by %></td>
+                <td class="text-muted-foreground"><%= row.reason %></td>
+                <td class="whitespace-nowrap text-right tabular-nums"><%= row.amount %></td>
+              </tr>
+            <% end %>
+          <% else %>
+            <%= render "hotel_portal/reports/table_empty_state", colspan: 7, message: "No adjustments were recorded for this audited business date." %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

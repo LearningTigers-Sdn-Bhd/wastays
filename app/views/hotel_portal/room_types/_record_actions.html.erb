@@ -1,0 +1,29 @@
+<%= render PanelsUI::DropdownMenu.new(
+      id: "#{id_prefix}-room-type-#{room_type.id}-actions",
+      placement: :bottom_end,
+      class: "w-48") do |menu| %>
+  <% menu.with_trigger(
+       variant: :ghost,
+       size: :icon_sm,
+       aria_label: "Actions for #{room_type.name}") do %>
+    <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+  <% end %>
+  <% menu.with_item(
+       href: edit_hotel_room_type_path(current_hotel, room_type),
+       data: { turbo_frame: "settings_action_sheet" }) do %>
+    <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
+    <span>Edit details</span>
+  <% end %>
+  <% menu.with_item(
+       href: hotel_room_type_path(current_hotel, room_type),
+       method: :delete,
+       variant: :danger,
+       data: {
+         turbo_confirm: "Are you sure you want to delete this room category?",
+         turbo_confirm_tone: "destructive",
+         turbo_frame: "_top"
+       }) do %>
+    <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+    <span>Delete category</span>
+  <% end %>
+<% end %>

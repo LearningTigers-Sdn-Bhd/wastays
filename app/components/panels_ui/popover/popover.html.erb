@@ -1,0 +1,13 @@
+<%= tag.span(**root_attributes) do %>
+  <%= trigger %>
+
+  <div id="<%= panel_id %>"
+       <%= tag.attributes(role: @role) if @role %>
+       <%= tag.attributes(aria: { labelledby: trigger_id }) if @role %>
+       popover="manual"
+       tabindex="-1"
+       data-state="closed"
+       aria-modal="<%= focus? %>"
+       class="<%= tw_merge("popover", @class) %>"
+       data-panels-ui--popover-target="panel"><%= content %><% if arrow? %><span class="floating-arrow" aria-hidden="true" data-panels-ui--popover-target="arrow"></span><% end %></div>
+<% end %>

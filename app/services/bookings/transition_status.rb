@@ -4,21 +4,42 @@ require "ostruct"
 
 module Bookings
   class TransitionStatus
-    def initialize(booking:, status:, timestamp: nil, user: nil)
+    def initialize(booking:, status:, timestamp: nil, user: nil, options: {})
       @booking = booking
       @status = status.to_s
       @timestamp = timestamp || Time.current
       @user = user
+      @options = options
     end
 
     def call
+      NightAudits::OperationalChangeGuard.call!(
+        hotel: @booking.hotel,
+        action: "transition_status:#{@status}",
+        night_audit: @options[:night_audit]
+      )
+
       case @status
       when "checked_in"
-        check_in
+        if @booking.status == "due_out_detected"
+          simple_transition("checked_in", @options[:event] || "resolve_late_checkout")
+        else
+          check_in
+        end
+      when "confirmed"
+        if @booking.status == "checked_in"
+          undo_check_in
+        else
+          failure("Unsupported status transition to confirmed from #{@booking.status}")
+        end
       when "completed"
         check_out
       when "cancelled"
         cancel
+      when "due_out_detected"
+        simple_transition("due_out_detected", @options[:event] || "detect_due_out")
+      when "checkout_required"
+        simple_transition("checkout_required", @options[:event] || "reject_late_checkout")
       else
         failure("Unsupported status transition: #{@status}")
       end
@@ -28,41 +49,417 @@ module Bookings
 
     private
 
+    def simple_transition(new_status, event)
+      Booking.transaction do
+        @booking.with_lock do
+          @booking.reload
+          @booking.transition_status_to!(new_status, event: event, attributes: @options[:attributes] || {})
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "status_change",
+            source: @options[:source],
+            old_value: { "status" => @booking.status_before_last_save },
+            new_value: { "status" => new_status },
+            reason: @options[:reason],
+            metadata: { from: @booking.status_before_last_save, to: new_status, event: event }.merge(@options[:metadata] || {})
+          )
+        end
+      end
+      success
+    rescue ActiveRecord::RecordInvalid => e
+      failure(e.record.errors.full_messages.to_sentence)
+    end
+
     def check_in
-      if @booking.update(status: "checked_in", checked_in_at: @timestamp)
+      business_date = @booking.check_in.to_date
+      is_retroactive = @booking.hotel.date_closed?(business_date, @timestamp)
+      transitioned = false
+      error = nil
+
+      Booking.transaction do
+        @booking.with_lock do
+          @booking.reload
+
+          if @booking.checked_in?
+            repair_options = @booking.booking_folio.present? ? @options : @options.reverse_merge(override_night_audit: true)
+            Folios::Lifecycle::InitializeForBooking.call(booking: @booking, user: @user, options: repair_options, lock: false)
+
+            updates = (@options[:attributes] || {}).dup
+            if @options[:reason].present? && @timestamp.present?
+              updates[:checked_in_at] = @timestamp
+            end
+
+            if updates.present?
+              old_attributes = @booking.attributes.slice(*updates.keys.map(&:to_s))
+              @booking.update!(updates)
+              sync_room_number_to_snapshot
+
+              Bookings::RecordAuditLog.call!(
+                auditable: @booking,
+                user: @user,
+                action_type: "edit_check_in",
+                source: @options[:source],
+                old_value: old_attributes,
+                new_value: updates.stringify_keys,
+                reason: @options[:reason],
+                metadata: { room_number: @booking.booking_rooms.first&.room_number }
+              )
+            end
+            tourism_tax_result = record_tourism_tax_payment_if_requested
+            unless tourism_tax_result.success?
+              error = tourism_tax_result.error
+              raise ActiveRecord::Rollback
+            end
+            next
+          end
+
+          was_no_show_detected = @booking.status == "no_show_detected"
+          unless @booking.status.in?(%w[confirmed no_show_detected])
+            error = "Cannot check in booking with status #{@booking.status}"
+            next
+          end
+
+          if unassigned_booking_room?
+            error = "Assign a room number to every room before check-in."
+            next
+          end
+
+          if BookingRedesign.enabled? && !@booking.booking_guests.exists?(role: "primary")
+            error = "A primary guest is required before check-in."
+            next
+          end
+
+          if is_retroactive && !(@options[:override_night_audit] && @options[:reason].present?)
+            error = "Reason required for backdated check-in on closed date #{business_date}."
+            next
+          end
+
+          guest_registration = if @booking.guest_registration_number.present?
+            year = @booking.guest_registration_year || DocumentIdentifiers::Issuer.sequence_year(hotel: @booking.hotel)
+            DocumentIdentifiers::Issuer::Allocation.new(
+              number: @booking.guest_registration_number,
+              year:,
+              reference: @booking.guest_registration_reference || DocumentIdentifiers::Issuer.format(
+                hotel: @booking.hotel,
+                type: :guest_registration,
+                year:,
+                number: @booking.guest_registration_number
+              )
+            )
+          else
+            DocumentIdentifiers::Issuer.issue!(hotel: @booking.hotel, type: :guest_registration)
+          end
+
+          attributes = (@options[:attributes] || {}).merge(
+            checked_in_at: @timestamp,
+            guest_registration_number: guest_registration.number,
+            guest_registration_year: guest_registration.year,
+            guest_registration_reference: guest_registration.reference
+          )
+
+          @booking.transition_status_to!(
+            "checked_in",
+            event: was_no_show_detected ? "backdated_check_in" : "check_in",
+            attributes: attributes
+          )
+
+          sync_room_number_to_snapshot
+          @booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
+            room_status = RoomStatus.find_by(
+              hotel: @booking.hotel,
+              room_type: booking_room.room_type,
+              room_number: booking_room.room_number
+            )
+            room_status&.update!(dnd: false, dnd_date: nil)
+          end
+
+          Folios::Lifecycle::InitializeForBooking.call(booking: @booking, user: @user, options: @options, lock: false)
+
+          tourism_tax_result = record_tourism_tax_payment_if_requested
+          unless tourism_tax_result.success?
+            error = tourism_tax_result.error
+            raise ActiveRecord::Rollback
+          end
+
+          deposit_result = record_security_deposit_if_requested
+          unless deposit_result.success?
+            error = deposit_result.error
+            raise ActiveRecord::Rollback
+          end
+          @security_deposit = deposit_result.deposit
+
+          if @security_deposit.present?
+            @booking.update!(deposit_status: "held")
+          end
+
+          if is_retroactive || was_no_show_detected
+            Folios::Charges::ProcessCatchUpCharges.call(
+              booking: @booking,
+              user: @user,
+              is_reinstate: false,
+              reason: @options[:reason]
+            )
+          end
+
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "check_in",
+            source: @options[:source],
+            old_value: { "status" => was_no_show_detected ? "no_show_detected" : "confirmed" },
+            new_value: { "status" => "checked_in", "checked_in_at" => @booking.checked_in_at },
+            reason: @options[:reason],
+            metadata: check_in_audit_metadata(is_retroactive).merge("room_number" => @booking.booking_rooms.first&.room_number)
+          )
+          transitioned = true
+        end
+      end
+
+      return failure(error) if error.present?
+      return success unless transitioned
+
+      unless @options[:defer_side_effects]
         Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
-        success
-      else
-        failure(@booking.errors.full_messages.to_sentence)
+        Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
+      end
+      success
+    rescue ActiveRecord::RecordInvalid => e
+      failure(e.record.errors.full_messages.to_sentence)
+    end
+
+    def record_security_deposit_if_requested
+      deposit_options = @options[:security_deposit]
+      return OpenStruct.new(success?: true) if deposit_options.blank?
+
+      Deposits::Record.call(
+        owner: @booking,
+        kind: "security",
+        actor: @user,
+        amount: deposit_options[:amount],
+        currency: @booking.currency || @booking.hotel.default_currency || "MYR",
+        payment_method: deposit_options[:payment_method] || "cash",
+        hotel_payment_method_id: deposit_options[:hotel_payment_method_id],
+        external_reference: deposit_options[:external_reference]
+      )
+    end
+
+    def unassigned_booking_room?
+      nested = @options.dig(:attributes, :booking_rooms_attributes) ||
+        @options.dig(:attributes, "booking_rooms_attributes")
+      submitted_rooms = nested.respond_to?(:each_value) ? nested.each_value.to_a : Array(nested)
+
+      @booking.booking_rooms.any? do |booking_room|
+        submitted = submitted_rooms.find { |room| (room[:id] || room["id"]).to_s == booking_room.id.to_s }
+        room_number = if submitted && (submitted.key?(:room_number) || submitted.key?("room_number"))
+          submitted[:room_number] || submitted["room_number"]
+        else
+          booking_room.room_number
+        end
+        room_number.blank?
       end
     end
 
+    def record_tourism_tax_payment_if_requested
+      return OpenStruct.new(success?: true) unless @booking.tourism_tax_collected?
+
+      Folios::Payments::RecordTourismTaxPayment.call(
+        booking: @booking,
+        user: @user,
+        options: @options.except(:attributes, :security_deposit)
+      )
+    end
+
+    def check_in_audit_metadata(is_retroactive)
+      metadata = {}
+      if is_retroactive
+        metadata[:retroactive_checkin] = true
+        metadata[:retroactive_reason] = @options[:reason]
+        metadata[:backdate_reason_category] = @options[:backdate_reason_category]
+        metadata[:backdate_reason_details] = @options[:backdate_reason_details]
+      end
+      if @security_deposit.present?
+        metadata[:security_deposit_id] = @security_deposit.id
+        metadata[:security_deposit_amount] = @security_deposit.amount.to_d.to_s("F")
+      end
+      metadata
+    end
+
     def check_out
+      close_result = nil
+      error = nil
+
       Booking.transaction do
-        @booking.update!(status: "completed", checked_out_at: @timestamp)
-        mark_assigned_rooms_pending_cleaning
+        @booking.with_lock do
+          @booking.reload
+
+          unless @booking.checked_in? || @booking.status == "checkout_required"
+            error = "Cannot check out booking with status #{@booking.status}"
+            next
+          end
+
+          close_result = Folios::Checkout::CloseForCheckout.call(booking: @booking, user: @user, checked_out_at: @timestamp, options: @options)
+          unless close_result.success?
+            error = close_result.error
+            next
+          end
+
+          deposit_release_result = release_security_deposit_if_requested
+          unless deposit_release_result.success?
+            error = deposit_release_result.error
+            next
+          end
+          @security_deposit_release = deposit_release_result
+
+          @booking.transition_status_to!(
+            "completed",
+            event: "check_out",
+            attributes: (@options[:attributes] || {}).merge(checked_out_at: @timestamp)
+          )
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "check_out",
+            source: @options[:source],
+            old_value: { "status" => @booking.status_before_last_save },
+            new_value: { "status" => "completed", "checked_out_at" => @booking.checked_out_at },
+            metadata: checkout_audit_metadata(close_result)
+          )
+          mark_assigned_rooms_dirty
+        end
+
+        raise ActiveRecord::Rollback if error.present?
       end
 
-      Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
+      return failure(error) if error.present?
+
+      unless @options[:defer_side_effects]
+        Bookings::WebhookTriggerService.new(@booking).trigger(:booking_completed)
+        Notifications::Dispatcher.new(event: :booking_completed, booking: @booking).call
+        Notifications::InvoiceDelivery.queue(
+          hotel: @booking.hotel,
+          bookings: [ @booking ],
+          anchor_booking: @booking,
+          source: "automatic_checkout"
+        )
+      end
 
       success
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
     end
 
-    def cancel
-      Booking.transaction do
-        if @booking.update(status: "cancelled")
-          InventoryManager.new(@booking).release
-          Bookings::WebhookTriggerService.new(@booking).trigger(:booking_cancelled)
-          success
-        else
-          failure(@booking.errors.full_messages.to_sentence)
+    def release_security_deposit_if_requested
+      release_options = @options[:security_deposit_release]
+      return Deposits::ReturnBatchResult.success(deposit_ids: [], total: 0.to_d) if release_options.blank?
+
+      deposits = @booking.deposits.kind_security.where(status: "held").lock.to_a
+      movements = []
+      error = nil
+      Deposit.transaction do
+        deposits.each do |deposit|
+          result = Deposits::Return.call(
+            deposit: deposit,
+            amount: deposit.available_amount,
+            actor: @user,
+            payment_method: release_options[:method],
+            external_reference: release_options[:reference],
+            operation_key: "checkout:#{@booking.id}:deposit:#{deposit.id}:release",
+            occurred_at: @timestamp
+          )
+          unless result.success?
+            error = result.error
+            raise ActiveRecord::Rollback
+          end
+          movements << result.movement
         end
       end
+      return Deposits::ReturnBatchResult.failure(error, deposit_ids: [], total: 0.to_d) if error
+
+      Deposits::ReturnBatchResult.success(
+        deposit_ids: deposits.map(&:id),
+        total: movements.sum { |movement| movement.amount.to_d },
+        method: release_options[:method].to_s.presence || "cash",
+        reference: release_options[:reference].to_s.strip.presence,
+        released_at: movements.map(&:occurred_at).max
+      )
     end
 
-    def mark_assigned_rooms_pending_cleaning
+    def checkout_audit_metadata(close_result)
+      metadata = {
+        folio_id: close_result.folio.id,
+        folio_number: close_result.folio.folio_number,
+        folio_status: close_result.folio.status,
+        outstanding_balance: close_result.balance.to_s
+      }
+
+      if @security_deposit_release&.deposit_ids&.any?
+        metadata[:security_deposit_release] = {
+          deposit_ids: @security_deposit_release.deposit_ids,
+          total: @security_deposit_release.total.to_d.to_s("F"),
+          method: @security_deposit_release.method,
+          reference: @security_deposit_release.reference,
+          released_at: @security_deposit_release.released_at.iso8601
+        }
+      end
+
+      metadata
+    end
+
+    def cancel
+      transitioned = false
+      error = nil
+
+      Booking.transaction do
+        @booking.with_lock do
+          @booking.reload
+
+          if @booking.status == "cancelled"
+            return success
+          end
+
+          unless cancellable_status?
+            error = "Cannot cancel booking with status #{@booking.status}"
+            next
+          end
+
+          previous_status = @booking.status
+          @booking.transition_status_to!("cancelled", event: "cancel", attributes: @options[:attributes] || {})
+          InventoryManager.new(@booking).release if release_inventory_on_cancel?(previous_status)
+          release_detected_no_show_rooms_to_ready if previous_status == "no_show_detected"
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "cancel",
+            source: @options[:source],
+            old_value: { "status" => previous_status },
+            new_value: { "status" => "cancelled" },
+            reason: @options[:reason]
+          )
+          transitioned = true
+        end
+      end
+
+      return failure(error) if error.present?
+
+      if transitioned
+        Bookings::WebhookTriggerService.new(@booking).trigger(:booking_cancelled)
+      end
+
+      success
+    rescue ActiveRecord::RecordInvalid => e
+      failure(e.record.errors.full_messages.to_sentence)
+    end
+
+    def cancellable_status?
+      @booking.status.in?(%w[pending confirmed no_show_detected overbooked])
+    end
+
+    def release_inventory_on_cancel?(previous_status)
+      previous_status.in?(%w[pending confirmed no_show_detected])
+    end
+
+    def mark_assigned_rooms_dirty
       @booking.booking_rooms.includes(:room_type).where.not(room_number: [ nil, "" ]).find_each do |booking_room|
         room_status = RoomStatus.find_or_create_by!(
           hotel: @booking.hotel,
@@ -70,16 +467,67 @@ module Bookings
           room_number: booking_room.room_number
         )
 
-        Rooms::SetStatus.new(
+        room_status.update!(dnd: false, dnd_date: nil, notes: nil)
+
+        result = Rooms::SetStatus.new(
           room_status: room_status,
-          status: "pending_cleaning",
+          status: "dirty",
           user: @user,
           booking: @booking,
-          event_type: "checkout_marked_pending_cleaning",
-          reason: "Guest checked out",
-          metadata: { "booking_id" => @booking.id }
+          event_type: "checkout_marked_dirty",
+          reason: "Checkout turnover",
+          metadata: { "booking_id" => @booking.id },
+          enforce_transition: false
         ).call
+        raise result.error unless result.success?
       end
+    end
+
+    def release_detected_no_show_rooms_to_ready
+      result = Bookings::ReleaseAssignedRooms.call(
+        booking: @booking,
+        user: @user,
+        event_type: "no_show_detection_cancelled",
+        reason: @options[:reason],
+        metadata: { "source" => "bookings_transition_status" }
+      )
+      raise result.error unless result.success?
+    end
+
+    def sync_room_number_to_snapshot
+      room_number = @booking.booking_rooms.first&.room_number
+      if room_number.present?
+        @booking.hotel_snapshot ||= {}
+        @booking.hotel_snapshot = @booking.hotel_snapshot.merge("room_number" => room_number)
+        @booking.update_columns(hotel_snapshot: @booking.hotel_snapshot) if @booking.persisted?
+      end
+    end
+
+    def undo_check_in
+      Booking.transaction do
+        @booking.with_lock do
+          @booking.reload
+          if @booking.status != "checked_in"
+            raise "Booking must be checked in to undo check-in."
+          end
+
+          @booking.transition_status_to!("confirmed", event: "undo_check_in", attributes: { checked_in_at: nil })
+
+          Bookings::RecordAuditLog.call!(
+            auditable: @booking,
+            user: @user,
+            action_type: "undo_check_in",
+            source: @options[:source],
+            old_value: { "status" => "checked_in" },
+            new_value: { "status" => "confirmed" },
+            reason: @options[:reason],
+            metadata: { from: "checked_in", to: "confirmed", event: "undo_check_in" }
+          )
+        end
+      end
+      success
+    rescue ActiveRecord::RecordInvalid => e
+      failure(e.record.errors.full_messages.to_sentence)
     end
 
     def success

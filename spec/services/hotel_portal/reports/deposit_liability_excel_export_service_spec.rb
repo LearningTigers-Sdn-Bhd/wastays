@@ -1,0 +1,44 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe HotelPortal::Reports::DepositLiabilityExcelExportService do
+  let(:report) do
+    double(
+      "DepositLiabilityReportResult",
+      as_of_date: Date.new(2026, 5, 20),
+      rows: [
+        {
+          guest_name: "John Doe",
+          confirmation_token: "ABC-123",
+          stay_dates: "20 May 2026 - 22 May 2026",
+          booking_status: "confirmed",
+          room_details: "Deluxe Room",
+          folio_number: "FOL-1",
+          booking_payment_amount: 300.0,
+          earned_amount: 100.0,
+          refund_amount: 0.0,
+          remaining_liability: 200.0,
+          latest_deposit_posting_date: Time.new(2026, 5, 10, 10, 0, 0)
+        }
+      ],
+      totals: {
+        booking_count: 1,
+        booking_payment_amount: 300.0,
+        earned_amount: 100.0,
+        refund_amount: 0.0,
+        remaining_liability: 200.0
+      }
+    )
+  end
+
+  let(:hotel) { instance_double(Hotel, name: "Sample Hotel", default_currency: "MYR") }
+  subject { described_class.new(hotel: hotel, report: report) }
+
+  describe "#generate" do
+    it "generates an XLSX workbook" do
+      content = subject.generate
+      expect(content).to start_with("PK")
+    end
+  end
+end

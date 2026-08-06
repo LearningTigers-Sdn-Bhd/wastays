@@ -10,6 +10,9 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 require 'rspec/rails'
 require 'capybara/cuprite'
 require 'webmock/rspec'
+require 'view_component/test_helpers'
+require 'view_component/system_test_helpers'
+require 'test_prof/recipes/rspec/let_it_be'
 WebMock.disable_net_connect!(allow_localhost: true)
 # Add additional requires below this line. Rails is not loaded until this point!
 
@@ -39,12 +42,28 @@ rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
 RSpec.configure do |config|
+  config.define_derived_metadata(file_path: %r{/spec/migrations/}) do |metadata|
+    metadata[:migration] = true
+  end
+
+  config.around(:each, :migration) do |example|
+    previous_verbose = ActiveRecord::Migration.verbose
+    ActiveRecord::Migration.verbose = false
+    example.run
+  ensure
+    ActiveRecord::Migration.verbose = previous_verbose
+  end
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
     Rails.root.join('spec/fixtures')
   ]
 
   config.include FactoryBot::Syntax::Methods
+  config.include ActiveSupport::Testing::TimeHelpers
+  config.include ViewComponent::TestHelpers, type: :component
+  config.include ViewComponent::SystemTestHelpers, type: :component
+  config.include Capybara::RSpecMatchers, type: :component
 
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, remove the following line or assign false
@@ -82,6 +101,20 @@ RSpec.configure do |config|
       skip "Skipping system test: Chrome executable not detected in supported Linux/macOS locations."
     end
   end
+
+  config.after(:each) do
+    travel_back
+  end
+
+  # cuprite clears cookies on session reset but not sessionStorage/localStorage,
+  # so stay-view persists scroll + focus state (keyed by a board query that
+  # repeats across examples) leaks into later examples. Clear web storage after
+  # each system example to keep them isolated.
+  config.after(:each, type: :system) do
+    page.execute_script("window.sessionStorage.clear(); window.localStorage.clear();")
+  rescue StandardError
+    # The page may be on about:blank or storage may be unavailable — nothing to clear.
+  end
 end
 
 def chrome_available?
@@ -91,12 +124,39 @@ def chrome_available?
   File.executable?("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 end
 
+def chrome_binary_path
+  return "google-chrome" if system("google-chrome --version > /dev/null 2>&1")
+  return "google-chrome-stable" if system("google-chrome-stable --version > /dev/null 2>&1")
+
+  mac_chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  return mac_chrome if File.executable?(mac_chrome)
+
+  nil
+end
+
+Capybara.default_max_wait_time = 10
+
 Capybara.register_driver :cuprite do |app|
+  browser_path = chrome_binary_path
+
   Capybara::Cuprite::Driver.new(
     app,
-    browser_options: { "no-sandbox" => nil, "disable-dev-shm-usage" => nil },
+    browser_path: browser_path,
+    browser_options: {
+      "no-sandbox" => nil,
+      "disable-dev-shm-usage" => nil,
+      "disable-gpu" => nil,
+      "disable-site-isolation-trials" => nil,
+      "disable-features" => "site-per-process"
+    },
     headless: true,
-    timeout: 10
+    timeout: 60,
+    process_timeout: 120,
+    pending_connection_errors: false,
+    url_blacklist: %w[
+      fonts.googleapis.com
+      fonts.gstatic.com
+    ]
   )
 end
 

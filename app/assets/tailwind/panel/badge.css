@@ -1,0 +1,131 @@
+@layer components {
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular) {
+    --panel-badge-background: var(--status-neutral-background);
+    --panel-badge-foreground: var(--status-neutral-foreground);
+    --panel-badge-border: var(--status-neutral-border);
+    --panel-badge-indicator: var(--status-neutral-indicator);
+
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border: 1px solid var(--panel-badge-border);
+    background: var(--panel-badge-background);
+    color: var(--panel-badge-foreground);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  .panel-badge { border-radius: 0.25rem; }
+  .panel-badge-rounded { border-radius: 9999px; }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-size="sm"] {
+    gap: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular):not([data-size]),
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-size="md"] { padding: 0.125rem 0.5rem; }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-size="lg"] {
+    gap: 0.5rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular) > svg { width: 0.875rem; height: 0.875rem; flex: none; }
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-size="sm"] > svg { width: 0.75rem; height: 0.75rem; }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-indicator="true"]::before {
+    width: 0.375rem;
+    height: 0.375rem;
+    flex: none;
+    border-radius: 9999px;
+    background: var(--panel-badge-indicator);
+    content: "";
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-size="lg"][data-indicator="true"]::before {
+    width: 0.4375rem;
+    height: 0.4375rem;
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-variant="primary"] {
+    --panel-badge-background: var(--status-primary-background);
+    --panel-badge-foreground: var(--status-primary-foreground);
+    --panel-badge-border: var(--status-primary-border);
+    --panel-badge-indicator: var(--status-primary-indicator);
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-variant="accent"] {
+    --panel-badge-background: var(--status-accent-background);
+    --panel-badge-foreground: var(--status-accent-foreground);
+    --panel-badge-border: var(--status-accent-border);
+    --panel-badge-indicator: var(--status-accent-indicator);
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-variant="info"] {
+    --panel-badge-background: var(--status-info-background);
+    --panel-badge-foreground: var(--status-info-foreground);
+    --panel-badge-border: var(--status-info-border);
+    --panel-badge-indicator: var(--status-info-indicator);
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-variant="success"] {
+    --panel-badge-background: var(--status-success-background);
+    --panel-badge-foreground: var(--status-success-foreground);
+    --panel-badge-border: var(--status-success-border);
+    --panel-badge-indicator: var(--status-success-indicator);
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-variant="warning"] {
+    --panel-badge-background: var(--status-warning-background);
+    --panel-badge-foreground: var(--status-warning-foreground);
+    --panel-badge-border: var(--status-warning-border);
+    --panel-badge-indicator: var(--status-warning-indicator);
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-variant="destructive"] {
+    --panel-badge-background: var(--status-destructive-background);
+    --panel-badge-foreground: var(--status-destructive-foreground);
+    --panel-badge-border: var(--status-destructive-border);
+    --panel-badge-indicator: var(--status-destructive-indicator);
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-variant="outline"] {
+    --panel-badge-background: transparent;
+    --panel-badge-foreground: var(--foreground);
+    --panel-badge-border: var(--border);
+    --panel-badge-indicator: var(--muted-foreground);
+  }
+
+  :is(.panel-badge, .panel-badge-rounded, .panel-badge-circular)[data-inverse="true"] {
+    --panel-badge-background: rgb(255 255 255 / 0.15);
+    --panel-badge-foreground: white;
+    --panel-badge-border: rgb(255 255 255 / 0.25);
+    --panel-badge-indicator: white;
+  }
+
+  /* Icon-only perfect circle. Fixed square sizing keeps it round and gives
+     interactive icon badges a valid pointer target (>= 24px). */
+  .panel-badge-circular {
+    gap: 0;
+    padding: 0;
+    border-radius: 9999px;
+    aspect-ratio: 1 / 1;
+  }
+
+  .panel-badge-circular[data-size="sm"] { width: 1.5rem; height: 1.5rem; padding: 0; }
+
+  .panel-badge-circular:not([data-size]),
+  .panel-badge-circular[data-size="md"] { width: 1.75rem; height: 1.75rem; padding: 0; }
+
+  .panel-badge-circular[data-size="lg"] { width: 2rem; height: 2rem; padding: 0; }
+}

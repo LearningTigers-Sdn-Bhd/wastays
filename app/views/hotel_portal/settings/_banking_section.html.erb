@@ -1,0 +1,70 @@
+<%= form_with model: @account,
+              url: hotel_banking_details_settings_path(@hotel),
+              method: :patch,
+              local: true,
+              class: "grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2" do |f| %>
+  <% if @account.errors.any? %>
+    <div class="lg:col-span-2">
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: pluralize(@account.errors.count, "error") + " prevented these settings from being saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @account.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= f.fields_for :banking_detail do |banking_fields| %>
+    <%= banking_fields.hidden_field :id if banking_fields.object.persisted? %>
+
+    <section aria-labelledby="banking-details-heading">
+      <div>
+        <h2 id="banking-details-heading" class="text-base font-semibold text-foreground">Banking Details</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Manage the receiving account used for payouts and settlements.</p>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <%= render PanelsUI::FormField.new(
+              form: banking_fields,
+              attribute: :account_holder_name,
+              label: "Account Holder Name",
+              required: true) do |field| %>
+          <% field.with_input(autocomplete: "organization") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: banking_fields,
+              attribute: :bank_name,
+              label: "Bank Name",
+              required: true) do |field| %>
+          <% field.with_combobox(
+               BankCatalog.options(current: banking_fields.object.bank_name),
+               prompt: "Search and select a bank",
+               selected: banking_fields.object.bank_name,
+               empty_text: "No banks found") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: banking_fields,
+              attribute: :account_number,
+              label: "Account Number",
+              hint: "Enter the number exactly as shown by the bank.",
+              required: true) do |field| %>
+          <% field.with_input(inputmode: "numeric", autocomplete: "off") %>
+        <% end %>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :md) do %>
+          Save Banking Details
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+<% end %>

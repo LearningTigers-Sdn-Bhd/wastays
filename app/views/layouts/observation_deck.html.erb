@@ -1,26 +1,25 @@
 <!DOCTYPE html>
-<html class="h-full bg-slate-50">
+<html class="h-full" data-observation-deck-theme="system">
   <head>
-    <title><%= content_for(:title) || "Observation Deck | Mission Control" %></title>
+    <title><%= content_for(:title) || "Observation Deck" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
-
+    <script nonce="<%= content_security_policy_nonce %>">
+      try {
+        const theme = localStorage.getItem("observation-deck-theme")
+        if (["system", "light", "dark"].includes(theme)) document.documentElement.dataset.observationDeckTheme = theme
+      } catch (_) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
-
-    <style>
-      body { font-family: 'Inter', sans-serif; }
-      .font-mono { font-family: 'JetBrains Mono', monospace; }
-    </style>
   </head>
-
-  <body class="h-full antialiased overflow-hidden">
+  <body class="h-full overflow-hidden">
     <%= yield %>
-    <%= render 'shared/turbo_confirm' %>
+    <%= render "shared/turbo_confirm" %>
   </body>
 </html>

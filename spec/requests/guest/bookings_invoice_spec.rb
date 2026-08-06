@@ -42,7 +42,6 @@ RSpec.describe "Guest::Bookings invoice", type: :request do
     create(:booking_room,
       booking: booking,
       room_type: room_type,
-      quantity: 1,
       subtotal: 300.0,
       room_type_snapshot: { "name" => "Standard Room" }
     )
@@ -53,6 +52,20 @@ RSpec.describe "Guest::Bookings invoice", type: :request do
     sign_in_guest!(guest)
   end
 
+  def create_closed_folio_with_charge!(target_booking)
+    folio = create(:booking_folio, booking: target_booking, hotel: target_booking.hotel, status: "closed", invoice_number: 123)
+    code = create(:transaction_code, hotel: target_booking.hotel, code: "RM-ACC", name: "Room / Accommodation", kind: "charge", category: "accommodation")
+    create(:folio_transaction,
+      booking_folio: folio,
+      transaction_code: code,
+      transaction_type: "charge",
+      category: "accommodation",
+      amount: 300,
+      description: "Room Charge - Standard Room")
+    create(:invoice, booking_folio: folio)
+    folio
+  end
+
   def sign_in_guest!(g)
     otp = g.generate_otp!
     post guest_login_path, params: { phone: g.phone, otp: otp }
@@ -61,11 +74,20 @@ RSpec.describe "Guest::Bookings invoice", type: :request do
 
   describe "GET /guest/bookings/:id/invoice" do
     it "returns a PDF for the guest's own booking" do
+      create_closed_folio_with_charge!(booking)
+
       get invoice_guest_booking_path(booking)
 
       expect(response).to have_http_status(:ok)
       expect(response.content_type).to eq("application/pdf")
       expect(response.headers["Content-Disposition"]).to include("attachment")
+    end
+
+    it "redirects when the booking has no closed folio" do
+      get invoice_guest_booking_path(booking)
+
+      expect(response).to redirect_to(guest_bookings_path)
+      expect(flash[:alert]).to eq("No finalized guest invoice is available for this booking.")
     end
 
     it "redirects when the booking belongs to another guest" do

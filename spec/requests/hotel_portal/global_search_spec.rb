@@ -21,7 +21,8 @@ RSpec.describe "Hotel portal global search", type: :request do
 
     expect(response).to have_http_status(:ok)
     archive_titles = JSON.parse(response.body).fetch("results").map { |row| row.fetch("title") }
-    expect(archive_titles).to include("Request Archive")
+    # The archive stopped being a page of its own and became a lane on the board.
+    expect(archive_titles).to include("Requests")
 
     get hotel_global_search_index_path(hotel), params: { q: "profile" }, headers: { "ACCEPT" => "application/json" }
 
@@ -39,12 +40,12 @@ RSpec.describe "Hotel portal global search", type: :request do
     expect(titles).to include("Help & Support")
   end
 
-  it "returns room status destination" do
-    get hotel_global_search_index_path(hotel), params: { q: "room readiness" }, headers: { "ACCEPT" => "application/json" }
+  it "returns stay view destination" do
+    get hotel_global_search_index_path(hotel), params: { q: "room status" }, headers: { "ACCEPT" => "application/json" }
 
     expect(response).to have_http_status(:ok)
     titles = JSON.parse(response.body).fetch("results").map { |row| row.fetch("title") }
 
-    expect(titles).to include("Room Status")
+    expect(titles).to include("Stay View")
   end
 end

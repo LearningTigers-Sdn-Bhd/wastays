@@ -1,0 +1,60 @@
+<div class="hidden overflow-x-auto rounded-md border border-border bg-card shadow-sm lg:block">
+  <table class="min-w-[1100px] w-full divide-y divide-border text-left">
+    <thead class="bg-muted/70">
+      <tr>
+        <th class="px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Guest / Booking</th>
+        <th class="px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Folio Reference</th>
+        <th class="px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Stay / Room</th>
+        <th class="px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Financials</th>
+        <th class="px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Status</th>
+        <th class="sticky right-0 z-10 border-l border-border/70 bg-muted/95 px-5 py-3 text-right text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground shadow-[-4px_0_6px_-1px_rgba(15,23,42,0.08)]">Action</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-border bg-card">
+      <% if folio_index.paginated_rows.any? %>
+        <% folio_index.paginated_rows.each do |row| %>
+          <tr class="group transition hover:bg-muted/80">
+            <td class="px-5 py-4">
+              <p class="text-sm font-black text-foreground"><%= row.booking.guest_name %></p>
+              <p class="mt-0.5 font-mono text-xs font-semibold text-muted-foreground"><%= row.booking.confirmation_token %></p>
+            </td>
+            <td class="px-5 py-4">
+              <p class="font-mono text-sm font-black text-foreground"><%= row.folio_reference %></p>
+              <p class="mt-0.5 text-xs font-semibold text-muted-foreground">Primary Folio</p>
+            </td>
+            <td class="px-5 py-4">
+              <p class="text-sm font-bold text-foreground"><%= row.stay_label.html_safe %></p>
+              <p class="mt-0.5 text-xs font-semibold text-muted-foreground"><%= row.room_label %></p>
+            </td>
+            <td class="px-5 py-4">
+              <p class="text-sm font-black tabular-nums text-foreground"><%= row.amount_label %></p>
+              <p class="mt-0.5 inline-flex items-center gap-1 text-xs font-bold <%= row.financial_status_class %>">
+                <%= cached_icon row.financial_icon, class: "size-3" %>
+                <%= row.financial_status %>
+              </p>
+            </td>
+            <td class="px-5 py-4">
+              <span class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider <%= row.folio_status_badge_class %>">
+                <%= cached_icon row.folio_status_icon, class: "size-3" %>
+                <%= row.folio.status.humanize %>
+              </span>
+              <div class="mt-1 flex flex-wrap gap-1">
+                <% row.status_badges.first(2).each do |badge| %>
+                  <span class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider <%= badge[:class] %>">
+                    <%= cached_icon badge[:icon], class: "size-3" %>
+                    <%= badge[:label] %>
+                  </span>
+                <% end %>
+              </div>
+            </td>
+            <td class="sticky right-0 z-10 border-l border-border bg-card px-5 py-4 text-right shadow-[-4px_0_6px_-1px_rgba(15,23,42,0.08)] group-hover:bg-muted">
+              <%= render "hotel_portal/folios/index/row_actions", row: row %>
+            </td>
+          </tr>
+        <% end %>
+      <% else %>
+        <%= render "hotel_portal/folios/index/empty_state", colspan: 6, folio_index: folio_index, reset_path: local_assigns[:reset_path] %>
+      <% end %>
+    </tbody>
+  </table>
+</div>

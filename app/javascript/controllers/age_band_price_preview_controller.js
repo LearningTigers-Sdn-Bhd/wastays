@@ -1,0 +1,67 @@
+import { Controller } from "@hotwired/stimulus"
+
+// Scoped to the whole Age Bands section (not per-row) so every row's preview
+// can react to a single "preview using this room type" selector. Rows are
+// found by data-role rather than named Stimulus targets so newly cloned
+// "+ Add Band" rows (plain innerHTML, no controller of their own) work
+// without any extra wiring.
+//
+// Both selects are PanelsUI::SelectMenu, which keeps a real <select> as its
+// source of truth and re-dispatches input/change from it — hence the reads
+// through a native <select> nested inside the styled wrapper.
+export default class extends Controller {
+  static targets = ["roomTypeField"]
+  static values = { currency: String, basePrices: Object }
+
+  connect() {
+    this.update()
+  }
+
+  update() {
+    const anchorPrice = this.currentAnchorPrice()
+
+    this.element.querySelectorAll('[data-role="age-band-row"]').forEach((row) => {
+      this.updateRow(row, anchorPrice)
+    })
+  }
+
+  currentAnchorPrice() {
+    if (!this.hasRoomTypeFieldTarget) return null
+
+    const select = this.roomTypeFieldTarget.querySelector("select")
+    if (!select) return null
+
+    const price = this.basePricesValue[select.value]
+    return typeof price === "number" ? price : null
+  }
+
+  updateRow(row, anchorPrice) {
+    const modeSelect = row.querySelector('[data-role="pricing-mode"] select')
+    const valueInput = row.querySelector('[data-role="price-value"]')
+    const preview = row.querySelector('[data-role="price-preview"]')
+    const unitHint = row.querySelector('[data-role="value-unit-hint"]')
+    if (!modeSelect || !valueInput || !preview) return
+
+    const isAmount = modeSelect.value === "amount"
+    if (unitHint) unitHint.textContent = isAmount ? this.currencyValue : "%"
+
+    const value = parseFloat(valueInput.value)
+    if (Number.isNaN(value)) {
+      preview.textContent = ""
+      return
+    }
+
+    if (isAmount) {
+      preview.textContent = `= ${this.currencyValue} ${value.toFixed(2)} per night (flat, regardless of room rate)`
+      return
+    }
+
+    if (anchorPrice === null) {
+      preview.textContent = `= ${value.toFixed(0)}% of the room's Standard Rate`
+      return
+    }
+
+    const amount = (anchorPrice * (value / 100)).toFixed(2)
+    preview.textContent = `= ${this.currencyValue} ${amount} (${value.toFixed(0)}% of ${this.currencyValue} ${anchorPrice.toFixed(2)}/night)`
+  }
+}

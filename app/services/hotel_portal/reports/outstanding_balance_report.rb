@@ -6,6 +6,14 @@ module HotelPortal
       Result = Struct.new(:start_date, :end_date, :rows, :totals, keyword_init: true)
 
       INCLUDED_STATUSES = %w[confirmed checked_in completed].freeze
+      BALANCE_SQL = <<~SQL.squish.freeze
+        COALESCE(SUM(CASE
+          WHEN folio_transactions.transaction_type = 'charge' THEN folio_transactions.amount
+          WHEN folio_transactions.transaction_type = 'payment' THEN -folio_transactions.amount
+          WHEN folio_transactions.transaction_type = 'adjustment' THEN folio_transactions.amount
+          ELSE 0
+        END), 0)
+      SQL
 
       def initialize(hotel:, start_date:, end_date:)
         @hotel = hotel
@@ -31,10 +39,13 @@ module HotelPortal
 
       def filtered_bookings
         @hotel.bookings
+              .joins(:booking_folio)
+              .left_joins(booking_folio: :folio_transactions)
               .where(status: INCLUDED_STATUSES)
-              .where.not(payment_status: "captured")
-              .where(check_in: @start_date..@end_date)
-              .includes(:booking_notes, booking_rooms: :room_type)
+              .checking_in_between(@start_date, @end_date, @hotel.hotel_time_zone)
+              .group("bookings.id")
+              .having("#{BALANCE_SQL} > 0")
+              .includes(:booking_notes, booking_folio: :folio_transactions, booking_rooms: :room_type)
               .order(:check_in, :created_at, :id)
       end
 
@@ -43,20 +54,26 @@ module HotelPortal
           booking_id: booking.id,
           guest_name: booking.guest_name,
           confirmation_token: booking.confirmation_token,
+          check_in: booking.check_in,
           payment_status: booking.payment_status.to_s.humanize,
           stay_dates: "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}",
           room_details: room_details(booking),
           room_numbers: room_numbers(booking),
-          outstanding_amount: booking.total_amount.to_d,
+          outstanding_amount: outstanding_amount_for(booking),
           latest_note: latest_note(booking)
         }
       end
 
+      def outstanding_amount_for(booking)
+        booking.booking_folio&.outstanding_balance.to_d
+      end
+
       def room_details(booking)
-        details = booking.booking_rooms.map do |room|
+        details = booking.booking_rooms.group_by do |room|
           snapshot_name = room.room_type_snapshot.is_a?(Hash) ? room.room_type_snapshot["name"].presence : nil
-          room_name = snapshot_name || room.room_type&.name || "Room"
-          "#{room.quantity}x #{room_name}"
+          snapshot_name || room.room_type&.name || "Room"
+        end.map do |room_name, rooms|
+          "#{rooms.size}x #{room_name}"
         end
 
         details.presence&.join(", ") || "No rooms assigned"

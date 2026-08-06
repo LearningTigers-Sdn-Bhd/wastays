@@ -14,7 +14,7 @@ class Api::V1::AiConcierge::InquiriesController < Api::V1::BaseController
     end
 
     hotel = hotel.class.includes(:property_policy, room_types: :room_rates).find(hotel.id)
-    result = AiConciergeV3::Orchestration::InquiryResponder.new(
+    result = AiConcierge::Orchestration::Core::InquiryResponder.new(
       hotel: hotel,
       message: inquiry_params[:message],
       phone: inquiry_params[:phone],
@@ -31,6 +31,7 @@ class Api::V1::AiConcierge::InquiriesController < Api::V1::BaseController
   private
 
   def inquiry_params
-    params.permit(:message, :phone, :prospect_public_id)
+    source = params[:inquiry].presence || params[:ai_concierge].presence || params
+    source.slice(:message, :phone, :prospect_public_id).permit(:message, :phone, :prospect_public_id)
   end
 end

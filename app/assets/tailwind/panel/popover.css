@@ -1,0 +1,51 @@
+@layer components {
+  .popover-root {
+    @apply relative inline-flex;
+  }
+
+  .popover {
+    inset: auto;
+    margin: 0;
+    max-width: min(22rem, calc(100vw - 1rem));
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    /* Same elevated card surface as dropdown-menu (proven AAA text contrast). Border +
+       shadow separate it from the page; the shared .floating-arrow continues the border. */
+    background: var(--card);
+    color: var(--card-foreground);
+    box-shadow: var(--shadow-lg);
+    /* Let the caret protrude. Scrollable bodies must wrap their own content, not the panel. */
+    overflow: visible;
+    z-index: var(--z-popover, var(--z-dropdown));
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.98);
+    transition: opacity var(--duration-fast) var(--ease-standard),
+                transform var(--duration-fast) var(--ease-standard);
+  }
+
+  .popover[data-state="open"] {
+    pointer-events: auto;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .popover:focus {
+    outline: none;
+  }
+
+  /* Calendar sheets size to their calendar grid instead of the generic popover cap. */
+  .popover.panel-date-picker__popover,
+  .popover.panel-date-time-picker__popover {
+    width: max-content;
+    max-width: calc(100vw - 1rem);
+    padding: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .popover {
+      transition: none;
+    }
+  }
+}

@@ -1,0 +1,78 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+require "pdf/reader"
+require "stringio"
+
+RSpec.describe Reports::AccountsReceivable::GenerateAgentSummary do
+  it "renders totals and per-account aging for travel_agent and airline accounts only" do
+    hotel = create(:hotel, name: "Hotel ABC Resort", default_currency: "MYR")
+    agent = create(
+      :hotel_corporate_account,
+      hotel: hotel,
+      account_type: "travel_agent",
+      credit_limit: 1_000,
+      credit_currency: "MYR",
+      corporate_account: create(:account, :corporate, name: "Sunset Travel Agency")
+    )
+    company = create(
+      :hotel_corporate_account,
+      hotel: hotel,
+      account_type: "company",
+      corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd")
+    )
+    as_of_date = Date.new(2026, 6, 25)
+
+    create_invoice(relationship: agent, amount: 150, due_on: as_of_date - 15.days)
+    create_invoice(relationship: company, amount: 999, due_on: as_of_date - 15.days)
+
+    report = ArInvoices::AgingReport.call(hotel: hotel, as_of_date: as_of_date, account_types: %w[travel_agent airline])
+
+    text = pdf_text(described_class.new(hotel: hotel, report: report).generate)
+
+    expect(text).to include("Agent Summary Statement")
+    expect(text).to include("Hotel ABC Resort")
+    expect(text).to include("As of 25 Jun 2026")
+    expect(text).to include("Currency")
+    expect(text).to include("Agent & Airline Accounts")
+    expect(text).to include("Sunset Travel Agency")
+    expect(text).not_to include("Acme Sdn Bhd")
+  end
+
+  it "renders an empty state when there are no outstanding balances" do
+    hotel = create(:hotel, name: "Hotel Empty", default_currency: "MYR")
+    report = ArInvoices::AgingReport.call(hotel: hotel, account_types: %w[travel_agent airline])
+
+    text = pdf_text(described_class.new(hotel: hotel, report: report).generate)
+
+    expect(text).to include("No outstanding balances for agent or airline accounts.")
+  end
+
+  def pdf_text(pdf)
+    PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
+  end
+
+  def create_invoice(relationship:, amount:, due_on:, currency: "MYR")
+    booking = create(:booking, hotel: relationship.hotel, currency: currency)
+    folio = create(
+      :booking_folio,
+      :secondary,
+      booking: booking,
+      hotel: relationship.hotel,
+      hotel_corporate_account: relationship,
+      currency: currency
+    )
+    create(
+      :ar_invoice,
+      hotel: relationship.hotel,
+      booking_folio: folio,
+      hotel_corporate_account: relationship,
+      amount: amount,
+      outstanding_amount: amount,
+      status: "open",
+      currency: currency,
+      issued_on: due_on - 30.days,
+      due_on: due_on
+    )
+  end
+end

@@ -5,6 +5,7 @@ Rails.application.configure do
 
   # Make code changes take effect immediately without server restart.
   config.enable_reloading = true
+  config.file_watcher = ActiveSupport::EventedFileUpdateChecker
 
   # Do not eager load code on boot.
   config.eager_load = false
@@ -35,7 +36,8 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
   config.action_mailer.delivery_method = :letter_opener_web
   config.action_mailer.perform_deliveries = true
-  config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
+  config.action_mailer.default_url_options = { host: "localhost", port: 3000, protocol: "http" }
+  Rails.application.routes.default_url_options = config.action_mailer.default_url_options
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
@@ -72,8 +74,18 @@ Rails.application.configure do
   config.active_record.encryption.deterministic_key = "H17mvYQYCWx1Np09Q79m9znsb8bNhIlH"
   config.active_record.encryption.key_derivation_salt = "H17mvYQYCWx1Np09Q79m9znsb8bNhIlH"
 
+  config.active_record.encryption.support_unencrypted_data = true
+
   config.hotwire_livereload.debounce_delay_ms = 300
 
   config.hosts << "wastays.jesseltonpixel.com"
   config.hosts << /.*\.wastays\.com/
+
+  # Enable Bullet N+1 query detection in development
+  config.after_initialize do
+    Bullet.enable = true
+    Bullet.bullet_logger = true
+    Bullet.rails_logger = true # Logs warnings to log/development.log
+    Bullet.console = true      # Outputs warnings directly to browser console
+  end
 end

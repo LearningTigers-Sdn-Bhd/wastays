@@ -1,0 +1,74 @@
+<% preview = local_assigns.fetch(:preview) %>
+<% booking = local_assigns.fetch(:booking) %>
+<% dialog_id = local_assigns.fetch(:dialog_id) %>
+<% return_to = local_assigns[:return_to] %>
+
+<div class="inline-flex">
+  <%= render PanelsUI::Tooltip.new(text: preview.tooltip, placement: :top) do %>
+    <% if preview.resendable? %>
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :button,
+            variant: :secondary,
+            size: :sm,
+            command: "show-modal",
+            commandfor: dialog_id,
+            aria: { haspopup: "dialog" }
+          ) do %>
+        <%= app_icon "send", class: "size-4", aria: { hidden: true } %>
+        <span>Resend</span>
+      <% end %>
+    <% else %>
+      <%= render PanelsUI::Button.new(label: "Resend", variant: :secondary, size: :sm, disabled: true) %>
+    <% end %>
+  <% end %>
+</div>
+
+<% if preview.resendable? %>
+  <%= form_with url: hotel_booking_action_group_print_send_resend_path(current_hotel, booking), method: :post do %>
+    <%= hidden_field_tag :return_to, return_to if return_to.present? %>
+    <%= render PanelsUI::Dialog.new(
+          id: dialog_id,
+          title: "Resend finalized invoices",
+          description: "Each payer receives one email with their official invoices in one combined PDF.",
+          size: :sm
+        ) do |dialog| %>
+      <% dialog.with_body do %>
+        <div class="space-y-3">
+          <% preview.groups.each do |group| %>
+            <div class="rounded-md border border-border px-3 py-2.5">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-foreground"><%= group.recipient.name %></p>
+                  <p class="truncate text-xs text-muted-foreground"><%= group.recipient.email.presence || "No saved email" %></p>
+                </div>
+                <%= render PanelsUI::Badge.new(
+                      label: pluralize(group.invoices.size, "invoice"),
+                      variant: group.recipient.email.present? ? :neutral : :warning,
+                      size: :sm
+                    ) %>
+              </div>
+              <% if group.recipient.email.blank? %>
+                <p class="mt-2 text-xs text-warning-foreground">Skipped until a saved email is added.</p>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+      <% dialog.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "panels-ui--dialog#close" }
+            ) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm) do %>
+          Confirm resend
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

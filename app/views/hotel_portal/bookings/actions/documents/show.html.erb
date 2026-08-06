@@ -1,0 +1,73 @@
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+           id: "quick-documents-sheet",
+           title: "Print/Send",
+           description: (@booking.group_booking_id? ? "#{@booking.group_booking.formatted_reservation_number} document shortcuts" : "#{@booking.confirmation_token} document shortcuts"),
+           size: :sm do %>
+  <div class="space-y-5">
+    <% if @booking.group_booking_id? %>
+      <p class="text-sm text-muted-foreground">Open the Documents tab to view invoices, ledgers, receipts, utility documents, and consolidated statements for the group.</p>
+    <% else %>
+      <% quick_rows = [
+           [ "Invoice", "file-text", @quick_documents[:invoice] ],
+           [ "Folio Ledger", "book-open", @quick_documents[:ledger] ],
+           [ "Receipt", "receipt", @quick_documents[:receipt] ],
+           [ "Registration Card", "clipboard-list", @quick_documents[:registration_card] ]
+         ] %>
+
+      <div class="divide-y divide-border rounded-md border border-border">
+        <% quick_rows.each do |label, icon, row| %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2.5">
+            <div class="flex min-w-0 items-center gap-2.5">
+              <%= app_icon icon, class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
+              <span class="truncate text-sm font-medium text-foreground"><%= label %></span>
+            </div>
+            <% if row&.available? %>
+              <%= render PanelsUI::Button.new(href: row.href, target: "_blank", data: { turbo: false }, variant: :secondary, size: :xs) do %>
+                Open
+              <% end %>
+            <% else %>
+              <%= render PanelsUI::Button.new(label: "Open", variant: :secondary, size: :xs, disabled: true) %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if @booking.tourism_tax? %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2.5">
+            <div class="flex min-w-0 items-center gap-2.5">
+              <%= app_icon "receipt", class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
+              <span class="truncate text-sm font-medium text-foreground">Tourism Tax Voucher</span>
+            </div>
+            <% if @booking.tourism_tax_voucher_number? %>
+              <%= render PanelsUI::Button.new(href: hotel_booking_tourism_tax_voucher_path(current_hotel, @booking), target: "_blank", data: { turbo: false }, variant: :secondary, size: :xs) do %>
+                Open
+              <% end %>
+            <% elsif current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+              <%= button_to "Open", issue_hotel_booking_tourism_tax_voucher_path(current_hotel, @booking), method: :post, form: { target: "_blank", data: { turbo: false } }, class: "inline-flex h-7 items-center rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted" %>
+            <% else %>
+              <%= render PanelsUI::Button.new(label: "Open", variant: :secondary, size: :xs, disabled: true) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+      <%= render PanelsUI::Button.new(
+            href: hotel_booking_workspace_path(current_hotel, @booking, tab: "documents"),
+            variant: :ghost,
+            size: :sm,
+            data: { turbo_frame: "_top" }
+          ) do %>
+        View all documents
+      <% end %>
+
+      <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+        <%= render "hotel_portal/bookings/shared/invoice_resend",
+                   preview: @invoice_delivery_preview,
+                   booking: @booking,
+                   dialog_id: "quick-documents-resend-dialog",
+                   return_to: hotel_booking_workspace_path(current_hotel, @booking, tab: "documents") %>
+      <% end %>
+    </div>
+  </div>
+<% end %>

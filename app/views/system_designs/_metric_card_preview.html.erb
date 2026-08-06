@@ -1,0 +1,60 @@
+<section aria-labelledby="metric-card-preview-heading" class="border-t border-border pt-8">
+  <h2 id="metric-card-preview-heading" class="text-lg font-semibold text-foreground">Metric card</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Compact operational summaries with one label, one tabular value, and one supporting line.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> compact metrics</h3>
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <%= render PanelsUI::MetricCard.new(
+                label: "Occupancy",
+                value: "82%",
+                detail: "41 of 50 rooms",
+                icon: "bed") %>
+          <%= render PanelsUI::MetricCard.new(
+                label: "Room revenue",
+                value: "MYR 18,420",
+                detail: "+6.4% vs yesterday",
+                detail_variant: :success,
+                icon: "chart-no-axes-combined") %>
+          <%= render PanelsUI::MetricCard.new(
+                label: "Needs attention",
+                value: "3",
+                detail: "2 payments · 1 room",
+                detail_variant: :warning,
+                icon: "triangle-alert") %>
+          <%= render PanelsUI::MetricCard.new(
+                label: "Failed payments",
+                value: "1",
+                detail: "Review before night audit",
+                detail_variant: :destructive,
+                icon: "circle-x") %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="mt-5 grid items-stretch gap-3 sm:grid-cols-3">
+    <%= render PanelsUI::MetricCard.new(
+          label: "In-house guests",
+          value: "68",
+          detail: "12 arriving today",
+          density: :loose,
+          icon: "users",
+          class: "h-full") %>
+    <%= render PanelsUI::MetricCard.new(
+          label: "Open folios",
+          value: "24",
+          detail: "View folio balances",
+          href: "#metric-card-preview-heading",
+          icon: "receipt-text",
+          class: "h-full") %>
+    <%= render PanelsUI::MetricCard.new(
+          label: "Room revenue",
+          loading: true,
+          class: "h-full") %>
+  </div>
+</section>

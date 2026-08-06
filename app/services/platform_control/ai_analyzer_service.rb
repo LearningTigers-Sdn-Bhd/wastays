@@ -1,76 +1,60 @@
-require "net/http"
+require "ruby_llm"
 require "json"
 
 module PlatformControl
   class AiAnalyzerService
-    GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-    OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+    PROVIDERS = {
+      "gemini" => { label: "Gemini", key: "gemini_api_key", model: "gemini-2.5-flash", ruby_llm_provider: :gemini },
+      "openai" => { label: "OpenAI", key: "openai_api_key", model: "gpt-4o-mini", ruby_llm_provider: :openai },
+      "deepseek" => { label: "DeepSeek", key: "deepseek_api_key", model: "deepseek-chat", ruby_llm_provider: :deepseek },
+      "claude" => { label: "Claude", key: "anthropic_api_key", model: "claude-haiku-4-5", ruby_llm_provider: :anthropic }
+    }.freeze
 
     def initialize(entry)
       @entry = entry
-      @provider = AppConfig.get("ai_provider") || "gemini"
-      @api_key = AppConfig.get("#{@provider}_api_key")
+      @provider = configured_provider
+      @provider_config = PROVIDERS[@provider]
     end
 
     def analyze
-      return { error: "#{@provider.titleize} API key not configured in AppConfig ('#{@provider}_api_key')" } if @api_key.blank?
+      return { error: "No AI provider API key configured in AppConfig" } if @provider_config.blank?
 
-      case @provider
-      when "openai"
-        analyze_openai
-      else
-        analyze_gemini
-      end
+      response = chat.ask(prompt)
+      render_content(response.content, @provider_config[:model])
+    rescue RubyLLM::Error => e
+      { error: "#{@provider_config[:label]} API request failed: #{e.message}" }
     rescue => e
       { error: "Analyzer error: #{e.message}" }
     end
 
     private
 
-    def analyze_gemini
-      uri = URI(GEMINI_API_URL)
-      uri.query = "key=#{@api_key}"
+    def configured_provider
+      selected_provider = AppConfig.get("observation_deck_ai_provider")
+      return selected_provider if provider_configured?(selected_provider)
 
-      response = post_request(uri, {
-        contents: [ { parts: [ { text: prompt } ] } ],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
-      })
-
-      if response.is_a?(Net::HTTPSuccess)
-        data = JSON.parse(response.body)
-        content = data.dig("candidates", 0, "content", "parts", 0, "text")
-        render_content(content, "gemini-1.5-flash")
-      else
-        { error: "Gemini API Request failed: #{response.code} - #{response.body}" }
-      end
+      PROVIDERS.keys.find { |provider| provider_configured?(provider) }
     end
 
-    def analyze_openai
-      uri = URI(OPENAI_API_URL)
-
-      response = post_request(uri, {
-        model: "gpt-4o-mini",
-        messages: [ { role: "user", content: prompt } ],
-        temperature: 0.2,
-        max_tokens: 1024
-      }, { "Authorization" => "Bearer #{@api_key}" })
-
-      if response.is_a?(Net::HTTPSuccess)
-        data = JSON.parse(response.body)
-        content = data.dig("choices", 0, "message", "content")
-        render_content(content, "gpt-4o-mini")
-      else
-        { error: "OpenAI API Request failed: #{response.code} - #{response.body}" }
-      end
+    def provider_configured?(provider)
+      config = PROVIDERS[provider]
+      config.present? && AppConfig.get(config[:key]).present?
     end
 
-    def post_request(uri, body, headers = {})
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
+    def chat
+      context.chat(
+        model: @provider_config[:model],
+        provider: @provider_config[:ruby_llm_provider]
+      )
+    end
 
-      request = Net::HTTP::Post.new(uri.request_uri, { "Content-Type" => "application/json" }.merge(headers))
-      request.body = body.to_json
-      http.request(request)
+    def context
+      RubyLLM.context do |config|
+        config.gemini_api_key = AppConfig.get("gemini_api_key")
+        config.openai_api_key = AppConfig.get("openai_api_key")
+        config.deepseek_api_key = AppConfig.get("deepseek_api_key")
+        config.anthropic_api_key = AppConfig.get("anthropic_api_key")
+      end
     end
 
     def render_content(content, model)

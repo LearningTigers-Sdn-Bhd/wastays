@@ -1,0 +1,92 @@
+<%= render "section_shell",
+    title: "Storage",
+    description: "S3-compatible Cloudflare R2 storage for uploads and public file links.",
+    icon_name: "database" do %>
+  <%= form_with url: admin_integrations_path, method: :patch, local: true, class: "space-y-5" do %>
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <%= render "secret_field",
+          name: :r2_access_key_id,
+          label: "Access Key ID",
+          value: @r2_access_key_id,
+          placeholder: "Enter R2 Access Key ID" %>
+
+      <%= render "secret_field",
+          name: :r2_secret_access_key,
+          label: "Secret Access Key",
+          value: @r2_secret_access_key,
+          placeholder: "Enter R2 Secret Access Key" %>
+
+      <div>
+        <%= label_tag :r2_bucket, "Bucket Name", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+        <%= text_field_tag :r2_bucket, @r2_bucket,
+            placeholder: "e.g. wastays-production",
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
+      </div>
+
+      <div>
+        <%= label_tag :r2_region, "Region", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+        <%= text_field_tag :r2_region, @r2_region,
+            placeholder: "auto",
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
+      </div>
+
+      <div class="md:col-span-2">
+        <%= label_tag :r2_endpoint, "Endpoint URL", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+        <%= text_field_tag :r2_endpoint, @r2_endpoint,
+            placeholder: "https://<account-id>.r2.cloudflarestorage.com",
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
+        <p class="mt-1.5 text-xs text-muted-foreground">Example: https://0123456789abcdef.r2.cloudflarestorage.com</p>
+      </div>
+
+      <div class="md:col-span-2">
+        <%= label_tag :r2_public_url, "Public URL / CDN", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+        <%= text_field_tag :r2_public_url, @r2_public_url,
+            placeholder: "https://pub-xyz.r2.dev or your custom domain",
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
+        <p class="mt-1.5 text-xs text-muted-foreground">When set, file links use this public base URL instead of signed S3 URLs.</p>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <button
+        type="button"
+        onclick="testR2Connection()"
+        id="test-connection-btn"
+        class="cursor-pointer rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted"
+      >
+        Test Connection
+      </button>
+      <%= submit_tag "Save Storage", class: "cursor-pointer rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-brand-secondary" %>
+    </div>
+  <% end %>
+
+  <script>
+    async function testR2Connection() {
+      const btn = document.getElementById("test-connection-btn");
+      const originalText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = "Testing...";
+      btn.classList.add("opacity-50");
+
+      try {
+        const response = await fetch("<%= test_r2_connection_admin_integrations_path %>", {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          }
+        });
+
+        const data = await response.json();
+        alert(data.message);
+      } catch (error) {
+        alert("Error: Could not reach the server.");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+        btn.classList.remove("opacity-50");
+      }
+    }
+  </script>
+<% end %>

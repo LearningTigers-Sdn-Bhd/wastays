@@ -1,0 +1,48 @@
+@layer components {
+  .panel-profile-menu__trigger.panel-button {
+    @apply size-8 rounded-full p-0;
+    min-height: 0;
+    background: transparent;
+    color: var(--sidebar-foreground);
+  }
+
+  .panel-profile-menu__trigger.panel-button:hover {
+    background: var(--sidebar-accent);
+  }
+
+  .panel-profile-menu__trigger.panel-button:focus-visible {
+    outline-color: var(--sidebar-ring);
+  }
+
+  .panel-profile-menu__menu {
+    width: min(17.5rem, calc(100vw - 1rem));
+  }
+
+  .panel-profile-menu__summary {
+    @apply flex items-center gap-2.5 px-3 py-2.5;
+    background: color-mix(in oklab, var(--muted) 58%, var(--card));
+  }
+
+  .panel-profile-menu__identity {
+    @apply min-w-0 flex-1;
+  }
+
+  .panel-profile-menu__name {
+    @apply truncate text-sm font-semibold;
+    color: var(--card-foreground);
+  }
+
+  .panel-profile-menu__secondary {
+    @apply truncate text-xs;
+    color: var(--muted-foreground);
+  }
+
+  .panel-profile-menu__item-icon {
+    @apply size-4 shrink-0;
+    color: var(--muted-foreground);
+  }
+
+  .dropdown-menu__item[data-variant="danger"] .panel-profile-menu__item-icon {
+    color: currentColor;
+  }
+}

@@ -1,54 +1,78 @@
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:shadow-none print:break-inside-avoid">
-  <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8 print:bg-white print:px-3 print:py-2">
-    <h2 class="text-lg font-bold tracking-tight text-slate-950 print:text-base"><%= title %></h2>
-  </div>
+<section class="space-y-3 print:space-y-3 print:break-inside-avoid" aria-labelledby="guest-list-heading">
+  <h2 id="guest-list-heading" class="text-base font-semibold text-foreground"><%= title %></h2>
 
-  <div class="overflow-x-auto">
-    <table class="min-w-full table-fixed print:table-auto">
-      <thead class="bg-slate-100 print:bg-white">
-        <tr>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8 print:px-2 print:py-2">Guest / Ref</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Rooms</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2">Stay</th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 print:px-2 print:py-2"><%= type == :arrival ? "Readiness" : "Departure" %></th>
-          <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8 print:px-2 print:py-2">Notes</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-200 bg-white">
-        <% if rows.any? %>
-          <% rows.each_with_index do |row, index| %>
-            <tr class="align-top transition-colors <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %> print:bg-white">
-              <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
-                <p class="text-sm font-bold text-slate-900 print:text-xs"><%= row[:guest_name] %></p>
-                <p class="mt-1 text-xs font-mono text-slate-500 print:text-[10px]"><%= row[:confirmation_token] %></p>
-                <p class="mt-1 text-xs font-medium text-slate-500 print:text-[10px]"><%= row[:guest_count] %></p>
-              </td>
-              <td class="px-6 py-4 print:px-2 print:py-2">
-                <p class="text-sm font-semibold text-slate-900 print:text-xs"><%= row[:room_details] %></p>
-                <p class="mt-1 text-xs font-medium text-slate-500 print:text-[10px]">Room: <%= row[:room_numbers] %></p>
-              </td>
-              <td class="px-6 py-4 text-sm font-medium text-slate-700 print:px-2 print:py-2 print:text-xs"><%= row[:stay_dates] %></td>
-              <td class="px-6 py-4 print:px-2 print:py-2">
-                <% if type == :arrival %>
-                  <p class="text-sm font-semibold text-slate-900 print:text-xs"><%= row[:pre_checkin_status] %></p>
-                  <p class="mt-1 text-xs font-medium text-slate-500 print:text-[10px]"><%= row[:guarantee_status] %></p>
-                <% else %>
-                  <p class="text-sm font-semibold text-slate-900 print:text-xs"><%= row[:departure_status] %></p>
-                <% end %>
-              </td>
-              <td class="px-6 py-4 sm:px-8 print:px-2 print:py-2">
-                <p class="text-sm text-slate-700 print:text-xs"><%= row[:latest_note].presence || "-" %></p>
-              </td>
+  <%= render PanelsUI::Table.new(
+        caption: title,
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        class: "min-w-[960px] print:min-w-0 print:w-auto",
+        wrapper_class: "rounded-lg border border-border bg-card print:overflow-visible"
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Guest / ref</th>
+        <th scope="col">Rooms</th>
+        <th scope="col">Stay</th>
+        <th scope="col"><%= type == :arrival ? "Readiness" : "Departure" %></th>
+        <% if local_assigns[:show_boat_departure] %>
+          <th scope="col">
+            <%= type == :arrival ? "Boat arrival" : "Boat departure" %>
+          </th>
+        <% end %>
+        <th scope="col">Notes</th>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if rows.any? %>
+        <% report_rows_grouped_by_month(rows, date_preset: date_preset) { |row| type == :arrival ? row[:check_in] : row[:check_out] }.each do |month, period_rows| %>
+          <% if month %>
+            <tr class="bg-muted/55" data-slot="report-month-group">
+              <th scope="rowgroup" colspan="<%= local_assigns[:show_boat_departure] ? 6 : 5 %>" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
             </tr>
           <% end %>
-        <% else %>
+        <% period_rows.each do |row| %>
           <tr>
-            <td colspan="5" class="px-6 py-16 text-center text-sm font-medium text-slate-500 sm:px-8 print:px-2 print:py-6 print:text-xs">
-              <%= empty_message %>
+            <th scope="row">
+              <div class="min-w-0">
+                <p class="font-semibold text-foreground"><%= row[:guest_name] %></p>
+                <p class="mt-1 font-mono text-xs text-muted-foreground"><%= row[:confirmation_token] %></p>
+                <p class="mt-1 text-xs font-medium text-muted-foreground"><%= row[:guest_count] %></p>
+              </div>
+            </th>
+            <td>
+              <p class="font-semibold text-foreground"><%= row[:room_details] %></p>
+              <p class="mt-1 text-xs text-muted-foreground">Room: <%= row[:room_numbers] %></p>
+            </td>
+            <td><%= row[:stay_dates] %></td>
+            <td>
+              <% if type == :arrival %>
+                <p class="font-semibold text-foreground"><%= row[:pre_checkin_status] %></p>
+                <p class="mt-1 text-xs text-muted-foreground"><%= row[:guarantee_status] %></p>
+              <% else %>
+                <p class="font-semibold text-foreground"><%= row[:departure_status] %></p>
+              <% end %>
+            </td>
+            <% if local_assigns[:show_boat_departure] %>
+              <td>
+                <% formatted = arrivals_departures_boat_time(row, type, current_hotel) %>
+                <% if formatted %>
+                  <p class="font-semibold text-foreground"><%= formatted[:date] %></p>
+                  <p class="mt-1 text-xs text-muted-foreground"><%= formatted[:time] %></p>
+                <% else %>
+                  <p class="font-semibold text-foreground">—</p>
+                <% end %>
+              </td>
+            <% end %>
+            <td>
+              <p class="text-foreground"><%= row[:latest_note].presence || "-" %></p>
             </td>
           </tr>
         <% end %>
-      </tbody>
-    </table>
-  </div>
-</div>
+        <% end %>
+      <% else %>
+        <%= render "table_empty_state", colspan: (local_assigns[:show_boat_departure] ? 6 : 5), message: empty_message %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

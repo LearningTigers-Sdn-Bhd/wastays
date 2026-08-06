@@ -1,0 +1,19 @@
+@layer components {
+  .panel-separator {
+    flex-shrink: 0;
+    border: 0;
+    background: var(--border);
+  }
+
+  .panel-separator:not([data-orientation]),
+  .panel-separator[data-orientation="horizontal"] {
+    width: 100%;
+    height: 1px;
+  }
+
+  .panel-separator[data-orientation="vertical"] {
+    align-self: stretch;
+    width: 1px;
+    min-height: 1rem;
+  }
+}

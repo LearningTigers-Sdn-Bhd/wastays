@@ -6,6 +6,7 @@ class SendWhatsappInvoiceJob < ApplicationJob
   def perform(booking_id)
     booking = Booking.find_by(id: booking_id)
     return unless booking
+    return unless booking.booking_folio&.closed?
 
     payload = build_payload(booking)
     WebhookBroadcastJob.perform_now("booking_confirmed", payload)
@@ -14,7 +15,7 @@ class SendWhatsappInvoiceJob < ApplicationJob
   private
 
   def build_payload(booking)
-    nights = (booking.check_out - booking.check_in).to_i
+    nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
 
     {
       confirmation_token: booking.confirmation_token,

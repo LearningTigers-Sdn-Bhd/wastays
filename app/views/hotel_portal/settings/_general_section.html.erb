@@ -1,0 +1,213 @@
+<%= form_with model: @hotel,
+              url: hotel_general_settings_path(@hotel),
+              method: :patch,
+              local: true,
+              class: "grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2" do |f| %>
+  <%= hidden_field_tag :form_id, "hotel_settings" %>
+
+  <% if @presenter.settings_errors.any? && params[:form_id] == "hotel_settings" %>
+    <div class="lg:col-span-2">
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: pluralize(@presenter.settings_errors.count, "error") + " prevented these settings from being saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @presenter.settings_errors.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <section aria-labelledby="general-setup-heading">
+    <div>
+      <h2 id="general-setup-heading" class="text-base font-semibold text-foreground">General Setup</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Review the hotel’s operating status, onboarding progress, and guest portal access.</p>
+    </div>
+
+    <% status = @presenter.settings_summary[:hotel_status] %>
+    <% onboarding = @presenter.settings_summary[:onboarding_stage] %>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::MetricCard.new(
+            label: "Hotel Status",
+            value: status,
+            detail: %w[live approved].include?(status.to_s.downcase) ? "Ready for guests" : "Setup in progress",
+            detail_variant: %w[live approved].include?(status.to_s.downcase) ? :success : :neutral,
+            icon: "building-2",
+            density: :compact) %>
+      <%= render PanelsUI::MetricCard.new(
+            label: "Onboarding Stage",
+            value: onboarding,
+            detail: onboarding.to_s.downcase == "live" ? "Onboarding complete" : "Profile preparation",
+            detail_variant: onboarding.to_s.downcase == "live" ? :success : :neutral,
+            icon: "circle-check",
+            density: :compact) %>
+    </div>
+
+    <% if feature_enabled_for_hotel?("ai_concierge_page", current_hotel) %>
+      <div class="mt-4">
+        <%= render PanelsUI::Card.new(
+              width: :full,
+              density: :compact,
+              variant: :outlined,
+              as: :article,
+              data: { testid: "guest-portal-card" }) do |card| %>
+          <% card.with_header(
+               title: "Front Desk Booking Concierge",
+               description: "Open the printable QR sheet guests can scan at the front desk.",
+               title_as: :h3) do |header| %>
+            <% header.with_actions do %>
+              <%= render PanelsUI::Button.new(
+                    href: hotel_concierge_qr_path(current_hotel),
+                    variant: :secondary,
+                    size: :sm,
+                    data: { turbo_frame: "concierge_qr_dialog" }) do %>
+                <%= app_icon "qr-code", class: "size-4", aria: { hidden: "true" } %>
+                <span>View QR</span>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <% content_for :body_end do %>
+        <%= turbo_frame_tag "concierge_qr_dialog" %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="operation-times-heading">
+    <div>
+      <h2 id="operation-times-heading" class="text-base font-semibold text-foreground">Operation Times</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Set standard arrival times, business-day boundaries, and the no-show grace period.</p>
+    </div>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <%= f.fields_for :property_policy_attributes, @presenter.property_policy do |property_policy_fields| %>
+        <%= render PanelsUI::FormField.new(
+              form: property_policy_fields,
+              attribute: :check_in_time,
+              label: "Standard Check-in Time") do |field| %>
+          <% field.with_time_picker(value: @presenter.time_picker_value(@presenter.property_policy.check_in_time), minute_step: 15) %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: property_policy_fields,
+              attribute: :check_out_time,
+              label: "Standard Check-out Time") do |field| %>
+          <% field.with_time_picker(value: @presenter.time_picker_value(@presenter.property_policy.check_out_time), minute_step: 15) %>
+        <% end %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :business_starts_at,
+            label: "Business Day Starts At") do |field| %>
+        <% field.with_time_picker(value: @hotel.business_starts_at&.strftime("%H:%M"), minute_step: 15) %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :business_ends_at,
+            label: "Business Day Ends At") do |field| %>
+        <% field.with_time_picker(value: @hotel.business_ends_at&.strftime("%H:%M"), minute_step: 15) %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :arrival_grace_period_hours,
+            label: "Arrival Grace (Hours)",
+            hint: "Buffers no-show handling relative to standard check-in operations.",
+            class: "sm:col-span-2") do |field| %>
+        <% field.with_input(type: :number, min: 0, step: 1) %>
+      <% end %>
+    </div>
+  </section>
+
+  <section id="guest-registration-card" aria-labelledby="guest-registration-heading" class="scroll-mt-6">
+    <div>
+      <h2 id="guest-registration-heading" class="text-base font-semibold text-foreground">Guest Registration Card</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Choose the optional guest and stay details shown on draft and future cards.</p>
+    </div>
+
+    <% selected_fields = @hotel.guest_registration_card_fields || GuestRegistrationCard::DISPLAY_FIELDS.keys %>
+    <%= hidden_field_tag "hotel[guest_registration_card_fields][]", "" %>
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+      <% GuestRegistrationCard::DISPLAY_FIELDS.each do |key, label| %>
+        <%= render PanelsUI::Checkbox.new(
+              name: "hotel[guest_registration_card_fields][]",
+              id: "hotel_guest_registration_card_field_#{key}",
+              value: key,
+              checked: Array(selected_fields).include?(key),
+              label: label,
+              variant: :card,
+              size: :sm,
+              include_hidden: false) %>
+      <% end %>
+    </div>
+  </section>
+
+  <section aria-labelledby="localization-security-heading">
+    <div>
+      <h2 id="localization-security-heading" class="text-base font-semibold text-foreground">Localization &amp; Security</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Set the property timezone, transaction currency, and location-based booking rules.</p>
+    </div>
+
+    <div class="mt-4 grid items-start gap-4 sm:grid-cols-2" data-testid="localization-fields-grid">
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :time_zone,
+            label: "Property Timezone",
+            hint: "Used for local check-in times, reports, and automated guest messages.") do |field| %>
+        <% field.with_combobox(
+             ActiveSupport::TimeZone.all.map { |time_zone| [time_zone.to_s, time_zone.name] },
+             prompt: "Search and select a timezone",
+             selected: @hotel.time_zone,
+             max_options: 50,
+             empty_text: "No timezones found") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :default_currency,
+            label: "Default Currency",
+            hint: @presenter.can_edit_currency? ? "Changing this affects check-in transaction logs." : "Locked. Contact a superadmin to change it.",
+            disabled: !@presenter.can_edit_currency?) do |field| %>
+        <% field.with_combobox(
+             CurrencyCatalog.options,
+             selected: @presenter.settings_summary[:default_currency] || "MYR",
+             prompt: "Search and select a currency",
+             empty_text: "No currencies found") %>
+      <% end %>
+
+      <div class="sm:col-span-2">
+        <%= render PanelsUI::Switch.new(
+              form: f,
+              attribute: :geolocation_enabled,
+              label: "Enforce Geolocation Check",
+              description: "Require guests to be physically on-site before they can self-check in.",
+              variant: :card) %>
+      </div>
+
+      <% if @hotel.allow_pax_pricing? %>
+        <div class="sm:col-span-2">
+          <%= render PanelsUI::Switch.new(
+                form: f,
+                attribute: :pax_pricing_only,
+                label: "Pax Pricing Only",
+                description: "Allow public bookings only through per-person rates.",
+                variant: :card) %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <div class="flex justify-end pt-1 lg:col-span-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :md) do %>
+      Save Settings
+    <% end %>
+  </div>
+<% end %>

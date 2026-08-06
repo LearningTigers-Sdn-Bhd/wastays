@@ -3,10 +3,26 @@
 module HotelPortal
   module Reports
     class ArrivalsDeparturesReport
-      Result = Struct.new(:start_date, :end_date, :arrivals, :departures, :arrival_count, :departure_count, keyword_init: true)
+      Result = Struct.new(
+        :start_date,
+        :end_date,
+        :arrivals,
+        :in_house,
+        :departures,
+        :checkout,
+        :arrival_count,
+        :in_house_count,
+        :departure_count,
+        :checkout_count,
+        :hotel_time_zone,
+        :allow_boat_information,
+        keyword_init: true
+      )
 
-      ARRIVAL_STATUSES = %w[confirmed checked_in].freeze
-      DEPARTURE_STATUSES = %w[confirmed checked_in completed].freeze
+      ARRIVAL_STATUSES = %w[confirmed no_show_detected checked_in].freeze
+      IN_HOUSE_STATUSES = %w[checked_in checkout_required].freeze
+      DEPARTURE_STATUSES = %w[confirmed no_show_detected checked_in checkout_required].freeze
+      CHECKOUT_STATUSES = %w[completed].freeze
 
       def initialize(hotel:, start_date:, end_date:)
         @hotel = hotel
@@ -16,15 +32,23 @@ module HotelPortal
 
       def call
         arrivals = arrival_scope.map { |booking| row_for(booking).merge(arrival_fields(booking)) }
+        in_house = in_house_scope.map { |booking| row_for(booking).merge(in_house_fields(booking)) }
         departures = departure_scope.map { |booking| row_for(booking).merge(departure_fields(booking)) }
+        checkout = checkout_scope.map { |booking| row_for(booking).merge(checkout_fields(booking)) }
 
         Result.new(
           start_date: @start_date,
           end_date: @end_date,
           arrivals: arrivals,
+          in_house: in_house,
           departures: departures,
+          checkout: checkout,
           arrival_count: arrivals.size,
-          departure_count: departures.size
+          in_house_count: in_house.size,
+          departure_count: departures.size,
+          checkout_count: checkout.size,
+          hotel_time_zone: @hotel.hotel_time_zone,
+          allow_boat_information: @hotel.allow_boat_information
         )
       end
 
@@ -33,16 +57,32 @@ module HotelPortal
       def arrival_scope
         @hotel.bookings
               .where(status: ARRIVAL_STATUSES)
-              .where(check_in: @start_date..@end_date)
-              .includes(:pre_checkin, :booking_notes, booking_rooms: :room_type)
+              .checking_in_between(@start_date, @end_date, @hotel.hotel_time_zone)
+              .includes(:pre_checkin, :booking_notes, :booking_guests, booking_rooms: :room_type)
               .order(:check_in, :created_at, :id)
       end
 
       def departure_scope
         @hotel.bookings
               .where(status: DEPARTURE_STATUSES)
-              .where(check_out: @start_date..@end_date)
-              .includes(:booking_notes, booking_rooms: :room_type)
+              .checking_out_between(@start_date, @end_date, @hotel.hotel_time_zone)
+              .includes(:booking_notes, :booking_guests, booking_rooms: :room_type)
+              .order(:check_out, :created_at, :id)
+      end
+
+      def in_house_scope
+        @hotel.bookings
+              .where(status: IN_HOUSE_STATUSES)
+              .where("check_in <= ? AND check_out >= ?", @end_date, @start_date)
+              .includes(:booking_notes, :booking_guests, booking_rooms: :room_type)
+              .order(:check_in, :created_at, :id)
+      end
+
+      def checkout_scope
+        @hotel.bookings
+              .where(status: CHECKOUT_STATUSES)
+              .checking_out_between(@start_date, @end_date, @hotel.hotel_time_zone)
+              .includes(:booking_notes, :booking_guests, booking_rooms: :room_type)
               .order(:check_out, :created_at, :id)
       end
 
@@ -65,18 +105,38 @@ module HotelPortal
       def arrival_fields(booking)
         guarantee = booking.guarantee_method.presence || "none"
         deposit = booking.deposit_status.presence || "not_required"
+        primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
 
         {
           pre_checkin_status: booking.pre_checkin_display_status.to_s.humanize,
           guarantee_method_status: guarantee.humanize,
           deposit_status: deposit.humanize,
-          guarantee_status: "#{guarantee.humanize} / #{deposit.humanize}"
+          guarantee_status: "#{guarantee.humanize} / #{deposit.humanize}",
+          boat_arrival: primary_bg&.boat_in_at
         }
       end
 
       def departure_fields(booking)
+        primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
         {
-          departure_status: departure_status(booking)
+          departure_status: departure_status(booking),
+          boat_departure: primary_bg&.boat_out_at
+        }
+      end
+
+      def in_house_fields(booking)
+        primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
+        {
+          departure_status: "In house",
+          boat_departure: primary_bg&.boat_out_at
+        }
+      end
+
+      def checkout_fields(booking)
+        primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
+        {
+          departure_status: departure_status(booking),
+          boat_departure: primary_bg&.boat_out_at
         }
       end
 
@@ -92,17 +152,18 @@ module HotelPortal
       end
 
       def room_details(booking)
-        details = booking.booking_rooms.map do |room|
+        details = booking.booking_rooms.sort_by(&:id).group_by do |room|
           snapshot_name = room.room_type_snapshot.is_a?(Hash) ? room.room_type_snapshot["name"].presence : nil
-          room_name = snapshot_name || room.room_type&.name || "Room"
-          "#{room.quantity}x #{room_name}"
+          snapshot_name || room.room_type&.name || "Room"
+        end.map do |room_name, rooms|
+          "#{rooms.size}x #{room_name}"
         end
 
         details.presence&.join(", ") || "No rooms assigned"
       end
 
       def room_numbers(booking)
-        numbers = booking.booking_rooms.map { |room| room.room_number.presence || "TBA" }
+        numbers = booking.booking_rooms.sort_by(&:id).map { |room| room.room_number.presence || "TBA" }
         numbers.presence&.join(", ") || "TBA"
       end
 

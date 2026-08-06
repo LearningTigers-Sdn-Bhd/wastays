@@ -1,0 +1,28 @@
+<div class="flex shrink-0 flex-wrap items-end gap-1" aria-label="Date range">
+  <%= render PanelsUI::Button.new(href: previous_path, variant: :ghost, size: :icon_sm, aria_label: "Earlier requests") do %>
+    <%= cached_icon "chevron-left", class: "size-4" %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :date, label: "Up to", size: :sm, class: "w-40 shrink-0") do |field| %>
+    <% field.with_date_picker(
+         value: date_window.anchor_date.iso8601,
+         data: { action: "change->auto-submit#submitNow" }) %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :days, label: "Range", size: :sm, class: "w-36 shrink-0") do |field| %>
+    <% field.with_select_menu(
+         HotelPortal::Requests::DateWindow::ALLOWED_DAYS.map { |days| { label: "Past #{days} days", value: days } },
+         selected: date_window.days,
+         data: { action: "change->auto-submit#submitNow" }) %>
+  <% end %>
+
+  <%= render PanelsUI::Button.new(href: next_path, variant: :ghost, size: :icon_sm, aria_label: "Later requests") do %>
+    <%= cached_icon "chevron-right", class: "size-4" %>
+  <% end %>
+
+  <% unless date_window.today? %>
+    <%= render PanelsUI::Button.new(href: today_path, variant: :secondary, size: :sm, class: "shrink-0") do %>
+      Today
+    <% end %>
+  <% end %>
+</div>

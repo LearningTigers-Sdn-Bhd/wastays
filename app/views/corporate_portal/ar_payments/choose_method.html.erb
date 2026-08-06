@@ -1,0 +1,59 @@
+<div class="mx-auto max-w-3xl space-y-6 pb-20">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Payments</p>
+    <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-950">Choose How to Pay</h1>
+    <p class="mt-1 text-sm text-slate-600"><%= @presenter.relationship&.hotel&.name %> · <%= pluralize(@presenter.invoices.size, "invoice") %></p>
+  </div>
+
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-6 py-4"><h2 class="text-sm font-bold text-slate-950">Paying</h2></div>
+    <dl class="divide-y divide-slate-100">
+      <% @presenter.invoices.each do |invoice| %>
+        <div class="flex items-center justify-between px-6 py-3 text-sm">
+          <dt class="font-semibold text-slate-700"><%= invoice.formatted_invoice_number %></dt>
+          <dd class="font-bold tabular-nums text-slate-950"><%= invoice.currency %> <%= format_number(invoice.outstanding_amount, precision: 2) %></dd>
+        </div>
+      <% end %>
+    </dl>
+    <div class="flex items-center justify-between border-t border-slate-200 bg-slate-50/60 px-6 py-3">
+      <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Total</p>
+      <p class="text-lg font-black tabular-nums text-slate-950"><%= @presenter.currency %> <%= format_number(@presenter.total_amount, precision: 2) %></p>
+    </div>
+  </section>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%= form_with url: review_corporate_ar_payments_path, method: :post, scope: :corporate_ar_payment, class: "flex" do %>
+      <%= hidden_field_tag "corporate_ar_payment[hotel_corporate_account_id]", @presenter.relationship&.id %>
+      <%= hidden_field_tag "corporate_ar_payment[currency]", @presenter.currency %>
+      <%= hidden_field_tag "corporate_ar_payment[gateway]", "razorpay" %>
+      <%= hidden_field_tag "corporate_ar_payment[amount]", @presenter.total_amount %>
+      <% @presenter.invoices.each do |invoice| %>
+        <%= hidden_field_tag "corporate_ar_payment[invoice_ids][]", invoice.id %>
+      <% end %>
+      <button type="submit"
+              <%= "disabled" unless @presenter.gateway_ready? %>
+              class="flex w-full flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+        <span class="inline-flex size-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+          <%= cached_icon "credit-card", class: "size-5", aria: { hidden: true } %>
+        </span>
+        <span class="text-sm font-bold text-slate-950">Pay Online</span>
+        <span class="text-xs text-slate-500"><%= @presenter.gateway_ready? ? "Pay instantly by card." : "Online payments aren't set up for this hotel yet." %></span>
+      </button>
+    <% end %>
+
+    <%= form_with url: new_corporate_ar_payment_submission_path, method: :get, class: "flex" do %>
+      <% @presenter.invoices.each do |invoice| %>
+        <%= hidden_field_tag "ar_invoice_ids[]", invoice.id %>
+      <% end %>
+      <button type="submit" class="flex w-full flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:bg-slate-50">
+        <span class="inline-flex size-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+          <%= cached_icon "upload", class: "size-5", aria: { hidden: true } %>
+        </span>
+        <span class="text-sm font-bold text-slate-950">Bank Transfer</span>
+        <span class="text-xs text-slate-500">I've already transferred the funds — upload the slip for the hotel to verify.</span>
+      </button>
+    <% end %>
+  </div>
+
+  <%= link_to "Back to Pay Invoices", pay_invoices_corporate_ar_payments_path, class: "inline-flex text-sm font-bold text-slate-600 hover:text-slate-900" %>
+</div>

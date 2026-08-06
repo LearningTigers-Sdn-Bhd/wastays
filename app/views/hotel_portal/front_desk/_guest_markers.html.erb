@@ -1,0 +1,28 @@
+<%# locals: (presenter:, labelled: false) %>
+<%#
+  Guest standing markers (VIP / blacklisted / repeat) for both front desk views.
+
+  The card view is space-constrained and renders icons alone, so each marker
+  carries an accessible name and a tooltip — an icon plus a colour on its own
+  would communicate meaning through colour and icon alone (DESIGN.md §10).
+  The list view has room for the visible label and passes `labelled: true`.
+%>
+<% markers = [
+     ({ label: "VIP", accessible_name: "VIP guest", icon: "crown-simple", library: "phosphor", variant: "duotone", tone: "text-warning" } if presenter.vip?),
+     ({ label: "Blacklisted", accessible_name: "Blacklisted guest", icon: "ban", library: "lucide", variant: "outline", tone: "text-destructive" } if presenter.blacklisted?),
+     ({ label: "Repeat", accessible_name: "Repeat guest", icon: "repeat", library: "lucide", variant: "outline", tone: "text-info" } if presenter.repeat?)
+   ].compact %>
+<% if markers.any? %>
+  <div class="flex shrink-0 items-center gap-1.5">
+    <% markers.each do |marker| %>
+      <%= render PanelsUI::Tooltip.new(text: marker[:accessible_name], delay: 150) do %>
+        <span class="inline-flex items-center gap-1 rounded-sm text-xs font-medium <%= marker[:tone] %> focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              tabindex="0"
+              aria-label="<%= marker[:accessible_name] %>">
+          <%= cached_icon marker[:icon], library: marker[:library], variant: marker[:variant], class: "size-4 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+          <% if labelled %><span aria-hidden="true"><%= marker[:label] %></span><% end %>
+        </span>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

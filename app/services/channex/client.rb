@@ -3,6 +3,8 @@ require "json"
 
 module Channex
   class Client
+    class RetryableRequestError < StandardError; end
+
     STAGING_URL = "https://staging.channex.io/api/v1".freeze
     PRODUCTION_URL = "https://channex.io/api/v1".freeze
 
@@ -15,7 +17,7 @@ module Channex
 
     def get(path, params = {})
       uri = URI("#{@base_url}#{path}")
-      uri.query = URI.encode_www_form(params) if params.any?
+      uri.query = params.to_query if params.any?
 
       request = Net::HTTP::Get.new(uri)
       execute(request)
@@ -60,7 +62,8 @@ module Channex
       ActiveSupport::Notifications.instrument("request.faraday", {
         method: request.method,
         url: uri.to_s,
-        request_headers: request.to_hash
+        request_headers: request.to_hash,
+        request_body: request.body
       }) do |payload|
         response = http.request(request)
         payload[:status] = response.code.to_i
@@ -70,9 +73,9 @@ module Channex
 
       parse_response(response)
     rescue JSON::ParserError => e
-      { error: "Invalid JSON response from Channex API", details: e.message }
+      { error: "Invalid JSON response from Channel Manager API", details: e.message }
     rescue StandardError => e
-      { error: "Channex API connection failed", details: e.message }
+      { error: "Channel Manager API connection failed", details: e.message, retryable: true }
     end
 
     def parse_response(response)
@@ -81,12 +84,18 @@ module Channex
       if response.is_a?(Net::HTTPSuccess)
         body
       else
+        status_code = response.code.to_i
         {
-          error: "Channex API error: #{response.code}",
+          error: "Channel Manager API error: #{response.code}",
           status: response.code,
-          details: body["errors"] || body["error"] || response.body
+          details: body["errors"] || body["error"] || response.body,
+          retryable: retryable_status?(status_code)
         }
       end
+    end
+
+    def retryable_status?(status_code)
+      status_code == 429 || status_code >= 500
     end
   end
 end

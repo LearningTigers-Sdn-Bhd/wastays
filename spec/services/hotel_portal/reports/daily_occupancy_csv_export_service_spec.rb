@@ -16,7 +16,9 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyCsvExportService do
             occupancy_rate: 0.25.to_d,
             room_revenue: 150.to_d,
             adr: 75.to_d,
-            revpar: 18.75.to_d
+            revpar: 18.75.to_d,
+            tax_amount: 10.to_d,
+            total_revenue: 160.to_d
           }
         ],
         totals: {
@@ -25,15 +27,17 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyCsvExportService do
           occupancy_rate: 0.25.to_d,
           room_revenue: 150.to_d,
           adr: 75.to_d,
-          revpar: 18.75.to_d
+          revpar: 18.75.to_d,
+          tax_amount: 10.to_d,
+          total_revenue: 160.to_d
         }
       )
 
       csv = described_class.new(report: report).generate
-      rows = CSV.parse(csv, headers: true)
+      rows = CSV.parse(csv.delete_prefix("\uFEFF"), headers: true)
 
       expect(rows.count).to eq(2)
-      expect(rows.headers).to eq([ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)" ])
+      expect(rows.headers).to eq([ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)", "Tax", "Total Revenue" ])
       expect(rows[0]["Date"]).to eq("2026-05-06")
       expect(rows[0]["Occupancy %"]).to eq("25.00%")
       expect(rows[1]["Date"]).to eq("TOTAL")

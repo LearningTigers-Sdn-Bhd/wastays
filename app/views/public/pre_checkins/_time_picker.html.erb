@@ -1,0 +1,38 @@
+<div data-time-picker-target="popover" class="hidden absolute left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[110] p-4">
+  <div class="grid grid-cols-3 gap-4">
+    <!-- Hours -->
+    <div class="space-y-1">
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-2">Hour</p>
+      <div class="h-48 overflow-y-auto custom-scrollbar space-y-1 pr-1">
+        <% presenter.hours_options.each do |h| %>
+          <button type="button" data-time-picker-target="hour" data-value="<%= h %>" data-action="click->time-picker#selectHour" class="w-full py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-blue-50 transition"><%= h %></button>
+        <% end %>
+      </div>
+    </div>
+    
+    <!-- Minutes -->
+    <div class="space-y-1">
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-2">Min</p>
+      <div class="h-48 overflow-y-auto custom-scrollbar space-y-1 pr-1">
+        <% presenter.minutes_options.each do |m| %>
+          <button type="button" data-time-picker-target="minute" data-value="<%= m %>" data-action="click->time-picker#selectMinute" class="w-full py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-blue-50 transition"><%= m %></button>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- AM/PM -->
+    <div class="space-y-1">
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-2">AM/PM</p>
+      <div class="space-y-1">
+        <button type="button" data-time-picker-target="period" data-value="AM" data-action="click->time-picker#selectPeriod" class="w-full py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-blue-50 transition">AM</button>
+        <button type="button" data-time-picker-target="period" data-value="PM" data-action="click->time-picker#selectPeriod" class="w-full py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-blue-50 transition">PM</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 pt-4 border-t border-slate-100">
+    <button type="button" data-action="click->time-picker#confirm" class="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-lg">
+      Set Time
+    </button>
+  </div>
+</div>

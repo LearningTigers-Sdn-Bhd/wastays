@@ -1,218 +1,27 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">Settings</span>
-  </div>
-<% end %>
+<div class="space-y-5">
+  <%= render PanelsUI::PageHeader.new(title: @presenter.page_title, description: @presenter.page_description) %>
 
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Settings</h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Update hotel policy, taxes, conversion rate, and banking details.</p>
-    </div>
-  </div>
+  <% if @presenter %>
+    <%= render "hotel_portal/settings/group_tabs" %>
 
-  <% if @settings.present? %>
-    <div class="space-y-6 px-4 md:px-0">
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Hotel Settings</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Control check-in/out timings, currency, and tourism tax.</p>
-        </div>
-
-        <div class="px-6 py-5 sm:px-8">
-          <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
-            <%= hidden_field_tag :form_id, "hotel_settings" %>
-            <% settings_errors = @hotel.errors.full_messages + @property_policy.errors.full_messages %>
-            <% if settings_errors.any? && params[:form_id] == "hotel_settings" %>
-              <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <p class="font-semibold"><%= pluralize(settings_errors.count, "error") %> prohibited these settings from being saved:</p>
-                <ul class="mt-2 list-disc space-y-1 ps-5">
-                  <% settings_errors.each do |message| %>
-                    <li><%= message %></li>
-                  <% end %>
-                </ul>
-              </div>
-            <% end %>
-
-            <div class="grid gap-4 md:grid-cols-2">
-              <div>
-                <%= f.label :hotel_status_display, "Hotel Status", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.text_field :hotel_status_display, value: @settings[:hotel_status], disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
-              </div>
-
-              <div>
-                <%= f.label :onboarding_stage_display, "Onboarding Stage", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.text_field :onboarding_stage_display, value: @settings[:onboarding_stage], disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
-              </div>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2">
-              <%= f.fields_for :property_policy_attributes, @property_policy do |property_policy_fields| %>
-                <div>
-                  <%= property_policy_fields.label :check_in_time, "Standard Check-in Time", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                  <%= property_policy_fields.time_field :check_in_time, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-                </div>
-
-                <div>
-                  <%= property_policy_fields.label :check_out_time, "Standard Check-out Time", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                  <%= property_policy_fields.time_field :check_out_time, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-                </div>
-              <% end %>
-            </div>
-
-            <div class="grid items-start gap-4 md:grid-cols-2" data-controller="tourism-tax">
-              <div>
-                <span class="mb-2 block text-sm font-medium text-slate-900">Tourism Tax</span>
-                <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4">
-                  <span class="text-sm text-slate-600">Enable tax</span>
-                  <span class="relative inline-flex items-center">
-                    <%= f.check_box :tourism_tax_enabled, class: "sr-only peer", data: { action: "change->tourism-tax#toggle", tourism_tax_target: "enabled" } %>
-                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
-                  </span>
-                </label>
-              </div>
-
-              <div>
-                <%= f.label :tourism_tax_amount, "Tourism Tax Amount", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.number_field :tourism_tax_amount, step: 0.01, disabled: !@hotel.tourism_tax_enabled?, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 disabled:bg-slate-50 disabled:text-slate-500", data: { tourism_tax_target: "amountInput" } %>
-              </div>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2">
-              <div>
-                <%= f.label :default_currency, "Default Currency", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.text_field :default_currency, value: @settings[:default_currency] || "MYR", disabled: true, class: "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500" %>
-              </div>
-
-              <div>
-                <%= f.label :usd_conversion_rate, "USD Conversion Rate", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.number_field :usd_conversion_rate, step: 0.0001, value: @settings[:usd_conversion_rate], class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-              </div>
-            </div>
-
-            <div class="flex justify-end border-t border-slate-200 pt-4">
-              <%= f.submit "Save Settings", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
-            </div>
-          <% end %>
-        </div>
-      </section>
-
-      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">AI Concierge Configuration</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Configure AI providers and keys for automated assistance.</p>
-        </div>
-
-        <div class="px-6 py-5 sm:px-8">
-          <%= form_with model: @hotel, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
-            <%= hidden_field_tag :form_id, "ai_configuration" %>
-            <% if @hotel.errors.any? && params[:form_id] == "ai_configuration" %>
-              <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                <p class="font-semibold"><%= pluralize(@hotel.errors.count, "error") %> prohibited these AI settings from being saved:</p>
-                <ul class="mt-2 list-disc space-y-1 ps-5">
-                  <% @hotel.errors.full_messages.each do |message| %>
-                    <li><%= message %></li>
-                  <% end %>
-                </ul>
-              </div>
-            <% end %>
-
-            <div class="grid items-start gap-4 md:grid-cols-2">
-              <div>
-                <span class="mb-2 block text-sm font-medium text-slate-900">AI Concierge Features</span>
-                <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4">
-                  <span class="text-sm text-slate-600">Enable AI Assistance</span>
-                  <span class="relative inline-flex items-center">
-                    <%= f.check_box :ai_provider_enabled, class: "sr-only peer" %>
-                    <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-slate-900 peer-checked:after:translate-x-full"></span>
-                  </span>
-                </label>
-              </div>
-
-              <div>
-                <%= f.label :ai_concierge_tone, "Tone", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.select :ai_concierge_tone, Hotel.ai_concierge_tones.keys.map { |tone| [tone.humanize, tone] }, {}, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-              </div>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2">
-              <div>
-                <%= f.label :ai_provider_name, "AI Provider", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <% provider_options = { "openai" => "OpenAI", "claude" => "Claude", "deepseek" => "DeepSeek", "gemini" => "Gemini" } %>
-                <%= f.select :ai_provider_name, Hotel.ai_provider_names.keys.map { |k| [provider_options[k] || k.humanize, k] }, { include_blank: "Select Provider" }, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-              </div>
-
-              <div>
-                <%= f.label :ai_provider_key, "API Key", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                <%= f.password_field :ai_provider_key, value: @hotel.ai_provider_key, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0", placeholder: "sk-..." %>
-                <p class="mt-1.5 text-xs text-slate-500">Your API key is securely encrypted before being saved.</p>
-              </div>
-            </div>
-
-            <div class="flex justify-end border-t border-slate-200 pt-4">
-              <%= f.submit "Save AI Concierge Configuration", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
-            </div>
-          <% end %>
-        </div>
-      </section>
-
-      <% if current_user.has_permission?("manage_account") %>
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
-            <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Banking Details</h2>
-            <p class="mt-1 text-sm font-medium text-slate-600">Shared account banking details for payout and settlement.</p>
-          </div>
-
-          <div class="px-6 py-5 sm:px-8">
-            <%= form_with model: @account, url: hotel_settings_path(@hotel), method: :patch, local: true, class: "space-y-6" do |f| %>
-              <% if @account.errors.any? %>
-                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                  <p class="font-semibold"><%= pluralize(@account.errors.count, "error") %> prohibited these settings from being saved:</p>
-                  <ul class="mt-2 list-disc space-y-1 ps-5">
-                    <% @account.errors.full_messages.each do |message| %>
-                      <li><%= message %></li>
-                    <% end %>
-                  </ul>
-                </div>
-              <% end %>
-
-              <%= f.fields_for :banking_detail do |banking_fields| %>
-                <%= banking_fields.hidden_field :id if banking_fields.object.persisted? %>
-
-                <div class="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <%= banking_fields.label :account_holder_name, "Account Holder Name", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                    <%= banking_fields.text_field :account_holder_name, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-                  </div>
-
-                  <div>
-                    <%= banking_fields.label :bank_name, "Bank Name", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                    <%= banking_fields.text_field :bank_name, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-                  </div>
-
-                  <div>
-                    <%= banking_fields.label :account_number, "Account Number", class: "mb-2 block text-sm font-medium text-slate-900" %>
-                    <%= banking_fields.text_field :account_number, class: "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0" %>
-                  </div>
-                </div>
-              <% end %>
-
-              <div class="flex justify-end border-t border-slate-200 pt-4">
-                <%= f.submit "Save Banking Details", class: "inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700" %>
-              </div>
-            <% end %>
-          </div>
-        </section>
-      <% end %>
-
-    </div>
+    <% case @presenter.active_page %>
+    <% when "general" %>
+      <%= render "hotel_portal/settings/general_section" %>
+    <% when "rates" %>
+      <%= render "hotel_portal/settings/rates_section" %>
+    <% when "boat" %>
+      <%= render "hotel_portal/settings/boat_section" %>
+    <% when "ai" %>
+      <%= render "hotel_portal/settings/ai_concierge_section" %>
+    <% when "notifications" %>
+      <%= render "hotel_portal/settings/notifications_section" %>
+    <% when "banking" %>
+      <%= render "hotel_portal/settings/banking_section" %>
+    <% end %>
   <% else %>
-    <div class="mx-4 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center md:mx-0">
-      <h2 class="text-lg font-bold text-slate-900">No settings yet</h2>
-      <p class="mt-2 text-sm text-slate-600">Settings will appear once a hotel is selected.</p>
-    </div>
+    <section class="space-y-2 py-10 text-center" aria-labelledby="empty-settings-title">
+      <h2 id="empty-settings-title" class="text-base font-semibold text-foreground">No settings yet</h2>
+      <p class="text-sm text-muted-foreground">Settings will appear once a hotel is selected.</p>
+    </section>
   <% end %>
 </div>

@@ -1,0 +1,30 @@
+<% form_id = "booking-internal-note-form" %>
+<% title = @mode == "add" ? "Add internal note" : "Edit internal note" %>
+<% submit_label = @mode == "add" ? "Add note" : "Save note" %>
+<% footer = capture do %>
+  <div class="flex w-full items-center justify-end gap-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Saving…" }) do %><%= submit_label %><% end %>
+  </div>
+<% end %>
+
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-internal-note-sheet",
+      title: title,
+      description: @booking.guest_name,
+      side: :right,
+      size: :md,
+      footer: footer do %>
+  <%= form_with model: @note,
+        url: hotel_booking_action_internal_notes_path(current_hotel, @booking, mode: @mode, note_id: @note.id),
+        method: @mode == "add" ? :post : :patch,
+        id: form_id do |form| %>
+    <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+    <% if @note.errors.any? %>
+      <div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1"><%= @note.errors.full_messages.to_sentence %></div>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form:, attribute: :body, label: "Internal note", hint: "Visible only to hotel staff.", required: true) do |field| %>
+      <% field.with_text_area(rows: 10, autofocus: true) %>
+    <% end %>
+  <% end %>
+<% end %>

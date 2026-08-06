@@ -1,0 +1,85 @@
+<div class="space-y-6">
+  <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <h3 class="text-sm font-black uppercase tracking-wider text-foreground mb-2">Derived Pricing Settings</h3>
+    <p class="text-xs font-medium text-muted-foreground mb-6">Manage how standard room rates are modified before syncing to each OTA channel. Derived settings automatically apply to all dates and rate plans.</p>
+
+    <% if @channels.blank? %>
+      <div class="flex flex-col items-center justify-center py-12 px-4 rounded-xl border border-dashed border-border text-center">
+        <%= cached_icon "radio", class: "size-10 text-muted-foreground mb-3 animate-pulse" %>
+        <h4 class="text-sm font-bold text-foreground mb-1">No Channels Connected</h4>
+        <p class="text-xs text-muted-foreground max-w-xs">Please connect your property to a channel manager and complete channel mapping to view channels here.</p>
+      </div>
+    <% else %>
+      <div class="grid gap-6 md:grid-cols-2">
+        <% @channels.each do |channel| %>
+          <%
+            setting = @derived_settings_by_channel_id[channel["id"]] || ChannelDerivedSetting.new(channel_id: channel["id"])
+            title = channel.dig("attributes", "title") || "Connected Channel"
+          %>
+          <%= form_with url: update_channel_derived_pricing_hotel_inventory_dashboards_path(current_hotel), method: :post, local: true, class: "rounded-2xl border border-border bg-muted p-5 space-y-5 shadow-sm transition hover:border-border-interactive", data: { controller: "pricing-mode" } do |f| %>
+            <%= hidden_field_tag :channel_id, channel["id"] %>
+
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-border pb-3">
+              <div class="flex items-center gap-2">
+                <span class="flex size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-sm font-bold text-foreground"><%= title %></span>
+              </div>
+              <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">Active</span>
+            </div>
+
+            <!-- Derived Pricing Mode -->
+            <div class="space-y-2">
+              <label class="block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Derived Pricing Mode</label>
+              <div class="grid grid-cols-3 gap-2">
+                <label class="flex flex-col items-center justify-center p-3 rounded-xl border border-border bg-card text-center cursor-pointer transition hover:bg-muted [&:has(input:checked)]:border-border-interactive [&:has(input:checked)]:ring-1 [&:has(input:checked)]:ring-ring">
+                  <%= f.radio_button :pricing_mode, "same", checked: setting.pricing_mode == "same", class: "sr-only", data: { action: "change->pricing-mode#toggle" } %>
+                  <span class="text-xs font-bold text-foreground">Same Price</span>
+                  <span class="text-[10px] text-muted-foreground mt-0.5">Use default rate</span>
+                </label>
+                <label class="flex flex-col items-center justify-center p-3 rounded-xl border border-border bg-card text-center cursor-pointer transition hover:bg-muted [&:has(input:checked)]:border-border-interactive [&:has(input:checked)]:ring-1 [&:has(input:checked)]:ring-ring">
+                  <%= f.radio_button :pricing_mode, "multiplier", checked: setting.pricing_mode == "multiplier", class: "sr-only", data: { action: "change->pricing-mode#toggle" } %>
+                  <span class="text-xs font-bold text-foreground">Multiplier (%)</span>
+                  <span class="text-[10px] text-muted-foreground mt-0.5">E.g., +10%</span>
+                </label>
+                <label class="flex flex-col items-center justify-center p-3 rounded-xl border border-border bg-card text-center cursor-pointer transition hover:bg-muted [&:has(input:checked)]:border-border-interactive [&:has(input:checked)]:ring-1 [&:has(input:checked)]:ring-ring">
+                  <%= f.radio_button :pricing_mode, "offset", checked: setting.pricing_mode == "offset", class: "sr-only", data: { action: "change->pricing-mode#toggle" } %>
+                  <span class="text-xs font-bold text-foreground">Fixed Offset</span>
+                  <span class="text-[10px] text-muted-foreground mt-0.5">E.g., +RM 20</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Derived Pricing Value -->
+            <div class="pricing-value-input <%= setting.pricing_mode == 'same' ? 'hidden' : '' %>" data-pricing-mode-target="value">
+              <label class="block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground mb-1.5">Adjustment Value</label>
+              <div class="relative rounded-xl shadow-sm">
+                <%= f.number_field :pricing_value, value: setting.pricing_value, step: 0.01, class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", placeholder: "0.00" %>
+              </div>
+              <p class="text-[10px] text-muted-foreground mt-1 font-medium">Use positive values to markup prices (e.g. 10.00 to add 10%) or negative to discount.</p>
+            </div>
+
+            <!-- Room Allocation / Allotment Section -->
+            <div class="space-y-2 border-t border-border pt-4">
+              <label class="block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Room Allocation & Allotment</label>
+              <div class="rounded-xl bg-info/10 border border-info/20 p-3">
+                <div class="flex items-start gap-2.5">
+                  <%= cached_icon "info", class: "size-4 text-info shrink-0 mt-0.5" %>
+                  <div class="text-[11px] leading-relaxed">
+                    <span class="font-bold text-foreground">Shared Allotment:</span>
+                    <span class="font-medium text-muted-foreground">By default, availability is shared equally across all connected channels. If you have 3 rooms left, both Booking.com and Expedia show 3 rooms available in real-time. First channel to book claims the inventory.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-2">
+              <%= f.submit "Save Channel Settings", class: "w-full rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-black text-xs uppercase tracking-[0.16em] py-2.5 transition shadow-sm cursor-pointer" %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

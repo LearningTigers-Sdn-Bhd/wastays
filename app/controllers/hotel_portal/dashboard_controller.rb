@@ -16,7 +16,7 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
     if current_user.has_permission?("view_reports", hotel: @current_hotel) && !current_user.has_permission?("manage_guest_arrival", hotel: @current_hotel)
       redirect_to hotel_reports_path(@current_hotel) and return
     elsif current_user.has_permission?("manage_room_status", hotel: @current_hotel) && !current_user.has_permission?("manage_guest_arrival", hotel: @current_hotel)
-      redirect_to hotel_room_status_board_path(@current_hotel) and return
+      redirect_to hotel_stay_view_path(@current_hotel) and return
     end
 
     stats = HotelPortal::DashboardStats.new(@current_hotel)
@@ -27,13 +27,16 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
     @revenue_this_month = stats.revenue_this_month
     @pending_actions_count = stats.pending_actions_count
     @occupancy_snapshot = stats.occupancy_snapshot
+    @live_inventory = stats.live_inventory
 
     @active_setup_fee = @current_hotel.active_setup_fee
     @setup_fee_amount = @active_setup_fee&.amount&.to_f || 0.0
     @setup_fee_currency = @active_setup_fee&.currency || SetupFeeRule::CURRENCY
     @setup_fee_source = @current_hotel.setup_fee_source
 
-    @recent_bookings = @current_hotel.bookings.order(created_at: :desc).limit(5)
+    @recent_bookings = @current_hotel.bookings.order(created_at: :desc).limit(5).includes(booking_guests: :guest)
+
+    @dashboard_presenter = HotelPortal::DashboardPresenter.new(@current_hotel, stats, @recent_bookings)
   end
 
   def submit_for_review

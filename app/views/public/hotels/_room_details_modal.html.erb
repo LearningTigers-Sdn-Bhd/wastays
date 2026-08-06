@@ -1,0 +1,123 @@
+<%# frozen_string_literal: true %>
+
+<div id="room-details-modal" 
+     class="hidden fixed inset-0 z-[150] bg-gray-900/60 backdrop-blur-sm lg:p-10 flex items-center justify-center transition-opacity" 
+     data-room-details-target="modal"
+     data-action="click->room-details#close">
+  <div class="relative h-[94vh] w-screen overflow-hidden bg-white flex flex-col md:h-[84vh] md:w-full md:max-w-[84rem] md:rounded-[1.75rem] md:shadow-2xl" 
+       data-action="click->room-details#stop">
+    <button type="button" 
+            data-action="click->room-details#close" 
+            class="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-gray-500 shadow-md hover:bg-white hover:text-gray-700 transition-colors md:right-5 md:top-5">
+      <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+
+    <div class="flex min-h-0 flex-1 flex-col md:flex-row">
+      <div class="flex w-full min-h-0 flex-col bg-white md:w-[68%]">
+        <div class="px-4 pt-4 md:px-6 md:pt-6">
+          <div class="relative overflow-hidden rounded-2xl bg-black h-[42vh] min-h-[300px] md:h-[54vh] md:min-h-[430px] group"
+               data-room-details-target="viewer"
+               data-action="touchstart->room-details#touchStart touchmove->room-details#touchMove touchend->room-details#touchEnd">
+            <img data-room-details-target="backdropImage" src="" class="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-55">
+            <div class="absolute inset-0 bg-black/18"></div>
+            <img data-room-details-target="mainImage" src="" class="relative z-[1] h-full w-full object-contain p-3 md:p-0">
+
+            <button type="button" data-action="click->room-details#prev" class="absolute left-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-white/95 text-blue-600 shadow-md hover:bg-white md:left-6">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button type="button" data-action="click->room-details#next" class="absolute right-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-xl bg-white/95 text-blue-600 shadow-md hover:bg-white md:right-6">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
+
+            <div class="absolute bottom-4 left-1/2 z-[1] -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-sm font-semibold text-white">
+              <span data-room-details-target="indexDisplay">1</span>/<span data-room-details-target="totalCount">1</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hidden shrink-0 border-t border-gray-100 bg-white px-4 py-4 md:block md:px-6">
+          <div data-room-details-target="thumbnails" class="flex gap-3 overflow-x-auto pb-1">
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full min-h-0 flex-col overflow-y-auto bg-white md:w-[32%] md:border-l md:border-gray-100">
+        <div class="p-5 md:p-6">
+          <h2 data-room-details-target="name" class="text-2xl font-bold text-gray-900 mb-2 pr-6"></h2>
+
+          <h3 class="text-sm font-bold text-gray-900 mb-2">Room Information</h3>
+          <ul class="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5">
+          <li class="flex items-center gap-3">
+            <%= cached_icon "adult", library: "guest", class: "w-4 h-4 text-gray-400 shrink-0 fill-current" %>
+            <p class="text-sm font-medium text-gray-900"><span data-room-details-target="adults"></span></p>
+          </li>
+          <li class="flex items-center gap-3" data-room-details-target="childrenContainer">
+            <%= cached_icon "child", library: "guest", class: "w-3.5 h-3.5 text-gray-400 shrink-0 fill-current" %>
+            <p class="text-sm font-medium text-gray-900"><span data-room-details-target="children"></span></p>
+          </li>
+        </ul>
+
+        <h3 class="text-sm font-bold text-gray-900 mb-2">Description</h3>
+        <div class="text-sm text-gray-600 leading-relaxed mb-5">
+          <p data-room-details-target="description"></p>
+        </div>
+
+        <div data-room-details-target="amenitiesSection" class="hidden">
+          <h3 class="text-sm font-black text-foreground uppercase tracking-widest mb-2">Room Amenities</h3>
+          <div data-room-details-target="amenitiesList" class="space-y-4">
+            <!-- Amenities will be rendered here -->
+          </div>
+          <div class="flex justify-end">
+            <button type="button"
+                    data-room-details-target="roomAmenitiesToggle"
+                    data-action="click->room-details#toggleRoomAmenities"
+                    class="mt-2 text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 hidden">
+              <span>Show more</span>
+              <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div data-room-details-target="hotelAmenitiesSection" class="hidden mt-4">
+          <h3 class="text-sm font-black text-foreground uppercase tracking-widest mb-2">Hotel Amenities</h3>
+          <div data-room-details-target="hotelAmenitiesList" class="space-y-4">
+            <!-- Hotel Amenities will be rendered here -->
+          </div>
+          <div class="flex justify-end">
+            <button type="button"
+                    data-room-details-target="hotelAmenitiesToggle"
+                    data-action="click->room-details#toggleHotelAmenities"
+                    class="mt-2 text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 hidden">
+              <span>Show more</span>
+              <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Amenity Category Template -->
+<template id="amenity-category-template">
+  <div class="mb-6">
+    <h4 class="flex items-center gap-x-2 text-[11px] font-black text-foreground uppercase tracking-[0.1em] mb-3">
+      <span data-category-icon></span>
+      <span data-category-name></span>
+    </h4>
+    <div data-amenity-list class="grid grid-cols-2 gap-y-3 gap-x-4">
+    </div>
+  </div>
+</template>
+
+<!-- Amenity Item Template -->
+<template id="amenity-item-template">
+  <div class="flex items-center gap-x-2.5 text-[13px] font-medium text-muted-foreground">
+    <svg class="w-5 h-5 text-slate-900 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M7.75 12L10.58 14.83L16.25 9.17004" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span data-amenity-name></span>
+  </div>
+</template>

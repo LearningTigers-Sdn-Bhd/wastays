@@ -1,0 +1,22 @@
+FactoryBot.define do
+  factory :booking_folio do
+    association :booking
+    booking_room { nil }
+    hotel { booking.hotel }
+    sequence(:folio_number) { |n| n }
+    folio_type { "guest" }
+    payer_type { "guest" }
+    hotel_corporate_account { payer_type == "company" ? association(:hotel_corporate_account, hotel: hotel) : nil }
+    # Only the guest folio is ever primary; external/house folios are secondary.
+    is_primary { folio_type == "guest" }
+    currency { booking.currency.presence || "MYR" }
+    opened_at { Time.current }
+    status { "open" }
+
+    trait :secondary do
+      folio_type { "external" }
+      payer_type { "company" }
+      is_primary { false }
+    end
+  end
+end

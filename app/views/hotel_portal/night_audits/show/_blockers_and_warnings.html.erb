@@ -1,0 +1,50 @@
+<div class="space-y-4">
+  <% [["Hard Blockers", "Accounting and posting integrity issues.", presenter.blocker_rows, :blockers, "red", "triangle-alert"], ["Warnings / Review Items", "Carried forward without preventing close.", presenter.warning_rows, :warnings, "amber", "circle-alert"]].each do |title, description, rows, empty_key, color, icon| %>
+    <% header_class = color == "red" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700" %>
+    <% text_class = color == "red" ? "text-red-700" : "text-amber-700" %>
+    <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <header class="border-b border-border bg-muted/70 px-4 py-2.5">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+              <span class="inline-flex size-6 items-center justify-center rounded-md <%= header_class %>"><%= cached_icon icon, class: "size-3.5", aria: { hidden: true } %></span>
+              <%= title %>
+            </h2>
+            <p class="mt-0.5 text-xs text-muted-foreground"><%= description %></p>
+          </div>
+          <span class="text-xs font-bold text-muted-foreground"><%= rows.count %></span>
+        </div>
+      </header>
+
+      <% if rows.any? %>
+        <div class="hidden overflow-x-auto md:block">
+          <table class="min-w-full divide-y divide-border text-sm" data-testid="<%= empty_key %>-table">
+            <thead class="text-left text-[10px] font-bold uppercase tracking-wider <%= header_class %>">
+              <tr><th class="px-4 py-2">Type</th><th class="px-4 py-2">Guest / Ref</th><th class="px-4 py-2">Details</th></tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <% rows.each do |row| %>
+                <tr>
+                  <td class="px-4 py-2.5"><span class="inline-flex rounded bg-card px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset <%= text_class %> <%= color == 'red' ? 'ring-red-600/25' : 'ring-amber-600/25' %>"><%= row.type %></span></td>
+                  <td class="px-4 py-2.5"><p class="font-semibold text-foreground"><%= row.guest %></p><p class="text-[10px] text-muted-foreground">#<%= row.reference %></p></td>
+                  <td class="px-4 py-2.5 text-muted-foreground"><%= row.details %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="divide-y divide-border md:hidden">
+          <% rows.each do |row| %>
+            <article class="px-4 py-3">
+              <p class="text-[10px] font-bold uppercase tracking-wider <%= text_class %>"><%= row.type %></p>
+              <p class="mt-1 text-sm font-bold text-foreground"><%= row.guest %> · #<%= row.reference %></p>
+              <p class="mt-1 text-xs text-muted-foreground"><%= row.details %></p>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="px-4 py-3 text-sm font-medium text-muted-foreground"><%= presenter.empty_state(empty_key) %></p>
+      <% end %>
+    </section>
+  <% end %>
+</div>

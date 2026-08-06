@@ -4,15 +4,20 @@ require "ostruct"
 
 module Rooms
   class SetStatus
+    class BookingTransitionFailed < StandardError; end
+
     ALLOWED_TRANSITIONS = {
-      "ready" => %w[pending_cleaning out_of_service],
-      "pending_cleaning" => %w[preparing ready],
-      "preparing" => %w[ready inspection_failed],
-      "inspection_failed" => %w[preparing],
-      "out_of_service" => %w[ready]
+      "ready" => %w[dirty out_of_service late_checkout_detected cleaning],
+      "dirty" => %w[cleaning ready out_of_service late_checkout_detected],
+      "cleaning" => %w[awaiting_inspection ready inspection_failed out_of_service],
+      "awaiting_inspection" => %w[ready inspection_failed cleaning out_of_service],
+      "inspection_failed" => %w[cleaning ready out_of_service],
+      "out_of_service" => %w[ready dirty],
+      "late_checkout_detected" => %w[dirty ready out_of_service]
     }.freeze
 
-    def initialize(room_status:, status:, user:, reason: nil, booking: nil, event_type: "room_status_changed", metadata: {})
+    def initialize(room_status:, status:, user:, reason: nil, booking: nil, event_type: "room_status_changed", metadata: {},
+                   require_ready_notes: true, clear_assignment: false, enforce_transition: true)
       @room_status = room_status
       @status = status.to_s
       @user = user
@@ -20,22 +25,30 @@ module Rooms
       @booking = booking
       @event_type = event_type
       @metadata = metadata
+      @require_ready_notes = require_ready_notes
+      @clear_assignment = clear_assignment
+      @enforce_transition = enforce_transition
     end
 
     def call
       return success if @room_status.status == @status
       return failure("Unsupported room status: #{@status}.") unless RoomStatus::STATUSES.include?(@status)
-      return failure(transition_error) unless allowed_transition?
+      return failure("Add remarks before marking this room Cleaned") if @status == "ready" && @require_ready_notes && @reason.blank?
+      return failure("A checked-in booking is required to report late checkout.") if @status == "late_checkout_detected" && @booking.blank?
+      return failure(transition_error) if @enforce_transition && !allowed_transition?
 
       old_status = @room_status.status
 
       RoomStatus.transaction do
-        @room_status.update!(
+        updates = {
           status: @status,
           last_changed_by: @user,
           last_changed_at: Time.current,
           notes: @reason.presence || @room_status.notes
-        )
+        }
+        updates[:assigned_to] = nil if @status == "ready" && @clear_assignment
+
+        @room_status.update!(updates)
 
         RoomOperationalAuditLog.create!(
           hotel: @room_status.hotel,
@@ -49,11 +62,23 @@ module Rooms
           reason: @reason,
           metadata: audit_metadata
         )
+
+        if @status == "late_checkout_detected"
+          transition_result = Bookings::TransitionStatus.new(
+            booking: @booking,
+            status: "due_out_detected",
+            user: @user,
+            options: { event: "detect_due_out", reason: @reason }
+          ).call
+          raise BookingTransitionFailed, transition_result.error unless transition_result.success?
+        end
       end
 
       success
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
+    rescue BookingTransitionFailed => e
+      failure(e.message)
     end
 
     private

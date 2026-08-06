@@ -1,0 +1,17 @@
+<%# frozen_string_literal: true %>
+<%# locals: (booking:, presenter: nil) %>
+<% presenter ||= HotelPortal::BookingPresenter.new(booking, current_hotel) %>
+
+<div class="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
+  <div>
+    <span class="block text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Guarantee Method</span>
+    <div class="mt-1 flex items-center gap-2">
+      <%= cached_icon "shield-check", stroke_width: 2.5, class: "size-4 text-muted-foreground" %>
+      <span class="text-sm font-bold text-foreground"><%= presenter.guarantee_method_display %></span>
+    </div>
+  </div>
+  <div class="text-right">
+    <span class="block text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Status</span>
+    <span class="mt-1 inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-foreground uppercase tracking-tight"><%= booking.status %></span>
+  </div>
+</div>

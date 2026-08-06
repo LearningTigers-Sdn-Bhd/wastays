@@ -1,151 +1,27 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">Nearby Attractions</span>
-  </div>
-<% end %>
+<div class="w-full space-y-3.5">
+  <%= render "hotel_portal/settings/property_page_header" %>
+  <%= render "hotel_portal/settings/group_tabs" %>
 
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  <section aria-labelledby="nearby-attractions-heading">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Nearby Attractions</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Show guests what to explore around your property.</p>
+        <h2 id="nearby-attractions-heading" class="text-base font-semibold text-foreground">Nearby Attractions</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Maintain the landmarks, activities, and local highlights recommended to guests.</p>
       </div>
-
-      <%= link_to new_hotel_nearby_attraction_path(current_hotel), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
-        <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-        Add Nearby Attraction
-      <% end %>
-    </div>
-  </div>
-
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
-      <div>
-        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Attractions</h2>
-        <p class="mt-1 text-sm font-medium text-slate-600">Nearby landmarks, activities, and local highlights for this property.</p>
-      </div>
-      <span class="text-sm font-medium text-slate-500">Total Attractions <span class="font-semibold text-slate-900"><%= @all_nearby_attractions.count %></span></span>
-    </div>
-
-    <div class="hidden lg:block overflow-x-auto">
-      <table class="min-w-full table-fixed">
-        <colgroup>
-          <col class="w-[28%]">
-          <col class="w-[32%]">
-          <col class="w-[20%]">
-          <col class="w-[20%]">
-        </colgroup>
-        <thead class="bg-slate-100">
-          <tr>
-            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Attraction</th>
-            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Description</th>
-            <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Location</th>
-            <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 bg-white">
-          <% if @nearby_attractions.any? %>
-            <% @nearby_attractions.each_with_index do |nearby_attraction, index| %>
-              <tr class="align-top transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-                <td class="px-6 py-4 sm:px-8">
-                  <div class="flex items-start gap-x-4">
-                    <div class="flex-none size-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
-                      <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                      <span class="text-sm font-bold text-slate-900"><%= nearby_attraction.name %></span>
-                      <span class="text-xs text-slate-500 line-clamp-2 leading-relaxed"><%= nearby_attraction.address.presence || "Address not provided" %></span>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-6 py-4">
-                  <span class="text-sm text-slate-600 line-clamp-3 leading-relaxed"><%= nearby_attraction.description.presence || "No description added yet." %></span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm font-bold text-slate-900"><%= nearby_attraction.city %></span>
-                  <p class="text-xs text-slate-500"><%= nearby_attraction.country %></p>
-                </td>
-                <td class="px-6 py-4 text-right whitespace-nowrap sm:px-8">
-                  <div class="relative inline-flex" data-controller="dropdown">
-                    <button type="button" data-action="click->dropdown#toggle" class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
-                      Manage
-                      <svg class="ms-1.5 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
-                    <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 min-w-[14rem] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in duration-200">
-                      <%= link_to edit_hotel_nearby_attraction_path(current_hotel, nearby_attraction), class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors" do %>
-                        <svg class="size-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                        Edit Details
-                      <% end %>
-                      <%= link_to hotel_nearby_attraction_path(current_hotel, nearby_attraction), data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete this nearby attraction?" }, class: "flex items-center gap-x-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors" do %>
-                        <svg class="size-4 text-red-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                        Delete Attraction
-                      <% end %>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr>
-              <td colspan="4" class="px-6 py-20 text-center sm:px-8">
-                <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
-                  <svg class="size-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg>
-                </div>
-                <h3 class="mt-4 text-sm font-bold text-slate-900">No nearby attractions found</h3>
-                <p class="mt-1 text-sm text-slate-500 text-sm">Start by adding a place guests can visit around your hotel.</p>
-                <div class="mt-6">
-                  <%= link_to "Add Nearby Attraction", new_hotel_nearby_attraction_path(current_hotel), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" %>
-                </div>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="space-y-4 p-4 sm:p-6 lg:hidden">
-      <% if @nearby_attractions.any? %>
-        <% @nearby_attractions.each do |nearby_attraction| %>
-          <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
-            <div class="flex items-start gap-3">
-              <div class="flex-none size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm">
-                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10Z"/><circle cx="12" cy="11" r="2.5"/></svg>
-              </div>
-              <div class="min-w-0">
-                <p class="text-sm font-bold text-slate-900 truncate"><%= nearby_attraction.name %></p>
-                <p class="mt-1 text-xs text-slate-500 line-clamp-1"><%= nearby_attraction.address.presence || "Address not provided" %></p>
-              </div>
-            </div>
-
-            <dl class="mt-4 space-y-3 text-sm">
-              <div class="flex items-start justify-between gap-4">
-                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Location</dt>
-                <dd class="text-right text-slate-900 font-bold"><%= nearby_attraction.city %>, <%= nearby_attraction.country %></dd>
-              </div>
-              <div class="space-y-1">
-                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Description</dt>
-                <dd class="text-slate-600"><%= nearby_attraction.description.presence || "No description added yet." %></dd>
-              </div>
-            </dl>
-
-            <div class="mt-6 flex flex-wrap items-center justify-end gap-2">
-              <%= link_to "Edit", edit_hotel_nearby_attraction_path(current_hotel, nearby_attraction), class: "inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition" %>
-              <%= link_to "Delete", hotel_nearby_attraction_path(current_hotel, nearby_attraction), data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to delete this nearby attraction?" }, class: "inline-flex items-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition" %>
-            </div>
-          </div>
-        <% end %>
-      <% else %>
-        <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center shadow-sm">
-          <p class="text-sm font-medium text-slate-500">No nearby attractions found.</p>
-        </div>
+      <%= render PanelsUI::Button.new(
+            href: new_hotel_nearby_attraction_path(current_hotel),
+            size: :sm,
+            class: "w-full sm:w-auto",
+            data: { turbo_frame: "nearby_attraction_form" }) do %>
+        <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
+        <span>Create</span>
       <% end %>
     </div>
 
-    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
-      <%= paginate @nearby_attractions %>
-    </div>
-  </div>
+    <%= render "list" %>
+  </section>
 </div>
+
+<% content_for :body_end do %>
+  <%= turbo_frame_tag "nearby_attraction_form" %>
+<% end %>

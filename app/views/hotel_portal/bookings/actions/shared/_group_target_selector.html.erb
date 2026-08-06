@@ -1,0 +1,78 @@
+<% target_presenter = local_assigns.fetch(:target_presenter) %>
+<% master_detail = local_assigns.fetch(:master_detail, false) %>
+<% show_status_badges = local_assigns.fetch(:show_status_badges, false) %>
+<% selection_mode = local_assigns.fetch(:selection_mode, :checkbox).to_sym %>
+<% radio_mode = selection_mode == :radio %>
+<% selected_booking_ids = Array(local_assigns[:selected_booking_ids]).reject(&:blank?).map(&:to_s) %>
+<% target_scope = local_assigns.fetch(:target_scope, "individual").to_s %>
+<% embedded = local_assigns.fetch(:embedded, false) %>
+<% row_control = radio_mode ? PanelsUI::Radio : PanelsUI::Checkbox %>
+
+<% if target_presenter.render? %>
+  <div class="min-h-0 overflow-y-auto custom-scrollbar lg:col-start-1 lg:row-span-[99] lg:h-full <%= 'bg-muted/30' unless embedded %>" data-group-lifecycle-targets-target="rail">
+    <% unless radio_mode %>
+      <div class="px-4 pt-4 pb-1">
+        <p id="target-scope-label" class="text-sm font-medium text-foreground">Perform <%= target_presenter.action_label %> on:</p>
+        <div class="mt-1.5 flex flex-wrap gap-x-6 gap-y-2" role="radiogroup" aria-labelledby="target-scope-label">
+          <%= render PanelsUI::Radio.new(
+                name: "target_scope", value: "group", label: "Group", size: :sm,
+                checked: target_scope == "group",
+                data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }) %>
+          <%= render PanelsUI::Radio.new(
+                name: "target_scope", value: "individual", label: "Individual booking", size: :sm,
+                checked: target_scope != "group",
+                data: { group_lifecycle_targets_target: "scope", action: "group-lifecycle-targets#scopeChanged" }) %>
+        </div>
+      </div>
+      <div class="mx-4 my-1 border-t border-secondary/20" role="presentation"></div>
+    <% end %>
+
+    <%= render PanelsUI::Accordion.new(
+          type: :multiple, variant: :default, heading_level: 3,
+          default_open: target_presenter.groups.map { |group| group.room_type.to_s },
+          class: "px-2 py-1") do |accordion| %>
+      <% target_presenter.groups.each do |group| %>
+        <% accordion.with_item(
+             value: group.room_type.to_s,
+             class: "border-b-0",
+             trigger_class: "min-h-0 px-2 py-1.5 hover:no-underline",
+             content_class: "px-0 pb-1") do |item| %>
+          <% item.with_trigger do %><%= group.room_type %> (<%= group.rows.size %>)<% end %>
+          <% item.with_body do %>
+            <div class="space-y-0.5">
+              <% group.rows.each do |row| %>
+                <% initially_active = if selected_booking_ids.any?
+                     selected_booking_ids.include?(row.booking.id.to_s)
+                   else
+                     master_detail && row.booking.id == target_presenter.booking.id
+                   end %>
+                <div class="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted has-[:checked]:bg-accent has-[:disabled]:hover:bg-transparent"
+                     data-group-lifecycle-targets-target="row"
+                     data-booking-id="<%= row.booking.id %>"
+                     aria-selected="<%= initially_active %>">
+                  <%= render row_control.new(
+                        name: "booking_ids[]", value: row.booking.id, id: "group-target-#{row.booking.id}",
+                        label: row.room_number.to_s, description: row.guest_name,
+                        checked: initially_active, disabled: !row.eligible, size: :sm,
+                        data: { booking_id: row.booking.id, group_lifecycle_targets_target: "checkbox", action: "group-lifecycle-targets#selectionChanged" }) %>
+                  <% if show_status_badges && row.eligible %>
+                    <span class="ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-warning text-warning-foreground"
+                          data-group-lifecycle-targets-target="statusBadge"
+                          data-booking-id="<%= row.booking.id %>"
+                          hidden></span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% if target_presenter.eligible_count.zero? %>
+      <div class="px-4 py-4">
+        <p class="rounded-md bg-warning/10 px-3 py-2 text-xs font-semibold text-warning-foreground">No group bookings are eligible for this action.</p>
+      </div>
+    <% end %>
+  </div>
+<% end %>

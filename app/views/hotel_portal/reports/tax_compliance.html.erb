@@ -1,0 +1,52 @@
+<% export_disabled = @report.rows.empty? %>
+<div class="w-full space-y-4" data-slot="report-page" data-report="tax-compliance">
+  <%= render PanelsUI::PageHeader.new(title: "Tax & compliance", description: "Review tourism tax, SST, and non-national guest records for the selected period.") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm text-muted-foreground">
+        <%= current_hotel.name %> ·
+        <% if @report.start_date == @report.end_date %>
+          <%= @report.start_date.strftime("%A, %d %b %Y") %>
+        <% else %>
+          <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
+        <% end %>
+      </p>
+    <% end %>
+    <% header.with_actions do %>
+      <%= render "preset_report_actions",
+        form_url: tax_compliance_hotel_reports_path(current_hotel),
+        form_id: "tax-compliance-range-form",
+        hidden_params: { tab: @active_tax_compliance_tab },
+        date_preset: @date_preset,
+        start_date: @report.start_date,
+        end_date: @report.end_date,
+        show_export: feature_enabled_for_hotel?("excel_pdf_export"),
+        export_disabled: export_disabled,
+        export_menu_id: "tax-compliance-export",
+        export_items: [
+          ["Export PDF", tax_compliance_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_tax_compliance_tab, format: :pdf)],
+          ["Export Excel", tax_compliance_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_tax_compliance_tab, format: :xlsx)],
+          ["Export CSV", tax_compliance_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_tax_compliance_tab, format: :csv)]
+        ] %>
+    <% end %>
+  <% end %>
+
+  <% preserved_params = { start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset } %>
+  <%= render PanelsUI::Tabs.new(
+        id: "tax-compliance-tabs",
+        active: @active_tax_compliance_tab,
+        variant: :line,
+        aria_label: "Tax and compliance sections") do |tabs| %>
+    <% tabs.with_tab(name: "tourism_tax", label: "Tourism tax", href: tax_compliance_hotel_reports_path(current_hotel, preserved_params.merge(tab: "tourism_tax")), data: { testid: "tax-compliance-tab-tourism-tax" }) %>
+    <% tabs.with_tab(name: "sst", label: "SST", href: tax_compliance_hotel_reports_path(current_hotel, preserved_params.merge(tab: "sst")), data: { testid: "tax-compliance-tab-sst" }) %>
+    <% tabs.with_tab(name: "non_national", label: "Non-national", href: tax_compliance_hotel_reports_path(current_hotel, preserved_params.merge(tab: "non_national")), data: { testid: "tax-compliance-tab-non-national" }) %>
+  <% end %>
+
+  <% case @active_tax_compliance_tab %>
+  <% when "sst" %>
+    <%= render "tax_compliance_sst" %>
+  <% when "non_national" %>
+    <%= render "tax_compliance_non_national" %>
+  <% else %>
+    <%= render "tax_compliance_tourism_tax" %>
+  <% end %>
+</div>

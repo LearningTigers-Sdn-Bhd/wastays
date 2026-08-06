@@ -1,161 +1,32 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <%= link_to "Night Audit", hotel_night_audits_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900"><%= @night_audit.business_date.strftime("%d %b %Y") %></span>
-  </div>
+<% presenter = @presenter %>
+
+<% if presenter.auto_refresh? %>
+  <% content_for :head do %>
+    <meta http-equiv="refresh" content="5">
+  <% end %>
 <% end %>
 
-<% status_class = case @night_audit.status
-  when "completed" then "border-emerald-200 bg-emerald-50 text-emerald-700"
-  when "blocked" then "border-amber-200 bg-amber-50 text-amber-700"
-  when "failed" then "border-red-200 bg-red-50 text-red-700"
-  else "border-slate-200 bg-slate-50 text-slate-700"
-end %>
+<div class="w-full space-y-4">
+  <%= render "hotel_portal/night_audits/show/header", presenter: presenter %>
+  <%= render "hotel_portal/night_audits/show/result_banner", presenter: presenter %>
+  <%= render "hotel_portal/night_audits/show/summary", presenter: presenter %>
 
-<% blockers = @night_audit.blocked_details || {} %>
-<% warnings = @night_audit.exceptions || {} %>
-
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0 mt-5">
-    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-      <div>
-        <div class="flex items-center gap-3 mb-2">
-          <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Night Audit <%= @night_audit.business_date.strftime("%d %b %Y") %></h1>
-          <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider <%= status_class %>"><%= @night_audit.status.humanize %></span>
-        </div>
-        <p class="text-sm font-medium text-slate-600">Trigger: <%= @night_audit.trigger_mode.humanize %> · Performed by <%= @night_audit.performed_by_user&.name || "System" %></p>
-      </div>
-      <%= link_to "Back to Night Audit", hotel_night_audits_path(current_hotel), class: "inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50" %>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-4 mx-4 md:mx-0">
-    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Arrivals</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @night_audit.summary["arrivals_count"] || 0 %></h2>
-    </div>
-    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Due Outs</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @night_audit.summary["due_out_count"] || 0 %></h2>
-    </div>
-    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Checked Out</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @night_audit.summary["checked_out_count"] || 0 %></h2>
-    </div>
-    <div class="p-6 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Warnings</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @night_audit.summary["warning_count"] || 0 %></h2>
-    </div>
-  </div>
-
-  <div class="grid gap-8 lg:grid-cols-3 px-4 md:px-0">
-    <div class="lg:col-span-2 space-y-8">
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950">Blocked Details</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Bookings that prevented the audit from completing.</p>
-        </div>
-        <div class="p-6 sm:p-8 space-y-6">
-          <% if blockers.values.flatten.any? %>
-            <% blockers.each do |label, rows| %>
-              <% next if rows.blank? %>
-              <div class="space-y-3">
-                <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-500"><%= label.humanize %></h3>
-                <% rows.each do |row| %>
-                  <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
-                    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p class="text-sm font-bold text-slate-950"><%= row["guest_name"] %> <span class="text-slate-500">#<%= row["confirmation_token"] %></span></p>
-                        <p class="text-xs font-medium text-slate-600"><%= row["reason"] %></p>
-                      </div>
-                      <p class="text-xs font-semibold uppercase tracking-wider text-amber-700"><%= row["status"] %></p>
-                    </div>
-                  </div>
-                <% end %>
-              </div>
-            <% end %>
-          <% else %>
-            <p class="text-sm font-medium italic text-slate-500">No blocking exceptions were found.</p>
-          <% end %>
-        </div>
-      </div>
-
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950">Warnings</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Open request items preserved as warnings only.</p>
-        </div>
-        <div class="p-6 sm:p-8 space-y-6">
-          <% if warnings.values.flatten.any? %>
-            <% warnings.each do |label, rows| %>
-              <% next if rows.blank? %>
-              <div class="space-y-3">
-                <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-500"><%= label.humanize %></h3>
-                <% rows.each do |row| %>
-                  <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p class="text-sm font-bold text-slate-950"><%= row["guest_name"] %> <span class="text-slate-500">#<%= row["confirmation_token"] %></span></p>
-                        <p class="text-xs font-medium text-slate-600"><%= row["details"] %></p>
-                      </div>
-                      <p class="text-xs font-semibold uppercase tracking-wider text-slate-500"><%= row["status"] %></p>
-                    </div>
-                  </div>
-                <% end %>
-              </div>
-            <% end %>
-          <% else %>
-            <p class="text-sm font-medium italic text-slate-500">No warnings were captured for this audit.</p>
-          <% end %>
-        </div>
-      </div>
-    </div>
-
-    <div class="space-y-8">
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-5">
-          <h2 class="text-lg font-bold tracking-tight text-slate-950">Audit Details</h2>
-        </div>
-        <div class="p-6 space-y-4 text-sm">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Started At</p>
-            <p class="mt-1 font-semibold text-slate-900"><%= @night_audit.started_at&.strftime("%d %b %Y, %I:%M %p") || "-" %></p>
-          </div>
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Completed At</p>
-            <p class="mt-1 font-semibold text-slate-900"><%= @night_audit.completed_at&.strftime("%d %b %Y, %I:%M %p") || "-" %></p>
-          </div>
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">In-House Count</p>
-            <p class="mt-1 font-semibold text-slate-900"><%= @night_audit.summary["in_house_count"] || 0 %></p>
-          </div>
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Payment Summary</p>
-            <% payment_status_counts = @night_audit.summary.fetch("payment_status_counts", {}) %>
-            <% if payment_status_counts.any? %>
-              <div class="mt-2 space-y-2">
-                <% payment_status_counts.each do |status, count| %>
-                  <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500"><%= status %></span>
-                    <span class="text-sm font-bold text-slate-900"><%= count %></span>
-                  </div>
-                <% end %>
-              </div>
-            <% else %>
-              <p class="mt-1 font-semibold text-slate-900">No payment rows captured.</p>
-            <% end %>
-          </div>
-          <% if @night_audit.notes.present? %>
-            <div>
-              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Notes</p>
-              <p class="mt-1 text-sm font-medium text-slate-700"><%= @night_audit.notes %></p>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
+  <div data-testid="night-audit-show-tabs">
+  <%= render PanelsUI::Tabs.new(id: "night-audit-show-tabs", active: @active_tab, variant: :pill, url: { param: "tab" }, class: "space-y-4", aria_label: "Night Audit record sections") do |tabs| %>
+    <% tabs.with_tab(name: "results", label: "Results", icon: "list-checks", count: presenter.run_result_counters.sum { |counter| counter.value.to_i }, panel_id: "results-panel") %>
+    <% tabs.with_tab(name: "financial-summary", label: "Financial Summary", icon: "chart-no-axes-combined", panel_id: "financial-summary-panel") %>
+    <% tabs.with_tab(name: "advanced-actions", label: "Advanced Actions", icon: "settings-2", count: presenter.manual_adjustment_rows.count, panel_id: "advanced-actions-panel") %>
+    <% tabs.with_panel(name: "results", id: "results-panel", class: "space-y-4", data: { testid: "results-panel" }) do %>
+      <%= render "hotel_portal/night_audits/show/run_results", presenter: presenter %>
+      <%= render "hotel_portal/night_audits/show/blockers_and_warnings", presenter: presenter %>
+    <% end %>
+    <% tabs.with_panel(name: "financial-summary", id: "financial-summary-panel", data: { testid: "financial-summary-panel" }) do %>
+      <%= render "hotel_portal/night_audits/show/financial_summary", presenter: presenter %>
+    <% end %>
+    <% tabs.with_panel(name: "advanced-actions", id: "advanced-actions-panel", data: { testid: "show-advanced-actions-panel" }) do %>
+      <%= render "hotel_portal/night_audits/show/completed_nightly_reconciliation", presenter: presenter %>
+      <%= render "hotel_portal/night_audits/show/manual_adjustments", presenter: presenter %>
+    <% end %>
+  <% end %>
   </div>
 </div>

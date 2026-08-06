@@ -1,0 +1,42 @@
+<%= tag.header(**navbar_attributes) do %>
+  <%# Three tracks: the start and end rails share the leftover width evenly, so the
+      centre slot stays optically centred in the bar regardless of how wide the
+      brand or the action cluster grows. The end rail renders even when empty —
+      it is the counterweight that keeps the centre honest. %>
+  <div class="panel-navbar__inner">
+    <div class="panel-navbar__start">
+      <% if navigation? %>
+        <button type="button"
+                class="panel-navbar__navigation-trigger lg:hidden"
+                command="show-modal"
+                commandfor="<%= mobile_sidebar_id %>"
+                aria-label="Open navigation">
+          <%= helpers.app_icon "menu", class: "panel-navbar__icon", aria: { hidden: "true" } %>
+        </button>
+
+        <button type="button"
+                class="panel-navbar__navigation-trigger hidden lg:inline-flex"
+                data-controller="panels-ui--sidebar-toggle"
+                data-panels-ui--sidebar-toggle-key-value="<%= key %>"
+                data-panels-ui--sidebar-toggle-state-key-value="<%= sidebar_state_key %>"
+                data-action="click->panels-ui--sidebar-toggle#toggleDesktop"
+                aria-controls="<%= key %>-sidebar"
+                aria-expanded="false"
+                aria-pressed="false"
+                aria-label="Lock navigation open">
+          <%= helpers.app_icon "pin", class: "panel-navbar__icon", data: { sidebar_toggle_icon: "lock" }, aria: { hidden: "true" } %>
+          <%= helpers.app_icon "pin-off", class: "panel-navbar__icon", data: { sidebar_toggle_icon: "unlock" }, hidden: true, aria: { hidden: "true" } %>
+        </button>
+      <% end %>
+
+      <% if brand? %><div class="panel-navbar__brand"><%= brand %></div><% end %>
+    </div>
+
+    <% if center? %><div class="panel-navbar__center"><%= center %></div><% end %>
+
+    <div class="panel-navbar__end">
+      <% if actions? %><div class="panel-navbar__actions"><%= actions %></div><% end %>
+      <% if profile? %><div class="panel-navbar__profile"><%= profile %></div><% end %>
+    </div>
+  </div>
+<% end %>

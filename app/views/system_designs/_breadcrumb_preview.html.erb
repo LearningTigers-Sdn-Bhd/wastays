@@ -1,0 +1,55 @@
+<section aria-labelledby="breadcrumb-preview-heading" class="border-t border-border pt-8">
+  <h2 id="breadcrumb-preview-heading" class="text-lg font-semibold text-foreground">Breadcrumb</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Semantic <code>&lt;nav&gt;/&lt;ol&gt;</code> trail rendered from the typed
+    <code>parts</code> the portal navigation helpers produce. Drop-in replacement for
+    <code>_breadcrumb_bar</code>. Sibling-menu dropdowns use the shared @floating-ui spine;
+    the <code>panels-ui--breadcrumb</code> controller also exposes the tab-label outlet API.
+  </p>
+
+  <div class="space-y-4">
+    <%# Plain trail: section → link → current %>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <%= render PanelsUI::Breadcrumb.new(parts: [
+        { type: :section, label: "Operations" },
+        { type: :menu, label: "Bookings", path: "#", siblings: nil },
+        { label: "BK-10293" }
+      ]) %>
+    </div>
+
+    <%# Sibling dropdown: the current menu has siblings to switch between %>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <%= render PanelsUI::Breadcrumb.new(parts: [
+        { type: :section, label: "Reports" },
+        { type: :menu, label: "Financial", path: "#", siblings: [
+          { label: "Summary", path: "#" },
+          { label: "Daily Report", path: "#" },
+          { label: "Refund Report", path: "#" }
+        ] }
+      ]) %>
+    </div>
+
+    <%# Nested: menu_group → breakdown dropdown %>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <%= render PanelsUI::Breadcrumb.new(parts: [
+        { type: :section, label: "Finance" },
+        { type: :menu_group, label: "Accounts Receivable" },
+        { type: :breakdown, label: "AR Invoices", path: "#", siblings: [
+          { label: "AR Invoices", path: "#" },
+          { label: "AR Payments", path: "#" },
+          { label: "Aging Report", path: "#" }
+        ] }
+      ]) %>
+    </div>
+
+    <%# Tab-driven trail: live tab label + optional subtab segment %>
+    <div class="rounded-lg border border-border bg-card p-4">
+      <%= render PanelsUI::Breadcrumb.new(id: "sd-unrelated-tabs-bc", parts: [
+        { type: :section, label: "Property" },
+        { type: :menu, label: "Rates & Inventory", path: "#" },
+        { label: "Calendar", tab_label: true },
+        { label: "Standard Room", subtab_label: true, hidden: false }
+      ]) %>
+    </div>
+  </div>
+</section>

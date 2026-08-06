@@ -1,0 +1,51 @@
+<div class="w-full">
+  <%= render PanelsUI::PageHeader.new(title: "Edit Mapping", description: "Update General Ledger Code (GL Code) for #{@gl_map.transaction_category.humanize}.", class: "mb-3.5") %>
+
+  <%= form_with model: @gl_map, url: hotel_general_ledger_map_path(current_hotel, @gl_map), class: "space-y-6" do |f| %>
+    <% if @gl_map.errors.any? %>
+      <div class="rounded-xl bg-red-50 p-4 border border-red-100">
+        <div class="flex">
+          <div class="shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-bold text-red-800"><%= pluralize(@gl_map.errors.count, "error") %> prohibited this mapping from being saved:</h3>
+            <div class="mt-2 text-sm text-red-700">
+              <ul role="list" class="list-disc space-y-1 pl-5">
+                <% @gl_map.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="p-8 space-y-6">
+        <div>
+          <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Category (Read-only)</label>
+          <input type="text" value="<%= @gl_map.transaction_category.humanize %>" disabled class="w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-bold text-muted-foreground cursor-not-allowed">
+        </div>
+
+        <div>
+          <%= f.label :gl_code, "General Ledger Code (GL Code)", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2" %>
+          <%= f.text_field :gl_code, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground focus:border-border-interactive focus:ring-0 transition-all placeholder:text-muted-foreground", placeholder: "e.g. 4010 or REV-ROOM" %>
+        </div>
+
+        <div>
+          <%= f.label :description, class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2" %>
+          <%= f.text_area :description, rows: 3, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground focus:border-border-interactive focus:ring-0 transition-all placeholder:text-muted-foreground", placeholder: "Optional description of this General Ledger (GL) mapping..." %>
+        </div>
+      </div>
+
+      <div class="bg-muted px-8 py-4 flex items-center justify-between border-t border-border">
+        <%= link_to "Cancel", hotel_general_ledger_maps_path(current_hotel), class: "text-sm font-bold text-muted-foreground hover:text-foreground transition-colors" %>
+        <%= f.submit "Update Mapping", class: "inline-flex items-center rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover cursor-pointer" %>
+      </div>
+    </div>
+  <% end %>
+</div>

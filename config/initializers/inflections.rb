@@ -14,3 +14,9 @@
 # ActiveSupport::Inflector.inflections(:en) do |inflect|
 #   inflect.acronym "RESTful"
 # end
+
+# "UI" acronym so the `app/components/panels_ui/` directory autoloads as the
+# `PanelsUI` module (Zeitwerk camelizes `panels_ui` -> `PanelsUI`, not `PanelsUi`).
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+  inflect.acronym "UI"
+end

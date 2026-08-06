@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-if Rails.env.demo?
-  require_relative "demo_seeds"
-  DemoSeeds.run
-else
+require_relative "demo_seeds"
+require_relative "amenities"
 
 SEED_PASSWORD = '12345678'.freeze
 
@@ -74,6 +72,7 @@ module SeedData
       guest.country = guest_attrs[:country]
       guest.document_type = guest_attrs[:document_type]
       guest.government_id = guest_attrs[:government_id]
+      guest.date_of_birth = guest_attrs[:date_of_birth]
       guest.save!
       guest
     end
@@ -100,7 +99,7 @@ module SeedData
       tourism_tax_amount: tourism_tax_applied ? hotel.send(:tourism_tax_amount_for, guest_attrs[:country]) : 0
     )
 
-    BookingRoom.create!(booking: booking, room_type: room_type, quantity: 1, subtotal: room_type.base_price * nights)
+    BookingRoom.create!(booking: booking, room_type: room_type, subtotal: room_type.base_price * nights)
 
     guest = upsert_guest(guest_attrs)
     BookingGuest.find_or_create_by!(booking: booking, guest: guest, is_primary: true)
@@ -114,7 +113,21 @@ module SeedData
     booking.update!(guarantee_method: guarantee, deposit_status: deposit)
     booking
   end
+
+  def ensure_default_gl_maps(hotel)
+    Financials::EnsureDefaultGlMaps.call(hotel)
+  end
 end
+
+AmenitiesSeeder.run
+
+SeedLog.section('Booking sources')
+BookingSource.seed_defaults!
+SeedLog.ok("#{BookingSource.count} booking sources")
+
+if Rails.env.demo?
+  DemoSeeds.run
+else
 
 SeedLog.section('Seeding WAStays data')
 
@@ -125,47 +138,48 @@ platform_permissions = [
   { name: 'Manage Rates', slug: 'manage_rates' },
   { name: 'Manage Inventory', slug: 'manage_inventory' },
   { name: 'View Bookings', slug: 'view_bookings' },
+  { name: 'View Financial Status', slug: 'view_financial_status' },
   { name: 'Manage Bookings', slug: 'manage_bookings' },
+  { name: 'Void Bookings', slug: 'void_bookings' },
+  { name: 'View Guest Records', slug: 'view_guest_records' },
   { name: 'View Guest Phone', slug: 'view_guest_phone' },
   { name: 'Manage Guest Arrival', slug: 'manage_guest_arrival' },
   { name: 'View Audit Logs', slug: 'view_audit_logs' },
   { name: 'Export Audit Logs', slug: 'export_audit_logs' },
+  { name: 'Delete Guest Record', slug: 'delete_guest_record' },
   { name: 'Manage Night Audit', slug: 'manage_night_audit' },
   { name: 'Manage Users', slug: 'manage_users' },
+  { name: 'Manage Corporate Accounts', slug: 'manage_corporate_accounts' },
+  { name: 'Manage AR Payments', slug: 'manage_ar_payments' },
+  { name: 'View Room Readiness', slug: 'view_room_readiness' },
   { name: 'Manage Room Status', slug: 'manage_room_status' },
+  { name: 'Override Room Status Assignment', slug: 'override_room_status_assignment' },
   { name: 'Post Charges', slug: 'post_charges' },
+  { name: 'Post Folio Charges', slug: 'post_folio_charges' },
+  { name: 'Post Folio Payments', slug: 'post_folio_payments' },
+  { name: 'Execute Folio Refunds', slug: 'execute_folio_refunds' },
+  { name: 'Post Folio Adjustments', slug: 'post_folio_adjustments' },
+  { name: 'Post Folio Corrections', slug: 'post_folio_corrections' },
+  { name: 'Post Folio Write-Offs', slug: 'post_folio_write_offs' },
+  { name: 'Manage Folio Windows', slug: 'manage_folio_windows' },
+  { name: 'Manage Folio Movements', slug: 'manage_folio_movements' },
+  { name: 'Override Financial Date Lock', slug: 'override_financial_date_lock' },
+  { name: 'Manage GL Mappings', slug: 'manage_general_ledger_maps' },
   { name: 'View Reports', slug: 'view_reports' },
   { name: 'View Payouts', slug: 'view_payouts' },
-  { name: 'Manage Requests', slug: 'manage_requests' }
+  { name: 'Manage Requests', slug: 'manage_requests' },
+  { name: 'Manage Concierge', slug: 'manage_concierge' },
+  { name: 'Perform Housekeeping Tasks', slug: 'perform_housekeeping_tasks' },
+  { name: 'Dispatch Housekeeping Tasks', slug: 'dispatch_housekeeping_tasks' }
 ]
 
-role_templates = [
-  { name: 'Hotel Owner', slug: 'hotel_owner', permissions: platform_permissions.map { |p| p[:slug] } },
-  { name: 'General Manager', slug: 'general_manager', permissions: platform_permissions.map { |p| p[:slug] }.reject { |s| s == 'manage_account' } },
-  { name: 'Front Desk', slug: 'front_desk', permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit manage_room_status post_charges manage_requests] },
-  { name: 'Housekeeper', slug: 'housekeeper', permissions: %w[manage_room_status manage_requests] }
-]
-
-cancellation_templates = [
-  { name: 'Flexible', body: 'Full refund if cancelled at least 24 hours before check-in time. No refund if cancelled within 24 hours.' },
-  { name: 'Moderate', body: 'Full refund if cancelled at least 5 days before check-in time. 50% refund if cancelled between 2 and 5 days. No refund within 48 hours.' },
-  { name: 'Strict', body: 'No refund for cancellations.' }
-]
-
-SeedLog.section('Permissions and templates')
+SeedLog.section('Permissions')
 platform_permissions.each do |permission_attrs|
   Permission.find_or_create_by!(slug: permission_attrs[:slug]) do |permission|
     permission.name = permission_attrs[:name]
   end
 end
 SeedLog.ok("#{platform_permissions.size} permissions ready")
-
-cancellation_templates.each do |template_attrs|
-  CancellationPolicyTemplate.find_or_create_by!(name: template_attrs[:name]) do |template|
-    template.body = template_attrs[:body]
-  end
-end
-SeedLog.ok("#{cancellation_templates.size} cancellation templates ready")
 
 if Rails.env.development?
   SeedLog.section('Accounts, hotels, and users')
@@ -251,7 +265,10 @@ if Rails.env.development?
     end
     account.update!(name: blueprint[:account][:name], status: blueprint[:account][:status])
 
-    role_lookup = role_templates.index_with { |template| SeedData.ensure_role(account, template) }
+    # Roles come from HotelOps::SeedAccountRoles so a seeded account looks
+    # exactly like one created through the app. Read after the permissions
+    # above exist, since the owner and manager templates derive from them.
+    role_lookup = HotelOps::SeedAccountRoles.role_templates.index_with { |template| SeedData.ensure_role(account, template) }
 
     BankingDetail.find_or_create_by!(account: account) do |banking_detail|
       banking_detail.account_holder_name = blueprint[:banking][:account_holder_name]
@@ -290,6 +307,8 @@ if Rails.env.development?
         tourism_tax_amount: hotel_attrs[:tourism_tax_amount]
       )
 
+      SeedData.ensure_default_gl_maps(hotel)
+
       PropertyPolicy.find_or_create_by!(hotel: hotel) do |policy|
         policy.check_in_time = hotel_attrs[:policy][:check_in_time]
         policy.check_out_time = hotel_attrs[:policy][:check_out_time]
@@ -312,6 +331,7 @@ if Rails.env.development?
           room.max_children = room_attrs[:children]
           room.quantity = room_attrs[:quantity]
           room.base_price = room_attrs[:base_price]
+          room.room_number_mode = 'range'
         end
 
         room_type.update!(
@@ -319,7 +339,8 @@ if Rails.env.development?
           max_adults: room_attrs[:adults],
           max_children: room_attrs[:children],
           quantity: room_attrs[:quantity],
-          base_price: room_attrs[:base_price]
+          base_price: room_attrs[:base_price],
+          room_number_mode: 'range'
         )
 
         SeedData.ensure_room_calendar(room_type, start_date: Date.current - 10.days, end_date: Date.current + 45.days)
@@ -386,7 +407,7 @@ if Rails.env.development?
     {
       hotel_name: 'Sample Hotel',
       room_name: 'Executive King',
-      guest: { name: 'Ravi Menon', email: 'ravi.menon@example.com', phone: '+60129876543', adults: 1, children: 0, gender: 'male', country: 'India', document_type: 'passport', government_id: 'N7788991' },
+      guest: { name: 'Ravi Menon', email: 'ravi.menon@example.com', phone: '+60129876543', adults: 1, children: 0, gender: 'male', country: 'India', document_type: 'passport', government_id: 'N7788991', date_of_birth: Date.new(1987, 3, 18) },
       check_in: Date.current - 2.days,
       nights: 3,
       status: 'confirmed',
@@ -398,7 +419,7 @@ if Rails.env.development?
     {
       hotel_name: 'Aurora Hill Retreat',
       room_name: 'Skyline Suite',
-      guest: { name: 'Elena Cruz', email: 'elena.cruz@example.com', phone: '+60123333333', adults: 2, children: 1, gender: 'female', country: 'Philippines', document_type: 'passport', government_id: 'P3344556' },
+      guest: { name: 'Elena Cruz', email: 'elena.cruz@example.com', phone: '+60123333333', adults: 2, children: 1, gender: 'female', country: 'Philippines', document_type: 'passport', government_id: 'P3344556', date_of_birth: Date.new(1991, 7, 24) },
       check_in: Date.current + 4.days,
       nights: 2,
       status: 'confirmed',
@@ -422,7 +443,7 @@ if Rails.env.development?
     {
       hotel_name: 'Kinabalu Rainforest Lodge',
       room_name: 'Canopy Cabin',
-      guest: { name: 'Tom Becker', email: 'tom.becker@example.com', phone: '+60192223344', adults: 2, children: 0, gender: 'male', country: 'Germany', document_type: 'passport', government_id: 'C01X7788' },
+      guest: { name: 'Tom Becker', email: 'tom.becker@example.com', phone: '+60192223344', adults: 2, children: 0, gender: 'male', country: 'Germany', document_type: 'passport', government_id: 'C01X7788', date_of_birth: Date.new(1985, 11, 9) },
       check_in: Date.current + 9.days,
       nights: 2,
       status: 'confirmed',
@@ -473,4 +494,14 @@ if Rails.env.development?
 end
 
 SeedLog.section('Seeding complete')
+end
+
+load Rails.root.join("db", "seeds", "plans.rb") unless Rails.env.test?
+
+Hotel.find_each do |hotel|
+  NotificationConfig.find_or_create_by!(hotel: hotel, notification_type: "check_in_confirmation") do |config|
+    config.enabled = true
+    config.channels = [ "whatsapp" ]
+    config.settings = {}
+  end
 end

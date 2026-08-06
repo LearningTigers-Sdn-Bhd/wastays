@@ -1,0 +1,5 @@
+<%= render ObservationDeck::AppBar.new(
+      environment: Rails.env.presence,
+      refresh_path: admin_observation_deck_index_path(@filter_params),
+      exit_path: admin_dashboard_path
+    ) %>

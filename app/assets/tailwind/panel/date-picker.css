@@ -1,0 +1,274 @@
+/* PanelsUI::DatePicker — a native <input> beside an icon button that opens a nested
+   PanelsUI::Popover holding a Cally <calendar-date> / <calendar-range>. The calendar
+   lives inside this component's themed subtree, so tokens resolve from the nearest
+   [data-theme] ancestor — no portal, no theme-mirroring. Cally exposes its internals
+   through Shadow-DOM ::part() hooks and the --color-accent custom property, which we
+   map onto our design tokens here. */
+@layer components {
+  .panel-date-picker {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* ─── Field: the trigger button is styled as the input ──────────────────── */
+  .panel-date-picker__anchor {
+    display: block;
+    width: 100%;
+  }
+
+  .panel-date-picker__display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: start;
+    font-weight: 400;
+    color: var(--foreground);
+    cursor: pointer;
+  }
+  .panel-date-picker__display[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .panel-date-picker[data-size="sm"] .panel-date-picker__display {
+    min-height: 1.75rem;
+    padding-inline: 0.625rem;
+    @apply text-xs;
+  }
+
+  .panel-date-picker[data-size="lg"] .panel-date-picker__display {
+    min-height: 2.25rem;
+    padding-inline: 0.875rem;
+    @apply text-sm;
+  }
+
+  .panel-date-picker__value {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Empty value → show the placeholder text. */
+  .panel-date-picker__value:empty::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+  }
+
+  .panel-date-picker__icon {
+    flex: none;
+    color: var(--muted-foreground);
+  }
+
+  /* ─── Popover body ──────────────────────────────────────────────────────── */
+  .popover.panel-date-picker__popover {
+    padding: 0;
+    width: max-content;
+    max-width: calc(100vw - 1rem);
+    overflow: visible;
+  }
+
+  /* ─── Calendar (Cally) ──────────────────────────────────────────────────── */
+  .panel-date-picker__calendar {
+    --color-accent: var(--primary);
+    --color-text-on-accent: var(--primary-foreground);
+    display: block;
+    inline-size: fit-content;
+    max-inline-size: calc(100vw - 1rem);
+    padding: 0.5rem;
+    margin-inline: auto;
+  }
+
+  .panel-date-picker__calendar svg {
+    height: 1rem;
+    width: 1rem;
+  }
+
+  /* Month/prev/next navigation lives on calendar-date / calendar-range. */
+  .panel-date-picker__calendar::part(button) {
+    appearance: none;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    color: var(--muted-foreground);
+    border-radius: var(--radius-md);
+  }
+  .panel-date-picker__calendar::part(button):hover {
+    background: var(--accent);
+    color: var(--foreground);
+  }
+  .panel-date-picker__calendar::part(button):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  .panel-date-picker__calendar::part(heading) {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+  .panel-date-picker__calendar::part(disabled) {
+    color: var(--muted-foreground);
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Day grid lives on the nested calendar-month. */
+  .panel-date-picker__calendar calendar-month {
+    --color-accent: var(--primary);
+    --color-text-on-accent: var(--primary-foreground);
+  }
+  .panel-date-picker__calendar calendar-month::part(heading) {
+    color: var(--muted-foreground);
+    font-weight: 500;
+  }
+  .panel-date-picker__calendar calendar-month::part(button) {
+    color: var(--card-foreground);
+    border-radius: var(--radius-md);
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+  }
+  .panel-date-picker__calendar calendar-month::part(button):hover {
+    background: var(--accent);
+  }
+  .panel-date-picker__calendar calendar-month::part(button):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -1px;
+  }
+  .panel-date-picker__calendar calendar-month::part(today) {
+    border: 1px solid var(--border-interactive);
+  }
+  .panel-date-picker__calendar calendar-month::part(selected) {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  .panel-date-picker__calendar calendar-month::part(outside) {
+    color: var(--muted-foreground);
+    opacity: 0.5;
+  }
+  .panel-date-picker__calendar calendar-month::part(disallowed) {
+    color: var(--muted-foreground);
+    opacity: 0.4;
+    text-decoration: line-through;
+  }
+
+  /* Range: fill the run with muted and round only the outer corners. */
+  .panel-date-picker__calendar calendar-month::part(range-inner) {
+    background: var(--muted);
+    color: var(--foreground);
+    border-radius: 0;
+  }
+  .panel-date-picker__calendar calendar-month::part(range-start) {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+  .panel-date-picker__calendar calendar-month::part(range-end) {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
+  .panel-date-picker__calendar calendar-month::part(range-start range-end) {
+    border-radius: var(--radius-md);
+  }
+
+  .panel-date-picker__months {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .panel-date-picker__months[data-compact="true"] calendar-month[offset="1"] {
+    display: none;
+  }
+
+  .panel-date-picker__calendar--dropdown::part(header) {
+    display: none;
+  }
+
+  .panel-calendar-caption {
+    display: flex;
+    justify-content: center;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .panel-calendar-caption__select { position: relative; }
+
+  .panel-calendar-caption__trigger {
+    display: inline-flex;
+    min-height: 1.75rem;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--foreground);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .panel-calendar-caption__trigger:hover { background: var(--muted); }
+  .panel-calendar-caption__trigger:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  .panel-calendar-caption__chevron {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-0.1rem) rotate(45deg);
+  }
+
+  .panel-calendar-caption__listbox {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 0.25rem);
+    left: 50%;
+    min-width: 8rem;
+    max-height: 15rem;
+    overflow-y: auto;
+    transform: translateX(-50%);
+    padding: 0.25rem;
+    border: 1px solid var(--border-interactive);
+    border-radius: var(--radius-md);
+    background: var(--sidebar-popup, var(--card));
+    color: var(--sidebar-popup-foreground, var(--card-foreground));
+    box-shadow: var(--shadow-lg);
+  }
+
+  .panel-calendar-caption__option {
+    display: block;
+    width: 100%;
+    min-height: 1.75rem;
+    padding: 0.25rem 0.5rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    font-size: 0.875rem;
+  }
+
+  .panel-calendar-caption__option:hover,
+  .panel-calendar-caption__option:focus-visible { background: var(--sidebar-popup-accent, var(--muted)); outline: none; }
+  .panel-calendar-caption__option[aria-selected="true"] { background: var(--primary); color: var(--primary-foreground); }
+
+  @media (max-width: 639px) {
+    .panel-date-picker__months { gap: 0; }
+    .panel-date-picker__calendar { max-inline-size: calc(100vw - 1.5rem); }
+  }
+
+  @media (pointer: coarse) {
+    .panel-date-picker__display {
+      min-height: 2.5rem;
+    }
+
+    .panel-date-picker__calendar calendar-month::part(button),
+    .panel-calendar-caption__trigger,
+    .panel-calendar-caption__option {
+      min-width: 2.5rem;
+      min-height: 2.5rem;
+    }
+  }
+}

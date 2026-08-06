@@ -1,0 +1,132 @@
+<%
+  item_id = component.navigation_item_id(
+    surface: surface,
+    section_index: section_index,
+    item_index: item_index
+  )
+
+  link_markup = lambda do |entry, child: false, icon_only: false|
+    capture do
+%>
+    <a class="panel-sidebar__link<%= " panel-sidebar__child" if child %>"
+       href="<%= entry.path %>"
+       data-sidebar-route
+       <%= %(data-turbo-frame="#{ERB::Util.html_escape(entry.turbo_frame)}").html_safe if entry.turbo_frame.present? %>
+       <%= 'data-action="click->panels-ui--sheet#close"'.html_safe if surface == :mobile && entry.turbo_frame.present? %>
+       <%= %(data-sidebar-active-paths="#{ERB::Util.html_escape(entry.active_paths.join(" "))}").html_safe if entry.active_paths.any? %>
+       <%= 'target="_blank" rel="noopener noreferrer"'.html_safe if entry.external? %>
+       <%= 'aria-current="page"'.html_safe if entry.active? %>>
+      <% if entry.icon %><%= component.helpers.app_icon entry.icon, class: "panel-sidebar__icon", aria: { hidden: "true" } %><% end %>
+      <% if icon_only %>
+        <span class="sr-only"><%= entry.label %></span>
+      <% else %>
+        <span class="panel-sidebar__label"><%= entry.label %></span>
+      <% end %>
+    </a>
+<%
+    end
+  end
+
+  children_markup = lambda do
+    capture do
+%>
+    <% item.children.each do |child| %>
+      <%= link_markup.call(child, child: true) %>
+    <% end %>
+<%
+    end
+  end
+%>
+
+<div class="panel-sidebar__item"
+     <%= "data-sidebar-group-item" if item.children? %>
+     <%= "data-sidebar-active" if item.active? %>
+     <%= 'data-panels-ui--sidebar-search-target="item"'.html_safe if search_target %>
+     <%= %(data-search-text="#{ERB::Util.html_escape(item.search_text || item.label)}").html_safe if search_target %>>
+  <% if surface == :desktop %>
+    <div class="panel-sidebar__presentation panel-sidebar__presentation--expanded"
+         data-sidebar-presentation="expanded">
+      <% if item.children? %>
+        <%= render PanelsUI::Collapsible.new(
+          id: "#{item_id}-collapsible",
+          open: component.group_open?(surface: surface, section_index: section_index, item_index: item_index, default: item.active?),
+          class: "panel-sidebar__group",
+          trigger_class: "panel-sidebar__link panel-sidebar__group-trigger",
+          content_class: "panel-sidebar__group-content",
+          data: { sidebar_group: "" }
+        ) do |collapsible| %>
+          <% collapsible.with_trigger do %>
+            <% if item.icon %><%= component.helpers.app_icon item.icon, class: "panel-sidebar__icon", aria: { hidden: "true" } %><% end %>
+            <span class="panel-sidebar__label"><%= item.label %></span>
+            <%= component.helpers.app_icon "chevron-down", class: "panel-sidebar__chevron panel-collapsible__indicator", aria: { hidden: "true" } %>
+          <% end %>
+          <% collapsible.with_body do %>
+            <div class="panel-sidebar__children"><%= children_markup.call %></div>
+          <% end %>
+        <% end %>
+      <% else %>
+        <%= link_markup.call(item) %>
+      <% end %>
+    </div>
+
+    <% if component.collapsible? %>
+      <div class="panel-sidebar__presentation panel-sidebar__presentation--collapsed"
+           data-sidebar-presentation="collapsed">
+        <% if item.children? %>
+          <%= render PanelsUI::Popover.new(
+            id: "#{item_id}-popover",
+            placement: :right_start,
+            offset: 4,
+            delay: 120,
+            close_delay: 180,
+            arrow: true,
+            trigger_on: :hover,
+            root_class: "panel-sidebar__popover-root w-full",
+            class: "panel-sidebar__flyout",
+            role: nil,
+            aria_haspopup: nil
+          ) do |popover| %>
+            <% popover.with_trigger(
+              aria_label: item.label,
+              unstyled: true,
+              class: "panel-sidebar__link panel-sidebar__group-trigger"
+            ) do %>
+              <% if item.icon %><%= component.helpers.app_icon item.icon, class: "panel-sidebar__icon", aria: { hidden: "true" } %><% end %>
+            <% end %>
+            <nav class="panel-sidebar__flyout-nav" aria-label="<%= item.label %> submenu">
+              <%= children_markup.call %>
+            </nav>
+          <% end %>
+        <% else %>
+          <%= render PanelsUI::Tooltip.new(
+            text: item.label,
+            placement: :right,
+            root_class: "panel-sidebar__tooltip-root w-full"
+          ) do %>
+            <%= link_markup.call(item, icon_only: true) %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% elsif item.children? %>
+    <%= render PanelsUI::Collapsible.new(
+      id: "#{item_id}-collapsible",
+      open: item.active?,
+      class: "panel-sidebar__group",
+      trigger_class: "panel-sidebar__link panel-sidebar__group-trigger",
+      content_class: "panel-sidebar__group-content",
+      data: { sidebar_group: "" }
+    ) do |collapsible| %>
+      <% collapsible.with_trigger do %>
+        <% if item.icon %><%= component.helpers.app_icon item.icon, class: "panel-sidebar__icon", aria: { hidden: "true" } %><% end %>
+        <span class="panel-sidebar__label"><%= item.label %></span>
+        <%= component.helpers.app_icon "chevron-down", class: "panel-sidebar__chevron panel-collapsible__indicator", aria: { hidden: "true" } %>
+      <% end %>
+      <% collapsible.with_body do %>
+        <div class="panel-sidebar__children"><%= children_markup.call %></div>
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= link_markup.call(item) %>
+  <% end %>
+</div>

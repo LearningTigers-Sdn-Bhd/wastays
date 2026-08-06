@@ -1,0 +1,20 @@
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-internal-note-history-sheet",
+      title: "Note edit history",
+      description: @booking.guest_name,
+      side: :right,
+      size: :md do %>
+  <% if Array(@note.edit_history).any? %>
+    <div class="space-y-3">
+      <% Array(@note.edit_history).reverse_each do |entry| %>
+        <% edited_time = Time.zone.parse(entry["edited_at"].to_s) rescue nil %>
+        <article class="rounded-md border border-border bg-muted p-4">
+          <p class="text-xs text-muted-foreground"><%= entry["edited_by_name"].presence || "User" %> · <%= edited_time ? edited_time.strftime("%d %b %Y, %I:%M %p") : "—" %></p>
+          <p class="mt-2 whitespace-pre-wrap text-sm text-foreground"><%= entry["body"] %></p>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="text-sm text-muted-foreground">This note has no edit history.</p>
+  <% end %>
+<% end %>

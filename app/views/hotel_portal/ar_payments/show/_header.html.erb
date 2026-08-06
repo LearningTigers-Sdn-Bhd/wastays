@@ -1,0 +1,16 @@
+<div class="border-b border-border pb-5">
+  <%= render PanelsUI::PageHeader.new(title: presenter.reference) do |header| %>
+    <% header.with_caption do %>
+      <%= presenter.company_name %>
+    <% end %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: hotel_ar_payments_path(current_hotel), variant: :secondary, size: :sm, class: "w-full lg:w-auto") do %>
+        <%= cached_icon "arrow-left", class: "size-3.5", aria: { hidden: true } %>
+        Payment ledger
+      <% end %>
+    <% end %>
+  <% end %>
+  <div class="mt-1 flex flex-wrap items-center gap-3">
+    <span class="inline-flex rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wider <%= presenter.status_class %>"><%= presenter.status_label %></span>
+  </div>
+</div>

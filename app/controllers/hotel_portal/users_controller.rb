@@ -1,88 +1,100 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class UsersController < HotelPortal::BaseController
+  class UsersController < HotelPortal::SettingsBaseController
+    include StaffAssignableRoles
+    include SheetActionCompletion
+
     before_action :authorize_manage_users!
-    before_action :set_hotel_access, only: %i[update destroy reactivate]
+    before_action :set_hotel_access, only: %i[edit update status destroy]
+    before_action :authorize_manage_account!, only: :destroy
 
     def index
-      @hotel_accesses = current_hotel.user_hotel_accesses.includes(:user, :role).order(deactivated_at: :asc, created_at: :desc)
-      @pending_invitations = current_hotel.staff_invitations.pending.includes(:role, :invited_by_user).order(created_at: :desc)
-      @available_roles = assignable_roles
+      @presenter = HotelPortal::StaffManagementPresenter.new(
+        hotel: current_hotel,
+        current_user: current_user
+      )
     end
 
     def new
-      @available_roles = assignable_roles
+      @invitation = current_hotel.staff_invitations.build
+      render layout: false
     end
 
     def create
-      email = params[:email].to_s.strip.downcase
-      role_id = params[:role_id]
-
-      if email.blank? || role_id.blank?
-        redirect_to hotel_users_path(current_hotel), alert: "Email and Role are required."
-        return
-      end
-
+      role_id = staff_invitation_params[:role_id]
       role = assignable_role(role_id)
 
-      unless role
-        redirect_to hotel_users_path(current_hotel), alert: "Selected role cannot be assigned."
-        return
-      end
+      # Assignability is an authorization question, so it is answered here rather
+      # than in the service — which would otherwise report a chosen-but-refused
+      # role as a missing one.
+      return reject_invitation("Selected role cannot be assigned.") if role_id.present? && role.blank?
 
-      user = User.find_by(email: email)
-      if user && current_hotel.user_hotel_accesses.active.exists?(user: user)
-        redirect_to hotel_users_path(current_hotel), alert: "This user already has active access to this property."
-        return
-      end
+      result = StaffInvitations::CreateService.new(
+        hotel: current_hotel,
+        invited_by: current_user,
+        email: staff_invitation_params[:email],
+        role: role
+      ).call
 
-      invitation = current_hotel.staff_invitations.find_or_initialize_by(email: email, accepted_at: nil)
-      token = StaffInvitation.generate_token
-      invitation.assign_attributes(
-        account: current_hotel.account,
-        role: role,
-        invited_by_user: current_user,
-        token_digest: StaffInvitation.digest(token),
-        expires_at: StaffInvitation::EXPIRY.from_now
-      )
-
-      if invitation.save
-        StaffInvitationMailer.invite(invitation, token).deliver_later
-        redirect_to hotel_users_path(current_hotel), notice: "Invitation sent to #{email}."
+      if result.success?
+        finish_sheet("Invitation sent to #{result.invitation.email}.")
       else
-        redirect_to hotel_users_path(current_hotel), alert: invitation.errors.full_messages.to_sentence
+        @invitation = result.invitation
+        render :new, layout: false, status: :unprocessable_content
       end
     end
 
+    def edit
+      render layout: false
+    end
+
+    # The edit sheet owns the role only.
     def update
-      role = assignable_role(params[:role_id])
+      role = assignable_role(hotel_access_params[:role_id])
+      return reject_access("Selected role cannot be assigned.") if role.blank?
 
-      unless role
-        redirect_to hotel_users_path(current_hotel), alert: "Selected role cannot be assigned."
-        return
-      end
+      result = StaffAccesses::UpdateService.new(
+        access: @hotel_access,
+        role: role,
+        current_user: current_user
+      ).call
 
-      if @hotel_access.update(role: role)
-        redirect_to hotel_users_path(current_hotel), notice: "Role updated successfully."
+      if result.success?
+        finish_sheet("#{@hotel_access.user.name}'s role updated.")
       else
-        redirect_to hotel_users_path(current_hotel), alert: @hotel_access.errors.full_messages.to_sentence
+        reject_access(result.error)
+      end
+    end
+
+    # The listing row's status switch owns revoke and reactivate. It targets the
+    # whole page rather than a frame, so both outcomes land back on the list.
+    def status
+      result = StaffAccesses::UpdateService.new(
+        access: @hotel_access,
+        active: ActiveModel::Type::Boolean.new.cast(hotel_access_params[:active]),
+        current_user: current_user
+      ).call
+
+      if result.success?
+        notice = @hotel_access.active? ? "restored" : "revoked"
+        redirect_to hotel_users_path(current_hotel), notice: "#{@hotel_access.user.name}'s access was #{notice}."
+      else
+        redirect_to hotel_users_path(current_hotel), alert: result.error
       end
     end
 
     def destroy
-      if @hotel_access.user_id == current_user.id
-        redirect_to hotel_users_path(current_hotel), alert: "You cannot revoke your own access."
-        return
+      result = StaffAccesses::DestroyService.new(
+        access: @hotel_access,
+        current_user: current_user
+      ).call
+
+      if result.success?
+        redirect_to hotel_users_path(current_hotel), notice: "#{@hotel_access.user.name}'s access was permanently deleted."
+      else
+        redirect_to hotel_users_path(current_hotel), alert: result.error
       end
-
-      @hotel_access.deactivate!
-      redirect_to hotel_users_path(current_hotel), notice: "Staff access revoked successfully."
-    end
-
-    def reactivate
-      @hotel_access.reactivate!
-      redirect_to hotel_users_path(current_hotel), notice: "Staff access reactivated successfully."
     end
 
     private
@@ -91,18 +103,51 @@ module HotelPortal
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_users", hotel: current_hotel)
     end
 
+    def authorize_manage_account!
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?(
+        UserHotelAccess::ACCOUNT_MANAGEMENT_PERMISSION,
+        hotel: current_hotel
+      )
+    end
+
     def set_hotel_access
-      @hotel_access = current_hotel.user_hotel_accesses.find(params[:id])
+      @hotel_access = current_hotel.user_hotel_accesses.includes(role: :permissions).find(params[:id])
     end
 
-    def assignable_roles
-      @assignable_roles ||= current_hotel.account.roles.includes(:permissions).order(:name).select do |role|
-        role.permissions.none? { |permission| permission.slug == "manage_account" } || current_user.has_permission?("manage_account")
-      end
+    def available_roles
+      assignable_roles
+    end
+    helper_method :available_roles
+
+    def reject_invitation(message)
+      @invitation = current_hotel.staff_invitations.build(email: staff_invitation_params[:email])
+      @invitation.errors.add(:base, message)
+      render :new, layout: false, status: :unprocessable_content
     end
 
-    def assignable_role(role_id)
-      assignable_roles.find { |role| role.id.to_s == role_id.to_s }
+    def reject_access(message)
+      @error = message
+      render :edit, layout: false, status: :unprocessable_content
+    end
+
+    def finish_sheet(notice)
+      complete_sheet_action(
+        destination: hotel_users_path(current_hotel),
+        notice: notice,
+        frame: sheet_frame
+      )
+    end
+
+    def sheet_frame
+      turbo_frame_request_id.presence || "settings_action_sheet"
+    end
+
+    def staff_invitation_params
+      params.fetch(:staff_invitation, params).permit(:email, :role_id)
+    end
+
+    def hotel_access_params
+      params.fetch(:user_hotel_access, params).permit(:role_id, :active)
     end
   end
 end

@@ -1,0 +1,89 @@
+<% booking = @booking %>
+<% presenter = @panel_presenter %>
+<% group_booking = booking.group_booking_id? %>
+<% navigation = { source: params[:source].presence, return_to: params[:return_to].presence }.compact %>
+<% total_amount = group_booking ? presenter.child_bookings.sum { |child| child.total_amount.to_d } : booking.total_amount.to_d %>
+<% outstanding_balance = group_booking ? presenter.group_total_balance : presenter.total_balance %>
+<% paid_amount = [ total_amount - outstanding_balance, 0 ].max %>
+<% status_variant = case booking.status
+   when "confirmed", "checked_in" then :success
+   when "no_show_detected", "due_out_detected", "checkout_required" then :warning
+   when "cancelled", "overbooked", "no_show" then :destructive
+   else :neutral
+   end %>
+<% sheet_footer = capture do %>
+  <dl class="flex w-full flex-wrap items-center justify-end gap-5 text-right">
+    <div>
+      <dt class="text-xs text-muted-foreground">Total</dt>
+      <dd class="text-sm font-semibold text-foreground"><%= presenter.money(total_amount) %></dd>
+    </div>
+    <div>
+      <dt class="text-xs text-muted-foreground">Paid</dt>
+      <dd class="text-sm font-semibold text-foreground"><%= presenter.money(paid_amount) %></dd>
+    </div>
+    <div>
+      <dt class="text-xs text-muted-foreground">Balance</dt>
+      <dd class="text-sm font-semibold text-destructive"><%= presenter.money(outstanding_balance) %></dd>
+    </div>
+  </dl>
+<% end %>
+
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-summary-sheet",
+      title: presenter.summary_title,
+      description: group_booking ? "Group Booking #{presenter.group_booking_number}" : "Booking No. #{presenter.booking_number}",
+      side: :right,
+      size: :lg,
+      footer: sheet_footer do %>
+  <div class="space-y-6">
+    <div class="flex items-center border-b border-border pb-4">
+      <%= render "hotel_portal/bookings/actions/summaries/actions_menu",
+        booking:,
+        presenter:,
+        group_booking:,
+        navigation: %>
+    </div>
+
+    <% if group_booking %>
+      <section aria-labelledby="booking-group-summary-heading" class="space-y-4">
+        <div class="flex items-center gap-2">
+          <h3 id="booking-group-summary-heading" class="text-base font-semibold">Group reservation</h3>
+          <%= render PanelsUI::Badge.new(label: "Group", variant: :info, size: :sm) %>
+        </div>
+        <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div><dt class="text-xs text-muted-foreground">Group reservation number</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_booking_number %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Group status</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_status_counts.map { |status, count| "#{count} #{HotelPortal::Bookings::WorkspacePresenter::STATUS_LABELS.fetch(status, status.humanize)}" }.to_sentence %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Arrival</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_earliest_arrival %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Departure</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.group_latest_departure %></dd></div>
+          <% if presenter.boat_transfers? %>
+            <div><dt class="text-xs text-muted-foreground">Boat-in</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_boat_in %></dd></div>
+            <div><dt class="text-xs text-muted-foreground">Boat-out</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_boat_out %></dd></div>
+          <% end %>
+          <div><dt class="text-xs text-muted-foreground">Rooms</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= pluralize(presenter.child_bookings.size, "room") %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Guests</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.child_bookings.sum { |child| child.adults.to_i } %> adults, <%= presenter.child_bookings.sum { |child| child.children.to_i } %> children</dd></div>
+        </dl>
+      </section>
+    <% else %>
+      <section aria-labelledby="booking-stay-summary-heading" class="space-y-4">
+        <div class="flex items-center justify-between gap-2">
+          <h3 id="booking-stay-summary-heading" class="text-base font-semibold">Stay summary</h3>
+          <%= render PanelsUI::Badge.new(label: presenter.status_label, variant: status_variant, size: :sm) %>
+        </div>
+        <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div><dt class="text-xs text-muted-foreground">Reservation number</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.booking_number %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Booking date</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.created_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Arrival</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Departure</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime("%Y/%m/%d %H:%M") %></dd></div>
+          <% if presenter.boat_transfers? %>
+            <div><dt class="text-xs text-muted-foreground">Boat-in</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_boat_in %></dd></div>
+            <div><dt class="text-xs text-muted-foreground">Boat-out</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.summary_boat_out %></dd></div>
+          <% end %>
+          <div><dt class="text-xs text-muted-foreground">Room / room type</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.room_summary %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Rate plan</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.booking_rooms.first&.rate_plan&.name.presence || "Standard" %></dd></div>
+          <div><dt class="text-xs text-muted-foreground">Guests</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= booking.adults.to_i %> adults, <%= booking.children.to_i %> children</dd></div>
+          <div><dt class="text-xs text-muted-foreground">Nightly rate</dt><dd class="mt-1 text-sm font-medium text-foreground"><%= presenter.nightly_rate_label %></dd></div>
+        </dl>
+      </section>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,19 @@
+<div data-slot="report-export">
+  <% if local_assigns.fetch(:disabled, false) %>
+    <%= render PanelsUI::Button.new(variant: :secondary, disabled: true, title: "No data available to export") do %>
+      <%= cached_icon "download", class: "me-2 size-4" %>
+      Export
+    <% end %>
+  <% else %>
+    <%= render PanelsUI::DropdownMenu.new(id: menu_id, placement: :bottom_end) do |menu| %>
+      <% menu.with_trigger(variant: :secondary) do %>
+        <%= cached_icon "download", class: "me-2 size-4" %>
+        Export
+        <%= cached_icon "chevron-down", class: "ms-2 size-4", aria: { hidden: "true" } %>
+      <% end %>
+      <% items.each do |label, href| %>
+        <% menu.with_item(href: href, data: { turbo: false }) { label } %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

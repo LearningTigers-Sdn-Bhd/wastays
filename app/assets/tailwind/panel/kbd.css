@@ -1,0 +1,58 @@
+@layer components {
+  /* Flat by design: no raised bottom edge, no inset highlight, no drop shadow.
+     A keycap that pretends to be a physical key fights the restrained, tight
+     character of the rest of the system — the shape and the mono face carry
+     enough meaning on their own. */
+  .panel-kbd {
+    display: inline-flex;
+    min-width: 1.5rem;
+    min-height: 1.375rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--muted);
+    color: var(--muted-foreground);
+    padding-inline: 0.4375rem;
+    /* Deliberately the UI face, not mono: the mono fallback renders glyph keys
+       like ⌘ from a substituted font and they come out ragged at small sizes. */
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  /* `sm` is tighter than `md` in box, not in type — 10px keys were unreadable
+     in the navbar pill, so the size step comes out of the padding instead. */
+  .panel-kbd[data-size="sm"] {
+    min-width: 1.375rem;
+    min-height: 1.25rem;
+    padding-inline: 0.3125rem;
+    font-size: 0.75rem;
+  }
+
+  .panel-kbd[data-size="lg"] {
+    min-width: 1.75rem;
+    min-height: 1.625rem;
+    padding-inline: 0.5625rem;
+    font-size: 0.8125rem;
+  }
+
+  .panel-kbd[data-variant="plain"] {
+    min-width: auto;
+    min-height: auto;
+    border-color: transparent;
+    background: transparent;
+    padding-inline: 0;
+  }
+
+  /* The glue in a combination — quieter than the keys it joins. */
+  .panel-kbd__separator {
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+}

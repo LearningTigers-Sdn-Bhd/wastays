@@ -1,0 +1,39 @@
+<%# Replaced on its own by the photo destroy actions, so a delete never re-renders
+    the surrounding form and never discards files staged in the dropzone. %>
+<div id="room-type-photos-manager">
+  <% if room_type.photos.attached? %>
+    <div class="rounded-md border border-border bg-card p-4">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <h3 class="text-sm font-semibold text-foreground">
+          Current photos (<%= room_type.photos.count %>)
+        </h3>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: "bulk-delete-photos-form",
+              variant: :ghost,
+              size: :sm,
+              class: "text-destructive",
+              data: { turbo_confirm: "Delete the selected photos?", turbo_confirm_tone: "destructive" }) do %>
+          Delete selected
+        <% end %>
+      </div>
+
+      <%= render PanelsUI::AttachmentGroup.new(layout: :grid, aria: { label: "Current room category photos" }) do %>
+        <% room_type.photos.each do |photo| %>
+          <div class="relative aspect-square" role="listitem">
+            <%= image_tag photo, class: "size-full rounded-md border border-border object-cover" %>
+            <div class="absolute right-2 top-2">
+              <input type="checkbox"
+                     name="photo_ids[]"
+                     value="<%= photo.id %>"
+                     form="bulk-delete-photos-form"
+                     class="panel-checkbox__input"
+                     aria-label="Select <%= photo.filename %> for deletion">
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

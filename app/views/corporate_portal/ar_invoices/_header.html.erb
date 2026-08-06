@@ -1,0 +1,10 @@
+<%= render PanelsUI::PageHeader.new(
+      title: "AR Invoices",
+      description: "Direct Bill invoices issued to your corporate account.") do |header| %>
+  <% header.with_actions do %>
+    <%= render PanelsUI::Button.new(as: :a, href: pay_invoices_corporate_ar_payments_path) do %>
+      <%= cached_icon "circle-dollar-sign", class: "size-4", aria: { hidden: true } %>
+      Pay Invoices
+    <% end %>
+  <% end %>
+<% end %>

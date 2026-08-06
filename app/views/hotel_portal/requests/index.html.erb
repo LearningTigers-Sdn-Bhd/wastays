@@ -1,235 +1,171 @@
 <% content_for :title, "Requests | WAStays" %>
+<% content_for :page_overscroll_class, "overscroll-none" %>
 
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">Requests</span>
-  </div>
-<% end %>
+<div class="w-full space-y-3">
+  <section
+    class="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
+    aria-label="Filter requests"
+    data-slot="requests-toolbar"
+  >
+    <%= form_with url: hotel_requests_path(current_hotel), method: :get,
+          data: { controller: "auto-submit" },
+          class: "divide-y divide-border" do |f| %>
+      <div class="flex flex-wrap items-end gap-2.5 px-4 py-3" data-slot="requests-toolbar-controls">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :q, label: "Search", size: :sm, class: "min-w-64 flex-1") do |field| %>
+          <% field.with_addon(align: :inline_start, variant: :bare) do %>
+            <%= cached_icon "search", class: "size-4" %>
+          <% end %>
+          <% field.with_input(
+               value: params[:q],
+               autocomplete: "off",
+               placeholder: "Search guest, booking or request details...",
+               data: { action: "input->auto-submit#submit" }) %>
+        <% end %>
 
-<div class="max-w-[1600px] mx-auto pb-10 space-y-5">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-4 md:px-0 mt-6">
-    <div>
-      <h1 class="text-2xl font-black tracking-tight text-slate-950">Requests Board</h1>
-    </div>
+        <%= render "hotel_portal/requests/date_window",
+              form: f,
+              date_window: @presenter.date_window,
+              previous_path: @presenter.previous_window_path,
+              next_path: @presenter.next_window_path,
+              today_path: @presenter.today_window_path %>
 
-    <div class="flex items-center gap-4">
-      <div class="flex gap-2 text-[10px] font-black uppercase tracking-wider">
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-          Housekeeping <%= @board_counts[:housekeeping] %>
-        </span>
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100">
-          Complaints <%= @board_counts[:complaint] %>
-        </span>
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-100">
-          Completed <%= @board_counts[:completed] %>
-        </span>
+        <%= render PanelsUI::Button.new(as: :a, href: hotel_requests_path(current_hotel), variant: :secondary, size: :sm, class: "shrink-0", data: { turbo_frame: "_top" }) do %>
+          Reset
+        <% end %>
       </div>
 
-      <%= link_to hotel_request_archive_path(current_hotel), class: "inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50" do %>
-        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-        Archives
-      <% end %>
-    </div>
-  </div>
-
-  <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm mx-4 md:mx-0">
-    <%= form_with url: hotel_requests_path(current_hotel), method: :get, local: true, data: { controller: "auto-submit", turbo_frame: "requests_board_results" }, class: "grid gap-4 md:grid-cols-[1fr_200px_auto]" do |f| %>
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </div>
-        <%= text_field_tag :q, params[:q], autocomplete: "off", class: "w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", placeholder: "Search guest, booking or request details...", data: { action: "input->auto-submit#submit" } %>
-      </div>
-      <div>
-        <%= f.date_field :date, value: params[:date], class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm" %>
-      </div>
-      <div class="flex items-center gap-2">
-        <%= f.submit "Filter", class: "rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 cursor-pointer" %>
-        <%= link_to "Reset", hotel_requests_path(current_hotel), class: "rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50", data: { turbo_frame: "_top" } %>
+      <%# Which lanes to show, switched on and off independently. The count sits
+          in the control that switches the lane, which is why the header's pills
+          are gone: they said the same thing twice, and only one of them could be
+          clicked. %>
+      <div class="px-4 py-2.5" data-slot="requests-toolbar-lanes">
+        <%= render PanelsUI::ToggleGroup.new(
+              type: :multiple,
+              name: "lanes[]",
+              value: @presenter.lane_toggle_values,
+              variant: :outline,
+              size: :sm,
+              spacing: 1,
+              aria_label: "Lanes to show",
+              data: {
+                controller: "requests-lane-filter",
+                action: "panels-ui--toggle-group:change->requests-lane-filter#change"
+              }) do |group| %>
+          <% group.with_item(value: "all") do %>
+            All
+            <%= render PanelsUI::Badge.new(
+                  label: @presenter.all_lanes_count_label,
+                  variant: :neutral,
+                  size: :sm,
+                  shape: :rounded,
+                  id: "requests_lane_count_all"
+                ) %>
+          <% end %>
+          <% @presenter.lane_options.each do |column| %>
+            <% group.with_item(value: column.key.to_s) do %>
+              <%= column.label %>
+              <%= render PanelsUI::Badge.new(
+                    label: @presenter.lane_count_label(column),
+                    variant: :neutral,
+                    size: :sm,
+                    shape: :rounded,
+                    id: "requests_lane_count_#{column.key}"
+                  ) %>
+            <% end %>
+          <% end %>
+        <% end %>
       </div>
     <% end %>
-  </div>
+  </section>
+
+  <p class="text-xs text-muted-foreground" data-slot="requests-toolbar-context">
+    Finished and archived work from <%= @presenter.window_label %>. Open lanes show everything outstanding.
+  </p>
 
   <%= turbo_frame_tag "requests_board_results" do %>
-  <div class="grid gap-4 xl:grid-cols-3 xl:h-[calc(100vh-12rem)] xl:items-stretch px-4 md:px-0" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
-    <% [
-      [:housekeeping, "Housekeeping", "border-t-blue-500"],
-      [:complaint, "Complaints", "border-t-rose-500"],
-      [:completed, "Recently Completed", "border-t-green-500"],
-    ].each do |bucket_key, label, accent_class| %>
+  <%# Five columns are wider than the page, so from xl up the board scrolls
+      sideways inside its own viewport rather than making the page do it, and each
+      column scrolls down inside that.
+
+      Below xl the columns stack full width and the board viewport scrolls them. %>
+  <%= render PanelsUI::ScrollArea.new(
+        orientation: :horizontal,
+        class: "h-[72dvh] pb-4"
+      ) do %>
+  <div class="flex flex-col gap-4 xl:h-full xl:flex-row xl:items-stretch" data-controller="requests-board" data-requests-board-hotel-id-value="<%= current_hotel.id %>" data-requests-board-target="board">
+    <% @presenter.columns.each do |column| %>
+      <% bucket_key = column.key %>
       <section
         data-requests-board-target="column"
         data-board-column="<%= bucket_key %>"
-        data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
-        class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/40 border-t-4 <%= accent_class %>"
+        data-accepted-request-kinds="<%= column.accepted_kinds.join(" ") %>"
+        data-move-url="<%= @presenter.move_path(column) %>"
+        <%# A lane takes a dropped card only where it accepts one, but it takes a
+            dropped lane wherever it can be reordered -- so Checkout and Archived
+            can be moved along the board without becoming somewhere a card can be
+            put. %>
+        <% if column.droppable? || column.reorderable? %>
+          data-action="dragover->requests-board#dragOver dragleave->requests-board#dragLeave drop->requests-board#drop"
+        <% end %>
+        <%# From xl a fixed width, and shrink-0 so the row does not squeeze the
+            columns to fit: the sideways scroll is what makes room for them.
+            min-w-0 stays on the header text below, where a long title would
+            otherwise widen the card. %>
+        class="flex w-full flex-col overflow-hidden rounded-lg border border-border bg-card xl:h-full xl:w-[21rem] xl:shrink-0"
       >
-        <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 bg-white">
-          <div>
-            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900"><%= label %></h2>
-            <p class="text-[11px] font-medium text-slate-500"><%= pluralize(@board_counts[bucket_key], "active request") %></p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="inline-flex size-7 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-700">
-              <%= @board_columns[bucket_key].size %>
-            </span>
-          </div>
-          <button
-            type="button"
-            draggable="true"
-            data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd"
-            class="p-1.5 rounded-lg text-slate-300 hover:text-slate-900 hover:bg-slate-50 cursor-grab"
-          >
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-          </button>
-        </div>
-
-        <div class="flex-1 min-h-0 space-y-3 overflow-y-auto p-3 custom-scrollbar">
-          <% if @board_columns[bucket_key].any? %>
-            <% @board_columns[bucket_key].each do |card| %>
-              <% status_class = card[:kind] == "housekeeping" ? housekeeping_status_class(card[:status]) : complaint_status_class(card[:status]) %>
-              <% kind_badge_class = card[:kind] == "housekeeping" ? "border-blue-100 bg-blue-50 text-blue-700" : "border-rose-100 bg-rose-50 text-rose-700" %>
-              <article
-                draggable="true"
-                data-requests-board-target="card"
-                data-request-kind="<%= card[:kind] %>"
-                data-request-id="<%= card[:request_id] %>"
-                data-update-url="<%= card[:update_url] %>"
-                data-current-status="<%= card[:status] %>"
-                data-action="dragstart->requests-board#dragStart dragend->requests-board#dragEnd"
-                class="group cursor-grab rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md active:cursor-grabbing"
-              >
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center gap-2">
-                    <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded border <%= kind_badge_class %>">
-                      <%= card[:kind] %>
-                    </span>
-                    <span class="text-[10px] font-bold text-slate-400 font-mono tracking-tight"><%= card[:booking_token] %></span>
-                  </div>
-                  <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-100">
-                    <%= card[:status] %>
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  class="block w-full text-left"
-                  onclick="document.getElementById('request-board-modal-<%= card[:kind] %>-<%= card[:request_id] %>').showModal()"
-                >
-                  <p class="text-sm font-bold text-slate-900 leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors"><%= card[:title] %></p>
-                </button>
-
-                <div class="mt-4 flex items-center justify-between pt-3 border-t border-slate-50">
-                  <div class="flex flex-col">
-                    <span class="text-xs font-bold text-slate-700 truncate max-w-[140px]"><%= card[:guest_name] %></span>
-                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-tight"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <% if bucket_key == :completed %>
-                      <%= button_to card[:archive_url], method: :patch, class: "size-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all shadow-sm", title: "Archive Request" do %>
-                        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                      <% end %>
-                    <% else %>
-                      <% target_status = card[:kind] == "housekeeping" ? "completed" : "resolved" %>
-                      <%= button_to card[:update_url], params: { status: target_status }, method: :patch, class: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all text-[10px] font-black uppercase tracking-wider shadow-sm", title: "Mark as Done" do %>
-                        <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Done
-                      <% end %>
-                    <% end %>
-                  </div>
-                </div>
-              </article>
-
-              <dialog id="request-board-modal-<%= card[:kind] %>-<%= card[:request_id] %>" class="fixed inset-0 m-auto w-[min(94vw,44rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60" onclick="if(event.target===this){this.close()}">
-                <div class="bg-white overflow-hidden flex flex-col" onclick="event.stopPropagation()">
-                  <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
-                    <div class="flex items-center gap-4">
-                      <span class="px-3 py-1 rounded-lg border text-[11px] font-black uppercase tracking-widest <%= kind_badge_class %>"><%= card[:kind] %></span>
-                      <h3 class="text-xl font-black text-slate-950"><%= card[:booking_token] %></h3>
-                    </div>
-                    <button type="button" class="size-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition" onclick="this.closest('dialog').close()">
-                      <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>
-                  </div>
-                  
-                  <div class="grid divide-y md:divide-y-0 md:divide-x divide-slate-100 md:grid-cols-2">
-                    <div class="p-8 space-y-6">
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Guest Details</label>
-                        <p class="mt-1 text-lg font-bold text-slate-900"><%= card[:guest_name] %></p>
-                      </div>
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Status</label>
-                        <div class="mt-2 flex items-center gap-2">
-                          <span class="px-3 py-1 rounded-lg bg-slate-100 text-[10px] font-black text-slate-600 uppercase tracking-wider border border-slate-200"><%= card[:status] %></span>
-                        </div>
-                      </div>
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Timeline</label>
-                        <div class="mt-3 space-y-2">
-                          <div class="flex items-center gap-3 text-sm">
-                            <span class="text-slate-400 font-bold uppercase text-[10px] w-12">Entry:</span>
-                            <span class="text-slate-900 font-bold"><%= display_housekeeping_datetime(card[:requested_at]) %></span>
-                          </div>
-                          <% if card[:completed_at].present? %>
-                            <div class="flex items-center gap-3 text-sm">
-                              <span class="text-emerald-500 font-bold uppercase text-[10px] w-12">Exit:</span>
-                              <span class="text-slate-900 font-bold"><%= display_housekeeping_datetime(card[:completed_at]) %></span>
-                            </div>
-                          <% end %>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="p-8 space-y-6 bg-slate-50/40">
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Body</label>
-                        <p class="mt-2 text-sm leading-relaxed font-bold text-slate-700 bg-white p-4 rounded-xl border border-slate-100 shadow-sm"><%= card[:title] %></p>
-                      </div>
-                      <div>
-                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Internal Staff Notes</label>
-                        <% if card[:internal_notes].any? %>
-                          <div class="space-y-3">
-                            <% card[:internal_notes].each do |note| %>
-                              <div class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-                                <p class="text-sm text-slate-800 font-medium whitespace-pre-wrap"><%= note["body"] %></p>
-                              </div>
-                            <% end %>
-                          </div>
-                        <% else %>
-                          <p class="text-xs font-bold text-slate-300 uppercase tracking-widest italic">No notes recorded</p>
-                        <% end %>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                    <button type="button" class="px-6 py-2.5 text-sm font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition" onclick="this.closest('dialog').close()">Close</button>
-                    <%= link_to "Full Booking Details", hotel_booking_path(current_hotel, card[:booking_token]), class: "px-6 py-2.5 text-sm font-black uppercase tracking-widest bg-slate-950 text-white rounded-xl hover:bg-slate-800 transition shadow-lg", data: { turbo: false } %>
-                  </div>
-                </div>
-              </dialog>
-            <% end %>
-          <% else %>
-            <div class="flex flex-col items-center justify-center h-40 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50">
-              <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">No active requests</p>
+        <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3 <%= @presenter.lane_header_class(column) %>">
+          <div class="flex min-w-0 items-center gap-3">
+            <span
+              class="h-8 w-1 shrink-0 rounded-full <%= @presenter.lane_marker_class(column) %>"
+              data-slot="requests-lane-marker"
+              aria-hidden="true"
+            ></span>
+            <div class="min-w-0">
+              <h2 class="text-base font-semibold text-foreground"><%= column.label %></h2>
+              <p class="text-xs text-muted-foreground" id="requests_count_label_<%= bucket_key %>"><%= pluralize(@presenter.board_counts[bucket_key], column.request_label) %></p>
             </div>
-          <% end %>
+          </div>
+          <div class="flex shrink-0 items-center gap-2">
+            <%= render PanelsUI::Badge.new(
+                  label: "",
+                  variant: :neutral,
+                  size: :sm,
+                  shape: :rounded,
+                  hidden: true,
+                  data: { requests_board_drop_hint: true }
+                ) %>
+            <% if column.reorderable? %>
+              <button
+                type="button"
+                draggable="true"
+                aria-label="Reorder <%= column.label %>. Use left and right arrow keys to move."
+                data-action="dragstart->requests-board#columnDragStart dragend->requests-board#columnDragEnd keydown->requests-board#columnKeydown"
+                class="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab"
+              >
+                <%= cached_icon "grip-vertical", stroke_width: 3, class: "size-4" %>
+              </button>
+            <% end %>
+          </div>
         </div>
 
-        <% page_params = request.query_parameters.except(:housekeeping_page, :complaint_page, :completed_page) %>
-        <div class="border-t border-slate-200 bg-white px-4 py-4 flex justify-center">
-          <% if bucket_key == :housekeeping %>
-            <%= paginate @board_columns[:housekeeping], param_name: :housekeeping_page, params: page_params %>
-          <% elsif bucket_key == :complaint %>
-            <%= paginate @board_columns[:complaint], param_name: :complaint_page, params: page_params %>
-          <% else %>
-            <%= paginate @board_columns[:completed], param_name: :completed_page, params: page_params %>
+        <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-muted/30 p-3 custom-scrollbar">
+          <%# Rendered whether or not there is anything in it: a card moved here
+              arrives as a prepend into this frame, which has to be on the page
+              before it can be a target. The empty state sits alongside it. %>
+          <%= render "hotel_portal/requests/column_page",
+                page: @presenter.page_for(bucket_key),
+                column: column,
+                presenter: @presenter,
+                frame_id: @presenter.column_frame_id(bucket_key, nil) %>
+          <% unless @presenter.board_columns[bucket_key].any? %>
+            <div class="flex h-36 flex-col items-center justify-center rounded-md border border-dashed border-border" id="requests_empty_<%= bucket_key %>">
+              <p class="text-xs text-muted-foreground">No <%= column.request_label.pluralize %></p>
+            </div>
           <% end %>
         </div>
       </section>
     <% end %>
   </div>
+  <% end %>
   <% end %>
 </div>

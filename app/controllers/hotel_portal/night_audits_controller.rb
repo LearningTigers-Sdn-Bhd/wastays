@@ -1,44 +1,33 @@
+# frozen_string_literal: true
+
 module HotelPortal
+  # Compatibility redirects for the former operational Night Audit pages.
+  # Running an audit now happens in NightAuditRunsController and historical
+  # evidence belongs to HotelPortal::Reports::NightAuditsController.
   class NightAuditsController < BaseController
-    before_action :authorize_night_audit_access!
+    before_action :authorize_night_audit_report_access!
+    before_action -> { require_feature!("no_show_auto_handling") }
 
     def index
-      @suggested_business_date = Date.current - 1.day
-      @night_audits = current_hotel.night_audits.recent_first.page(params[:page]).per(25)
+      redirect_to hotel_reports_night_audits_path(current_hotel), status: :moved_permanently
     end
 
     def show
-      @night_audit = current_hotel.night_audits.find(params[:id])
-    end
-
-    def create
-      result = HotelOps::RunNightAudit.new(
-        hotel: current_hotel,
-        business_date: requested_business_date,
-        performed_by_user: current_user,
-        trigger_mode: "manual",
-        notes: params.dig(:night_audit, :notes)
-      ).call
-
-      if result.night_audit.present?
-        flash[result.success? ? :notice : :alert] = result.success? ? "Night audit completed successfully." : (result.error || "Night audit completed with blockers.")
-        redirect_to hotel_night_audit_path(current_hotel, result.night_audit)
-      else
-        redirect_to hotel_night_audits_path(current_hotel), alert: result.error || "Night audit could not be created."
-      end
+      night_audit = current_hotel.night_audits.where.not(status: "preparing").find(params[:id])
+      redirect_to hotel_reports_night_audit_path(
+        current_hotel,
+        night_audit,
+        format: request.format.symbol == :html ? nil : request.format.symbol,
+        **request.query_parameters
+      ), status: :moved_permanently
     end
 
     private
 
-    def authorize_night_audit_access!
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_night_audit", hotel: current_hotel)
-    end
-
-    def requested_business_date
-      raw_value = params.dig(:night_audit, :business_date)
-      raw_value.present? ? Date.parse(raw_value) : Date.current - 1.day
-    rescue ArgumentError, TypeError
-      Date.current - 1.day
+    def authorize_night_audit_report_access!
+      allowed = current_user.has_permission?("view_reports", hotel: current_hotel) ||
+        current_user.has_permission?("manage_night_audit", hotel: current_hotel)
+      raise Pundit::NotAuthorizedError unless allowed
     end
   end
 end

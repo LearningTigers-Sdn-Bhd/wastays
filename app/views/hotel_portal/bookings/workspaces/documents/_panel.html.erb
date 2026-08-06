@@ -1,0 +1,118 @@
+<div id="documents-panel" tabindex="-1" aria-label="Booking documents" class="min-w-0 max-w-full overflow-hidden px-5 py-5" data-testid="booking-documents">
+  <div class="min-w-0 max-w-full space-y-6" data-testid="document-section-grid">
+    <% presenter.document_sections.each do |section| %>
+      <section aria-labelledby="documents-<%= section.key %>-heading" class="min-w-0 space-y-3" data-document-section="<%= section.key %>">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="documents-<%= section.key %>-heading" class="text-base font-semibold text-foreground"><%= section.title %></h2>
+          <% if section.key == :invoices && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+            <%= render "hotel_portal/bookings/shared/invoice_resend",
+                       preview: @invoice_delivery_preview,
+                       booking: booking,
+                       dialog_id: "documents-tab-resend-dialog",
+                       return_to: hotel_booking_workspace_path(current_hotel, booking, tab: "documents") %>
+          <% end %>
+        </div>
+
+        <%= render PanelsUI::Table.new(
+              caption: section.caption,
+              density: :compact,
+              hoverable: true,
+              bordered: true,
+              wrapper_class: "rounded-md border border-border",
+              class: "table-fixed min-w-[760px] xl:min-w-0") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col" class="w-1/4"><%= section.primary_heading %></th>
+              <th scope="col" class="w-40"><%= section.type_heading %></th>
+              <th scope="col" class="w-1/4">Booking / room</th>
+              <th scope="col" class="w-1/5"><%= section.party_heading %></th>
+              <th scope="col" class="w-32">Issued</th>
+              <% if section.amount_heading %>
+                <th scope="col" class="w-32 text-right"><%= section.amount_heading %></th>
+              <% end %>
+              <th scope="col" class="w-20"><span class="sr-only">Actions</span></th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% if section.rows.any? %>
+              <% section.rows.each do |document| %>
+                <% badge_variant = case document.status
+                   when "Finalized", "Issued", "Signed", "Available", "Paid" then :success
+                   when "Under correction", "Partially paid", "Overdue", "Historical" then :warning
+                   when "Voided", "Void" then :destructive
+                   else :neutral
+                   end %>
+                <tr data-document-type="<%= document.type.parameterize %>">
+                  <th scope="row" class="text-left font-normal">
+                    <div class="min-w-0 space-y-1.5">
+                      <span class="block truncate font-medium text-foreground"><%= document.number %></span>
+                      <div class="flex min-w-0 items-center gap-1.5">
+                        <%= render PanelsUI::Badge.new(label: document.status, variant: badge_variant, size: :sm) %>
+                      </div>
+                    </div>
+                  </th>
+                  <td><span class="line-clamp-2"><%= document.context_type %></span></td>
+                  <td class="min-w-0" data-document-context>
+                    <span class="block truncate text-foreground"><%= document.booking %></span>
+                    <span class="mt-0.5 block truncate text-xs text-muted-foreground"><%= document.room %></span>
+                  </td>
+                  <td><span class="line-clamp-2"><%= document.payer %></span></td>
+                  <td class="whitespace-nowrap">
+                    <% if document.issued_at %>
+                      <%= document.issued_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y") %>
+                    <% else %>
+                      <span class="text-muted-foreground">—</span>
+                    <% end %>
+                  </td>
+                  <% if section.amount_heading %>
+                    <td class="whitespace-nowrap text-right tabular-nums">
+                      <% if document.amount.present? %>
+                        <% unless section.single_currency? %>
+                          <span class="text-muted-foreground"><%= document.currency %></span>
+                        <% end %>
+                        <%= number_with_precision(document.amount, precision: 2, delimiter: ",") %>
+                      <% else %>
+                        <span class="text-muted-foreground">—</span>
+                      <% end %>
+                    </td>
+                  <% end %>
+                  <td>
+                    <div class="flex justify-end">
+                      <% if document.type == "Folio invoice" && (document.available? || document.history?) %>
+                        <%= render PanelsUI::DropdownMenu.new(id: "document-actions-#{document.key}", placement: :bottom_end) do |menu| %>
+                          <% menu.with_trigger(variant: :secondary, size: :sm, aria_label: "Actions for #{document.number}") do %>
+                            Actions
+                            <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+                          <% end %>
+                          <% if document.available? %>
+                            <% menu.with_item(href: document.href, target: "_blank", data: { turbo: false }) { "Open current" } %>
+                          <% end %>
+                          <% if document.history? %>
+                            <% menu.with_submenu(label: "History", id: "document-history-#{document.key}") do |history| %>
+                              <% document.revision_actions.each do |revision| %>
+                                <% history.with_item(href: revision[:href], target: "_blank", data: { turbo: false }) { revision[:label] } %>
+                              <% end %>
+                            <% end %>
+                          <% end %>
+                        <% end %>
+                      <% elsif document.available? %>
+                        <%= render PanelsUI::Button.new(href: document.href, variant: :secondary, size: :xs, target: "_blank", data: { turbo: false }, aria: { label: "Open #{document.type} #{document.number}" }) do %>
+                          <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
+                          <span>Open</span>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="<%= section.amount_heading ? 7 : 6 %>" class="py-10 text-center text-muted-foreground"><%= section.empty_message %></td>
+              </tr>
+            <% end %>
+          <% end %>
+        <% end %>
+      </section>
+    <% end %>
+  </div>
+</div>

@@ -34,3 +34,12 @@
 /db/test*.db
 /db/test*.sqlite3
 .aider*
+.antigravitycli/
+
+# Gemini CLI / Agent Skills
+.agents/
+
+# OS files
+.DS_Store
+
+channex_doc_index.md

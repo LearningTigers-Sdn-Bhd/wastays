@@ -1,111 +1,113 @@
 # frozen_string_literal: true
 
-require "prawn"
-require "prawn/table"
-
 module HotelPortal
   module Reports
     class ArrivalsDeparturesPdfExportService
-      def initialize(hotel:, report:)
+      # Room, date and time share one width so both tables line up; the guest
+      # name takes whatever page width is left over.
+      BIBO_FIXED_COLUMN_WIDTH = 150
+
+      # Same idea for meal prep, but its columns hold different amounts of text.
+      MEAL_PREP_FIXED_COLUMN_WIDTHS = { "Pax" => 60, "Room Number" => 110, "Transfer" => 110,
+                                        "Transfer Date" => 120, "Transfer Time" => 110 }.freeze
+
+      def initialize(hotel:, report:, tab: "arrivals")
         @hotel = hotel
         @report = report
+        @tab = tab.to_s
+        @table = ArrivalsDeparturesCsvExportService.new(report: report, tab: tab)
       end
 
       def generate
-        pdf = Prawn::Document.new(page_size: "A4", margin: [ 32, 32, 32, 32 ])
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Guest Reports", subtitle: section_name, period_label: period_label, page_layout: :landscape)
 
-        draw_header(pdf)
-        draw_summary(pdf)
-        draw_section(pdf, "Expected Arrivals", @report.arrivals, :arrival)
-        draw_section(pdf, "Expected Departures", @report.departures, :departure)
+        case @tab
+        when "meal_prep" then add_meal_prep_pages(builder)
+        when "bibo" then add_summary_and_header(builder) { add_bibo_tables(builder) }
+        else add_summary_and_header(builder) { add_single_table(builder) }
+        end
 
-        pdf.render
+        builder.render
       end
 
       private
 
-      def draw_header(pdf)
-        logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-        if File.exist?(logo_path)
-          pdf.image logo_path, at: [ pdf.bounds.right - 150, pdf.cursor + 8 ], width: 140
-        else
-          pdf.text_box "WAStays", at: [ pdf.bounds.right - 140, pdf.cursor + 8 ], width: 140, align: :right, size: 12, style: :bold
-        end
-
-        pdf.text "Arrivals & Departures Report", size: 18, style: :bold
-        pdf.move_down 4
-        pdf.text @hotel.name.to_s, size: 11, style: :bold
-
-        period_text = if @report.start_date == @report.end_date
-          @report.start_date.strftime("%d %b %Y")
-        else
-          "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
-        end
-        pdf.text period_text, size: 10
-        pdf.move_down 12
+      def add_summary_and_header(builder)
+        builder.add_header
+        builder.add_summary([ [ "Records", record_count.to_s ] ])
+        yield
       end
 
-      def draw_summary(pdf)
-        card_gap = 12
-        card_height = 62
-        card_width = (pdf.bounds.width - card_gap) / 2.0
-        top = pdf.cursor
-
-        cards = [
-          [ "Arrivals", @report.arrival_count.to_s ],
-          [ "Departures", @report.departure_count.to_s ]
-        ]
-
-        cards.each_with_index do |(label, value), index|
-          x = index * (card_width + card_gap)
-          y = top
-
-          pdf.bounding_box([ x, y ], width: card_width, height: card_height) do
-            pdf.stroke_color "D1D5DB"
-            pdf.fill_color "FFFFFF"
-            pdf.fill_and_stroke_rounded_rectangle([ 0, card_height ], card_width, card_height, 8)
-            pdf.fill_color "000000"
-            pdf.stroke_color "000000"
-
-            pdf.bounding_box([ 10, card_height - 10 ], width: card_width - 20, height: card_height - 20) do
-              pdf.text label, size: 9, style: :bold
-              pdf.move_down 8
-              pdf.text value, size: 14, style: :bold
-            end
-          end
-        end
-
-        pdf.move_cursor_to(top - (card_height + 10))
+      def add_single_table(builder)
+        headers = @table.export_headers
+        builder.add_table(
+          section_title: section_name, headers: headers,
+          rows: @table.export_rows.reject(&:empty?).map { |row| row.map { |value| value.presence || "-" } },
+          numeric_columns: [], total_row: nil,
+          empty_message: "No guest records found for the selected period."
+        )
       end
 
-      def draw_section(pdf, title, rows, type)
-        pdf.text title, size: 12, style: :bold
-        pdf.move_down 6
+      # A kitchen works one meal at a time, so each meal gets its own printed page,
+      # header and pax total.
+      def add_meal_prep_pages(builder)
+        headers = ArrivalsDeparturesCsvExportService::MEAL_PREP_COLUMNS
+        widths = meal_prep_column_widths(builder, headers)
+        pax_column = headers.index("Pax")
 
-        if rows.empty?
-          pdf.text(type == :arrival ? "No arrivals scheduled for this selected period." : "No departures scheduled for this selected period.", size: 10, style: :italic)
-          pdf.move_down 14
-          return
+        @report.sections.each_with_index do |section, index|
+          builder.start_new_page unless index.zero?
+          builder.add_header
+          builder.add_summary([ [ "Transfers", section[:rows].size.to_s ], [ "Total Pax", section[:total_pax].to_s ] ])
+          builder.add_table(
+            section_title: section[:title], headers: headers,
+            rows: section[:rows].map { |row| @table.meal_prep_row(row).map { |value| value.blank? ? "-" : value.to_s } },
+            numeric_columns: [ pax_column ],
+            total_row: [ "Total Pax", section[:total_pax].to_s ] + Array.new(headers.size - 2),
+            empty_message: "No boat transfers or meal records found for the selected period.",
+            column_widths: widths
+          )
         end
-
-        table_rows = rows.map do |row|
-          status = type == :arrival ? "#{row[:pre_checkin_status]} / #{row[:guarantee_status]}" : row[:departure_status]
-          [
-            "#{row[:guest_name]}\n#{row[:confirmation_token]}",
-            "#{row[:room_details]}\nRoom: #{row[:room_numbers]}",
-            row[:stay_dates],
-            status,
-            row[:latest_note].presence || "-"
-          ]
-        end
-
-        pdf.table([ [ "Guest / Ref", "Rooms", "Stay", type == :arrival ? "Readiness" : "Departure", "Notes" ] ] + table_rows, width: pdf.bounds.width, cell_style: { size: 9, padding: [ 6, 6, 6, 6 ] }) do
-          row(0).font_style = :bold
-          row(0).background_color = "F1F5F9"
-        end
-
-        pdf.move_down 14
       end
+
+      def meal_prep_column_widths(builder, headers)
+        fixed = MEAL_PREP_FIXED_COLUMN_WIDTHS
+        headers.map { |header| fixed.fetch(header, builder.content_width - fixed.values.sum) }
+      end
+
+      # One table per direction shown, so the page mirrors the on-screen split.
+      def add_bibo_tables(builder)
+        widths = bibo_column_widths(builder)
+
+        @report.sections.each do |leg|
+          rows = leg[:rows]
+          builder.add_table(
+            section_title: leg[:title],
+            headers: [ "Guest Name", "Room Number", leg[:date_header], leg[:time_header] ],
+            rows: rows.map { |row| [ row[:guest_name], row[:room_number], row[leg[:date_key]], row[:boat_time] ].map { |value| value.presence || "-" } },
+            numeric_columns: [], total_row: nil, empty_message: leg[:empty_message],
+            column_widths: widths
+          )
+        end
+      end
+
+      def bibo_column_widths(builder)
+        fixed = Array.new(3, BIBO_FIXED_COLUMN_WIDTH)
+        [ builder.content_width - fixed.sum ] + fixed
+      end
+
+      # Meal prep never lands here; each of its pages counts its own section.
+      def record_count
+        return @report.boat_ins.size + @report.boat_outs.size if @tab == "bibo"
+
+        @table.export_rows.size
+      end
+
+      def section_name
+        { "arrivals" => "Arrivals", "in_house" => "In-House", "departures" => "Departures", "checkout" => "Checkout", "bibo" => "Boat Transfers", "meal_prep" => "Meal Prep" }.fetch(@tab, "Arrivals")
+      end
+
+      def period_label = @report.start_date == @report.end_date ? @report.start_date.strftime("%d %b %Y") : "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
     end
   end
 end

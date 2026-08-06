@@ -1,0 +1,241 @@
+<% content_for :title, "Check In Now | #{@hotel.name}" %>
+<% subtitle = @presenter.subtitle %>
+
+<div data-mobile-view class="min-h-screen bg-background flex flex-col font-sans">
+
+  <%# Top nav %>
+  <div class="px-6 pt-8 pb-6">
+    <%= link_to concierge_check_in_path(@hotel.slug),
+          class: "w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20 active:scale-90 transition-transform" do %>
+      <%= cached_icon "chevron-left", stroke_width: 3, class: "w-5 h-5 text-white" %>
+    <% end %>
+  </div>
+
+  <%# Header Section %>
+  <div class="px-6 pb-8">
+    <h1 class="text-2xl font-black text-foreground leading-tight">
+      Ready to <span class="text-primary">check in?</span>
+    </h1>
+    <p class="text-[13px] text-muted-foreground mt-3 font-medium leading-relaxed">
+      <%= subtitle %>
+    </p>
+  </div>
+
+  <div class="flex-1 px-6 space-y-6 pb-32">
+    <%= render "public/concierge/shared/error_alert", message: @error %>
+
+    <%# Booking summary card - Redesigned as a premium "Ticket" %>
+    <div class="rounded-2xl border border-border/50 bg-white p-6 shadow-sm overflow-hidden relative">
+      <div class="flex items-center gap-4 mb-5 pb-5 border-b border-dashed border-border/80">
+        <% if @presenter.pre_checkin_completed? %>
+          <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+            <%= cached_icon "circle-check", stroke_width: 2.5, class: "w-6 h-6" %>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-green-600">Verified</p>
+            <p class="text-xs font-bold text-foreground mt-0.5">Registration Complete</p>
+          </div>
+        <% else %>
+          <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <%= cached_icon "clipboard", stroke_width: 2.2, class: "w-6 h-6" %>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-amber-600">Action Required</p>
+            <p class="text-xs font-bold text-foreground mt-0.5">Please Complete Registration</p>
+          </div>
+        <% end %>
+      </div>
+      
+      <div class="space-y-3">
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Guest Name</p>
+          <p class="text-sm font-bold text-foreground"><%= @booking.guest_name %></p>
+        </div>
+        
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Reservation No.</p>
+            <p class="text-xs font-mono font-bold text-primary"><%= @booking.confirmation_token %></p>
+          </div>
+          <div class="text-right">
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Stay Duration</p>
+            <p class="text-xs font-bold text-foreground">
+              <%= concierge_booking_nights(@booking) %>
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Room Details</p>
+          <div class="space-y-0.5">
+            <% @booking.booking_rooms.each do |booking_room| %>
+              <p class="text-xs font-bold text-foreground">1x <%= booking_room.room_type_snapshot["name"] %></p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: @presenter.form_data(self, is_mobile: true) do |f| %>
+      <%= hidden_field_tag :latitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "latitude" } : {} %>
+      <%= hidden_field_tag :longitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "longitude" } : {} %>
+      <% if @presenter.registration_required? %>
+        <div class="rounded-2xl border border-border/50 bg-white p-6 shadow-sm space-y-8">
+          <div>
+            <h2 class="text-sm font-black uppercase tracking-[0.2em] text-foreground">Guest Registration</h2>
+            <p class="text-[11px] text-muted-foreground mt-2 leading-relaxed">Fill in your details to complete check-in.</p>
+          </div>
+
+          <div class="space-y-6">
+            <div class="space-y-2">
+              <%= f.label :guest_name, "Full Name (as per IC/Passport)", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.text_field :guest_name, value: @booking.guest_name, 
+                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all", required: true %>
+            </div>
+
+            <div class="space-y-2">
+              <%= f.label :guest_document_type, "Document Type", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <div class="relative" data-controller="searchable-select">
+                <%= f.hidden_field :guest_document_type, value: @booking.guest_document_type, data: { searchable_select_target: "hiddenInput", guest_dob_target: "documentType", pre_checkin_document_target: "select", action: "change->guest-dob#autofill change->pre-checkin-document#toggleUploads" } %>
+                <div class="relative cursor-pointer" data-action="click->searchable-select#toggle">
+                  <input type="text" readonly 
+                         data-searchable-select-target="input"
+                         placeholder="Select document type"
+                         class="w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 pr-10 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all cursor-pointer">
+                  <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <%= cached_icon "chevron-down", stroke_width: 2.5, class: "h-4 w-4 text-muted-foreground" %>
+                  </div>
+                </div>
+                
+                <div data-searchable-select-target="options" class="hidden absolute z-50 mt-2 w-full bg-white border border-border/60 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                  <% @presenter.document_types.each do |label, value| %>
+                    <div class="px-4 py-3 text-sm font-medium text-foreground hover:bg-muted cursor-pointer transition-colors border-b border-border/20 last:border-0"
+                         data-action="click->searchable-select#select"
+                         data-searchable-select-target="option"
+                         data-value="<%= value %>"
+                         data-label="<%= label %>">
+                      <%= label %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <%= f.label :guest_government_id, "IC / Passport Number", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.text_field :guest_government_id, value: @booking.guest_government_id, 
+                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
+                    required: true, placeholder: "e.g. 900101011234",
+                    data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+            </div>
+
+            <div class="space-y-2">
+              <%= f.label :guest_email, "Email Address", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.email_field :guest_email, value: @booking.guest_email, 
+                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all", required: true %>
+            </div>
+
+            <div class="space-y-2">
+              <%= f.label :guest_phone, "Phone Number", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.telephone_field :guest_phone, value: @booking.guest_phone, 
+                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all", required: true %>
+            </div>
+
+            <div class="space-y-2">
+              <%= f.label :guest_country, "Nationality", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <div class="relative" data-controller="searchable-select">
+                <%= f.hidden_field :guest_country, value: @presenter.default_country, data: { searchable_select_target: "hiddenInput", guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
+                <div class="relative">
+                  <input type="text" 
+                         data-searchable-select-target="input"
+                         data-action="input->searchable-select#filter focus->searchable-select#open"
+                         placeholder="Search nationality..."
+                         autocomplete="off"
+                         class="w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 pr-10 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all">
+                  <div class="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer" data-action="click->searchable-select#toggle">
+                    <%= cached_icon "chevron-down", stroke_width: 2.5, class: "h-4 w-4 text-muted-foreground" %>
+                  </div>
+                </div>
+                
+                <div data-searchable-select-target="options" class="hidden absolute z-50 mt-2 w-full bg-white border border-border/60 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                  <div data-searchable-select-target="placeholder" class="hidden px-4 py-3 text-sm text-muted-foreground italic">No results found</div>
+                  <% country_options.each do |label, value| %>
+                    <div class="px-4 py-3 text-sm font-medium text-foreground hover:bg-muted cursor-pointer transition-colors border-b border-border/20 last:border-0"
+                         data-action="click->searchable-select#select"
+                         data-searchable-select-target="option"
+                         data-value="<%= value %>"
+                         data-label="<%= label %>">
+                      <%= label %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <%= f.label :guest_date_of_birth, "Date of Birth", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.date_field :guest_date_of_birth, value: @form.guest_date_of_birth,
+                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
+                    data: { guest_dob_target: "dateOfBirth" } %>
+            </div>
+
+            <div class="space-y-2">
+              <%= f.label :guest_home_address, "Home Address", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.text_area :guest_home_address, value: @booking.guest_home_address,
+                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
+                    required: true, rows: 3, placeholder: "e.g. No. 12, Jalan Ampang, 50450 Kuala Lumpur" %>
+            </div>
+          </div>
+        </div>
+
+        <%# ID document photos %>
+        <div class="rounded-2xl border border-border/50 bg-white p-6 shadow-sm space-y-6 transition-all duration-300 transform <%= @presenter.upload_section_class %>" data-pre-checkin-document-target="uploadSection">
+          <div>
+            <h2 class="text-sm font-black uppercase tracking-[0.2em] text-foreground">Identity Document</h2>
+            <p class="text-[11px] text-muted-foreground mt-2 leading-relaxed">Upload or scan your IC / passport.</p>
+          </div>
+          <div class="grid gap-4">
+            <div data-pre-checkin-document-target="frontContainer" class="transition-all duration-300 transform <%= @presenter.front_container_class %>">
+              <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: @presenter.front_scanner_label %>
+            </div>
+            <div data-pre-checkin-document-target="backContainer" class="transition-all duration-300 transform <%= @presenter.back_container_class %>">
+              <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID Card" %>
+            </div>
+          </div>
+        </div>
+
+        <%# Guest signature %>
+        <div class="rounded-2xl border border-border/50 bg-white p-6 shadow-sm space-y-4">
+          <div>
+            <h2 class="text-sm font-black uppercase tracking-[0.2em] text-foreground">Guest Signature</h2>
+            <p class="text-[11px] text-muted-foreground mt-2 leading-relaxed">Sign below to confirm your check-in details.</p>
+          </div>
+          <div data-controller="signature" class="space-y-2">
+            <div class="rounded-xl border border-border bg-white p-2">
+              <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
+            </div>
+            <div class="flex justify-end">
+              <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-primary hover:underline">
+                Clear Signature
+              </button>
+            </div>
+            <%= f.hidden_field :signature, data: { signature_target: "input" }, required: true %>
+          </div>
+        </div>
+      <% end %>
+
+      <%# Submit button positioned at the bottom %>
+      <div class="fixed bottom-0 left-0 right-0 p-6 bg-background/95 backdrop-blur-md z-30">
+        <% if @presenter.geolocation_active? %>
+          <div data-geolocation-check-in-target="status"></div>
+        <% end %>
+        <%= submit_tag @presenter.registration_required? ? "CONFIRM PRE-CHECK-IN" : "CONFIRM CHECK IN",
+              class: "w-full bg-primary text-white font-black py-5 rounded-xl shadow-xl shadow-primary/30 active:scale-[0.98] transition-all cursor-pointer tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed mt-2",
+              data: @presenter.geolocation_active? ? { geolocation_check_in_target: "submitButton" } : {} %>
+      </div>
+    <% end %>
+
+    <%= render "shared/scanner_modal" %>
+  </div>
+
+</div>

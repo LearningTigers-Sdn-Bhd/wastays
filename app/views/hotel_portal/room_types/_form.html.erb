@@ -1,185 +1,249 @@
-<%= form_with model: [@hotel, room_type], local: true, data: { controller: "room-number-generator" } do |f| %>
-  <div class="grid gap-y-6">
-    <div>
-      <%= f.label :name, "Room Type Name", class: "block text-sm mb-2 font-medium" %>
-      <%= f.text_field :name, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, placeholder: "e.g. Deluxe Twin Room" %>
+<%# Amenities read as "Bathroom · Hair dryer": the category is folded into the
+    label so one searchable list replaces the old category accordion. %>
+<% amenity_choices = categorized_room_amenities.flat_map do |group|
+     group[:items].map { |amenity| { label: "#{group[:category]} · #{amenity[:name]}", value: amenity[:id] } }
+   end %>
+<% room_group_choices = @hotel.room_groups.order(:name).map { |group| { label: group.name, value: group.id } } %>
+<% custom_numbering = room_type.room_number_mode == "custom" %>
+<% currency = @hotel.default_currency %>
+
+<%= form_with model: [ @hotel, room_type ],
+              local: true,
+              id: form_id,
+              class: "grid grid-cols-1 items-start gap-x-10 gap-y-10 lg:grid-cols-2",
+              data: { controller: "room-number-generator" } do |f| %>
+  <% if room_type.errors.any? %>
+    <div class="lg:col-span-2">
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: pluralize(room_type.errors.count, "error") + " prevented this room category from being saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% room_type.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
     </div>
+  <% end %>
 
-    <div>
-      <%= f.label :description, class: "block text-sm mb-2 font-medium" %>
-      <%= f.text_area :description, rows: 3, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", placeholder: "e.g. Spacious room with two twin beds and city view." %>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
+  <%# Two independent columns rather than grid auto-flow: the sections differ a
+      lot in height, and row-aligned cells left dead space beside the short ones.
+      Small-field sections stack left, the two tall ones stack right. %>
+  <div class="space-y-8">
+    <section aria-labelledby="room-category-basics-heading">
       <div>
-        <%= f.label :max_adults, "Max Adults", class: "block text-sm mb-2 font-medium" %>
-        <%= f.number_field :max_adults, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, min: 1 %>
-      </div>
-      <div>
-        <%= f.label :max_children, "Max Children", class: "block text-sm mb-2 font-medium" %>
-        <%= f.number_field :max_children, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, min: 0 %>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <%= f.label :quantity, "Total Number of Rooms", class: "block text-sm mb-2 font-medium" %>
-        <%= f.number_field :quantity,
-            class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500",
-            required: true,
-            min: 0,
-            data: { room_number_generator_target: "quantity", action: "input->room-number-generator#generate" } %>
-      </div>
-      <div>
-        <%= f.label :base_price, "Base Nightly Rate (MYR)", class: "block text-sm mb-2 font-medium" %>
-        <%= f.number_field :base_price, step: 0.01, class: "py-3 px-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500", required: true, min: 0 %>
-      </div>
-    </div>
-
-    <div data-controller="multi-select-dropdown"
-         data-multi-select-dropdown-selected-value="<%= (room_type.amenities || []).to_json %>"
-         data-multi-select-dropdown-all-value="<%= Hotel::ROOM_AMENITIES.to_json %>"
-         data-action="click@window->multi-select-dropdown#hideDropdown">
-      <div class="flex items-center justify-between mb-2">
-        <%= f.label :amenities, "Room Amenities", class: "block text-sm font-medium" %>
+        <h2 id="room-category-basics-heading" class="text-base font-semibold text-foreground">Basic Info</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Name this room category and place it in a room group.</p>
       </div>
 
-      <div class="relative">
-        <div class="min-h-[52px] w-full rounded-lg border border-gray-200 bg-white p-2 flex flex-wrap items-center gap-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all cursor-text"
-             data-action="click->multi-select-dropdown#focusInput">
-          <div class="flex flex-wrap gap-2" data-multi-select-dropdown-target="pillsContainer">
-            <!-- Pills will be rendered here by Stimulus -->
-          </div>
-          
-          <input type="text" 
-                 class="flex-grow min-w-[150px] border-none bg-transparent focus:ring-0 focus:outline-none text-sm text-slate-900 placeholder:text-slate-400" 
-                 data-multi-select-dropdown-target="input"
-                 data-action="input->multi-select-dropdown#filterOptions focus->multi-select-dropdown#openDropdown click->multi-select-dropdown#stopProp keydown->multi-select-dropdown#navigate">
+      <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Room Category Name", required: true) do |field| %>
+          <% field.with_input(placeholder: "e.g. Deluxe Twin Room", autocomplete: "off") %>
+        <% end %>
 
-          <div class="ml-auto pr-2">
-            <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" data-multi-select-dropdown-target="chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-          </div>
-        </div>
-
-        <!-- Dropdown Options -->
-        <div class="absolute z-50 mt-2 w-full max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg hidden" 
-             data-multi-select-dropdown-target="dropdown">
-          <% Hotel::ROOM_AMENITIES.each do |amenity| %>
-            <button type="button"
-                    class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
-                    data-id="<%= amenity[:id] %>"
-                    data-name="<%= amenity[:name] %>"
-                    data-multi-select-dropdown-target="option"
-                    data-action="click->multi-select-dropdown#select">
-              <%= amenity[:name] %>
-            </button>
+        <%# Omitted entirely until the property has room groups — the control
+            would be an empty list, and groups are created from the list page. %>
+        <% if room_group_choices.any? %>
+          <%= render PanelsUI::FormField.new(form: f, attribute: :room_group_id, label: "Room Group") do |field| %>
+            <% field.with_select_menu(
+                 room_group_choices,
+                 selected: room_type.room_group_id,
+                 include_blank: "No Group") %>
           <% end %>
-        </div>
-      </div>
+        <% end %>
 
-      <!-- Template for Pills -->
-      <template data-multi-select-dropdown-target="template">
-        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">
-          <span data-name></span>
-          <button type="button" 
-                  class="hover:text-slate-300 transition-colors"
-                  data-remove-id
-                  data-action="click->multi-select-dropdown#remove">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
-          <input type="hidden" name="room_type[amenities][]" value="">
-        </div>
-      </template>
-    </div>
-
-    <!-- Room Number Management -->
-    <div class="p-5 border border-slate-200 rounded-2xl bg-slate-50/50 space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold text-slate-900">Room Numbering</h3>
-        </div>
-      </div>
-
-      <div data-room-number-generator-target="rangeFields" class="grid sm:grid-cols-1 gap-4">
-        <div>
-          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Start Number</label>
-          <input type="number" data-room-number-generator-target="start" data-action="input->room-number-generator#generate" placeholder="e.g. 101" class="py-2.5 px-4 block w-full border border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500">
-        </div>
-      </div>
-
-      <div data-room-number-generator-target="customFields" class="hidden">
-        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Room Numbers </label>
-        <textarea data-room-number-generator-target="customList" data-action="input->room-number-generator#generate" rows="2" placeholder="101, 102, 103, 105, 107" class="py-2.5 px-4 block w-full border border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500"><%= room_type.room_numbers&.join(", ") %></textarea>
-      </div>
-
-      <div class="space-y-3">
-        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Preview</label>
-        <div data-room-number-generator-target="preview" class="flex flex-wrap gap-2 min-h-[40px] p-3 border border-dashed border-slate-200 rounded-xl bg-white">
-          <span class="text-slate-400 italic text-sm">Waiting for input...</span>
-        </div>
-
-        <div class="flex items-center gap-x-2.5 pt-1">
-          <%= f.hidden_field :room_number_mode, data: { room_number_generator_target: "modeInput" } %>
-          <input type="checkbox" id="custom-mode-toggle"
-                 data-room-number-generator-target="modeCheckbox"
-                 data-action="change->room-number-generator#toggleMode"
-                 <%= 'checked' if room_type.room_number_mode == 'custom' %>
-                 class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-          <label for="custom-mode-toggle" class="text-xs font-bold text-slate-700 cursor-pointer">Enable manual customization (Custom Mode)</label>
-        </div>
-
-        <p data-room-number-generator-target="hint" class="text-xs hidden"></p>
-      </div>
-
-      <div data-room-number-generator-target="inputContainer" class="hidden">
-        <% room_type.room_numbers&.each do |num| %>
-          <input type="hidden" name="room_type[room_numbers][]" value="<%= num %>">
+        <%= render PanelsUI::FormField.new(
+              form: f,
+              attribute: :description,
+              label: "Description",
+              class: "sm:col-span-2") do |field| %>
+          <% field.with_text_area(rows: 3, placeholder: "e.g. Spacious room with two twin beds and a city view.") %>
         <% end %>
       </div>
-    </div>
+    </section>
 
-    <div>
-      <%= f.label :photos, "Room Photos", class: "block text-sm mb-2 font-medium" %>
-      <%= f.file_field :photos, multiple: true, accept: 'image/*', class: "block w-full border border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none file:bg-gray-50 file:border-0 file:me-4 file:py-3 file:px-4" %>
-      <p class="mt-1 text-xs text-gray-500">You can upload multiple photos.</p>
-    </div>
+    <section aria-labelledby="room-category-capacity-heading">
+      <div>
+        <h2 id="room-category-capacity-heading" class="text-base font-semibold text-foreground">Capacity &amp; Standard Rate</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Base occupancy, how many units exist, and this category's default nightly price.</p>
+      </div>
 
-    <% if room_type.photos.attached? %>
-      <div class="mt-4 p-4 border border-slate-200 rounded-2xl bg-slate-50/50">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-slate-900">Manage Current Photos</h3>
-          <button type="submit" 
-                  form="bulk-delete-photos-form"
-                  class="py-1.5 px-3 inline-flex items-center gap-x-2 text-xs font-semibold rounded-lg border border-transparent bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-                  data-turbo-confirm="Are you sure you want to delete the selected photos?">
-            Delete Selected
-          </button>
+      <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :max_adults, label: "Max Adults", required: true) do |field| %>
+          <% field.with_input(type: :number, min: 1, step: 1) %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: f, attribute: :max_children, label: "Max Children", required: true) do |field| %>
+          <% field.with_input(type: :number, min: 0, step: 1) %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: f, attribute: :quantity, label: "Total Number of Rooms", required: true) do |field| %>
+          <% field.with_input(
+               type: :number,
+               min: 0,
+               step: 1,
+               data: { room_number_generator_target: "quantity", action: "input->room-number-generator#generate" }) %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: f,
+              attribute: :base_price,
+              label: "Standard Rate (#{currency})",
+              hint: safe_join([
+                "The default nightly price for any date without an override. Other plans derive from it in ",
+                link_to("Rate Settings", hotel_rates_settings_path(@hotel), class: "underline"),
+                "."
+              ]),
+              required: true) do |field| %>
+          <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+        <% end %>
+      </div>
+    </section>
+
+    <section aria-labelledby="room-category-amenities-heading">
+      <div>
+        <h2 id="room-category-amenities-heading" class="text-base font-semibold text-foreground">Amenities</h2>
+        <p class="mt-2 text-sm text-muted-foreground">What's included in this room.</p>
+      </div>
+
+      <div class="mt-4">
+        <% if amenity_choices.any? %>
+          <%= render PanelsUI::FormField.new(
+                form: f,
+                attribute: :amenities,
+                label: "Room amenities",
+                label_hidden: true) do |field| %>
+            <% field.with_multi_select(
+                 amenity_choices,
+                 selected: room_type.amenities,
+                 prompt: "Search and select amenities",
+                 empty_text: "No amenities found") %>
+          <% end %>
+        <% else %>
+          <p class="text-sm text-muted-foreground">No amenities are configured for this property yet.</p>
+        <% end %>
+      </div>
+    </section>
+
+    <section aria-labelledby="room-category-restrictions-heading">
+      <div>
+        <h2 id="room-category-restrictions-heading" class="text-base font-semibold text-foreground">Restrictions</h2>
+        <p class="mt-2 text-sm text-muted-foreground">House rules that apply to this room category.</p>
+      </div>
+
+      <div class="mt-4 grid gap-3">
+        <%= render PanelsUI::Switch.new(
+              form: f,
+              attribute: :smoking_allowed,
+              checked: room_type.smoking_allowed?,
+              label: "Smoking Allowed",
+              description: "Guests may smoke in rooms of this category.",
+              variant: :card) %>
+
+        <%= render PanelsUI::Switch.new(
+              form: f,
+              attribute: :pets_allowed,
+              checked: room_type.pets_allowed?,
+              label: "Pets Allowed",
+              description: "Guests may bring pets into rooms of this category.",
+              variant: :card) %>
+      </div>
+    </section>
+  </div>
+
+  <div class="space-y-8">
+    <section aria-labelledby="room-category-numbering-heading">
+      <div>
+        <h2 id="room-category-numbering-heading" class="text-base font-semibold text-foreground">Room Numbering</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Generate room numbers from a starting number, or enter them yourself.</p>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <%= render PanelsUI::Switch.new(
+              form: f,
+              attribute: :room_number_mode,
+              value: "custom",
+              unchecked_value: "range",
+              checked: custom_numbering,
+              label: "Enter room numbers manually",
+              description: "Off, numbers run consecutively from the starting number.",
+              variant: :card,
+              data: {
+                room_number_generator_target: "modeCheckbox",
+                action: "change->room-number-generator#toggleMode"
+              }) %>
+
+        <div data-room-number-generator-target="rangeFields" class="panel-form-field" data-size="md">
+          <label for="room-numbering-start" class="panel-form-field__label">Start Number</label>
+          <input type="number"
+                 id="room-numbering-start"
+                 class="panel-input"
+                 data-size="md"
+                 placeholder="e.g. 101"
+                 data-room-number-generator-target="start"
+                 data-action="input->room-number-generator#generate">
         </div>
 
-        <div class="grid grid-cols-4 gap-4">
-          <% room_type.photos.each do |photo| %>
-            <div class="relative group">
-              <%= image_tag photo, class: "w-full h-24 object-cover rounded-xl border border-gray-200" %>
-              <div class="absolute top-2 right-2">
-                <input type="checkbox" 
-                       name="photo_ids[]" 
-                       value="<%= photo.id %>" 
-                       form="bulk-delete-photos-form"
-                       class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer">
-              </div>
-            </div>
+        <div data-room-number-generator-target="customFields" class="panel-form-field hidden" data-size="md">
+          <label for="room-numbering-list" class="panel-form-field__label">Room Numbers</label>
+          <textarea id="room-numbering-list"
+                    rows="2"
+                    class="panel-text-area"
+                    data-size="md"
+                    placeholder="101, 102, 103, 105, 107"
+                    data-room-number-generator-target="customList"
+                    data-action="input->room-number-generator#generate"><%= room_type.room_numbers&.join(", ") %></textarea>
+        </div>
+
+        <p data-room-number-generator-target="hint" class="hidden text-sm text-destructive" role="status"></p>
+
+        <div>
+          <p class="panel-form-field__label">Preview</p>
+          <div data-room-number-generator-target="preview"
+               class="mt-2 flex min-h-16 flex-wrap content-start gap-2 rounded-md border border-dashed border-border bg-muted/30 p-3">
+            <span class="text-sm text-muted-foreground">Enter a start number to generate a preview…</span>
+          </div>
+        </div>
+
+        <div data-room-number-generator-target="inputContainer" class="hidden">
+          <% room_type.room_numbers&.each do |number| %>
+            <input type="hidden" name="room_type[room_numbers][]" value="<%= number %>">
           <% end %>
         </div>
       </div>
-    <% end %>
+    </section>
 
-    <div class="mt-5">
-      <%= f.submit (room_type.new_record? ? "Create Room Type" : "Update Room Type"), class: "w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" %>
-    </div>
+    <section aria-labelledby="room-category-photos-heading">
+      <div>
+        <h2 id="room-category-photos-heading" class="text-base font-semibold text-foreground">Photos</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Show off this room category to guests.</p>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <%= render PanelsUI::FormField.new(
+              form: f,
+              attribute: :photos,
+              label: "Room category photos",
+              label_hidden: true) do |field| %>
+          <% field.with_dropzone(
+               accept: "image/*",
+               multiple: true,
+               max_files: RoomType::MAX_PHOTOS,
+               existing_count: room_type.photos.count,
+               preview: :image,
+               description: "PNG, JPG, or JPEG · maximum #{RoomType::MAX_PHOTOS} photos") %>
+        <% end %>
+
+        <%= render "photo_manager", room_type: room_type %>
+      </div>
+    </section>
   </div>
 <% end %>
 
 <% unless room_type.new_record? %>
-  <%= form_with url: bulk_destroy_photos_hotel_room_type_path(@hotel, room_type), method: :delete, id: "bulk-delete-photos-form", class: "hidden" do |f| %>
+  <%= form_with url: bulk_destroy_photos_hotel_room_type_path(@hotel, room_type), method: :delete, id: "bulk-delete-photos-form", class: "hidden" do |form| %>
   <% end %>
 <% end %>

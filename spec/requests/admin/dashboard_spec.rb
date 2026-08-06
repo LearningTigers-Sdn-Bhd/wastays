@@ -1,7 +1,7 @@
 require 'rails_helper'
 require 'securerandom'
 
-RSpec.describe 'Admin::Dashboard', type: :request do
+RSpec.describe 'Admin::Dashboard', type: :request, frozen_time: Time.zone.local(2026, 8, 15, 12) do
   let(:token) { SecureRandom.hex(6) }
   let(:admin_account) { create(:account, name: "Admin Dashboard #{token}") }
   let(:superadmin) { create(:user, :superadmin, account: admin_account, email: "admin-dashboard-#{token}@example.com") }
@@ -15,9 +15,9 @@ RSpec.describe 'Admin::Dashboard', type: :request do
       get admin_dashboard_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Dashboard')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Dashboard")
       expect(response.body).to include('Platform overview and real-time operational status.')
-      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Recent Successful Bookings')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Recent Successful Bookings')
       expect(response.body).to include('Recent Successful Bookings')
       expect(response.body).to include('View All Bookings')
       expect(response.body).to include('Payment Issues')
@@ -55,8 +55,8 @@ RSpec.describe 'Admin::Dashboard', type: :request do
     let(:other_hotel_account) { create(:account, name: "Ocean Breeze Group #{token}", status: 'active') }
     let(:other_hotel) { create(:hotel, account: other_hotel_account, name: "Ocean Breeze #{token}", status: 'approved') }
 
-    let!(:current_month_booking) do
-      create(
+    let!(:first_current_month_booking) do
+      booking = create(
         :booking,
         hotel: hotel,
         booking_quote: create(:booking_quote, hotel: hotel, token: "tok_#{token}_1"),
@@ -67,10 +67,13 @@ RSpec.describe 'Admin::Dashboard', type: :request do
         margin_rate: 10.0,
         created_at: Time.current.beginning_of_month + 2.days
       )
+      folio = create(:booking_folio, hotel: hotel, booking: booking)
+      create(:folio_transaction, booking_folio: folio, transaction_type: 'charge', category: 'accommodation', amount: 500.0, created_at: booking.created_at)
+      booking
     end
 
     let!(:second_current_month_booking) do
-      create(
+      booking = create(
         :booking,
         hotel: other_hotel,
         booking_quote: create(:booking_quote, hotel: other_hotel, token: "tok_#{token}_2"),
@@ -81,7 +84,11 @@ RSpec.describe 'Admin::Dashboard', type: :request do
         margin_rate: 15.0,
         created_at: Time.current.beginning_of_month + 5.days
       )
+      folio = create(:booking_folio, hotel: other_hotel, booking: booking)
+      create(:folio_transaction, booking_folio: folio, transaction_type: 'charge', category: 'accommodation', amount: 300.0, created_at: booking.created_at)
+      booking
     end
+
 
     let!(:previous_month_booking) do
       create(
@@ -98,13 +105,13 @@ RSpec.describe 'Admin::Dashboard', type: :request do
     end
 
     it 'shows global current-month analytics across hotels' do
-      get admin_analytics_path
+      get admin_analytics_path, params: { date_preset: "this_month" }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Revenue &amp; Margin Analytics')
+      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Revenue & Margin Analytics")
       expect(response.body).to include('Revenue &amp; Margin Analytics')
       expect(response.body).to include('Detailed superadmin analytics across all revenue-generating bookings.')
-      expect(response.body).to include('class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Daily Breakdown')
+      expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Daily Breakdown')
       expect(response.body).to include('RM 800.00')
       expect(response.body).to include('RM 95.00')
       expect(response.body).to include('RM 705.00')

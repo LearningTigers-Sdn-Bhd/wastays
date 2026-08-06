@@ -1,0 +1,23 @@
+<header id="observation-app-bar" class="observation-deck__app-bar">
+  <div class="observation-deck__brand">
+    <%= helpers.app_icon "eye", class: "size-4", aria: { hidden: true } %>
+    <h1>Observation Deck</h1>
+    <% if @environment.present? %>
+      <span class="observation-deck__environment"><%= @environment %></span>
+    <% end %>
+  </div>
+
+  <div class="observation-deck__app-actions">
+    <span class="observation-deck__refresh-time">Request-driven · last loaded <%= Time.current.in_time_zone.strftime("%H:%M:%S") %></span>
+    <%= link_to @refresh_path, class: "observation-deck__icon-button", aria: { label: "Refresh event stream" }, data: { action: "click->observation-deck#startRefresh observation:refresh-test->observation-deck#startRefresh" } do %>
+      <%= helpers.app_icon "refresh-cw", class: "size-4", aria: { hidden: true } %>
+    <% end %>
+    <button type="button" class="observation-deck__icon-button" aria-label="Open Observation Deck settings" title="Open Observation Deck settings" data-action="observation-deck#openSettings">
+      <%= helpers.app_icon "settings-2", class: "size-4", aria: { hidden: true } %>
+    </button>
+    <%= link_to @exit_path, class: "observation-deck__exit-link" do %>
+      <%= helpers.app_icon "log-out", class: "size-4", aria: { hidden: true } %>
+      Exit
+    <% end %>
+  </div>
+</header>

@@ -81,5 +81,58 @@ RSpec.describe "Admin::RefundRequests", type: :request do
       patch complete_admin_refund_request_path(approved_request)
       expect(approved_request.booking.reload.payment_status).to eq("refunded")
     end
+
+    it "completes without a folio" do
+      expect(approved_request.booking.booking_folio).to be_nil
+
+      patch complete_admin_refund_request_path(approved_request)
+
+      expect(approved_request.reload.status).to eq("completed")
+      expect(approved_request.booking.reload.payment_status).to eq("refunded")
+    end
+
+    it "posts a folio refund when a folio exists" do
+      folio = create(:booking_folio, booking: approved_request.booking)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :charge, amount: 200.0)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "gateway_payment", amount: 200.0)
+
+      expect {
+        patch complete_admin_refund_request_path(approved_request)
+      }.to change { folio.folio_transactions.payment.where(category: "refund").count }.by(1)
+
+      refund_transaction = folio.folio_transactions.payment.find_by!(category: "refund")
+      expect(refund_transaction.amount).to eq(-approved_request.refund_amount)
+      expect(refund_transaction.metadata["refund_request_id"]).to eq(approved_request.id)
+      expect(folio.outstanding_balance).to eq(approved_request.refund_amount)
+    end
+
+    it "does not duplicate an existing folio refund" do
+      folio = create(:booking_folio, booking: approved_request.booking)
+      create(
+        :folio_transaction,
+        booking_folio: folio,
+        transaction_type: :payment,
+        category: "refund",
+        amount: -approved_request.refund_amount,
+        metadata: { refund_request_id: approved_request.id }
+      )
+
+      expect {
+        patch complete_admin_refund_request_path(approved_request)
+      }.not_to change { folio.folio_transactions.payment.where(category: "refund").count }
+    end
+
+    it "does not complete when folio refund posting fails" do
+      create(:booking_folio, booking: approved_request.booking)
+      failed_result = Folios::Transactions::TransactionResult.failure("posting blocked")
+      allow(Folios::Payments::RecordRefund).to receive(:call).and_return(failed_result)
+
+      expect {
+        patch complete_admin_refund_request_path(approved_request)
+      }.to raise_error(RuntimeError, /posting blocked/)
+
+      expect(approved_request.reload.status).to eq("approved")
+      expect(approved_request.booking.reload.payment_status).not_to eq("refunded")
+    end
   end
 end

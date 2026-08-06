@@ -1,13 +1,13 @@
-# WAStays MVP
+# WAStays PMS
 
 WAStays is a modern hotel platform for small and budget hotels across Malaysia and Southeast Asia. This application provides a full-stack solution for hotel onboarding, inventory management, public booking, and guest arrival workflows.
 
 ## Prerequisites
 
-- **Ruby:** 3.3+ (Check `.ruby-version`)
-- **Node.js:** 20+
-- **PostgreSQL:** 14+
-- **Redis:** (Optional, but recommended for background jobs)
+- **Ruby:** 3.4.7 (see `.ruby-version`, managed via mise)
+- **PostgreSQL:** 14+ with pgvector
+
+No Node.js required — the app uses Import Maps and Tailwind via Ruby gems. No Redis required — background jobs, cache, and Action Cable use the database-backed Solid Queue/Cache/Cable.
 
 ## Getting Started
 
@@ -56,14 +56,35 @@ WAStays is a modern hotel platform for small and budget hotels across Malaysia a
 
 ## Testing
 
-Run the full test suite with:
+Use the domain-aware test runner:
+
 ```bash
-bundle exec rspec
+bin/test
 ```
+
+By default this runs the fast non-system suite in parallel. Common commands:
+
+```bash
+bin/test --menu
+bin/test --list
+bin/test bookings
+bin/test hotel_management
+bin/test hotel_operations
+bin/test financials
+bin/test reports
+bin/test system
+bin/test all
+bin/test spec/models/app_config_spec.rb
+bin/test spec/models/app_config_spec.rb:12
+```
+
+Use `bin/test <domain> --serial` for serial execution and `bin/test <domain> --paths` to inspect a domain's spec mapping. Raw RSpec remains available with `bundle exec rspec` when needed.
+
+`bin/test` stores per-domain timing data in `tmp/parallel_runtime_rspec_<domain>.log` to improve parallel distribution after the first run.
 
 ## Documentation
 
-Detailed technical specifications and implementation roadmaps are available in the `markdowns/` directory. Operational guides for admins are loaded from `guides/`, with `markdowns/guides/` still supported when present.
+Domain documentation and plan/design specs live in `docs/` (including `docs/superpowers/plans/` and `docs/superpowers/specs/`). Operational guides for hotel admins are loaded from `guides/`. AI assistant instructions are in `CLAUDE.md`.
 
 ## Production Deployment
 

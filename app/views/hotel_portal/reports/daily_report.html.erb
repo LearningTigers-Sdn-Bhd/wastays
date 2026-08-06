@@ -1,0 +1,75 @@
+<% export_disabled = case @daily_report_tab
+   when "revenue" then @revenue_report.rows.empty?
+   when "cashier" then @cashier_report.totals[:movement_count].zero?
+   else @revenue_report.rows.empty? && @cashier_report.totals[:movement_count].zero?
+   end %>
+<div class="w-full space-y-4" data-slot="report-page" data-report="daily-report">
+  <%= render PanelsUI::PageHeader.new(title: "Daily report", description: "Review daily revenue, charge activity, and cashier sales for the selected period.") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm text-muted-foreground">
+        <%= current_hotel.name %> ·
+        <% if @revenue_report.start_date == @revenue_report.end_date %>
+          <%= @revenue_report.start_date.strftime("%A, %d %b %Y") %>
+        <% else %>
+          <%= @revenue_report.start_date.strftime("%d %b %Y") %> - <%= @revenue_report.end_date.strftime("%d %b %Y") %>
+        <% end %>
+      </p>
+    <% end %>
+    <% header.with_actions do %>
+      <%= render "preset_report_actions",
+        form_url: daily_report_hotel_reports_path(current_hotel),
+        form_id: "daily-revenue-range-form",
+        hidden_params: { tab: @daily_report_tab },
+        date_preset: @date_preset,
+        start_date: @revenue_report.start_date,
+        end_date: @revenue_report.end_date,
+        show_export: feature_enabled_for_hotel?("excel_pdf_export"),
+        export_disabled: export_disabled,
+        export_menu_id: "daily-revenue-export",
+        export_items: [
+          ["Export PDF", daily_report_hotel_reports_path(current_hotel, start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :pdf)],
+          ["Export Excel", daily_report_hotel_reports_path(current_hotel, start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :xlsx)],
+          ["Export CSV", daily_report_hotel_reports_path(current_hotel, start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :csv)]
+        ] %>
+    <% end %>
+  <% end %>
+
+  <% preserved_params = { start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset }.merge(@transaction_filters) %>
+  <%= render PanelsUI::Tabs.new(
+        id: "daily-report-tabs",
+        active: @daily_report_tab,
+        variant: :line,
+        aria_label: "Daily report sections") do |tabs| %>
+    <% tabs.with_tab(name: "overview", label: "Overview", href: daily_report_hotel_reports_path(current_hotel, preserved_params.merge(tab: "overview")), data: { testid: "daily-report-tab-overview" }) %>
+    <% tabs.with_tab(name: "revenue", label: "Revenue", href: daily_report_hotel_reports_path(current_hotel, preserved_params.merge(tab: "revenue")), data: { testid: "daily-report-tab-revenue" }) %>
+    <% tabs.with_tab(name: "cashier", label: "Cashier sales", href: daily_report_hotel_reports_path(current_hotel, preserved_params.merge(tab: "cashier")), data: { testid: "daily-report-tab-cashier" }) %>
+  <% end %>
+
+  <% case @daily_report_tab %>
+  <% when "revenue" %>
+    <%= render "daily_report_revenue" %>
+  <% when "cashier" %>
+    <%= render "daily_report_cashier_sales" %>
+  <% else %>
+    <section class="space-y-3" aria-labelledby="overview-revenue-heading">
+      <% adjustment = daily_report_adjustment_presentation(@revenue_report.totals[:adjustments]) %>
+      <h2 id="overview-revenue-heading" class="text-base font-semibold">Revenue (accrual)</h2>
+      <%= render "daily_report_metric_row", aria_label: "Revenue summary", metrics: [
+        { label: "Bookings engaged", value: format_number(@revenue_report.totals[:booking_count]), detail: "Bookings with posted revenue" },
+        { label: "Total charges", value: "MYR #{format_number(@revenue_report.totals[:total_charges], precision: 2)}", detail: "Before adjustments" },
+        { label: "Adjustments", value: adjustment[:value], detail: adjustment[:detail], detail_variant: adjustment[:variant] },
+        { label: "Net revenue", value: "MYR #{format_number(@revenue_report.totals[:net_revenue], precision: 2)}", detail: "After adjustments", detail_variant: :success }
+      ] %>
+    </section>
+
+    <section class="space-y-3" aria-labelledby="overview-cashier-heading">
+      <h2 id="overview-cashier-heading" class="text-base font-semibold">Cashier sales (cash flow)</h2>
+      <%= render "daily_report_metric_row", aria_label: "Cashier sales summary", metrics: [
+        { label: "Cash movements", value: format_number(@cashier_report.totals[:movement_count]), detail: "Payments and refunds" },
+        { label: "Total collected", value: "MYR #{format_number(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
+        { label: "Total refunded", value: "- MYR #{format_number(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive },
+        { label: "Net cash", value: "MYR #{format_number(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success }
+      ] %>
+    </section>
+  <% end %>
+</div>

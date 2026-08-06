@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["modeCheckbox", "modeInput", "rangeFields", "customFields", "start", "customList", "preview", "quantity", "inputContainer", "hint"]
+  static targets = ["modeCheckbox", "rangeFields", "customFields", "start", "customList", "preview", "quantity", "inputContainer", "hint"]
   static values = { defaultStart: { type: Number, default: 101 } }
 
   connect() {
@@ -13,13 +13,18 @@ export default class extends Controller {
       }
     }
 
+    // The mode switch now submits room_number_mode itself, so the previous mode
+    // is tracked here rather than read back off a hidden companion field.
+    // Seeding it from the switch keeps connect() a no-op transition, the way
+    // reading the persisted hidden value used to be.
+    this.mode = this.modeCheckboxTarget.checked ? "custom" : "range"
     this.toggleMode()
   }
 
   toggleMode() {
     const isCustom = this.modeCheckboxTarget.checked
-    const previousMode = this.modeInputTarget.value
-    this.modeInputTarget.value = isCustom ? "custom" : "range"
+    const previousMode = this.mode
+    this.mode = isCustom ? "custom" : "range"
 
     if (isCustom) {
       this.rangeFieldsTarget.classList.add("hidden")
@@ -72,7 +77,7 @@ export default class extends Controller {
   }
 
   updateInputs(numbers) {
-    this.inputContainerTarget.innerHTML = ""
+    this.inputContainerTarget.replaceChildren()
     numbers.forEach(number => {
       const input = document.createElement("input")
       input.type = "hidden"
@@ -82,21 +87,28 @@ export default class extends Controller {
     })
 
     const quantity = parseInt(this.quantityTarget.value) || 0
-    let previewHtml = numbers.map(n =>
-      `<span class="inline-flex items-center gap-x-1.5 py-1 px-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">${n}</span>`
-    ).join(" ")
 
+    // Room numbers are free text in custom mode, so they are written as text
+    // nodes rather than interpolated into markup.
+    this.previewTarget.replaceChildren()
     if (numbers.length === 0) {
-      previewHtml = `<span class="text-slate-400 italic text-sm">No room numbers generated</span>`
+      const empty = document.createElement("span")
+      empty.className = "text-sm text-muted-foreground"
+      empty.textContent = "No room numbers generated"
+      this.previewTarget.appendChild(empty)
+    } else {
+      numbers.forEach(number => {
+        const chip = document.createElement("span")
+        chip.className = "inline-flex items-center gap-x-1.5 rounded-md border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground"
+        chip.textContent = number
+        this.previewTarget.appendChild(chip)
+      })
     }
-
-    this.previewTarget.innerHTML = previewHtml
 
     if (this.hasHintTarget) {
       if (numbers.length !== quantity && quantity > 0) {
-        this.hintTarget.innerHTML = `Warning: Number of rooms (${numbers.length}) does not match Total Quantity (${quantity})`
+        this.hintTarget.textContent = `Warning: the number of rooms (${numbers.length}) does not match the total number of rooms (${quantity})`
         this.hintTarget.classList.remove("hidden")
-        this.hintTarget.classList.add("text-red-500")
       } else {
         this.hintTarget.classList.add("hidden")
       }

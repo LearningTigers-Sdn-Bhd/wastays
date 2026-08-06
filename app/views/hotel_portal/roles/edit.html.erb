@@ -1,26 +1,38 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <%= link_to "Roles & Permissions", hotel_roles_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">Edit Role</span>
-  </div>
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "edit-role-sheet",
+             title: "Edit Role",
+             description: "Rename #{@role.name}. Its permissions are managed in the matrix.",
+             form_id: "edit-role-form",
+             submit_label: "Save Changes"
+           } do %>
+  <%= form_with model: @role,
+                url: hotel_role_path(current_hotel, @role),
+                method: :patch,
+                id: "edit-role-form",
+                class: "space-y-5" do |f| %>
+    <% if @role.errors.any? %>
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: "This role could not be saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @role.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :name,
+          label: "Role Name",
+          hint: "The slug was generated when the role was created and does not change.",
+          required: true) do |field| %>
+      <% field.with_input(placeholder: "Night Manager", autocomplete: "off", required: true) %>
+    <% end %>
+  <% end %>
 <% end %>
-
-<div class="mx-auto max-w-5xl space-y-8 pb-20">
-  <div class="px-4 md:px-0">
-    <div class="mt-5">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Edit <%= @role.name %></h1>
-      <p class="mt-1 text-sm font-medium text-slate-600">Update this role's name and assigned permissions.</p>
-    </div>
-  </div>
-
-  <div class="px-4 md:px-0">
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="p-6">
-        <%= render "form" %>
-      </div>
-    </section>
-  </div>
-</div>

@@ -1,6 +1,7 @@
 <%
   sidebar_key = local_assigns.fetch(:sidebar_key)
   home_path = local_assigns.fetch(:home_path)
+  header_html = local_assigns[:header_html]
   nav_html = local_assigns.fetch(:nav_html)
   footer_html = local_assigns.fetch(:footer_html)
   search_enabled = local_assigns.fetch(:search_enabled, false)
@@ -8,6 +9,9 @@
   empty_message = local_assigns.fetch(:empty_message, "No navigation matches that search.")
   search_controller = "admin-sidebar-search"
   mobile_controllers = [ (search_enabled ? search_controller : nil), "sidebar-toggle" ].compact.join(" ")
+  permanent_sidebar = local_assigns.fetch(:permanent_sidebar, [ "admin", "hotel" ].include?(sidebar_key))
+  state_enabled = local_assigns.fetch(:state_enabled, [ "admin", "hotel" ].include?(sidebar_key))
+  desktop_controllers = [ (search_enabled ? search_controller : nil), (state_enabled ? "sidebar-state" : nil) ].compact.join(" ")
   desktop_id = "#{sidebar_key}-sidebar"
   mobile_id = "#{sidebar_key}-sidebar-mobile"
   overlay_id = "#{sidebar_key}-sidebar-overlay"
@@ -15,69 +19,89 @@
   mobile_search_id = "#{sidebar_key}-sidebar-search-mobile"
 %>
 
-<aside id="<%= desktop_id %>" <% if sidebar_key == "hotel" %>data-turbo-permanent<% end %> <% if search_enabled %>data-controller="<%= search_controller %>"<% end %> class="hidden lg:flex lg:flex-col w-[260px] border-e border-layer-line bg-sidebar-bg shrink-0 h-full overflow-y-auto overscroll-contain custom-scrollbar">
-  <% if search_enabled %>
-    <div class="p-4 pb-2">
-      <label class="block" for="<%= desktop_search_id %>">
-        <span class="sr-only">Search navigation</span>
-        <span class="relative block">
-          <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground-2">
-            <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </span>
-          <input id="<%= desktop_search_id %>" type="search" placeholder="<%= search_placeholder %>" autocomplete="off" data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter" class="w-full rounded-lg border border-layer-line bg-layer-alt py-2 pl-10 pr-3 text-sm text-neutral-text-primary placeholder:text-muted-foreground-2 shadow-xs focus:border-slate-300 focus:outline-none focus:ring-0">
-        </span>
-      </label>
+<aside id="<%= desktop_id %>" <%= "data-turbo-permanent" if permanent_sidebar %> <% if desktop_controllers.present? %>data-controller="<%= desktop_controllers %>"<% end %> <% if state_enabled %>data-sidebar-state-key-value="<%= sidebar_key %>"<% end %> class="hidden lg:flex lg:flex-col w-[260px] border-e border-border bg-card shrink-0 h-full">
+  <% if header_html %>
+    <div class="shrink-0 border-b border-border bg-card">
+      <%= header_html %>
     </div>
   <% end %>
 
-  <%= nav_html %>
+  <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+    <% if search_enabled %>
+      <div class="p-4 pb-2">
+        <label class="block" for="<%= desktop_search_id %>">
+          <span class="sr-only">Search navigation</span>
+          <span class="relative block">
+            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+              <%= cached_icon "search", class: "size-4 shrink-0" %>
+            </span>
+            <input id="<%= desktop_search_id %>" type="search" placeholder="<%= search_placeholder %>" autocomplete="off" data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter" class="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground shadow-xs focus:border-border-interactive focus:outline-none focus:ring-0">
+          </span>
+        </label>
+      </div>
+    <% end %>
 
-  <div <% if search_enabled %>data-admin-sidebar-search-target="section"<% end %> class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
+    <%= nav_html %>
+
+    <% if search_enabled %>
+      <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-border bg-background px-4 py-5 text-center text-sm text-muted-foreground">
+        <%= empty_message %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="shrink-0 px-4 py-4 border-t border-border bg-card space-y-0.5 sidebar-footer">
     <%= footer_html %>
   </div>
 
-  <% if search_enabled %>
-    <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-layer-line bg-layer-alt px-4 py-5 text-center text-sm text-muted-foreground-2">
-      <%= empty_message %>
-    </div>
+  <% if state_enabled %>
+    <div class="sidebar-tooltip hidden" role="tooltip" data-sidebar-state-target="tooltip"></div>
   <% end %>
 </aside>
 
-<div id="<%= overlay_id %>" class="fixed inset-0 z-[79] bg-black/50 hidden lg:hidden" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#close"></div>
-<aside id="<%= mobile_id %>" data-controller="<%= mobile_controllers %>" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-sidebar-bg border-e border-layer-line transform -translate-x-full transition-transform duration-300 lg:hidden overflow-y-auto overscroll-contain custom-scrollbar">
-  <div class="flex items-center justify-between p-4 border-b border-layer-line">
+<div id="<%= overlay_id %>" class="fixed inset-0 z-[79] bg-foreground/50 hidden lg:hidden" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#close"></div>
+<aside id="<%= mobile_id %>" data-controller="<%= mobile_controllers %>" class="fixed top-0 start-0 bottom-0 z-[80] w-[260px] bg-card border-e border-border transform -translate-x-full transition-transform duration-300 lg:hidden flex flex-col">
+  <div class="flex items-center justify-between p-4 border-b border-border shrink-0">
     <a href="<%= home_path %>" class="flex items-center gap-x-2.5">
-      <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-white font-bold text-sm shadow-xs">W</span>
-      <span class="text-sm font-semibold text-neutral-text-primary">WAStays</span>
+      <span class="inline-flex justify-center items-center size-8 bg-brand-primary rounded-lg text-primary-foreground font-bold text-sm shadow-xs">W</span>
+      <span class="text-sm font-semibold text-foreground">WAStays</span>
     </a>
-    <button type="button" class="inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-action="click->sidebar-toggle#close">
-      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    <button type="button" class="inline-flex justify-center items-center size-8 rounded-lg text-muted-foreground hover:bg-muted transition-colors" data-action="click->sidebar-toggle#close">
+      <%= cached_icon "x", class: "size-4" %>
     </button>
   </div>
 
-  <% if search_enabled %>
-    <div class="p-4 pb-2">
-      <label class="block" for="<%= mobile_search_id %>">
-        <span class="sr-only">Search navigation</span>
-        <span class="relative block">
-          <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground-2">
-            <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </span>
-          <input id="<%= mobile_search_id %>" type="search" placeholder="<%= search_placeholder %>" autocomplete="off" data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter" class="w-full rounded-lg border border-layer-line bg-layer-alt py-2 pl-10 pr-3 text-sm text-neutral-text-primary placeholder:text-muted-foreground-2 shadow-xs focus:border-slate-300 focus:outline-none focus:ring-0">
-        </span>
-      </label>
+  <% if header_html %>
+    <div class="shrink-0 border-b border-border bg-card">
+      <%= header_html %>
     </div>
   <% end %>
 
-  <%= nav_html %>
+  <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+    <% if search_enabled %>
+      <div class="p-4 pb-2">
+        <label class="block" for="<%= mobile_search_id %>">
+          <span class="sr-only">Search navigation</span>
+          <span class="relative block">
+            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+              <%= cached_icon "search", class: "size-4 shrink-0" %>
+            </span>
+            <input id="<%= mobile_search_id %>" type="search" placeholder="<%= search_placeholder %>" autocomplete="off" data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter" class="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground shadow-xs focus:border-border-interactive focus:outline-none focus:ring-0">
+          </span>
+        </label>
+      </div>
+    <% end %>
 
-  <div <% if search_enabled %>data-admin-sidebar-search-target="section"<% end %> class="px-4 py-4 mt-auto border-t border-layer-line space-y-0.5">
-    <%= footer_html %>
+    <%= nav_html %>
+
+    <% if search_enabled %>
+      <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-border bg-background px-4 py-5 text-center text-sm text-muted-foreground">
+        <%= empty_message %>
+      </div>
+    <% end %>
   </div>
 
-  <% if search_enabled %>
-    <div data-admin-sidebar-search-target="empty" class="hidden mx-4 mb-4 rounded-xl border border-dashed border-layer-line bg-layer-alt px-4 py-5 text-center text-sm text-muted-foreground-2">
-      <%= empty_message %>
-    </div>
-  <% end %>
+  <div class="shrink-0 px-4 py-4 border-t border-border bg-card space-y-0.5 sidebar-footer">
+    <%= footer_html %>
+  </div>
 </aside>

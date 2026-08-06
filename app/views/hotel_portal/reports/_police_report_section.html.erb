@@ -1,0 +1,18 @@
+<section class="space-y-3" aria-labelledby="police-report-records-heading">
+  <h2 id="police-report-records-heading" class="text-base font-semibold text-foreground">Police report records</h2>
+  <%= render PanelsUI::Table.new(caption: "Police report records", density: :compact, header_style: :sentence, hoverable: true, class: "min-w-[1200px] print:min-w-0 print:w-auto", wrapper_class: "rounded-lg border border-border bg-card print:overflow-visible") do |table| %>
+    <% table.with_header do %><tr><th>Guest</th><th>Room</th><th>Nights stayed</th><th>Guest details</th><th>Contact</th><th>Scheduled check-in</th><th>Actual check-in</th><th>Scheduled check-out</th><th>Actual check-out</th><th>Status</th></tr><% end %>
+    <% table.with_body do %>
+      <% if report.rows.any? %>
+        <% report_rows_grouped_by_month(report.rows, date_preset: date_preset) { |row| row[:check_in_date] }.each do |month, rows| %>
+          <% if month %>
+            <tr class="bg-muted/55" data-slot="report-month-group"><th scope="rowgroup" colspan="10" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th></tr>
+          <% end %>
+          <% rows.each do |row| %><tr class="align-top"><th scope="row" class="font-semibold text-foreground"><%= row[:guest_name] %><span class="mt-1 block font-mono text-xs text-muted-foreground"><%= row[:confirmation_token] %></span></th><td><%= row[:room_number] %></td><td><%= row[:nights_stayed] %></td><td><%= [ row[:nationality], row[:gender] ].reject { |value| value == "-" }.join(" · ").presence || "-" %><span class="mt-1 block text-xs text-muted-foreground"><%= row[:date_of_birth] %></span></td><td class="min-w-56"><%= row[:contact] %><span class="mt-1 block text-xs text-muted-foreground"><%= row[:address] %></span></td><td><%= row[:scheduled_check_in] %></td><td class="whitespace-pre-line"><%= row[:actual_check_in] %></td><td><%= row[:scheduled_check_out] %></td><td class="whitespace-pre-line"><%= row[:actual_check_out] %></td><td><%= row[:status] %></td></tr><% end %>
+        <% end %>
+      <% else %>
+        <%= render "hotel_portal/reports/table_empty_state", colspan: 10, message: "No guest stays in this selected period." %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

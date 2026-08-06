@@ -1,0 +1,32 @@
+<%= turbo_frame_tag "nearby_attraction_form" do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "nearby-attraction-sheet",
+          side: :right,
+          size: :md,
+          title: nearby_attraction.new_record? ? "Add Nearby Attraction" : "Edit Nearby Attraction",
+          description: nearby_attraction.new_record? ? "Highlight popular places guests can visit around your hotel." : "Update nearby attraction details for your guests.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= render "form", nearby_attraction: nearby_attraction %>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: "nearby-attraction-form",
+              variant: :primary,
+              size: :sm) do %>
+          <%= nearby_attraction.new_record? ? "Create Nearby Attraction" : "Update Nearby Attraction" %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

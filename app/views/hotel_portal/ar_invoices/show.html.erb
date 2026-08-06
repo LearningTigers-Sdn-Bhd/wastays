@@ -1,0 +1,17 @@
+<div class="w-full">
+  <div class="space-y-4">
+    <%= render "hotel_portal/ar_invoices/show/header", presenter: @presenter, ar_invoice: @ar_invoice %>
+    <%= render "hotel_portal/ar_invoices/show/details", presenter: @presenter, ar_invoice: @ar_invoice %>
+
+    <%= render PanelsUI::Tabs.new(id: "ar-invoice-tabs", active: "payment-allocations", variant: :pill, url: { param: "tab" }, class: "space-y-4", list_class: "mt-8 mb-3", aria_label: "Invoice tabs") do |tabs| %>
+      <% tabs.with_tab(name: "payment-allocations", label: "Payment Allocations", icon: "credit-card", count: @presenter.allocation_rows.size, panel_id: "payment-allocations-panel") %>
+      <% tabs.with_tab(name: "technical-snapshots", label: "Technical Snapshots", icon: "database", panel_id: "technical-snapshots-panel") %>
+      <% tabs.with_panel(name: "payment-allocations", id: "payment-allocations-panel", data: { testid: "payment-allocations-panel" }) do %>
+        <%= render "hotel_portal/ar_invoices/show/payment_allocations", presenter: @presenter %>
+      <% end %>
+      <% tabs.with_panel(name: "technical-snapshots", id: "technical-snapshots-panel", data: { testid: "technical-snapshots-panel" }) do %>
+        <%= render "hotel_portal/ar_invoices/show/technical_snapshots", presenter: @presenter %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

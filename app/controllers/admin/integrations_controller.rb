@@ -2,6 +2,13 @@
 
 module Admin
   class IntegrationsController < Admin::BaseController
+    AI_PROVIDER_CONFIG_KEYS = %w[
+      gemini_api_key
+      openai_api_key
+      deepseek_api_key
+      anthropic_api_key
+    ].freeze
+
     def show
       @channex_api_key = AppConfig.get("channex_api_key")
       @channex_environment = AppConfig.get("channex_environment") || "staging"
@@ -13,6 +20,8 @@ module Admin
       @r2_endpoint = AppConfig.get("r2_endpoint")
       @r2_region = AppConfig.get("r2_region") || "auto"
       @r2_public_url = AppConfig.get("r2_public_url")
+
+      @ai_provider_keys = AI_PROVIDER_CONFIG_KEYS.index_with { |key| AppConfig.get(key) }
     end
 
     def update
@@ -36,6 +45,10 @@ module Admin
       AppConfig.set("r2_endpoint", endpoint) if params.key?(:r2_endpoint)
       AppConfig.set("r2_region", params[:r2_region].to_s.strip) if params.key?(:r2_region)
       AppConfig.set("r2_public_url", params[:r2_public_url].to_s.strip) if params.key?(:r2_public_url)
+
+      AI_PROVIDER_CONFIG_KEYS.each do |key|
+        AppConfig.set(key, params[key].to_s.strip) if params.key?(key)
+      end
 
       redirect_to admin_integrations_path, notice: "Settings saved successfully."
     end

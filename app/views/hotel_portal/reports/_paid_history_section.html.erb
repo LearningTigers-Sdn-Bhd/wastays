@@ -1,0 +1,84 @@
+<% if feature_enabled_for_hotel?("excel_pdf_export") %>
+  <div class="-mt-2 flex justify-end">
+    <% if @payout_history.blank? %>
+      <%= render PanelsUI::Button.new(variant: :secondary, disabled: true, title: "No data available to export") do %>
+        <%= cached_icon "download", class: "me-2 size-4" %> Export
+      <% end %>
+    <% else %>
+      <%= render "export_dropdown", menu_id: "paid-payouts-export", items: [
+        ["Export PDF", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :pdf)],
+        ["Export Excel", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :xlsx)],
+        ["Export CSV", payouts_hotel_reports_path(current_hotel, tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date, format: :csv)]
+      ] %>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+  <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8">
+    <%= form_with url: payouts_hotel_reports_path(current_hotel), method: :get, class: "flex flex-col gap-4 md:flex-row md:items-center md:justify-end", data: { controller: "date-preset", turbo_frame: "payouts_content" } do |f| %>
+      <%= hidden_field_tag :tab, "paid" %>
+      <% paid_range = "#{@paid_start_date.iso8601}/#{@paid_end_date.iso8601}" if @paid_start_date && @paid_end_date %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :paid_date_range, label: "Date Range", label_hidden: true, class: "w-full md:w-64") do |field| %>
+        <% field.with_date_picker(
+             range: true,
+             months: 2,
+             responsive_months: true,
+             value: paid_range,
+             placeholder: "Date range",
+             data: { action: "change->date-preset#submitDate" }) %>
+      <% end %>
+      <%= render PanelsUI::Button.new(
+            as: :a,
+            href: payouts_hotel_reports_path(current_hotel, tab: "paid"),
+            variant: :secondary,
+            data: { turbo_frame: "payouts_content" }) do %>
+        Reset
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full table-fixed">
+      <thead class="bg-muted">
+        <tr>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Period</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Settled At</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Platform Reference</th>
+          <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Net Amount</th>
+          <th scope="col" class="px-6 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Receipt</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border bg-card">
+        <% if @payout_history.any? %>
+          <% @payout_history.each_with_index do |batch, index| %>
+            <tr class="align-top transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
+              <td class="px-6 py-4 sm:px-8"><span class="text-sm font-medium text-foreground"><%= batch.period_start.strftime("%d %b") %> – <%= batch.period_end.strftime("%d %b %Y") %></span></td>
+              <td class="px-6 py-4 text-sm font-medium text-muted-foreground"><%= batch.payout_at&.strftime("%d %b %Y") || "Pending" %></td>
+              <td class="px-6 py-4"><span class="inline-flex items-center gap-x-1.5 rounded-lg border px-2 py-1 text-xs font-bold <%= payout_status_class(batch.status) %>"><%= batch.status.titleize %></span></td>
+              <td class="px-6 py-4 font-mono text-sm text-muted-foreground"><%= batch.payout_reference.presence || "—" %></td>
+              <td class="whitespace-nowrap px-6 py-4 text-right"><span class="text-sm font-bold text-foreground">MYR <%= format_number(batch.amount, precision: 2) %></span></td>
+              <td class="px-6 py-4 text-center sm:px-8">
+                <% if batch.receipt.attached? %>
+                  <%= link_to url_for(batch.receipt), target: "_blank", class: "inline-flex items-center gap-1 text-xs font-bold text-foreground underline underline-offset-4 hover:text-foreground", data: { turbo: false } do %>
+                    <%= cached_icon "download", class: "size-3" %>
+                    PDF
+                  <% end %>
+                <% else %>
+                  <span class="text-xs font-medium italic text-muted-foreground">None</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="6" class="px-6 py-20 text-center text-sm font-medium italic text-muted-foreground">No settlement history found for this criteria.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-4 sm:px-8">
+    <%= paginate @payout_history, params: { tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date } %>
+  </div>
+</div>

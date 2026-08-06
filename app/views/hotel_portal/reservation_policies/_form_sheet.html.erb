@@ -1,0 +1,122 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = "manage-reservation-policy-#{policy.id}-form" %>
+<% currency = current_hotel.default_currency.presence || "MYR" %>
+<% event = policy.policy_type_label.downcase %>
+<%# No-show is nights-only at the database level: the fee is posted alongside the
+    booking's per-night tax snapshot, so any other shape would leave the fee and its
+    own tax describing different amounts. %>
+<% pricing_choices = policy.no_show? ? [ { label: "Nights at room rate", value: "nights" } ] : [
+     { label: "Staff enters the amount", value: "manual" },
+     { label: "A fixed amount", value: "fixed" },
+     { label: "A percentage", value: "percentage" },
+     { label: "Nights at room rate", value: "nights" }
+   ] %>
+<% basis_choices = [
+     { label: "the first night", value: "first_night" },
+     { label: "the whole stay", value: "total_stay" },
+     { label: "the remaining nights", value: "remaining_nights" }
+   ] %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(id: "manage-reservation-policy-sheet", side: :right, size: :lg,
+          title: "#{policy.policy_type_label} policy",
+          description: "Decide whether this hotel charges for #{event}, and how much.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: policy, url: hotel_reservation_policy_path(current_hotel, policy), method: :patch,
+              id: form_id, class: "space-y-6 py-2",
+              data: { controller: "reservation-policy-form",
+                action: "input->reservation-policy-form#update change->reservation-policy-form#update",
+                reservation_policy_form_currency_value: currency,
+                reservation_policy_form_policy_type_value: policy.policy_type } do |form| %>
+          <% if policy.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Policy could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { policy.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <%= render PanelsUI::Switch.new(form:, attribute: :active, checked: policy.active?,
+                label: "Charge for #{event}",
+                description: "Off means nothing is posted automatically. Staff can still add a manual charge.",
+                data: { reservation_policy_form_target: "gate", action: "change->reservation-policy-form#update" }) %>
+
+          <div data-reservation-policy-form-target="settings" class="space-y-6">
+            <section aria-labelledby="policy-pricing-heading-<%= policy.id %>" class="space-y-4 border-t border-border pt-5">
+              <div>
+                <h2 id="policy-pricing-heading-<%= policy.id %>" class="text-base font-semibold text-foreground">The charge</h2>
+                <p class="mt-1 text-sm text-muted-foreground">Amounts here are before tax. Room revenue tax rules are added when the charge posts.</p>
+              </div>
+
+              <%= render PanelsUI::FormField.new(form:, attribute: :pricing_type, label: "Charge #{event} as", required: true) do |field| %>
+                <% field.with_select_menu(pricing_choices, selected: policy.pricing_type,
+                     disabled: policy.no_show?, data: { reservation_policy_form_target: "pricingType" }) %>
+              <% end %>
+              <% if policy.no_show? %>
+                <%= form.hidden_field :pricing_type, value: "nights" %>
+              <% end %>
+
+              <%# One rate field, relabelled by pricing type. Three parallel fields bound
+                  to the same attribute would each submit, and the last one would win. %>
+              <p class="text-sm text-foreground" aria-live="polite" data-reservation-policy-form-target="sentence"></p>
+
+              <div data-reservation-policy-form-target="rateField" hidden>
+                <%# rate_value is a decimal column, so a night count renders as "1.0" and a
+                    browser stepping in whole numbers rejects it. min is the step basis, not
+                    just a floor, so the two must agree. The Stimulus controller keeps these
+                    in sync as the pricing type changes; these are the values for first paint. %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :rate_value, label: "Amount") do |field| %>
+                  <% field.with_input(type: :number, value: policy.rate_value_for_input,
+                       min: policy.nights? ? 1 : 0.01, step: policy.nights? ? 1 : 0.01,
+                       inputmode: policy.nights? ? "numeric" : "decimal",
+                       data: { reservation_policy_form_target: "rateValue" }) %>
+                  <% field.with_addon(align: :inline_start, data: { reservation_policy_form_target: "currencyAddon" }) { currency } %>
+                  <% field.with_addon(align: :inline_end, data: { reservation_policy_form_target: "percentAddon" }) { "%" } %>
+                <% end %>
+              </div>
+
+              <div data-reservation-policy-form-target="basisField" hidden>
+                <%= render PanelsUI::FormField.new(form:, attribute: :percentage_basis, label: "Percentage of") do |field| %>
+                  <% field.with_select_menu(basis_choices, selected: policy.percentage_basis || "total_stay") %>
+                <% end %>
+              </div>
+
+              <div data-reservation-policy-form-target="overrideField" hidden>
+                <%= render PanelsUI::Switch.new(form:, attribute: :allow_amount_override,
+                      checked: policy.allow_amount_override?,
+                      label: "Let staff change the calculated amount",
+                      description: "The configured amount stays in the audit trail.") %>
+              </div>
+            </section>
+
+            <% if policy.cancellation? %>
+              <%= render "cancellation_tiers", form:, policy:, currency:, basis_choices: %>
+            <% end %>
+
+            <section aria-labelledby="policy-note-heading-<%= policy.id %>" class="border-t border-border pt-5">
+              <h2 id="policy-note-heading-<%= policy.id %>" class="sr-only">Guest note</h2>
+              <%= render PanelsUI::Collapsible.new(id: "policy-note-#{policy.id}", open: policy.description.present?) do |item| %>
+                <% item.with_trigger do %>
+                  <span class="text-sm font-medium text-foreground">Add a note for guests</span>
+                <% end %>
+                <% item.with_body do %>
+                  <div class="pt-3">
+                    <%= render PanelsUI::FormField.new(form:, attribute: :description, label: "Note", label_hidden: true,
+                          hint: "For exceptions and context — when the hotel waives the charge, who to contact. Do not restate the amounts above; they are published from the settings themselves and would drift.") do |field| %>
+                      <% field.with_text_area(rows: 3, placeholder: "Waived for medical emergencies with documentation.") %>
+                    <% end %>
+                  </div>
+                <% end %>
+              <% end %>
+            </section>
+          </div>
+        <% end %>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

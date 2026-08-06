@@ -1,8 +1,12 @@
 class NightAudit < ApplicationRecord
   belongs_to :hotel
   belongs_to :performed_by_user, class_name: "User", optional: true
+  has_many :night_audit_logs, dependent: :destroy
+  has_many :folio_transactions, dependent: :restrict_with_error
+  has_many :financial_audit_events, dependent: :restrict_with_error
+  has_one :financial_summary, class_name: "NightAuditFinancialSummary", dependent: :destroy
 
-  STATUSES = %w[pending running completed blocked failed].freeze
+  STATUSES = %w[preparing pending running completed blocked failed].freeze
   TRIGGER_MODES = %w[manual scheduled].freeze
 
   validates :business_date, presence: true
@@ -11,6 +15,11 @@ class NightAudit < ApplicationRecord
   validates :hotel_id, uniqueness: { scope: :business_date }
 
   scope :recent_first, -> { order(business_date: :desc, created_at: :desc) }
+  scope :completed, -> { where(status: "completed") }
+
+  def self.closed_for_date?(hotel_id, date)
+    Hotel.find(hotel_id).date_closed?(date)
+  end
 
   def completed?
     status == "completed"
@@ -26,5 +35,13 @@ class NightAudit < ApplicationRecord
 
   def running?
     status == "running"
+  end
+
+  def pending?
+    status == "pending"
+  end
+
+  def preparing?
+    status == "preparing"
   end
 end

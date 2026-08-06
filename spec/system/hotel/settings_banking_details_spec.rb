@@ -16,17 +16,14 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
-    visit login_path
-    fill_in 'Email Address', with: user.email
-    fill_in 'Password', with: 'password123'
-    click_button 'Sign In to Portal'
+    sign_in_through_ui(user)
   end
 
   it 'allows the user to add banking details from the settings page' do
-    visit hotel_settings_path(hotel)
+    visit hotel_banking_details_settings_path(hotel)
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Syarikat Maju Jaya Sdn Bhd'
-    fill_in 'account_banking_detail_attributes_bank_name', with: 'Maybank'
+    select 'Maybank', from: 'account_banking_detail_attributes_bank_name'
     fill_in 'account_banking_detail_attributes_account_number', with: '5142 1234 5678'
 
     click_button 'Save Banking Details'
@@ -41,15 +38,10 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
   end
 
   it 'saves banking details independently of the display-only settings card' do
-    visit hotel_settings_path(hotel)
-
-    within('section', text: 'Hotel Settings') do
-      expect(page).to have_field('Hotel Status', type: 'text', disabled: true, with: 'Approved')
-      expect(page).to have_field('Onboarding Stage', type: 'text', disabled: true, with: 'Building profile')
-    end
+    visit hotel_banking_details_settings_path(hotel)
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: 'Kejayaan Hotel Sdn Bhd'
-    fill_in 'account_banking_detail_attributes_bank_name', with: 'CIMB'
+    select 'CIMB', from: 'account_banking_detail_attributes_bank_name'
     fill_in 'account_banking_detail_attributes_account_number', with: '1234 5678 9012'
 
     click_button 'Save Banking Details'
@@ -60,15 +52,15 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
   end
 
   it 'shows validation errors when banking details are invalid' do
-    visit hotel_settings_path(hotel)
+    visit hotel_banking_details_settings_path(hotel)
 
     fill_in 'account_banking_detail_attributes_account_holder_name', with: ''
-    fill_in 'account_banking_detail_attributes_bank_name', with: ''
+    select 'Search and select a bank', from: 'account_banking_detail_attributes_bank_name'
     fill_in 'account_banking_detail_attributes_account_number', with: '1234/5678'
 
     click_button 'Save Banking Details'
 
-    expect(page).to have_content('prohibited these settings from being saved')
+    expect(page).to have_content('3 errors prevented these settings from being saved')
     expect(page).to have_content("Banking detail account holder name can't be blank")
     expect(page).to have_content("Banking detail bank name can't be blank")
     expect(page).to have_content('Banking detail account number is invalid')

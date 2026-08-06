@@ -1,0 +1,32 @@
+<div class="panel-calendar-caption" data-<%= identifier %>-target="caption">
+  <% [ [ "month", month_choices ], [ "year", year_choices.map { |year| [ year.to_s, year ] } ] ].each do |kind, choices| %>
+    <div class="panel-calendar-caption__select">
+      <button type="button"
+              class="panel-calendar-caption__trigger"
+              aria-label="Choose <%= kind %>"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              data-caption-kind="<%= kind %>"
+              data-<%= identifier %>-target="<%= kind %>Button"
+              data-action="click-><%= identifier %>#toggleCaption keydown-><%= identifier %>#onCaptionTriggerKeydown">
+        <span data-<%= identifier %>-target="<%= kind %>Label"></span>
+        <span class="panel-calendar-caption__chevron" aria-hidden="true"></span>
+      </button>
+      <div class="panel-calendar-caption__listbox"
+           role="listbox"
+           tabindex="-1"
+           hidden
+           aria-label="Choose <%= kind %>"
+           data-caption-kind="<%= kind %>"
+           data-<%= identifier %>-target="<%= kind %>Listbox"
+           data-action="keydown-><%= identifier %>#onCaptionListboxKeydown">
+        <% choices.each do |label, value| %>
+          <button type="button" role="option" tabindex="-1"
+                  class="panel-calendar-caption__option"
+                  data-caption-value="<%= value %>"
+                  data-action="click-><%= identifier %>#selectCaption"><%= label %></button>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

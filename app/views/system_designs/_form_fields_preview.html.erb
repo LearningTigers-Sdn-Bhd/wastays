@@ -1,0 +1,73 @@
+<section aria-labelledby="form-fields-preview-heading" class="border-t border-border pt-8">
+  <h2 id="form-fields-preview-heading" class="text-lg font-semibold text-foreground">Form fields</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Rails FormBuilder controls with linked labels, hints, validation feedback, and logical addons.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= label %> controls</h3>
+
+        <% preview_scope = "preview_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#form-fields-preview", scope: preview_scope, class: "mt-4" do |form| %>
+          <%= render PanelsUI::FieldSet.new(
+                legend: "Booking details",
+                description: "Grouped fields share one legend, like shadcn's FieldSet.") do %>
+          <%= render PanelsUI::FieldGroup.new do %>
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :email,
+                label: "Email address",
+                hint: "Used for booking notifications.") do |field| %>
+            <% field.with_input type: :email, autocomplete: "email", placeholder: "guest@example.com" %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :nightly_rate,
+                label: "Nightly rate",
+                required: true) do |field| %>
+            <% field.with_input type: :number, min: 0, step: "0.01", placeholder: "0.00" %>
+            <% field.with_addon(align: :inline_start, variant: :bare) { "MYR" } %>
+            <% field.with_addon(align: :inline_end, variant: :bare) { "per night" } %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :notes,
+                label: "Internal notes",
+                error: "Please add a note before saving.") do |field| %>
+            <% field.with_text_area rows: 4, maxlength: 500, placeholder: "Add operational context…" %>
+            <% field.with_addon(align: :block_start) { "Visible to hotel staff only" } %>
+            <% field.with_addon(align: :block_end) do %>
+              <span>0 / 500</span>
+              <span>Draft</span>
+            <% end %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :readonly_reference,
+                label: "Reference",
+                readonly: true,
+                size: :sm) do |field| %>
+            <% field.with_input value: "BK-2026-001" %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :external_id,
+                label: "External channel ID",
+                hint: "Managed by the connected channel — not editable here.",
+                disabled: true,
+                size: :sm) do |field| %>
+            <% field.with_input value: "AGODA-8842190" %>
+          <% end %>
+          <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

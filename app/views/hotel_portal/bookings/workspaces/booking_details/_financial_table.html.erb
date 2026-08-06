@@ -1,0 +1,49 @@
+<% rows = presenter.financial_party_rows %>
+<% totals = presenter.financial_party_totals %>
+<div>
+  <h3 class="text-base font-semibold text-foreground">Financial</h3>
+  <div class="mt-3">
+    <% if rows.any? %>
+      <%= render PanelsUI::Table.new(
+            caption: "Financial",
+            density: :compact,
+            hoverable: true,
+            bordered: true,
+            wrapper_class: "rounded-md border border-border",
+            class: "min-w-[720px]") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Billing party</th>
+            <th scope="col">Type</th>
+            <th scope="col" class="text-right">Folios</th>
+            <th scope="col" class="text-right">Charged</th>
+            <th scope="col" class="text-right">Paid</th>
+            <th scope="col" class="text-right">Outstanding</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% rows.each do |row| %>
+            <tr>
+              <td class="font-medium"><%= row[:name] %></td>
+              <td><%= row[:kind] %></td>
+              <td class="text-right tabular-nums"><%= row[:folio_count] %></td>
+              <td class="text-right tabular-nums"><%= row[:charged] %></td>
+              <td class="text-right tabular-nums"><%= row[:paid] %></td>
+              <td class="text-right tabular-nums"><%= row[:outstanding] %></td>
+            </tr>
+          <% end %>
+        <% end %>
+        <% table.with_footer do %>
+          <tr>
+            <th colspan="3" scope="row" class="text-right font-medium text-foreground">Total</th>
+            <td class="text-right font-semibold tabular-nums text-foreground"><%= totals[:charged] %></td>
+            <td class="text-right font-semibold tabular-nums text-foreground"><%= totals[:paid] %></td>
+            <td class="text-right font-semibold tabular-nums text-foreground"><%= totals[:outstanding] %></td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No folios have been opened for this booking yet.</p>
+    <% end %>
+  </div>
+</div>

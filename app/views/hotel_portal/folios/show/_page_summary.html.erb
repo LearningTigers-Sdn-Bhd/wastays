@@ -1,0 +1,6 @@
+<% folio_show = local_assigns.fetch(:folio_show) %>
+
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+  <%= render "hotel_portal/folios/show/folio_details", folio_show: folio_show %>
+  <%= render "hotel_portal/folios/show/financial_metrics", folio_show: folio_show %>
+</div>

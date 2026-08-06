@@ -1,0 +1,70 @@
+<% folio_origin = local_assigns[:folio_origin] %>
+<% active_folio_id = folio_show.active_folio_id %>
+
+<section class="overflow-hidden rounded-md border border-border bg-card" data-controller="billing-instructions">
+  <div class="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-7 items-center justify-center rounded-md bg-muted text-foreground">
+          <%= cached_icon "route", class: "size-3.5" %>
+        </span>
+        <h2 class="text-sm font-black uppercase tracking-[0.18em] text-foreground">Billing Instructions</h2>
+      </div>
+      <p class="mt-1 text-sm font-medium text-muted-foreground">Rules decide which folio receives future charges for this booking.</p>
+    </div>
+
+    <% if folio_show.can_manage_billing_instructions? %>
+      <%= link_to hotel_folio_action_billing_routes_path(hotel, booking, return_to: request.fullpath),
+          class: "inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-black text-primary-foreground shadow-sm transition hover:bg-primary-hover",
+          data: { turbo_frame: "folio_action_sheet" } do %>
+        <%= cached_icon "plus", class: "size-3" %>
+        Change Billing Routes
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[760px] table-fixed text-left text-xs">
+      <thead class="bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <tr class="border-b border-border">
+          <th class="w-24 px-4 py-2">Code</th>
+          <th class="px-4 py-2">Charge / Category</th>
+          <th class="w-52 px-4 py-2">Target Folio</th>
+          <th class="w-24 px-4 py-2">Status</th>
+          <th class="w-28 px-4 py-2 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        <% if folio_show.billing_instruction_rows.any? %>
+          <% folio_show.billing_instruction_rows.each do |row| %>
+            <%= render "hotel_portal/folios/show/billing_instruction_row",
+              row: row,
+              row_kind: :rule,
+              hotel: hotel,
+              booking: booking,
+              folio_origin: folio_origin,
+              active_folio_id: active_folio_id %>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="5" class="px-4 py-8 text-center text-sm font-medium text-muted-foreground">No custom billing instructions yet.</td>
+          </tr>
+        <% end %>
+
+        <tr class="border-y border-border bg-muted">
+          <td colspan="5" class="px-4 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Defaults</td>
+        </tr>
+
+        <% folio_show.default_billing_instruction_rows.each do |row| %>
+          <%= render "hotel_portal/folios/show/billing_instruction_row",
+            row: row,
+            row_kind: :default,
+            hotel: hotel,
+            booking: booking,
+            folio_origin: folio_origin,
+            active_folio_id: active_folio_id %>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</section>

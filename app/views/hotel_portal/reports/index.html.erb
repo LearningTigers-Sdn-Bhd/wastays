@@ -1,268 +1,79 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900">Reports</span>
-  </div>
-<% end %>
+<div class="w-full space-y-4" data-slot="report-page" data-report="reports-summary">
+  <%= turbo_frame_tag "reports_content", class: "block space-y-4" do %>
+    <%= render PanelsUI::PageHeader.new(title: "Reports summary", description: "Review the key results across financial, compliance, guest, and accounting reports.") do |header| %>
+      <% header.with_caption do %>
+        <p class="text-sm font-medium text-muted-foreground">
+          <%= current_hotel.name %> ·
+          <% if @start_date == @end_date %>
+            <%= @start_date.strftime("%A, %d %b %Y") %>
+          <% else %>
+            <%= @start_date.strftime("%d %b %Y") %> - <%= @end_date.strftime("%d %b %Y") %>
+          <% end %>
+        </p>
+      <% end %>
+      <% header.with_actions do %>
+        <%= render "preset_report_actions",
+          form_url: hotel_reports_path(current_hotel),
+          date_preset: @date_preset,
+          start_date: @start_date,
+          end_date: @end_date,
+          export_menu_id: "reports-summary-export",
+          export_items: [],
+          show_export: false,
+          class_name: "flex flex-col gap-2 sm:flex-row sm:items-end" %>
+      <% end %>
+    <% end %>
 
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <section class="space-y-3" aria-labelledby="financial-summary-heading" data-slot="reports-summary-group">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Financial Performance</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Review your earnings and booking activity.</p>
+        <h2 id="financial-summary-heading" class="text-base font-semibold text-foreground">Financial</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Bookings, revenue, refunds, and balances.</p>
       </div>
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Gross bookings", value: "MYR #{number_with_delimiter(number_with_precision(@total_gross, precision: 2))}", detail: "Booking date" },
+        { label: "Net earnings", value: "MYR #{number_with_delimiter(number_with_precision(@total_net, precision: 2))}", detail: "Booking date", detail_variant: :success },
+        { label: "Refunds", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:financial][:refunds], precision: 2))}", detail: "Posting date", detail_variant: :destructive },
+        { label: "Extra charges", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:financial][:extra_charges], precision: 2))}", detail: "Posting date" },
+        { label: "Outstanding balance", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:financial][:outstanding], precision: 2))}", detail: "Stay date", detail_variant: :warning },
+        { label: "Deposit liability", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:financial][:deposit_liability], precision: 2))}", detail: "As of #{@end_date.strftime('%d %b %Y')}" }
+      ], aria_label: "Financial report summary") %>
+    </section>
 
-      <div class="inline-flex gap-x-2">
-        <%= link_to breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, date_preset: @date_preset), class: "inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700", data: { turbo: false } do %>
-          <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14v4"/><path d="M12 10v8"/><path d="M17 6v12"/></svg>
-          View Breakdown
-        <% end %>
+    <section class="space-y-3" aria-labelledby="tax-compliance-summary-heading" data-slot="reports-summary-group">
+      <div>
+        <h2 id="tax-compliance-summary-heading" class="text-base font-semibold text-foreground">Tax &amp; compliance</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Tax collections and non-national guest activity.</p>
       </div>
-    </div>
-  </div>
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Tourism tax collected", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:tax_compliance][:tourism_tax], precision: 2))}", detail: "Stay date" },
+        { label: "SST", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:tax_compliance][:sst], precision: 2))}", detail: "Posting date" },
+        { label: "Non-national guests", value: @reports_summary[:tax_compliance][:non_national_guests].to_s, detail: "Stay date" }
+      ], aria_label: "Tax and compliance report summary") %>
+    </section>
 
-  <%= turbo_frame_tag "reports_content", class: "block space-y-8" do %>
-    <!-- Integrated Stats Grid (Dashboard Style) -->
-    <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-3">
-      <div class="p-8 md:border-r md:border-slate-200">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Gross Bookings</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950">MYR <%= number_with_delimiter(number_with_precision(@total_gross, precision: 2)) %></h2>
-        <p class="mt-2 text-sm font-medium text-slate-600">Total gross sales before commission</p>
+    <section class="space-y-3" aria-labelledby="guest-operations-summary-heading" data-slot="reports-summary-group">
+      <div>
+        <h2 id="guest-operations-summary-heading" class="text-base font-semibold text-foreground">Guest operations</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Key movement counts for the selected stay dates.</p>
       </div>
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Arrivals", value: @reports_summary[:guest_operations][:arrivals].to_s, detail: "Check-in date" },
+        { label: "In house", value: @reports_summary[:guest_operations][:in_house].to_s, detail: "Stay date" },
+        { label: "Departures", value: @reports_summary[:guest_operations][:departures].to_s, detail: "Check-out date" },
+        { label: "Checkouts", value: @reports_summary[:guest_operations][:checkouts].to_s, detail: "Check-out date" }
+      ], aria_label: "Guest operations report summary") %>
+    </section>
 
-      <div class="bg-slate-50/30 p-8 md:border-r md:border-slate-200">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Net Earnings</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-700">MYR <%= number_with_delimiter(number_with_precision(@total_net, precision: 2)) %></h2>
-        <p class="mt-2 text-sm font-medium text-slate-600">Total settlement amount after commission</p>
+    <section class="space-y-3" aria-labelledby="accounting-summary-heading" data-slot="reports-summary-group">
+      <div>
+        <h2 id="accounting-summary-heading" class="text-base font-semibold text-foreground">Accounting</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Journal activity recorded for the selected business dates.</p>
       </div>
-
-      <div class="p-8">
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Reservations</p>
-        <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= @booking_count %></h2>
-        <p class="mt-2 text-sm font-medium text-slate-600">Total reservations processed in period</p>
-      </div>
-    </div>
-
-    <!-- Daily Performance Section -->
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="border-b border-slate-200 bg-slate-50/50 px-8 py-6">
-        <%= form_with url: hotel_reports_path, method: :get, class: "flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between", data: { controller: "auto-submit", turbo_frame: "reports_content" } do |f| %>
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-end flex-1">
-            <div class="w-full lg:w-64">
-              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Time Period</label>
-              <%= f.select :date_preset, options_for_select(date_preset_options, @date_preset), {}, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm transition-all", data: { action: "change->auto-submit#submitNow" } %>
-            </div>
-
-            <div id="custom-date-range" class="<%= @date_preset == 'custom' ? 'flex' : 'hidden' %> flex-1 gap-3 max-w-md animate-in fade-in slide-in-from-left-2 duration-300">
-              <div class="flex-1">
-                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">From</label>
-                <%= f.date_field :start_date, value: @start_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
-              </div>
-              <div class="flex-1">
-                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">To</label>
-                <%= f.date_field :end_date, value: @end_date, class: "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus:border-slate-300 focus:outline-none focus:ring-0 shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
-              </div>
-            </div>
-          </div>
-          
-          <div class="hidden lg:flex lg:items-center">
-            <details class="relative min-w-[160px]">
-              <summary class="list-none inline-flex w-full cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-900 hover:bg-slate-50">
-                <svg class="size-4 me-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Export
-              </summary>
-              <div class="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                <%= link_to "Export PDF", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf), class: "block px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
-                <%= link_to "Export Excel", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xls), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
-                <%= link_to "Export CSV", hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv), class: "block border-t border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" %>
-              </div>
-            </details>
-          </div>
-        <% end %>
-      </div>
-
-      <div class="px-8 py-6 border-b border-slate-100">
-        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Daily Performance Snapshot</h2>
-        <p class="mt-1 text-sm font-medium text-slate-500">A detailed breakdown of revenue and volume across the selected range.</p>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="min-w-full table-fixed">
-          <colgroup>
-            <col class="w-[22%]">
-            <col class="w-[15%]">
-            <col class="w-[21%]">
-            <col class="w-[18%]">
-            <col class="w-[24%]">
-          </colgroup>
-          <thead class="bg-slate-100">
-            <tr>
-              <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Date</th>
-              <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Bookings</th>
-              <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Gross</th>
-              <th scope="col" class="px-8 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Margin</th>
-              <th scope="col" class="px-8 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Net</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-200 bg-white">
-            <% if @paginated_daily_data.any? %>
-              <% @paginated_daily_data.each_with_index do |(date, gross), index| %>
-                <% 
-                  daily_bookings = @base_bookings.select { |b| b.created_at.to_date == date }
-                  daily_margin = daily_bookings.sum { |b| b.margin_amount || 0 }
-                  daily_net = daily_bookings.sum { |b| b.net_amount || 0 }
-                  date_key = date.strftime("%Y%m%d")
-                %>
-                <tr class="group align-top transition-colors hover:bg-slate-100/80 cursor-pointer <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>" onclick="document.getElementById('daily-performance-modal-<%= date_key %>').showModal()">
-                  <td class="px-8 py-5">
-                    <div class="flex flex-col">
-                      <span class="text-sm font-bold text-slate-900"><%= date.strftime("%d %b %Y") %></span>
-                      <span class="text-[10px] font-medium text-slate-500"><%= date.strftime("%A") %></span>
-                    </div>
-                  </td>
-                  <td class="px-8 py-5 text-sm text-slate-700 font-medium">
-                    <%= daily_bookings.count %>
-                  </td>
-                  <td class="px-8 py-5 text-sm font-bold text-slate-900">
-                    MYR <%= number_with_delimiter(number_with_precision(gross, precision: 2)) %>
-                  </td>
-                  <td class="px-8 py-5 text-sm font-bold text-red-500/80">
-                    - <%= number_with_delimiter(number_with_precision(daily_margin, precision: 2)) %>
-                  </td>
-                  <td class="px-8 py-5 text-right whitespace-nowrap">
-                    <div class="flex items-center justify-end gap-3">
-                      <span class="text-sm font-black text-emerald-700">MYR <%= number_with_delimiter(number_with_precision(daily_net, precision: 2)) %></span>
-                      <svg class="size-4 text-slate-300 group-hover:text-slate-900 transition-colors" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                    </div>
-                  </td>
-                </tr>
-
-                <dialog id="daily-performance-modal-<%= date_key %>" class="fixed inset-0 m-auto w-[min(94vw,64rem)] rounded-3xl p-0 shadow-2xl backdrop:bg-slate-900/60 transition-all" onclick="if(event.target===this){this.close()}">
-                  <div class="max-h-[85vh] overflow-hidden flex flex-col bg-white" onclick="event.stopPropagation()">
-                    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-8 py-6">
-                      <div>
-                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Daily Ledger</p>
-                        <h3 class="text-2xl font-bold text-slate-950 mt-1"><%= date.strftime("%A, %d %b %Y") %></h3>
-                      </div>
-                      <button type="button" class="size-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition" onclick="this.closest('dialog').close()">
-                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-px bg-slate-100 border-b border-slate-100 md:grid-cols-4">
-                      <div class="bg-white p-8">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Volume</p>
-                        <p class="text-xl font-bold text-slate-900"><%= daily_bookings.count %></p>
-                      </div>
-                      <div class="bg-white p-8">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Gross Sale</p>
-                        <p class="text-xl font-bold text-slate-900">MYR <%= number_with_precision(gross, precision: 2) %></p>
-                      </div>
-                      <div class="bg-white p-8">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Commission</p>
-                        <p class="text-xl font-bold text-red-600">- <%= number_with_precision(daily_margin, precision: 2) %></p>
-                      </div>
-                      <div class="bg-white p-8">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Settlement</p>
-                        <p class="text-xl font-bold text-emerald-700">MYR <%= number_with_precision(daily_net, precision: 2) %></p>
-                      </div>
-                    </div>
-
-                    <div class="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50 p-8">
-                      <div class="space-y-4">
-                        <% if daily_bookings.any? %>
-                          <% daily_bookings.each do |booking| %>
-                            <div class="group relative bg-white border border-slate-200 rounded-2xl p-6 shadow-sm transition hover:border-slate-400 hover:shadow-md">
-                              <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                                <div class="flex-1">
-                                  <div class="flex items-center gap-3 mb-2">
-                                    <span class="text-sm font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">#<%= booking.confirmation_token %></span>
-                                    <span class="text-sm font-bold text-slate-950"><%= booking.guest_name %></span>
-                                  </div>
-                                  <p class="text-xs font-bold text-slate-400 uppercase tracking-tight"><%= booking.guest_email %> · <%= booking.guest_phone %></p>
-                                  
-                                  <div class="mt-4 flex items-center gap-2">
-                                     <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2">
-                                        <svg class="size-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                        <span class="text-xs font-bold text-slate-600">
-                                          <%= booking.check_in&.strftime("%d %b") %> — <%= booking.check_out&.strftime("%d %b %Y") %>
-                                        </span>
-                                     </div>
-                                  </div>
-                                </div>
-
-                                <div class="text-left md:text-right border-t border-slate-50 pt-4 md:border-0 md:pt-0">
-                                  <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Net Settlement</p>
-                                  <p class="text-xl font-bold text-slate-950">MYR <%= number_with_precision(booking.net_amount, precision: 2) %></p>
-                                  <%= link_to hotel_booking_path(current_hotel, booking), class: "mt-4 inline-flex items-center text-xs font-bold text-slate-900 uppercase tracking-widest border-b-2 border-slate-900 pb-0.5 hover:text-blue-600 hover:border-blue-600 transition-all", data: { turbo: false } do %>
-                                    Details
-                                    <svg class="ms-1 size-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                                  <% end %>
-                                </div>
-                              </div>
-
-                              <% if booking.booking_rooms.any? %>
-                                <div class="mt-6 pt-6 border-t border-slate-100 flex flex-wrap gap-2">
-                                  <% booking.booking_rooms.each do |room| %>
-                                    <% room_name = room.room_type_snapshot.is_a?(Hash) ? room.room_type_snapshot["name"].presence : nil %>
-                                    <% room_name = room_name.presence || room.room_type&.name || "Room" %>
-                                    <span class="inline-flex items-center rounded-lg bg-slate-50 border border-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-600 uppercase">
-                                      <span class="text-slate-900 mr-2"><%= room.quantity %>x</span> <%= room_name %>
-                                    </span>
-                                  <% end %>
-                                </div>
-                              <% end %>
-                            </div>
-                          <% end %>
-                        <% else %>
-                          <div class="py-20 text-center">
-                            <div class="size-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                               <svg class="size-8 text-slate-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            </div>
-                            <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">No entries found</p>
-                          </div>
-                        <% end %>
-                      </div>
-                    </div>
-                  </div>
-                </dialog>
-              <% end %>
-            <% else %>
-              <tr>
-                <td colspan="5" class="px-8 py-24 text-center sm:px-8">
-                  <div class="flex flex-col items-center">
-                    <p class="text-sm font-bold text-slate-400 uppercase tracking-wider">No financial data</p>
-                    <p class="mt-2 text-sm font-medium text-slate-500">Try selecting a different time period.</p>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="px-8 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center">
-        <%= paginate @paginated_daily_data %>
-      </div>
-    </div>
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Journal batches", value: @reports_summary[:accounting][:batches].to_s, detail: "Business date" },
+        { label: "Total debit", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:accounting][:debit], precision: 2))}", detail: "Business date" },
+        { label: "Total credit", value: "MYR #{number_with_delimiter(number_with_precision(@reports_summary[:accounting][:credit], precision: 2))}", detail: "Business date" }
+      ], aria_label: "Accounting report summary") %>
+    </section>
   <% end %>
 </div>
-
-<script>
-  // Simple listener to show/hide custom date range if needed between turbo loads
-  document.addEventListener('change', function(e) {
-    if (e.target && e.target.name === 'date_preset') {
-      const customRange = document.getElementById('custom-date-range');
-      if (!customRange) return;
-      if (e.target.value === 'custom') {
-        customRange.classList.remove('hidden');
-        customRange.classList.add('flex');
-      } else {
-        customRange.classList.add('hidden');
-        customRange.classList.remove('flex');
-      }
-    }
-  });
-</script>

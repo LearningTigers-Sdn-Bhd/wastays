@@ -1,0 +1,21 @@
+<section class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+  <div class="border-b border-border bg-muted/80 px-5 py-4 sm:px-6">
+    <div class="flex items-start gap-3">
+      <% if local_assigns[:icon_name].present? %>
+        <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-card text-brand-primary ring-1 ring-ring">
+          <%= cached_icon icon_name, stroke_width: 2.25, class: "size-4" %>
+        </span>
+      <% end %>
+      <div>
+        <h2 class="text-base font-bold tracking-tight text-foreground"><%= title %></h2>
+        <% if local_assigns[:description].present? %>
+          <p class="mt-1 text-sm font-medium leading-6 text-muted-foreground"><%= description %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-5 sm:p-6">
+    <%= yield %>
+  </div>
+</section>

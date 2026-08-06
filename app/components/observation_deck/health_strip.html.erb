@@ -1,0 +1,27 @@
+<section id="observation-health-strip" class="observation-deck__health-strip" aria-label="<%= @scope_label %> health">
+  <p class="observation-deck__health-scope"><%= @scope_label %> <span aria-hidden="true">|</span></p>
+  <dl class="observation-deck__health-metrics">
+    <div class="observation-deck__health-metric">
+      <dt>Requests</dt>
+      <dd><%= number_with_delimiter(@total_requests) %></dd>
+    </div>
+    <div class="observation-deck__health-metric">
+      <dt>Errors</dt>
+      <dd class="<%= @error_count.positive? ? "is-danger" : "" %>"><%= number_with_delimiter(@error_count) %> <span><%= @error_rate %>%</span></dd>
+    </div>
+    <div class="observation-deck__health-metric">
+      <dt>Avg latency</dt>
+      <dd><%= @average_latency %><span> ms</span></dd>
+    </div>
+    <div class="observation-deck__health-metric">
+      <dt>New errors</dt>
+      <dd class="<%= @unacknowledged_errors.positive? ? "is-danger" : "" %>"><%= @unacknowledged_errors %></dd>
+    </div>
+  </dl>
+  <% if @unacknowledged_errors.positive? %>
+    <div class="observation-deck__health-actions">
+      <%= link_to "View errors", @error_path, class: "observation-deck__text-action" %>
+      <%= button_to "Acknowledge", acknowledge_admin_observation_deck_index_path, method: :post, class: "observation-deck__text-action" %>
+    </div>
+  <% end %>
+</section>

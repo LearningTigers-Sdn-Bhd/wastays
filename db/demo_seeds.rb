@@ -32,19 +32,33 @@ module DemoSeeds
     { name: "Manage Inventory", slug: "manage_inventory" },
     { name: "View Bookings", slug: "view_bookings" },
     { name: "Manage Bookings", slug: "manage_bookings" },
+    { name: "Void Bookings", slug: "void_bookings" },
+    { name: "View Guest Records", slug: "view_guest_records" },
     { name: "View Guest Phone", slug: "view_guest_phone" },
     { name: "Manage Guest Arrival", slug: "manage_guest_arrival" },
     { name: "View Audit Logs", slug: "view_audit_logs" },
     { name: "Export Audit Logs", slug: "export_audit_logs" },
+    { name: "Delete Guest Record", slug: "delete_guest_record" },
     { name: "Manage Night Audit", slug: "manage_night_audit" },
-    { name: "Manage Users", slug: "manage_users" }
+    { name: "Manage Users", slug: "manage_users" },
+    { name: "Manage Corporate Accounts", slug: "manage_corporate_accounts" },
+    { name: "Manage AR Payments", slug: "manage_ar_payments" },
+    { name: "Post Folio Charges", slug: "post_folio_charges" },
+    { name: "Post Folio Payments", slug: "post_folio_payments" },
+    { name: "Execute Folio Refunds", slug: "execute_folio_refunds" },
+    { name: "Post Folio Adjustments", slug: "post_folio_adjustments" },
+    { name: "Post Folio Corrections", slug: "post_folio_corrections" },
+    { name: "Post Folio Write-Offs", slug: "post_folio_write_offs" },
+    { name: "Manage GL Mappings", slug: "manage_general_ledger_maps" },
+    { name: "View Reports", slug: "view_reports" },
+    { name: "View Payouts", slug: "view_payouts" }
   ].freeze
 
   ROLE_TEMPLATES = [
-    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit] },
-    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_night_audit] },
-    { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_night_audit] },
-    { name: "Reservation Staff", slug: "reservation_staff", permissions: %w[view_bookings manage_bookings view_guest_phone] }
+    { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings void_bookings view_guest_records view_guest_phone delete_guest_record manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_corporate_accounts manage_ar_payments manage_night_audit post_folio_charges post_folio_payments execute_folio_refunds post_folio_adjustments post_folio_corrections post_folio_write_offs manage_general_ledger_maps view_reports view_payouts] },
+    { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings void_bookings view_guest_records view_guest_phone delete_guest_record manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_corporate_accounts manage_ar_payments manage_night_audit post_folio_charges post_folio_payments execute_folio_refunds post_folio_adjustments post_folio_corrections post_folio_write_offs manage_general_ledger_maps view_reports view_payouts] },
+    { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings view_guest_records manage_guest_arrival manage_night_audit post_folio_charges post_folio_payments] },
+    { name: "Reservation Staff", slug: "reservation_staff", permissions: %w[view_bookings manage_bookings view_guest_records view_guest_phone] }
   ].freeze
 
   CANCELLATION_TEMPLATES = [
@@ -1169,13 +1183,15 @@ module DemoSeeds
     property_policy.usd_rate = usd_conversion_rate
     property_policy.save!
 
-    rooms.each do |attrs|
+    rooms.each_with_index do |attrs, index|
       room_type = RoomType.find_or_initialize_by(hotel: hotel, name: attrs[:name])
       room_type.description = attrs[:description]
       room_type.max_adults = attrs[:adults]
       room_type.max_children = attrs[:children]
       room_type.quantity = attrs[:quantity]
       room_type.base_price = attrs[:base_price]
+      room_type.room_number_mode = "custom"
+      room_type.room_numbers = attrs.fetch(:room_numbers) { room_numbers_for(index, attrs[:quantity]) }
       room_type.save!
 
       ensure_room_calendar(
@@ -1186,7 +1202,18 @@ module DemoSeeds
       )
     end
 
+    ensure_default_gl_maps(hotel)
+
     hotel
+  end
+
+  def room_numbers_for(room_index, quantity)
+    floor = room_index + 1
+    1.upto(quantity).map { |number| ((floor * 100) + number).to_s }
+  end
+
+  def ensure_default_gl_maps(hotel)
+    Financials::EnsureDefaultGlMaps.call(hotel)
   end
 
   def add_hotel_access(user, hotel, role)
@@ -1199,6 +1226,7 @@ module DemoSeeds
       inventory = RoomInventory.find_or_initialize_by(room_type: room_type, date: date)
       inventory.quantity = date.wday == 2 ? [ room_type.quantity - 1, 1 ].max : room_type.quantity
       inventory.status = "open"
+      inventory.available_room_numbers = room_type.room_numbers.first(inventory.quantity)
       inventory.save!
 
       rate = RoomRate.find_or_initialize_by(room_type: room_type, date: date)
@@ -1335,7 +1363,6 @@ module DemoSeeds
     BookingRoom.create!(
       booking: booking,
       room_type: room_type,
-      quantity: 1,
       subtotal: booking.total_amount,
       room_type_snapshot: room_type_snapshot_for(room_type),
       nightly_rate_snapshot: nightly_rate_snapshot_for(room_type, check_in, check_out),
@@ -1571,5 +1598,13 @@ module DemoSeeds
     existing = model_class.find_by(lookup)
     existing.destroy! if existing
     model_class.new
+  end
+end
+
+Hotel.find_each do |hotel|
+  NotificationConfig.find_or_create_by!(hotel: hotel, notification_type: "check_in_confirmation") do |config|
+    config.enabled = true
+    config.channels = [ "whatsapp" ]
+    config.settings = {}
   end
 end

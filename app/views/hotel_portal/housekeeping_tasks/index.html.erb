@@ -1,0 +1,31 @@
+<% content_for :title, "Housekeeping Tasks | WAStays" %>
+
+<div class="w-full space-y-4">
+  <%= render PanelsUI::PageHeader.new(title: "Housekeeping Tasks", description: "Review today's room readiness, booking status, assignments, and housekeeping remarks.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::DropdownMenu.new(id: "housekeeping-tasks-export-menu", placement: :bottom_end, class: "w-48") do |menu| %>
+        <% menu.with_trigger(variant: :neutral, size: :md, class: "w-full sm:w-auto") do %>
+          <%= cached_icon "download", class: "size-4" %>
+          Export
+        <% end %>
+        <%# The board's own filters, so an export straight off a bookmarked URL %>
+        <%# carries them. The filter bar keeps these links in step from there on. %>
+        <% export_filters = board_filters.merge("date" => @selected_date.iso8601) %>
+        <% menu.with_item(href: hotel_housekeeping_tasks_path(current_hotel, export_filters.merge(format: :pdf)), id: "export-pdf-link", variant: :default, data: { turbo: false }) do %>
+          <%= cached_icon "file-down", class: "size-4 text-muted-foreground" %>
+          <span>PDF</span>
+        <% end %>
+        <% menu.with_item(href: hotel_housekeeping_tasks_path(current_hotel, export_filters.merge(format: :xlsx)), id: "export-excel-link", variant: :default, data: { turbo: false }) do %>
+          <%= cached_icon "table", class: "size-4 text-muted-foreground" %>
+          <span>Excel</span>
+        <% end %>
+        <% menu.with_item(href: hotel_housekeeping_tasks_path(current_hotel, export_filters.merge(format: :csv)), id: "export-csv-link", variant: :default, data: { turbo: false }) do %>
+          <%= cached_icon "file-text", class: "size-4 text-muted-foreground" %>
+          <span>CSV</span>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= render "hotel_portal/housekeeping_tasks/table_view" %>
+</div>

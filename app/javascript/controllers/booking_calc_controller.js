@@ -1,14 +1,109 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["checkIn", "checkOut", "roomType", "totalInput", "displayTotal", "roomNumberSelect", "roomNumberContainer"]
-  static values = { availabilityUrl: String, priceUrl: String, bookingId: String }
+  static targets = ["checkIn", "checkOut", "roomType", "guestCountry", "ratePlanSelect", "restrictionCheckbox", "totalInput", "displayTotal", "displayRoomTotal", "displayTaxTotal", "priceDetailsSection", "adjustPriceSection", "roomNumberSelect", "roomNumberContainer", "paymentAmountInput", "rateOverrideFlag", "corporateRate", "ratesBreakdown", "taxesBreakdown", "estimatedTotalSection"]
+  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, bookingId: String, excludeBookingId: String }
 
   connect() {
     // Trigger initial calculation and room numbers load
     if (this.roomTypeTarget.value && this.checkInTarget.value && this.checkOutTarget.value) {
       this.calculate()
     }
+    this.setupGroupScopeListener()
+  }
+
+  setupGroupScopeListener() {
+    const scopeRadios = this.element.querySelectorAll('[data-group-lifecycle-targets-target="scope"]')
+    scopeRadios.forEach(radio => {
+      radio.addEventListener("change", (e) => this.toggleGroupFields(e))
+    })
+    // Run once on load to ensure correct state
+    const selectedRadio = this.element.querySelector('[data-group-lifecycle-targets-target="scope"]:checked')
+    if (selectedRadio) {
+      this.toggleGroupFields({ target: selectedRadio })
+    }
+  }
+
+  toggleGroupFields(event) {
+    const isGroup = event.target.value === "group"
+
+    const fieldsToToggle = []
+    if (this.hasRoomTypeTarget) fieldsToToggle.push(this.roomTypeTarget)
+    if (this.hasRatePlanSelectTarget) fieldsToToggle.push(this.ratePlanSelectTarget)
+    if (this.hasRoomNumberSelectTarget) fieldsToToggle.push(this.roomNumberSelectTarget)
+
+    fieldsToToggle.forEach(field => {
+      field.disabled = isGroup
+      const container = field.closest(".space-y-2") || field.parentElement
+      if (container) {
+        container.classList.toggle("hidden", isGroup)
+      }
+    })
+
+    if (this.hasEstimatedTotalSectionTarget) {
+      this.estimatedTotalSectionTarget.classList.toggle("hidden", isGroup)
+    }
+  }
+
+  async loadRateOptions() {
+    const roomTypeId = this.roomTypeTarget.value
+    const checkIn = this.checkInTarget.value
+    const checkOut = this.checkOutTarget.value
+
+    if (!this.hasRatePlanSelectTarget) return
+
+    if (!roomTypeId || !checkIn || !checkOut || !this.hasRateOptionsUrlValue) {
+      this.populateRateOptions([], "Select room category and dates first")
+      return
+    }
+
+    const currentSelection = this.ratePlanSelectTarget.value
+    this.populateRateOptions([], "Loading rates…")
+    this.ratePlanSelectTarget.disabled = true
+
+    try {
+      const params = new URLSearchParams({
+        room_type_id: roomTypeId,
+        check_in: checkIn,
+        check_out: checkOut
+      })
+
+      this.restrictionCheckboxTargets.forEach((checkbox) => {
+        params.set(checkbox.name.replace(/^booking\[|\]$/g, ""), checkbox.checked ? "1" : "0")
+      })
+
+      if (this.hasCorporateRateTarget) {
+        params.set("corporate_rate", this.corporateRateTarget.checked)
+      }
+
+      const response = await fetch(`${this.rateOptionsUrlValue}?${params}`)
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+
+      const data = await response.json()
+      this.populateRateOptions(data.rate_options || [], "No rate options available", currentSelection)
+    } catch (error) {
+      console.error("Rate options load failed:", error)
+      this.populateRateOptions([], `Error: ${error.message}`)
+    } finally {
+      this.ratePlanSelectTarget.disabled = false
+    }
+  }
+
+  populateRateOptions(options, promptText, currentSelection = "") {
+    this.ratePlanSelectTarget.innerHTML = ""
+
+    const prompt = document.createElement("option")
+    prompt.value = ""
+    prompt.textContent = options.length > 0 ? "Select a rate" : promptText
+    this.ratePlanSelectTarget.appendChild(prompt)
+
+    options.forEach((rateOption) => {
+      const option = document.createElement("option")
+      option.value = rateOption.id || ""
+      option.textContent = `${rateOption.name} - ${rateOption.currency} ${parseFloat(rateOption.total_amount || 0).toFixed(2)}`
+      if ((rateOption.id || "").toString() === (currentSelection || "").toString()) option.selected = true
+      this.ratePlanSelectTarget.appendChild(option)
+    })
   }
 
   async updateRoomNumbers() {
@@ -17,22 +112,29 @@ export default class extends Controller {
     const checkOut = this.checkOutTarget.value
     
     if (!roomTypeId || !checkIn || !checkOut) {
-      if (this.hasRoomNumberContainerTarget) this.roomNumberContainerTarget.classList.add("hidden")
+      this.roomNumberSelectTarget.innerHTML = '<option value="">Select room category and dates first</option>'
+      this.roomNumberSelectTarget.disabled = true
       return
     }
 
-    // Show container and loading state
-    if (this.hasRoomNumberContainerTarget) this.roomNumberContainerTarget.classList.remove("hidden")
+    // Update the room-lock controller's room type if it exists in the same container
+    if (this.hasRoomNumberContainerTarget) {
+      const lockController = this.application.getControllerForElementAndIdentifier(this.element, "room-lock")
+      if (lockController) {
+        lockController.roomTypeIdValue = roomTypeId
+      }
+    }
+
     this.roomNumberSelectTarget.required = true
     
     const currentSelection = this.roomNumberSelectTarget.value
-    this.roomNumberSelectTarget.innerHTML = '<option value="">Checking availability...</option>'
+    this.roomNumberSelectTarget.innerHTML = '<option value="">Checking availability…</option>'
     this.roomNumberSelectTarget.disabled = true
 
     try {
       if (!this.hasAvailabilityUrlValue) return
       
-      const bookingId = this.bookingIdValue || ""
+      const bookingId = this.excludeBookingIdValue || this.bookingIdValue || ""
       const url = `${this.availabilityUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}&exclude_booking_id=${bookingId}`
       
       const response = await fetch(url)
@@ -109,31 +211,216 @@ export default class extends Controller {
     const roomTypeId = this.roomTypeTarget.value
 
     if (!checkIn || !checkOut || !roomTypeId) {
-      if (this.hasDisplayTotalTarget) this.updateDisplay(0)
+      if (this.hasDisplayTotalTarget) this.updateDisplay({ total_amount: 0 })
       return
     }
 
     // Crucial: Always check availability when dates/room type change
-    this.updateRoomNumbers()
+    await this.updateRoomNumbers()
+    await this.loadRateOptions()
 
     if (!this.hasPriceUrlValue) return
 
+    // Skip price calculation if manual override is active
+    if (this.hasRateOverrideFlagTarget && this.rateOverrideFlagTarget.value) {
+      return
+    }
+
     try {
-      this.displayTotalTarget.textContent = "Calculating..."
-      const url = `${this.priceUrlValue}?room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`
+      if (this.hasDisplayTotalTarget) this.displayTotalTarget.textContent = "Calculating…"
+      const params = new URLSearchParams({
+        room_type_id: roomTypeId,
+        check_in: checkIn,
+        check_out: checkOut
+      })
+      if (this.hasRatePlanSelectTarget && this.ratePlanSelectTarget.value) {
+        params.set("rate_plan_id", this.ratePlanSelectTarget.value)
+      }
+      if (this.hasGuestCountryTarget && this.guestCountryTarget.value) {
+        params.set("guest_country", this.guestCountryTarget.value)
+      }
+      if (this.hasCorporateRateTarget) {
+        params.set("corporate_rate", this.corporateRateTarget.checked)
+      }
+
+      const url = `${this.priceUrlValue}?${params}`
       const response = await fetch(url)
       const data = await response.json()
-      this.updateDisplay(parseFloat(data.total_amount || 0))
+      this.updateDisplay(data)
     } catch (error) {
       console.error("Price calculation failed:", error)
-      this.updateDisplay(0)
+      this.updateDisplay({ total_amount: 0 })
     }
   }
 
-  updateDisplay(amount) {
+  updateDisplay(data) {
     if (!this.hasDisplayTotalTarget || !this.hasTotalInputTarget) return
+    data = data || {}
+    
+    const amount = parseFloat(data.total_amount || 0)
     const formatted = amount.toFixed(2)
+    
     this.displayTotalTarget.textContent = formatted
     this.totalInputTarget.value = formatted
+    
+    if (this.hasDisplayRoomTotalTarget) {
+      this.displayRoomTotalTarget.textContent = parseFloat(data.room_total || 0).toFixed(2)
+    }
+    
+    if (this.hasDisplayTaxTotalTarget) {
+      this.displayTaxTotalTarget.textContent = parseFloat(data.tax_total || 0).toFixed(2)
+    }
+
+    if (this.hasRatesBreakdownTarget) {
+      this.populateRatesBreakdown(data.nightly_rate_snapshot || {})
+    }
+
+    if (this.hasTaxesBreakdownTarget) {
+      this.populateTaxesBreakdown(data.tax_lines || [])
+    }
+    
+    // Also update the manual payment amount field if it exists
+    if (this.hasPaymentAmountInputTarget) {
+      this.paymentAmountInputTarget.value = formatted
+    }
+  }
+
+  populateRatesBreakdown(snapshot) {
+    const container = this.ratesBreakdownTarget
+    container.innerHTML = ""
+    let subtotal = 0
+    
+    Object.entries(snapshot).forEach(([date, details]) => {
+      const amount = parseFloat(details.price || 0)
+      subtotal += amount
+
+      const row = document.createElement("div")
+      row.className = "flex justify-between items-center gap-4 py-0.5"
+      
+      const label = document.createElement("span")
+      label.className = "min-w-0 truncate pr-2"
+      label.textContent = this.formatDate(date)
+      
+      const value = document.createElement("span")
+      value.className = "font-medium text-slate-700 whitespace-nowrap tabular-nums"
+      value.textContent = `MYR ${amount.toFixed(2)}`
+      
+      row.appendChild(label)
+      row.appendChild(value)
+      container.appendChild(row)
+    })
+
+    container.appendChild(this.buildSubtotalRow("Room Rate Subtotal", subtotal))
+  }
+
+  populateTaxesBreakdown(taxLines) {
+    const container = this.taxesBreakdownTarget
+    container.innerHTML = ""
+
+    const payableTaxLines = taxLines.filter((tax) => !this.isTourismTax(tax))
+    const tourismTaxTotal = taxLines
+      .filter((tax) => this.isTourismTax(tax))
+      .reduce((sum, tax) => sum + parseFloat(tax.amount || 0), 0)
+
+    if (payableTaxLines.length === 0 && tourismTaxTotal === 0) {
+      container.appendChild(this.buildSubtotalRow("Taxes Subtotal", 0))
+      return
+    }
+
+    let subtotal = 0
+    payableTaxLines.forEach(tax => {
+      const amount = parseFloat(tax.amount || 0)
+      subtotal += amount
+
+      container.appendChild(this.buildAmountRow(tax.name, amount))
+    })
+
+    container.appendChild(this.buildSubtotalRow("Taxes Subtotal", subtotal))
+
+    if (tourismTaxTotal > 0) {
+      container.appendChild(this.buildInformationalAmountRow("Tourism Tax (collect at check-in)", tourismTaxTotal))
+    }
+  }
+
+  isTourismTax(tax) {
+    const type = (tax.type || "").toString()
+    const primaryTaxKey = (tax.primary_tax_key || "").toString()
+    return [type, primaryTaxKey].some((value) => value === "tourism_tax" || value === "ttx")
+  }
+
+  buildAmountRow(labelText, amount) {
+    const row = document.createElement("div")
+    row.className = "flex justify-between items-center gap-4 py-0.5"
+
+    const label = document.createElement("span")
+    label.className = "min-w-0 truncate pr-2"
+    label.textContent = labelText
+
+    const value = document.createElement("span")
+    value.className = "font-medium text-slate-700 whitespace-nowrap tabular-nums"
+    value.textContent = `MYR ${amount.toFixed(2)}`
+
+    row.appendChild(label)
+    row.appendChild(value)
+    return row
+  }
+
+  buildInformationalAmountRow(labelText, amount) {
+    const row = this.buildAmountRow(labelText, amount)
+    row.className = "mt-2 flex justify-between items-center gap-4 rounded-xl bg-amber-50 px-3 py-2 text-amber-800"
+    row.lastElementChild.className = "font-bold whitespace-nowrap tabular-nums"
+    return row
+  }
+
+  buildSubtotalRow(labelText, amount) {
+    const row = document.createElement("div")
+    row.className = "mt-2 flex justify-between items-center gap-4 border-t border-slate-200 pt-2"
+
+    const label = document.createElement("span")
+    label.className = "min-w-0 truncate pr-2 font-bold text-slate-700"
+    label.textContent = labelText
+
+    const value = document.createElement("span")
+    value.className = "font-bold text-slate-900 whitespace-nowrap tabular-nums"
+    value.textContent = `MYR ${amount.toFixed(2)}`
+
+    row.appendChild(label)
+    row.appendChild(value)
+    return row
+  }
+
+  formatDate(dateString) {
+    const date = new Date(dateString)
+    return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
+  }
+
+  toggleAdjustPrice(event) {
+    if (this.hasAdjustPriceSectionTarget) {
+      this.adjustPriceSectionTarget.classList.toggle("hidden", !event.target.checked)
+    }
+
+    if (!event.target.checked) {
+      this.clearOverride()
+    }
+  }
+
+  togglePriceDetails(event) {
+    if (this.hasPriceDetailsSectionTarget) {
+      this.priceDetailsSectionTarget.classList.toggle("hidden", !event.target.checked)
+    }
+  }
+
+  // Called when user manually edits the total input
+  setOverride() {
+    if (this.hasRateOverrideFlagTarget) {
+      this.rateOverrideFlagTarget.value = this.totalInputTarget.value
+    }
+  }
+
+  clearOverride() {
+    if (this.hasRateOverrideFlagTarget) {
+      this.rateOverrideFlagTarget.value = ""
+    }
+    this.calculate()
   }
 }

@@ -1,0 +1,75 @@
+<%
+  head_markup = header if header?
+
+  search_box = lambda do |input_id|
+    capture do
+%>
+  <div class="panel-sidebar__search">
+    <label class="sr-only" for="<%= input_id %>">Search navigation</label>
+    <div class="panel-sidebar__search-field">
+      <%= helpers.app_icon "search", class: "panel-sidebar__search-icon", aria: { hidden: "true" } %>
+      <input id="<%= input_id %>" type="search" placeholder="<%= search_placeholder %>" autocomplete="off"
+             class="panel-sidebar__search-input"
+             data-panels-ui--sidebar-search-target="input"
+             data-action="input->panels-ui--sidebar-search#filter">
+    </div>
+  </div>
+<%
+    end
+  end
+%>
+
+<aside id="<%= desktop_id %>"
+       class="<%= tw_merge("panel-sidebar hidden lg:flex", @class) %>"
+       data-collapsed="<%= collapsible? %>"
+       data-collapsible="<%= collapsible? %>"
+       data-locked="false"
+       <%= "data-turbo-permanent" if permanent? %>
+       data-controller="<%= desktop_controllers %>"
+       data-panels-ui--sidebar-key-value="<%= key %>"
+       data-panels-ui--sidebar-surface-value="desktop">
+  <% if head_markup %><div class="panel-sidebar__header"><%= head_markup %></div><% end %>
+  <div class="panel-sidebar__body">
+    <% if searchable? %><%= search_box.call(desktop_search_id) %><% end %>
+    <%= render_sidebar_partial(:navigation, surface: :desktop) %>
+  </div>
+  <%= render_sidebar_partial(:footer, surface: :desktop) %>
+</aside>
+
+<%= render PanelsUI::Sheet.new(
+      id: mobile_id,
+      side: :left,
+      size: :sm,
+      variant: :edge,
+      title: nil,
+      aria_label: "#{brand_name} navigation",
+      body_class: "flex flex-col overflow-hidden p-0",
+      class: "panel-sidebar--mobile-sheet w-[260px] max-w-[100dvw]"
+    ) do |sheet| %>
+  <% sheet.with_header do %>
+    <div class="panel-sidebar__mobile-head">
+      <a href="<%= home_path %>" class="panel-sidebar__brand">
+        <span class="panel-sidebar__brand-badge"><%= brand_initial %></span>
+        <span class="panel-sidebar__brand-name"><%= brand_name %></span>
+      </a>
+      <button type="button" class="panel-sidebar__close"
+              data-action="panels-ui--sheet#close"
+              aria-label="Close navigation">
+        <%= helpers.app_icon "x", class: "panel-sidebar__icon" %>
+      </button>
+    </div>
+  <% end %>
+  <% sheet.with_body do %>
+    <div class="flex min-h-0 flex-1 flex-col"
+         data-controller="<%= mobile_controllers %>"
+         data-panels-ui--sidebar-key-value="<%= key %>"
+         data-panels-ui--sidebar-surface-value="mobile">
+      <% if head_markup %><div class="panel-sidebar__header"><%= head_markup %></div><% end %>
+      <div class="panel-sidebar__body">
+        <% if searchable? %><%= search_box.call(mobile_search_id) %><% end %>
+        <%= render_sidebar_partial(:navigation, surface: :mobile) %>
+      </div>
+      <%= render_sidebar_partial(:footer, surface: :mobile) %>
+    </div>
+  <% end %>
+<% end %>

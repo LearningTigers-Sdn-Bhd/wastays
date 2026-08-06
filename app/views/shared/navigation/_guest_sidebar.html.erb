@@ -1,54 +1,12 @@
-<% dashboard_active = controller_name == 'dashboard' %>
-<% bookings_active  = controller_name == 'bookings' %>
-<% refunds_active   = controller_name == 'refund_requests' %>
-
-<% guest_sidebar_sections = [
-  {
-    label: 'My Account',
-    items: [
-      { label: 'Dashboard', path: guest_dashboard_path, search_text: 'Dashboard Home Overview', active: dashboard_active, icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-      { label: 'My Bookings', path: guest_bookings_path, search_text: 'My Bookings Stays Reservations History', active: bookings_active, icon: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
-      { label: 'Refunds', path: guest_refund_requests_path, search_text: 'Refund Requests Cancellations', active: refunds_active, icon: '<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/>' }
-    ]
-  }
-] %>
-
-<% guest_sidebar_footer_items = [
-  { label: 'Homepage', path: root_path, search_text: 'Homepage Website', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-  { label: 'Help & support', path: help_center_path, search_text: 'Help Support FAQ', icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' }
-] %>
-
-<% render_sidebar_nav = lambda do %>
-  <nav class="flex-1 px-4 py-3 space-y-6">
-    <% guest_sidebar_sections.each do |section| %>
-      <div class="sidebar-nav-group">
-        <span class="sidebar-section-label"><%= section[:label] %></span>
-        <div class="space-y-0.5">
-          <% section[:items].each do |item| %>
-            <a class="sidebar-nav-link <%= item[:active] ? 'sidebar-nav-link-active' : 'sidebar-nav-link-default' %>" href="<%= item[:path] %>">
-              <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-              <span><%= item[:label] %></span>
-            </a>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-  </nav>
-<% end %>
-
-<% guest_nav_html = capture(&render_sidebar_nav) %>
-<% guest_footer_html = capture do %>
-  <% guest_sidebar_footer_items.each do |item| %>
-    <a class="sidebar-nav-link sidebar-nav-link-default" href="<%= item[:path] %>">
-      <svg class="size-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%= item[:icon].html_safe %></svg>
-      <span><%= item[:label] %></span>
-    </a>
+<%= render PanelsUI::Sidebar.new(
+      key: "guest",
+      home_path: guest_dashboard_path,
+      sections: guest_sidebar_sections,
+      collapsible: true,
+      searchable: false,
+      permanent: true
+    ) do |sidebar| %>
+  <% sidebar.with_header do %>
+    <%= render "shared/navigation/portal_label", label: "Guest Portal", icon: "user", href: guest_dashboard_path %>
   <% end %>
 <% end %>
-
-<%= render "shared/navigation/sidebar_shell",
-           sidebar_key: "guest",
-           home_path: guest_dashboard_path,
-           nav_html: guest_nav_html,
-           footer_html: guest_footer_html,
-           search_enabled: false %>

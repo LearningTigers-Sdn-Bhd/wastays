@@ -1,0 +1,8 @@
+<%= turbo_frame_tag "entries_frame", class: "observation-deck__entries-frame" do %>
+  <%= render ObservationDeck::EventTable.new(
+        entries: @entries,
+        presenters: @entry_presenters,
+        selected_id: params[:selected_entry_id],
+        filter_active: @filter_params.any?
+      ) %>
+<% end %>

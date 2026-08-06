@@ -1,0 +1,73 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+<% grouped = booking.group_booking_id.present? %>
+<% selected_option = @folio_booking_options.find { |option| option[:booking].id == booking.id } || @folio_booking_options.first %>
+<% has_any_party = @folio_booking_options.any? { |option| option[:parties].any? } %>
+
+<%= form_with scope: :folio_window,
+      url: hotel_folio_action_new_window_path(current_hotel, booking),
+      method: :post,
+      class: "flex h-full min-h-0 flex-col",
+      data: { controller: "folio-window-booking" } do |form| %>
+  <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+  <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+    <p class="text-sm text-muted-foreground">
+      Create a folio window for a billing party on this booking.
+      Creating a folio does not change transaction-code routing.
+    </p>
+
+    <% if grouped %>
+      <div data-folio-window-booking-target="booking" data-action="change->folio-window-booking#change">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :booking_id, label: "Booking", required: true,
+              hint: "The new folio belongs only to the selected child booking.") do |field| %>
+          <% field.with_select_menu(
+               @folio_booking_options.map { |option| { label: option[:label], value: option[:booking].id } },
+               selected: selected_option[:booking].id,
+               required: true) %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div data-folio-window-booking-target="party">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :booking_billing_party_id, label: "Sharer / billing party", required: true) do |field| %>
+        <% field.with_select_menu(
+             selected_option[:parties].map { |party| { label: "#{party.display_name} · #{party.party_kind.humanize}", value: party.id } }.presence ||
+               [ { label: "No billing party available", value: "", disabled: true } ],
+             prompt: "Select billing party",
+             required: true) %>
+      <% end %>
+      <% unless has_any_party %>
+        <p class="mt-2 text-xs font-medium text-warning-foreground">Add a guest or a Corporate Account billing party before creating a folio window.</p>
+      <% end %>
+    </div>
+
+    <% if grouped %>
+      <div hidden>
+        <% @folio_booking_options.each do |option| %>
+          <script type="application/json"
+                  data-folio-window-booking-target="partyData"
+                  data-booking-id="<%= option[:booking].id %>"><%= option[:parties].map { |party| { label: "#{party.display_name} · #{party.party_kind.humanize}", value: party.id } }.to_json.html_safe %></script>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form: form, attribute: :label, label: "Folio label") do |field| %>
+      <% field.with_input(placeholder: "Optional — defaults to the folio reference") %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form: form, attribute: :currency, label: "Currency") do |field| %>
+      <% field.with_select_menu(
+           CurrencyCatalog.codes.map { |code| { label: code, value: code } },
+           selected: booking.currency.presence || current_hotel.default_currency) %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form: form, attribute: :reason, label: "Reason") do |field| %>
+      <% field.with_input(placeholder: "Optional internal reason") %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, disabled: !has_any_party, data: { turbo_submits_with: "Creating…" }) do %>Create folio<% end %>
+  </div>
+<% end %>

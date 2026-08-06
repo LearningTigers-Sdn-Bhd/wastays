@@ -24,6 +24,10 @@ module HotelOps
         sanitize_amenities
         hotel = Hotel.create!(@hotel_params.reverse_merge(status: "registered", amenities: []).merge(account: account))
 
+        Financials::EnsureDefaultGlMaps.call(hotel)
+        Financials::EnsureDefaultTransactionCodes.call(hotel)
+        HotelBusinessDate.initialize_for_hotel!(hotel: hotel, date: hotel.business_date_for(Time.current))
+
         # Grant hotel access with the owner role
         UserHotelAccess.create!(user: user, hotel: hotel, role: owner_role)
 

@@ -1,0 +1,22 @@
+<header class="border-b border-border bg-muted/60 px-4 py-3 sm:px-5">
+  <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+    <span class="inline-flex size-6 items-center justify-center rounded bg-primary text-primary-foreground">
+      <%= cached_icon "landmark", class: "size-3.5", aria: { hidden: true } %>
+    </span>
+    Payment record
+  </h2>
+</header>
+
+<section class="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Payment allocation summary">
+  <% [
+    [ "Received amount", presenter.amount_label, "text-foreground", "Total funds recorded" ],
+    [ "Allocated", presenter.allocated_amount_label, "text-emerald-700", "Assigned to AR invoices" ],
+    [ "Unapplied", presenter.unapplied_amount_label, "text-amber-700", "Available for allocation" ]
+  ].each do |label, amount, amount_class, description| %>
+    <div class="relative px-4 py-4 sm:px-5">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"><%= label %></p>
+      <p class="mt-1.5 text-xl font-black tabular-nums <%= amount_class %>"><%= amount %></p>
+      <p class="mt-1 text-[11px] font-medium text-muted-foreground"><%= description %></p>
+    </div>
+  <% end %>
+</section>

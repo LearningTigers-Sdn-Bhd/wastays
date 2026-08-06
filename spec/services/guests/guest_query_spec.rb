@@ -10,10 +10,10 @@ RSpec.describe Guests::GuestQuery do
   let!(:guest3) { create(:guest, name: "Charlie", country: "Malaysia") }
 
   before do
-    booking1 = create(:booking, hotel: hotel)
+    booking1 = create(:booking, hotel: hotel, guest_email: "bob@example.com", guest_name: "Bob", guest_phone: "+6599999999")
     create(:booking_guest, booking: booking1, guest: guest2, is_primary: true)
 
-    booking2 = create(:booking, hotel: other_hotel)
+    booking2 = create(:booking, hotel: other_hotel, guest_email: "charlie@example.com", guest_name: "Charlie", guest_phone: "+6099999999")
     create(:booking_guest, booking: booking2, guest: guest3, is_primary: true)
   end
 
@@ -36,6 +36,32 @@ RSpec.describe Guests::GuestQuery do
 
     it "filters by country" do
       query = described_class.new(hotel: hotel, params: { country: "Singapore" })
+      results = query.call
+      expect(results).to include(guest2)
+      expect(results).not_to include(guest1)
+    end
+
+    it "filters by VIP status tag" do
+      guest1.update!(vip: true)
+      query = described_class.new(hotel: hotel, params: { tag: "vip" })
+      results = query.call
+      expect(results).to include(guest1)
+      expect(results).not_to include(guest2)
+    end
+
+    it "filters by Banned status tag" do
+      guest1.update!(blacklisted: true)
+      query = described_class.new(hotel: hotel, params: { tag: "banned" })
+      results = query.call
+      expect(results).to include(guest1)
+      expect(results).not_to include(guest2)
+    end
+
+    it "filters by Repeat status tag" do
+      booking_c = create(:booking, hotel: hotel, status: "completed")
+      create(:booking_guest, booking: booking_c, guest: guest2)
+
+      query = described_class.new(hotel: hotel, params: { tag: "repeat" })
       results = query.call
       expect(results).to include(guest2)
       expect(results).not_to include(guest1)

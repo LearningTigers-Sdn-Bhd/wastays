@@ -1,0 +1,176 @@
+<section aria-labelledby="communication-notifications-heading">
+  <div>
+    <h2 id="communication-notifications-heading" class="text-base font-semibold text-foreground">Communication &amp; Notifications</h2>
+    <p class="mt-2 text-sm text-muted-foreground">Configure the messages guests receive before, during, and after their stay.</p>
+  </div>
+
+  <% if params[:form_id] == "notification_settings" && (@notification_config&.errors&.any? || @hotel.errors.any?) %>
+    <div class="mt-4">
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Some notification settings could not be saved", role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% (@notification_config&.errors&.full_messages || []).each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+            <% @hotel.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="mt-4 grid items-stretch gap-5 lg:grid-cols-2">
+    <%= render "hotel_portal/settings/notification_module",
+               config: @presenter.check_in_notification_config,
+               notification_type: "check_in_confirmation",
+               title: "Check-In Confirmation",
+               subtitle: "Guest Arrival",
+               description: "Send room details and hotel information immediately after check-in.",
+               icon: nil %>
+
+    <%= render "hotel_portal/settings/notification_module",
+               config: @presenter.check_out_receipt_notification_config,
+               notification_type: "check_out_receipt_message",
+               title: "Check-Out Receipt",
+               subtitle: "Billing",
+               description: "Send a receipt or outstanding invoice when the guest checks out.",
+               icon: nil %>
+
+    <% pre_arrival_config = @presenter.pre_arrival_notification_config %>
+    <%= render "hotel_portal/settings/notification_module",
+               config: pre_arrival_config,
+               notification_type: "pre_arrival_notification",
+               title: "Pre-Arrival Greeting",
+               subtitle: "Stay Preparation",
+               description: "Remind guests about their stay and share useful arrival information.",
+               icon: nil do |f| %>
+      <% stages = pre_arrival_config.settings.to_h["stages"] || [] %>
+      <%= render PanelsUI::FieldSet.new(legend: "Send Stages", legend_variant: :label) do %>
+        <%= hidden_field_tag "notification_config[settings][stages][]", "" %>
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <% [["d2", "Two days before"], ["d1", "One day before"]].each do |value, label| %>
+            <%= render PanelsUI::Checkbox.new(
+                  name: "notification_config[settings][stages][]",
+                  id: "notification_config_pre_arrival_stage_#{value}",
+                  value: value,
+                  checked: stages.include?(value),
+                  label: label,
+                  variant: :card,
+                  size: :sm,
+                  include_hidden: false) %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <% post_stay_config = @presenter.post_stay_review_notification_config %>
+    <%= render "hotel_portal/settings/notification_module",
+               config: post_stay_config,
+               notification_type: "post_stay_review_request",
+               title: "Post-Stay Review",
+               subtitle: "Guest Feedback",
+               description: "Request a review after checkout while the stay is still fresh.",
+               icon: nil do |f| %>
+      <%= fields_for "notification_config[settings]", nil do |settings_fields| %>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <%= render PanelsUI::FormField.new(
+                form: settings_fields,
+                attribute: :review_link,
+                label: "Review Link") do |field| %>
+            <% field.with_input(
+                 type: :url,
+                 value: post_stay_config.settings.to_h["review_link"],
+                 placeholder: "https://…") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: settings_fields,
+                attribute: :send_delay_hours,
+                label: "Delay (Hours)") do |field| %>
+            <% field.with_input(
+                 type: :number,
+                 value: post_stay_config.settings.to_h["send_delay_hours"],
+                 min: 0,
+                 step: 1) %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <% in_stay_config = @presenter.in_stay_guest_notification_config %>
+    <div class="lg:col-span-2">
+      <%= render "hotel_portal/settings/notification_module",
+                 config: in_stay_config,
+                 notification_type: "in_stay_guest_messaging",
+                 title: "In-Stay Guest Engagement",
+                 subtitle: "Guest Experience",
+                 description: "Schedule satisfaction checks, relevant offers, and local activity suggestions.",
+                 icon: nil do |f| %>
+        <% in_stay_rules = in_stay_config.settings.to_h.fetch("rules", {}) %>
+        <%= render PanelsUI::FieldSet.new(
+              legend: "Scheduled Messages",
+              description: "Choose which messages are active and when they should be sent.",
+              legend_variant: :label) do %>
+          <div class="mt-4 grid gap-5 md:grid-cols-3">
+            <% [["mid_stay", "Mid-stay Check", "Satisfaction survey"],
+                ["upsell", "Upsell Prompt", "Food, beverage, or spa offers"],
+                ["activity", "Activity Suggestion", "Relevant local attractions"]].each do |rule_key, label, description| %>
+              <% rule = in_stay_rules.fetch(rule_key, {}) %>
+              <%= fields_for "notification_config[settings][rules][#{rule_key}]", nil do |rule_fields| %>
+                <div class="border-t border-border pt-4">
+                  <%= render PanelsUI::Switch.new(
+                        name: "notification_config[settings][rules][#{rule_key}][enabled]",
+                        id: "notification_config_rule_#{rule_key}_enabled",
+                        label: label,
+                        description: description,
+                        checked: rule.fetch("enabled", true),
+                        size: :sm) %>
+                  <div class="mt-4">
+                    <%= render PanelsUI::FormField.new(
+                          form: rule_fields,
+                          attribute: :time,
+                          label: "Send Time",
+                          size: :sm) do |field| %>
+                      <% field.with_time_picker(value: rule.fetch("time", "12:00"), minute_step: 15) %>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% quiet_hours = in_stay_config.settings.to_h.fetch("quiet_hours", {}) %>
+        <div class="mt-5 border-t border-border pt-5">
+          <%= fields_for "notification_config[settings][quiet_hours]", nil do |quiet_fields| %>
+            <%= render PanelsUI::Switch.new(
+                  name: "notification_config[settings][quiet_hours][enabled]",
+                  id: "notification_config_quiet_hours_enabled",
+                  label: "Quiet Hours",
+                  description: "Pause automated messages overnight.",
+                  checked: quiet_hours.fetch("enabled", true),
+                  size: :sm) %>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(
+                    form: quiet_fields,
+                    attribute: :start,
+                    label: "No Messages After",
+                    size: :sm) do |field| %>
+                <% field.with_time_picker(value: quiet_hours.fetch("start", "22:00"), minute_step: 15) %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(
+                    form: quiet_fields,
+                    attribute: :end,
+                    label: "Resume Messages At",
+                    size: :sm) do |field| %>
+                <% field.with_time_picker(value: quiet_hours.fetch("end", "08:00"), minute_step: 15) %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</section>

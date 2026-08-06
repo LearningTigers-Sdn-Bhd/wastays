@@ -1,0 +1,68 @@
+<%
+  nav = PanelsUI::Navigation
+  sidebar_sections = [
+    nav::Section.new(label: "Home", items: [
+      nav::Item.new(label: "Overview", path: "/system-design", icon: "layout-dashboard", active: true, search_text: "Overview Home Dashboard")
+    ]),
+    nav::Section.new(label: "Operations", items: [
+      nav::Item.new(label: "Arrivals", path: "#arrivals", icon: "user-plus", search_text: "Arrivals Check-in"),
+      nav::Item.new(label: "Bookings", path: "#bookings", icon: "calendar-days", search_text: "Bookings Reservations"),
+      nav::Item.new(label: "Reports", icon: "chart-bar", search_text: "Reports Financial Tax", children: [
+        nav::Item.new(label: "Financial", path: "#financial", icon: "coins"),
+        nav::Item.new(label: "Tax & Compliance", path: "#tax", icon: "calculator")
+      ])
+    ])
+  ]
+%>
+
+<section aria-labelledby="sidebar-preview-heading" class="border-t border-border pt-8">
+  <h2 id="sidebar-preview-heading" class="text-lg font-semibold text-foreground">Sidebar</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Data-driven nav from <code>Navigation::Section</code>/<code>Item</code>. Desktop hover
+    expansion with an optional navigation-scoped lock, mobile drawer, type-to-filter search,
+    and Turbo active-link resync.
+  </p>
+
+  <div class="flex items-center gap-3 mb-4">
+    <button type="button"
+            id="sd-nav-sidebar-mobile-trigger"
+            class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            command="show-modal"
+            commandfor="sd-nav-sidebar-mobile">
+      <%= app_icon "menu", class: "size-4" %>
+      Open mobile navigation
+    </button>
+    <button type="button"
+            class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            data-controller="panels-ui--sidebar-toggle"
+            data-panels-ui--sidebar-toggle-key-value="sd-nav"
+            data-action="click->panels-ui--sidebar-toggle#toggleDesktop"
+            aria-controls="sd-nav-sidebar"
+            aria-expanded="false"
+            aria-pressed="false">
+      <%= app_icon "pin", class: "size-4", data: { sidebar_toggle_icon: "lock" } %>
+      <%= app_icon "pin-off", class: "size-4", data: { sidebar_toggle_icon: "unlock" }, hidden: true %>
+      Toggle lock
+    </button>
+  </div>
+
+  <div class="flex h-[420px] overflow-hidden rounded-xl border border-border" data-testid="sidebar-demo">
+    <%= render PanelsUI::Sidebar.new(key: "sd-nav", home_path: "/system-design",
+                                     sections: sidebar_sections,
+                                     searchable: true, brand_name: "PanelsUI", brand_initial: "P") do |s| %>
+      <% s.with_header do %>
+        <div class="flex items-center gap-x-2.5 px-4 py-3">
+          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-muted text-foreground">
+            <%= app_icon "building-2", class: "size-4" %>
+          </span>
+          <span class="panel-sidebar__label text-sm font-semibold text-foreground">Grand Hotel</span>
+        </div>
+      <% end %>
+    <% end %>
+
+    <div class="flex-1 bg-background p-6 text-sm text-muted-foreground">
+      Main content area — the sidebar sits to the left. Try collapse, search, and note
+      "Overview" is active (matches this page's path).
+    </div>
+  </div>
+</section>

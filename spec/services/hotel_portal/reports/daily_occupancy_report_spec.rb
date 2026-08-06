@@ -14,8 +14,11 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyReport, type: :service do
       create(:room_inventory, room_type: room_type, date: start_date, quantity: 8, status: "open")
       create(:room_inventory, room_type: room_type, date: end_date, quantity: 10, status: "open")
 
-      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 400)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 2, subtotal: 300)
+      group = create(:group_booking, hotel: hotel)
+      first_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 1, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 200)
+      second_booking = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 200)
+      create(:booking_room, booking: first_booking, room_type: room_type, subtotal: 150)
+      create(:booking_room, booking: second_booking, room_type: room_type, subtotal: 150)
 
       create(:booking, hotel: other_hotel, status: "confirmed", check_in: start_date, check_out: end_date + 1.day, total_amount: 500)
 
@@ -58,12 +61,27 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyReport, type: :service do
     it "falls back to booking total_amount when booking_room subtotal is zero" do
       room_type = create(:room_type, hotel: hotel, quantity: 5)
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date, check_out: start_date + 2.days, total_amount: 240)
-      create(:booking_room, booking: booking, room_type: room_type, quantity: 1, subtotal: 0)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 0)
 
       result = described_class.new(hotel: hotel, start_date: start_date, end_date: start_date).call
 
       expect(result.rows.first[:room_revenue]).to eq(120.to_d)
       expect(result.rows.first[:adr]).to eq(120.to_d)
+    end
+
+    it "adds posted tax to room revenue for total revenue" do
+      room_type = create(:room_type, hotel: hotel, quantity: 5)
+      booking = create(:booking, hotel: hotel, status: "checked_in", check_in: start_date, check_out: start_date + 1.day, total_amount: 100)
+      create(:booking_room, booking: booking, room_type: room_type, subtotal: 100)
+      booking_folio = create(:booking_folio, booking: booking)
+      create(:folio_transaction, booking_folio: booking_folio, category: "tax", posting_date: start_date, amount: 6)
+
+      result = described_class.new(hotel: hotel, start_date: start_date, end_date: start_date).call
+
+      expect(result.rows.first[:tax_amount]).to eq(6.to_d)
+      expect(result.rows.first[:total_revenue]).to eq(106.to_d)
+      expect(result.totals[:tax_amount]).to eq(6.to_d)
+      expect(result.totals[:total_revenue]).to eq(106.to_d)
     end
   end
 end

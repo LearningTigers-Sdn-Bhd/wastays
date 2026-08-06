@@ -1,0 +1,63 @@
+<section aria-labelledby="tabs-preview-heading" class="border-t border-border pt-8">
+  <h2 id="tabs-preview-heading" class="text-lg font-semibold text-foreground">Tabs</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    One compound component renders either link navigation or WAI-ARIA panel tabs from
+    its children. URL state is opt-in, and nested tabs use the same component.
+  </p>
+
+  <div class="space-y-6">
+    <%# Default line navigation: hrefs infer ordinary link semantics and no tab controller. %>
+    <%= render PanelsUI::Tabs.new(id: "sd-tab-navigation", active: "overview", aria_label: "Design system sections") do |t| %>
+      <% t.with_tab(name: "overview", label: "Overview", href: system_design_path(example: "overview")) %>
+      <% t.with_tab(name: "tables", label: "Tables", href: system_design_path(example: "tables")) %>
+    <% end %>
+
+    <%# Explicit pill tabs with panels and opt-in URL state. %>
+    <%= render PanelsUI::Tabs.new(id: "sd-tabs", active: "history", variant: :pill, url: { param: "tab" }, aria_label: "Night audit sections") do |t| %>
+      <% t.with_tab(name: "history", label: "Audit History", icon: "history", count: 12) %>
+      <% t.with_tab(name: "advanced", label: "Advanced Actions", icon: "settings-2") %>
+      <% t.with_tab(name: "exports", label: "Exports", icon: "download", count: 3) %>
+
+      <% t.with_panel(name: "history") do %>
+        <div class="rounded-lg border border-border bg-card p-4 text-sm text-foreground">Audit history panel content.</div>
+      <% end %>
+      <% t.with_panel(name: "advanced") do %>
+        <div class="rounded-lg border border-border bg-card p-4 text-sm text-foreground">Advanced actions panel content.</div>
+      <% end %>
+      <% t.with_panel(name: "exports") do %>
+        <div class="rounded-lg border border-border bg-card p-4 text-sm text-foreground">Exports panel content.</div>
+      <% end %>
+    <% end %>
+
+    <%# Event integration: the breadcrumb listens only to the configured tab ids. %>
+    <div data-testid="tabs-breadcrumb-demo" class="space-y-3">
+      <%= render PanelsUI::Breadcrumb.new(id: "sd-tabs-bc", parts: [
+        { type: :section, label: "Property" },
+        { type: :menu, label: "Rates & Inventory", path: "#" },
+        { label: "Calendar", tab_label: true, tabs_id: "sd-tabs-linked" },
+        { label: "—", subtab_label: true, tabs_ids: ["sd-subtabs-linked"], hidden: true }
+      ]) %>
+
+      <%= render PanelsUI::Tabs.new(id: "sd-tabs-linked", active: "calendar", variant: :pill, aria_label: "Inventory sections") do |t| %>
+        <% t.with_tab(name: "calendar", label: "Calendar") %>
+        <% t.with_tab(name: "bulk", label: "Bulk Edit") %>
+        <% t.with_tab(name: "restrictions", label: "Restrictions") %>
+
+        <% t.with_panel(name: "calendar") do %>
+          <div class="rounded-lg border border-border bg-card p-4 text-sm text-foreground">Calendar content.</div>
+        <% end %>
+        <% t.with_panel(name: "bulk") do %>
+          <%= render PanelsUI::Tabs.new(id: "sd-subtabs-linked", active: "pricing", variant: :pill, url: { param: "subtab" }, aria_label: "Bulk edit sections") do |nested| %>
+            <% nested.with_tab(name: "pricing", label: "Pricing Rules") %>
+            <% nested.with_tab(name: "overrides", label: "Availability Overrides") %>
+            <% nested.with_panel(name: "pricing") { "Pricing rules content." } %>
+            <% nested.with_panel(name: "overrides") { "Availability overrides content." } %>
+          <% end %>
+        <% end %>
+        <% t.with_panel(name: "restrictions") do %>
+          <div class="rounded-lg border border-border bg-card p-4 text-sm text-foreground">Restrictions content.</div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,46 @@
+<div class="w-full space-y-6" data-controller="booking-source-reorder">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Booking Sources",
+        description: "Manage the global list of booking sources (walk-in, phone, OTAs, custom channels). Changes apply to every hotel's source badges and manual-select dropdowns.") do |header| %>
+    <% header.with_actions do %>
+      <%= link_to "Add Source", new_admin_booking_source_path, class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+    <% end %>
+  <% end %>
+
+  <% @booking_sources.group_by(&:kind).each do |kind, sources| %>
+    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="flex items-center justify-between border-b border-border px-6 py-4">
+        <h2 class="text-sm font-bold text-foreground"><%= BookingSource.kind_label(kind) %></h2>
+        <p class="text-xs text-muted-foreground">Drag to reorder — sets the order shown in the manual source dropdown.</p>
+      </div>
+
+      <ul class="divide-y divide-border" data-booking-source-reorder-target="list" data-kind="<%= kind %>" data-reorder-url="<%= reorder_admin_booking_sources_path %>">
+        <% sources.sort_by(&:position).each do |source| %>
+          <li class="flex items-center gap-4 px-6 py-3"
+              draggable="true"
+              data-id="<%= source.id %>"
+              data-action="dragstart->booking-source-reorder#dragStart dragend->booking-source-reorder#dragEnd dragover->booking-source-reorder#dragOver drop->booking-source-reorder#drop">
+            <span class="shrink-0 cursor-grab text-muted-foreground" aria-hidden="true"><%= cached_icon "grip-vertical", class: "size-4" %></span>
+            <%= render PanelsUI::BookingSourceBadge.new(source:, size: :md, with_tooltip: false) %>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-bold text-foreground"><%= source.label %></p>
+              <p class="truncate text-xs font-mono text-muted-foreground"><%= source.key %></p>
+            </div>
+            <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold <%= source.active? ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground" %>"><%= source.active? ? "Active" : "Inactive" %></span>
+            <div class="flex shrink-0 gap-2">
+              <%= link_to "Edit", edit_admin_booking_source_path(source), class: "rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted" %>
+              <%= button_to (source.active? ? "Deactivate" : "Activate"), toggle_admin_booking_source_path(source), method: :patch,
+                    class: "rounded-lg px-3 py-1.5 text-xs font-bold #{source.active? ? "bg-red-50 text-red-700 hover:bg-red-100" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}" %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if @booking_sources.empty? %>
+    <section class="rounded-2xl border border-border bg-card p-12 text-center text-sm font-semibold text-muted-foreground shadow-sm">
+      No booking sources yet.
+    </section>
+  <% end %>
+</div>

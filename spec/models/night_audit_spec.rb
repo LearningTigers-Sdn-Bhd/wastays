@@ -5,6 +5,7 @@ RSpec.describe NightAudit, type: :model do
 
   it { is_expected.to belong_to(:hotel) }
   it { is_expected.to belong_to(:performed_by_user).class_name("User").optional }
+  it { is_expected.to have_many(:folio_transactions).dependent(:restrict_with_error) }
 
   it { is_expected.to validate_presence_of(:business_date) }
   it { is_expected.to validate_inclusion_of(:status).in_array(NightAudit::STATUSES) }
@@ -29,5 +30,21 @@ RSpec.describe NightAudit, type: :model do
 
     expect(described_class.recent_first.first).to eq(newer)
     expect(described_class.recent_first.last).to eq(older)
+  end
+
+  describe ".closed_for_date?" do
+    it "uses hotel business dates as the closed-date source of truth" do
+      hotel = create(:hotel)
+      hotel.current_business_date_record.update!(business_date: Date.current, status: "closed")
+
+      expect(described_class.closed_for_date?(hotel.id, Date.current)).to be(true)
+    end
+
+    it "does not treat a completed night audit as accounting-date authority" do
+      night_audit = create(:night_audit, status: "completed")
+      night_audit.hotel.hotel_business_dates.delete_all
+
+      expect(described_class.closed_for_date?(night_audit.hotel_id, night_audit.business_date)).to be(true)
+    end
   end
 end

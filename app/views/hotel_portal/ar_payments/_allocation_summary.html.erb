@@ -1,0 +1,5 @@
+<section class="grid gap-3 sm:grid-cols-3" data-currency="<%= currency %>">
+  <article class="rounded-xl border border-border bg-card p-4 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Payment Amount</p><p class="mt-2 text-xl font-black tabular-nums" data-ar-payment-form-target="amountSummary"><%= currency %> 0.00</p></article>
+  <article class="rounded-xl border border-border bg-card p-4 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Allocated</p><p class="mt-2 text-xl font-black tabular-nums" data-ar-payment-form-target="allocatedSummary"><%= currency %> 0.00</p></article>
+  <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm"><p class="text-[10px] font-bold uppercase tracking-widest text-amber-700">Unapplied</p><p class="mt-2 text-xl font-black tabular-nums text-amber-900" data-ar-payment-form-target="unappliedSummary"><%= currency %> 0.00</p></article>
+</section>

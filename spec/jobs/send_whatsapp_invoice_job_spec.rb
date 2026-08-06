@@ -19,19 +19,27 @@ RSpec.describe SendWhatsappInvoiceJob, type: :job do
     create(:booking_room,
       booking: booking,
       room_type: room_type,
-      quantity: 1,
       subtotal: 300.0,
       room_type_snapshot: { "name" => room_type.name }
     )
   end
+  let(:folio) { create(:booking_folio, booking: booking, hotel: hotel, status: "closed", invoice_number: 123) }
 
   describe "#perform" do
     it "enqueues or runs a WebhookBroadcastJob" do
+      create(:folio_transaction, booking_folio: folio, transaction_type: "charge", category: "accommodation", amount: 300)
+
       # Since SendWhatsappInvoiceJob calls WebhookBroadcastJob.perform_now
       expect(WebhookBroadcastJob).to receive(:perform_now).with("booking_confirmed", hash_including(
         confirmation_token: booking.confirmation_token,
         guest_name: booking.guest_name
       ))
+
+      described_class.new.perform(booking.id)
+    end
+
+    it "skips bookings without a closed folio" do
+      expect(WebhookBroadcastJob).not_to receive(:perform_now)
 
       described_class.new.perform(booking.id)
     end

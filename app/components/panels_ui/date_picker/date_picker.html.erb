@@ -1,0 +1,52 @@
+<%= tag.div(**root_attributes) do %>
+  <%# Hidden field: ISO form source of truth the calendar writes back into. %>
+  <%= hidden_field %>
+
+  <%= render PanelsUI::Popover.new(
+        id: popover_id,
+        placement: :bottom_start,
+        arrow: false,
+        focus: true,
+        aria_haspopup: "dialog",
+        root_class: "#{anchor_class} #{popover_root_class}",
+        class: "panel-date-picker__popover") do |popover| %>
+    <%# The field itself is the trigger — a themed button showing the value. %>
+    <% popover.with_trigger(
+         unstyled: true,
+         aria_label: placeholder_text,
+         class: "panel-input panel-date-picker__display",
+         disabled: field_disabled?,
+         aria: { labelledby: @labelled_by, describedby: @described_by, invalid: (@invalid ? "true" : nil), required: (@required ? "true" : nil) },
+         data: { "#{stimulus_identifier}-target" => "trigger", size: @size }) do %>
+      <span class="panel-date-picker__value"
+            data-<%= stimulus_identifier %>-target="display"
+            data-placeholder="<%= placeholder_text %>"></span>
+      <svg class="panel-date-picker__icon size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 2v4M16 2v4M3 9h18M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+      </svg>
+    <% end %>
+
+    <%= content_tag(calendar_element,
+          class: "panel-date-picker__calendar #{'panel-date-picker__calendar--dropdown' if dropdown_caption?}",
+          months: calendar_months,
+          data: {
+            "#{stimulus_identifier}-target" => "calendar",
+            action: "change->#{stimulus_identifier}#onCalendarChange focusday->#{stimulus_identifier}#onCalendarFocusday"
+          }) do %>
+      <svg slot="previous" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="Previous">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
+      </svg>
+      <svg slot="next" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="Next">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6" />
+      </svg>
+      <% if dropdown_caption? %>
+        <%= render "panels_ui/calendar_caption", identifier: stimulus_identifier,
+              month_choices: month_choices, year_choices: year_choices %>
+      <% end %>
+      <div class="panel-date-picker__months" data-<%= stimulus_identifier %>-target="months">
+        <calendar-month></calendar-month>
+        <% if render_second_month? %><calendar-month offset="1"></calendar-month><% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

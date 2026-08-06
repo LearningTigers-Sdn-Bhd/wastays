@@ -1,0 +1,19 @@
+<section class="grid grid-cols-1 gap-3 px-4 sm:grid-cols-2 md:px-0 xl:grid-cols-3 2xl:grid-cols-6" aria-label="AR aging totals">
+  <% presenter.summary_metrics.each do |metric| %>
+    <article class="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"><%= metric.label %></p>
+          <div class="mt-2 space-y-0.5">
+            <% metric.amounts.each do |amount| %>
+              <p class="truncate text-lg font-black tabular-nums text-foreground"><%= amount %></p>
+            <% end %>
+          </div>
+        </div>
+        <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg <%= metric.class_name %>">
+          <%= cached_icon metric.icon, stroke_width: 2.1, class: "size-4" %>
+        </span>
+      </div>
+    </article>
+  <% end %>
+</section>

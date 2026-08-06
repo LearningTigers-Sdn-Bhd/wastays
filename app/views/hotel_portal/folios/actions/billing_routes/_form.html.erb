@@ -1,0 +1,40 @@
+<% booking_number = @routing_booking.formatted_reservation_number.presence || "—" %>
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "folio-billing-routes-sheet",
+        side: :right,
+        size: :xl,
+        title: "Change billing routes",
+        description: "Booking No. #{booking_number} · Billing",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <div class="flex h-full min-h-0 flex-col bg-card">
+
+    <% if flash.now[:alert].present? %>
+      <div class="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive" role="alert"><%= flash.now[:alert] %></div>
+    <% end %>
+
+    <% if @routing_booking_options.any? %>
+      <div class="border-b border-border bg-muted px-6 py-4">
+        <%= form_with url: hotel_folio_action_billing_routes_path(current_hotel, @booking), method: :get,
+          class: "max-w-xl", data: { controller: "auto-submit" } do |form| %>
+          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :route_booking_id, label: "Booking") do |field| %>
+            <% field.with_select_menu(
+                 @routing_booking_options.map { |child| { label: "Booking No. #{child.formatted_reservation_number.presence || '—'} · #{child.guest_name}", value: child.id } },
+                 selected: @routing_booking.id,
+                 data: { action: "change->auto-submit#submitNow" }) %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @batch_preview&.success? && @batch_preview.review_required? %>
+      <%= render "hotel_portal/folios/actions/billing_routes/impact_review" %>
+    <% else %>
+      <%= render "hotel_portal/folios/actions/billing_routes/routing_form" %>
+    <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

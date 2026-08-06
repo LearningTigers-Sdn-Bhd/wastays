@@ -1,0 +1,40 @@
+<% tone_classes = {
+  "success" => "border-emerald-200 bg-emerald-50 text-emerald-700",
+  "warning" => "border-amber-200 bg-amber-50 text-amber-700",
+  "danger" => "border-red-200 bg-red-50 text-red-700",
+  "info" => "border-blue-200 bg-blue-50 text-blue-700",
+  "neutral" => "border-border bg-muted text-foreground"
+} %>
+
+<header class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+  <div class="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+    <div class="min-w-0">
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="text-xl font-bold tracking-tight text-foreground sm:text-2xl"><%= presenter.title %></h1>
+        <span class="inline-flex rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider <%= tone_classes.fetch(presenter.status_tone) %>">
+          <%= presenter.status_label %>
+        </span>
+      </div>
+      <p class="mt-1 text-xs font-medium text-muted-foreground sm:text-sm"><%= presenter.subtitle %></p>
+    </div>
+
+    <div class="grid gap-2 sm:flex sm:flex-wrap lg:justify-end">
+      <% if presenter.audit_packet_visible? %>
+        <%= link_to hotel_night_audit_path(current_hotel, presenter.night_audit, format: :pdf), target: "_blank", class: "inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" do %>
+          <%= cached_icon "file-text", class: "size-3.5", aria: { hidden: true } %>
+          View Audit Packet
+        <% end %>
+      <% end %>
+      <% if presenter.resolve_blockers_visible? %>
+        <%= link_to resolve_hotel_night_audit_path(current_hotel, presenter.night_audit), class: "inline-flex items-center justify-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-800 shadow-sm transition hover:bg-red-100" do %>
+          <%= cached_icon "triangle-alert", class: "size-3.5", aria: { hidden: true } %>
+          Resolve Blockers
+        <% end %>
+      <% end %>
+      <%= link_to hotel_night_audits_path(current_hotel), class: "inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:bg-muted" do %>
+        <%= cached_icon "arrow-left", class: "size-3.5", aria: { hidden: true } %>
+        Back to Night Audit
+      <% end %>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,56 @@
+<% forecasted = row.row_kind == :forecasted %>
+<% can_move = row.row_kind == :posted && row.movement_allowed && folio_show.can_manage_folio_movements? %>
+<% can_reverse = row.action_kind == :reverse %>
+<% has_actions = can_move || can_reverse %>
+<tr class="align-top <%= "bg-warning/10" if forecasted %> <%= "text-muted-foreground" if row.reversed %>">
+  <td class="whitespace-nowrap">
+    <span class="tabular-nums text-foreground"><%= row.date_label %></span>
+    <span class="ml-1 text-muted-foreground"><%= row.weekday_label %></span>
+  </td>
+  <td class="whitespace-nowrap font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><%= row.code %></td>
+  <td>
+    <div class="flex items-start gap-1.5">
+      <span class="font-medium text-foreground <%= "line-through text-muted-foreground" if row.reversed %>"><%= row.description %></span>
+      <% if row.info_rows.present? %>
+        <%= render PanelsUI::Popover.new(id: "ledger-info-#{row.transaction_id || row.forecast_id}", trigger_on: :hover, placement: :top_start, arrow: true) do |popover| %>
+          <% popover.with_trigger(unstyled: true, aria_label: "Transaction details", class: "mt-px inline-flex shrink-0 rounded text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring") do %>
+            <%= cached_icon row.info_icon.to_s, class: "size-3.5", aria: { hidden: true } %>
+          <% end %>
+          <dl class="grid w-64 grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left text-xs">
+            <% row.info_rows.each do |label, value| %>
+              <dt class="font-medium text-muted-foreground"><%= label %></dt>
+              <dd class="text-foreground"><%= value %></dd>
+            <% end %>
+          </dl>
+        <% end %>
+      <% end %>
+    </div>
+  </td>
+  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground"><%= row.debit %></td>
+  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-success"><%= row.credit %></td>
+  <td class="text-right">
+    <% if has_actions %>
+      <%= render PanelsUI::DropdownMenu.new(id: "folio-row-actions-#{row.transaction_id}", placement: :bottom_end) do |menu| %>
+        <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "Row actions") do %>
+          <%= cached_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+        <% end %>
+        <% if can_move %>
+          <% menu.with_item(href: hotel_folio_action_move_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
+            <%= cached_icon "arrow-right", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            Move
+          <% end %>
+          <% menu.with_item(href: hotel_folio_action_split_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
+            <%= cached_icon "split", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            Split
+          <% end %>
+        <% end %>
+        <% if can_reverse %>
+          <% menu.with_item(href: hotel_folio_action_reverse_transaction_path(hotel, booking, row.transaction_id, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
+            <%= cached_icon "rotate-ccw", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            <%= row.action_label %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </td>
+</tr>

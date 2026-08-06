@@ -1,0 +1,64 @@
+<section aria-labelledby="reservation-policies-heading" class="space-y-3">
+  <div>
+    <h2 id="reservation-policies-heading" class="text-base font-semibold text-foreground">Reservation policies</h2>
+    <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
+      What the hotel charges when a stay does not run as booked. Each posts under its own ledger code
+      and is taxed with the room revenue rules on the other tab.
+    </p>
+  </div>
+
+  <%= render PanelsUI::Table.new(caption: "Reservation policies", header_style: :sentence, striped: true,
+        hoverable: true, bordered: true, wrapper_class: "rounded-md border border-border bg-card",
+        class: "min-w-[720px]", data: { testid: "reservation-policies-registry" }) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Charging</th>
+        <th scope="col">Event</th>
+        <th scope="col">Code</th>
+        <th scope="col">Rule</th>
+        <th scope="col" class="text-right">Action</th>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% presenter.reservation_policies.each do |policy| %>
+        <tr id="reservation-policy-row-<%= policy.id %>">
+          <td class="align-middle">
+            <%= form_with url: status_hotel_reservation_policy_path(current_hotel, policy), method: :patch, class: "inline-flex",
+                  data: { controller: "tax-registry-status",
+                    action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish",
+                    turbo_frame: "_top",
+                    turbo_confirm: policy.active? ? "Stop charging for #{policy.policy_type_label.downcase}?" : nil,
+                    turbo_confirm_text: policy.active? ? "Staff can still post a manual charge. Existing folio transactions remain unchanged." : nil } do %>
+              <%= hidden_field_tag :active, "0" %>
+              <%= submit_tag "Update status", hidden: true, data: { tax_registry_status_target: "submit" } %>
+              <%= render PanelsUI::Switch.new(name: :active,
+                    label: tag.span("#{policy.active? ? 'Stop' : 'Start'} charging for #{policy.policy_type_label.downcase}", class: "sr-only"),
+                    checked: policy.active?, size: :sm,
+                    data: { tax_registry_status_target: "switch", action: "change->tax-registry-status#change" }) %>
+            <% end %>
+          </td>
+          <td class="align-middle">
+            <span class="font-medium text-foreground"><%= policy.policy_type_label %></span>
+            <p class="mt-0.5 max-w-xs truncate text-xs text-muted-foreground"><%= policy.description.presence || "No guest note" %></p>
+          </td>
+          <td class="align-middle font-mono text-xs text-foreground" translate="no"><%= policy.code %></td>
+          <td class="align-middle text-muted-foreground">
+            <%= policy.pricing_label %>
+            <% if policy.cancellation? && policy.cancellation_tiers.any? %>
+              <span class="text-xs">· <%= pluralize(policy.cancellation_tiers.size, "tier") %></span>
+            <% end %>
+          </td>
+          <td class="text-right align-middle">
+            <%= render PanelsUI::Button.new(href: edit_hotel_reservation_policy_path(current_hotel, policy),
+                  variant: :secondary, size: :xs, data: { turbo_frame: "settings_action_sheet" }) do %>
+              Manage
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+      <% if presenter.reservation_policies.empty? %>
+        <tr><td colspan="5" class="py-8 text-center text-sm text-muted-foreground">No reservation policies are configured.</td></tr>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

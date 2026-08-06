@@ -1,83 +1,78 @@
 # frozen_string_literal: true
 
-require "cgi"
-
 module HotelPortal
   module Reports
     class ArrivalsDeparturesExcelExportService
-      XML_HEADER = %(<?xml version="1.0"?>).freeze
-
-      def initialize(report:)
+      def initialize(hotel:, report:, tab: "arrivals")
+        @hotel = hotel
         @report = report
+        @tab = tab.to_s
+        @table = ArrivalsDeparturesCsvExportService.new(report: report, tab: tab)
       end
 
       def generate
-        <<~XML
-          #{XML_HEADER}
-          <?mso-application progid="Excel.Sheet"?>
-          <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-            xmlns:o="urn:schemas-microsoft-com:office:office"
-            xmlns:x="urn:schemas-microsoft-com:office:excel"
-            xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-            <Worksheet ss:Name="Arrivals">
-              <Table>
-                #{build_arrivals_rows}
-              </Table>
-            </Worksheet>
-            <Worksheet ss:Name="Departures">
-              <Table>
-                #{build_departures_rows}
-              </Table>
-            </Worksheet>
-          </Workbook>
-        XML
+        Exports::ExcelReportBuilder.new(hotel: @hotel, title: "Guest Reports", period_label: period_label).generate do |builder|
+          if @tab == "meal_prep"
+            add_meal_prep_sheets(builder)
+          else
+            add_single_sheet(builder)
+          end
+        end
       end
 
       private
 
-      def build_arrivals_rows
-        rows = []
-        rows << spreadsheet_row([ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Notes" ])
-        @report.arrivals.each do |row|
-          rows << spreadsheet_row([
-            row[:guest_name],
-            row[:confirmation_token],
-            row[:room_details],
-            row[:room_numbers],
-            row[:stay_dates],
-            row[:pre_checkin_status],
-            row[:guarantee_method_status],
-            row[:deposit_status],
-            row[:latest_note]
-          ])
-        end
-        rows.join("\n")
+      def add_single_sheet(builder)
+        headers = @table.export_headers
+        sheet = builder.add_sheet(name: sheet_name, widths: column_widths(headers), orientation: :landscape)
+        builder.add_header(sheet: sheet, subtitle: sheet_name)
+        builder.add_summary(sheet: sheet, metrics: [ [ "Records", data_record_count, nil ] ])
+        builder.add_table(
+          sheet: sheet, section_title: sheet_name, headers: headers, rows: @table.export_rows,
+          column_types: Array.new(headers.size, :text), total_row: nil,
+          empty_message: "No guest records found for the selected period."
+        )
       end
 
-      def build_departures_rows
-        rows = []
-        rows << spreadsheet_row([ "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ])
-        @report.departures.each do |row|
-          rows << spreadsheet_row([
-            row[:guest_name],
-            row[:confirmation_token],
-            row[:room_details],
-            row[:room_numbers],
-            row[:stay_dates],
-            row[:departure_status],
-            row[:latest_note]
-          ])
+      # Every meal gets its own sheet, so the meal is the workspace rather than a
+      # column. A single-meal tab yields a single sheet.
+      def add_meal_prep_sheets(builder)
+        headers = ArrivalsDeparturesCsvExportService::MEAL_PREP_COLUMNS
+
+        @report.sections.each do |section|
+          sheet = builder.add_sheet(name: section[:title], widths: column_widths(headers), orientation: :landscape)
+          builder.add_header(sheet: sheet, subtitle: "Meal Prep - #{section[:title]}")
+          builder.add_summary(sheet: sheet, metrics: [ [ "Transfers", section[:rows].size, nil ], [ "Total Pax", section[:total_pax], nil ] ])
+          builder.add_table(
+            sheet: sheet, section_title: section[:title], headers: headers,
+            rows: section[:rows].map { |row| @table.meal_prep_row(row) },
+            column_types: meal_prep_column_types,
+            total_row: [ "Total Pax", section[:total_pax] ] + Array.new(headers.size - 2),
+            empty_message: "No boat transfers or meal records found for the selected period."
+          )
         end
-        rows.join("\n")
       end
 
-      def spreadsheet_row(values)
-        cells = values.map do |value|
-          escaped = CGI.escapeHTML(value.to_s)
-          %(<Cell><Data ss:Type="String">#{escaped}</Data></Cell>)
-        end.join
-        %(<Row>#{cells}</Row>)
+      def meal_prep_column_types
+        ArrivalsDeparturesCsvExportService::MEAL_PREP_COLUMNS.map { |header| header == "Pax" ? :integer : :text }
       end
+
+      # Guest names need the room; every other column holds a short date or time.
+      def column_widths(headers)
+        headers.map { |header| header == "Guest Name" ? 34 : 20 }
+      end
+
+      def data_record_count = @table.export_rows.size
+
+      # Meal prep never lands here; it names its sheets after its meals.
+      def sheet_name
+        return @report.sections.first[:title] if @tab == "bibo" && @report.leg.present?
+        return "Boat Transfers" if @tab == "bibo"
+
+        @tab.titleize
+      end
+
+      def period_label = @report.start_date == @report.end_date ? @report.start_date.strftime("%d %b %Y") : "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
     end
   end
 end

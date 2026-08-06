@@ -1,0 +1,69 @@
+<div class="mx-auto max-w-3xl space-y-6 pb-20">
+  <div class="flex flex-col gap-2 px-4 md:px-0">
+    <h1 class="text-3xl font-bold tracking-tight text-slate-950">Pay Account Balance</h1>
+    <p class="text-sm text-slate-600">Pay a lump sum toward your account instead of picking specific invoices. The hotel applies it to your oldest outstanding invoices first.</p>
+  </div>
+
+  <% if @presenter.relationships.empty? %>
+    <section class="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+      <div class="inline-flex size-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+        <%= cached_icon "building-2", class: "size-6" %>
+      </div>
+      <h3 class="mt-4 text-sm font-bold text-slate-950">No Relationships Found</h3>
+      <p class="mt-1 text-xs text-slate-500 max-w-sm mx-auto">There are no active corporate hotel relationships available for payment under this account.</p>
+    </section>
+  <% else %>
+    <%= form_with url: pay_balance_corporate_ar_payments_path, method: :get, class: "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm", data: { controller: "auto-submit" } do %>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="hotel_corporate_account_id" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Choose Hotel</label>
+          <div class="relative mt-2">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <%= cached_icon "hotel", class: "size-4 text-slate-400" %>
+            </div>
+            <%= select_tag :hotel_corporate_account_id,
+              options_from_collection_for_select(@presenter.relationships, :id, ->(relationship) { relationship.hotel.name }, @presenter.selected_relationship&.id),
+              id: "hotel_corporate_account_id",
+              data: { action: "change->auto-submit#submitNow" },
+              class: "block w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10 transition-all shadow-sm" %>
+          </div>
+        </div>
+        <div>
+          <label for="currency" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Currency</label>
+          <%= select_tag :currency,
+            options_for_select(@presenter.available_currencies, @presenter.selected_currency),
+            id: "currency",
+            data: { action: "change->auto-submit#submitNow" },
+            class: "mt-2 block w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900/10 transition-all shadow-sm" %>
+        </div>
+      </div>
+    <% end %>
+
+    <% if @presenter.selected_relationship.present? && @presenter.selected_currency.present? %>
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="px-4 py-5 sm:px-6">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Outstanding balance</p>
+          <p class="mt-1.5 text-3xl font-black tabular-nums text-slate-950"><%= @presenter.selected_currency %> <%= format_number(@presenter.outstanding_total, precision: 2) %></p>
+        </div>
+        <div class="border-t border-slate-200 bg-slate-50/40 px-4 py-4 sm:px-6">
+          <%= link_to new_corporate_ar_payment_submission_path(ar_payment_submission: {
+                lump_sum: "true",
+                hotel_corporate_account_id: @presenter.selected_relationship&.id,
+                currency: @presenter.selected_currency,
+                amount: @presenter.outstanding_total
+              }),
+              class: "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700" do %>
+            Pay
+          <% end %>
+        </div>
+      </section>
+    <% else %>
+      <div class="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
+        <p class="text-sm font-semibold text-slate-700">No Outstanding Balance</p>
+        <p class="mt-1 text-xs text-slate-500">This hotel relationship has no open invoices to pay.</p>
+      </div>
+    <% end %>
+
+    <%= link_to "Back to Payment History", corporate_ar_payments_path, class: "inline-flex text-sm font-bold text-slate-600 hover:text-slate-900" %>
+  <% end %>
+</div>

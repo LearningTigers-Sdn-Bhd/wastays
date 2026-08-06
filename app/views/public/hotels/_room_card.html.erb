@@ -1,0 +1,132 @@
+<%# frozen_string_literal: true %>
+
+<% available_qty = room_type.available_quantity %>
+
+<div class="card overflow-hidden group hover:shadow-xl transition-all duration-300 border-2 border-transparent"
+     data-role="card-container"
+     data-room-selector-target="roomCard"
+     data-room-type-id="<%= room_type.id %>"
+     data-room-name="<%= room_type.name %>"
+     data-room-price="<%= room_type.single_room_total_price_value %>"
+     data-room-pax-price="<%= room_type.pax_rate_value %>"
+     data-room-single-supplement="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.single_supplement&.to_f || 0.0) : 0 %>"
+     data-room-child-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.child_price_multiplier&.to_f || 1.0) : 1.0 %>"
+     data-room-age-bands="<%= (room_type.per_pax_billing? ? room_type.pricing_summary[:rate_plan]&.rate_plan_age_bands.to_a : []).map { |b| { minAge: b.min_age, maxAge: b.max_age, pricingMode: b.pricing_mode, value: b.price_value.to_f } }.to_json %>"
+     data-room-max-capacity="<%= room_type.max_capacity %>"
+     data-room-max-adults="<%= room_type.max_adults %>"
+     data-room-max-children="<%= room_type.max_children.to_i %>"
+     data-room-available-quantity="<%= available_qty %>">
+  <div class="flex flex-col md:flex-row">
+    <div class="md:w-80 lg:w-96 h-64 md:h-auto relative overflow-hidden cursor-pointer"
+         data-action="click->room-details#open"
+         data-room-details="<%= room_type.details_json %>">
+
+      <% if room_type.photo_url %>
+        <%= image_tag room_type.photo_url, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
+      <% else %>
+        <div class="absolute inset-0 bg-muted flex items-center justify-center">
+          <svg class="w-12 h-12 text-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>
+        </div>
+      <% end %>
+    </div>
+    
+    <div class="flex-1 px-6 py-4 flex flex-col justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-foreground mb-2"><%= room_type.name %></h3>
+        <p class="text-sm text-muted-foreground line-clamp-2 mb-4"><%= room_type.description %></p>
+        
+        <div class="flex flex-wrap gap-y-2 gap-x-4 mb-6">
+          <div class="flex items-center gap-x-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            <%= cached_icon "adult", library: "guest", class: "w-3.5 h-3.5 text-primary fill-current" %>
+            Up to <%= room_type.max_adults %> Adults
+          </div>
+          <% if room_type.max_children.to_i > 0 %>
+            <div class="flex items-center gap-x-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <%= cached_icon "child", library: "guest", class: "w-3 h-3 text-primary fill-current" %>
+              <%= room_type.max_children %> <%= room_type.max_children == 1 ? "Child" : "Children" %>
+            </div>
+          <% end %>
+        </div>
+
+      </div>
+
+      <div class="flex justify-between items-end border-t border-border pt-4">
+        <div>
+          <% if search_ready %>
+            <% if (restriction_error = room_type.stay_restriction_error).present? %>
+              <p class="text-xs font-bold text-destructive flex items-start gap-x-1.5 mt-1">
+                <svg class="w-4 h-4 shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <%= restriction_error %>
+              </p>
+            <% else %>
+              <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">
+                <%= room_type.per_pax_billing? ? "Price Per Person" : "Price Per Room" %>
+              </p>
+              <p class="text-2xl font-black text-foreground">
+                <%= room_type.per_pax_billing? ? room_type.display_pax_rate(display_currency) : room_type.display_single_room_total_price(display_currency) %>
+              </p>
+              <p class="text-[10px] text-muted-foreground italic">
+                <%= room_type.rate_plan_name %> · <%= display_currency != room_type.single_room_pricing_summary[:currency] ? "estimate" : "fixed rate" %>
+              </p>
+            <% end %>
+          <% else %>
+            <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">
+              <%= @hotel.pax_pricing_only? ? "Price Per Person" : "Price Per Room" %>
+            </p>
+            <p class="text-sm font-bold text-muted-foreground">Select dates to see price</p>
+          <% end %>
+        </div>
+
+        <% if search_ready %>
+          <% if room_type.stay_restriction_error.present? %>
+            <button type="button" class="btn border border-border text-muted-foreground bg-muted font-bold py-3 px-8 cursor-not-allowed" disabled>
+              Unavailable
+            </button>
+          <% elsif available_qty <= 0 %>
+            <button type="button" class="btn border border-border text-muted-foreground bg-muted font-bold py-3 px-8 cursor-not-allowed" disabled>
+              Sold Out
+            </button>
+          <% else %>
+            <div>
+              <%# 1. Add to Stay button (visible when selected quantity is 0) %>
+              <button type="button"
+                      data-role="add-button"
+                      data-action="click->room-selector#add"
+                      data-room-type-id="<%= room_type.id %>"
+                      class="btn bg-brand-navy hover:bg-brand-navy-hover text-white font-bold py-3 px-8 shadow-lg shadow-brand-navy/20 transition-all duration-200">
+                Add to Stay
+              </button>
+
+              <%# 2. Stepper control (visible when selected quantity > 0) %>
+              <div data-role="stepper" class="flex items-center gap-x-3 bg-muted rounded-xl border border-border p-1 hidden">
+                <button type="button"
+                        data-role="decrement-btn"
+                        data-action="click->room-selector#decrement"
+                        data-room-type-id="<%= room_type.id %>"
+                        class="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-white hover:shadow-sm border border-transparent hover:border-border transition font-black text-lg">
+                  −
+                </button>
+                <span data-room-selector-target="quantityDisplay"
+                      data-room-type-id="<%= room_type.id %>"
+                      class="w-6 text-center text-sm font-black text-foreground">
+                  0
+                </span>
+                <button type="button"
+                        data-role="increment-btn"
+                        data-action="click->room-selector#increment"
+                        data-room-type-id="<%= room_type.id %>"
+                        class="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-white hover:shadow-sm border border-transparent hover:border-border transition font-black text-lg">
+                  +
+                </button>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <button type="button" class="btn bg-muted text-muted-foreground font-bold py-3 px-8 cursor-not-allowed" disabled>
+            Select Dates
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

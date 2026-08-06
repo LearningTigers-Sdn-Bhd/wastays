@@ -1,0 +1,82 @@
+<%# locals: (f:, field:, label:, side:, height_class: "h-44") %>
+<% attached = id_scanner_attached?(f, field) %>
+<div class="space-y-3" data-controller="id-upload">
+  <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider"><%= label %></label>
+  <div class="relative group <%= height_class %> w-full transition-all duration-300 ease-in-out">
+    <!-- Upload Placeholder -->
+    <div data-action="click->id-upload#openGallery" 
+         data-id-upload-target="placeholder" 
+         class="<%= 'hidden' if attached %> flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer hover:bg-slate-50 transition bg-white overflow-hidden">
+      <div class="flex flex-col items-center justify-center">
+        <div class="mb-2 text-slate-400 group-hover:text-slate-500 transition-colors">
+          <%= id_scanner_placeholder_icon(side) %>
+          <% if side == :front %>
+            <div class="w-8 h-0.5 bg-current mx-auto mt-1 rounded-full opacity-50"></div>
+          <% end %>
+        </div>
+        <p class="text-[10px] font-bold text-slate-600 uppercase tracking-widest"><%= id_scanner_side_label(side) %></p>
+        <p class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest">Click to upload</p>
+      </div>
+
+      <!-- Mobile/Staff Scanner Button Overlay (Hidden on Desktop/Laptop) -->
+      <button type="button" data-action="click->scanner#open" data-input-id="<%= f.object_name %>_<%= field %>" class="absolute bottom-3 right-3 w-10 h-10 bg-slate-900 rounded-xl flex md:hidden items-center justify-center text-white shadow-lg hover:bg-slate-800 transition z-10">
+        <%= cached_icon "camera", stroke_width: 2, class: "w-5 h-5" %>
+      </button>
+    </div>
+    
+    <!-- Image Preview Container -->
+    <div data-id-upload-target="previewContainer" class="<%= 'hidden' unless attached %> absolute inset-0 w-full h-full rounded-2xl overflow-hidden shadow-sm ring-1 ring-slate-200 bg-slate-50">
+      <img data-id-upload-target="preview" 
+           src="<%= attached ? id_scanner_preview_url(f, field) : nil %>" 
+           class="w-full h-full object-cover" />
+      <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+        <!-- Desktop Buttons -->
+        <button type="button" data-action="click->id-upload#openGallery" class="hidden md:inline-flex px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl hover:bg-slate-200 transition">
+          Change Photo
+        </button>
+        
+        <!-- Mobile Button (Triggers Choice Menu) -->
+        <button type="button" data-action="click->id-upload#openChoiceMenu" class="md:hidden px-6 py-3 bg-white rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-900 shadow-xl active:scale-95 transition">
+          Retake Photo
+        </button>
+      </div>
+    </div>
+
+
+    <!-- Choice Menu Action Sheet (Mobile Only) -->
+    <div data-id-upload-target="choiceMenu" class="hidden fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm transition-opacity" data-action="click->id-upload#closeChoiceMenu">
+      <div class="absolute bottom-0 inset-x-0 p-4 transform transition-transform translate-y-full bg-white rounded-t-[2.5rem] shadow-2xl" onclick="event.stopPropagation()">
+        <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+        <h4 class="text-center text-sm font-black uppercase tracking-widest text-slate-900 mb-6">Retake ID Photo</h4>
+        
+        <div class="space-y-3 pb-8">
+          <button type="button" data-action="click->id-upload#closeChoiceMenu click->scanner#open" data-input-id="<%= f.object_name %>_<%= field %>" class="w-full flex items-center gap-4 p-5 bg-slate-50 rounded-3xl hover:bg-slate-100 transition group">
+            <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg group-active:scale-90 transition">
+              <%= cached_icon "camera", stroke_width: 2, class: "w-6 h-6" %>
+            </div>
+            <div class="text-left">
+              <p class="text-sm font-black text-slate-900 uppercase tracking-wider">Open Scanner</p>
+              <p class="text-[11px] text-slate-500 font-medium">Use your camera to scan ID</p>
+            </div>
+          </button>
+
+          <button type="button" data-action="click->id-upload#_openGallery" class="w-full flex items-center gap-4 p-5 bg-slate-50 rounded-3xl hover:bg-slate-100 transition group">
+            <div class="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg group-active:scale-90 transition">
+              <%= cached_icon "image", stroke_width: 2, class: "w-6 h-6" %>
+            </div>
+            <div class="text-left">
+              <p class="text-sm font-black text-slate-900 uppercase tracking-wider">Choose from Gallery</p>
+              <p class="text-[11px] text-slate-500 font-medium">Upload an existing photo</p>
+            </div>
+          </button>
+
+          <button type="button" data-action="click->id-upload#closeChoiceMenu" class="w-full p-5 text-sm font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <%= f.file_field field, class: "hidden", accept: "image/*", data: { id_upload_target: "input", action: "change->id-upload#updatePreview" } %>
+  </div>
+</div>

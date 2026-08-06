@@ -1,0 +1,242 @@
+---
+version: "1.0"
+last_updated: 2026-07-15
+---
+
+# WAStays Portal UI Contract
+
+This contract governs Admin, Hotel, Corporate, and Guest portal UI. Public and
+marketing pages are outside its scope.
+
+## 1. Page ownership
+
+`panel-page` owns the portal content viewport, including its width, height,
+screen-edge padding, workspace behavior, and mobile-navigation clearance.
+
+- Do not override, duplicate, cap, or compensate for `panel-page`.
+- Do not add page-level `max-w-*`, replacement padding, negative margins, or
+  arbitrary width and height values.
+- Pages control only their internal layout.
+
+## 2. Semantic styling
+
+Use portal semantic tokens such as `background`, `foreground`, `card`,
+`card-foreground`, `muted`, `muted-foreground`, `border`,
+`border-interactive`, `primary`, and the semantic status tokens.
+
+- Do not introduce palette utilities such as `slate-*`, `gray-*`, `indigo-*`,
+  `red-*`, `green-*`, `white`, or arbitrary color values in portal UI.
+- Use the established `PanelsUI` radius, border, shadow, and focus treatments.
+
+## 3. Typography
+
+- Page title: `text-base font-semibold tracking-tight`
+- Section title: `text-base font-semibold`
+- Card title: component default
+- Field label: `text-sm font-medium`
+- Body and descriptions: `text-sm`
+- Supporting metadata: `text-xs`
+- Secondary text: `text-muted-foreground`
+
+Large operational values must use `PanelsUI::MetricCard` or another approved
+data-display primitive.
+
+Avoid decorative uppercase text, excessive tracking, `font-bold`, `font-black`,
+and page-local type scales. Keep heading order semantic: `h1`, then `h2`, then
+`h3`.
+
+These roles mirror the type tokens defined in `app/assets/tailwind/panel/*`.
+When a case is ambiguous, resolve it against those tokens, not a nearby page.
+
+## 4. Spacing
+
+Use the established Tailwind spacing scale by role:
+
+- Inline and icon gaps: `1`, `1.5`, `2`
+- Control and component gaps: `2.5`, `3`, `4`
+- Section spacing: `5`, `6`, `8`
+- Exceptional workflow separation: `10`
+
+Prefer `gap-*` and `space-y-*` for relationships and component density options
+for internal padding. Do not use arbitrary spacing values or copy spacing from a
+nearby page without confirming that the content relationship is the same.
+
+This scale mirrors `app/assets/tailwind/panel/*`; resolve borderline choices
+against those tokens.
+
+Correct:
+
+```erb
+<%# section-level rhythm, then component-level gaps inside %>
+<section class="space-y-6">
+  <div class="flex items-center gap-2">
+    <%= app_icon "calendar" %>
+    <h2 class="text-base font-semibold">Bookings</h2>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2"><%# ... %></div>
+</section>
+```
+
+## 5. Components first
+
+Before writing UI markup:
+
+1. Search `PanelsUI` for an existing component.
+2. Inspect its Ruby API, template, CSS, JavaScript, specs, and real usages.
+3. Confirm whether its variants, slots, or density options meet the need.
+4. Extend it when the requirement belongs to that component.
+5. Introduce a primitive only when no existing primitive can own the pattern.
+
+Do not create a new component merely because the desired appearance differs.
+Do not duplicate an existing component with page-local Tailwind markup. Use
+`app_icon`; do not add inline SVG icons.
+
+A new primitive must include:
+
+- a semantic API
+- light and dark theme behavior
+- keyboard and screen-reader behavior
+- responsive behavior
+- component specs
+- at least one real usage
+
+Model new primitives on the shadcn Nova theme: a compact, small-scale UI with
+tight density, restrained radii and shadows, and modest control sizing. Match
+that character rather than introducing a larger or heavier look, and express it
+through the `PanelsUI` tokens rather than hard-coded values.
+
+## 6. Selection controls
+
+Do not use native `<select>`, Rails `f.select`, `select_tag`, or
+`PanelsUI::NativeSelect` in portal UI.
+
+- Use `PanelsUI::SelectMenu` for a finite option set.
+- Use `PanelsUI::Combobox` when options require search or filtering.
+- Use `PanelsUI::MultiSelect` when multiple values may be selected.
+- Preserve labels, hints, errors, disabled state, keyboard navigation, and
+  selected values through `PanelsUI::FormField`.
+
+A native select is allowed only when explicitly required as a documented
+accessibility or platform fallback.
+
+Correct:
+
+```erb
+<%= render PanelsUI::FormField.new(
+      form: form,
+      attribute: :board,
+      label: "Board basis",
+      hint: "Keyboard: type to jump, arrows to move, Enter to pick.") do |field| %>
+  <% field.with_select_menu(
+       [
+         { label: "Room only", value: "room_only" },
+         { label: "Breakfast included", value: "bnb" },
+         { label: "Full board", value: "full" }
+       ],
+       prompt: "Select a board basis") %>
+<% end %>
+```
+
+## 7. Page composition
+
+Components standardize controls and interaction behavior. They do not prescribe
+one universal page layout.
+
+Compose each page around the user's primary task, information hierarchy,
+content volume, decision frequency, action risk, mobile behavior, and total
+scroll cost.
+
+- Prefer progressive disclosure, tabs, sheets, dialogs, collapsibles, or
+  dedicated pages when they reduce scanning and scrolling.
+- When adding tabs to a new or redesigned page, use `PanelsUI::Tabs` with the
+  `line` variant. Use the `pill` variant only when it is explicitly requested.
+- Do not reduce scroll by shrinking typography, controls, or spacing.
+- Avoid unnecessary card nesting, repeated explanations, duplicated headings,
+  unrelated workflows in one continuous form, and actions far from the content
+  they affect.
+
+A card is not the default container. Structure pages with labelled `<section>`
+regions and heading hierarchy. Reach for `PanelsUI::Card` (or `MetricCard`) only
+when the content genuinely needs a bounded, elevated surface — not to wrap every
+section.
+
+Plain labelled sections are the default and the priority. Cards are a
+deliberate exception, justified only by the content, not by preference. A set of
+distinct, self-contained offers meant to be compared — such as a
+plan-comparison view — can warrant bounded surfaces, because the content is
+inherently discrete. That justification comes from the content itself, not from
+a nearby page that happens to use cards. When in doubt, default to a section.
+
+## 8. Form separation
+
+A page has one clear responsibility.
+
+- Do not embed create or edit forms inside an index, table, dashboard, or
+  unrelated detail page.
+- Use a dedicated `new` or `edit` page, a dialog for a short focused decision,
+  or a sheet for contextual editing that benefits from keeping the source
+  visible.
+- A settings page may itself be a form when updating those settings is its
+  primary responsibility.
+- Do not place unrelated forms on one page. Split them into routes, tabs,
+  dialogs, or sheets.
+- Keep submission actions attached to the form they submit.
+
+## 9. Interaction ownership
+
+- Use `PanelsUI` for shared UI behavior and presentation.
+- Use Stimulus for application-specific behavior.
+- Use Turbo for navigation, frames, and server-rendered updates.
+- Do not introduce a second implementation of an existing interaction.
+- Do not mix business behavior into a visual primitive.
+
+## 10. Accessibility
+
+All portal UI must meet WCAG 2.2 AA.
+
+- Use semantic HTML before ARIA; do not recreate native semantics unnecessarily.
+- Give every control an accessible name and complete keyboard operation.
+- Preserve logical heading, DOM, focus, and reading order with visible focus.
+- Meet AA contrast: 4.5:1 for normal text and 3:1 for large text and UI
+  boundaries.
+- Do not communicate meaning through color, icons, position, or motion alone.
+- Associate fields with labels, hints, errors, required state, and disabled state.
+- Move and restore focus correctly for dialogs, sheets, menus, and validation
+  errors.
+- Provide `aria-live` feedback for asynchronous status changes when necessary.
+- Make pointer targets at least 24 by 24 CSS pixels; prefer 44 by 44 for primary
+  touch controls.
+- Support zoom, text resizing, reflow, reduced motion, and mobile keyboard use.
+- Hide decorative icons from assistive technology.
+- Validate keyboard use and accessible names on the rendered UI.
+
+## 11. Validation
+
+Before completing UI work, verify:
+
+- existing components were inspected before extension or replacement
+- semantic tokens and styled selection components are used
+- `panel-page` ownership remains intact
+- typography and heading hierarchy
+- keyboard navigation and visible focus
+- labels, hints, errors, disabled states, and long-content states
+- mobile and desktop layouts
+- light and dark portal themes where applicable
+- empty, loading, error, and destructive states
+- Turbo and Stimulus behavior
+- relevant component and system specs
+
+For meaningful visual changes, inspect the rendered page rather than source code
+alone.
+
+## Source of truth
+
+- `app/components/panels_ui/**`
+- `app/assets/tailwind/panel/**`
+- portal shell layouts
+
+Historical design plans are not authoritative when they conflict with this file
+or the current `PanelsUI` implementation.
+
+When this contract and the `PanelsUI` implementation disagree, fix whichever is
+wrong in the same PR. Do not leave the two in conflict.

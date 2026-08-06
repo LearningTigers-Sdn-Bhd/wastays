@@ -1,0 +1,22 @@
+<% folio_show = local_assigns.fetch(:folio_show) %>
+
+<section class="rounded-md border border-border bg-card p-4 shadow-sm">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-7 items-center justify-center rounded-md <%= folio_show.checkout_readiness_label == "Ready" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700" %>">
+          <%= cached_icon "door-open", class: "size-3.5" %>
+        </span>
+        <h2 class="text-sm font-black uppercase tracking-[0.18em] text-foreground">Checkout Status</h2>
+      </div>
+
+      <p class="mt-3 text-base font-black text-foreground"><%= folio_show.checkout_status_label %></p>
+      <p class="mt-1 text-sm font-semibold text-muted-foreground"><%= folio_show.checkout_status_description %></p>
+    </div>
+
+    <%= link_to folio_show.booking_show_url, class: "inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted" do %>
+      Go to Booking
+      <%= cached_icon "arrow-right", class: "size-3" %>
+    <% end %>
+  </div>
+</section>

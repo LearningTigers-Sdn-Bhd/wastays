@@ -1,0 +1,31 @@
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "stay-view-room-status-sheet",
+        side: :right,
+        size: :md,
+        title: "Change room status",
+        description: "#{@room_type.name} · Room #{@room_number}",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with model: @room_status, url: hotel_stay_view_room_status_path(current_hotel, @room_type, @room_number), method: :patch, class: "flex h-full min-h-0 flex-col", data: { turbo_stream: true } do |form| %>
+        <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
+        <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+          <%= render "hotel_portal/stay_view/errors", record: @room_status, title: "The room status could not be changed." %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :status, label: "Physical status", required: true) do |field| %>
+            <% field.with_select_menu(
+              (RoomStatus::STATUSES - [ "late_checkout_detected" ]).map { |status| { label: status.humanize, value: status } },
+              selected: @room_status.status
+            ) %>
+          <% end %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :notes, label: "Reason or note", hint: "This note is included in the operational audit trail.") do |field| %>
+            <% field.with_text_area(rows: 4) %>
+          <% end %>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-border p-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Updating…" }) do %>Update status<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

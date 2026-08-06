@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class ProfilesController < HotelPortal::BaseController
+  class ProfilesController < HotelPortal::SettingsBaseController
     before_action :set_hotel
     before_action :set_photo_queue
 
     def edit
       authorize @hotel
-      @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, self)
+      prepare_profile_page
+      render :edit, formats: :html if request.format.turbo_stream?
     end
 
     def update
@@ -18,10 +19,10 @@ module HotelPortal
 
       if upload_result
         flash[:alert] = upload_result.alert_message if upload_result.respond_to?(:trimmed?) && upload_result.trimmed?
-        redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel profile updated successfully."
+        redirect_with_toast(edit_hotel_profile_path(@hotel), "Hotel profile updated successfully.", type: :success, status: :see_other)
       else
-        @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, self)
-        render :edit, status: :unprocessable_content
+        prepare_profile_page
+        render :edit, formats: :html, status: :unprocessable_content
       end
     end
 
@@ -32,9 +33,26 @@ module HotelPortal
       clear_featured_photo_if_needed(photo.id)
       photo.purge
 
-      redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel photo removed successfully."
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: [
+            turbo_stream.replace(
+              "hotel-published-photos",
+              partial: "hotel_portal/profiles/published_photos",
+              locals: { hotel: @hotel }
+            ),
+            toast_stream("Hotel photo removed successfully.", type: :success)
+          ]
+        end
+        format.html { redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel photo removed successfully." }
+      end
     rescue ActiveRecord::RecordNotFound
-      redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found."
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: toast_stream("Hotel photo could not be found.", type: :error), status: :not_found
+        end
+        format.html { redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found." }
+      end
     end
 
     def destroy_photos
@@ -66,12 +84,35 @@ module HotelPortal
       photo = @hotel.photos.attachments.find(params[:photo_id])
 
       if @hotel.update(featured_photo_attachment_id: photo.id)
-        redirect_to edit_hotel_profile_path(@hotel), notice: "Featured photo updated successfully."
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: [
+              turbo_stream.replace(
+                "hotel-published-photos",
+                partial: "hotel_portal/profiles/published_photos",
+                locals: { hotel: @hotel }
+              ),
+              toast_stream("Featured photo updated successfully.", type: :success)
+            ]
+          end
+          format.html { redirect_to edit_hotel_profile_path(@hotel), notice: "Featured photo updated successfully." }
+        end
       else
-        redirect_to edit_hotel_profile_path(@hotel), alert: @hotel.errors.full_messages.to_sentence
+        message = @hotel.errors.full_messages.to_sentence
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: toast_stream(message, type: :error), status: :unprocessable_content
+          end
+          format.html { redirect_to edit_hotel_profile_path(@hotel), alert: message }
+        end
       end
     rescue ActiveRecord::RecordNotFound
-      redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found."
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: toast_stream("Hotel photo could not be found.", type: :error), status: :not_found
+        end
+        format.html { redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found." }
+      end
     end
 
     def enqueue_photo
@@ -128,6 +169,10 @@ module HotelPortal
 
     def set_photo_queue
       @photo_queue = HotelPortal::PhotoQueue.new(@hotel, session)
+    end
+
+    def prepare_profile_page
+      @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, view_context)
     end
 
     def clear_featured_photo_if_needed(photo_ids)

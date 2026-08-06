@@ -1,53 +1,140 @@
 # frozen_string_literal: true
 
 class Booking < ApplicationRecord
+  include Bookings::StatusLifecycle
+
+  TOURISM_TAX_KEYS = %w[tourism_tax ttx].freeze
+
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
+  belongs_to :group_booking, optional: true
   belongs_to :payout_batch, optional: true
+  belongs_to :hotel_corporate_account, optional: true
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
+  has_one :guest_registration_card, dependent: :destroy
   has_one :refund_request, dependent: :destroy
+  has_many :booking_folios, dependent: :destroy
+  has_one :booking_folio, -> { where(is_primary: true, booking_room_id: nil) }, dependent: :destroy
+  has_many :folio_routing_rules, dependent: :destroy
+  has_many :booking_billing_parties, dependent: :restrict_with_error
+  has_many :booking_billing_terms, through: :booking_billing_parties, source: :billing_terms
+  has_many :booking_tax_inclusion_overrides, dependent: :destroy
+  has_many :billing_route_batches, dependent: :destroy
+  has_many :deposits, dependent: :restrict_with_error
+  has_one_attached :id_front
+  has_one_attached :id_back
   has_many :housekeeping_requests, dependent: :destroy
   has_many :complaint_requests, dependent: :destroy
+  has_many :check_out_requests, dependent: :destroy
+  has_many :notification_deliveries, dependent: :destroy
+  has_many :payment_transactions, dependent: :destroy
+  has_one :booking_confirmation_token, dependent: :destroy
+  has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
-  attr_accessor :estimated_arrival_time
-  attr_accessor :guest_government_id
+  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :guest_date_of_birth, :status_transition_event
 
-  STATUSES = %w[pending confirmed checked_in cancelled completed overbooked].freeze
-  PAYMENT_STATUSES = %w[pending authorized captured failed refunded].freeze
+  def online?
+    source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
+  end
+
+  def check_in=(value)
+    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_in) if hotel && value.present?
+    super(value)
+  end
+
+  def check_out=(value)
+    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_out) if hotel && value.present?
+    super(value)
+  end
+
+  def room_type_summary
+    booking_rooms.includes(:room_type).map { |br| br.room_type.name }.uniq.to_sentence
+  end
+
+  def guest_government_id
+    @guest_government_id.presence ||
+      pre_checkin&.metadata&.dig("guest_government_id").presence ||
+      primary_guest&.government_id
+  end
+
+  def guest_government_id=(value)
+    @guest_government_id = value
+  end
+
+  STATUSES = %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required cancelled completed overbooked no_show voided].freeze
+  OCCUPIED_STATUSES = %w[checked_in due_out_detected checkout_required].freeze
+  # Statuses that occupy a room on the timeline (arrival/occupied/departure). Shared by the
+  # Stay View loader and its filter contract so both describe the same set of bookings.
+  OCCUPYING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required completed].freeze
+  PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
   PRE_CHECKIN_STATUSES = %w[not_started pending in_progress completed failed].freeze
   GUARANTEE_METHODS = %w[none pre_checkin_completed manual_at_hotel card_authorization_document charge_now].freeze
-  DEPOSIT_STATUSES = %w[not_required pending_at_hotel authorized collected released failed].freeze
+  DEPOSIT_STATUSES = %w[not_required pending_at_hotel authorized held collected released failed].freeze
+  DOCUMENT_TYPES = [
+    [ "Identity Card (IC)", "ic" ],
+    [ "Passport", "passport" ]
+  ].freeze
 
   validates :status, presence: true, inclusion: { in: STATUSES }
+  validate :status_transition_must_be_allowed, if: :status_changed_on_persisted_record?
+  validate :check_cta_ctd_restrictions
+  validates :no_show_detected_business_date, presence: true, if: -> { status == "no_show_detected" }
   validates :payment_status, presence: true, inclusion: { in: PAYMENT_STATUSES }
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
-  validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_nil: true }
+  validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
 
   def primary_guest
-    booking_guests.find_by(is_primary: true)&.guest
+    if booking_guests.loaded?
+      booking_guests.find { |bg| bg.is_primary? }&.guest
+    else
+      booking_guests.find_by(is_primary: true)&.guest
+    end
+  end
+
+  def vip?
+    primary_guest&.vip? || self[:vip] || false
+  end
+
+  def blacklisted?
+    primary_guest&.blacklisted_at?(hotel) || false
+  end
+
+  def repeat?
+    primary_guest&.repeat? || false
   end
 
   validates :guest_name, :guest_email, :guest_phone, presence: true
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true
+  validates :folio_account_reference, uniqueness: { scope: :hotel_id, allow_blank: true }
+  validates :group_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validate :group_booking_belongs_to_hotel
 
-  before_validation :generate_confirmation_token, on: :create
+  before_validation :assign_confirmation_token, on: :create
+  before_create :assign_document_counters
   before_validation :normalize_guest_data
+  before_validation :assign_existing_document_references
+  after_create :register_confirmation_token
+  after_update :sync_confirmation_token, if: :saved_change_to_confirmation_token?
 
   scope :recent_first, -> { order(created_at: :desc) }
+  scope :with_confirmation_token, ->(token) {
+    joins(:booking_confirmation_token).where(booking_confirmation_tokens: { token: token.to_s.strip.upcase })
+  }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
   scope :completed, -> { where(status: "completed") }
-  scope :active, -> { where(status: [ "confirmed", "checked_in" ]) }
-  scope :revenue_generating, -> { where(status: [ "confirmed", "checked_in", "completed" ]) }
+  scope :no_show, -> { where(status: "no_show") }
+  scope :active, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required" ]) }
+  scope :revenue_generating, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
 
   scope :search, ->(query) {
@@ -62,6 +149,23 @@ class Booking < ApplicationRecord
   scope :created_between, ->(start_date, end_date) {
     where(created_at: start_date.beginning_of_day..end_date.end_of_day)
   }
+  scope :checking_in_on, ->(date, zone = Time.zone) { where(check_in: date.to_date.in_time_zone(zone).all_day) }
+  scope :checking_out_on, ->(date, zone = Time.zone) { where(check_out: date.to_date.in_time_zone(zone).all_day) }
+  scope :checking_in_between, ->(start_date, end_date, zone = Time.zone) {
+    where(check_in: start_date.to_date.in_time_zone(zone).beginning_of_day..end_date.to_date.in_time_zone(zone).end_of_day)
+  }
+  scope :checking_out_between, ->(start_date, end_date, zone = Time.zone) {
+    where(check_out: start_date.to_date.in_time_zone(zone).beginning_of_day..end_date.to_date.in_time_zone(zone).end_of_day)
+  }
+  scope :occupying_night_on, ->(date, zone = Time.zone) {
+    next_day_start = (date.to_date + 1.day).in_time_zone(zone).beginning_of_day
+    where("check_in < ? AND check_out >= ?", next_day_start, next_day_start)
+  }
+  scope :intersecting_local_date, ->(date, zone = Time.zone) {
+    day_start = date.to_date.in_time_zone(zone).beginning_of_day
+    next_day_start = (date.to_date + 1.day).in_time_zone(zone).beginning_of_day
+    where("check_in < ? AND check_out >= ?", next_day_start, day_start)
+  }
 
   scope :unbatched_upcoming, ->(cutoff_date) {
     completed.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)
@@ -71,10 +175,20 @@ class Booking < ApplicationRecord
     base = base_scope || revenue_generating
     base = base.created_between(start_date, end_date).search(query)
 
+    # Reconcile to FolioTransaction SSOT
+    transactions = FolioTransaction.joins(booking_folio: :booking)
+                                   .where(bookings: { id: base.select(:id) })
+                                   .where(transaction_type: %w[charge adjustment])
+
+    total_gross = transactions.sum(:amount)
+    # Proportional margin calculation based on booking snapshots
+    total_margin = base.sum("COALESCE(margin_amount, 0)")
+    total_net = total_gross - total_margin
+
     {
-      total_revenue: base.sum(:total_amount) || 0,
-      total_margin: base.sum("COALESCE(margin_amount, 0)"),
-      total_net: base.sum("COALESCE(net_amount, 0)"),
+      total_revenue: total_gross,
+      total_margin: total_margin,
+      total_net: total_net,
       booking_count: base.count,
       active_hotels_count: base.distinct.count(:hotel_id)
     }
@@ -82,24 +196,36 @@ class Booking < ApplicationRecord
 
   def self.daily_analytics(start_date, end_date, query: nil, base_scope: nil)
     base = base_scope || revenue_generating
-    base.created_between(start_date, end_date)
-      .search(query)
-      .group_by { |booking| booking.created_at.to_date }
+    base = base.created_between(start_date, end_date).search(query).includes(booking_folio: :folio_transactions)
+
+    base.group_by { |booking| booking.created_at.to_date }
       .sort
       .map do |date, bookings|
+        # Sum gross from transactions for these specific bookings
+        gross = FolioTransaction.joins(booking_folio: :booking)
+                                .where(bookings: { id: bookings.map(&:id) })
+                                .where(transaction_type: %w[charge adjustment])
+                                .sum(:amount)
+        margin = bookings.sum { |b| b.margin_amount || 0 }
         {
           date: date,
           booking_count: bookings.count,
-          revenue: bookings.sum(&:total_amount),
-          margin: bookings.sum { |b| b.margin_amount || 0 },
-          net: bookings.sum { |b| b.net_amount || 0 }
+          revenue: gross,
+          margin: margin,
+          net: gross - margin
         }
       end
   end
 
   def self.daily_revenue_data(bookings)
+    # Reconcile to ledger
     bookings.group_by { |b| b.created_at.to_date }
-            .transform_values { |bs| bs.sum(&:total_amount) }
+            .transform_values do |bs|
+              FolioTransaction.joins(booking_folio: :booking)
+                              .where(bookings: { id: bs.map(&:id) })
+                              .where(transaction_type: %w[charge adjustment])
+                              .sum(:amount)
+            end
             .sort.to_h
   end
   def self.last_friday
@@ -121,6 +247,7 @@ class Booking < ApplicationRecord
 
   def self.for_financial_breakdown(hotel, start_date, end_date, query)
     hotel.bookings.revenue_generating
+         .includes(booking_folio: :folio_transactions)
          .created_between(start_date, end_date)
          .search(query)
          .order(created_at: :desc)
@@ -130,8 +257,20 @@ class Booking < ApplicationRecord
     status == "checked_in"
   end
 
+  def checkout_required?
+    status == "checkout_required"
+  end
+
   def checked_out?
     status == "completed"
+  end
+
+  def guest_registration_card_number_display
+    formatted_guest_registration_number.presence || "Pending check-in"
+  end
+
+  def group_booking?
+    group_booking_id.present?
   end
 
   def payout_eligible?
@@ -139,8 +278,8 @@ class Booking < ApplicationRecord
   end
 
   before_save :set_payout_status, if: :status_changed?
-  after_create_commit :enqueue_invoice_email, if: -> { status == "confirmed" }
-  after_create_commit :enqueue_whatsapp_invoice, if: -> { status == "confirmed" }
+  after_create_commit :enqueue_receipt_email, if: :send_creation_notifications?
+  after_create_commit :enqueue_whatsapp_receipt, if: :send_creation_notifications?
 
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
@@ -160,8 +299,135 @@ class Booking < ApplicationRecord
     pre_checkin_status.presence || pre_checkin&.status.presence || "not_started"
   end
 
+  delegate :folio_number, to: :booking_folio, allow_nil: true
+  delegate :folio_year, to: :booking_folio, allow_nil: true
+  delegate :invoice_number, to: :booking_folio, allow_nil: true
+
+  def pre_checkin_completed?
+    pre_checkin_display_status == "completed"
+  end
+
   def tourism_tax?
-    tourism_tax_applied && tourism_tax_amount.positive?
+    tourism_tax_total.positive?
+  end
+
+  def tourism_tax_total
+    snapshot_total = self.class.tourism_tax_total_from_posting_snapshot(tax_posting_snapshot)
+    return snapshot_total if snapshot_total.positive?
+
+    tax_line_total = self.class.tourism_tax_total_for(tax_lines)
+    return tax_line_total if tax_line_total.positive?
+
+    tourism_tax_amount.to_d.round(2)
+  end
+
+  def folio_outstanding_balance
+    booking_folios.to_a.sum { |folio| folio.outstanding_balance.to_d }
+  end
+
+  def folio_account_reference_display
+    folio_account_reference.presence || formatted_folio_number
+  end
+
+  def assign_folio_account_reference_from!(folio_number, folio_year: DocumentIdentifiers::Issuer.sequence_year(hotel:))
+    return folio_account_reference if folio_account_reference.present?
+    return if folio_number.blank?
+
+    update!(folio_account_reference: DocumentIdentifiers::Issuer.format(hotel:, type: :folio, year: folio_year, number: folio_number))
+    folio_account_reference
+  end
+
+  def transition_status_to!(new_status, event:, attributes: {})
+    self.status_transition_event = event
+    update!(attributes.merge(status: new_status))
+  ensure
+    self.status_transition_event = nil
+  end
+
+  def tax_total
+    Array(tax_lines).sum { |t| t["amount"].to_f }.round(2)
+  end
+
+  def non_tourism_tax_total
+    self.class.non_tourism_tax_total_for(tax_lines)
+  end
+
+  def tax_lines_for(type)
+    Array(tax_lines).select { |t| t["type"] == type.to_s }
+  end
+
+  def self.tourism_tax_total_for(lines)
+    Array(lines).select { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.non_tourism_tax_total_for(lines)
+    Array(lines).reject { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.tourism_tax_total_from_posting_snapshot(snapshot)
+    snapshot.to_h.values.flatten.select { |line| tourism_tax_line?(line) }.sum { |line| tax_line_amount(line) }.round(2)
+  end
+
+  def self.tourism_tax_line?(line)
+    line = line.to_h
+    type = line["type"].presence || line[:type]
+    primary_key = line["primary_tax_key"].presence || line[:primary_tax_key]
+
+    type.to_s.in?(TOURISM_TAX_KEYS) || primary_key.to_s.in?(TOURISM_TAX_KEYS)
+  end
+
+  def self.tax_line_amount(line)
+    line = line.to_h
+    (line["amount"].presence || line[:amount]).to_d
+  end
+
+  def formatted_reservation_number
+    reservation_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :reservation, year: reservation_year, number: reservation_number)
+  end
+
+  def formatted_receipt_number
+    DocumentIdentifiers::Issuer.format(hotel:, type: :receipt, year: created_at&.year, number: receipt_number)
+  end
+
+  def formatted_folio_number
+    DocumentIdentifiers::Issuer.format(hotel:, type: :folio, year: folio_year, number: folio_number)
+  end
+
+  def formatted_invoice_number
+    booking_folio&.invoice_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :invoice, year: booking_folio&.invoice_year, number: invoice_number)
+  end
+
+  def formatted_guest_registration_number
+    guest_registration_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :guest_registration, year: guest_registration_year, number: guest_registration_number)
+  end
+
+  def formatted_tourism_tax_voucher_number
+    tourism_tax_voucher_reference.presence || DocumentIdentifiers::Issuer.format(hotel:, type: :tourism_tax_voucher, year: tourism_tax_voucher_year, number: tourism_tax_voucher_number)
+  end
+
+  def assign_tourism_tax_voucher_number!(user:)
+    with_lock do
+      reload
+      return tourism_tax_voucher_number if tourism_tax_voucher_number.present?
+
+      allocation = DocumentIdentifiers::Issuer.issue!(hotel:, type: :tourism_tax_voucher)
+      update!(
+        tourism_tax_voucher_number: allocation.number,
+        tourism_tax_voucher_year: allocation.year,
+        tourism_tax_voucher_reference: allocation.reference
+      )
+      Bookings::RecordAuditLog.new(
+        auditable: self,
+        user: user,
+        action_type: "tourism_tax_voucher_issued",
+        category: "financial",
+        source: "staff",
+        old_value: {},
+        new_value: { "tourism_tax_voucher_number" => allocation.number },
+        metadata: { "tourism_tax_total" => tourism_tax_total.to_s, "tourism_tax_collected" => tourism_tax_collected? }
+      ).call!
+      allocation.number
+    end
   end
 
   def room_numbers
@@ -175,26 +441,158 @@ class Booking < ApplicationRecord
     where("regexp_replace(guest_phone, '\D', '', 'g') LIKE ?", "%#{suffix}")
   end
 
+  def past_check_in_time?
+    policy = hotel.property_policy
+    return true if policy&.check_in_time.blank?
+
+    hotel_tz = hotel.hotel_time_zone
+    hotel_now = Time.current.in_time_zone(hotel_tz)
+    hotel_today = hotel_now.to_date
+
+    return false if hotel_today < check_in.to_date
+    return true if hotel_today > check_in.to_date
+
+    check_in_dt = hotel_tz.parse("#{check_in.to_date} #{policy.check_in_time}")
+    return false unless check_in_dt
+
+    hotel_now >= check_in_dt
+  rescue ArgumentError, TypeError
+    false
+  end
+
+  def duration_in_nights
+    (check_out.to_date - check_in.to_date).to_i
+  end
+
+  def eligible_for_refund?(refund_policy)
+    return false unless status == "confirmed" && refund_request.nil? && refund_policy.present?
+
+    days_until_checkin = (check_in.to_date - Date.current).to_i
+    days_until_checkin >= refund_policy.min_days_before_checkin
+  end
+
   private
+
+  def group_booking_belongs_to_hotel
+    return if group_booking.blank? || hotel_id.blank? || group_booking.hotel_id == hotel_id
+
+    errors.add(:group_booking, "must belong to the same hotel")
+  end
+
+  def status_changed_on_persisted_record?
+    persisted? && will_save_change_to_status?
+  end
+
+  def status_transition_must_be_allowed
+    from = status_in_database
+    to = status
+    event = status_transition_event
+
+    return if Bookings::StatusLifecycle.valid_transition?(from: from, to: to, event: event)
+
+    errors.add(:status, Bookings::StatusLifecycle.transition_error(from: from, to: to, event: event))
+  end
 
   def set_payout_status
     self.payout_status = "pending" if status == "completed" && payout_status.blank?
+  end
+
+  def send_creation_notifications?
+    status == "confirmed" && !Thread.current[:skip_booking_creation_notifications]
+  end
+
+  def enqueue_receipt_email
+    SendReceiptEmailJob.perform_later(id)
+  end
+
+  def enqueue_whatsapp_receipt
+    SendWhatsappReceiptJob.perform_later(id)
   end
 
   def enqueue_invoice_email
     SendInvoiceEmailJob.perform_later(id)
   end
 
-  def enqueue_whatsapp_invoice
-    SendWhatsappInvoiceJob.perform_later(id)
+  def assign_confirmation_token
+    DocumentIdentifiers::HotelReferences.assign_confirmation_token(self, unique_against: [ Booking, GroupBooking ])
   end
 
-  def generate_confirmation_token
-    self.confirmation_token ||= "WS-#{SecureRandom.alphanumeric(8).upcase}"
+  def register_confirmation_token
+    DocumentIdentifiers::RegisterConfirmationToken.call!(record: self)
+  end
+
+  def sync_confirmation_token
+    DocumentIdentifiers::SyncConfirmationToken.call!(record: self)
+  end
+
+  def assign_document_counters
+    return if reservation_number.present? && reservation_year.present? && reservation_reference.present?
+
+    allocation = DocumentIdentifiers::Issuer.issue!(hotel:, type: :reservation)
+    self.reservation_number = allocation.number
+    self.reservation_year = allocation.year
+    self.reservation_reference = allocation.reference
+  end
+
+  def assign_existing_document_references
+    current_year = DocumentIdentifiers::Issuer.sequence_year(hotel:) if hotel
+    self.reservation_year ||= current_year if reservation_number.present?
+    self.guest_registration_year ||= current_year if guest_registration_number.present?
+    self.tourism_tax_voucher_year ||= current_year if tourism_tax_voucher_number.present?
+    self.reservation_reference ||= DocumentIdentifiers::Issuer.format(hotel:, type: :reservation, year: reservation_year, number: reservation_number)
+    self.guest_registration_reference ||= DocumentIdentifiers::Issuer.format(hotel:, type: :guest_registration, year: guest_registration_year, number: guest_registration_number)
+    self.tourism_tax_voucher_reference ||= DocumentIdentifiers::Issuer.format(hotel:, type: :tourism_tax_voucher, year: tourism_tax_voucher_year, number: tourism_tax_voucher_number)
   end
 
   def normalize_guest_data
     self.guest_email = guest_email&.downcase&.strip
     self.guest_country = guest_country&.split&.map(&:capitalize)&.join(" ") if guest_country.present?
+  end
+
+  def check_cta_ctd_restrictions
+    return unless %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required].include?(status)
+    return unless new_record? || check_in_changed? || check_out_changed?
+    return if new_record? && booking_rooms.target.empty?
+
+    room_types = booking_rooms.map(&:room_type).compact
+    return if room_types.empty?
+
+    room_types.each do |room_type|
+      rate_plan_ids = [ nil ]
+      if booking_rooms.present?
+        rate_plan_ids += booking_rooms.map(&:rate_plan_id).compact
+      end
+      if rate_plan_ids.include?(nil)
+        standard_plan = room_type.standard_rate_plan
+        rate_plan_ids << standard_plan.id if standard_plan
+      end
+      rate_plan_ids.uniq!
+
+      # CTA Check on check-in date
+      if check_in.present?
+        room_rates_at_check_in = RoomRate.where(
+          room_type_id: room_type.id,
+          date: check_in.to_date,
+          rate_plan_id: rate_plan_ids
+        )
+
+        if room_rates_at_check_in.any?(&:closed_to_arrival?)
+          errors.add(:check_in, "date (#{check_in.to_date}) is closed to arrival (CTA) for this rate plan.")
+        end
+      end
+
+      # CTD Check on check_out date
+      if check_out.present?
+        room_rates_at_check_out = RoomRate.where(
+          room_type_id: room_type.id,
+          date: check_out.to_date,
+          rate_plan_id: rate_plan_ids
+        )
+
+        if room_rates_at_check_out.any?(&:closed_to_departure?)
+          errors.add(:check_out, "date (#{check_out.to_date}) is closed to departure (CTD) for this rate plan.")
+        end
+      end
+    end
   end
 end

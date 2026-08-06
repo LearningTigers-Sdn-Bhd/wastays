@@ -1,0 +1,21 @@
+<% folio_show = local_assigns.fetch(:folio_show) %>
+
+<section class="overflow-hidden rounded-md border border-border bg-card shadow-sm">
+  <div class="flex items-center gap-2 border-b border-border px-4 py-3">
+    <span class="inline-flex size-7 items-center justify-center rounded-md bg-blue-50 text-blue-700">
+      <%= cached_icon "book-open", class: "size-3.5" %>
+    </span>
+    <h2 class="text-sm font-black uppercase tracking-[0.18em] text-foreground">Folio Details</h2>
+  </div>
+
+  <table class="w-full table-fixed text-sm">
+    <tbody class="divide-y divide-border">
+      <% folio_show.folio_detail_rows.each do |label, value| %>
+        <tr>
+          <th class="w-40 bg-muted px-4 py-2 text-left text-[11px] font-black uppercase tracking-wider text-muted-foreground sm:w-48"><%= label %></th>
+          <td class="px-4 py-2 font-semibold tabular-nums text-foreground"><%= value %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

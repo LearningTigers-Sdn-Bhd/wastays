@@ -1,14 +1,31 @@
+# frozen_string_literal: true
+
 module HotelOps
   class SeedAccountRoles
-    ROLE_TEMPLATES = [
-      { name: "Hotel Owner", slug: "hotel_owner", permissions: %w[manage_account manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_room_status post_charges view_reports view_payouts manage_requests manage_night_audit] },
-      { name: "General Manager", slug: "general_manager", permissions: %w[manage_hotel_profile manage_room_types manage_rates manage_inventory view_bookings manage_bookings view_guest_phone manage_guest_arrival view_audit_logs export_audit_logs manage_users manage_room_status post_charges view_reports view_payouts manage_requests manage_night_audit] },
-      { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings manage_bookings manage_guest_arrival manage_room_status post_charges manage_requests manage_night_audit] },
-      { name: "Housekeeper", slug: "housekeeper", permissions: %w[manage_room_status manage_requests] }
-    ]
+    # Owner and manager are defined by exclusion: they hold whatever is in the
+    # permission registry, minus what is reserved above them. Deriving the two
+    # keeps them from silently falling behind every time a permission is added.
+    GENERAL_MANAGER_EXCLUSIONS = %w[manage_account].freeze
+
+    STAFF_TEMPLATES = [
+      { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings view_financial_status manage_bookings view_guest_records manage_guest_arrival view_room_readiness manage_room_status post_charges post_folio_charges post_folio_payments manage_requests manage_night_audit manage_concierge perform_housekeeping_tasks dispatch_housekeeping_tasks] },
+      { name: "Housekeeper", slug: "housekeeper", permissions: %w[manage_room_status manage_requests perform_housekeeping_tasks] }
+    ].freeze
+
+    # The one definition of what an account's starting roles hold. db/seeds.rb
+    # reads this too, so the two paths cannot drift apart.
+    def self.role_templates
+      all_slugs = Permission.order(:slug).pluck(:slug)
+
+      [
+        { name: "Hotel Owner", slug: "hotel_owner", permissions: all_slugs },
+        { name: "General Manager", slug: "general_manager", permissions: all_slugs - GENERAL_MANAGER_EXCLUSIONS },
+        *STAFF_TEMPLATES
+      ]
+    end
 
     def self.call(account)
-      ROLE_TEMPLATES.each do |t|
+      role_templates.each do |t|
         role = Role.find_or_create_by!(account: account, slug: t[:slug]) do |r|
           r.name = t[:name]
         end

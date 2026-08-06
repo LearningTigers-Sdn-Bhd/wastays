@@ -1,0 +1,47 @@
+<section aria-labelledby="radio-preview-heading" class="border-t border-border pt-8">
+  <h2 id="radio-preview-heading" class="text-lg font-semibold text-foreground">Radios</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Single-select groups built on the shared toggle scaffolding — accessible <code>role="radiogroup"</code>
+    semantics, whole-card selection, descriptions, and validation feedback.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> radios</h3>
+        <% scope = "radio_#{theme.tr('-', '_')}".to_sym %>
+        <%= form_with url: "#radio-preview", scope: scope, class: "mt-4 space-y-5" do |form| %>
+          <%= render PanelsUI::RadioGroup.new(
+                form: form, attribute: :board, label: "Board basis", selected: "bnb",
+                description: "Applies to every night of the stay.",
+                options: [
+                  { label: "Room only", value: "room_only" },
+                  { label: "Bed & breakfast", value: "bnb", description: "Daily buffet included." },
+                  { label: "Full board", value: "full", disabled: true }
+                ]) %>
+
+          <%= render PanelsUI::RadioGroup.new(
+                form: form, attribute: :housekeeping, label: "Housekeeping", variant: :card, selected: "daily",
+                options: [
+                  { label: "Daily service", value: "daily", description: "The whole card is the target." },
+                  { label: "On request", value: "on_request" }
+                ]) %>
+
+          <%= render PanelsUI::RadioGroup.new(
+                name: "#{scope}[bed]", label: "Bed preference", orientation: :horizontal, size: :sm,
+                error: "Select a bed configuration.",
+                options: [ [ "King", "king" ], [ "Twin", "twin" ], [ "Sofa", "sofa" ] ]) %>
+
+          <%= render PanelsUI::RadioGroup.new(
+                name: "#{scope}[deposit]", label: "Deposit policy", variant: :card, selected: "on_arrival",
+                description: "A selection is required to confirm.",
+                error: "Choose when the deposit is collected.",
+                options: [
+                  { label: "On arrival", value: "on_arrival", description: "Card border reddens at rest; the selected dot is destructive." },
+                  { label: "At booking", value: "at_booking" }
+                ]) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

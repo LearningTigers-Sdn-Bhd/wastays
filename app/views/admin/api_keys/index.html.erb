@@ -1,36 +1,32 @@
-<% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "API Access" %>
-<% end %>
-
 <% if @generated_api_key_token.present? %>
-  <div id="api-key-reveal-modal" class="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="api-key-reveal-title">
-    <div class="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" data-controller="clipboard" data-clipboard-success-text-value="Copied">
-      <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
-        <h2 id="api-key-reveal-title" class="text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">API Key Created</h2>
-        <p class="mt-2 text-sm font-medium text-slate-600">
+  <div id="api-key-reveal-modal" class="fixed inset-0 z-[130] flex items-center justify-center bg-primary/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="api-key-reveal-title">
+    <div class="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl" data-controller="clipboard" data-clipboard-success-text-value="Copied">
+      <div class="border-b border-border px-6 py-5 sm:px-8">
+        <h2 id="api-key-reveal-title" class="text-xl font-bold tracking-tight text-foreground sm:text-2xl">API Key Created</h2>
+        <p class="mt-2 text-sm font-medium text-muted-foreground">
           This API key is shown only once. Copy and store it securely before closing this dialog.
         </p>
       </div>
 
       <div class="space-y-4 px-6 py-5 sm:px-8">
-        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Key Name</p>
-          <p class="mt-1 text-sm font-semibold text-slate-900"><%= @generated_api_key_name.presence || "Untitled Key" %></p>
+        <div class="rounded-xl border border-border bg-muted px-4 py-3">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Key Name</p>
+          <p class="mt-1 text-sm font-semibold text-foreground"><%= @generated_api_key_name.presence || "Untitled Key" %></p>
         </div>
 
-        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div class="rounded-xl border border-border bg-muted px-4 py-3">
           <div class="mb-2 flex items-center justify-between gap-3">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">API Token</p>
-            <button data-clipboard-target="button" data-action="clipboard#copy" class="inline-flex items-center gap-x-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">API Token</p>
+            <button data-clipboard-target="button" data-action="clipboard#copy" class="inline-flex items-center gap-x-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition hover:border-border-interactive hover:text-foreground">
               Copy
             </button>
           </div>
-          <code data-clipboard-target="source" class="block overflow-x-auto break-all rounded-lg bg-slate-900 px-3 py-2.5 font-mono text-xs text-slate-100"><%= @generated_api_key_token %></code>
+          <code data-clipboard-target="source" class="block overflow-x-auto break-all rounded-lg bg-primary px-3 py-2.5 font-mono text-xs text-primary-foreground"><%= @generated_api_key_token %></code>
         </div>
       </div>
 
-      <div class="flex justify-end border-t border-slate-200 px-6 py-4 sm:px-8">
-        <button type="button" class="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800" onclick="document.getElementById('api-key-reveal-modal').remove()">
+      <div class="flex justify-end border-t border-border px-6 py-4 sm:px-8">
+        <button type="button" class="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover" onclick="document.getElementById('api-key-reveal-modal').remove()">
           I Stored It Safely
         </button>
       </div>
@@ -38,36 +34,31 @@
   </div>
 <% end %>
 
-<div class="max-w-[1600px] mx-auto pb-20 space-y-8">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+<div class="w-full space-y-8">
+  <%= render PanelsUI::PageHeader.new(
+        title: "API Access Management",
+        description: "Manage programmatic access for chatbots and external integrations.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(as: :a, href: docs_admin_api_keys_path, variant: :secondary) do %>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        View Documentation
+      <% end %>
+
+      <%= render PanelsUI::Button.new(as: :a, href: new_admin_api_key_path) do %>
+        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        Generate New Key
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="flex items-center justify-between border-b border-border px-6 py-5 sm:px-8">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">API Access Management</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Manage programmatic access for chatbots and external integrations.</p>
+        <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Issued Keys</h2>
+        <p class="mt-1 text-sm font-medium text-muted-foreground">Active and revoked credentials for platform integrations.</p>
       </div>
 
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <%= link_to docs_admin_api_keys_path, class: "inline-flex items-center justify-center gap-x-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50" do %>
-          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          View Documentation
-        <% end %>
-
-        <%= link_to new_admin_api_key_path, class: "inline-flex items-center justify-center gap-x-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800" do %>
-          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-          Generate New Key
-        <% end %>
-      </div>
-    </div>
-  </div>
-
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
-      <div>
-        <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Issued Keys</h2>
-        <p class="mt-1 text-sm font-medium text-slate-600">Active and revoked credentials for platform integrations.</p>
-      </div>
-
-      <span class="text-sm font-medium text-slate-500">Total <span class="font-semibold text-slate-900"><%= @all_api_keys.size %></span></span>
+      <span class="text-sm font-medium text-muted-foreground">Total <span class="font-semibold text-foreground"><%= @all_api_keys.size %></span></span>
     </div>
 
     <div id="admin-api-keys-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
@@ -80,29 +71,29 @@
           end %>
           <% status_classes = key.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200" %>
 
-          <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+          <div class="rounded-2xl border border-border bg-muted/60 p-4 shadow-sm">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="text-sm font-semibold text-slate-900"><%= key.name %></p>
-                <p class="mt-1 text-sm text-slate-600"><%= scope_label %></p>
+                <p class="text-sm font-semibold text-foreground"><%= key.name %></p>
+                <p class="mt-1 text-sm text-muted-foreground"><%= scope_label %></p>
               </div>
               <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold <%= status_classes %>"><%= key.status.titleize %></span>
             </div>
 
             <dl class="mt-4 space-y-3 text-sm">
               <div>
-                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Token</dt>
-                <dd class="mt-1 font-mono text-slate-700">...<%= key.token.last(8) %></dd>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Token</dt>
+                <dd class="mt-1 font-mono text-foreground">...<%= key.token.last(8) %></dd>
               </div>
               <div>
-                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Last Used</dt>
-                <dd class="mt-1 text-slate-600"><%= key.last_used_at ? "#{time_ago_in_words(key.last_used_at)} ago" : "Never" %></dd>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Last Used</dt>
+                <dd class="mt-1 text-muted-foreground"><%= key.last_used_at ? "#{time_ago_in_words(key.last_used_at)} ago" : "Never" %></dd>
               </div>
             </dl>
 
             <% if key.status == "active" %>
               <div class="mt-4 flex justify-end">
-                <%= link_to admin_api_key_path(key), data: { turbo_method: :delete, turbo_confirm: "Are you sure? This will immediately disable all API requests using this key." }, class: "inline-flex items-center gap-x-1.5 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50" do %>
+                <%= link_to admin_api_key_path(key), data: { turbo_method: :delete, turbo_confirm: "Are you sure? This will immediately disable all API requests using this key." }, class: "inline-flex items-center gap-x-1.5 rounded-lg border border-rose-200 bg-card px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50" do %>
                   Revoke
                 <% end %>
               </div>
@@ -110,50 +101,50 @@
           </div>
         <% end %>
       <% else %>
-        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
-          <p class="text-sm font-semibold text-slate-900">No API keys generated yet.</p>
-          <p class="mt-2 text-sm text-slate-500">Create a key to enable programmatic access for approved integrations.</p>
+        <div class="rounded-2xl border border-dashed border-border bg-muted/60 px-4 py-8 text-center">
+          <p class="text-sm font-semibold text-foreground">No API keys generated yet.</p>
+          <p class="mt-2 text-sm text-muted-foreground">Create a key to enable programmatic access for approved integrations.</p>
         </div>
       <% end %>
     </div>
 
     <div class="hidden lg:block overflow-x-auto">
       <table class="min-w-full">
-        <thead class="bg-slate-100">
+        <thead class="bg-muted">
           <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Name</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Bearer / Scope</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Token</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Last Used</th>
-            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Action</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Name</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Bearer / Scope</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Token</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Last Used</th>
+            <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 bg-white">
+        <tbody class="divide-y divide-border bg-card">
           <% if @api_keys.any? %>
             <% @api_keys.each_with_index do |key, index| %>
               <% status_classes = key.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200" %>
 
-              <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900 sm:px-8"><%= key.name %></td>
-                <td class="px-6 py-4 text-sm text-slate-700">
+              <tr class="transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground sm:px-8"><%= key.name %></td>
+                <td class="px-6 py-4 text-sm text-foreground">
                   <% if key.superadmin? %>
                     Global (Superadmin)
                   <% else %>
                     <div class="flex flex-col">
-                      <span class="font-medium text-slate-900"><%= key.bearer&.name %></span>
-                      <span class="text-xs text-slate-500"><%= key.bearer_type %> Restriction</span>
+                      <span class="font-medium text-foreground"><%= key.bearer&.name %></span>
+                      <span class="text-xs text-muted-foreground"><%= key.bearer_type %> Restriction</span>
                     </div>
                   <% end %>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-700">...<%= key.token.last(8) %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-foreground">...<%= key.token.last(8) %></td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold <%= status_classes %>"><%= key.status.titleize %></span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><%= key.last_used_at ? "#{time_ago_in_words(key.last_used_at)} ago" : "Never" %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground"><%= key.last_used_at ? "#{time_ago_in_words(key.last_used_at)} ago" : "Never" %></td>
                 <td class="px-6 py-4 text-right sm:px-8">
                   <% if key.status == "active" %>
-                    <%= link_to admin_api_key_path(key), data: { turbo_method: :delete, turbo_confirm: "Are you sure? This will immediately disable all API requests using this key." }, class: "inline-flex items-center gap-x-1.5 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50" do %>
+                    <%= link_to admin_api_key_path(key), data: { turbo_method: :delete, turbo_confirm: "Are you sure? This will immediately disable all API requests using this key." }, class: "inline-flex items-center gap-x-1.5 rounded-lg border border-rose-200 bg-card px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50" do %>
                       Revoke
                     <% end %>
                   <% end %>
@@ -164,8 +155,8 @@
             <tr>
               <td colspan="6" class="px-6 py-12 text-center sm:px-8">
                 <div class="mx-auto max-w-sm space-y-2">
-                  <p class="text-sm font-semibold text-slate-900">No API keys generated yet.</p>
-                  <p class="text-sm text-slate-500">Create a key to enable programmatic access for approved integrations.</p>
+                  <p class="text-sm font-semibold text-foreground">No API keys generated yet.</p>
+                  <p class="text-sm text-muted-foreground">Create a key to enable programmatic access for approved integrations.</p>
                 </div>
               </td>
             </tr>
@@ -174,7 +165,7 @@
       </table>
     </div>
 
-    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center sm:px-8">
+    <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center sm:px-8">
       <%= paginate @api_keys %>
     </div>
   </div>

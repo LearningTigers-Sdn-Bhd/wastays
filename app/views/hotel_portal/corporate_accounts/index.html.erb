@@ -1,0 +1,11 @@
+<div class="w-full space-y-4">
+  <%= render "filters", presenter: @presenter %>
+
+  <%# Tabs sit inside the frame so their counts follow the active search. %>
+  <%= turbo_frame_tag "corporate_accounts_results" do %>
+    <div class="space-y-3">
+      <%= render "tabs", presenter: @presenter %>
+      <%= render "table", presenter: @presenter %>
+    </div>
+  <% end %>
+</div>

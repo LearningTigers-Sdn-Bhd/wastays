@@ -1,0 +1,86 @@
+<section aria-labelledby="file-upload-preview-heading" class="border-t border-border pt-8">
+  <h2 id="file-upload-preview-heading" class="text-lg font-semibold text-foreground">File uploads</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Native file inputs and progressively enhanced dropzones share the same Rails form contract.
+    Selected files render through the Attachment primitive; no upload library is involved.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> uploads</h3>
+        <% scope = "file_upload_#{theme.tr('-', '_')}".to_sym %>
+
+        <%= form_with url: "#file-upload-preview", scope: scope, class: "mt-4" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :document,
+                  label: "Supporting document",
+                  hint: "PDF or image, up to 5 MB.") do |field| %>
+              <% field.with_input(type: :file, accept: ".pdf,image/*") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :photos,
+                  label: "Room photos",
+                  hint: "Select up to two images; files upload when the form is submitted.") do |field| %>
+              <% field.with_dropzone(
+                   accept: "image/*",
+                   multiple: true,
+                   max_files: 2,
+                   max_size: 5.megabytes,
+                   preview: :auto,
+                   description: "PNG, JPG, or WebP · maximum 5 MB each") %>
+            <% end %>
+          <% end %>
+        <% end %>
+
+        <div class="mt-5 space-y-2" aria-label="Attachment states">
+          <%= render PanelsUI::Attachment.new(
+                title: "selected-file.pdf",
+                state: :ready,
+                size: :sm) do |attachment| %>
+            <% attachment.with_trigger(
+                 href: "#file-upload-preview-heading",
+                 aria_label: "Open selected-file.pdf") %>
+            <% attachment.with_actions do %>
+              <%= render PanelsUI::Button.new(
+                    variant: :ghost,
+                    size: :icon_xs,
+                    icon_only: true,
+                    aria_label: "Remove selected-file.pdf") do %>
+                <%= app_icon("x", class: "size-3.5", aria: { hidden: "true" }) %>
+              <% end %>
+            <% end %>
+          <% end %>
+
+          <%= render PanelsUI::Attachment.new(
+                title: "design-system.zip",
+                state: :uploading,
+                progress: 61,
+                size: :sm) %>
+
+          <%= render PanelsUI::Attachment.new(
+                title: "market-research.pdf",
+                description: "Processing document",
+                state: :processing,
+                size: :sm) %>
+
+          <%= render PanelsUI::Attachment.new(
+                title: "financial-model.xlsx",
+                description: "Upload failed. Try again.",
+                state: :error,
+                size: :sm) %>
+
+          <%= render PanelsUI::Attachment.new(
+                title: "uploaded-report.pdf",
+                description: "Uploaded · 1.8 MB",
+                state: :uploaded,
+                size: :sm) %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</section>

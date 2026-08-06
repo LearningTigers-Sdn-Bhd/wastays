@@ -1,11 +1,11 @@
 module FilteringHelper
-  def date_preset_options
+  def date_preset_options(include_single: false, as_of: false)
     options = [
+      [ "Today", "today" ],
       [ "This Month", "this_month" ],
-      [ "Last Month", "last_month" ],
-      [ "This Year", "this_year" ],
-      [ "All Time", "all_time" ]
+      [ "Last Month", "last_month" ]
     ]
+    options.concat([ [ "This Year", "this_year" ], [ "All Time", "all_time" ] ]) unless as_of
 
     # Add last 6 months specifically
     (0..5).each do |i|
@@ -15,7 +15,8 @@ module FilteringHelper
       options << [ label, val ] unless options.any? { |o| o[1] == val }
     end
 
-    options << [ "Custom Range", "custom" ]
+    options << [ "Single Date", "single" ] if include_single
+    options << [ as_of ? "Custom Date" : "Custom Range", "custom" ]
     options
   end
 end

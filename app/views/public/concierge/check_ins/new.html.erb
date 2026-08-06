@@ -1,0 +1,24 @@
+<% content_for :title, "Check In | #{@hotel.name}" %>
+<%= render layout: "public/concierge/shared/page_shell" do %>
+  <%= render "public/concierge/shared/page_header",
+             back_path: concierge_home_path(@hotel.slug),
+             back_label: "Back to Concierge",
+             eyebrow: "Check In",
+             title_prefix: "How would you like",
+             title_accent: "to check in?" %>
+  <%= render "public/concierge/shared/error_alert", message: @error %>
+
+  <div class="rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5">
+    <h3 class="mb-1 text-xs font-black uppercase tracking-widest text-foreground">I have a booking</h3>
+    <p class="mb-5 text-xs text-muted-foreground">Enter your confirmation code to continue.</p>
+
+    <%= form_with url: concierge_check_in_lookup_path(@hotel.slug), method: :post, class: "space-y-4" do %>
+      <div>
+        <label class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">Confirmation Code</label>
+        <%= text_field_tag :confirmation_token, params[:confirmation_token], class: "form-input px-4 py-3 uppercase", placeholder: "e.g. AKWS4A", autocapitalize: "characters" %>
+      </div>
+
+      <%= submit_tag "Continue →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>
+    <% end %>
+  </div>
+<% end %>

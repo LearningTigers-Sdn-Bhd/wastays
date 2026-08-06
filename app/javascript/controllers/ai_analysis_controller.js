@@ -4,8 +4,8 @@ export default class extends Controller {
   static targets = ["button", "loading", "content"]
 
   start() {
-    if (this.hasButtonTarget) this.buttonTarget.classList.add("hidden")
-    if (this.hasContentTarget) this.contentTarget.classList.add("hidden")
-    this.loadingTarget.classList.remove("hidden")
+    if (this.hasButtonTarget) this.buttonTarget.hidden = true
+    if (this.hasContentTarget) this.contentTarget.hidden = true
+    if (this.hasLoadingTarget) this.loadingTarget.hidden = false
   }
 }

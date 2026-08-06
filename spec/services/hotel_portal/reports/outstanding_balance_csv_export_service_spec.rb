@@ -26,7 +26,7 @@ RSpec.describe HotelPortal::Reports::OutstandingBalanceCsvExportService do
       )
 
       csv = described_class.new(report: report).generate
-      rows = CSV.parse(csv, headers: true)
+      rows = CSV.parse(csv.delete_prefix("\uFEFF"), headers: true)
 
       expect(rows.headers).to eq([ "Guest Name", "Booking Ref", "Stay", "Rooms", "Room Numbers", "Payment Status", "Outstanding Amount", "Notes" ])
       expect(rows[0]["Guest Name"]).to eq("Guest A")

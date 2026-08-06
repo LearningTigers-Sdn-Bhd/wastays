@@ -1,8 +1,12 @@
+# frozen_string_literal: true
+
 class PreCheckin < ApplicationRecord
   belongs_to :booking
+  has_one_attached :signature
 
   validates :status, presence: true
   validates :token, presence: true, uniqueness: true
+  validates :booking_id, uniqueness: true
 
   STATUSES = %w[pending in_progress completed failed].freeze
   DOCUMENT_STATUSES = %w[pending uploaded verified rejected].freeze

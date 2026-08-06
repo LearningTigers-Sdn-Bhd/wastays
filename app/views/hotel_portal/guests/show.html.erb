@@ -1,155 +1,264 @@
-<% content_for :breadcrumbs do %>
-  <div class="flex items-center gap-x-2">
-    <span class="text-sm font-medium text-slate-600"><%= current_hotel.name %></span>
-    <span class="text-sm text-slate-400">/</span>
-    <%= link_to "Guest Records", hotel_guests_path(current_hotel), class: "text-sm font-medium text-slate-600 hover:text-slate-900" %>
-    <span class="text-sm text-slate-400">/</span>
-    <span class="text-sm font-semibold text-slate-900"><%= safe_guest_attr(@guest, :name) %></span>
-  </div>
-<% end %>
-
 <div class="space-y-6">
-  <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <%= link_to hotel_guests_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
-      <svg class="flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+ <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <%= link_to hotel_guests_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
+      <%= cached_icon "chevron-left", class: "flex-shrink-0 w-4 h-4" %>
       Back to Guest Records
     <% end %>
 
-    <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "inline-flex items-center gap-x-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 w-fit" do %>
-      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-      Edit Profile
-    <% end %>
+    <%# Desktop Actions %>
+    <div class="hidden md:flex items-center gap-x-3">
+      <%= button_to toggle_vip_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit" do %>
+        <% if @guest.vip? %>
+          <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+          Remove VIP
+        <% else %>
+          <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-muted-foreground shrink-0" %>
+          Mark as VIP
+        <% end %>
+      <% end %>
+
+      <% if @guest.blacklisted_at?(current_hotel) %>
+        <%= button_to toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit" do %>
+          <div class="relative size-4 flex items-center justify-center shrink-0">
+            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-rose-600" %>
+            <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-rose-600" %>
+          </div>
+          Remove Blacklist
+        <% end %>
+      <% else %>
+        <button type="button" command="show-modal" commandfor="guest-blacklist-dialog" class="inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit">
+          <div class="relative size-4 flex items-center justify-center shrink-0">
+            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-muted-foreground" %>
+            <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-muted-foreground" %>
+          </div>
+          Blacklist Guest
+        </button>
+      <% end %>
+
+      <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "inline-flex items-center gap-x-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover w-fit" do %>
+        <%= cached_icon "pencil", class: "size-4" %>
+        Edit Profile
+      <% end %>
+    </div>
+
+    <%# Mobile Actions (Three-lines dropdown) %>
+    <div class="md:hidden relative inline-block text-left self-end" data-controller="dropdown" data-dropdown-align="right">
+      <button data-action="click->dropdown#toggle" type="button" class="inline-flex items-center justify-center size-10 rounded-xl border border-border bg-card text-foreground shadow-sm hover:bg-muted active:scale-95 transition-all" aria-label="Guest Actions">
+        <%= cached_icon "menu", class: "size-5" %>
+      </button>
+
+      <div data-dropdown-target="menu" class="hidden absolute right-0 mt-2 w-48 origin-top-right rounded-2xl border border-border bg-card p-1.5 shadow-xl z-50 focus:outline-none" role="menu">
+        <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "flex items-center gap-x-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition" do %>
+          <%= cached_icon "pencil", class: "size-4 text-muted-foreground" %>
+          Edit Profile
+        <% end %>
+
+        <%= button_to toggle_vip_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition" do %>
+          <% if @guest.vip? %>
+            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+            Remove VIP
+          <% else %>
+            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-muted-foreground shrink-0" %>
+            Mark as VIP
+          <% end %>
+        <% end %>
+
+        <% if @guest.blacklisted_at?(current_hotel) %>
+          <%= button_to toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition" do %>
+            <div class="relative size-4 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-rose-600" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-rose-600" %>
+            </div>
+            Remove Blacklist
+          <% end %>
+        <% else %>
+          <button type="button" command="show-modal" commandfor="guest-blacklist-dialog" class="flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition">
+            <div class="relative size-4 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-muted-foreground" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-muted-foreground" %>
+            </div>
+            Blacklist Guest
+          </button>
+        <% end %>
+      </div>
+    </div>
   </div>
 
-  <div class="card">
-    <div class="p-4 border-b border-neutral-border">
+  <%= form_with url: toggle_blacklist_hotel_guest_path(current_hotel, @guest), method: :patch do |f| %>
+    <%= render PanelsUI::Dialog.new(id: "guest-blacklist-dialog", title: "Blacklist guest", description: "#{@presenter.name} will be flagged as blacklisted for #{current_hotel.name}.", size: :md) do |dialog| %>
+      <% dialog.with_body do %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :blacklist_reason, label: "Reason", required: true) do |field| %>
+          <% field.with_text_area(rows: 4, placeholder: "Explain why this guest is being blacklisted.") %>
+        <% end %>
+      <% end %>
+      <% dialog.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Blacklist guest<% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <div class="legacy-card <%= @guest.blacklisted_at?(current_hotel) ? 'border-rose-200 bg-rose-50/20' : '' %>">
+    <div class="p-4 border-b border-border <%= @guest.blacklisted_at?(current_hotel) ? 'bg-rose-50/30 border-rose-200' : '' %>">
       <div>
-        <h1 class="text-xl font-bold text-neutral-text-primary"><%= safe_guest_attr(@guest, :name) %></h1>
-        <p class="text-xs uppercase tracking-widest text-neutral-text-secondary">Guest Profile</p>
+        <div class="flex items-center gap-x-2">
+          <h1 class="text-xl font-bold text-foreground"><%= @presenter.name %></h1>
+          <% if @guest.vip? %>
+            <%= render PanelsUI::Tooltip.new(text: "VIP guest", delay: 150) do %>
+              <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="VIP guest">
+                <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-5 text-amber-500 fill-amber-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+              </span>
+            <% end %>
+          <% end %>
+          <% if @guest.blacklisted_at?(current_hotel) %>
+            <div class="relative size-5 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-5 translate-x-0.5 text-rose-600" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-6 -translate-y-0.5 text-rose-600" %>
+            </div>
+          <% end %>
+          <% if @guest.repeat? %>
+            <%= render PanelsUI::Tooltip.new(text: "Repeat guest", delay: 150) do %>
+              <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="Repeat guest">
+                <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-5 text-blue-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+              </span>
+            <% end %>
+          <% end %>
+        </div>
+        <% if (detail = @guest.blacklist_detail(current_hotel)).present? %>
+          <p class="mt-1 text-xs text-rose-700">
+            Blacklisted by <span class="font-semibold"><%= detail["blacklisted_by_name"] %></span>
+            <% if detail["reason"].present? %> &middot; <%= detail["reason"] %><% end %>
+          </p>
+        <% end %>
       </div>
     </div>
     <div class="p-4 space-y-3 grid gap-3 md:grid-cols-2">
       <div>
-        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Email</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :email) %></p>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Email</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.email %></p>
       </div>
       <div>
-        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Phone</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :phone) %></p>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Phone</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.phone %></p>
       </div>
       <div>
-        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Gender</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :gender)&.capitalize || "—" %></p>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Gender</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.gender %></p>
       </div>
       <div>
-        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Passport Country</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :country) %></p>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Passport Country</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.country %></p>
       </div>
       <div>
-        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Document Type</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :document_type)&.upcase %></p>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Document Type</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.document_type %></p>
       </div>
       <div>
-        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">ID / Passport</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= safe_guest_attr(@guest, :government_id) %></p>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">ID / Passport</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.government_id %></p>
       </div>
       <div>
-        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Last Stay</p>
-        <p class="text-sm font-semibold text-neutral-text-primary">
-          <%= @all_bookings.first&.check_out ? @all_bookings.first.check_out.strftime("%d %b %Y") : "—" %>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Date of Birth</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.date_of_birth_formatted %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Last Stay</p>
+        <p class="text-sm font-semibold text-foreground">
+          <%= @presenter.last_stay_checkout_date(@all_bookings) %>
         </p>
       </div>
       <div>
-        <p class="text-[10px] uppercase tracking-widest text-neutral-text-secondary">Total Visits</p>
-        <p class="text-sm font-semibold text-neutral-text-primary"><%= @all_bookings.count %></p>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Total Visits</p>
+        <p class="text-sm font-semibold text-foreground"><%= @all_bookings.count %></p>
       </div>
     </div>
   </div>
 
   <div class="grid md:grid-cols-2 gap-4">
-    <div class="card">
-      <div class="p-4 border-b border-neutral-border">
-        <p class="text-xs uppercase font-black tracking-widest text-neutral-text-secondary">Currency Totals</p>
+    <div class="legacy-card">
+      <div class="p-4 border-b border-border">
+        <p class="text-xs uppercase font-black tracking-widest text-muted-foreground">Currency Totals</p>
       </div>
       <div class="p-4 space-y-3">
         <% if @currency_totals.any? %>
           <% @currency_totals.each do |currency, amount| %>
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-neutral-text-secondary"><%= currency %></span>
-              <span class="text-sm font-semibold text-neutral-text-primary"><%= number_to_currency(amount, unit: currency == 'USD' ? 'USD ' : 'RM ', delimiter: ',') %></span>
+              <span class="text-sm font-medium text-muted-foreground"><%= currency %></span>
+              <span class="text-sm font-semibold text-foreground"><%= @presenter.formatted_currency_amount(amount, currency) %></span>
             </div>
           <% end %>
         <% else %>
-          <p class="text-xs text-neutral-text-secondary">No bookings recorded yet.</p>
+          <p class="text-xs text-muted-foreground">No bookings recorded yet.</p>
         <% end %>
       </div>
     </div>
 
-    <div class="card">
-      <div class="p-4 border-b border-neutral-border">
-        <p class="text-xs uppercase font-black tracking-widest text-neutral-text-secondary">Recent Notes</p>
+    <div class="legacy-card">
+      <div class="p-4 border-b border-border">
+        <p class="text-xs uppercase font-black tracking-widest text-muted-foreground">Recent Notes</p>
       </div>
-      <div class="p-4 text-xs text-neutral-text-secondary">
+      <div class="p-4 text-xs text-muted-foreground">
         Use the booking timeline below to review stay history, documentation status, and payment summaries.
       </div>
     </div>
   </div>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-        <div>
-          <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Booking History</h2>
-          <p class="mt-1 text-sm font-medium text-slate-600">Timeline of this guest's stays at the property.</p>
-        </div>
-      <span class="text-sm font-medium text-slate-500">Stays <span class="font-semibold text-slate-900"><%= @all_bookings.count %></span></span>
+  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="flex items-center justify-between border-b border-border px-6 py-5">
+      <div>
+        <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Booking History</h2>
+        <p class="mt-1 text-sm font-medium text-muted-foreground">Timeline of this guest's stays at the property.</p>
       </div>
+      <span class="text-sm font-medium text-muted-foreground">Stays <span class="font-semibold text-foreground"><%= @all_bookings.count %></span></span>
+    </div>
 
     <% if @bookings.any? %>
       <div class="hidden md:block overflow-x-auto">
         <table class="min-w-full">
-          <thead class="bg-slate-100">
+          <thead class="bg-muted">
             <tr>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Confirmation</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Stay</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Status</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Amount</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Created At</th>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Pre-Check-In</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Confirmation</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Stay</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Amount</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Created At</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Pre-Check-In</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-200 bg-white">
+          <tbody class="divide-y divide-border bg-card">
             <% @bookings.each_with_index do |booking, index| %>
-              <tr class="transition-colors hover:bg-slate-100/80 <%= index.even? ? 'bg-white' : 'bg-slate-50/55' %>">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900"><%= booking.confirmation_token %></td>
-                <td class="px-6 py-4 text-sm text-slate-700">
+              <% booking_presenter = Guests::BookingPresenter.new(booking) %>
+              <tr class="transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground"><%= booking_presenter.confirmation_token %></td>
+                <td class="px-6 py-4 text-sm text-foreground">
                   <div class="flex flex-col gap-0.5">
-                    <span><%= booking.check_in.strftime("%d %b %Y") %> - <%= booking.check_out.strftime("%d %b %Y") %></span>
-                    <span class="text-xs text-slate-500">
-                      <%= pluralize((booking.check_out - booking.check_in).to_i, "night") %>
+                    <span><%= booking_presenter.check_in_formatted %> - <%= booking_presenter.check_out_formatted %></span>
+                    <span class="text-xs text-muted-foreground">
+                      <%= booking_presenter.nights_label %>
                     </span>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking.status) %>">
-                    <%= booking.status.humanize %>
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking_presenter.status) %>">
+                    <%= booking_presenter.status_humanized %>
                   </span>
                 </td>
-                <td class="px-6 py-4 text-sm font-medium text-slate-900">
+                <td class="px-6 py-4 text-sm font-medium text-foreground">
                   <div class="flex flex-col gap-0.5">
-                    <span><%= booking.currency == "USD" ? "USD #{number_with_precision(booking.total_amount, precision: 2)}" : "RM #{number_with_precision(booking.total_amount, precision: 2)}" %></span>
-                    <% if booking.tourism_tax? %>
-                      <span class="text-xs text-slate-500">Tax RM <%= number_with_precision(booking.tourism_tax_amount, precision: 2) %></span>
+                    <span><%= booking_presenter.formatted_total_amount %></span>
+                    <% if booking_presenter.tourism_tax? %>
+                      <span class="text-xs text-muted-foreground"><%= booking_presenter.formatted_tourism_tax_amount %></span>
                     <% end %>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-slate-700">
+                <td class="px-6 py-4 text-sm text-foreground">
                   <div class="flex flex-col gap-0.5">
-                    <span><%= booking.created_at.strftime("%I:%M %p") %></span>
-                    <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                    <span><%= booking_presenter.created_at_time_formatted %></span>
+                    <span class="text-xs text-muted-foreground"><%= booking_presenter.created_at_date_formatted %></span>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-slate-600">
-                  <%= booking.pre_checkin_status&.humanize || "Pending" %>
+                <td class="px-6 py-4 text-sm text-muted-foreground">
+                  <%= booking_presenter.pre_checkin_status_label %>
                 </td>
               </tr>
             <% end %>
@@ -159,41 +268,42 @@
 
       <div class="space-y-4 p-4 md:hidden">
         <% @bookings.each do |booking| %>
-          <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+          <% booking_presenter = Guests::BookingPresenter.new(booking) %>
+          <div class="rounded-2xl border border-border bg-muted/60 p-4 shadow-sm">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Confirmation</p>
-                <p class="mt-1 text-sm font-semibold text-slate-900"><%= booking.confirmation_token %></p>
+                <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Confirmation</p>
+                <p class="mt-1 text-sm font-semibold text-foreground"><%= booking_presenter.confirmation_token %></p>
               </div>
               <div class="text-right">
-                <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Status</p>
-                <span class="inline-flex items-center rounded-full mt-1 px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking.status) %>">
-                  <%= booking.status.humanize %>
+                <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Status</p>
+                <span class="inline-flex items-center rounded-full mt-1 px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking_presenter.status) %>">
+                  <%= booking_presenter.status_humanized %>
                 </span>
               </div>
             </div>
 
             <dl class="mt-4 space-y-3 text-sm">
               <div>
-                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Stay</dt>
-                <dd class="mt-1 text-slate-700"><%= booking.check_in.strftime("%d %b %Y") %> - <%= booking.check_out.strftime("%d %b %Y") %></dd>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Stay</dt>
+                <dd class="mt-1 text-foreground"><%= booking_presenter.check_in_formatted %> - <%= booking_presenter.check_out_formatted %></dd>
               </div>
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Amount</dt>
-                  <dd class="mt-1 text-slate-700"><%= booking.currency == "USD" ? "USD #{number_with_precision(booking.total_amount, precision: 2)}" : "RM #{number_with_precision(booking.total_amount, precision: 2)}" %></dd>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Amount</dt>
+                  <dd class="mt-1 text-foreground"><%= booking_presenter.formatted_total_amount %></dd>
                 </div>
                 <div class="text-right">
-                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Pre-Check-In</dt>
-                  <dd class="mt-1 text-slate-700"><%= booking.pre_checkin_status&.humanize || "Pending" %></dd>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Pre-Check-In</dt>
+                  <dd class="mt-1 text-foreground"><%= booking_presenter.pre_checkin_status_label %></dd>
                 </div>
               </div>
               <div>
-                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Created At</dt>
-                <dd class="mt-1 text-slate-700">
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Created At</dt>
+                <dd class="mt-1 text-foreground">
                   <div class="flex flex-col gap-0.5">
-                    <span><%= booking.created_at.strftime("%I:%M %p") %></span>
-                    <span class="text-xs text-slate-500"><%= booking.created_at.strftime("%d %b %Y") %></span>
+                    <span><%= booking_presenter.created_at_time_formatted %></span>
+                    <span class="text-xs text-muted-foreground"><%= booking_presenter.created_at_date_formatted %></span>
                   </div>
                 </dd>
               </div>
@@ -203,11 +313,11 @@
       </div>
     <% else %>
       <div class="px-6 py-12 text-center">
-        <p class="text-sm font-medium text-slate-500">No bookings yet.</p>
+        <p class="text-sm font-medium text-muted-foreground">No bookings yet.</p>
       </div>
     <% end %>
 
-    <div class="px-6 py-5 border-t border-slate-200 bg-slate-50/50 flex justify-center">
+    <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center">
       <%= paginate @bookings %>
     </div>
   </div>

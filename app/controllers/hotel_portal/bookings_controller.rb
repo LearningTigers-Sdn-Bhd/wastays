@@ -1,81 +1,21 @@
 # frozen_string_literal: true
 
+# LEGACY: frozen pending booking-workspace migration. Do not add features here.
+
 class HotelPortal::BookingsController < HotelPortal::BaseController
-  before_action :authorize_view_bookings!, only: %i[index show availability stay_price]
-  before_action :authorize_manage_bookings!, only: %i[new create update check_in check_out cancel]
+  include BookingAuditable
+
+  before_action :authorize_view_bookings!, only: %i[index show]
+  before_action :authorize_manage_bookings!, only: %i[update]
 
   def index
-    @all_bookings = current_hotel.bookings.recent_first
-    @all_bookings = @all_bookings.search(params[:query]) if params[:query].present?
-    @all_bookings = @all_bookings.where(status: params[:status]) if params[:status].present?
-
-    @bookings = @all_bookings.page(params[:page]).per(25)
-  end
-
-  def new
-    @booking = current_hotel.bookings.build(
-      check_in: params[:check_in].presence || Date.current,
-      check_out: params[:check_out].presence || Date.current + 1.day,
-      adults: 2
-    )
-    @room_types = current_hotel.room_types.order(:name)
-  end
-
-  def availability
-    if params[:check_in].blank? || params[:check_out].blank? || params[:room_type_id].blank?
-      return render json: { available_rooms: [] }
-    end
-
-    room_type = current_hotel.room_types.find(params[:room_type_id])
-
-    service = Bookings::AvailableRoomNumbers.new(
-      hotel: current_hotel,
-      room_type: room_type,
-      check_in: Date.parse(params[:check_in]),
-      check_out: Date.parse(params[:check_out]),
-      exclude_booking_id: params[:exclude_booking_id].presence
-    )
-
-    render json: { available_rooms: service.call, room_options: service.options }
-  end
-
-  def stay_price
-    if params[:check_in].blank? || params[:check_out].blank? || params[:room_type_id].blank?
-      return render json: { total_amount: 0 }
-    end
-
-    room_type = current_hotel.room_types.find(params[:room_type_id])
-
-    total = Bookings::CalculateStayPrice.new(
-      room_type: room_type,
-      check_in: Date.parse(params[:check_in]),
-      check_out: Date.parse(params[:check_out])
-    ).call
-
-    render json: { total_amount: total }
-  end
-
-  def create
-    result = Bookings::CreateManualBooking.new(
-      hotel: current_hotel,
-      params: booking_params,
-      user: current_user
-    ).call
-
-    if result.success?
-      release_room_locks(result.booking)
-      redirect_to hotel_booking_path(current_hotel, result.booking), notice: "Booking created successfully."
-    else
-      @booking = current_hotel.bookings.build(booking_params.except(:room_type_id, :room_number))
-      @room_types = current_hotel.room_types.order(:name)
-      flash.now[:alert] = result.errors.to_sentence
-      render :new, status: :unprocessable_content
-    end
+    redirect_to hotel_front_desk_path(current_hotel, legacy_index_params), status: :moved_permanently
   end
 
   def show
-    @booking = current_hotel.bookings.find(params[:id])
-    @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
+    booking = current_hotel.bookings.find(params[:id])
+    tab = { "requests" => "housekeeping_requests", "history" => "audit_trails" }.fetch(params[:tab].to_s, "booking_details")
+    redirect_to hotel_booking_workspace_path(current_hotel, booking, tab: tab), status: :moved_permanently
   end
 
   def update
@@ -90,61 +30,46 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
 
     if result.success?
       release_room_locks(@booking)
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: "Booking updated successfully."
+      respond_to do |format|
+        format.html { redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details"), notice: "Booking updated successfully." }
+        format.json { render json: { success: true, booking: @booking } }
+      end
     else
-      @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      @booking.errors.add(:base, result.errors.to_sentence)
-      render :show, status: :unprocessable_content
+      respond_to do |format|
+        format.html { render plain: result.errors.to_sentence, status: :unprocessable_content }
+        format.json { render json: { success: false, errors: result.errors }, status: :unprocessable_content }
+      end
     end
-  end
-
-  def check_in
-    transition_status("checked_in", params[:checked_in_at], "Guest checked in successfully.")
-  end
-
-  def check_out
-    transition_status("completed", params[:checked_out_at], "Guest has been checked out.")
-  end
-
-  def cancel
-    transition_status("cancelled", nil, "Booking cancelled successfully.")
   end
 
   private
 
+  def legacy_index_params
+    {
+      tab: "bookings",
+      view: legacy_view,
+      booking_query: params[:query],
+      booking_status: params[:status],
+      booking_check_in_date: params[:check_in_date],
+      booking_page: params[:page]
+    }.compact
+  end
+
   def release_room_locks(booking)
-    # Release locks for all rooms assigned to this booking
-    # Assuming the admin might have locked multiple rooms if they changed their mind
-    # or if we just want to be safe and release all locks held by current user for this hotel
-    # But more specifically, we should release the lock for the room they just assigned.
     room_number = booking.hotel_snapshot.is_a?(Hash) ? (booking.hotel_snapshot["room_number"] || booking.hotel_snapshot.dig("assignment", "room_number")) : nil
     RoomLock.where(hotel: current_hotel, user: current_user, room_number: room_number).destroy_all if room_number.present?
   end
 
-  def transition_status(status, timestamp, success_notice)
-    @booking = current_hotel.bookings.find(params[:id])
-    result = Bookings::TransitionStatus.new(
-      booking: @booking,
-      status: status,
-      timestamp: timestamp,
-      user: current_user
-    ).call
-
-    if result.success?
-      release_room_locks(@booking) if status == "checked_in"
-      redirect_to hotel_booking_path(current_hotel, @booking), notice: success_notice
-    else
-      @presenter = HotelPortal::BookingPresenter.new(@booking, current_hotel)
-      flash.now[:alert] = result.error
-      render :show, status: :unprocessable_content
-    end
-  end
-
   def booking_params
     params.fetch(:booking, {}).permit(
-      :guest_name, :guest_email, :guest_phone, :status, :checked_in_at, :checked_out_at,
+      :guest_name, :guest_email, :guest_phone, :checked_in_at, :checked_out_at,
+      :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_date_of_birth, :guest_update_intent,
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
-      booking_rooms_attributes: [ :id, :room_number ]
+      :record_payment, :payment_method, :payment_amount, :payment_reference,
+      :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,
+      :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
+      :guarantee_method,
+      booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ]
     )
   end
 

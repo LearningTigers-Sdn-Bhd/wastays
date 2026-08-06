@@ -1,0 +1,39 @@
+<%# locals: (booking:, tab:, split: false) %>
+<%#
+  Two renderings of one action list (see HotelPortal::FrontDeskHelper).
+
+  `split: true` is the table: the primary action gets a button and the rest
+  fall into the overflow menu, matching the booking sheet. The card passes
+  the default and keeps everything in the menu, because its header has room
+  for one icon trigger and nothing more.
+%>
+<% actions = front_desk_actions(booking, tab:) %>
+<% primary = split ? actions.find { |action| action[:primary] } : nil %>
+<% menu_actions = actions - [ primary ].compact %>
+<div class="flex items-center justify-end gap-2">
+  <% if primary %>
+    <%= render PanelsUI::Button.new(
+          as: :a,
+          href: primary[:path],
+          variant: :primary,
+          size: :sm,
+          data: primary[:data] || {},
+          target: primary[:target]) do %>
+      <%= primary[:label] %>
+    <% end %>
+  <% end %>
+  <% if menu_actions.any? %>
+    <%= render PanelsUI::DropdownMenu.new(id: "booking-actions-#{split ? "row" : "card"}-#{booking.id}", placement: :bottom_end, class: "w-56") do |menu| %>
+      <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "Actions for #{booking.confirmation_token}") do %>
+        <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+      <%# No group label: the trigger already names the menu, so an "Actions"
+          heading and separator inside it just repeat that. %>
+      <% menu_actions.each do |action| %>
+        <% menu.with_item(href: action[:path], data: action[:data] || {}, target: action[:target]) do %>
+          <span><%= action[:label] %></span>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

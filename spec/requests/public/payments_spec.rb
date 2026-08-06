@@ -12,7 +12,8 @@ RSpec.describe "Public::Payments", type: :request do
       government_id: "A1234567",
       gender: "male",
       country: "Malaysia",
-      document_type: "ic"
+      document_type: "ic",
+      date_of_birth: "1990-05-20"
     }
   end
 
@@ -188,7 +189,8 @@ RSpec.describe "Public::Payments", type: :request do
             government_id: "A1234567",
             gender: "male",
             country: "Malaysia",
-            document_type: "ic"
+            document_type: "ic",
+            date_of_birth: "1990-05-20"
           }
         }
       )

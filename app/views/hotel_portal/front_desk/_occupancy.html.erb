@@ -1,0 +1,16 @@
+<%# locals: (adults:, children:) %>
+<div class="flex items-center gap-2 text-sm text-muted-foreground">
+  <%= render PanelsUI::Tooltip.new(text: pluralize(adults, "Adult"), delay: 150) do %>
+    <span class="inline-flex cursor-help items-center gap-1 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="<%= pluralize(adults, "Adult") %>">
+      <%= cached_icon "adult", library: "guest", class: "size-4 fill-current", aria: { hidden: "true" }, focusable: "false" %>
+      <span aria-hidden="true"><%= adults %></span>
+    </span>
+  <% end %>
+
+  <%= render PanelsUI::Tooltip.new(text: pluralize(children, "Child"), delay: 150) do %>
+    <span class="inline-flex cursor-help items-center gap-1 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="<%= pluralize(children, "Child") %>">
+      <%= cached_icon "child", library: "guest", class: "size-3 fill-current", aria: { hidden: "true" }, focusable: "false" %>
+      <span aria-hidden="true"><%= children %></span>
+    </span>
+  <% end %>
+</div>

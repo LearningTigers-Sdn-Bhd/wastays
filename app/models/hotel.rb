@@ -31,62 +31,126 @@ class Hotel < ApplicationRecord
   has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :users, through: :user_hotel_accesses
-  has_many :staff_invitations, dependent: :destroy
+  has_many :invitations, dependent: :destroy
+  has_many :staff_invitations, -> { staff }, class_name: "StaffInvitation"
+  has_many :corporate_invitations, -> { corporate }, class_name: "CorporateInvitation"
+  has_many :hotel_corporate_accounts, dependent: :destroy
+  has_many :corporate_accounts, through: :hotel_corporate_accounts
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
+  belongs_to :plan, optional: true
   has_one :property_policy, dependent: :destroy
+  accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
+  has_many :room_groups, dependent: :destroy
+  has_many :rate_plans, dependent: :destroy
+  has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
+  has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
   has_many :nearby_attractions, dependent: :destroy
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :guest_registration_cards, dependent: :restrict_with_error
+  has_many :guest_registration_note_templates, dependent: :destroy
+  has_many :group_bookings, dependent: :restrict_with_error
+  has_many :booking_folios, dependent: :restrict_with_error
+  has_many :ar_invoices, dependent: :restrict_with_error
+  has_many :invoices, dependent: :restrict_with_error
+  has_many :receivables, class_name: "Receivable", dependent: :restrict_with_error
+  has_many :ar_payments, dependent: :restrict_with_error
+  has_many :ar_payment_submissions, dependent: :restrict_with_error
+  has_many :folio_routing_rules, dependent: :destroy
+  has_many :deposits, dependent: :restrict_with_error
+  has_many :deposit_movements, through: :deposits
+  has_many :hotel_taxes, dependent: :destroy
+  has_many :transaction_codes, dependent: :destroy
+  has_many :hotel_extra_charges, dependent: :destroy
+  has_many :hotel_discounts, dependent: :destroy
+  has_many :hotel_payment_methods, dependent: :destroy
+  has_many :hotel_reservation_policies, dependent: :destroy
+  has_one :hotel_transaction_configuration, dependent: :destroy
+  has_one :hotel_boat_setting, dependent: :destroy
+  accepts_nested_attributes_for :hotel_boat_setting
+  has_many :hotel_boat_schedules, dependent: :destroy
+  has_many :hotel_counters, dependent: :destroy
   has_many :prospects, dependent: :destroy
   has_many :night_audits, dependent: :destroy
+  has_many :hotel_business_dates, dependent: :destroy
+  has_many :hotel_general_ledger_maps, dependent: :destroy
+  has_many :journal_batches, dependent: :destroy
+  has_many :financial_audit_events, dependent: :restrict_with_error
+  has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
+  has_many :room_rates, through: :room_types
   has_many :room_locks, dependent: :destroy
   has_many :room_statuses, dependent: :destroy
   has_many :room_operational_audit_logs, dependent: :destroy
+  has_many :room_blocks, dependent: :destroy
+  has_many :notification_configs, dependent: :destroy
+  has_many :notification_deliveries, dependent: :destroy
+  has_many :channel_derived_settings, dependent: :destroy
+  has_many :channel_availability_rules, dependent: :destroy
+
 
   validates :name, presence: true
+  validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
+                           length: { in: 3..6 },
+                           format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
+                           if: -> { hotel_prefix.present? }
+  has_many :hotel_prefix_histories, dependent: :destroy
+  validate :hotel_prefix_has_not_been_used_by_another_hotel
+
+  before_validation :normalize_default_currency
+  before_validation :reset_pax_pricing_only_if_not_allowed
+  before_validation :normalize_hotel_prefix
+  before_validation :assign_hotel_prefix, on: :create
+  after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
   validates :country, presence: true
+  validates :business_starts_at, :business_ends_at, presence: true
+  validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
+  validate :account_must_be_hotel_kind
 
-  HOTEL_AMENITIES = [
-    { id: "wifi", name: "Free WiFi", icon: "wifi" },
-    { id: "parking", name: "Free Parking", icon: "parking" },
-    { id: "pool", name: "Swimming Pool", icon: "pool" },
-    { id: "gym", name: "Fitness Center", icon: "gym" },
-    { id: "restaurant", name: "Restaurant", icon: "restaurant" },
-    { id: "bar", name: "Bar / Lounge", icon: "bar" },
-    { id: "front_desk", name: "24-Hour Front Desk", icon: "front_desk" },
-    { id: "spa", name: "Spa / Wellness Center", icon: "spa" },
-    { id: "laundry", name: "Laundry Service", icon: "laundry" }
-  ].freeze
+  def self.const_missing(const_name)
+    case const_name
+    when :HOTEL_AMENITIES
+      Amenity.hotel.ordered.map(&:to_h)
+    when :CATEGORIZED_HOTEL_AMENITIES
+      Amenity.categorized(:hotel)
+    when :ROOM_AMENITIES
+      Amenity.room.ordered.map(&:to_h)
+    when :CATEGORIZED_ROOM_AMENITIES
+      Amenity.categorized(:room)
+    when :HOTEL_AMENITIES_MAP
+      Amenity.lookup_map(:hotel)
+    when :ROOM_AMENITIES_MAP
+      Amenity.lookup_map(:room)
+    when :AMENITIES
+      (HOTEL_AMENITIES + ROOM_AMENITIES).uniq { |a| a[:id] }
+    else
+      super
+    end
+  end
 
-  ROOM_AMENITIES = [
-    { id: "wifi", name: "Free WiFi", icon: "wifi" },
-    { id: "ac", name: "Air Conditioning", icon: "ac" },
-    { id: "minibar", name: "Mini Bar", icon: "minibar" },
-    { id: "coffee_maker", name: "Coffee / Tea Maker", icon: "coffee_maker" },
-    { id: "tv", name: "Flat-screen TV", icon: "tv" },
-    { id: "safe", name: "In-room Safe", icon: "safe" },
-    { id: "bathtub", name: "Bathtub", icon: "bathtub" },
-    { id: "balcony", name: "Balcony / Terrace", icon: "balcony" },
-    { id: "desk", name: "Work Desk", icon: "desk" },
-    { id: "hairdryer", name: "Hairdryer", icon: "hairdryer" }
-  ].freeze
+  def account_must_be_hotel_kind
+    return if account.blank? || account.hotel?
 
-  # For backward compatibility and general lookups
-  AMENITIES = (HOTEL_AMENITIES + ROOM_AMENITIES).uniq { |a| a[:id] }.freeze
+    errors.add(:account, "must be a hotel account")
+  end
+
+  def normalize_default_currency
+    self.default_currency = CurrencyCatalog.normalize(default_currency)
+  end
 
   scope :search, ->(query) {
     return all if query.blank?
@@ -132,6 +196,134 @@ class Hotel < ApplicationRecord
 
   def active?
     %w[approved live].include?(status)
+  end
+
+  def publicly_bookable?
+    active? && plan&.slug != "easy"
+  end
+
+  def concierge_available?
+    active? && concierge_enabled?
+  end
+
+  def plan_feature_map
+    @plan_feature_map ||= if plan_id
+      PlanFeature.where(plan_id: plan_id)
+          .joins(:feature)
+          .pluck("features.slug", :enabled, :level, :addon)
+          .each_with_object({}) { |(slug, enabled, level, addon), h|
+            h[slug] = { enabled: enabled, level: level, addon: addon }
+          }
+    else
+      {}
+    end
+  end
+
+  def feature_enabled?(slug)
+    !!plan_feature_map.dig(slug.to_s, :enabled)
+  end
+
+  def feature_level(slug)
+    row = plan_feature_map[slug.to_s]
+    return nil unless row && row[:enabled]
+    row[:level]
+  end
+
+  def feature_addon?(slug)
+    !!plan_feature_map.dig(slug.to_s, :addon)
+  end
+
+  def hotel_time_zone
+    Time.find_zone(time_zone.presence || User::DEFAULT_TIME_ZONE) || Time.zone
+  end
+
+  def arrival_grace_period_hours
+    (arrival_grace_period || 0) / 3600
+  end
+
+  def arrival_grace_period_hours=(hours)
+    self.arrival_grace_period = hours.to_i * 3600
+  end
+
+  def business_starts_at
+    read_attribute(:business_starts_at)&.utc
+  end
+
+  def business_starts_at=(value)
+    if value.is_a?(String) && value.present?
+      write_attribute(:business_starts_at, Time.find_zone("UTC").parse(value))
+    else
+      super
+    end
+  end
+
+  def business_ends_at
+    read_attribute(:business_ends_at)&.utc
+  end
+
+  def business_ends_at=(value)
+    if value.is_a?(String) && value.present?
+      write_attribute(:business_ends_at, Time.find_zone("UTC").parse(value))
+    else
+      super
+    end
+  end
+
+  def business_date_for(time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    date = local_time.to_date
+
+    return date if business_day_window_for(date).cover?(local_time)
+    return date - 1.day if business_day_window_for(date - 1.day).cover?(local_time)
+
+    date
+  end
+
+  def current_business_date_record
+    hotel_business_dates.current.order(:business_date, :id).first
+  end
+
+  def current_business_date
+    current_business_date_record&.business_date
+  end
+
+  def date_closed?(date, _reference_time = Time.current)
+    date = date.to_date
+    record = hotel_business_dates.find_by(business_date: date)
+
+    record.nil? || record.closed_like?
+  end
+
+  def can_audit_date?(business_date, time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    window = business_day_window_for(business_date)
+
+    return false if local_time < window.end
+
+    local_time >= window.end + 5.minutes
+  end
+
+  def latest_closable_business_date(time = Time.current)
+    local_time = time.in_time_zone(hotel_time_zone)
+    current_biz_date = business_date_for(local_time)
+
+    candidate = current_biz_date - 1.day
+    candidate_end = business_day_window_for(candidate).end
+
+    if local_time >= candidate_end + 30.minutes
+      candidate
+    else
+      candidate - 1.day
+    end
+  end
+
+  def business_day_window_for(business_date)
+    date = business_date.to_date
+    start_at = hotel_time_zone.local(date.year, date.month, date.day, business_starts_at.hour, business_starts_at.min)
+    end_date = business_day_crosses_midnight? ? date + 1.day : date
+    end_at = hotel_time_zone.local(end_date.year, end_date.month, end_date.day, business_ends_at.hour, business_ends_at.min)
+
+    start_at...end_at
   end
 
   def effective_payment_setting(gateway)
@@ -210,6 +402,18 @@ class Hotel < ApplicationRecord
     default_rule&.amount&.to_f || 0.0
   end
 
+  def business_day_crosses_midnight?
+    # Compare hours and minutes directly to avoid zone issues on the 'time' column
+    start_total_mins = (business_starts_at.hour * 60) + business_starts_at.min
+    end_total_mins = (business_ends_at.hour * 60) + business_ends_at.min
+
+    end_total_mins <= start_total_mins
+  end
+
+  def seconds_since_midnight(time)
+    (time.hour * 3600) + (time.min * 60) + time.sec
+  end
+
   def onboarding?
     %w[registered email_verified profile_incomplete rooms_incomplete inventory_incomplete].include?(status)
   end
@@ -242,6 +446,29 @@ class Hotel < ApplicationRecord
     update(status: "inventory_incomplete") if status == "rooms_incomplete"
   end
 
+  def ready_for_review?
+    property_profile_ready? && rooms_ready? && inventory_ready?
+  end
+
+  def property_profile_ready?
+    name.present? &&
+      city.present? &&
+      country.present? &&
+      address.present? &&
+      featured_photo_attachment_id.present?
+  end
+
+  def rooms_ready?
+    room_types.exists? && room_types.all? { |rt| rt.name.present? && rt.quantity.positive? }
+  end
+
+  def inventory_ready?
+    # Check if there are rates set for at least some days in the next 30 days
+    room_rates.where(date: Date.current..30.days.from_now.to_date)
+              .where("price > 0")
+              .exists?
+  end
+
   def submit_for_review!
     update(status: "pending_review") if ready_for_review?
   end
@@ -255,6 +482,10 @@ class Hotel < ApplicationRecord
 
   def tourism_tax_amount_for(country)
     tourism_tax_applicable_for?(country) ? tourism_tax_amount : 0
+  end
+
+  def transaction_configuration
+    hotel_transaction_configuration || build_hotel_transaction_configuration
   end
 
   def featured_photo_attachment
@@ -373,16 +604,95 @@ class Hotel < ApplicationRecord
     end
   end
 
-  def should_generate_new_friendly_id?
-    slug.blank?
+  def booking_snapshot
+    as_json(except: %i[
+      ai_provider_enabled
+      ai_provider_name
+      ai_provider_key
+      ai_concierge_tone
+    ])
   end
 
+  def latitude
+    extract_coordinate("3d", /@(-?\d+\.\d+)/)
+  end
+
+  def longitude
+    extract_coordinate("4d", /@(?:-?\d+\.\d+),(-?\d+\.\d+)/)
+  end
+
+  def should_generate_new_friendly_id?
+    name_changed? || slug.blank?
+  end
+
+
   private
+
+  def hotel_prefix_has_not_been_used_by_another_hotel
+    return if hotel_prefix.blank?
+    return unless HotelPrefixHistory.where(prefix: hotel_prefix).where.not(hotel_id: id).exists?
+
+    errors.add(:hotel_prefix, "has already been used by another hotel")
+  end
+
+  def record_hotel_prefix_history
+    return if hotel_prefix.blank?
+
+    hotel_prefix_histories.where.not(prefix: hotel_prefix).where(retired_at: nil).update_all(retired_at: Time.current, updated_at: Time.current)
+    history = hotel_prefix_histories.find_or_initialize_by(prefix: hotel_prefix)
+    history.retired_at = nil
+    history.save!
+  end
+
+  def assign_hotel_prefix
+    return if hotel_prefix.present?
+    self.hotel_prefix = generate_unique_prefix
+  end
+
+  def normalize_hotel_prefix
+    self.hotel_prefix = nil if hotel_prefix.blank?
+  end
+
+  PREFIX_MIN_LENGTH = 3
+  PREFIX_MAX_LENGTH = 4
+
+  def generate_unique_prefix
+    base = build_prefix_base
+    candidate = base
+    counter = 2
+    while Hotel.exists?(hotel_prefix: candidate) || HotelPrefixHistory.exists?(prefix: candidate)
+      candidate = "#{base}#{counter}"
+      counter += 1
+    end
+    candidate
+  end
+
+  def build_prefix_base
+    cleaned = name.to_s.upcase.gsub(/[^A-Z\s]/, "").strip
+    words = cleaned.split(/\s+/).reject(&:empty?)
+    return "WAS" if words.empty?
+
+    base =
+      if words.length >= PREFIX_MIN_LENGTH
+        words.map { |w| w[0] }.join.first(PREFIX_MAX_LENGTH)
+      elsif words.length == 2
+        first, last = words
+        "#{first[0]}#{first[1] || last[1] || 'X'}#{last[0]}"
+      else
+        words.first.first(PREFIX_MAX_LENGTH)
+      end
+
+    base.length >= PREFIX_MIN_LENGTH ? base : base.ljust(PREFIX_MIN_LENGTH, "X")
+  end
+
+  def self.allowed_amenity_slugs
+    @allowed_amenity_slugs ||= Amenity.hotel.pluck(:slug)
+  end
 
   def amenities_must_be_from_list
     return if amenities.blank?
 
-    allowed_ids = HOTEL_AMENITIES.map { |a| a[:id] }
+    allowed_ids = self.class.allowed_amenity_slugs
     invalid_amenities = amenities - allowed_ids
 
     if invalid_amenities.any?
@@ -410,5 +720,51 @@ class Hotel < ApplicationRecord
   def final_onboarding_session
     onboarding_sessions.completed.where(notes: "FINAL_ONBOARDING_COMPLETION").order(completed_at: :desc).first ||
       onboarding_sessions.where(notes: "FINAL_ONBOARDING_COMPLETION").order(updated_at: :desc).first
+  end
+
+  def extract_coordinate(prefix, fallback_regex)
+    return nil if google_map_link.blank?
+
+    matches = google_map_link.scan(/!#{prefix}(-?\d+\.\d+)/).flatten
+    return matches.last.to_f if matches.any?
+
+    google_map_link[fallback_regex, 1]&.to_f
+  end
+
+  def reset_pax_pricing_only_if_not_allowed
+    unless allow_pax_pricing?
+      self.pax_pricing_only = false
+
+      if persisted?
+        affected_ids = rate_plans.where(sell_mode: "per_person").pluck(:id)
+        if affected_ids.any?
+          rate_plans.where(id: affected_ids).update_all(sell_mode: "per_room")
+          Rails.logger.warn(
+            "[Hotel##{id}] allow_pax_pricing disabled: force-flipped #{affected_ids.size} rate plan(s) " \
+            "from per_person to per_room (rate_plan_ids=#{affected_ids})"
+          )
+        end
+      end
+    end
+  end
+
+  def ensure_current_business_date
+    HotelBusinessDate.initialize_for_hotel!(hotel: self, date: business_date_for(Time.current))
+  end
+
+  def ensure_default_gl_maps
+    Financials::EnsureDefaultGlMaps.call(self)
+  end
+
+  def ensure_default_transaction_codes
+    Financials::EnsureDefaultTransactionCodes.call(self)
+  end
+
+  def saved_change_to_primary_tax_settings?
+    saved_change_to_sst_enabled? || saved_change_to_tourism_tax_enabled?
+  end
+
+  def sync_primary_tax_transaction_codes
+    Financials::EnsureDefaultTransactionCodes.call(self)
   end
 end

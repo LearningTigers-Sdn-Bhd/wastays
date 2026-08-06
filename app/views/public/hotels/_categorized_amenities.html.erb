@@ -1,0 +1,72 @@
+<%# frozen_string_literal: true %>
+
+<% if categorized_amenities.any? %>
+  <div class="mt-8" data-controller="hotel-amenities">
+    <%# Initial View (Collapsed) %>
+    <div data-hotel-amenities-target="collapsedContent">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-10">
+        <% 
+          visible_categories_count = 0
+          total_amenities_count = 0
+          categorized_amenities.each do |category, amenities|
+            break if visible_categories_count >= 3
+            
+            visible_amenities = amenities.take(5)
+            
+            if visible_amenities.any?
+              visible_categories_count += 1
+              total_amenities_count += visible_amenities.size
+        %>
+          <div>
+            <h4 class="flex items-center gap-x-2 text-xs font-black text-foreground uppercase tracking-widest mb-4">
+              <%= category_icon(category) %>
+              <%= category %>
+            </h4>
+            <div class="space-y-3">
+              <% visible_amenities.each do |amenity| %>
+                <div class="flex items-center gap-x-2.5 text-[13px] font-medium text-muted-foreground">
+                  <svg class="w-5 h-5 text-success shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span><%= amenity.name %></span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% 
+            end
+          end 
+        %>
+      </div>
+    </div>
+
+    <%# Full View (Expanded) %>
+    <div data-hotel-amenities-target="expandedContent" class="hidden">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-10">
+        <% categorized_amenities.each do |category, amenities| %>
+          <div>
+            <h4 class="flex items-center gap-x-2 text-xs font-black text-foreground uppercase tracking-widest mb-4">
+              <%= category_icon(category) %>
+              <%= category %>
+            </h4>
+            <div class="space-y-3">
+              <% amenities.each do |amenity| %>
+                <div class="flex items-center gap-x-2.5 text-[13px] font-medium text-muted-foreground">
+                  <svg class="w-5 h-5 text-success shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span><%= amenity.name %></span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <% if categorized_amenities.size > visible_categories_count || categorized_amenities.sum { |_, a| a.size } > total_amenities_count %>
+      <button type="button" 
+              class="mt-6 text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+              data-action="click->hotel-amenities#toggle"
+              data-hotel-amenities-target="showMoreButton">
+        Show more
+      </button>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,56 @@
+<section aria-labelledby="popover-preview-heading" class="border-t border-border pt-8">
+  <h2 id="popover-preview-heading" class="text-lg font-semibold text-foreground">Popover</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Click- or hover-triggered container that yields arbitrary content, positioned like a
+    menu with an optional caret. Collision-aware, dismissed on Escape or outside click.
+    A <code>focus</code> variant traps focus within the panel.
+  </p>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <%= render PanelsUI::Popover.new(id: "popover-default") do |popover| %>
+      <% popover.with_trigger(variant: :primary) do %>Open popover<% end %>
+      <div class="w-56 text-left">
+        <h3 class="text-sm font-semibold text-foreground">Dimensions</h3>
+        <p class="mt-1 text-xs text-muted-foreground">
+          Set the width and height of the layer. Any content is allowed here.
+        </p>
+        <%= render PanelsUI::Button.new(variant: :secondary, size: :sm, class: "mt-3") do %>Action<% end %>
+      </div>
+    <% end %>
+
+    <% {
+      top: "Top",
+      right: "Right",
+      bottom: "Bottom",
+      left: "Left"
+    }.each do |placement, label| %>
+      <%= render PanelsUI::Popover.new(id: "popover-#{placement}", placement: placement) do |popover| %>
+        <% popover.with_trigger(variant: :secondary) do %><%= label %><% end %>
+        <p class="w-40 text-left text-xs text-muted-foreground">Placed on <%= label.downcase %>.</p>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::Popover.new(id: "popover-hover", trigger_on: :hover) do |popover| %>
+      <% popover.with_trigger(variant: :secondary) do %>Hover<% end %>
+      <p class="w-44 text-left text-xs text-muted-foreground">Opens on hover and keyboard focus.</p>
+    <% end %>
+
+    <%= render PanelsUI::Popover.new(id: "popover-no-arrow", arrow: false) do |popover| %>
+      <% popover.with_trigger(variant: :secondary) do %>No arrow<% end %>
+      <p class="w-44 text-left text-xs text-muted-foreground">The caret is omitted with <code>arrow: false</code>.</p>
+    <% end %>
+
+    <%= render PanelsUI::Popover.new(id: "popover-focus", focus: true) do |popover| %>
+      <% popover.with_trigger(variant: :accent) do %>Focus trap<% end %>
+      <form class="w-60 text-left">
+        <h3 class="text-sm font-semibold text-foreground">Rename layer</h3>
+        <label class="mt-2 block text-xs font-medium text-muted-foreground" for="popover-focus-name">Name</label>
+        <input id="popover-focus-name" name="name" type="text" class="panel-input mt-1" placeholder="Untitled" />
+        <div class="mt-3 flex justify-end gap-2">
+          <%= render PanelsUI::Button.new(variant: :ghost, size: :sm, data: { action: "click->panels-ui--popover#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(variant: :primary, size: :sm) do %>Save<% end %>
+        </div>
+      </form>
+    <% end %>
+  </div>
+</section>

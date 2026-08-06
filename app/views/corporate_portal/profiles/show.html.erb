@@ -1,0 +1,61 @@
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Corporate Profile",
+        description: "Your corporate account and linked hotel relationships.") %>
+
+  <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <h2 class="text-lg font-bold text-foreground"><%= @account.name %></h2>
+    <dl class="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+      <div>
+        <dt class="text-muted-foreground">Account status</dt>
+        <dd class="font-bold text-foreground"><%= @account.status.humanize %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Account type</dt>
+        <dd class="font-bold text-foreground"><%= @account.account_kind.humanize %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Primary user</dt>
+        <dd class="font-bold text-foreground"><%= current_user.name %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Email</dt>
+        <dd class="font-bold text-foreground"><%= current_user.email %></dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-6 py-5">
+      <h2 class="text-lg font-bold text-foreground">Linked Hotels</h2>
+    </div>
+    <% if @relationships.any? %>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[760px] text-left text-sm">
+          <thead class="border-b border-border bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th class="px-6 py-3">Hotel</th>
+              <th class="px-6 py-3">Relationship</th>
+              <th class="px-6 py-3">Direct Bill</th>
+              <th class="px-6 py-3">Credit Limit</th>
+              <th class="px-6 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <% @relationships.each do |relationship| %>
+              <tr>
+                <td class="px-6 py-4 font-bold text-foreground"><%= relationship.hotel.name %></td>
+                <td class="px-6 py-4 text-muted-foreground"><%= relationship.relationship_type.humanize %></td>
+                <td class="px-6 py-4 text-muted-foreground"><%= relationship.direct_bill_enabled? ? "Enabled" : "Disabled" %></td>
+                <td class="px-6 py-4 text-muted-foreground"><%= relationship.credit_limit.present? ? "#{relationship.credit_currency} #{format_number(relationship.credit_limit, precision: 2)}" : "Not set" %></td>
+                <td class="px-6 py-4"><span class="rounded-md bg-muted px-2 py-1 text-xs font-bold uppercase tracking-wide text-foreground"><%= relationship.status.humanize %></span></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="px-6 py-10 text-center text-sm text-muted-foreground">No hotel relationships are available.</p>
+    <% end %>
+  </section>
+</div>

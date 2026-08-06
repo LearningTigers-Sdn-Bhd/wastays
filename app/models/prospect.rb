@@ -4,6 +4,7 @@ class Prospect < ApplicationRecord
   belongs_to :hotel
   belongs_to :guest, optional: true
   has_many :prospect_messages, dependent: :destroy
+  has_many :hotel_knowledge_diagnostics, dependent: :nullify
   has_one :prospect_conversation_state, dependent: :destroy
 
   validates :public_id, presence: true, uniqueness: true

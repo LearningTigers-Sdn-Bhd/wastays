@@ -1,0 +1,46 @@
+<% content_for :body_end do %>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<% end %>
+
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Review Payment",
+        description: "Suggestions are sent to hotel finance as remittance instructions only.") %>
+
+  <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <div class="grid gap-4 sm:grid-cols-3">
+      <div><p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Hotel</p><p class="mt-1 font-bold text-foreground"><%= @presenter.hotel_name %></p></div>
+      <div><p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment amount</p><p class="mt-1 font-black text-foreground"><%= @presenter.amount_label %></p></div>
+      <div><p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Selected outstanding</p><p class="mt-1 font-black text-foreground"><%= @presenter.selected_total_label %></p></div>
+    </div>
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+      <p class="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">Shortfall: <%= @presenter.shortfall_label %></p>
+      <p class="rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800">Excess unapplied: <%= @presenter.excess_label %></p>
+    </div>
+  </section>
+
+  <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-6 py-5"><h2 class="text-lg font-bold text-foreground">Oldest Due First Suggestions</h2></div>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[720px] text-left text-sm">
+        <thead class="border-b border-border bg-muted text-xs uppercase tracking-wider text-muted-foreground"><tr><th class="px-6 py-3">Invoice</th><th class="px-6 py-3">Due</th><th class="px-6 py-3 text-right">Outstanding</th><th class="px-6 py-3 text-right">Suggested</th></tr></thead>
+        <tbody class="divide-y divide-border">
+          <% @presenter.suggestions.each do |suggestion| %>
+            <% due_on = suggestion["due_on"] || suggestion[:due_on] %>
+            <tr><td class="px-6 py-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td><td class="px-6 py-4 text-muted-foreground"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td><td class="px-6 py-4 text-right"><%= @presenter.currency %> <%= format_number(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td><td class="px-6 py-4 text-right font-bold"><%= @presenter.currency %> <%= format_number(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <%= form_with url: verify_corporate_ar_payments_path, method: :post,
+                data: { controller: "checkout-payment", checkout_payment_session_url_value: checkout_session_corporate_ar_payments_path, checkout_payment_hotel_name_value: @presenter.hotel_name, checkout_payment_ready_value: @presenter.ready?, action: "submit->checkout-payment#submit" } do %>
+    <%= hidden_field_tag :intent_id, @presenter.intent.id %>
+    <%= hidden_field_tag :gateway, @presenter.intent.gateway %>
+    <%= hidden_field_tag "payment_response[razorpay_payment_id]", "", data: { checkout_payment_target: "paymentIdField" } %>
+    <%= hidden_field_tag "payment_response[razorpay_order_id]", "", data: { checkout_payment_target: "orderIdField" } %>
+    <%= hidden_field_tag "payment_response[razorpay_signature]", "", data: { checkout_payment_target: "signatureField" } %>
+    <div class="flex justify-end"><%= submit_tag "Pay Securely", disabled: !@presenter.ready?, data: { checkout_payment_target: "submitButton" }, class: "rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50" %></div>
+  <% end %>
+</div>

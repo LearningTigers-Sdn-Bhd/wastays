@@ -1,0 +1,59 @@
+@layer components {
+  .panel-accordion {
+    @apply w-full text-foreground;
+  }
+
+  .panel-accordion--bordered {
+    @apply overflow-hidden rounded-lg border border-border;
+  }
+
+  .panel-accordion__item {
+    @apply border-b border-border;
+  }
+
+  .panel-accordion__item:last-child {
+    @apply border-b-0;
+  }
+
+  .panel-accordion__heading {
+    @apply m-0;
+  }
+
+  .panel-accordion__trigger {
+    @apply min-h-11 py-2.5 text-sm font-medium hover:underline;
+  }
+
+  .panel-accordion--bordered > .panel-accordion__item > .panel-collapsible__heading > .panel-accordion__trigger {
+    @apply px-3;
+  }
+
+  .panel-accordion__trigger[aria-disabled="true"] {
+    @apply cursor-default;
+  }
+
+  .panel-accordion__label {
+    @apply min-w-0 text-left;
+  }
+
+  .panel-accordion__indicator {
+    @apply size-4 shrink-0 transition-transform duration-200;
+  }
+
+  .panel-accordion__trigger[data-state="open"] .panel-accordion__indicator {
+    transform: rotate(180deg);
+  }
+
+  .panel-accordion__content > .panel-collapsible__content-inner {
+    @apply pb-3 text-sm text-muted-foreground;
+  }
+
+  .panel-accordion--bordered > .panel-accordion__item > .panel-accordion__content > .panel-collapsible__content-inner {
+    @apply px-3;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-accordion__indicator {
+      transition: none;
+    }
+  }
+}

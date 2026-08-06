@@ -1,0 +1,55 @@
+<% tone_text = { "danger" => "text-red-700", "warning" => "text-amber-700", "success" => "text-emerald-700", "info" => "text-blue-700", "neutral" => "text-foreground" } %>
+
+<section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+  <header class="border-b border-border bg-muted/70 px-4 py-2.5">
+    <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+      <span class="inline-flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-700"><%= cached_icon "list-checks", class: "size-3.5", aria: { hidden: true } %></span>
+      Run Results
+    </h2>
+    <p class="mt-0.5 text-xs text-muted-foreground">Actions and exceptions recorded by this Night Audit run.</p>
+  </header>
+
+  <div class="grid grid-cols-2 gap-px bg-muted lg:grid-cols-4">
+    <% presenter.run_result_counters.each do |counter| %>
+      <div class="bg-card px-4 py-2.5">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= counter.label %></p>
+        <p class="mt-0.5 text-lg font-bold tabular-nums <%= tone_text.fetch(counter.tone) %>"><%= counter.value %></p>
+        <% if counter.detail.present? %><p class="text-[11px] text-muted-foreground"><%= counter.detail %></p><% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if presenter.run_result_rows.any? %>
+    <div class="hidden overflow-x-auto border-t border-border md:block">
+      <table class="min-w-full divide-y divide-border text-sm" data-testid="run-results-table">
+        <thead class="bg-muted text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <tr><th class="px-4 py-2">Result</th><th class="px-4 py-2">Booking / Item</th><th class="px-4 py-2">Change / Details</th><th class="px-4 py-2 text-right">Amount</th></tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          <% presenter.run_result_rows.each do |row| %>
+            <tr>
+              <td class="px-4 py-2.5"><span class="inline-flex rounded bg-card px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset <%= tone_text.fetch(row.tone) %> ring-ring"><%= row.result %></span></td>
+              <td class="px-4 py-2.5 font-semibold text-foreground"><%= row.reference %></td>
+              <td class="px-4 py-2.5 text-muted-foreground"><%= row.details %></td>
+              <td class="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground"><%= row.amount %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <div class="divide-y divide-border border-t border-border md:hidden">
+      <% presenter.run_result_rows.each do |row| %>
+        <article class="px-4 py-3">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-[10px] font-bold uppercase tracking-wider <%= tone_text.fetch(row.tone) %>"><%= row.result %></p>
+            <p class="text-xs font-bold tabular-nums text-foreground"><%= row.amount %></p>
+          </div>
+          <p class="mt-1 text-sm font-bold text-foreground"><%= row.reference %></p>
+          <p class="mt-1 text-xs text-muted-foreground"><%= row.details %></p>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="border-t border-border px-4 py-3 text-sm font-medium text-muted-foreground"><%= presenter.empty_state(:run_results) %></p>
+  <% end %>
+</section>

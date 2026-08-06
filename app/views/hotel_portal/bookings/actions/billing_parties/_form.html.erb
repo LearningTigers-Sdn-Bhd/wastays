@@ -1,0 +1,129 @@
+<% sheet_frame = turbo_frame_request_id.presence || "booking_action_sheet" %>
+<% if @review_group %>
+  <%= render "hotel_portal/bookings/actions/billing_parties/group_review" %>
+<% elsif @mode == "choose" %>
+  <%= render "hotel_portal/bookings/actions/shared/sheet",
+        id: "billing-party-choice-sheet",
+        title: "Add billing party",
+        description: "Choose who will pay for this room.",
+        side: :right,
+        size: :sm do %>
+    <div class="space-y-3">
+      <%= render PanelsUI::Button.new(
+            href: hotel_booking_action_manage_guest_path(current_hotel, @booking, mode: "add", return_to: @return_to),
+            variant: :secondary,
+            class: "w-full justify-start",
+            data: { turbo_frame: sheet_frame }) do %>
+        <%= app_icon "user-plus", class: "size-4", aria: { hidden: true } %>
+        Add guest
+      <% end %>
+      <p class="text-xs text-muted-foreground">Creates a guest for the stay and makes them available as a payer.</p>
+
+      <%= render PanelsUI::Button.new(
+            href: hotel_booking_action_manage_billing_party_path(current_hotel, @booking, mode: "add_account", return_to: @return_to),
+            variant: :secondary,
+            class: "w-full justify-start",
+            data: { turbo_frame: sheet_frame }) do %>
+        <%= app_icon "building-2", class: "size-4", aria: { hidden: true } %>
+        Add Corporate Account payer
+      <% end %>
+      <p class="text-xs text-muted-foreground">Links a Corporate Account and creates its external folio.</p>
+    </div>
+  <% end %>
+<% elsif @mode == "remove" %>
+  <% footer = capture do %>
+    <div class="flex w-full justify-end gap-2">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) { "Cancel" } %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: "remove-billing-party-form", variant: :destructive) { "Remove payer" } %>
+    </div>
+  <% end %>
+  <%= render "hotel_portal/bookings/actions/shared/sheet", id: "remove-billing-party-sheet", title: "Remove billing party", description: @party.display_name, size: :sm, footer: footer do %>
+    <%= form_with url: hotel_booking_action_manage_billing_party_path(current_hotel, @booking, mode: "remove", billing_party_id: @party.id), method: :delete, id: "remove-billing-party-form" do %>
+      <%= hidden_field_tag :return_to, @return_to %>
+      <p class="text-sm text-muted-foreground">This removes the account from the current room. Existing linked folios prevent removal.</p>
+      <% if @errors.any? %><p class="mt-4 text-sm text-destructive" role="alert"><%= @errors.to_sentence %></p><% end %>
+    <% end %>
+  <% end %>
+<% else %>
+  <% editing = @mode == "edit_terms" %>
+  <% accounts_available = @accounts.any? %>
+  <% form_id = editing ? "billing-terms-form" : "billing-party-form" %>
+  <% submit_label = editing ? "Save terms" : "Add account payer" %>
+  <% footer = capture do %>
+    <div class="flex w-full justify-end gap-2">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) { "Cancel" } %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, disabled: !editing && !accounts_available, data: { turbo_submits_with: "Saving…" }) { submit_label } %>
+    </div>
+  <% end %>
+  <%= render "hotel_portal/bookings/actions/shared/sheet",
+        id: editing ? "billing-terms-sheet" : "billing-party-sheet",
+        title: editing ? "Edit billing terms" : "Add account payer",
+        description: editing ? @party.display_name : "Choose an account and where it applies.",
+        size: :lg,
+        footer: footer do %>
+    <% form_url = hotel_booking_action_manage_billing_party_path(current_hotel, @booking, mode: @mode, billing_party_id: @party&.id) %>
+    <%= form_with scope: :billing_party, url: form_url, method: editing ? :patch : :post, id: form_id, class: "space-y-5" do |form| %>
+      <%= hidden_field_tag :return_to, @return_to %>
+
+      <% if @errors.any? %>
+        <div class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1">
+          <p class="font-medium">Billing party could not be saved.</p>
+          <p class="mt-1"><%= @errors.to_sentence %></p>
+        </div>
+      <% end %>
+
+      <% if @booking.group_booking_id? && (!editing || @party.company?) %>
+        <% children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
+        <% choices = children.map do |child|
+             room = child.booking_rooms.first
+             label = room&.room_number.present? ? "Room #{room.room_number}" : child.formatted_reservation_number
+             [label, "booking:#{child.id}"]
+           end %>
+        <% if editing %>
+          <% choices = [["Current room", "booking:#{@booking.id}"], ["Apply to group booking (#{children.size} rooms)", "group"]] %>
+        <% else %>
+          <% choices << ["All rooms in group (#{children.size})", "group"] %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :apply_to, label: "Apply to", hint: editing ? "Group updates change existing matching account payers only." : "One payer and external folio will be created for each selected room.") do |field| %>
+          <% field.with_select_menu(choices, selected: @billing_party_attributes[:apply_to].presence || "booking:#{@booking.id}") %>
+        <% end %>
+      <% else %>
+        <%= hidden_field_tag "billing_party[apply_to]", "booking:#{@booking.id}" %>
+        <% apply_hint = editing && @party.guest? ? "Guest billing terms apply to this room only." : "Standalone bookings can only update their current room." %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :apply_to, label: "Apply to", hint: apply_hint, disabled: true) do |field| %>
+          <% field.with_select_menu([["Current room", "booking:#{@booking.id}"]], selected: "booking:#{@booking.id}") %>
+        <% end %>
+      <% end %>
+
+      <% unless editing %>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <%= render PanelsUI::FormField.new(form:, attribute: :account_type, label: "Account type", required: true) do |field| %>
+            <% field.with_select_menu(BookingBillingParty::ACCOUNT_TYPES.map { |type| [type.humanize, type] }, selected: @billing_party_attributes[:account_type].presence || "company") %>
+          <% end %>
+          <% if accounts_available %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :hotel_corporate_account_id, label: "Corporate account", required: true) do |field| %>
+              <% field.with_combobox(@accounts.map { |account| [account.corporate_account.name, account.id] }, selected: @billing_party_attributes[:hotel_corporate_account_id], prompt: "Search accounts") %>
+            <% end %>
+          <% else %>
+            <p class="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">No active Corporate Accounts yet. Add one in settings to bill a Corporate Account.</p>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% terms = @party&.billing_terms %>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form:, attribute: :settlement_type, label: "Settlement type", required: true) do |field| %>
+          <% field.with_select_menu([["Cash / bank", "cash_bank"], ["City Ledger", "city_ledger"]], selected: @billing_party_attributes[:settlement_type].presence || terms&.settlement_type || "cash_bank") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :purchase_order_reference, label: "PO reference") do |field| %>
+          <% field.with_input(value: @billing_party_attributes[:purchase_order_reference].presence || terms&.purchase_order_reference) %>
+        <% end %>
+        <div class="sm:col-span-2">
+          <%= render PanelsUI::FormField.new(form:, attribute: :authorization_reference, label: "Authorization reference") do |field| %>
+            <% field.with_input(value: @billing_party_attributes[:authorization_reference].presence || terms&.authorization_reference) %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

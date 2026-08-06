@@ -1,0 +1,22 @@
+<%# locals: (booking:) %>
+<% presenter = HotelPortal::InHouseGuestPresenter.new(booking, current_user.time_zone) %>
+<% room_numbers = booking.booking_rooms.filter_map { |room| room.room_number.presence }.join(" · ").presence || "Unassigned" %>
+<% nights = booking.check_in && booking.check_out ? (booking.check_out.to_date - booking.check_in.to_date).to_i : nil %>
+<% totals = HotelPortal::FrontDesk::StayTotalsPresenter.new(booking) %>
+<article class="front-desk-stay-card min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm" data-booking-token="<%= booking.confirmation_token %>">
+  <header class="flex min-w-0 items-stretch gap-2 border-b border-border p-3">
+    <span class="flex max-w-[35%] shrink-0 items-center border-r border-border pr-3 <%= room_numbers == 'Unassigned' ? 'flex-col justify-center text-xs font-medium leading-tight text-muted-foreground' : 'truncate text-lg font-semibold tracking-tight text-primary' %>"><span><%= room_numbers %></span><% if room_numbers == "Unassigned" %><span class="mt-1">Room</span><% end %></span>
+    <div class="min-w-0 flex-1">
+      <div class="flex min-w-0 flex-wrap items-start gap-1.5"><p class="min-w-0 flex-1 break-words text-sm font-semibold text-foreground"><%= presenter.guest_name %></p><%= render "guest_markers", presenter: %></div>
+      <p class="mt-1 truncate font-mono text-xs text-muted-foreground"><%= presenter.confirmation_token %></p>
+    </div>
+    <%= render "record_actions", booking:, tab: "in_house" %>
+  </header>
+  <div class="space-y-3 p-3"><section class="flex items-stretch gap-2 rounded-lg bg-muted px-3 py-2 text-sm"><div class="min-w-0 flex flex-1 flex-col justify-center"><p class="text-xs font-medium text-muted-foreground">Arrival</p><p class="mt-1 truncate"><%= presenter.check_in_formatted %></p></div><span class="-my-2 self-stretch border-l border-border" aria-hidden="true"></span><div class="flex shrink-0 flex-col justify-center text-center"><p class="text-xs font-medium text-muted-foreground">Stay</p><p class="mt-1 font-semibold text-foreground"><%= nights ? pluralize(nights, "night") : "—" %></p></div><span class="-my-2 self-stretch border-l border-border" aria-hidden="true"></span><div class="flex min-w-0 flex-1 flex-col justify-center text-right"><p class="text-xs font-medium text-muted-foreground">Departure</p><p class="mt-1 truncate"><%= presenter.check_out_formatted %></p></div></section>
+    <% if show_boat_times?(current_hotel) %>
+      <%= render "boat_band", booking:, kind: :out %>
+    <% end %>
+  <div class="flex items-center justify-between gap-2"><div class="flex min-w-0 items-center gap-1.5"><span class="<%= presenter.mobile_status_badge_class %>"><%= presenter.mobile_status_label %></span><%= render "booking_source_icon", source: booking.source %></div><%= render "occupancy", adults: booking.adults, children: booking.children %></div>
+  <dl class="grid grid-cols-2 gap-3 text-sm"><div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Checked in</dt><dd class="mt-1 break-words text-foreground"><%= presenter.checked_in_at_formatted %></dd></div><div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Booking date</dt><dd class="mt-1 text-foreground"><%= booking.created_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y") %></dd></div><div class="col-span-2 min-w-0"><dt class="text-xs font-medium text-muted-foreground">Rooms</dt><dd class="mt-1 break-words text-foreground"><%= presenter.rooms_summary.join(", ").presence || "No rooms assigned" %></dd></div></dl>
+  <dl class="grid grid-cols-3 gap-2 rounded-lg bg-muted px-3 py-2 text-sm tabular-nums"><div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Charges</dt><dd class="mt-1 whitespace-nowrap text-xs font-semibold text-foreground"><%= number_to_currency(totals.charges, unit: "RM ") %></dd></div><div class="min-w-0"><dt class="text-xs font-medium text-muted-foreground">Paid</dt><dd class="mt-1 whitespace-nowrap text-xs font-semibold text-foreground"><%= number_to_currency(totals.paid, unit: "RM ") %></dd></div><div class="min-w-0 text-right"><dt class="text-xs font-medium text-muted-foreground">Balance</dt><dd class="mt-1 whitespace-nowrap text-xs font-semibold <%= totals.balance.positive? ? 'text-destructive' : 'text-foreground' %>"><%= number_to_currency(totals.balance, unit: "RM ") %></dd></div></dl></div>
+</article>

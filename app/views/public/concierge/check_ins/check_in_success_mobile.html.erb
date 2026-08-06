@@ -1,0 +1,83 @@
+<% content_for :title, "Check-In Success! | #{@hotel.name}" %>
+
+<div data-mobile-view 
+     data-controller="scroll-reveal"
+     class="h-screen bg-primary font-sans overflow-hidden">
+
+  <%# Full Page Fade-Up Wrapper %>
+  <div class="h-full flex flex-col" data-animate style="transition-duration: 0.8s; transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
+    
+    <div class="flex-1 flex flex-col items-center justify-center px-6 text-center">
+      
+      <%# Success Icon %>
+      <div class="relative mb-8">
+        <div class="absolute inset-0 bg-white/10 rounded-full blur-2xl scale-150"></div>
+        <div class="relative w-24 h-24 rounded-full border-4 border-white flex items-center justify-center shadow-2xl">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+      </div>
+
+      <%# Success Content %>
+      <div class="mb-6">
+        <h1 class="text-3xl font-black text-white leading-tight mb-2">
+          Check-in Success!
+        </h1>
+        <p class="text-white/70 text-[13px] leading-relaxed font-medium">
+          Welcome to <span class="font-bold text-white"><%= @hotel.name %></span>. <br>
+          Your visit has been successfully checked in!
+        </p>
+      </div>
+
+      <%# Room Number Display %>
+      <div class="w-full max-w-[280px] mx-auto mb-6 pt-5 border-t border-white/20">
+        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-accent/80 mb-1">Your Room Number</p>
+        <p class="text-6xl font-serif text-white tracking-tighter [text-shadow:0_4px_12px_rgba(0,0,0,0.3)]">
+          <%= @room_number || @booking.room_numbers.presence || "ASSIGNING" %>
+        </p>
+        <% unless @room_number || @booking.room_numbers.present? %>
+          <p class="text-[9px] text-white/60 mt-2 font-medium">Please proceed to the front desk to <br>collect your room key.</p>
+        <% end %>
+      </div>
+
+      <%# Guest Info Card - Compact %>
+      <div class="w-full max-w-[300px] mx-auto bg-white/5 border border-white/10 rounded-2xl p-5 text-left space-y-4">
+        <div class="flex justify-between items-start gap-4">
+          <div>
+            <p class="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 mb-1">Guest</p>
+            <p class="text-[11px] font-bold text-white uppercase"><%= @booking.guest_name %></p>
+          </div>
+          <div class="text-right">
+            <p class="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 mb-1">Reservation</p>
+            <p class="text-[11px] font-mono font-bold text-accent"><%= @booking.confirmation_token %></p>
+          </div>
+        </div>
+        
+        <div class="flex items-end justify-between gap-4 pt-3 border-t border-white/10">
+          <div>
+            <p class="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 mb-1">Room Type</p>
+            <p class="text-[11px] font-bold text-white">
+              <%= @booking.booking_rooms.map { |br| br.room_type_snapshot["name"] }.join(", ") %>
+            </p>
+          </div>
+          <div class="text-right">
+            <p class="text-[8px] font-black uppercase tracking-[0.2em] text-white/40 mb-1">Duration</p>
+            <p class="text-[11px] font-bold text-white"><%= concierge_booking_nights(@booking) %></p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <%# Bottom Button %>
+    <div class="p-6 pb-12">
+      <%= link_to concierge_home_path(@hotel.slug), 
+            class: "block w-full bg-white text-primary font-black py-4.5 rounded-xl shadow-2xl active:scale-[0.98] transition-all text-center tracking-[0.2em] text-sm uppercase" do %>
+        Done
+      <% end %>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,53 @@
+<%# frozen_string_literal: true %>
+
+<% if show_stay_modal %>
+  <div class="fixed inset-0 z-[200] bg-black/55 backdrop-blur-sm px-4 sm:px-6 flex items-center justify-center overflow-y-auto"
+       role="dialog"
+       aria-modal="true"
+       data-controller="hotel-search-bar"
+       data-action="click->hotel-search-bar#close">
+    <div class="w-full max-w-xl my-6 rounded-2xl bg-white shadow-2xl border border-border p-6 sm:p-8" onclick="event.stopPropagation()">
+      <h2 class="text-2xl font-extrabold text-foreground mb-2">Select Your Stay Dates</h2>
+      <p class="text-sm text-muted-foreground mb-6">Choose your check-in and check-out dates to see accurate room availability and price.</p>
+
+      <%= form_with url: hotel_path(hotel),
+                    method: :get,
+                    local: true,
+                    class: "space-y-4",
+                    data: { action: "submit->hotel-search-bar#submit" } do |f| %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <%= f.label :check_in, "Check-in", class: "block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2" %>
+            <%= f.date_field :check_in, value: (check_in || Date.current).to_s, required: true, class: "w-full rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground" %>
+          </div>
+          <div>
+            <%= f.label :check_out, "Check-out", class: "block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2" %>
+            <%= f.date_field :check_out, value: (check_out || Date.tomorrow).to_s, required: true, class: "w-full rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground" %>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <%= f.label :adults, "Adults", class: "block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2" %>
+            <%= f.select :adults, options_for_select(1..8, adults), {}, class: "w-full rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground" %>
+          </div>
+          <div>
+            <%= f.label :children, "Children", class: "block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2" %>
+            <%= f.select :children, options_for_select(0..6, children), {}, class: "w-full rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground" %>
+          </div>
+          <%= f.hidden_field :room_count, value: 1 %>
+        </div>
+
+        <div>
+          <%= f.label :display_currency, "Display Currency", class: "block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2" %>
+          <%= f.select :display_currency, options_for_select(CurrencyCatalog.options, display_currency), {}, class: "w-full rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground" %>
+          <p class="mt-1 text-[11px] text-muted-foreground">Prices are estimates when display currency differs from the charged hotel currency.</p>
+        </div>
+
+        <div class="pt-2">
+          <%= f.submit "Check Availability", class: "btn btn-primary w-full py-3 text-sm font-bold uppercase tracking-widest" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

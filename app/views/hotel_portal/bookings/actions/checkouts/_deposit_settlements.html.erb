@@ -1,0 +1,96 @@
+<% group_deposits = deposits.select(&:group_booking_id?) %>
+<% booking_deposits = deposits.select(&:booking_id?).group_by(&:booking_id) %>
+<% selected_bookings = bookings.select { |candidate| selected_booking_ids.include?(candidate.id.to_s) } %>
+
+<section class="space-y-3" aria-labelledby="checkout-deposits-heading">
+  <div>
+    <h3 id="checkout-deposits-heading" class="text-base font-semibold">Deposits</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Apply or return each available deposit balance before completing checkout.</p>
+  </div>
+
+  <% sections = [] %>
+  <% sections << [ "Group deposits", group_deposits, nil ] if group_deposits.any? %>
+  <% bookings.each do |checkout_booking| %>
+    <% owned = booking_deposits.fetch(checkout_booking.id, []) %>
+    <% sections << [ checkout_booking.formatted_reservation_number, owned, checkout_booking ] if owned.any? %>
+  <% end %>
+
+  <div class="space-y-3">
+    <% sections.each do |title, section_deposits, owner_booking| %>
+      <section class="overflow-hidden rounded-lg border border-border bg-card <%= 'hidden' if owner_booking && !selected_booking_ids.include?(owner_booking.id.to_s) %>"
+               <% if owner_booking %>data-<%= ns %>-target="depositBookingSection" data-booking-id="<%= owner_booking.id %>"<% end %>>
+        <header class="border-b border-border px-4 py-3">
+          <h4 class="text-sm font-medium"><%= title %></h4>
+          <% if owner_booking %><p class="text-xs text-muted-foreground"><%= owner_booking.guest_name %></p><% end %>
+        </header>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[780px] text-sm">
+            <thead class="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
+              <tr>
+                <th scope="col" class="px-4 py-2 font-medium">Kind</th>
+                <th scope="col" class="px-4 py-2 text-right font-medium">Original</th>
+                <th scope="col" class="px-4 py-2 text-right font-medium">Applied</th>
+                <th scope="col" class="px-4 py-2 text-right font-medium">Returned</th>
+                <th scope="col" class="px-4 py-2 text-right font-medium">Available</th>
+                <th scope="col" class="px-4 py-2 font-medium">Settlement</th>
+                <th scope="col" class="px-4 py-2 font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <% section_deposits.each do |deposit| %>
+                <% available = checkout_deposit_available_amount(deposit) %>
+                <% resolved = !available.positive? %>
+                <% operation = deposit.kind_security? ? "apply" : "refund" %>
+                <% apply_path = checkout_deposit_action_path(deposit, "apply", selected_bookings) if deposit.kind_security? %>
+                <% return_operation = deposit.kind_security? ? "release" : "refund" %>
+                <% return_path = checkout_deposit_action_path(deposit, return_operation, selected_bookings) %>
+                <tr data-<%= ns %>-target="depositRow"
+                    data-deposit-id="<%= deposit.id %>"
+                    data-booking-id="<%= deposit.booking_id %>"
+                    data-blocking="<%= checkout_deposit_blocking?(deposit, selected_bookings) %>"
+                    data-available-amount="<%= available.to_s('F') %>">
+                  <td class="px-4 py-3">
+                    <span class="font-medium"><%= deposit.kind.humanize %></span>
+                    <span class="block text-xs text-muted-foreground" data-<%= ns %>-target="depositStatus"><%= deposit.status.humanize %></span>
+                  </td>
+                  <td class="px-4 py-3 text-right tabular-nums"><%= deposit.currency %> <%= format("%.2f", deposit.amount) %></td>
+                  <td class="px-4 py-3 text-right tabular-nums" data-<%= ns %>-target="depositApplied"><%= deposit.currency %> <%= format("%.2f", deposit.applied_amount) %></td>
+                  <td class="px-4 py-3 text-right tabular-nums" data-<%= ns %>-target="depositReturned"><%= deposit.currency %> <%= format("%.2f", deposit.returned_amount) %></td>
+                  <td class="px-4 py-3 text-right font-semibold tabular-nums" data-<%= ns %>-target="depositAvailable"><%= deposit.currency %> <%= format("%.2f", available) %></td>
+                  <td class="px-4 py-3">
+                    <div class="<%= 'hidden' if resolved %>" data-deposit-settlement-control>
+                      <%= fields_for "deposit_actions[#{deposit.id}]", OpenStruct.new(operation: operation) do |deposit_form| %>
+                        <%= render PanelsUI::FormField.new(form: deposit_form, attribute: :operation, label: "Settlement for deposit #{deposit.id}", label_hidden: true, size: :sm) do |field| %>
+                          <% options = deposit.kind_security? ? [ { label: "Apply", value: "apply" }, { label: "Release", value: "release" } ] : [ { label: "Refund", value: "refund" } ] %>
+                          <% field.with_select_menu(options, selected: operation, data: { "#{ns}-target": "depositActionControl", deposit_id: deposit.id, action: "change->#{ns}#updateDepositAction" }) %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                    <span class="<%= 'hidden' unless resolved %> text-sm text-muted-foreground" data-deposit-resolved>Resolved</span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <%= render PanelsUI::Button.new(
+                          href: operation == "apply" ? apply_path : return_path,
+                          variant: :secondary,
+                          size: :sm,
+                          class: ("hidden" if resolved),
+                          data: {
+                            turbo_frame: "booking_action_sheet_secondary",
+                            "#{ns}-target": "depositActionButton",
+                            deposit_id: deposit.id,
+                            apply_url: apply_path,
+                            return_url: return_path
+                          }) do %>
+                      <span data-deposit-action-label><%= operation.humanize %></span>
+                    <% end %>
+                    <span class="<%= 'hidden' unless resolved %> text-sm text-muted-foreground" data-deposit-action-complete>Complete</span>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% end %>
+  </div>
+</section>

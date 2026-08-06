@@ -1,0 +1,26 @@
+<% attention_count = folio_index.needs_attention_count %>
+<section class="mb-4 flex flex-col gap-3 rounded-md border px-4 py-3 sm:flex-row sm:items-center sm:justify-between <%= attention_count.positive? ? "border-amber-200 bg-amber-50/60" : "border-border bg-card" %>">
+  <div class="flex items-center gap-3">
+    <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-md <%= attention_count.positive? ? "bg-amber-100 text-amber-700" : "bg-emerald-50 text-emerald-700" %>">
+      <%= cached_icon(attention_count.positive? ? "triangle-alert" : "circle-check", class: "size-4") %>
+    </span>
+    <div>
+      <% if attention_count.positive? %>
+        <p class="text-sm font-black text-foreground">
+          <%= pluralize(attention_count, "folio") %> <%= attention_count == 1 ? "needs" : "need" %> attention
+        </p>
+        <p class="text-xs font-medium text-muted-foreground">Balances due, refunds due, due-out folios, and unsynced refunds.</p>
+      <% else %>
+        <p class="text-sm font-black text-foreground">No folios need attention</p>
+        <p class="text-xs font-medium text-muted-foreground">Balances, due-out folios, and refund syncs look clear.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <% if attention_count.positive? %>
+    <%= link_to needs_attention_hotel_folios_path(current_hotel), class: "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-2 text-xs font-black text-white shadow-sm transition hover:bg-amber-700", data: { turbo_frame: "_top" } do %>
+      Review Needs Attention
+      <%= cached_icon "arrow-right", class: "size-3.5" %>
+    <% end %>
+  <% end %>
+</section>

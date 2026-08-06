@@ -1,0 +1,14 @@
+<%= turbo_frame_tag(turbo_frame_request_id.presence || "booking_action_sheet_secondary") do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render "hotel_portal/bookings/deposits/settlement_sheet",
+          deposit: @deposit,
+          operation: @operation,
+          eligible_folios: @eligible_folios,
+          reason_codes: @reason_codes,
+          deduction: @operation == "apply",
+          form_scope: :deposit_settlement,
+          action_url: hotel_booking_action_checkout_deposit_settlement_path(current_hotel, @booking, @deposit,
+            operation: @operation, booking_ids: @checkout_bookings.map(&:id), return_to: @return_to),
+          error: @settlement_error %>
+  </div>
+<% end %>

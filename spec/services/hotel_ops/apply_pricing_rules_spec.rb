@@ -15,6 +15,7 @@ RSpec.describe HotelOps::ApplyPricingRules do
       hotel.pricing_rules.create!(rule_type: "weekends", name: "Weekends", price: 150, start_date: start_date, end_date: end_date, weekdays: [ 5, 6, 0 ])
       hotel.pricing_rules.create!(rule_type: "school_holiday", name: "School Holiday", price: 220, start_date: Date.new(2026, 4, 24), end_date: Date.new(2026, 4, 25))
       hotel.pricing_rules.create!(rule_type: "public_holiday", name: "Kaamatan", price: 260, start_date: Date.new(2026, 4, 25), end_date: Date.new(2026, 4, 25))
+      hotel.pricing_rules.create!(rule_type: "walk_in", name: "Walk-in", price: 300, start_date: Date.new(2026, 4, 25), end_date: Date.new(2026, 4, 25))
     end
 
     it "creates daily rate records for selected room types" do
@@ -27,9 +28,21 @@ RSpec.describe HotelOps::ApplyPricingRules do
     it "uses highest price rule and tier tie-breaker" do
       service.call
 
+      rate = room_type.room_rates.find_by(date: Date.new(2026, 4, 25))
       expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 23)).price.to_f).to eq(100.0) # GP
       expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 24)).price.to_f).to eq(220.0) # SC beats WK
-      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 25)).price.to_f).to eq(260.0) # PH beats SC
+      expect(rate.price.to_f).to eq(260.0) # Online winner is PH
+      expect(rate.walk_in_price.to_f).to eq(300.0) # Walk-in winner is WI
+    end
+
+    it "prioritizes rule tier over price amount" do
+      hotel.pricing_rules.delete_all
+      hotel.pricing_rules.create!(rule_type: "general", name: "General", price: 500, start_date: start_date, end_date: end_date)
+      hotel.pricing_rules.create!(rule_type: "public_holiday", name: "Promo", price: 200, start_date: Date.new(2026, 4, 23), end_date: Date.new(2026, 4, 23))
+
+      service.call
+
+      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 23)).price.to_f).to eq(200.0) # PH beats GP even if cheaper
     end
 
     it "supports custom weekend-day definitions" do
@@ -63,6 +76,34 @@ RSpec.describe HotelOps::ApplyPricingRules do
       expect {
         service.call
       }.to change(RoomRate, :count).by(-1)
+    end
+
+    context "when the category also carries a second rate plan" do
+      let!(:package) { create(:rate_plan, :custom, hotel: hotel, room_type: room_type, currency: "MYR") }
+
+      let!(:package_rate) do
+        create(:room_rate, room_type: room_type, rate_plan: package, date: Date.new(2026, 4, 23), price: 1350, currency: "MYR")
+      end
+
+      it "leaves the second plan's price alone" do
+        service.call
+
+        expect(package_rate.reload.price.to_f).to eq(1350.0)
+        expect(package_rate.rate_plan_id).to eq(package.id)
+      end
+
+      it "still writes the rule price onto the anchor plan" do
+        service.call
+
+        anchor_rate = room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 23))
+        expect(anchor_rate.price.to_f).to eq(100.0)
+      end
+
+      it "does not delete the second plan's price when no rule applies" do
+        hotel.pricing_rules.delete_all
+
+        expect { service.call }.not_to change { RoomRate.where(id: package_rate.id).count }
+      end
     end
   end
 end

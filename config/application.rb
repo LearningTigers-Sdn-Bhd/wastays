@@ -7,6 +7,10 @@ require "rails/all"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+RubyLLM.configure do |config|
+  config.use_new_acts_as = true
+end
+
 require_relative "../app/middleware/observation_deck_middleware"
 require "csv"
 
@@ -27,7 +31,14 @@ module Wastays
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+    config.autoload_paths << Rails.root.join("app/presenters")
+    config.eager_load_paths << Rails.root.join("app/presenters")
+
+    # PanelsUI component library: generate components with a sidecar directory
+    # (template + assets colocated next to the .rb).
+    config.view_component.generate.sidecar = true
 
     config.middleware.use ObservationDeckMiddleware
+    config.middleware.use Rack::Attack
   end
 end

@@ -1,0 +1,27 @@
+<%# The foot of every sidebar signs the product and carries the legal links.
+    Superadmins get the mark as a door into the admin portal — the hotel
+    sidebar used to spend a whole nav row on that link. Everyone else gets the
+    same mark, inert. Collapsed, the wordmark swaps for the icon and the legal
+    row drops; 48px has no room for either. %>
+<% admin_shortcut = current_user&.superadmin? %>
+<div class="panel-sidebar__footer">
+  <%= content_tag(
+        admin_shortcut ? :a : :div,
+        class: class_names("panel-sidebar__mark", "panel-sidebar__mark--interactive" => admin_shortcut),
+        href: (admin_dashboard_path if admin_shortcut),
+        aria: { label: ("Go to Admin Portal" if admin_shortcut) }
+      ) do %>
+    <span class="panel-sidebar__presentation panel-sidebar__presentation--expanded">
+      <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-5 w-auto" %>
+    </span>
+    <span class="panel-sidebar__presentation panel-sidebar__presentation--collapsed">
+      <%= image_tag "logo/icon-logo.png", alt: "WAStays", width: 512, height: 512, class: "size-5" %>
+    </span>
+  <% end %>
+
+  <div class="panel-sidebar__legal panel-sidebar__presentation panel-sidebar__presentation--expanded">
+    <%= link_to "Terms of Use", terms_and_conditions_path %>
+    <span aria-hidden="true">·</span>
+    <%= link_to "Privacy Policy", privacy_policy_path %>
+  </div>
+</div>

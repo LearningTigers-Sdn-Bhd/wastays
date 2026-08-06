@@ -1,0 +1,73 @@
+<div class="w-full space-y-5" data-slot="report-page" data-report="night-audits">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Night audit reports",
+        description: "Review immutable run evidence and financial summaries for past accounting business dates."
+      ) do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm font-medium text-muted-foreground"><%= current_hotel.name %> · Historical audit evidence</p>
+    <% end %>
+  <% end %>
+
+  <%= render HotelPortal::Reports::MetricStrip.new(
+        aria_label: "Night audit report summary",
+        metrics: @presenter.metrics
+      ) %>
+
+  <section class="space-y-3" aria-labelledby="night-audit-history-heading">
+    <div class="flex items-center gap-2">
+      <%= app_icon "history", class: "size-4 text-muted-foreground", aria: { hidden: "true" } %>
+      <h2 id="night-audit-history-heading" class="text-base font-semibold text-foreground">Audit history</h2>
+    </div>
+
+    <%= render PanelsUI::Table.new(
+          caption: "Night audit history",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card"
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Business date</th>
+          <th scope="col">Status</th>
+          <th scope="col">Trigger</th>
+          <th scope="col">Performed by</th>
+          <th scope="col">Completed</th>
+          <th scope="col" class="text-right">Net revenue</th>
+          <th scope="col"><span class="sr-only">Actions</span></th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% if @presenter.rows.any? %>
+          <% @presenter.rows.each do |row| %>
+            <tr>
+              <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= row.business_date %></th>
+              <td><%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm) %></td>
+              <td class="whitespace-nowrap text-muted-foreground"><%= row.trigger %></td>
+              <td class="text-muted-foreground"><%= row.performed_by %></td>
+              <td class="whitespace-nowrap text-muted-foreground"><%= row.completed_at %></td>
+              <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground"><%= row.net_revenue %></td>
+              <td class="text-right">
+                <%= render PanelsUI::Button.new(
+                      label: "View report",
+                      href: hotel_reports_night_audit_path(current_hotel, row.night_audit),
+                      variant: :ghost,
+                      size: :sm
+                    ) do %>
+                  <%= app_icon "arrow-right", class: "size-4", aria: { hidden: "true" } %>
+                  <span>View report</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <%= render "hotel_portal/reports/table_empty_state",
+                colspan: 7,
+                message: "No Night Audit reports are available yet. Completed and attempted runs will appear here." %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render "hotel_portal/reports/table_pagination", collection: @presenter.night_audits %>
+  </section>
+</div>

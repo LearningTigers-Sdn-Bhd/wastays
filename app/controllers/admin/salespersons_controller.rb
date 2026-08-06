@@ -88,7 +88,7 @@ class Admin::SalespersonsController < Admin::BaseController
     flash.now[:notice] = notice
     render turbo_stream: [
       turbo_stream.remove(helpers.dom_id(@salesperson, :row)),
-      turbo_stream.prepend("flash_toasts", partial: "shared/toast", locals: { key: "notice", value: notice })
+      toast_stream(notice, type: :success)
     ]
   end
 
@@ -101,7 +101,7 @@ class Admin::SalespersonsController < Admin::BaseController
         partial: "admin/salespersons/salesperson_row",
         locals: { salesperson: @salesperson, index: @salespersons.index(@salesperson) || 0, editing: false }
       ),
-      turbo_stream.prepend("flash_toasts", partial: "shared/toast", locals: { key: "notice", value: notice })
+      toast_stream(notice, type: :success)
     ]
   end
 

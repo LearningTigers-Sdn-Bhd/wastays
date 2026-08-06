@@ -1,0 +1,55 @@
+<% folio_show = local_assigns.fetch(:folio_show) %>
+<% booking = local_assigns.fetch(:booking) %>
+<% hotel = local_assigns.fetch(:hotel) %>
+
+<section data-testid="folio-ledger">
+  <%= render PanelsUI::Table.new(
+        caption: "Folio ledger",
+        density: :compact,
+        sticky_header: true,
+        bordered: true,
+        wrapper_class: "rounded-md border border-border",
+        class: "table-fixed min-w-[820px] text-xs") do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col" class="w-32">Date</th>
+        <th scope="col" class="w-36">Code</th>
+        <th scope="col">Description</th>
+        <th scope="col" class="w-28 text-right">Debit (<%= folio_show.currency %>)</th>
+        <th scope="col" class="w-28 text-right">Credit (<%= folio_show.currency %>)</th>
+        <th scope="col" class="w-14 text-right"><span class="sr-only">Actions</span></th>
+      </tr>
+    <% end %>
+
+    <% table.with_body do %>
+      <% folio_show.ledger_rows.each do |row| %>
+        <%= render "hotel_portal/folios/show/ledger_desktop_row", row: row, currency: folio_show.currency, booking: booking, hotel: hotel, folio_show: folio_show %>
+      <% end %>
+
+      <% if folio_show.ledger_entry_count.zero? %>
+        <tr>
+          <td colspan="6" class="py-6 text-center text-muted-foreground">No transactions yet.</td>
+        </tr>
+      <% end %>
+    <% end %>
+
+    <% if folio_show.ledger_entry_count.positive? %>
+      <% table.with_footer do %>
+        <tr>
+          <td colspan="6">
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-xs text-muted-foreground">
+                Posted <span class="font-medium tabular-nums text-foreground"><%= folio_show.money(folio_show.posted_balance) %></span>
+                <span aria-hidden="true"> · </span>
+                Upcoming <span class="font-medium tabular-nums text-foreground"><%= folio_show.money(folio_show.forecasted_charges) %></span>
+              </span>
+              <span class="text-sm font-semibold tabular-nums text-foreground">
+                Projected outstanding&nbsp; <%= folio_show.money(folio_show.current_balance) %>
+              </span>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

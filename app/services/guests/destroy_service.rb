@@ -10,22 +10,10 @@ module Guests
     end
 
     def call
-      # 1. Check if guest has any ACTIVE (non-cancelled) bookings at this hotel
-      if @guest.bookings.where(hotel_id: @hotel.id).where.not(status: "cancelled").exists?
-        return OpenStruct.new(
-          success?: false,
-          message: "Guest cannot be deleted because they have associated active bookings. Please cancel or remove bookings first if necessary."
-        )
-      end
-
+      # We no longer block on active bookings because it is now a soft delete (discard).
+      # The data remains in the database for existing bookings, but the guest is hidden from the directory.
       Guest.transaction do
-        # Remove the links (BookingGuest) for this hotel
-        @guest.booking_guests.joins(:booking).where(bookings: { hotel_id: @hotel.id }).destroy_all
-
-        # If the guest was created by this hotel and has no more links anywhere else, delete the profile
-        if @guest.created_by_hotel_id == @hotel.id && @guest.booking_guests.empty?
-          @guest.destroy!
-        end
+        @guest.discard!
       end
 
       OpenStruct.new(success?: true, message: "Guest record removed successfully.")

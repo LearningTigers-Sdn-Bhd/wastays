@@ -1,45 +1,36 @@
-<% content_for :breadcrumbs do %>
-  <%= render "shared/navigation/admin_breadcrumbs", current: "Salespersons" %>
-<% end %>
-
 <% total_salespersons = @salespersons.size %>
 <% total_assignments = @hotels.count { |hotel| hotel.salesperson_id.present? } %>
 <% unassigned_salespersons = @salespersons.count { |salesperson| @hotels.none? { |hotel| hotel.salesperson_id == salesperson.id } } %>
 
-<div class="mx-auto max-w-[1600px] space-y-8 pb-20">
-  <div class="px-4 md:px-0">
-    <div class="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Salespersons</h1>
-        <p class="mt-1 text-sm font-medium text-slate-600">Create and edit salesperson assignments for one or more hotels.</p>
-      </div>
-    </div>
-  </div>
+<div class="w-full space-y-8">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Salespersons",
+        description: "Create and edit salesperson assignments for one or more hotels.") %>
 
-  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-3">
-    <div class="p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Total Salespersons</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-slate-950"><%= total_salespersons %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Accounts in this table</p>
+  <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-3">
+    <div class="p-6 md:border-r md:border-border md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Total Salespersons</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= total_salespersons %></h2>
+      <p class="mt-2 text-sm font-medium text-muted-foreground">Accounts in this table</p>
     </div>
 
-    <div class="bg-slate-50/30 p-6 md:border-r md:border-slate-200 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Hotel Assignments</p>
+    <div class="bg-muted/30 p-6 md:border-r md:border-border md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Hotel Assignments</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= total_assignments %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Hotels currently assigned</p>
+      <p class="mt-2 text-sm font-medium text-muted-foreground">Hotels currently assigned</p>
     </div>
 
     <div class="p-6 md:p-8">
-      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Unassigned</p>
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Unassigned</p>
       <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-600"><%= unassigned_salespersons %></h2>
-      <p class="mt-2 text-sm font-medium text-slate-600">Salespersons with no hotels</p>
+      <p class="mt-2 text-sm font-medium text-muted-foreground">Salespersons with no hotels</p>
     </div>
   </div>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="px-6 py-5 sm:px-8">
-      <h2 class="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">Add Salesperson</h2>
-      <p class="mt-1 text-sm font-medium text-slate-600">Create a new salesperson user and assign hotels using the multi-select dropdown.</p>
+      <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Add Salesperson</h2>
+      <p class="mt-1 text-sm font-medium text-muted-foreground">Create a new salesperson user and assign hotels using the multi-select dropdown.</p>
 
       <% if @new_salesperson.errors.any? %>
         <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
@@ -55,36 +46,36 @@
       <%= form_with model: [:admin, @new_salesperson], url: admin_salespersons_path, class: "mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_auto]" do |f| %>
         <%= hidden_field_tag :query, @query if @query.present? %>
         <div>
-          <%= f.label :name, "Name", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-          <%= f.text_field :name, required: true, class: "block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0", placeholder: "Full name" %>
+          <%= f.label :name, "Name", class: "mb-2 block text-sm font-semibold text-foreground" %>
+          <%= f.text_field :name, required: true, class: "block w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", placeholder: "Full name" %>
         </div>
 
         <div>
-          <%= f.label :email, "Email", class: "mb-2 block text-sm font-semibold text-slate-700" %>
-          <%= f.email_field :email, required: true, class: "block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0", placeholder: "email@example.com" %>
+          <%= f.label :email, "Email", class: "mb-2 block text-sm font-semibold text-foreground" %>
+          <%= f.email_field :email, required: true, class: "block w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", placeholder: "email@example.com" %>
         </div>
 
         <div>
-          <label class="mb-2 block text-sm font-semibold text-slate-700">Hotels</label>
+          <label class="mb-2 block text-sm font-semibold text-foreground">Hotels</label>
           <%= render "hotel_dropdown", hotels: @hotels, selected_hotel_ids: @selected_hotel_ids, field_name: "hotel_ids" %>
         </div>
 
         <div class="flex items-end">
-          <%= f.submit "Add Salesperson", class: "inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700" %>
+          <%= f.submit "Add Salesperson", class: "inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-red-700" %>
         </div>
       <% end %>
     </div>
   </div>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-6 py-5 sm:px-8">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 
         <%= form_with url: admin_salespersons_path, method: :get, local: true, data: { controller: "live-filter", turbo_frame: "salespersons_results" }, class: "w-full lg:max-w-4xl" do |f| %>
           <div class="flex gap-3">
             <div class="relative flex-1">
-              <svg class="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              <%= f.text_field :query, value: @query, placeholder: "Search name, email, or hotel...", autocomplete: "off", class: "block w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-0", data: { action: "input->live-filter#submit" } %>
+              <svg class="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <%= f.text_field :query, value: @query, placeholder: "Search name, email, or hotel...", autocomplete: "off", class: "block w-full rounded-xl border border-border bg-card py-3 pl-10 pr-4 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-0", data: { action: "input->live-filter#submit" } %>
             </div>
           </div>
         <% end %>
@@ -94,15 +85,15 @@
     <%= turbo_frame_tag "salespersons_results" do %>
       <div class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="bg-slate-100">
+          <thead class="bg-muted">
             <tr>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 sm:px-8">Salesperson</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Email</th>
-              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Hotels</th>
-              <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600">Actions</th>
+              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Salesperson</th>
+              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Email</th>
+              <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Hotels</th>
+              <th class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-200 bg-white">
+          <tbody class="divide-y divide-border bg-card">
             <% if @salespersons.any? %>
               <% @salespersons.each_with_index do |salesperson, index| %>
                 <%= render "salesperson_row", salesperson: salesperson, index: index, editing: @editing_salesperson_id == salesperson.id, query: @query %>
@@ -110,11 +101,11 @@
             <% else %>
               <tr>
                 <td colspan="4" class="px-6 py-20 text-center">
-                  <div class="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                  <div class="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <svg class="size-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
                   </div>
-                  <h3 class="text-lg font-bold text-slate-950">No salespersons yet</h3>
-                  <p class="mt-1 text-sm text-slate-600">Create your first salesperson and assign the hotels they manage.</p>
+                  <h3 class="text-lg font-bold text-foreground">No salespersons yet</h3>
+                  <p class="mt-1 text-sm text-muted-foreground">Create your first salesperson and assign the hotels they manage.</p>
                 </td>
               </tr>
             <% end %>

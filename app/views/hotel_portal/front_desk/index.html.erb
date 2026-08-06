@@ -1,0 +1,29 @@
+<% state = @state %>
+<div class="w-full space-y-6" data-front-desk-tab="<%= @tab %>" data-front-desk-view="<%= @view %>">
+  <%= render PanelsUI::PageHeader.new(title: "Reservations", description: "Track bookings, arrivals, in-house guests, and departures.") do |header| %>
+    <% if @tab == "bookings" && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+      <% header.with_actions do %>
+        <%= render PanelsUI::DropdownMenu.new(id: "reservations-new-transaction-menu", placement: :bottom_end, class: "w-60") do |menu| %>
+          <% menu.with_trigger(variant: :primary, size: :md) do %><%= app_icon "plus", class: "size-4", aria: { hidden: true } %><span>New</span><%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %><% end %>
+          <% menu.with_group(label: "Insert transaction") do |group| %>
+            <% group.with_item(href: hotel_booking_action_quick_booking_path(current_hotel), data: { turbo_frame: "booking_action_sheet" }) do %><%= app_icon "calendar-plus", class: "size-4", aria: { hidden: true } %><span>New Booking</span><% end %>
+            <% group.with_item(href: hotel_booking_action_walk_in_check_in_path(current_hotel), data: { turbo_frame: "booking_action_sheet" }) do %><%= app_icon "user-check", class: "size-4", aria: { hidden: true } %><span>Walk-in Check-in</span><% end %>
+            <% group.with_item(href: hotel_booking_action_backdated_check_in_path(current_hotel), data: { turbo_frame: "booking_action_sheet" }) do %><%= app_icon "calendar-clock", class: "size-4", aria: { hidden: true } %><span>Backdated Check-in</span><% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= render PanelsUI::Tabs.new(id: "reservation-sections", active: @tab, variant: :line, aria_label: "Reservation sections") do |tabs| %>
+    <% @allowed_tabs.each do |tab| %>
+      <% tabs.with_tab(name: tab, label: (tab == "in_house" ? "In House" : tab.titleize), icon: { "bookings" => "calendar-days", "arrivals" => "user-plus", "in_house" => "users", "departures" => "log-out", "checkout" => "user-check" }.fetch(tab), count: @metrics.fetch(tab), href: hotel_front_desk_path(current_hotel, state.merge(tab:, view: @view))) %>
+    <% end %>
+  <% end %>
+
+  <%= render "toolbar", state: %>
+  <main id="front-desk-results">
+    <span class="sr-only">active-tab:<%= @tab %> active-view:<%= @view %> page:<%= @bookings.current_page %></span>
+    <%= render "results" %>
+  </main>
+</div>

@@ -1,0 +1,135 @@
+<div data-controller="booking-source-preview" data-booking-source-preview-icon-preview-url-value="<%= icon_preview_admin_booking_sources_path %>">
+  <%= form_with model: [ :admin, @booking_source ], local: true, class: "space-y-6" do |f| %>
+    <% if @booking_source.errors.any? %>
+      <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <%= @booking_source.errors.full_messages.to_sentence %>
+      </div>
+    <% end %>
+
+    <div class="grid gap-5 sm:grid-cols-2">
+      <div>
+        <%= f.label :label, "Display name", class: "mb-2 block text-sm font-semibold text-foreground" %>
+        <%= f.text_field :label, class: "w-full rounded-xl border border-border px-3 py-2.5 text-sm" %>
+      </div>
+      <div>
+        <%= f.label :key, "Matching identifier", class: "mb-2 block text-sm font-semibold text-foreground" %>
+        <%= f.text_field :key, class: "w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono" %>
+        <p class="mt-1 text-xs text-muted-foreground">
+          This is what a booking's stored source value is compared against to pick this logo/badge — not something guests or staff see.
+          It's auto-normalized to lowercase with underscores, so <code class="font-mono">Booking.com</code>, <code class="font-mono">booking.com</code>, and <code class="font-mono">BOOKING_COM</code> all resolve to the same identifier: <code class="font-mono">booking_com</code>.
+          Changing it later stops matching any booking already tagged with the old value.
+        </p>
+      </div>
+    </div>
+
+    <div>
+      <%= f.label :kind, "Category", class: "mb-2 block text-sm font-semibold text-foreground" %>
+      <%= render PanelsUI::SelectMenu.new(
+            form: f, attribute: :kind,
+            choices: BookingSource::KINDS.map { |kind| [ BookingSource.kind_label(kind), kind ] },
+            data: { action: "change->booking-source-preview#toggleKindFields" }) %>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Determines which group this appears under in the manual source dropdown across every hotel.
+        Its position within that group is set on the <%= link_to "Booking Sources list", admin_booking_sources_path, class: "underline" %> by dragging rows.
+      </p>
+    </div>
+
+    <div class="rounded-2xl border border-border bg-muted p-5">
+      <h3 class="text-sm font-bold text-foreground">Logo</h3>
+      <p class="mt-1 text-xs text-muted-foreground">Shown everywhere this source appears (front desk cards, Stay View, booking details). Falls back to the badge below when absent.</p>
+
+      <% if @booking_source.logo.attached? %>
+        <div class="mt-4 flex items-center gap-4">
+          <div class="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-card">
+            <span data-booking-source-preview-target="logoPlaceholder" class="hidden">
+              <%= cached_icon "image", class: "size-6 text-muted-foreground" %>
+            </span>
+            <img data-booking-source-preview-target="logoPreview"
+                 src="<%= url_for(@booking_source.logo) %>"
+                 class="size-14 object-contain"
+                 alt="<%= @booking_source.label %> logo">
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-foreground">Current logo</p>
+            <label class="mt-1 flex items-center gap-2 text-xs font-medium text-foreground">
+              <%= check_box_tag "booking_source[remove_logo]", "1", false,
+                    data: { booking_source_preview_target: "removeLogoCheckbox", action: "change->booking-source-preview#toggleRemoveLogo" },
+                    class: "size-4 rounded border-border-interactive text-foreground focus:ring-0" %>
+              Remove current logo (falls back to the badge/icon below)
+            </label>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="mt-4">
+        <%= render PanelsUI::Dropzone.new(
+              form: f, attribute: :logo,
+              accept: "image/png,image/jpeg,image/webp,image/svg+xml",
+              preview: :image,
+              description: "PNG, JPEG, WEBP, or SVG — uploading replaces the current logo") %>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-border bg-muted p-5 <%= "hidden" unless @booking_source.kind == "ota" %>" data-booking-source-preview-target="otaOnlySection">
+      <h3 class="text-sm font-bold text-foreground">Fallback badge</h3>
+      <p class="mt-1 text-xs text-muted-foreground">Only used for Online Travel Agency sources with no logo uploaded yet — a colored circle with an initial.</p>
+      <div class="mt-4 flex items-center gap-5">
+        <span data-booking-source-preview-target="badgePreview"
+              style="background-color: <%= @booking_source.badge_color.presence || "#6B7280" %>; color: <%= @booking_source.badge_text_color.presence || "#FFFFFF" %>;"
+              class="inline-flex size-12 shrink-0 items-center justify-center rounded-full text-sm font-bold"><%= @booking_source.badge_initial %></span>
+        <div class="grid flex-1 gap-3 sm:grid-cols-3">
+          <div>
+            <%= f.label :badge_color, "Badge color", class: "mb-1 block text-xs font-semibold text-foreground" %>
+            <%= f.color_field :badge_color, value: @booking_source.badge_color.presence || "#6B7280",
+                  data: { booking_source_preview_target: "colorInput", action: "input->booking-source-preview#updateBadge" },
+                  class: "h-10 w-full rounded-lg border border-border" %>
+          </div>
+          <div>
+            <%= f.label :badge_text_color, "Text color", class: "mb-1 block text-xs font-semibold text-foreground" %>
+            <%= f.color_field :badge_text_color, value: @booking_source.badge_text_color.presence || "#FFFFFF",
+                  data: { booking_source_preview_target: "textColorInput", action: "input->booking-source-preview#updateBadge" },
+                  class: "h-10 w-full rounded-lg border border-border" %>
+          </div>
+          <div>
+            <%= f.label :badge_initial, "Initial (max 2 chars)", class: "mb-1 block text-xs font-semibold text-foreground" %>
+            <%= f.text_field :badge_initial, maxlength: 2,
+                  data: { booking_source_preview_target: "initialInput", action: "input->booking-source-preview#updateBadge" },
+                  class: "w-full rounded-lg border border-border px-3 py-2 text-sm" %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <%= f.label :icon, "Fallback icon (Lucide icon name)", class: "mb-2 block text-sm font-semibold text-foreground" %>
+      <div class="flex items-center gap-3">
+        <span class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card" data-booking-source-preview-target="iconPreview">
+          <%= render "icon_preview", icon_name: @booking_source.icon.presence %>
+        </span>
+        <%= f.text_field :icon, placeholder: "globe", list: "lucide-icon-names",
+              data: { booking_source_preview_target: "iconInput", action: "input->booking-source-preview#previewIcon" },
+              class: "w-full rounded-xl border border-border px-3 py-2.5 text-sm" %>
+      </div>
+      <datalist id="lucide-icon-names">
+        <% @icon_names.each do |name| %>
+          <option value="<%= name %>"></option>
+        <% end %>
+      </datalist>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Start typing to see suggestions from the <%= @icon_names.size %> available icons and a live preview, or browse the full set at
+        <%= link_to "lucide.dev/icons", "https://lucide.dev/icons", target: "_blank", rel: "noopener", class: "underline" %>.
+        Used only for non-OTA sources, or OTA sources with neither a logo nor a badge configured.
+      </p>
+    </div>
+
+    <label class="flex items-center gap-2 text-sm font-semibold text-foreground">
+      <%= f.check_box :active, checked: @booking_source.active != false, class: "size-4 rounded border-border-interactive text-foreground focus:ring-0" %>
+      Active (shown in manual source dropdowns)
+    </label>
+
+    <div class="flex items-center gap-3">
+      <%= f.submit @booking_source.persisted? ? "Save Source" : "Create Source", class: "rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+      <%= link_to "Cancel", admin_booking_sources_path, class: "rounded-xl border border-border px-5 py-2.5 text-sm font-bold text-foreground" %>
+    </div>
+  <% end %>
+</div>

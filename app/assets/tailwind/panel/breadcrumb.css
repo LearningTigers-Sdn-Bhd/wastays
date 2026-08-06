@@ -1,0 +1,38 @@
+@layer components {
+  /* PanelsUI::Breadcrumb — semantic <nav><ol> trail. Colors use theme tokens
+     (foreground / muted-foreground / primary) so contrast holds in light and dark.
+     Sibling menus are rendered as .dropdown-menu (see panel/dropdown-menu.css). */
+  .breadcrumb-root {
+    @apply flex w-max min-w-0 items-center;
+  }
+
+  .breadcrumb-list {
+    @apply flex w-max min-w-0 items-center text-xs;
+    list-style: none;
+  }
+
+  .breadcrumb-item {
+    @apply inline-flex items-center;
+  }
+
+  /* "/" separator between adjacent items. A hidden <li> (subtab segment) drops its
+     own leading separator with it, since display:none suppresses ::before. */
+  .breadcrumb-item + .breadcrumb-item::before {
+    content: "/";
+    @apply mx-1.5 text-muted-foreground opacity-60;
+  }
+
+  /* Inline menu-button trigger: reads as breadcrumb text, not a .panel-button. */
+  .breadcrumb-dropdown {
+    @apply relative inline-flex items-center gap-x-1;
+  }
+
+  .breadcrumb-dropdown__trigger {
+    @apply inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors;
+    @apply hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  @media (pointer: coarse) {
+    .breadcrumb-dropdown__trigger { min-width: 2.5rem; min-height: 2.5rem; }
+  }
+}

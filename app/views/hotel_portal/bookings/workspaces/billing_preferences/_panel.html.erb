@@ -1,0 +1,140 @@
+<% rows = presenter.billing_party_rows %>
+<% can_manage = presenter.can_manage_bookings?(current_user) %>
+
+<section id="billing-preferences-panel" aria-labelledby="billing-preferences-heading" tabindex="-1">
+  <header class="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h2 id="billing-preferences-heading" class="text-base font-semibold text-foreground">Billing</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Manage payers, settlement terms, and charge routing for this room.</p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <% if current_user.superadmin? || current_user.has_permission?("manage_folio_movements", hotel: current_hotel) %>
+        <% if presenter.group_context_enabled? %>
+          <%= render PanelsUI::DropdownMenu.new(id: "billing-route-actions", placement: :bottom_end, class: "w-60") do |menu| %>
+            <% menu.with_trigger(variant: :secondary, size: :sm) do %>
+              <%= app_icon "route", class: "size-4", aria: { hidden: true } %>
+              Change billing routes
+              <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+            <% end %>
+            <% menu.with_item(href: hotel_folio_action_group_billing_routes_path(current_hotel, entity_booking, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
+              <span>Group billing routes</span>
+            <% end %>
+            <% menu.with_item(href: hotel_folio_action_billing_routes_path(current_hotel, entity_booking, return_to: request.fullpath), data: { turbo_frame: "folio_action_sheet" }) do %>
+              <span>Selected room routes</span>
+            <% end %>
+          <% end %>
+        <% else %>
+          <%= render PanelsUI::Button.new(href: hotel_folio_action_billing_routes_path(current_hotel, entity_booking, return_to: request.fullpath), variant: :secondary, size: :sm, data: { turbo_frame: "folio_action_sheet" }) do %>
+            <%= app_icon "route", class: "size-4", aria: { hidden: true } %>
+            Change billing routes
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if can_manage %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_booking_action_manage_billing_party_path(current_hotel, entity_booking, mode: "choose", return_to: request.fullpath),
+              size: :sm,
+              data: { turbo_frame: "booking_action_sheet" }) do %>
+          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+          Add billing party
+        <% end %>
+      <% end %>
+    </div>
+  </header>
+
+  <div class="p-5">
+    <%= render PanelsUI::Table.new(
+          caption: "Billing parties for #{presenter.selected_entity_label}",
+          density: :compact,
+          hoverable: rows.any?,
+          wrapper_class: "rounded-md border border-border") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Payer</th>
+          <th scope="col">Settlement</th>
+          <th scope="col">Folios</th>
+          <th scope="col" class="text-right">Outstanding (<%= presenter.billing_currency %>)</th>
+          <th scope="col" class="w-12 text-right"><span class="sr-only">Actions</span></th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% rows.each do |row| %>
+          <% party = row.record %>
+          <tr>
+            <th scope="row" class="font-normal">
+              <span class="block font-medium text-foreground"><%= row.label %></span>
+              <span class="mt-0.5 block text-xs text-muted-foreground"><%= row.role %> · <%= row.kind %></span>
+            </th>
+            <td>
+              <span class="block text-foreground"><%= row.settlement %></span>
+              <span class="mt-0.5 block text-xs text-muted-foreground"><%= row.description %></span>
+            </td>
+            <td data-column="folios">
+              <span class="inline-flex items-center gap-1">
+                <span class="tabular-nums text-foreground"><%= row.folio_count %></span>
+                <% if row.folio_count.positive? %>
+                  <%= render PanelsUI::Popover.new(
+                        id: "billing-party-#{party.id}-folios",
+                        trigger_on: :hover,
+                        placement: :top_start,
+                        arrow: true) do |popover| %>
+                    <% popover.with_trigger(
+                         unstyled: true,
+                         aria_label: "Folio details for #{row.label}",
+                         class: "inline-flex size-6 items-center justify-center rounded text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring") do %>
+                      <%= app_icon "info", class: "size-3.5", aria: { hidden: true } %>
+                    <% end %>
+                    <div class="w-56 text-left">
+                      <p class="text-xs font-medium text-foreground">Folios</p>
+                      <ul class="mt-1.5 space-y-1 text-xs text-muted-foreground">
+                        <% row.folio_labels.each do |folio_label| %>
+                          <li class="break-words"><%= folio_label %></li>
+                        <% end %>
+                      </ul>
+                    </div>
+                  <% end %>
+                <% end %>
+              </span>
+            </td>
+            <td data-column="outstanding" class="text-right font-medium tabular-nums text-foreground"><%= number_with_precision(row.outstanding, precision: 2, delimiter: ",") %></td>
+            <td class="text-right">
+              <% if can_manage %>
+                <%= render PanelsUI::DropdownMenu.new(id: "billing-party-#{party.id}-actions", placement: :bottom_end, class: "w-48") do |menu| %>
+                  <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "Actions for #{row.label}") do %>
+                    <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+                  <% end %>
+                  <% menu.with_item(href: hotel_booking_action_manage_billing_party_path(current_hotel, entity_booking, mode: "edit_terms", billing_party_id: party.id, return_to: request.fullpath), data: { turbo_frame: "booking_action_sheet" }) do %>
+                    <%= app_icon "pencil", class: "size-4", aria: { hidden: true } %>
+                    <span>Edit terms</span>
+                  <% end %>
+                  <% if party.archiveable? %>
+                    <% menu.with_item(href: hotel_booking_action_manage_billing_party_path(current_hotel, entity_booking, mode: "remove", billing_party_id: party.id, return_to: request.fullpath), variant: :danger, data: { turbo_frame: "booking_action_sheet" }) do %>
+                      <%= app_icon "trash-2", class: "size-4", aria: { hidden: true } %>
+                      <span>Remove payer</span>
+                    <% end %>
+                  <% end %>
+                <% end %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+
+        <% if rows.empty? %>
+          <tr>
+            <td colspan="5" class="py-10 text-center">
+              <p class="font-medium text-foreground">No billing parties for this room.</p>
+              <p class="mt-1 text-sm text-muted-foreground">Add a guest or account payer to start managing settlement terms.</p>
+              <% if can_manage %>
+                <div class="mt-4">
+                  <%= render PanelsUI::Button.new(href: hotel_booking_action_manage_billing_party_path(current_hotel, entity_booking, mode: "choose", return_to: request.fullpath), size: :sm, data: { turbo_frame: "booking_action_sheet" }) { "Add billing party" } %>
+                </div>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</section>

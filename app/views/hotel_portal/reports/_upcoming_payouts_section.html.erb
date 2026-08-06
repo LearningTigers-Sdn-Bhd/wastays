@@ -1,0 +1,64 @@
+<% if feature_enabled_for_hotel?("excel_pdf_export") %>
+  <div class="-mt-2 flex justify-end">
+    <% if @upcoming_bookings.blank? %>
+      <%= render PanelsUI::Button.new(variant: :secondary, disabled: true, title: "No data available to export") do %>
+        <%= cached_icon "download", class: "me-2 size-4" %> Export
+      <% end %>
+    <% else %>
+      <%= render "export_dropdown", menu_id: "upcoming-payouts-export", items: [
+        ["Export PDF", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :pdf)],
+        ["Export Excel", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :xlsx)],
+        ["Export CSV", payouts_hotel_reports_path(current_hotel, tab: "upcoming", format: :csv)]
+      ] %>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm <%= @processing_batches.any? ? 'md:grid-cols-2' : 'md:grid-cols-1' %>">
+  <div class="p-6 md:p-8 <%= @processing_batches.any? ? 'md:border-r md:border-border' : '' %>">
+    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Accumulating (Current Cycle)</p>
+    <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground">MYR <%= format_number(@upcoming_payout_amount, precision: 2) %></h2>
+    <p class="mt-2 text-sm font-medium text-muted-foreground"><%= pluralize(format_number(@upcoming_bookings.count), "stay") %> completed and ready for settlement</p>
+  </div>
+
+  <% if @processing_batches.any? %>
+    <div class="bg-amber-50/30 p-6 md:p-8">
+      <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-700">Processing Batch</p>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-amber-900">MYR <%= format_number(@processing_batches.sum(&:amount), precision: 2) %></h2>
+      <p class="mt-2 text-sm font-medium text-amber-700/80">Funds currently being processed by the platform</p>
+    </div>
+  <% end %>
+</div>
+
+<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+  <div class="border-b border-border bg-muted/70 px-6 py-5 sm:px-8">
+    <h2 class="text-lg font-bold tracking-tight text-foreground">Current Cycle Breakdown</h2>
+    <p class="mt-1 text-sm font-medium text-muted-foreground">Individual bookings ready for next payout.</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full table-fixed">
+      <thead class="bg-muted">
+        <tr>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Booking Reference</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Checkout Date</th>
+          <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+          <th scope="col" class="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Net Payout</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border bg-card">
+        <% if @upcoming_bookings.any? %>
+          <% @upcoming_bookings.each_with_index do |booking, index| %>
+            <tr class="align-top transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
+              <td class="px-6 py-4 sm:px-8"><span class="font-mono text-sm font-semibold text-foreground">#<%= booking.confirmation_token %></span></td>
+              <td class="px-6 py-4 text-sm font-medium text-muted-foreground"><%= booking.checked_out_at&.strftime("%d %b %Y, %I:%M %p") %></td>
+              <td class="px-6 py-4"><span class="inline-flex items-center gap-x-1.5 rounded-lg border px-2 py-1 text-xs font-bold <%= payout_status_class(booking.payout_status) %>"><%= booking.payout_status.titleize %></span></td>
+              <td class="whitespace-nowrap px-6 py-4 text-right sm:px-8"><span class="text-sm font-bold text-foreground">RM <%= format_number(booking.net_amount, precision: 2) %></span></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr><td colspan="4" class="px-6 py-20 text-center text-sm font-medium italic text-muted-foreground">No completed bookings in the current cycle yet.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

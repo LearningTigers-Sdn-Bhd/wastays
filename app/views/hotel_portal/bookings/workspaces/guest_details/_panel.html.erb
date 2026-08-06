@@ -1,0 +1,143 @@
+<%# locals: (booking:, entity_booking:, presenter:, booking_presenter: nil, folio_show: nil, audit_logs: nil, audit_history: nil, audit_category: nil, audit_history_available: nil) %>
+<%# Guest identity lives in the entity rail; repeating it here duplicated the
+    global header, the rail row, and the Full name field. %>
+<section id="guest-details-panel" class="flex h-full min-h-0 flex-col" aria-label="Guest details" tabindex="-1">
+  <% if presenter.selected_booking_guest && presenter.selected_guest %>
+    <% return_to = presenter.guest_details_return_to %>
+    <% snapshots = presenter.guest_details_snapshots %>
+    <% country_choices = COUNTRY_OPTIONS.map { |country| [country, country] } %>
+
+    <%= form_with model: presenter.selected_guest,
+        url: hotel_booking_workspace_path(current_hotel, entity_booking, tab: "guest_details", booking_guest_id: presenter.selected_booking_guest.id),
+        method: :patch,
+        id: "guest-details-form",
+        class: "flex min-h-0 flex-1 flex-col bg-card",
+        data: { turbo: false, controller: "guest-details-editor guest-dob", action: "input->guest-details-editor#markDirty change->guest-details-editor#markDirty submit->guest-details-editor#submit" } do |form| %>
+      <%= hidden_field_tag :return_to, return_to %>
+      <%= hidden_field_tag :presentation, "booking_workspace" %>
+
+      <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
+        <div class="max-w-6xl px-5 py-6 lg:px-8">
+          <% if presenter.guest_details_errors.any? %>
+            <div class="mb-5 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1" data-guest-details-error-summary>
+              <p class="font-medium">Guest details could not be saved.</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <% presenter.guest_details_errors.each do |message| %><li><%= message %></li><% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <%# Two columns at lg: who the guest is on the left, what documents and
+              transfers they arrived with on the right. Each section pairs its own
+              fields, so the columns stack below lg without the pairing changing. %>
+          <div class="grid gap-x-8 gap-y-10 lg:grid-cols-2 lg:items-start">
+            <%= render PanelsUI::FieldSet.new(
+                  legend: "Guest details",
+                  description: "Guest details recorded for this stay.",
+                  disabled: !presenter.can_manage_bookings?(current_user)) do %>
+              <%= render PanelsUI::FieldGroup.new do %>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <%= render PanelsUI::FormField.new(form:, attribute: :booking_assignment, label: "Booking", hint: "A guest stay record remains attached to its current room.", disabled: true) do |field| %>
+                    <% field.with_select_menu([[presenter.selected_entity_label, entity_booking.id]], selected: entity_booking.id) %>
+                  <% end %>
+                </div>
+                <div class="sm:col-span-2">
+                  <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true) do |field| %>
+                    <% field.with_input(value: snapshots[:name], autocomplete: "name", placeholder: "Enter full name") %>
+                  <% end %>
+                </div>
+                <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email") do |field| %>
+                  <% field.with_input(type: :email, value: snapshots[:email], autocomplete: "email", spellcheck: false, placeholder: "guest@example.com") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone") do |field| %>
+                  <% field.with_input(type: :tel, value: snapshots[:phone], autocomplete: "tel", placeholder: "+60 12-345 6789") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
+                  <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
+                  <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
+                <% end %>
+              </div>
+              <% end %>
+            <% end %>
+
+            <div class="space-y-10">
+              <%= render PanelsUI::FieldSet.new(
+                  legend: "Identity information",
+                  description: "Use the identification presented by the guest.",
+                  disabled: !presenter.can_manage_bookings?(current_user)) do %>
+              <%= render PanelsUI::FieldGroup.new do %>
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
+                    <% field.with_select_menu([["IC", "ic"], ["Passport", "passport"]], selected: snapshots[:document_type], prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
+                  <% end %>
+                  <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
+                    <% field.with_date_picker(
+                         value: snapshots[:date_of_birth]&.to_date&.iso8601,
+                         max: Date.yesterday,
+                         caption_layout: :dropdown,
+                         year_range: (Date.current.year - 120)..Date.current.year,
+                         placeholder: "Select date of birth",
+                         data: { guest_dob_target: "dateOfBirth" }) %>
+                  <% end %>
+                  <div class="sm:col-span-2">
+                    <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
+                      <% field.with_input(value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+
+              <% if presenter.boat_schedule.enabled? %>
+                <%= render PanelsUI::FieldSet.new(
+                      legend: "Boat transfer",
+                      description: "Pick the transfer slots this guest is booked on.",
+                      disabled: !presenter.can_manage_bookings?(current_user)) do %>
+                  <%= render PanelsUI::FieldGroup.new do %>
+                    <%= fields_for :booking_guest, presenter.guest_details_booking_guest_form do |booking_guest_form| %>
+                      <%= render "hotel_portal/bookings/boat_transfer_fields",
+                            form: booking_guest_form,
+                            schedule: presenter.boat_schedule,
+                            boat_in: presenter.guest_details_boat_in_time,
+                            boat_out: presenter.guest_details_boat_out_time,
+                            boat_in_date: presenter.check_in_date,
+                            boat_out_date: presenter.check_out_date,
+                            error: presenter.guest_details_boat_error %>
+                    <% end %>
+                  <% end %>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Outside the form above: this footer carries its own form for Make primary,
+        and a nested <form> would be invalid. The submit buttons reach the guest
+        form by id instead. %>
+    <% if presenter.selected_booking_guest&.guest.present? %>
+      <%= render "hotel_portal/bookings/workspaces/guest_details/footer", booking: entity_booking, presenter: presenter %>
+      <%= render "hotel_portal/bookings/workspaces/alerts/confirm_discard_alert" %>
+    <% end %>
+  <% else %>
+    <div class="flex flex-1 items-center justify-center px-5 py-12 text-center">
+      <div>
+        <p class="font-semibold text-foreground">No guest is linked to this booking.</p>
+        <p class="mt-1 text-sm text-muted-foreground">Add a primary guest before check-in.</p>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && entity_booking.status.in?(%w[confirmed checked_in]) %>
+          <div class="mt-4">
+            <%= render PanelsUI::Button.new(
+                  href: hotel_booking_action_manage_guest_path(current_hotel, entity_booking, mode: "add", return_to: presenter.close_drawer_path),
+                  variant: :primary,
+                  size: :sm,
+                  data: { turbo_frame: "booking_action_sheet" }) do %>Add Guest<% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</section>

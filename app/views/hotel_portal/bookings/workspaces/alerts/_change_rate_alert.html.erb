@@ -1,0 +1,19 @@
+<%= render PanelsUI::AlertDialog.new(
+      id: "change-rate-alert",
+      title: "Change this room’s rate?",
+      description: "Changing the rate can alter the forecasted stay value. Charges already posted to a folio remain financial records and must be reviewed separately.",
+      tone: :warning,
+      data: {
+        controller: "warning-dialog",
+        warning_dialog_close_url_value: presenter.close_alert_path,
+        warning_dialog_trigger_selector_value: '[data-warning-dialog-trigger="change-rate"]'
+      }) do |alert| %>
+  <% alert.with_icon do %>
+    <%= cached_icon "triangle-alert", class: "size-5", aria: { hidden: true } %>
+  <% end %>
+  <% alert.with_cancel(label: "Cancel", data: { action: "warning-dialog#close" }) %>
+  <% alert.with_action(
+       label: "Continue to editor",
+       href: hotel_booking_action_edit_rate_path(current_hotel, booking, return_to: presenter.close_alert_path),
+       data: { turbo_frame: "booking_action_sheet", action: "warning-dialog#proceed" }) %>
+<% end %>

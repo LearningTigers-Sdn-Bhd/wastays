@@ -1,0 +1,50 @@
+<div class="w-full space-y-4">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Transaction Code Reference",
+        description: "Every posting code on this property, with the ledger account it books to. Read-only — each code is edited in the registry that owns it.") %>
+
+  <%= render "hotel_portal/settings/group_tabs" %>
+
+  <section aria-labelledby="transaction-code-reference-heading" class="space-y-3">
+    <h2 id="transaction-code-reference-heading" class="text-base font-semibold text-foreground">All transaction codes</h2>
+
+    <%= render PanelsUI::Table.new(caption: "Transaction code reference", header_style: :sentence, striped: true,
+          hoverable: true, bordered: true, wrapper_class: "rounded-md border border-border bg-card",
+          class: "min-w-[900px]", data: { testid: "transaction-code-reference" }) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Code</th>
+          <th scope="col">Name</th>
+          <th scope="col">Kind</th>
+          <th scope="col">Category</th>
+          <th scope="col">GL account</th>
+          <th scope="col">Status</th>
+          <th scope="col">Managed in</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% @transaction_codes.each do |transaction_code| %>
+          <% owner = @owners[transaction_code.id] %>
+          <tr>
+            <td class="font-mono text-xs text-foreground" translate="no"><%= transaction_code.code %></td>
+            <td class="font-medium text-foreground"><%= transaction_code.name %></td>
+            <td class="text-muted-foreground"><%= transaction_code.kind.humanize %></td>
+            <td class="text-muted-foreground"><%= transaction_code.category.humanize %></td>
+            <td class="font-mono text-xs text-muted-foreground"><%= transaction_code.gl_account_code.presence || "—" %></td>
+            <td class="text-muted-foreground"><%= transaction_code.active? ? "Active" : "Inactive" %></td>
+            <td>
+              <% if owner %>
+                <%= link_to owner[:path], class: "inline-flex items-center gap-1 text-sm text-foreground underline underline-offset-2 hover:no-underline" do %>
+                  <%= owner[:label] %>
+                  <%= app_icon "arrow-right", class: "size-3.5", aria: { hidden: true } %>
+                <% end %>
+              <% else %>
+                <span class="text-sm text-muted-foreground">Not in a registry</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+</div>

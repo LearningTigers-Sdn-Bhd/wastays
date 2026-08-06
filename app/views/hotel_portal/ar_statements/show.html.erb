@@ -1,0 +1,194 @@
+<% start_date = @presenter&.start_date || @start_date %>
+<% end_date = @presenter&.end_date || @end_date %>
+
+<div class="w-full space-y-3.5">
+  <div>
+    <div>
+      <%= render PanelsUI::PageHeader.new(title: @hotel_corporate_account.corporate_account.name) do |header| %>
+        <% header.with_caption do %>
+          <%= @hotel_corporate_account.corporate_account.users.min_by(&:id)&.email || "No contact email" %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <%= form_with url: hotel_ar_statement_path(current_hotel, @hotel_corporate_account),
+                method: :get,
+                class: "rounded-xl border border-border bg-card p-4 shadow-sm",
+                data: { controller: "auto-submit", turbo_frame: "ar_statement_results", turbo_action: "advance" } do |form| %>
+    <div class="grid gap-3 sm:grid-cols-3">
+      <div>
+        <%= form.label :start_date, "Start Date", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
+        <%= form.date_field :start_date, value: start_date, max: end_date, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
+      </div>
+      <div>
+        <%= form.label :end_date, "End Date", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
+        <%= form.date_field :end_date, value: end_date, min: start_date, max: (current_hotel.current_business_date || current_hotel.business_date_for(Time.current)), class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
+      </div>
+      <% if @presenter.present? && @presenter.available_currencies.size > 1 %>
+        <div>
+          <%= form.label :currency, "Currency", class: "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground" %>
+          <%= form.select :currency, @presenter.available_currencies, { selected: @presenter.currency }, class: "w-full rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground", data: { action: "change->auto-submit#submitNow" } %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= turbo_frame_tag "ar_statement_results", class: "block space-y-4" do %>
+    <% if @statement_error.present? %>
+      <div class="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-800">
+        <%= @statement_error %>
+      </div>
+    <% else %>
+      <div class="flex justify-end">
+        <div class="relative inline-block text-left" data-controller="dropdown" data-dropdown-align="right">
+          <button type="button"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover"
+                  data-dropdown-target="button"
+                  data-action="click->dropdown#toggle keydown->dropdown#handleKeydown"
+                  aria-expanded="false"
+                  aria-haspopup="true">
+            <%= cached_icon "download", class: "size-4" %>
+            Download PDF
+            <%= cached_icon "chevron-down", class: "size-3" %>
+          </button>
+          <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
+            <%= link_to hotel_ar_statement_path(
+                  current_hotel,
+                  @hotel_corporate_account,
+                  start_date: @presenter.start_date,
+                  end_date: @presenter.end_date,
+                  currency: @presenter.currency,
+                  report_type: "summary",
+                  format: :pdf
+                ),
+                role: "menuitem",
+                target: "_blank",
+                class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+                data: { turbo: false } do %>
+              <%= cached_icon "file-text", class: "size-4 text-muted-foreground" %>
+              <span>Summary</span>
+            <% end %>
+            <%= link_to hotel_ar_statement_path(
+                  current_hotel,
+                  @hotel_corporate_account,
+                  start_date: @presenter.start_date,
+                  end_date: @presenter.end_date,
+                  currency: @presenter.currency,
+                  report_type: "detail",
+                  format: :pdf
+                ),
+                role: "menuitem",
+                target: "_blank",
+                class: "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+                data: { turbo: false } do %>
+              <%= cached_icon "file-text", class: "size-4 text-muted-foreground" %>
+              <span>Detail</span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <section class="grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:grid-cols-5">
+        <% [
+          ["Opening Balance", @presenter.opening_balance, "text-foreground"],
+          ["Period Invoices", @presenter.period_invoices, "text-foreground"],
+          ["Period Payments", @presenter.period_payments, "text-emerald-700"],
+          ["Closing Balance", @presenter.closing_balance, @presenter.closing_balance.negative? ? "text-emerald-700" : "text-amber-700"],
+          ["Unapplied Credit", @presenter.unapplied_credit, "text-emerald-700"]
+        ].each_with_index do |(label, amount, color), index| %>
+          <div class="p-4 <%= "border-l border-border" unless index.zero? %>">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"><%= label %></p>
+            <p class="mt-1 text-lg font-black tabular-nums <%= color %>"><%= @presenter.money(amount) %></p>
+          </div>
+        <% end %>
+      </section>
+
+      <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <header class="border-b border-border bg-muted/60 px-4 py-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-foreground">Statement Activity</h2>
+        </header>
+        <div class="overflow-x-auto">
+          <table class="min-w-[1100px] w-full">
+            <thead class="border-b border-border bg-muted text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th class="px-4 py-3 text-left">Date</th>
+                <th class="px-4 py-3 text-left">Type</th>
+                <th class="px-4 py-3 text-left">Reference</th>
+                <th class="px-4 py-3 text-left">Description</th>
+                <th class="px-4 py-3 text-left">Due Date</th>
+                <th class="px-4 py-3 text-right">Debit</th>
+                <th class="px-4 py-3 text-right">Credit</th>
+                <th class="px-4 py-3 text-right">Running Balance</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <% if @presenter.paginated_rows.any? %>
+                <% @presenter.paginated_rows.each do |row| %>
+                  <tr class="align-top hover:bg-muted/60">
+                    <td class="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground"><%= row.effective_date.strftime("%d %b %Y") %></td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm font-semibold text-foreground"><%= row.record_type %></td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm font-bold text-foreground"><%= row.reference %></td>
+                    <td class="min-w-80 px-4 py-3 text-sm text-muted-foreground"><%= row.description %></td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground"><%= row.due_on&.strftime("%d %b %Y") || "—" %></td>
+                    <td class="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-foreground"><%= row.debit.zero? ? "—" : @presenter.money(row.debit) %></td>
+                    <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-emerald-700"><%= row.credit.zero? ? "—" : @presenter.money(row.credit) %></td>
+                    <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-black tabular-nums <%= row.balance.negative? ? "text-emerald-700" : "text-foreground" %>"><%= @presenter.money(row.balance) %></td>
+                  </tr>
+                <% end %>
+              <% else %>
+                <tr><td colspan="8" class="px-6 py-16 text-center text-sm font-medium text-muted-foreground">No AR activity in this statement period.</td></tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <% if @presenter.paginated_rows.total_pages > 1 %>
+          <div class="border-t border-border px-4 py-4">
+            <%= paginate @presenter.paginated_rows, params: @presenter.pagination_params %>
+          </div>
+        <% end %>
+      </section>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:col-span-2">
+          <header class="border-b border-border bg-muted/60 px-4 py-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-foreground">Invoice Aging as of <%= @presenter.end_date.strftime("%d %b %Y") %></h2>
+          </header>
+          <div class="grid grid-cols-2 gap-px bg-muted sm:grid-cols-3 lg:grid-cols-6">
+            <% [
+              ["Current", @presenter.aging.current],
+              ["1–30 Days", @presenter.aging.days_1_30],
+              ["31–60 Days", @presenter.aging.days_31_60],
+              ["61–90 Days", @presenter.aging.days_61_90],
+              ["90+ Days", @presenter.aging.days_over_90],
+              ["Total", @presenter.aging.total]
+            ].each do |label, amount| %>
+              <div class="bg-card p-4">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= label %></p>
+                <p class="mt-1 text-sm font-black tabular-nums text-foreground"><%= @presenter.money(amount) %></p>
+              </div>
+            <% end %>
+          </div>
+        </section>
+
+        <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <header class="border-b border-border bg-muted/60 px-4 py-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-foreground">Statement Details</h2>
+          </header>
+          <dl class="divide-y divide-border">
+            <div class="px-4 py-3"><dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contact</dt><dd class="mt-1 text-sm font-semibold text-foreground"><%= @presenter.contact_email || "—" %></dd></div>
+            <div class="px-4 py-3"><dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Payment Terms</dt><dd class="mt-1 text-sm font-semibold text-foreground"><%= @presenter.payment_terms %></dd></div>
+            <div class="px-4 py-3"><dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Currency</dt><dd class="mt-1 text-sm font-semibold text-foreground"><%= @presenter.currency %></dd></div>
+          </dl>
+        </section>
+      </div>
+
+      <section class="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-amber-900">Statement Notes</h2>
+        <ul class="mt-2 space-y-1 text-xs font-medium leading-relaxed text-amber-800">
+          <% @presenter.notes.each do |note| %><li>• <%= note %></li><% end %>
+        </ul>
+      </section>
+    <% end %>
+  <% end %>
+</div>

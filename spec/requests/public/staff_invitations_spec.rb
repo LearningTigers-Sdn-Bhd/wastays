@@ -53,5 +53,17 @@ RSpec.describe "Public::StaffInvitations", type: :request do
       expect(user.reload.authenticate("oldpassword")).to be_truthy
       expect(user.hotels).to include(invitation.hotel)
     end
+
+    it "does not grant staff access to a corporate user" do
+      corporate_user = create(:user, :corporate, email: invitation.email)
+
+      expect {
+        patch staff_invitation_path(token), params: { user: {} }
+      }.not_to change(UserHotelAccess, :count)
+
+      expect(response).to redirect_to(login_path)
+      expect(flash[:alert]).to include("corporate account")
+      expect(corporate_user.reload).to be_corporate
+    end
   end
 end

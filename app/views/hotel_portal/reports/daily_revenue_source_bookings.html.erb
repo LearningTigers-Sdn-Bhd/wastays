@@ -1,0 +1,54 @@
+<%= turbo_frame_tag "offcanvas_drawer", data: { offcanvas_variant: "right" } do %>
+  <div class="flex h-full min-h-0 flex-col bg-background text-foreground">
+    <header class="shrink-0 border-b border-border bg-card p-3">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-medium text-muted-foreground">Daily revenue report</p>
+          <h2 class="mt-1 text-base font-semibold tracking-tight"><%= @detail.source_label %> bookings</h2>
+          <p class="mt-1 text-xs text-muted-foreground"><%= @detail.start_date.strftime("%d %b %Y") %> – <%= @detail.end_date.strftime("%d %b %Y") %></p>
+        </div>
+        <button type="button" class="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive" data-action="click->offcanvas#close" aria-label="Close">
+          <%= app_icon "x", class: "size-4", aria: { hidden: "true" } %>
+        </button>
+      </div>
+    </header>
+
+    <div class="min-h-0 flex-1 overflow-y-auto p-3">
+      <%= render PanelsUI::Table.new(
+            caption: "#{@detail.source_label} bookings",
+            density: :compact,
+            header_style: :sentence,
+            hoverable: true,
+            wrapper_class: "rounded-lg border border-border bg-card"
+          ) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Booking</th>
+            <th scope="col">Guest</th>
+            <th scope="col">Stay</th>
+            <th scope="col">Status</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% if @detail.entries.any? %>
+            <% @detail.entries.each do |entry| %>
+              <tr>
+                <th scope="row" class="font-semibold">
+                  <%= link_to entry.confirmation_token,
+                        hotel_booking_path(current_hotel, entry.id),
+                        class: "text-primary underline decoration-dotted underline-offset-2 hover:decoration-border-interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
+                        data: { turbo_frame: "_top" } %>
+                </th>
+                <td class="text-muted-foreground"><%= entry.guest_name %></td>
+                <td class="whitespace-nowrap text-muted-foreground"><%= entry.check_in.strftime("%d %b") %> – <%= entry.check_out.strftime("%d %b %Y") %></td>
+                <td class="text-muted-foreground"><%= entry.status.humanize %></td>
+              </tr>
+            <% end %>
+          <% else %>
+            <%= render "table_empty_state", colspan: 4, message: "No bookings found for this source." %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+<% end %>

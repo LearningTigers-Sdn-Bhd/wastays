@@ -1,0 +1,86 @@
+<div style="margin: 0; padding: 24px 0; background-color: #f3f4f6; font-family: Arial, Helvetica, sans-serif; color: #0f172a;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 0 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; border-collapse: separate; border-spacing: 0; background-color: #ffffff; border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0;">
+          <tr>
+            <td align="center" style="background-color: #115e59; padding: 26px 20px;">
+              <%= image_tag attachments["long-logo.png"].url, alt: "WAStays", style: "max-width: 150px; width: 100%; height: auto; display: block;" %>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 30px 38px 12px 38px;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; line-height: 18px; font-weight: 700; color: #0f766e; text-transform: uppercase; letter-spacing: 0.08em;">
+                PRE-ARRIVAL REMINDER <%= @payload[:stage].to_s.upcase.presence %>
+              </p>
+              <h1 style="margin: 0; font-size: 38px; line-height: 44px; color: #0f172a; font-weight: 700;">
+                See you soon, <%= @guest_first_name %>!
+              </h1>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 14px 38px 0 38px;">
+              <p style="margin: 0; font-size: 30px; line-height: 36px; font-weight: 700; color: #0f172a;">
+                <%= @payload[:hotel_name] %>
+              </p>
+              <p style="margin: 8px 0 0 0; font-size: 17px; line-height: 28px; color: #334155;">
+                Your upcoming stay is almost here. We are excited to welcome you.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 26px 38px 0 38px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 16px 18px 12px 18px; border-bottom: 1px solid #e2e8f0;">
+                    <div style="font-size: 12px; line-height: 18px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Booking Reference</div>
+                    <div style="font-size: 30px; line-height: 36px; font-weight: 700; color: #0f172a; margin-top: 4px;"><%= @payload[:confirmation_token] %></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                      <tr>
+                        <td width="50%" style="padding: 14px 18px; border-right: 1px solid #e2e8f0;">
+                          <div style="font-size: 12px; line-height: 18px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Check-in</div>
+                          <div style="font-size: 18px; line-height: 24px; font-weight: 700; color: #0f172a; margin-top: 4px;"><%= Date.parse(@payload[:check_in].to_s).strftime("%d %b %Y") rescue @payload[:check_in] %></div>
+                        </td>
+                        <td width="50%" style="padding: 14px 18px;">
+                          <div style="font-size: 12px; line-height: 18px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Check-out</div>
+                          <div style="font-size: 18px; line-height: 24px; font-weight: 700; color: #0f172a; margin-top: 4px;"><%= Date.parse(@payload[:check_out].to_s).strftime("%d %b %Y") rescue @payload[:check_out] %></div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 22px 38px 0 38px;">
+              <div style="margin: 0; border-radius: 12px; border: 1px solid #bbf7d0; background-color: #f0fdf4; padding: 14px 16px; font-size: 18px; line-height: 28px; color: #166534;">
+                We cannot wait to host you. Wishing you a smooth trip and a wonderful stay.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 24px 38px 22px 38px; text-align: center;">
+              <p style="margin: 0; font-size: 14px; line-height: 22px; color: #94a3b8;">Thank you for choosing WAStays.</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 16px 38px; border-top: 1px solid #e2e8f0; text-align: center; background-color: #f8fafc;">
+              <p style="margin: 0; font-size: 12px; line-height: 18px; color: #94a3b8;">&copy; <%= Time.current.year %> WAStays. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>

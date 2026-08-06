@@ -1,0 +1,57 @@
+<%= form_with url: form_url, method: :get, local: true,
+      class: local_assigns.fetch(:class_name, "flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end lg:w-auto"),
+      id: local_assigns[:form_id],
+      data: { controller: "date-preset", slot: "report-toolbar" } do |form| %>
+  <% local_assigns.fetch(:hidden_params, {}).each do |name, value| %>
+    <%= hidden_field_tag name, value %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :date_preset, label: "Time period", class: "w-full md:w-40") do |field| %>
+    <% field.with_select_menu(
+          date_preset_options(
+            include_single: !local_assigns.fetch(:single_date, false),
+            as_of: local_assigns.fetch(:single_date, false)
+          ),
+          selected: date_preset,
+          data: { action: "change->date-preset#toggleCustom" }) %>
+  <% end %>
+
+  <div id="custom-date-range" class="<%= %w[custom single].include?(date_preset) ? 'flex' : 'hidden' %> items-end gap-2">
+    <% if local_assigns.fetch(:single_date, false) %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :as_of_date, label: "As of date", label_hidden: true, class: "w-full md:w-40") do |field| %>
+        <% field.with_date_picker(
+             value: start_date.iso8601,
+             placeholder: "As of date",
+             data: { action: "change->date-preset#submitDate" }) %>
+      <% end %>
+    <% else %>
+      <div id="single-date-wrapper" class="<%= date_preset == 'single' ? '' : 'hidden' %> w-full md:w-40">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :start_date, label: "Date", label_hidden: true) do |field| %>
+          <% field.with_date_picker(
+               value: start_date.iso8601,
+               placeholder: "Select date",
+               data: { action: "change->date-preset#submitDate" }) %>
+        <% end %>
+      </div>
+
+      <div id="custom-date-wrapper" class="<%= date_preset == 'custom' ? '' : 'hidden' %> w-full md:w-60">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :date_range, label: "Date range", label_hidden: true) do |field| %>
+          <% field.with_date_picker(
+               range: true,
+               months: 2,
+               responsive_months: true,
+               value: "#{start_date.iso8601}/#{end_date.iso8601}",
+               placeholder: "Date range",
+               data: { action: "change->date-preset#submitDate" }) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if local_assigns.fetch(:show_export, true) %>
+    <%= render "hotel_portal/reports/export_dropdown",
+      menu_id: export_menu_id,
+      items: export_items,
+      disabled: local_assigns.fetch(:export_disabled, false) %>
+  <% end %>
+<% end %>

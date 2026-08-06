@@ -1,40 +1,27 @@
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe "HotelPortal::Arrivals", type: :request do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
-  let(:booking) { create(:booking, hotel: hotel, check_in: Date.today) }
 
   before do
     role = create(:role, account: hotel.account)
-    permission = Permission.find_by(slug: "manage_guest_arrival") || Permission.find_by(slug: 'manage_guest_arrival') || create(:permission, slug: 'manage_guest_arrival', name: 'Manage Guest Arrival')
-    role.permissions << permission
-    UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    UserHotelAccess.create!(user:, hotel:, role:)
     sign_in_as(user)
   end
 
-  describe "GET /index" do
-      before do
-      room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
-      BookingRoom.create!(booking: booking, room_type: room_type, room_type_snapshot: { "name" => room_type.name }, quantity: 1, subtotal: booking.total_amount)
-      create(:pre_checkin, booking: booking, status: "completed", document_status: "uploaded")
-    end
+  it "redirects with only mapped front desk parameters before arrival authorization" do
+    get hotel_arrivals_path(hotel), params: { date: "2026-07-15", q: "Aisha", page: 2, ignored: "x" }
 
-    it "returns http success" do
-      get "/hotel/#{hotel.id}/arrivals"
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include("View")
-      expect(response.body).not_to include("Assign in Room Readiness")
-    end
+    expect(response).to have_http_status(:moved_permanently)
+    expect(response).to redirect_to(hotel_front_desk_path(hotel, tab: "arrivals", view: "list", arrival_date: "2026-07-15", arrival_q: "Aisha", arrival_page: 2))
+  end
 
-    it 'logs out users whose account has been suspended' do
-      user.account.update!(status: 'suspended')
+  it "logs out users whose account has been suspended" do
+    user.account.update!(status: "suspended")
 
-      get "/hotel/#{hotel.id}/arrivals"
+    get hotel_arrivals_path(hotel)
 
-      expect(response).to redirect_to(login_path)
-      follow_redirect!
-      expect(response.body).to include('Your account has been suspended. Please contact support.')
-    end
+    expect(response).to redirect_to(login_path)
   end
 end

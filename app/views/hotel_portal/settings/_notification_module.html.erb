@@ -1,0 +1,72 @@
+<%= form_with model: config,
+              url: hotel_notification_settings_path(@hotel),
+              method: :patch,
+              local: true,
+              class: "h-full" do |f| %>
+  <%= hidden_field_tag :form_id, "notification_settings" %>
+  <%= hidden_field_tag "notification_config[notification_type]", notification_type %>
+
+  <%= render PanelsUI::Card.new(
+        width: :full,
+        density: :compact,
+        variant: :outlined,
+        dividers: :none,
+        as: :article,
+        class: "group/card h-full",
+        data: {
+          controller: "notification-card",
+          notification_type: notification_type,
+          disabled: (!config.enabled).to_s
+        }) do |card| %>
+    <% card.with_header(title: title, description: description, title_as: :h3) do |header| %>
+      <% header.with_badges do %>
+        <%= render PanelsUI::Badge.new(label: subtitle, variant: :outline, size: :sm) %>
+      <% end %>
+      <% header.with_actions do %>
+        <%= render PanelsUI::Switch.new(
+              name: "notification_config[enabled]",
+              id: "notification_config_#{notification_type}_enabled",
+              label: "Enabled",
+              checked: config.enabled,
+              size: :sm,
+              data: {
+                notification_card_target: "toggle",
+                action: "change->notification-card#refresh"
+              }) %>
+      <% end %>
+    <% end %>
+
+    <% card.with_card_content(
+         class: "flex flex-1 flex-col transition-opacity group-[.is-disabled]/card:opacity-50",
+         data: { notification_card_target: "content" }) do %>
+      <%= render PanelsUI::FieldSet.new(legend: "Delivery Channels", legend_variant: :label) do %>
+        <%= hidden_field_tag "notification_config[channels][]", "" %>
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <% ["whatsapp", "email"].each do |channel| %>
+            <%= render PanelsUI::Checkbox.new(
+                  name: "notification_config[channels][]",
+                  id: "notification_config_#{notification_type}_channel_#{channel}",
+                  value: channel,
+                  checked: config.channels.include?(channel),
+                  label: channel.humanize,
+                  variant: :card,
+                  size: :sm,
+                  include_hidden: false) %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if block_given? %>
+        <div class="mt-4">
+          <%= yield f %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <% card.with_footer(align: :end) do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm) do %>
+        Save Configuration
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

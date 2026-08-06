@@ -1,0 +1,254 @@
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(title: "Bookings", description: "Manage property reservations and guest stays.") do |header| %>
+    <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+      <% header.with_actions do %>
+        <%= render PanelsUI::DropdownMenu.new(id: "bookings-new-transaction-menu", placement: :bottom_end, class: "w-60") do |menu| %>
+          <% menu.with_trigger(variant: :primary, size: :md, class: "w-full sm:w-auto") do %>
+            <%= cached_icon "plus", class: "size-4" %>
+            <span class="hidden md:inline">New</span>
+            <%= cached_icon "chevron-down", class: "hidden size-4 md:inline-block" %>
+          <% end %>
+          <% menu.with_group(label: "Insert Transaction") do |group| %>
+            <% group.with_item(href: hotel_booking_action_quick_booking_path(current_hotel), variant: :default, data: { turbo_frame: "booking_action_sheet" }) do %>
+              <%= cached_icon "calendar-plus", stroke_width: 2.2, class: "size-4" %>
+              New Booking
+            <% end %>
+            <% group.with_item(href: hotel_booking_action_walk_in_check_in_path(current_hotel), variant: :default, data: { turbo_frame: "booking_action_sheet" }) do %>
+              <%= cached_icon "user-check", stroke_width: 2.2, class: "size-4" %>
+              Walk-in Check-in
+            <% end %>
+            <% group.with_item(href: hotel_booking_action_backdated_check_in_path(current_hotel), variant: :default, data: { turbo_frame: "booking_action_sheet" }) do %>
+              <%= cached_icon "calendar-clock", stroke_width: 2.2, class: "size-4" %>
+              Backdated Check-in
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <div class="space-y-4">
+    <%= form_with url: hotel_bookings_path(current_hotel), method: :get, class: "space-y-4", data: { controller: "auto-submit", turbo_frame: "bookings_results", turbo_action: "advance" } do |f| %>
+      <%# First Row: Search + Check-in Date %>
+      <div class="flex flex-col md:flex-row gap-3">
+        <div class="relative flex-1">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <%= cached_icon "search", class: "size-4 text-muted-foreground" %>
+          </div>
+          <%= f.text_field :query, value: params[:query], placeholder: "Search guest name, ref, or contact...", class: "block w-full rounded-lg border border-border bg-card py-2 pl-10 pr-3 text-sm placeholder:text-muted-foreground focus:border-border-interactive focus:ring-1 focus:ring-ring/10 focus:outline-none transition-all shadow-sm", data: { action: "input->auto-submit#submit" } %>
+        </div>
+        <div class="relative w-full md:w-64">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+            <%= cached_icon "calendar", class: "size-4 text-muted-foreground" %>
+          </div>
+          <%= f.date_field :check_in_date, value: params[:check_in_date], class: "block w-full rounded-lg border border-border bg-card py-2 pl-10 pr-3 text-sm focus:border-border-interactive focus:ring-1 focus:ring-ring/10 focus:outline-none transition-all shadow-sm", data: { action: "change->auto-submit#submitNow" } %>
+        </div>
+      </div>
+
+      <%# Second Row: Status Pills (Horizontally Scrollable) %>
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-2 px-0.5 -mx-0.5">
+        <div class="shrink-0">
+          <input type="radio" name="status" value="" id="status_all" class="sr-only peer" <%= "checked" if params[:status].blank? %> data-action="change->auto-submit#submitNow">
+          <label for="status_all" class="cursor-pointer rounded-full border border-border bg-card px-4 py-1.5 text-xs font-bold text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground peer-checked:border-border-interactive peer-checked:bg-primary peer-checked:text-primary-foreground uppercase tracking-wider inline-flex items-center gap-1.5">
+            <%= cached_icon "funnel", stroke_width: 2.5, class: "size-3.5" %>
+            ALL
+          </label>
+        </div>
+
+        <% Booking::STATUSES.each do |status| %>
+          <% next if status == "overbooked" # hide overbooked filter pill for now %>
+          <div class="shrink-0">
+            <input type="radio" name="status" value="<%= status %>" id="status_<%= status %>" class="sr-only peer" <%= "checked" if params[:status] == status %> data-action="change->auto-submit#submitNow">
+            <% variant = HotelPortal::BookingPresenter.status_pill_style(status) %>
+            <label for="status_<%= status %>" class="cursor-pointer rounded-full border border-border bg-card px-4 py-1.5 text-xs font-bold text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground uppercase tracking-wider <%= variant %> inline-flex items-center gap-1.5">
+              <%= cached_icon booking_status_icon(status), stroke_width: 2.5, class: "size-3.5" %>
+              <%= status.upcase.gsub('_', ' ') %>
+            </label>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= turbo_frame_tag "bookings_results" do %>
+      <%# 4. Desktop Table %>
+      <div class="hidden lg:block overflow-x-auto rounded-xl border border-border bg-card shadow-sm overflow-visible">
+        <table class="min-w-full divide-y divide-border">
+          <thead class="bg-muted/50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reference</th>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Guest</th>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Stay Dates</th>
+              <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Amount</th>
+              <th scope="col" class="sticky right-0 bg-muted/50 z-10 px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-l border-border/50 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)]">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border bg-card">
+            <% if @bookings.any? %>
+              <% @bookings.each do |booking| %>
+                <% booking_presenter = HotelPortal::BookingPresenter.new(booking, current_hotel) %>
+                <tr class="group <%= booking.blacklisted? ? 'bg-rose-100' : 'hover:bg-muted/80 transition-colors' %>">
+                  <td class="py-3 pr-6 <%= booking.blacklisted? ? 'border-l-4 border-l-rose-600 pl-5' : 'pl-6' %>">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-bold text-foreground"><%= booking_presenter.confirmation_token %></span>
+                      <span class="text-[10px] font-medium text-muted-foreground mt-0.5"><%= booking_presenter.created_at_date %></span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3">
+                    <span class="inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider <%= booking_presenter.status_variant_class %>">
+                      <%= booking_presenter.status_label_humanized %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-3">
+                    <div class="flex flex-col">
+                      <div class="flex items-center gap-x-1.5">
+                        <span class="text-sm font-bold text-foreground"><%= booking_presenter.guest_name %></span>
+                        <% if booking_presenter.vip? %>
+                          <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+                        <% end %>
+                        <% if booking_presenter.blacklisted? %>
+                          <div class="relative size-4 flex items-center justify-center shrink-0">
+                            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3.5 translate-x-0.3 text-rose-600" %>
+                            <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                          </div>
+                        <% end %>
+                        <% if booking_presenter.repeat? %>
+                          <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
+                        <% end %>
+                      </div>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-[11px] font-medium text-muted-foreground"><%= booking_presenter.guest_email_display %></span>
+                        <span class="size-1 rounded-full bg-muted"></span>
+                        <span class="text-[11px] font-medium text-muted-foreground font-mono"><%= booking_presenter.guest_phone_display %></span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3">
+                    <div class="flex flex-col">
+                      <div class="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                        <span><%= booking_presenter.check_in_short %></span>
+                        <span class="text-muted-foreground">—</span>
+                        <span><%= booking_presenter.check_out_date_year %></span>
+                      </div>
+                      <span class="mt-0.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                        <%= booking_presenter.nights_label %>
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3 whitespace-nowrap">
+                    <span class="text-sm font-black text-foreground"><%= booking_presenter.formatted_currency_total %></span>
+                  </td>
+                  <td class="sticky right-0 z-10 px-6 py-3 text-right border-l border-border shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] <%= booking.blacklisted? ? 'bg-rose-100' : 'bg-card group-hover:bg-muted transition-colors' %>">
+                    <%= link_to hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), class: "group inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1 text-xs font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted active:scale-95", data: { turbo_frame: "_top" } do %>
+                      Open
+                      <%= cached_icon "arrow-right", stroke_width: 2.5, class: "size-3 text-muted-foreground group-hover:text-foreground transition-colors" %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="6" class="px-6 py-4">
+                  <div class="flex flex-col items-center justify-center text-center py-12 px-4">
+                    <div class="p-3 bg-muted rounded-full text-muted-foreground mb-3">
+                      <%= cached_icon "calendar-x", stroke_width: 2, class: "size-6" %>
+                    </div>
+                    <h3 class="text-sm font-bold text-foreground">No bookings found</h3>
+                    <p class="text-xs text-muted-foreground max-w-[280px] mt-1">Try adjusting your filters or search keywords to find the reservation.</p>
+                    <% if params[:query].present? || params[:check_in_date].present? || params[:status].present? %>
+                      <%= link_to hotel_bookings_path(current_hotel), class: "mt-4 inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground shadow-sm hover:bg-muted transition active:scale-95", data: { turbo_frame: "_top" } do %>
+                        <%= cached_icon "rotate-ccw", stroke_width: 2.5, class: "size-3" %>
+                        Reset Filters
+                      <% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <%# 6. Mobile Layout %>
+      <div class="lg:hidden space-y-3 px-4 sm:px-0">
+        <% if @bookings.any? %>
+          <% @bookings.each do |booking| %>
+            <% booking_presenter = HotelPortal::BookingPresenter.new(booking, current_hotel) %>
+            <div class="rounded-xl border border-border p-4 shadow-sm <%= booking.blacklisted? ? 'bg-rose-100 border-t-4 border-t-rose-600 pt-3' : 'bg-card' %>">
+              <div class="flex items-start justify-between">
+                <div class="space-y-1">
+                  <span class="text-xs font-black text-muted-foreground uppercase tracking-wider">Ref</span>
+                  <p class="text-sm font-black text-foreground"><%= booking_presenter.confirmation_token %></p>
+                </div>
+                <span class="inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider <%= booking_presenter.status_variant_class %>">
+                  <%= booking_presenter.status_label_humanized %>
+                </span>
+              </div>
+
+              <div class="mt-4 grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                  <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Guest</span>
+                  <div class="flex items-center gap-x-1.5 min-w-0">
+                    <p class="text-sm font-bold text-foreground truncate"><%= booking_presenter.guest_name %></p>
+                    <% if booking_presenter.vip? %>
+                      <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+                    <% end %>
+                    <% if booking_presenter.blacklisted? %>
+                      <div class="relative size-4 flex items-center justify-center shrink-0">
+                        <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3.5 text-rose-600" %>
+                        <%= cached_icon "ban", class: "absolute inset-0 size-4 text-rose-600" %>
+                      </div>
+                    <% end %>
+                    <% if booking_presenter.repeat? %>
+                      <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-4 text-blue-500 shrink-0" %>
+                    <% end %>
+                  </div>
+                  <p class="text-[10px] text-muted-foreground truncate"><%= booking_presenter.guest_email_display %></p>
+                  <p class="text-[10px] text-muted-foreground font-mono"><%= booking_presenter.guest_phone_display %></p>
+                </div>
+                <div class="space-y-1 text-right">
+                  <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Amount</span>
+                  <p class="text-sm font-black text-foreground"><%= booking_presenter.formatted_currency_total %></p>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t border-border flex items-center justify-between">
+                <div class="space-y-1">
+                  <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Stay Dates</span>
+                  <p class="text-xs font-bold text-foreground"><%= booking_presenter.check_in_short %> – <%= booking_presenter.check_out_date_year %></p>
+                </div>
+                <%= link_to hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details"), class: "group inline-flex items-center gap-1 rounded-lg border border-border bg-card px-4 py-1.5 text-xs font-bold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted active:scale-95", data: { turbo_frame: "_top" } do %>
+                  Open
+                  <%= cached_icon "arrow-right", stroke_width: 2.5, class: "size-3 text-muted-foreground group-hover:text-foreground transition-colors" %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="rounded-xl border border-dashed border-border bg-card p-6 shadow-sm">
+            <div class="flex flex-col items-center justify-center text-center py-8 px-4">
+              <div class="p-3 bg-muted rounded-full text-muted-foreground mb-3">
+                <%= cached_icon "calendar-x", stroke_width: 2, class: "size-6" %>
+              </div>
+              <h3 class="text-sm font-bold text-foreground">No bookings found</h3>
+              <p class="text-xs text-muted-foreground max-w-[280px] mt-1">Try adjusting your filters or search keywords to find the reservation.</p>
+              <% if params[:query].present? || params[:check_in_date].present? || params[:status].present? %>
+                <%= link_to hotel_bookings_path(current_hotel), class: "mt-4 inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground shadow-sm hover:bg-muted transition active:scale-95", data: { turbo_frame: "_top" } do %>
+                  <%= cached_icon "rotate-ccw", stroke_width: 2.5, class: "size-3" %>
+                  Reset Filters
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%# 7. Pagination %>
+      <% if @bookings.total_pages > 1 %>
+        <div class="mt-6 flex justify-center">
+          <%= paginate @bookings %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

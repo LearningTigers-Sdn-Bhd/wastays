@@ -1,0 +1,181 @@
+<div class="w-full space-y-4 print:max-w-none print:pb-0 print:space-y-4" data-slot="report-page" data-report="guest-reports">
+  <div class="print:px-0">
+    <%= render PanelsUI::PageHeader.new(title: "Guest reports", description: "Review arrivals, in-house guests, departures, registration cards, and operational guest lists.", class: "print:block") do |header| %>
+      <% header.with_caption do %>
+        <p class="text-sm font-medium text-muted-foreground print:text-xs">
+          <%= current_hotel.name %> ·
+          <% if @report.start_date == @report.end_date %>
+            <%= @report.start_date.strftime("%A, %d %b %Y") %>
+          <% else %>
+            <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
+          <% end %>
+        </p>
+      <% end %>
+      <% header.with_actions do %>
+        <%# The meal and leg strips are sub-tabs of a tab: exports and date changes
+            carry the one in play so both follow what is on screen. %>
+        <% sub_tab = { meal_type: params[:meal_type], leg: params[:leg] }.compact %>
+        <div class="print:hidden">
+          <%= render "preset_report_actions",
+            form_url: guest_reports_hotel_reports_path(current_hotel), form_id: "arrivals-date-range-form",
+            date_preset: @date_preset, start_date: @report.start_date, end_date: @report.end_date,
+            hidden_params: { tab: @active_guest_report_tab, q: params[:q], status: params[:status] }.compact.merge(sub_tab),
+            show_export: feature_enabled_for_hotel?("excel_pdf_export") && @active_guest_report_tab != "registration_cards",
+            export_menu_id: "guest-reports-export",
+            export_items: [
+              ["Export PDF", guest_reports_hotel_reports_path(current_hotel, **sub_tab, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :pdf)],
+              ["Export Excel", guest_reports_hotel_reports_path(current_hotel, **sub_tab, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :xlsx)],
+              ["Export CSV", guest_reports_hotel_reports_path(current_hotel, **sub_tab, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: @active_guest_report_tab, q: params[:q], format: :csv)]
+            ] %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="print:hidden">
+    <% guest_tab_labels = {
+      "arrivals" => "Arrivals",
+      "in_house" => "In-house",
+      "departures" => "Departures",
+      "checkout" => "Checkout",
+      "police_report" => "Police report",
+      "registration_cards" => "Registration cards",
+      "bibo" => "Boat transfers",
+      "meal_prep" => "Meal prep"
+    } %>
+    <%= render PanelsUI::Tabs.new(
+          id: "guest-reports-tabs",
+          active: @active_guest_report_tab,
+          variant: :line,
+          aria_label: "Guest reports"
+        ) do |tabs| %>
+      <% guest_report_tabs_data(
+           report: @report,
+           bibo_report: @bibo_full,
+           police_report: @police_report,
+           meal_prep_report: @meal_prep_full,
+           active_tab: @active_guest_report_tab,
+           grc_total_count: @grc_total_count,
+           current_hotel: current_hotel,
+           date_preset: @date_preset
+         ).each do |tab| %>
+        <% tabs.with_tab(
+             name: tab[:value],
+             label: guest_tab_labels.fetch(tab[:value]),
+             count: tab[:count],
+             href: tab[:path]
+           ) %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if show_metrics_cards?(@active_guest_report_tab) %>
+    <%= render HotelPortal::Reports::MetricStrip.new(
+          metrics: [
+            { label: "Arrivals", value: @report.arrival_count.to_s, detail: "Selected period" },
+            { label: "In-house", value: @report.in_house_count.to_s, detail: "Selected period" },
+            { label: "Departures", value: @report.departure_count.to_s, detail: "Selected period" },
+            { label: "Checkout", value: @report.checkout_count.to_s, detail: "Selected period" }
+          ],
+          aria_label: "Guest report summary",
+          class: "print:grid-cols-2"
+        ) %>
+  <% end %>
+
+  <% if @active_guest_report_tab == "arrivals" %>
+    <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+      title: "Expected arrivals",
+      empty_message: "No arrivals scheduled for this selected period.",
+      rows: @report.arrivals,
+      type: :arrival,
+      date_preset: @date_preset,
+      show_boat_departure: current_hotel.allow_boat_information?
+    } %>
+  <% elsif @active_guest_report_tab == "in_house" %>
+    <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+      title: "In-house guests",
+      empty_message: "No in-house guests for this selected period.",
+      rows: @report.in_house,
+      type: :departure,
+      date_preset: @date_preset,
+      show_boat_departure: current_hotel.allow_boat_information?
+    } %>
+  <% elsif @active_guest_report_tab == "departures" %>
+    <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+      title: "Expected departures",
+      empty_message: "No departures scheduled for this selected period.",
+      rows: @report.departures,
+      type: :departure,
+      date_preset: @date_preset,
+      show_boat_departure: current_hotel.allow_boat_information?
+    } %>
+  <% elsif @active_guest_report_tab == "checkout" %>
+    <%= render partial: "hotel_portal/reports/arrivals_departures_section", locals: {
+      title: "Checked-out guests",
+      empty_message: "No checked-out guests for this selected period.",
+      rows: @report.checkout,
+      type: :departure,
+      date_preset: @date_preset,
+      show_boat_departure: current_hotel.allow_boat_information?
+    } %>
+  <% elsif @active_guest_report_tab == "bibo" %>
+    <div class="space-y-3">
+      <div class="print:hidden">
+        <%= render PanelsUI::Tabs.new(
+              id: "bibo-leg-tabs",
+              active: params[:leg],
+              variant: :line,
+              aria_label: "Boat transfer directions"
+            ) do |tabs| %>
+          <% ([ HotelPortal::ReportsController::BIBO_ALL ] + HotelPortal::Reports::BiboReport::LEG_KEYS).each do |leg| %>
+            <% tabs.with_tab(
+                 name: leg,
+                 label: bibo_leg_label(leg),
+                 count: @bibo_counts[leg],
+                 href: guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: "bibo", leg: leg)
+               ) %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <%= render partial: "hotel_portal/reports/bibo_section", locals: {
+        report: @bibo_report
+      } %>
+    </div>
+  <% elsif @active_guest_report_tab == "meal_prep" %>
+    <div class="space-y-3">
+      <div class="print:hidden">
+        <%= render PanelsUI::Tabs.new(
+              id: "meal-type-tabs",
+              active: params[:meal_type],
+              variant: :line,
+              aria_label: "Meal types"
+            ) do |tabs| %>
+          <% ([ HotelPortal::ReportsController::MEAL_PREP_ALL ] + HotelPortal::Reports::MealPrepReport::MEALS).each do |m_type| %>
+            <% tabs.with_tab(
+                 name: m_type,
+                 label: m_type.titleize,
+                 count: @meal_prep_counts[m_type],
+                 href: guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: "meal_prep", meal_type: m_type)
+               ) %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <%= render partial: "hotel_portal/reports/meal_prep_section", locals: {
+        report: @meal_prep_report
+      } %>
+    </div>
+  <% elsif @active_guest_report_tab == "police_report" %>
+    <%= render "hotel_portal/reports/police_report_section", report: @police_report, date_preset: @date_preset %>
+  <% else %>
+    <%= render "hotel_portal/reports/guest_registration_cards_section",
+      form_url: guest_reports_hotel_reports_path(current_hotel),
+      hidden_fields: {
+        tab: @active_guest_report_tab,
+        start_date: @report.start_date,
+        end_date: @report.end_date,
+        date_preset: @date_preset
+      } %>
+  <% end %>
+</div>

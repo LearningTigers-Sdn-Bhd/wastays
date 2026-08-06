@@ -4,9 +4,9 @@ class GlobalSearchService
   GROUP_PRIORITY = { "Bookings" => 0, "Pages" => 1, "Requests" => 2 }.freeze
   PAGE_RESULTS = [
     { title: "Hotel Dashboard", subtitle: "Overview and recent activity", route: :hotel_dashboard_path, keywords: "dashboard overview recent bookings" },
-    { title: "Arrival Board", subtitle: "Check-ins and arrivals", route: :hotel_arrivals_path, keywords: "arrival board arrivals check in" },
-    { title: "In-House Guests", subtitle: "Current in-house guests", route: :hotel_in_house_guests_path, keywords: "in house guests" },
-    { title: "Bookings", subtitle: "All hotel bookings", route: :hotel_bookings_path, keywords: "bookings reservations recent bookings" },
+    { title: "Arrival Board", subtitle: "Check-ins and arrivals", route: :hotel_front_desk_path, tab: "arrivals", keywords: "arrival board arrivals check in" },
+    { title: "In-House Guests", subtitle: "Current in-house guests", route: :hotel_front_desk_path, tab: "in_house", keywords: "in house guests" },
+    { title: "Bookings", subtitle: "All hotel bookings", route: :hotel_front_desk_path, tab: "bookings", keywords: "bookings reservations recent bookings" },
     { title: "Requests", subtitle: "Housekeeping and complaints", route: :hotel_requests_path, keywords: "requests housekeeping complaints" },
     { title: "Guest Records", subtitle: "Past and upcoming guest history", route: :hotel_guests_path, keywords: "guest records guests" },
     { title: "Room Categories", subtitle: "Manage room types", route: :hotel_room_types_path, keywords: "room categories room types" },
@@ -14,7 +14,7 @@ class GlobalSearchService
     { title: "Reports", subtitle: "Financial performance", route: :hotel_reports_path, keywords: "reports financial performance" },
     { title: "Weekly Settlements", subtitle: "Payout reports", route: :payouts_hotel_reports_path, keywords: "payouts settlements weekly" },
     { title: "Operation Audit Logs", subtitle: "Operational changes history", route: :hotel_audit_logs_path, keywords: "audit logs operations" },
-    { title: "Settings", subtitle: "Hotel and payment settings", route: :hotel_settings_path, keywords: "settings preferences payment" }
+    { title: "Settings", subtitle: "Hotel and payment settings", route: :hotel_general_settings_path, keywords: "settings preferences payment" }
   ].freeze
 
   def initialize(hotel, query)
@@ -32,9 +32,9 @@ class GlobalSearchService
 
   def quick_actions
     [
-      { group: "Bookings", label: "Go to bookings", url: hotel_bookings_path(@hotel) },
+      { group: "Bookings", label: "Go to bookings", url: hotel_front_desk_path(@hotel, tab: "bookings") },
       { group: "Requests", label: "Go to requests", url: hotel_requests_path(@hotel) },
-      { group: "Pages", label: "Go to arrival board", url: hotel_arrivals_path(@hotel) }
+      { group: "Pages", label: "Go to arrival board", url: hotel_front_desk_path(@hotel, tab: "arrivals") }
     ]
   end
 
@@ -50,7 +50,7 @@ class GlobalSearchService
         title: entry[:title],
         subtitle: entry[:subtitle],
         group: "Pages",
-        url: hotel_portal_route(entry[:route]),
+        url: hotel_portal_route(entry[:route], tab: entry[:tab]),
         score: score + 10
       }
     end
@@ -73,7 +73,7 @@ class GlobalSearchService
         title: "#{booking.confirmation_token} · #{booking.guest_name}",
         subtitle: "#{booking.guest_email} · #{booking.guest_phone}",
         group: "Bookings",
-        url: hotel_booking_path(@hotel, booking),
+        url: hotel_booking_workspace_path(@hotel, booking, tab: "booking_details"),
         score: search_score(haystack, @query) + 6
       }
     end
@@ -115,14 +115,14 @@ class GlobalSearchService
         title: "#{label}: #{request.external_id || booking&.confirmation_token}",
         subtitle: "#{booking&.guest_name} · #{request.status.to_s.humanize}",
         group: "Requests",
-        url: hotel_booking_path(@hotel, booking),
+        url: hotel_booking_workspace_path(@hotel, booking, tab: "booking_details"),
         score: search_score(haystack, @query) + 5
       }
     end
   end
 
-  def hotel_portal_route(route_name)
-    send(route_name, @hotel)
+  def hotel_portal_route(route_name, tab: nil)
+    send(route_name, @hotel, **{ tab: }.compact)
   end
 
   # --- Scoring Logic ---

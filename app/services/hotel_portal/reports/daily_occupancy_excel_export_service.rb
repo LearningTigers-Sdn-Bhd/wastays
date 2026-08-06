@@ -1,87 +1,42 @@
 # frozen_string_literal: true
 
-require "cgi"
-
 module HotelPortal
   module Reports
     class DailyOccupancyExcelExportService
-      XML_HEADER = %(<?xml version="1.0"?>).freeze
+      HEADERS = [ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)", "Tax", "Total Revenue" ].freeze
 
-      def initialize(report:)
+      def initialize(hotel:, report:)
+        @hotel = hotel
         @report = report
       end
 
       def generate
-        <<~XML
-          #{XML_HEADER}
-          <?mso-application progid="Excel.Sheet"?>
-          <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-            xmlns:o="urn:schemas-microsoft-com:office:office"
-            xmlns:x="urn:schemas-microsoft-com:office:excel"
-            xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-            <Worksheet ss:Name="Summary">
-              <Table>
-                #{summary_rows}
-              </Table>
-            </Worksheet>
-            <Worksheet ss:Name="Daily Occupancy">
-              <Table>
-                #{daily_rows}
-              </Table>
-            </Worksheet>
-          </Workbook>
-        XML
+        Exports::ExcelReportBuilder.new(hotel: @hotel, title: "Daily Occupancy Report", period_label: period_label).generate do |builder|
+          sheet = builder.add_sheet(name: "Daily Occupancy", widths: [ 15, 13, 16, 14, 16, 22, 28, 14, 16 ], orientation: :landscape)
+          builder.add_header(sheet: sheet)
+          builder.add_summary(sheet: sheet, metrics: summary_metrics)
+          builder.add_table(
+            sheet: sheet, section_title: "Daily Occupancy", headers: HEADERS,
+            rows: @report.rows.map { |row| [ row[:date], row[:rooms_sold], row[:rooms_available], row[:occupancy_rate], row[:room_revenue], row[:adr], row[:revpar], row[:tax_amount], row[:total_revenue] ] },
+            column_types: %i[date integer integer percentage money money money money money],
+            total_row: [ "TOTAL", @report.totals[:rooms_sold], @report.totals[:rooms_available], @report.totals[:occupancy_rate], @report.totals[:room_revenue], @report.totals[:adr], @report.totals[:revpar], @report.totals[:tax_amount], @report.totals[:total_revenue] ],
+            empty_message: "No occupancy data for the selected period."
+          )
+        end
       end
 
       private
 
-      def summary_rows
-        rows = []
-        rows << spreadsheet_row([ "Metric", "Value" ])
-        rows << spreadsheet_row([ "Rooms Sold", @report.totals[:rooms_sold] ])
-        rows << spreadsheet_row([ "Rooms Available", @report.totals[:rooms_available] ])
-        rows << spreadsheet_row([ "Occupancy %", percentage(@report.totals[:occupancy_rate]) ])
-        rows << spreadsheet_row([ "Room Revenue", money(@report.totals[:room_revenue]) ])
-        rows << spreadsheet_row([ "Average Daily Rate (ADR)", money(@report.totals[:adr]) ])
-        rows << spreadsheet_row([ "Revenue per Available Room (RevPAR)", money(@report.totals[:revpar]) ])
-        rows.join("\n")
+      def summary_metrics
+        [
+          [ "Rooms Sold", @report.totals[:rooms_sold], nil ], [ "Rooms Available", @report.totals[:rooms_available], nil ],
+          [ "Room Revenue", @report.totals[:room_revenue], currency ], [ "Tax", @report.totals[:tax_amount], currency ],
+          [ "Total Revenue", @report.totals[:total_revenue], currency ]
+        ]
       end
 
-      def daily_rows
-        rows = []
-        rows << spreadsheet_row([ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)" ])
-
-        @report.rows.each do |row|
-          rows << spreadsheet_row([
-            row[:date].strftime("%Y-%m-%d"),
-            row[:rooms_sold],
-            row[:rooms_available],
-            percentage(row[:occupancy_rate]),
-            money(row[:room_revenue]),
-            money(row[:adr]),
-            money(row[:revpar])
-          ])
-        end
-
-        rows.join("\n")
-      end
-
-      def spreadsheet_row(values)
-        cells = values.map do |value|
-          escaped = CGI.escapeHTML(value.to_s)
-          %(<Cell><Data ss:Type="String">#{escaped}</Data></Cell>)
-        end.join
-
-        %(<Row>#{cells}</Row>)
-      end
-
-      def percentage(value)
-        format("%.2f%%", value.to_d * 100)
-      end
-
-      def money(value)
-        format("%.2f", value.to_d)
-      end
+      def period_label = @report.start_date == @report.end_date ? @report.start_date.strftime("%d %b %Y") : "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
+      def currency = @hotel.default_currency.presence || "MYR"
     end
   end
 end

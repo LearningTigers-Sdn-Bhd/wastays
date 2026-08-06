@@ -1,0 +1,99 @@
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(title: "Knowledge Diagnostics", description: "Review weak or unanswered AI concierge knowledge turns.") %>
+
+  <%= render "hotel_portal/settings/group_tabs" %>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <% [
+      ["Open", @summary_counts[:open]],
+      ["Unavailable / Weak", @summary_counts[:weak]],
+      ["Reviewed", @summary_counts[:reviewed]],
+      ["Resolved", @summary_counts[:resolved]]
+    ].each do |label, count| %>
+      <div class="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <p class="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground"><%= label %></p>
+        <p class="mt-2 text-3xl font-bold text-foreground"><%= count %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-4 py-4 sm:px-6">
+      <%= form_with url: hotel_knowledge_diagnostics_path(@hotel), method: :get, class: "grid gap-3 md:grid-cols-5" do |f| %>
+        <%= f.select :status, options_for_select([["All statuses", ""], ["Open", "open"], ["Reviewed", "reviewed"], ["Resolved", "resolved"], ["Dismissed", "dismissed"]], @status), {}, class: "rounded-xl border border-border px-3 py-2 text-sm" %>
+        <%= f.select :answer_mode, options_for_select([["All modes", ""], ["Unavailable", "unavailable"], ["Fallback", "fallback"], ["Deterministic", "deterministic"], ["Synthesized", "synthesized"], ["Structured", "structured"]], @answer_mode), {}, class: "rounded-xl border border-border px-3 py-2 text-sm" %>
+        <%= f.select :suggested_category, options_for_select([["All categories", ""], ["Policy", "policy"], ["FAQ", "faq"], ["General Info", "general_info"]], @suggested_category), {}, class: "rounded-xl border border-border px-3 py-2 text-sm" %>
+        <%= f.date_field :start_date, value: @start_date&.iso8601, class: "rounded-xl border border-border px-3 py-2 text-sm" %>
+        <div class="flex gap-2">
+          <%= f.date_field :end_date, value: @end_date&.iso8601, class: "min-w-0 flex-1 rounded-xl border border-border px-3 py-2 text-sm" %>
+          <%= f.submit "Filter", class: "rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground" %>
+        </div>
+      <% end %>
+    </div>
+
+    <% if @diagnostics.any? %>
+      <div class="divide-y divide-border">
+        <% @diagnostics.each do |diagnostic| %>
+          <% best_match = Array(diagnostic.knowledge_matches).first || {} %>
+          <details class="group">
+            <summary class="grid cursor-pointer list-none gap-4 px-4 py-4 transition hover:bg-muted lg:grid-cols-[minmax(0,1.5fr)_140px_140px_160px_120px] lg:items-center sm:px-6">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold text-foreground"><%= diagnostic.question %></p>
+                <p class="mt-1 text-xs text-muted-foreground"><%= [diagnostic.intent, diagnostic.topic].compact_blank.join(" / ") %></p>
+              </div>
+              <span class="inline-flex w-fit rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-foreground"><%= diagnostic.answer_mode.presence || "unknown" %></span>
+              <span class="inline-flex w-fit rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"><%= diagnostic.suggested_category.presence || "uncategorized" %></span>
+              <span class="text-sm text-muted-foreground"><%= best_match["document_title"].presence || "No strong match" %></span>
+              <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"><%= diagnostic.diagnostic_status %></span>
+            </summary>
+
+            <div class="grid gap-6 bg-muted px-4 py-5 lg:grid-cols-2 sm:px-6">
+              <div class="space-y-4">
+                <div>
+                  <h2 class="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Answer</h2>
+                  <p class="mt-2 whitespace-pre-wrap text-sm text-foreground"><%= diagnostic.answer.presence || "No answer captured." %></p>
+                </div>
+                <div>
+                  <h2 class="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Search Path</h2>
+                  <p class="mt-2 text-sm text-foreground">Routed: <%= diagnostic.routed_categories.presence&.join(", ") || "none" %></p>
+                  <p class="mt-1 text-sm text-foreground">Fallback: <%= diagnostic.fallback_categories.presence&.join(", ") || "none" %></p>
+                  <p class="mt-1 text-sm text-foreground">Best distance: <%= diagnostic.best_distance || "n/a" %></p>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div>
+                  <h2 class="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Matches</h2>
+                  <% if diagnostic.knowledge_matches.any? %>
+                    <div class="mt-2 space-y-3">
+                      <% diagnostic.knowledge_matches.first(3).each do |match| %>
+                        <div class="rounded-xl border border-border bg-card p-3">
+                          <p class="text-xs font-bold text-foreground"><%= match["document_title"].presence || "Untitled" %> · <%= match["category"].presence || "knowledge" %></p>
+                          <p class="mt-1 text-xs text-muted-foreground">Distance: <%= match["distance"] || "n/a" %></p>
+                          <p class="mt-2 line-clamp-3 text-sm text-foreground"><%= match["content"] %></p>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% else %>
+                    <p class="mt-2 text-sm text-muted-foreground">No knowledge matches were captured.</p>
+                  <% end %>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <% (HotelKnowledgeDiagnostic::STATUSES - [diagnostic.diagnostic_status]).each do |status| %>
+                    <%= button_to status.humanize, hotel_knowledge_diagnostic_path(@hotel, diagnostic), method: :patch, params: { diagnostic_status: status }, class: "rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground hover:bg-muted" %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </details>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="px-6 py-12 text-center">
+        <p class="text-sm font-semibold text-foreground">No diagnostics found.</p>
+        <p class="mt-1 text-sm text-muted-foreground">Weak or unanswered knowledge turns will appear here.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

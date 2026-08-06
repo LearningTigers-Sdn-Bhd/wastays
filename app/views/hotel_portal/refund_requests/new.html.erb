@@ -1,0 +1,62 @@
+<%= turbo_frame_tag "offcanvas_drawer" do %>
+  <div class="p-6 space-y-6">
+    <div class="flex items-center justify-between">
+      <h3 class="text-xl font-bold text-foreground">Initiate Refund Request</h3>
+      <button type="button" data-action="click->offcanvas#close" class="text-muted-foreground hover:text-muted-foreground">
+        <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <%= form_with(model: [@booking.hotel, @booking, @refund_request],
+                  url: hotel_booking_refund_requests_path(@booking.hotel, @booking),
+                  class: "space-y-6",
+                  data: { turbo: false }) do |f| %>
+
+      <% if @refund_request.errors.any? %>
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <%= @refund_request.errors.full_messages.to_sentence %>
+        </div>
+      <% end %>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <%= f.label :refund_amount, "Refund Amount (#{@booking.currency})", class: "block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.number_field :refund_amount, step: 0.01, class: "w-full rounded-lg border-border focus:ring-amber-500 focus:border-amber-500 font-semibold pl-5" %>
+          <p class="mt-1 text-xs text-muted-foreground">Policy suggests <%= @presenter.suggested_amount_label(@booking, @eligibility) %></p>
+        </div>
+
+        <div class="md:col-span-2">
+          <%= f.label :reason, "Reason for Refund", class: "block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_area :reason, rows: 2, class: "w-full rounded-lg border-border focus:ring-amber-500 focus:border-amber-500 pl-3 pt-2", placeholder: "e.g. Guest cancelled due to medical emergency" %>
+        </div>
+
+        <div>
+          <%= f.label :bank_name, class: "block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :bank_name, class: "w-full rounded-lg border-border focus:ring-amber-500 focus:border-amber-500 pl-3", placeholder: "e.g. Maybank" %>
+        </div>
+
+        <div>
+          <%= f.label :account_type, class: "block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.select :account_type, @presenter.account_type_options, {}, class: "w-full rounded-lg border-border focus:ring-amber-500 focus:border-amber-500 pl-5" %>
+        </div>
+
+        <div>
+          <%= f.label :account_holder_name, class: "block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :account_holder_name, class: "w-full rounded-lg border-border focus:ring-amber-500 focus:border-amber-500 pl-3", placeholder: "e.g. Sarah Jenkins" %>
+        </div>
+
+        <div>
+          <%= f.label :account_number, class: "block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :account_number, class: "w-full rounded-lg border-border focus:ring-amber-500 focus:border-amber-500 pl-3", placeholder: "e.g. 1234567890" %>
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-border flex gap-3">
+        <%= f.submit "Submit to Superadmin", class: "flex-1 bg-amber-600 hover:bg-amber-700 text-primary-foreground font-bold py-3 px-4 rounded-lg transition-colors cursor-pointer" %>
+        <button type="button" data-action="click->offcanvas#close" class="flex-1 bg-muted hover:bg-muted text-foreground font-bold py-3 px-4 rounded-lg transition-colors">
+          Cancel
+        </button>
+      </div>
+    <% end %>
+  </div>
+<% end %>

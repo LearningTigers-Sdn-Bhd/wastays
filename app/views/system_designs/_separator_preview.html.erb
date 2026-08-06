@@ -1,0 +1,28 @@
+<section aria-labelledby="separator-preview-heading" class="border-t border-border pt-8">
+  <h2 id="separator-preview-heading" class="text-lg font-semibold text-foreground">Separator</h2>
+  <p class="mt-1 text-sm text-muted-foreground">
+    A token-based visual divider with horizontal and vertical orientations.
+  </p>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light" ], [ "panel-dark", "Dark" ] ].each do |theme, theme_label| %>
+      <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= theme_label %> separators</h3>
+
+        <div class="mt-4">
+          <p class="text-sm font-medium">Booking details</p>
+          <%= render PanelsUI::Separator.new(class: "my-4") %>
+          <p class="text-sm text-muted-foreground">Guest and stay information</p>
+        </div>
+
+        <div class="mt-6 flex h-10 items-center gap-4 text-sm">
+          <span>Overview</span>
+          <%= render PanelsUI::Separator.new(orientation: :vertical) %>
+          <span>Activity</span>
+          <%= render PanelsUI::Separator.new(orientation: :vertical) %>
+          <span>Notes</span>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</section>

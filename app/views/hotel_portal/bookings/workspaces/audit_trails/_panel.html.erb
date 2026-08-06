@@ -1,0 +1,9 @@
+<%= render "hotel_portal/bookings/workspaces/audit_trails/booking_audit_log",
+      booking: booking,
+      presenter: presenter,
+      audit_logs: audit_logs,
+      audit_history: audit_history,
+      audit_category: local_assigns[:audit_category],
+      audit_history_available: local_assigns[:audit_history_available],
+      closeable: local_assigns[:closeable],
+      filter_frame: local_assigns[:filter_frame] || (local_assigns[:closeable] ? "offcanvas_drawer" : "booking_workspace") %>

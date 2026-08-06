@@ -17,12 +17,103 @@ RSpec.describe "HotelPortal::ProfilePhotoQueue", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/profile/edit" do
-    it "renders the queue uploader section" do
+    it "renders the canonical hotel details page" do
       get edit_hotel_profile_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Upload Queue")
-      expect(response.body).to include("Confirm Upload")
+      expect(response.body).to include(%(id="hotel-profile-section"))
+      expect(response.body).to include(%(data-testid="settings-tabs"))
+      expect(response.parsed_body.css(".panel-dropzone")).not_to be_empty
+      expect(response.parsed_body.css(".panel-attachment-group[data-layout='list']")).not_to be_empty
+    end
+
+    it "renders published photos as attachment cards with per-photo actions" do
+      hotel.photos.attach(
+        io: StringIO.new("published-photo"),
+        filename: "published.jpg",
+        content_type: "image/jpeg"
+      )
+
+      get edit_hotel_profile_path(hotel)
+
+      document = response.parsed_body
+      published_attachment = document.at_css(".panel-attachment-group[data-layout='grid'] .panel-attachment[data-state='uploaded']")
+      expect(published_attachment.text.squish).to include("published.jpg")
+      expect(document.at_css("#hotel-photo-#{hotel.photos.first.id}-actions.dropdown-menu-root")).to be_present
+      expect(document.at_css("button[aria-label='Actions for published.jpg']")).to be_present
+      expect(document.at_css("button[data-turbo-confirm-tone='destructive']")).to be_present
+    end
+  end
+
+  describe "DELETE /hotel/:hotel_id/profile/photos/:photo_id" do
+    it "removes one published attachment" do
+      hotel.photos.attach(
+        io: StringIO.new("published-photo"),
+        filename: "remove.jpg",
+        content_type: "image/jpeg"
+      )
+      photo = hotel.photos.first
+
+      expect {
+        delete hotel_profile_photo_path(hotel, photo.id)
+      }.to change { hotel.reload.photos.count }.by(-1)
+
+      expect(response).to redirect_to(edit_hotel_profile_path(hotel))
+    end
+
+    it "replaces the published album and appends a toast for Turbo Stream requests" do
+      hotel.photos.attach(
+        io: StringIO.new("published-photo"),
+        filename: "remove-live.jpg",
+        content_type: "image/jpeg"
+      )
+      photo = hotel.photos.first
+
+      delete hotel_profile_photo_path(hotel, photo.id),
+             headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('action="replace" target="hotel-published-photos"')
+      expect(response.body).to include('action="append" target="toast-viewport"')
+      expect(response.body).to include("Hotel photo removed successfully.")
+      expect(response.body).not_to include("remove-live.jpg")
+      expect(hotel.reload.photos).not_to be_attached
+    end
+  end
+
+  describe "PATCH /hotel/:hotel_id/profile/photos/:photo_id/feature" do
+    before do
+      %w[first.jpg second.jpg].each do |filename|
+        hotel.photos.attach(
+          io: StringIO.new("published-photo-#{filename}"),
+          filename: filename,
+          content_type: "image/jpeg"
+        )
+      end
+    end
+
+    it "replaces the published album and appends a toast for Turbo Stream requests" do
+      photo = hotel.photos.attachments.joins(:blob).find_by!(active_storage_blobs: { filename: "second.jpg" })
+
+      patch hotel_profile_photo_feature_path(hotel, photo.id),
+            headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('action="replace" target="hotel-published-photos"')
+      expect(response.body).to include('action="append" target="toast-viewport"')
+      expect(response.body).to include("second.jpg", "Featured photo", "Featured photo updated successfully.")
+      expect(hotel.reload.featured_photo_attachment_id).to eq(photo.id)
+    end
+
+    it "retains the redirect fallback for HTML requests" do
+      photo = hotel.photos.attachments.first
+
+      patch hotel_profile_photo_feature_path(hotel, photo.id)
+
+      expect(response).to redirect_to(edit_hotel_profile_path(hotel))
+      expect(hotel.reload.featured_photo_attachment_id).to eq(photo.id)
     end
   end
 

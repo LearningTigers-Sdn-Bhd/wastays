@@ -15,68 +15,111 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
 
     # Login
-    visit login_path
-    fill_in 'Email Address', with: user.email
-    fill_in 'Password', with: 'password123'
-    click_button 'Sign In to Portal'
+    sign_in_through_ui(user)
   end
 
   it 'allows the user to update the hotel profile' do
-    expect(page).to have_content('Hotel Dashboard')
-    within('#hotel-sidebar') { click_link 'Hotel Details' }
+    visit edit_hotel_profile_path(hotel)
 
-    within('#hotel-profile-section') do
-      fill_in 'Hotel Name', with: 'Updated Hotel Name'
-      fill_in 'Address', with: '123 New Street'
-      click_button 'Save Profile'
+    expect(page).to have_css('h1', text: 'Property Details Settings')
+    within('[data-testid="settings-tabs"]') do
+      expect(page).to have_link('Hotel Details')
     end
 
-    expect(page).to have_content('Hotel profile updated successfully.')
+    within('#hotel-profile-section') do
+      expect(page).to have_link('See Hotel', href: hotel_path(hotel))
+
+      fill_in 'Hotel Name', with: 'Updated Hotel Name'
+      fill_in 'Description', with: 'A peaceful city retreat with locally inspired hospitality.'
+      fill_in 'Address', with: '123 New Street'
+      click_button 'Save Settings'
+    end
+
+    expect(page).to have_css('.toast', text: 'Hotel profile updated successfully.')
     expect(hotel.reload.name).to eq('Updated Hotel Name')
+    expect(hotel.description).to eq('A peaceful city retreat with locally inspired hospitality.')
     expect(page).to have_current_path(edit_hotel_profile_path(hotel))
     expect(page).not_to have_css('#hotel-faq-section')
   end
 
-  it 'allows the user to save the hotel faq independently' do
-    visit edit_hotel_faq_path(hotel)
+  it 'queues and publishes a hotel album photo through the Panels UI dropzone' do
+    visit edit_hotel_profile_path(hotel)
 
-    within('#hotel-faq-form') do
-      click_button 'Add Section'
+    arm_transition_wait("#hotel-photo-upload-sheet", property: "translate")
+    click_button 'Upload Photos'
+    expect(page).to have_css("dialog#hotel-photo-upload-sheet[open][data-panels-open]")
+    wait_for_transition_end("#hotel-photo-upload-sheet")
 
-      # Fill section name
-      find('input[placeholder="e.g., Arrival & Check-in"]').set('General')
+    attach_file 'hotel_album_photos', Rails.root.join('spec/fixtures/files/sample_image.jpg'), make_visible: true
 
-      # Fill question and answer
-      find('input[placeholder="Enter question here..."]').set('Do you offer airport transfers?')
-      find('textarea[placeholder="Write the answer..."]').set('Yes, on request.')
+    expect(page).to have_css("[data-hotel-photo-queue-target='queueList'] [data-signed-id]", text: 'sample_image.jpg')
+    expect(page).to have_css("[data-hotel-photo-queue-target='counterText']", text: '1 queued')
 
-      click_button 'Done and Save'
+    within('dialog#hotel-photo-upload-sheet') do
+      click_in_overlay find("button[aria-label='Close']")
     end
+    expect(page).to have_no_css("dialog#hotel-photo-upload-sheet[open]")
 
-    expect(page).to have_current_path(edit_hotel_faq_path(hotel))
+    arm_transition_wait("#hotel-photo-upload-sheet", property: "translate")
+    click_button 'Upload Photos'
+    expect(page).to have_css("dialog#hotel-photo-upload-sheet[open][data-panels-open]")
+    expect(page).to have_css("dialog#hotel-photo-upload-sheet[open] [data-signed-id]", text: 'sample_image.jpg')
+    wait_for_transition_end("#hotel-photo-upload-sheet")
 
-    hotel.reload
-    expect(hotel.faq).to be_an(Array)
-    expect(hotel.faq.first['section_name']).to eq('General')
-    expect(hotel.faq.first['items'].first['question']).to eq('Do you offer airport transfers?')
+    click_in_overlay 'Confirm Upload'
+
+    expect(page).to have_css("[aria-label='Published hotel photos'] .panel-attachment", text: 'sample_image.jpg')
+    expect(hotel.reload.photos.count).to eq(1)
   end
 
-  it 'allows the user to save the hotel policy independently' do
-    visit edit_hotel_policy_path(hotel)
+  it 'uses a destructive alert dialog and removes a published photo live' do
+    hotel.photos.attach(
+      io: StringIO.new('published-photo'),
+      filename: 'published.jpg',
+      content_type: 'image/jpeg'
+    )
 
-    within('#hotel-policy-form') do
-      click_button 'Add Policy'
-      find('input[placeholder="e.g., Quiet Hours"]', wait: 5).set('Quiet Hours')
-      find('textarea[placeholder="Write the policy details..."]', wait: 5).set('Quiet hours start at 10 PM.')
-      click_button 'Done and Save'
+    visit edit_hotel_profile_path(hotel)
+
+    find("button[aria-label='Actions for published.jpg']").click
+    click_button 'Remove photo'
+
+    expect(page).to have_css("dialog#turbo-confirm-dialog[open][data-tone='destructive']")
+
+    within('dialog#turbo-confirm-dialog') { click_in_overlay 'Cancel' }
+    expect(hotel.reload.photos.count).to eq(1)
+
+    find("button[aria-label='Actions for published.jpg']").click
+    click_button 'Remove photo'
+    within('dialog#turbo-confirm-dialog') { click_in_overlay 'Confirm' }
+
+    expect(page).to have_no_css('#hotel-published-photos .panel-attachment', text: 'published.jpg')
+    expect(page).to have_css('.toast', text: 'Hotel photo removed successfully.')
+    expect(page).to have_current_path(edit_hotel_profile_path(hotel))
+    expect(hotel.reload.photos.count).to eq(0)
+  end
+
+  it 'updates the featured photo live without leaving Hotel Details' do
+    %w[first.jpg second.jpg].each do |filename|
+      hotel.photos.attach(
+        io: StringIO.new("published-photo-#{filename}"),
+        filename: filename,
+        content_type: 'image/jpeg'
+      )
     end
+    first_photo, second_photo = hotel.photos.attachments.order(:id).to_a
+    hotel.update!(featured_photo_attachment_id: first_photo.id)
 
-    expect(page).to have_current_path(edit_hotel_policy_path(hotel))
-    expect(hotel.reload.policy).to eq([
-      {
-        'title' => 'Quiet Hours',
-        'content' => 'Quiet hours start at 10 PM.'
-      }
-    ])
+    visit edit_hotel_profile_path(hotel)
+
+    find("button[aria-label='Actions for second.jpg']").click
+    click_button 'Set as featured'
+
+    second_card = find('#hotel-published-photos .panel-attachment', text: 'second.jpg')
+    expect(second_card).to have_css('.panel-badge', text: 'Featured')
+    expect(find('#hotel-published-photos .panel-attachment', text: 'first.jpg')).to have_no_css('.panel-badge', text: 'Featured')
+    expect(page).to have_css('.toast', text: 'Featured photo updated successfully.')
+    expect(page).to have_current_path(edit_hotel_profile_path(hotel))
+    expect(hotel.reload.featured_photo_attachment_id).to eq(second_photo.id)
   end
 end

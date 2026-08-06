@@ -1,85 +1,44 @@
 require "rails_helper"
 
-RSpec.describe "HotelPortal::NightAudits", type: :request do
+RSpec.describe "Legacy hotel Night Audit routes", type: :request do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "live") }
-  let(:user) { create(:user, account: account, role: "hotel_staff") }
-  let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account:, plan:, status: "live") }
+  let(:user) { create(:user, account:, role: "hotel_staff") }
+  let(:role) { create(:role, account:, slug: "night_auditor", name: "Night Auditor") }
   let!(:permission) do
-    Permission.find_or_create_by!(slug: "manage_night_audit") do |record|
-      record.name = "Manage Night Audit"
-    end
+    Permission.find_or_create_by!(slug: "manage_night_audit") { |record| record.name = "Manage Night Audit" }
   end
 
   before do
     role.permissions << permission
-    create(:user_hotel_access, user: user, hotel: hotel, role: role)
+    create(:user_hotel_access, user:, hotel:, role:)
+    create(:plan_feature, plan:, feature: create(:feature, feature_group:, slug: "no_show_auto_handling"), enabled: true)
+    post login_path, params: { email: user.email, password: user.password }
   end
 
-  def sign_in(current_user)
-    post login_path, params: { email: current_user.email, password: current_user.password }
-    follow_redirect!
+  it "permanently redirects the former index to report history" do
+    get hotel_night_audits_path(hotel)
+
+    expect(response).to redirect_to(hotel_reports_night_audits_path(hotel))
+    expect(response).to have_http_status(:moved_permanently)
   end
 
-  it "allows front desk to create a night audit" do
-    sign_in(user)
-    business_date = Date.current - 1.day
+  it "preserves format and query parameters when redirecting a historical record" do
+    audit = create(:night_audit, hotel:, status: "completed")
 
-    post hotel_night_audits_path(hotel), params: {
-      night_audit: {
-        business_date: business_date.to_s,
-        notes: "Run now"
-      }
-    }
+    get hotel_night_audit_path(hotel, audit, format: :pdf, tab: "financial-summary")
 
-    expect(response).to redirect_to(hotel_night_audit_path(hotel, NightAudit.last))
-    expect(flash[:notice]).to eq("Night audit completed successfully.")
-    expect(NightAudit.last.business_date).to eq(business_date)
-    expect(NightAudit.last.trigger_mode).to eq("manual")
+    expect(response).to redirect_to(hotel_reports_night_audit_path(hotel, audit, format: :pdf, tab: "financial-summary"))
+    expect(response).to have_http_status(:moved_permanently)
   end
 
-  it "defaults manual business date to yesterday when omitted" do
-    sign_in(user)
+  it "does not expose preparation-only records through the legacy show route" do
+    audit = create(:night_audit, hotel:, status: "preparing")
 
-    post hotel_night_audits_path(hotel), params: { night_audit: { notes: "Default run" } }
+    get hotel_night_audit_path(hotel, audit)
 
-    expect(NightAudit.last.business_date).to eq(Date.current - 1.day)
-    expect(NightAudit.last.trigger_mode).to eq("manual")
-  end
-
-  it "blocks access without permission" do
-    role.permissions.delete(permission)
-    sign_in(user)
-
-    post hotel_night_audits_path(hotel), params: {
-      night_audit: {
-        business_date: Date.current.to_s
-      }
-    }
-
-    expect(response).to redirect_to(root_path)
-    follow_redirect!
-    expect(flash[:alert]).to include("not authorized")
-  end
-
-  it "returns an alert redirect for a blocked audit" do
-    sign_in(user)
-    create(:booking,
-      hotel: hotel,
-      status: "checked_in",
-      payment_status: "captured",
-      check_in: Date.current - 1.day,
-      check_out: Date.current,
-      checked_in_at: 1.day.ago)
-
-    post hotel_night_audits_path(hotel), params: {
-      night_audit: {
-        business_date: Date.current.to_s
-      }
-    }
-
-    expect(response).to redirect_to(hotel_night_audit_path(hotel, NightAudit.last))
-    expect(flash[:alert]).to eq("Night audit completed with blockers.")
-    expect(NightAudit.last).to be_blocked
+    expect(response).to have_http_status(:not_found)
   end
 end

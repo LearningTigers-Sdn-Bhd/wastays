@@ -1,0 +1,82 @@
+<div class="overflow-hidden rounded-md border border-border bg-card">
+  <% if presenter.any_rows? %>
+    <%= render PanelsUI::Table.new(caption: "External accounts", hoverable: true, bordered: false) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Account</th>
+          <th scope="col">Code</th>
+          <th scope="col">Type</th>
+          <th scope="col">Terms</th>
+          <th scope="col">Credit</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
+          <th scope="col" class="text-right"><span class="sr-only">Action</span></th>
+        </tr>
+      <% end %>
+
+      <% table.with_body do %>
+        <%# Invitations are pinned above the paginated body: they are few, urgent, and
+            must not be able to hide on page three. %>
+        <% presenter.pinned_rows.each do |row| %>
+          <tr data-testid="<%= row.dom_id %>">
+            <%= render "hotel_portal/corporate_accounts/row_identity", row: row %>
+            <td class="text-muted-foreground">—</td>
+            <td class="text-muted-foreground"><%= row.account_type_label %></td>
+            <td class="text-muted-foreground"><%= row.terms_label %></td>
+            <td class="text-muted-foreground">
+              <% if row.proposed_credit_limit.present? %>
+                <div class="text-sm tabular-nums"><%= row.proposed_credit_currency %> <%= format_amount(row.proposed_credit_limit) %></div>
+                <div class="mt-0.5 text-xs">Proposed limit</div>
+              <% else %>
+                <div class="text-sm">No limit set</div>
+              <% end %>
+            </td>
+            <td>
+              <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %>
+              <div class="mt-1 text-xs text-muted-foreground"><%= row.expiry_label %></div>
+            </td>
+            <td class="text-muted-foreground"><%= row.created_on_label %></td>
+            <td class="text-right"><%= render "hotel_portal/corporate_accounts/invitation_actions", row: row, presenter: presenter %></td>
+          </tr>
+        <% end %>
+
+        <% if presenter.pinned_rows.any? && presenter.paginated_rows.any? %>
+          <tr aria-hidden="true">
+            <td colspan="8" class="!p-0"><div class="h-px bg-border"></div></td>
+          </tr>
+        <% end %>
+
+        <% presenter.paginated_rows.each do |row| %>
+          <tr data-testid="<%= row.dom_id %>">
+            <%= render "hotel_portal/corporate_accounts/row_identity", row: row %>
+            <td class="font-mono text-xs font-semibold text-foreground"><%= row.agent_code.presence || "—" %></td>
+            <td class="text-muted-foreground"><%= row.account_type_label %></td>
+            <td class="text-muted-foreground"><%= row.terms_label %></td>
+            <td><%= render "hotel_portal/corporate_accounts/credit_cell", exposure: row.credit_exposure %></td>
+            <td><%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %></td>
+            <td class="text-muted-foreground"><%= row.created_on_label %></td>
+            <td class="text-right">
+              <%= render PanelsUI::Button.new(
+                as: :a,
+                href: edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath),
+                variant: :secondary,
+                size: :sm,
+                data: { testid: "external-account-edit-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
+                <%= cached_icon "square-pen", class: "size-3.5", aria: { hidden: true } %>
+                Edit
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% if presenter.pagination.total_pages > 1 %>
+      <div class="border-t border-border px-4 py-3">
+        <%= paginate presenter.pagination, data: { turbo_action: "advance" } %>
+      </div>
+    <% end %>
+  <% else %>
+    <%= render "hotel_portal/corporate_accounts/empty_state", presenter: presenter %>
+  <% end %>
+</div>

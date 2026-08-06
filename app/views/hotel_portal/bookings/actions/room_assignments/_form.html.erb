@@ -1,0 +1,101 @@
+<% currency = @booking.currency.presence || current_hotel.default_currency.presence || "MYR" %>
+<% current_room_total = @room&.subtotal.to_d %>
+<% current_tax_total = Booking.non_tourism_tax_total_for(@booking.tax_lines) %>
+<% move = @proposal_kind == "move" %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "booking-room-sheet",
+        side: :right,
+        size: :lg,
+        title: "Change room",
+        description: @booking.guest_name,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with scope: :booking,
+            url: hotel_booking_action_edit_room_path(current_hotel, @booking),
+            method: :patch,
+            class: "flex h-full min-h-0 flex-col",
+            data: {
+              controller: "booking-actions--room-editor booking-actions--stay-price",
+              action: "change->booking-actions--room-editor#changed change->booking-actions--stay-price#changed",
+              booking_actions__room_editor_availability_url_value: availability_hotel_bookings_path(current_hotel),
+              booking_actions__room_editor_booking_id_value: @booking.id,
+              booking_actions__stay_price_url_value: stay_price_hotel_bookings_path(current_hotel),
+              booking_actions__stay_price_guest_country_value: @booking.guest_country.presence || current_hotel.country
+            } do |form| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+        <%= hidden_field_tag :source, params[:source] if params[:source].present? %>
+        <%= hidden_field_tag :proposal_kind, @proposal_kind if @proposal_kind.present? %>
+        <%# Dates are always submitted so availability resolves and a move proposal can shift them.
+            Date-only on purpose: UpdateStayService applies the hotel's policy check-in/out times,
+            avoiding the midnight-in-UTC previous-day shift a full timestamp would cause. %>
+        <%= form.hidden_field :check_in, value: @check_in_value.to_s.split("T").first %>
+        <%= form.hidden_field :check_out, value: @check_out_value.to_s.split("T").first %>
+
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <div class="space-y-6 p-6">
+            <% if @booking.errors.any? %>
+              <div class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert" aria-live="polite">
+                <p class="font-semibold">The room assignment could not be updated.</p>
+                <ul class="mt-2 list-disc space-y-1 pl-5">
+                  <% @booking.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <% if move %>
+              <div class="flex gap-3 rounded-md border border-border bg-muted p-4 text-sm">
+                <%= app_icon("move", class: "mt-0.5 size-4 shrink-0 text-muted-foreground", aria: { hidden: true }) %>
+                <div>
+                  <p class="font-medium text-foreground">Review the proposed room and dates.</p>
+                  <p class="mt-1 text-muted-foreground">Nothing changes until you save. Proposed dates: <%= l(Date.parse(@check_in_value), format: :short) %> – <%= l(Date.parse(@check_out_value), format: :short) %>.</p>
+                </div>
+              </div>
+            <% end %>
+
+            <section aria-labelledby="current-stay-heading" class="space-y-3">
+              <h3 id="current-stay-heading" class="text-base font-semibold">Current stay</h3>
+              <dl class="grid gap-3 rounded-md border border-border bg-muted p-4 text-sm sm:grid-cols-2">
+                <div><dt class="text-xs text-muted-foreground">Dates</dt><dd class="mt-1 font-medium text-foreground"><%= l(@booking.check_in.in_time_zone(current_hotel.hotel_time_zone), format: :short) %> – <%= l(@booking.check_out.in_time_zone(current_hotel.hotel_time_zone), format: :short) %></dd></div>
+                <div><dt class="text-xs text-muted-foreground">Room</dt><dd class="mt-1 font-medium text-foreground"><%= @room&.room_type&.name || "Unassigned" %> · <%= @room&.room_number || "Unassigned" %></dd></div>
+              </dl>
+            </section>
+
+            <section aria-labelledby="room-heading" class="space-y-4">
+              <div>
+                <h3 id="room-heading" class="text-base font-semibold">Room</h3>
+                <p class="mt-1 text-sm text-muted-foreground">Room changes apply only to this booking. Availability refreshes when the category changes.</p>
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <%= render PanelsUI::FormField.new(form:, attribute: :room_type_id, label: "Room category", required: true) do |field| %>
+                  <% field.with_select_menu(@room_type_choices, selected: @room_type_id, prompt: "Select a room category") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :room_number, label: "Room", hint: "Unavailable rooms remain visible but cannot be selected.", required: true) do |field| %>
+                  <% field.with_select_menu(@room_choices, selected: @room_number, prompt: "Select a room") %>
+                <% end %>
+              </div>
+            </section>
+
+            <section aria-labelledby="estimated-value-heading" class="space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <h3 id="estimated-value-heading" class="text-base font-semibold">Estimated value</h3>
+                <p class="text-xs text-muted-foreground" role="status" aria-live="polite" data-booking-actions--stay-price-target="calculationStatus">Current estimate</p>
+              </div>
+              <dl class="divide-y divide-border rounded-md border border-border text-sm">
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2, delimiter: ",") %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2, delimiter: ",") %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2, delimiter: ",") %></span></dd></div>
+              </dl>
+            </section>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

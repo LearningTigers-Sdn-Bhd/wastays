@@ -4,7 +4,9 @@ require "rails_helper"
 
 RSpec.describe "HotelPortal::Roles", type: :request do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account) }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, plan: plan) }
   let(:user) { create(:user, account: account) }
   let(:manager_role) { create(:role, account: account, name: "General Manager", slug: "general_manager") }
   let(:manage_users_permission) { Permission.find_by(slug: 'manage_users') || create(:permission, slug: 'manage_users', name: 'Manage Users') }
@@ -12,6 +14,7 @@ RSpec.describe "HotelPortal::Roles", type: :request do
   before do
     create(:role_permission, role: manager_role, permission: manage_users_permission)
     create(:user_hotel_access, user: user, hotel: hotel, role: manager_role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "role_based_access_control"), enabled: true)
     sign_in_as(user)
   end
 
@@ -25,6 +28,26 @@ RSpec.describe "HotelPortal::Roles", type: :request do
       expect(response.body).to include(role.name)
     end
 
+    it "renders the matrix as a pinned, striped table with a named control per cell" do
+      role = create(:role, account: account, name: "Front Desk", slug: "front_desk")
+      permission = Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings')
+
+      get hotel_roles_path(hotel)
+
+      document = Nokogiri::HTML(response.body)
+      table = document.at_css("table.panel-table[data-testid='permission-matrix']")
+      expect(table["data-sticky-column"]).to eq("true")
+      expect(table["data-sticky-header"]).to eq("true")
+      expect(table["data-striped"]).to eq("true")
+      # The matrix is taller than the viewport, so it scrolls inside itself.
+      expect(document.at_css(".panel-table__wrapper")["class"]).to include("max-h-[75dvh]")
+
+      checkbox_id = "role-#{role.id}-permission-#{permission.id}"
+      expect(document.at_css("input##{checkbox_id}[name='roles[#{role.id}][permission_ids][]'][value='#{permission.id}']")).to be_present
+      expect(document.at_css("label[for='#{checkbox_id}'] .panel-checkbox__label").text.strip)
+        .to eq("View Bookings for Front Desk")
+    end
+
     it "blocks users without manage_users permission" do
       manager_role.permissions.delete(manage_users_permission)
 
@@ -32,6 +55,28 @@ RSpec.describe "HotelPortal::Roles", type: :request do
 
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to include("not authorized")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/roles-and-permissions/new" do
+    it "renders the role sheet" do
+      get new_hotel_role_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("New Role")
+      expect(response.body).to include("new-role-form")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/roles-and-permissions/:id/edit" do
+    it "renders the role sheet for an existing role" do
+      role = create(:role, account: account, name: "Front Desk", slug: "front_desk")
+
+      get edit_hotel_role_path(hotel, role)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("edit-role-form")
+      expect(response.body).to include("Front Desk")
     end
   end
 
@@ -129,6 +174,57 @@ RSpec.describe "HotelPortal::Roles", type: :request do
       get edit_hotel_role_path(hotel, other_role)
 
       expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe "PATCH /hotel/:hotel_id/roles-and-permissions/bulk_update" do
+    it "updates multiple roles at once" do
+      role1 = create(:role, account: account, name: "Role 1")
+      role2 = create(:role, account: account, name: "Role 2")
+      p1 = Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings')
+      p2 = Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings', name: 'Manage Bookings')
+
+      patch bulk_update_hotel_roles_path(hotel), params: {
+        roles: {
+          role1.id => { permission_ids: [ p1.id ] },
+          role2.id => { permission_ids: [ p1.id, p2.id ] }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_roles_path(hotel))
+      expect(flash[:notice]).to include("successfully")
+      expect(role1.reload.permissions).to contain_exactly(p1)
+      expect(role2.reload.permissions).to contain_exactly(p1, p2)
+    end
+
+    it "handles clearing all permissions for a role" do
+      role = create(:role, account: account, name: "Cleanup Role")
+      p1 = Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings')
+      role.permissions << p1
+
+      patch bulk_update_hotel_roles_path(hotel), params: {
+        roles: {
+          role.id => { permission_ids: [ "" ] }
+        }
+      }
+
+      expect(role.reload.permissions).to be_empty
+    end
+
+    it "fails if a role ID does not belong to the account" do
+      other_account = create(:account)
+      other_role = create(:role, account: other_account)
+
+      # RolesController#bulk_update finds roles via current_hotel.account.roles.where(id: ...)
+      # So it will simply skip roles not found in that scope.
+      patch bulk_update_hotel_roles_path(hotel), params: {
+        roles: {
+          other_role.id => { permission_ids: [] }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_roles_path(hotel))
+      expect(other_role.reload.permissions).to be_empty
     end
   end
 end

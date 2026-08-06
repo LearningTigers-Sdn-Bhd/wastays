@@ -1,0 +1,26 @@
+<div class="hidden md:flex md:w-[45%] lg:w-2/5 bg-secondary flex-col justify-between relative overflow-hidden p-12 lg:p-16 min-h-screen">
+  <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div class="w-[600px] h-[600px] bg-primary/15 rounded-full blur-[120px]"></div>
+  </div>
+
+  <div class="relative z-10">
+    <%= link_to root_path do %>
+      <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-14 w-auto" %>
+    <% end %>
+  </div>
+
+  <div class="relative z-10 flex-1 flex flex-col justify-center py-16">
+    <div class="inline-flex items-center gap-x-3 mb-8">
+      <span class="w-8 h-px bg-accent/30"></span>
+      <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Digital Concierge</span>
+      <span class="w-8 h-px bg-accent/30"></span>
+    </div>
+    <h1 class="text-4xl lg:text-5xl font-serif text-white leading-[1.1] mb-6"><%= @hotel.name %></h1>
+    <p class="text-gray-400 text-base mb-12"><%= @hotel.city %>, <%= @hotel.country %></p>
+  </div>
+
+  <div class="relative z-10 flex items-center gap-x-3">
+    <span class="w-6 h-px bg-accent/20"></span>
+    <p class="text-xs text-gray-600">Powered by WAStays</p>
+  </div>
+</div>

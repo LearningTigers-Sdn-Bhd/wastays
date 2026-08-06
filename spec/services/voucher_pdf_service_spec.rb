@@ -15,7 +15,11 @@ RSpec.describe VoucherPdfService do
   end
 
   before do
-    create(:booking_room, booking: booking, room_type: room_type, quantity: 1, subtotal: 300.0, room_type_snapshot: { "name" => "Deluxe" })
+    create(:booking_room, booking: booking, room_type: room_type, subtotal: 300.0, room_type_snapshot: { "name" => "Deluxe" })
+  end
+
+  def pdf_text(pdf)
+    PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
   end
 
   it "generates a valid PDF binary" do
@@ -24,5 +28,93 @@ RSpec.describe VoucherPdfService do
     expect(pdf).to be_a(String)
     expect(pdf.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
     expect(pdf.bytesize).to be > 1500
+  end
+
+  it "renders reservation metadata, rate breakdown, and guest country" do
+    booking.update!(
+      created_at: Time.zone.local(2026, 7, 17, 12, 0),
+      guest_country: "Singapore",
+      tax_lines: [ { "name" => "SST", "amount" => 24.0 } ]
+    )
+
+    text = pdf_text(described_class.new(booking).generate)
+
+    expect(text).to include(
+      "RESERVATION NUMBER",
+      booking.formatted_reservation_number,
+      "BOOKING DATE",
+      "17 Jul 2026",
+      "AMOUNT",
+      "MYR 300.00",
+      "SST",
+      "MYR 24.00",
+      "Singapore"
+    )
+  end
+
+  it "renders the total paid and positive balance due from folio transactions" do
+    booking.update!(total_amount: 324.0)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 100.0)
+
+    text = pdf_text(described_class.new(booking).generate)
+
+    expect(text).to include("TOTAL PAID", "MYR 100.00", "BALANCE DUE", "MYR 224.00")
+  end
+
+  it "omits balance due when transactions cover the total and guest country is blank" do
+    booking.update!(guest_country: nil)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 300.0)
+
+    text = pdf_text(described_class.new(booking).generate)
+
+    expect(text).to include("TOTAL PAID", "MYR 300.00")
+    expect(text).not_to include("BALANCE DUE")
+  end
+
+  it "renders the cancellation tier table from the booking's own snapshot, with the description beneath" do
+    booking.update!(cancellation_policy_snapshot_data: {
+      "description" => "Non-refundable during Hari Raya.",
+      "refund_processing_days" => 7,
+      "refund_method" => "original_payment_method",
+      "tiers" => [
+        { "days_before_arrival" => 14, "window" => "14+ days before arrival", "charge" => "No charge" },
+        { "days_before_arrival" => 0, "window" => "Less than 1 day before arrival", "charge" => "keep 100.00% of total stay" }
+      ]
+    })
+
+    text = pdf_text(described_class.new(booking).generate)
+
+    expect(text).to include(
+      "If cancelled",
+      "14+ days before arrival",
+      "No charge",
+      "Less than 1 day before arrival",
+      "keep 100.00% of total stay",
+      "Refunds are issued to the original payment method within 7 working days.",
+      "Non-refundable during Hari Raya."
+    )
+    # The prose snapshot is never shown alongside the table it could contradict.
+    expect(text).not_to include("No refund")
+  end
+
+  it "falls back to the legacy prose for bookings taken before the policy was structured" do
+    booking.update!(cancellation_policy_snapshot: "Free cancellation up to 24 hours before arrival")
+
+    text = pdf_text(described_class.new(booking).generate)
+
+    expect(text).to include("Free cancellation up to 24 hours before arrival")
+  end
+
+  it "does not count posted room charges as payments" do
+    booking.update!(total_amount: 300.0)
+    folio = create(:booking_folio, booking: booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :charge, category: "accommodation", amount: 300.0)
+    create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 100.0)
+
+    text = pdf_text(described_class.new(booking).generate)
+
+    expect(text).to include("TOTAL PAID", "MYR 100.00", "BALANCE DUE", "MYR 200.00")
   end
 end

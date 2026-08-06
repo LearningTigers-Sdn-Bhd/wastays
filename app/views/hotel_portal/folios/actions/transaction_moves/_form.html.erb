@@ -1,0 +1,88 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+<% target_choices = @target_folios.map { |folio| { label: folio.display_option_label, value: folio.id } } %>
+<% open_choices = @open_folios.map { |folio| { label: folio.display_option_label, value: folio.id } } %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "folio-move-transaction-sheet",
+        side: :right,
+        size: :lg,
+        title: "Move transaction",
+        description: booking.confirmation_token,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <% if target_choices.empty? %>
+        <div class="space-y-4 p-4">
+          <%= render PanelsUI::Alert.new(tone: :warning, title: "No other open folio window") do |alert| %>
+            <% alert.with_description do %>
+              This booking has no other open folio window to move the transaction to.
+              Create a folio window first.
+            <% end %>
+          <% end %>
+          <div class="flex justify-end">
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Close<% end %>
+          </div>
+        </div>
+      <% else %>
+        <%= form_with scope: :folio_operation,
+              url: hotel_folio_action_move_transaction_path(current_hotel, booking, @transaction),
+              method: :post,
+              class: "flex h-full min-h-0 flex-col" do |form| %>
+          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+          <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+            <div class="rounded-lg border border-border bg-muted p-4">
+              <p class="text-sm font-semibold text-foreground"><%= @transaction.description %></p>
+              <p class="mt-1 text-xs text-muted-foreground">
+                <%= @transaction.posted_transaction_code || @transaction.category.to_s.humanize %> ·
+                <%= @transaction.posting_date.strftime("%d %b %Y") %> ·
+                <%= @transaction.currency %> <%= format_number(@transaction.amount, precision: 2) %>
+              </p>
+              <p class="mt-1 text-xs text-muted-foreground">Source folio: <%= @source_folio.display_option_label %></p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :target_folio_id, label: "Target folio", required: true) do |field| %>
+              <% field.with_select_menu(target_choices, prompt: "Select a target folio", required: true) %>
+            <% end %>
+
+            <% if @tax_transactions.any? %>
+              <div class="space-y-3 rounded-lg border border-border bg-muted p-4">
+                <div>
+                  <p class="text-sm font-semibold text-foreground">Attached taxes and fees</p>
+                  <p class="mt-1 text-xs text-muted-foreground">Leave blank to follow the target folio, or choose a specific open folio.</p>
+                </div>
+
+                <div class="space-y-3">
+                  <% @tax_transactions.each do |tax_transaction| %>
+                    <div class="grid gap-3 rounded-md border border-border bg-card p-3 sm:grid-cols-[1fr_16rem] sm:items-start">
+                      <div>
+                        <p class="font-mono text-xs font-semibold text-foreground"><%= tax_transaction.posted_transaction_code || "TAX" %></p>
+                        <p class="mt-1 text-xs text-muted-foreground"><%= tax_transaction.description %></p>
+                        <p class="mt-1 text-xs text-muted-foreground"><%= tax_transaction.currency %> <%= format_number(tax_transaction.amount, precision: 2) %></p>
+                      </div>
+                      <%= form.fields_for :tax_routes, index: tax_transaction.id do |route| %>
+                        <%= route.hidden_field :transaction_id, value: tax_transaction.id %>
+                        <%= render PanelsUI::FormField.new(form: route, attribute: :target_folio_id, label: "Route to", label_hidden: true) do |field| %>
+                          <% field.with_select_menu(open_choices, prompt: "Follow target folio", size: :sm) %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :reason, label: "Reason", required: true) do |field| %>
+              <% field.with_input(placeholder: "e.g., Corporate Account pays room charges", required: true) %>
+            <% end %>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Moving…" }) do %>Move transaction<% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

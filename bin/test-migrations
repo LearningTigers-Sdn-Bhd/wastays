@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export RAILS_ENV="${RAILS_ENV:-test}"
+
+migration_specs=()
+while IFS= read -r spec_file; do
+  migration_specs+=("$spec_file")
+done < <(find spec/migrations -type f -name '*_spec.rb' -print | sort)
+
+if (( ${#migration_specs[@]} == 0 )); then
+  printf "No migration specs found.\n"
+  exit 0
+fi
+
+for spec_file in "${migration_specs[@]}"; do
+  printf "\nRunning %s in an isolated RSpec process\n" "$spec_file"
+  SKIP_SIMPLECOV=true bundle exec rspec "$spec_file"
+done

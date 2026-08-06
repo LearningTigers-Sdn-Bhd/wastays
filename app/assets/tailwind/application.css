@@ -1,4 +1,109 @@
 @import "tailwindcss";
+@import "./public/theme.css";
+@import "./panel/theme.css";
+@import "./panel/page.css";
+@import "./panel/page-header.css";
+@import "./panel/form.css";
+@import "./panel/field.css";
+@import "./panel/checkbox.css";
+@import "./panel/radio.css";
+@import "./panel/switch.css";
+@import "./panel/input.css";
+@import "./panel/autocomplete.css";
+@import "./panel/text-area.css";
+@import "./panel/native-select.css";
+@import "./panel/select-menu.css";
+@import "./panel/combobox.css";
+@import "./panel/multi-select.css";
+@import "./panel/date-picker.css";
+@import "./panel/time-picker.css";
+@import "./panel/date-time-picker.css";
+@import "./panel/command-palette.css";
+@import "./panel/button.css";
+@import "./panel/toggle.css";
+@import "./panel/toggle-group.css";
+@import "./panel/badge.css";
+@import "./panel/avatar.css";
+@import "./panel/skeleton.css";
+@import "./panel/spinner.css";
+@import "./panel/progress.css";
+@import "./panel/attachment.css";
+@import "./panel/dropzone.css";
+@import "./panel/kbd.css";
+@import "./panel/separator.css";
+@import "./panel/alert.css";
+@import "./panel/alert-dialog.css";
+@import "./panel/banner.css";
+@import "./panel/card.css";
+@import "./panel/metric-card.css";
+@import "./panel/table.css";
+@import "./panel/timeline.css";
+@import "./panel/floating.css";
+@import "./panel/dropdown-menu.css";
+@import "./panel/profile-menu.css";
+@import "./panel/tooltip.css";
+@import "./panel/popover.css";
+@import "./panel/button-group.css";
+@import "./panel/toast.css";
+@import "./panel/breadcrumb.css";
+@import "./panel/tabs.css";
+@import "./panel/collapsible.css";
+@import "./panel/accordion.css";
+@import "./panel/scroll-area.css";
+@import "./panel/sidebar.css";
+@import "./panel/navbar.css";
+@import "./observation_deck.css";
+
+/* ─── Role tokens (shadcn-style naming) ───
+   Values come from public/theme.css (:root) and panel/theme.css
+   ([data-theme="panel"]); @theme inline just registers the names so
+   Tailwind generates bg-primary / text-*-foreground / etc. utilities
+   that resolve per-theme. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-border: var(--border);
+  --color-border-interactive: var(--border-interactive);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
 
 @theme {
   /* ─── Preline-Inspired Design Tokens ─── */
@@ -10,8 +115,11 @@
   --color-brand-tertiary: #115e59;  /* Teal-800 */
   --color-brand-accent: #fde68a;    /* Amber-200 for badge */
   --color-brand-accent-text: #92400e; /* Amber-800 for badge text */
+  --color-brand-gold: #d9c5a0;     /* Champagne gold accent */
   --color-landing-bg: #fdfbf7;      /* Off-white background */
   --background-image-brand-gradient: linear-gradient(135deg, #0f4a43 0%, #0d3d37 100%);
+  --color-brand-navy: #1e2e60;
+  --color-brand-navy-hover: #152043;
 
   /* Layer System (Preline-style) */
   --color-layer: #FFFFFF;
@@ -25,10 +133,10 @@
 
   /* Sidebar Design Tokens */
   --color-sidebar-bg: #FFFFFF;
-  --color-sidebar-nav-hover: #F1F5F9;
-  --color-sidebar-nav-active: #FEF2F2;
-  --color-sidebar-nav-active-text: #DC2626;
-  --color-sidebar-nav-foreground: #475569;
+  --color-sidebar-nav-hover: #F8FAFC;
+  --color-sidebar-nav-active: #F1F5F9;
+  --color-sidebar-nav-active-text: #020617;
+  --color-sidebar-nav-foreground: #64748B;
   --color-sidebar-section-label: #94A3B8;
 
   /* Navbar Design Tokens */
@@ -43,8 +151,8 @@
   --color-neutral-text-primary: #0F172A;
   --color-neutral-text-secondary: #64748B;
 
-  /* Muted Text */
-  --color-muted-foreground: #64748B;
+  /* Secondary muted text. The primary muted-foreground utility is registered
+     above as a role token so it follows the active public/panel theme. */
   --color-muted-foreground-2: #94A3B8;
 
   /* Status Colors */
@@ -68,9 +176,80 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
   --shadow-dropdown: 0 10px 40px 10px rgba(0, 0, 0, 0.08);
+
+  /* ─── Structural tokens (theme-agnostic) ─── */
+  /* border-width and z-index have no dedicated Tailwind v4 theme namespace;
+     values are declared here and exposed as utilities via @utility below. */
+  --border-width-thin: 1px;
+  --border-width-base: 1px;
+  --border-width-thick: 2px;
+  --border-width-focus: 2px;
+
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-fixed: 1200;
+  --z-overlay: 1300;
+  --z-modal: 1400;
+  --z-popover: 1500;
+  --z-tooltip: 1600;
+  --z-toast: 1700;
+
+  /* --duration-* and --ease-* ARE real Tailwind v4 namespaces (duration-fast, ease-standard). */
+  --duration-fast: 100ms;
+  --duration-base: 200ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* border-width-* and z-* have no theme namespace to hook utility generation off of,
+   so they're registered explicitly as named utilities. */
+@utility border-width-thin {
+  border-width: var(--border-width-thin);
+}
+@utility border-width-base {
+  border-width: var(--border-width-base);
+}
+@utility border-width-thick {
+  border-width: var(--border-width-thick);
+}
+@utility border-width-focus {
+  border-width: var(--border-width-focus);
+}
+
+@utility z-base {
+  z-index: var(--z-base);
+}
+@utility z-dropdown {
+  z-index: var(--z-dropdown);
+}
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+@utility z-fixed {
+  z-index: var(--z-fixed);
+}
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+@utility z-modal {
+  z-index: var(--z-modal);
+}
+@utility z-popover {
+  z-index: var(--z-popover);
+}
+@utility z-tooltip {
+  z-index: var(--z-tooltip);
+}
+@utility z-toast {
+  z-index: var(--z-toast);
 }
 
 @layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
   html.landing-loader-active,
   html.landing-loader-active body {
     overflow: hidden;
@@ -78,6 +257,46 @@
 
   html.landing-loader-active #abw-btn-cont {
     display: none !important;
+  }
+
+  @media (max-width: 767px) {
+    html.scanner-active #abw-btn-cont {
+      display: none !important;
+    }
+  }
+
+  /* Dynamically adjust WhatsApp widget bottom offset to prevent overlap with sticky actions */
+  #abw-btn-cont .abw-btn {
+    transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  /* Lift widget on mobile screens to clear the default sticky Choose Room button */
+  @media (max-width: 1023px) {
+    #abw-btn-cont .abw-btn {
+      bottom: calc(90px + env(safe-area-inset-bottom)) !important;
+    }
+  }
+
+  /* Lift widget further when the custom selection cart bar is active */
+  html.sticky-bar-active #abw-btn-cont .abw-btn {
+    bottom: 110px !important;
+  }
+
+  /* On mobile screens, when the custom selection cart bar is active, lift widget to clear the stacked cart bar */
+  @media (max-width: 639px) {
+    html.sticky-bar-active #abw-btn-cont .abw-btn {
+      bottom: calc(220px + env(safe-area-inset-bottom)) !important;
+    }
+  }
+
+  /* Position sticky cart bar above mobile bottom nav on mobile screens */
+  @media (max-width: 639px) {
+    [data-room-selector-target="stickyBar"] {
+      bottom: calc(58px + env(safe-area-inset-bottom)) !important;
+    }
+    [data-role="mobile-sticky-cta"] {
+      bottom: calc(58px + env(safe-area-inset-bottom)) !important;
+    }
   }
 
   body {
@@ -261,28 +480,51 @@
   }
 
   .btn-primary {
-    @apply bg-brand-primary text-white hover:bg-brand-primary-hover focus:ring-brand-primary;
+    @apply bg-primary text-primary-foreground hover:bg-primary-hover focus:ring-primary;
   }
 
   .btn-gradient {
     @apply bg-brand-gradient text-white hover:opacity-90 focus:ring-brand-primary;
   }
 
-  .btn-secondary {
+  /* Renamed from .btn-secondary so panel views (still on the legacy
+     neutral-* palette) keep their exact current appearance while
+     .btn-secondary below is repointed to the new token system for public views. */
+  .legacy-btn-secondary {
     @apply bg-white border-neutral-border text-neutral-text-secondary hover:bg-neutral-bg focus:ring-neutral-border;
+  }
+
+  .btn-navy {
+    @apply bg-brand-navy text-white hover:bg-brand-navy-hover focus:ring-brand-navy;
+  }
+
+  .btn-secondary {
+    @apply bg-card border-border text-muted-foreground hover:bg-muted focus:ring-border;
   }
 
   /* ─── Sidebar Nav Items (Preline CMS Style) ─── */
   .sidebar-nav-link {
-    @apply w-full flex items-center gap-x-2.5 py-2 px-2.5 text-sm rounded-lg transition-colors duration-150;
+    @apply relative w-full flex items-center gap-x-2.5 py-2 px-2.5 text-sm font-medium rounded-xl transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300;
   }
 
   .sidebar-nav-link-default {
-    @apply text-sidebar-nav-foreground hover:bg-sidebar-nav-hover;
+    @apply bg-transparent text-sidebar-nav-foreground hover:bg-sidebar-nav-hover hover:text-slate-900;
   }
 
   .sidebar-nav-link-active {
-    @apply bg-sidebar-nav-active text-sidebar-nav-active-text font-medium;
+    @apply bg-sidebar-nav-active text-sidebar-nav-active-text font-semibold ring-1 ring-slate-200;
+  }
+
+  .sidebar-group-parent {
+    @apply text-sidebar-nav-foreground hover:bg-sidebar-nav-hover hover:text-slate-900;
+  }
+
+  details[open] > .sidebar-group-parent {
+    @apply bg-slate-50 text-slate-700 font-semibold;
+  }
+
+  .sidebar-child-link {
+    @apply rounded-lg;
   }
 
   .sidebar-section-label {
@@ -293,23 +535,76 @@
     @apply pt-1;
   }
 
+  .sidebar-collapsed .sidebar-nav-link {
+    @apply size-9 mx-auto justify-center p-0;
+  }
+
+  .sidebar-collapsed nav {
+    @apply !space-y-1 py-2 px-2;
+  }
+
+  .sidebar-collapsed .sidebar-header-container,
+  .sidebar-collapsed .sidebar-footer {
+    @apply px-2;
+  }
+
   .sidebar-collapsed .sidebar-nav-group + .sidebar-nav-group {
-    @apply border-t border-layer-line pt-3;
+    @apply border-t border-layer-line !mt-1 pt-1 -mx-2;
   }
 
-  /* ─── Navbar Items (Preline CMS Style) ─── */
-  .navbar-link {
-    @apply flex items-center gap-x-1.5 py-1.5 px-2.5 text-sm text-navbar-nav-foreground rounded-lg hover:bg-navbar-nav-hover transition-colors duration-150;
+  .sidebar-collapsed .sidebar-nav-group > div {
+    @apply space-y-0.5;
   }
 
-  /* ─── Input Styles ─── */
-  .form-input {
+  .sidebar-collapsed .sidebar-details-content {
+    @apply hidden;
+  }
+
+  .sidebar-collapsed details[open] > .sidebar-details-content {
+    @apply fixed z-[90] flex flex-col gap-1 w-14 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg;
+  }
+
+  .sidebar-collapsed details[open] > .sidebar-group-parent::after {
+    content: "";
+    @apply absolute right-2 top-2 size-1.5 rounded-full bg-slate-400;
+  }
+
+  .sidebar-collapsed .sidebar-group-active > .sidebar-group-parent {
+    @apply bg-slate-100 text-slate-950 ring-1 ring-slate-200;
+  }
+
+  .sidebar-collapsed .sidebar-group-active[open] > .sidebar-group-parent::after {
+    @apply bg-slate-500;
+  }
+
+  .sidebar-tooltip {
+    @apply fixed z-[100] pointer-events-none whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg;
+  }
+
+  /* ─── Input Styles (legacy) ───
+     Renamed from .form-input so panel views (still on the legacy
+     neutral- and brand- palette) keep their exact current appearance while
+     .form-input below is repointed to the new token system for public views. */
+  .legacy-form-input {
     @apply block w-full rounded-lg border-neutral-border shadow-xs focus:border-brand-primary focus:ring-brand-primary sm:text-sm transition-all duration-200;
   }
 
-  /* ─── Card Styles ─── */
-  .card {
+  /* ─── Input Styles (token-based) ─── */
+  .form-input {
+    @apply block w-full rounded-lg border-border shadow-xs focus:border-primary focus:ring-primary sm:text-sm transition-all duration-200;
+  }
+
+  /* ─── Card Styles (legacy) ───
+     Renamed from .card so panel views (which still use the legacy
+     neutral-* palette) keep their exact current appearance while
+     .card below is repointed to the new token system for public views. */
+  .legacy-card {
     @apply bg-neutral-surface border border-neutral-border rounded-xl shadow-xs;
+  }
+
+  /* ─── Card Styles (token-based) ─── */
+  .card {
+    @apply bg-card border border-border rounded-xl shadow-xs;
   }
 
   /* ─── Badge Styles ─── */
@@ -345,17 +640,41 @@
   .table-cell {
     @apply px-6 py-4 whitespace-nowrap text-sm text-neutral-text-primary;
   }
-
-  /* Preline Dropdown Integration */
-  .hs-dropdown.open > .hs-dropdown-menu {
-    @apply absolute block opacity-100;
-  }
 }
 
 @layer utilities {
   .pb-safe {
     padding-bottom: 0;
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+
+  /* Shared reduced-motion override — identical in both themes, defined once.
+     Tailwind's built-in motion-reduce:/motion-safe: variants cover ordinary
+     utility usage, but the hand-written @keyframes animations below (landing
+     loader, hero fade-ins, marquee, typewriter caret) aren't utility-driven,
+     so they need an explicit kill switch. */
+  @media (prefers-reduced-motion: reduce) {
+    .landing-loader,
+    .landing-loader__backdrop,
+    .landing-loader__shutter,
+    .landing-loader__glow,
+    .landing-loader__meter-bar,
+    .landing-loader__mark,
+    .landing-loader__meter,
+    .landing-loader__caption,
+    .animate-marquee,
+    .typeword-inline::after,
+    .animate-hero-badge,
+    .animate-hero-title,
+    .animate-hero-text,
+    .animate-hero-buttons,
+    .animate-hero-trust,
+    .js-animate-ready [data-animate] {
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }
 
   /* Custom Scrollbar (Preline-style) */
@@ -491,4 +810,50 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* Room Status Board Overrides */
+@layer components {
+  .booking-form__label {
+    @apply mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-stone-500;
+  }
+
+  .booking-form__control {
+    @apply block h-10 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 shadow-none outline-none transition focus:border-stone-700 focus:ring-1 focus:ring-stone-700 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400;
+  }
+
+  .booking-form__textarea {
+    @apply block min-h-24 w-full resize-y rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-800 shadow-none outline-none transition focus:border-stone-700 focus:ring-1 focus:ring-stone-700;
+  }
+
+  .booking-form__value {
+    @apply flex h-10 w-full items-center rounded-md border border-stone-200 bg-stone-100 px-3 py-2 text-sm font-bold tabular-nums text-stone-800;
+  }
+
+  .room-status-comfortable {
+    @media (min-width: 1024px) {
+      --grid-day-width: 102.7px;
+    }
+  }
+}
+
+/* OTA Visibility Modes */
+[data-otas-mode="hidden"] [data-channel-summary-row="true"],
+[data-otas-mode="hidden"] [data-channel-detail-row="true"] {
+  display: none !important;
+}
+
+[data-otas-mode="compact"] [data-channel-detail-row="true"] {
+  display: none !important;
+}
+
+/* Guest Registration Card Print styles */
+@media print {
+  body * { visibility: hidden; }
+  .grc-print, .grc-print * { visibility: visible; }
+  .grc-print { position: absolute; top: 0; left: 0; right: 0; }
+  .grc-print-page { min-height: auto; display: flex; flex-direction: column; }
+  .grc-print-footer { margin-top: 1.5rem; }
+  .grc-no-print { display: none !important; }
+  @page { margin: 6mm; }
 }

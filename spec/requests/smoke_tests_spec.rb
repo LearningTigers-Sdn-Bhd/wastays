@@ -2,7 +2,9 @@ require 'rails_helper'
 
 RSpec.describe "Platform Smoke Tests", type: :request do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: 'live') }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: 'live') }
   let(:staff_user) { create(:user, account: account, role: 'hotel_staff') }
   let(:superadmin) { create(:user, :superadmin) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner') }
@@ -12,7 +14,7 @@ RSpec.describe "Platform Smoke Tests", type: :request do
     # Define necessary permissions
     [
       'manage_hotel_profile', 'manage_room_types', 'manage_rates', 'manage_inventory',
-      'view_bookings', 'manage_bookings', 'view_guest_phone', 'manage_guest_arrival',
+      'view_bookings', 'manage_bookings', 'view_guest_records', 'delete_guest_record', 'view_guest_phone', 'manage_guest_arrival',
       'view_audit_logs', 'view_reports', 'view_payouts'
     ].each do |slug|
       Permission.find_or_create_by!(slug: slug) { |p| p.name = slug.humanize }
@@ -23,6 +25,8 @@ RSpec.describe "Platform Smoke Tests", type: :request do
 
     # Give staff user access to the hotel
     create(:user_hotel_access, user: staff_user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "unified_guest_profile"), enabled: true)
+    create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "full_audit_trail"), enabled: true)
 
     # Setup some basic data to avoid nil errors in views
     create(:property_policy, hotel: hotel)
@@ -66,14 +70,12 @@ RSpec.describe "Platform Smoke Tests", type: :request do
 
     [
       "dashboard",
-      "bookings",
-      "arrivals",
+      "front-desk",
       "guests",
-      "in_house_guests",
       "reports",
       "reports/payouts",
       "inventory",
-      "settings",
+      "settings/general",
       "audit_logs"
     ].each do |subpath|
       it "renders hotel portal #{subpath} successfully" do
@@ -83,8 +85,8 @@ RSpec.describe "Platform Smoke Tests", type: :request do
       end
     end
 
-    it "renders nested room type rates successfully" do
-      path = "/hotel/#{hotel.id}/room_types/#{room_type.id}/rates"
+    it "renders inventory dashboard successfully" do
+      path = "/hotel/#{hotel.id}/inventory"
       get path
       expect(response).to have_http_status(:ok)
     end

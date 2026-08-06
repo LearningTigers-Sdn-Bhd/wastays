@@ -66,6 +66,10 @@ RSpec.describe "Guest::RefundRequests", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Refund Details")
       expect(response.body).to include(booking.confirmation_token)
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("header.panel-page-header h1").text).to eq("Refund Details")
+      expect(document.at_css("header.panel-page-header .panel-page-header__caption").text)
+        .to include(booking.confirmation_token)
     end
 
     it "shows a warm message based on refund status" do

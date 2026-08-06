@@ -1,0 +1,48 @@
+@layer components {
+  .panel-banner {
+    --panel-feedback-background: var(--status-neutral-background);
+    --panel-feedback-foreground: var(--status-neutral-foreground);
+    --panel-feedback-border: var(--status-neutral-border);
+    --panel-feedback-indicator: var(--status-neutral-indicator);
+    width: 100%;
+    border: 1px solid var(--panel-feedback-border);
+    background: var(--panel-feedback-background);
+    color: var(--panel-feedback-foreground);
+  }
+
+  .panel-banner[data-tone="info"] { --panel-feedback-background: var(--status-info-background); --panel-feedback-foreground: var(--status-info-foreground); --panel-feedback-border: var(--status-info-border); --panel-feedback-indicator: var(--status-info-indicator); }
+  .panel-banner[data-tone="success"] { --panel-feedback-background: var(--status-success-background); --panel-feedback-foreground: var(--status-success-foreground); --panel-feedback-border: var(--status-success-border); --panel-feedback-indicator: var(--status-success-indicator); }
+  .panel-banner[data-tone="warning"] { --panel-feedback-background: var(--status-warning-background); --panel-feedback-foreground: var(--status-warning-foreground); --panel-feedback-border: var(--status-warning-border); --panel-feedback-indicator: var(--status-warning-indicator); }
+  .panel-banner[data-tone="destructive"] { --panel-feedback-background: var(--status-destructive-background); --panel-feedback-foreground: var(--status-destructive-foreground); --panel-feedback-border: var(--status-destructive-border); --panel-feedback-indicator: var(--status-destructive-indicator); }
+
+  .panel-banner[data-appearance="full"] { border-inline: 0; }
+  .panel-banner[data-appearance="floating"] { max-width: 56rem; margin-inline: auto; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+  .panel-banner[data-strategy="fixed"] { position: fixed; z-index: var(--z-fixed); }
+  .panel-banner[data-strategy="fixed"][data-position="top"] { top: 0; }
+  .panel-banner[data-strategy="fixed"][data-position="bottom"] { bottom: 0; }
+  .panel-banner[data-strategy="fixed"][data-position="top"] .panel-banner__inner { padding-top: max(1rem, env(safe-area-inset-top)); }
+  .panel-banner[data-strategy="fixed"][data-position="bottom"] .panel-banner__inner { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .panel-banner[data-strategy="fixed"][data-appearance="full"] { left: 0; right: 0; }
+  .panel-banner[data-strategy="fixed"][data-appearance="floating"] { left: max(1rem, env(safe-area-inset-left)); right: max(1rem, env(safe-area-inset-right)); width: auto; }
+  .panel-banner[data-strategy="fixed"][data-position="top"][data-appearance="floating"] { top: max(1rem, env(safe-area-inset-top)); }
+  .panel-banner[data-strategy="fixed"][data-position="bottom"][data-appearance="floating"] { bottom: max(1rem, env(safe-area-inset-bottom)); }
+
+  .panel-banner__inner { display: flex; align-items: center; gap: 0.625rem; width: 100%; max-width: 80rem; margin-inline: auto; padding: 0.625rem 0.75rem; }
+  .panel-banner__icon { display: inline-flex; flex: none; color: var(--panel-feedback-indicator); }
+  .panel-banner__content { min-width: 0; flex: 1 1 auto; }
+  .panel-banner__title { font-size: 0.875rem; line-height: 1.25rem; font-weight: 650; }
+  .panel-banner__description { margin-top: 0.125rem; font-size: 0.875rem; line-height: 1.375rem; }
+  .panel-banner__actions { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .panel-banner__dismiss { display: inline-flex; width: 1.75rem; height: 1.75rem; flex: none; align-items: center; justify-content: center; border-radius: 0.375rem; color: currentColor; opacity: 0.7; }
+  .panel-banner__dismiss:hover { background: color-mix(in oklab, var(--panel-feedback-foreground) 10%, transparent); opacity: 1; }
+  .panel-banner__dismiss:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  @media (max-width: 639px) {
+    .panel-banner__inner { flex-wrap: wrap; align-items: flex-start; }
+    .panel-banner__actions { order: 4; width: 100%; padding-inline-start: 2.125rem; }
+  }
+
+  @media (pointer: coarse) {
+    .panel-banner__dismiss { min-width: 2.5rem; min-height: 2.5rem; }
+  }
+}

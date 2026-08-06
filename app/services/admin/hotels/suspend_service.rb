@@ -11,8 +11,14 @@ module Admin
 
       def call
         ActiveRecord::Base.transaction do
-          @hotel.account.update!(status: "suspended")
-          @hotel.update!(status: "suspended")
+          @hotel.account.update!(
+            pre_suspension_status: @hotel.account.status,
+            status: "suspended"
+          )
+          @hotel.update!(
+            pre_suspension_status: @hotel.status,
+            status: "suspended"
+          )
         end
         Result.new(true, nil)
       rescue => e

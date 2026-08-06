@@ -58,4 +58,14 @@ Rails.application.configure do
   config.active_record.encryption.primary_key = "test_primary_key_at_least_32_chars_long_123456"
   config.active_record.encryption.deterministic_key = "test_deterministic_key_at_least_32_chars_long"
   config.active_record.encryption.key_derivation_salt = "test_salt_at_least_32_chars_long_123"
+
+  # Enable Bullet N+1 query detection when BULLET=true is set
+  config.after_initialize do
+    if ENV["BULLET"].present?
+      Bullet.enable = true
+      Bullet.bullet_logger = true
+      Bullet.raise = true # Raise an error if an N+1 query is detected
+      Bullet.unused_eager_loading_enable = false # Prevent fragile tests from unused eager load warnings
+    end
+  end
 end

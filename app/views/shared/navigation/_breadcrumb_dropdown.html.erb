@@ -1,0 +1,22 @@
+<%# locals: part - breadcrumb hash with label:, optional path:, and siblings: %>
+<div class="relative inline-flex items-center gap-x-1" data-breadcrumb-dropdown-target="item">
+  <% if part[:path].present? %>
+    <%= link_to part[:label], part[:path], class: "font-semibold text-foreground hover:text-brand-primary transition-colors" %>
+  <% else %>
+    <span class="cursor-default font-semibold text-foreground"><%= part[:label] %></span>
+  <% end %>
+  <button type="button"
+          class="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-brand-primary"
+          aria-label="Open <%= part[:label] %> navigation"
+          aria-expanded="false"
+          data-action="click->breadcrumb-dropdown#toggle">
+    <%= cached_icon "chevron-down", class: "size-3 shrink-0" %>
+  </button>
+  <div class="fixed w-56 bg-card shadow-dropdown rounded-lg hidden z-50 border border-border py-1" data-breadcrumb-dropdown-target="menu">
+    <% part[:siblings].each do |sibling| %>
+      <%= link_to sibling[:label], sibling[:path],
+                  class: "block px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors",
+                  data: { action: "click->breadcrumb-dropdown#close" } %>
+    <% end %>
+  </div>
+</div>

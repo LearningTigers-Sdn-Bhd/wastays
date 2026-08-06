@@ -1,0 +1,12 @@
+<div class="flex flex-col items-center justify-center px-4 py-10 text-center">
+  <div class="mb-3 rounded-full bg-muted p-3 text-muted-foreground">
+    <%= cached_icon(presenter.filters_active? ? "search-x" : "badge-check", stroke_width: 2, class: "size-6") %>
+  </div>
+  <% if presenter.filters_active? %>
+    <h3 class="text-sm font-bold text-foreground">No matching accounts</h3>
+    <p class="mt-1 max-w-[320px] text-xs text-muted-foreground">Try another search term or account type.</p>
+  <% else %>
+    <h3 class="text-sm font-bold text-foreground">No outstanding AR balances</h3>
+    <p class="mt-1 max-w-[320px] text-xs text-muted-foreground">Paid, void, and zero-balance invoices do not appear in this report.</p>
+  <% end %>
+</div>

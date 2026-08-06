@@ -1,0 +1,65 @@
+<section class="overflow-hidden rounded-md border border-border bg-card">
+  <div class="flex flex-col gap-2 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex size-7 items-center justify-center rounded-md bg-muted text-foreground">
+          <%= cached_icon "map", class: "size-3.5" %>
+        </span>
+        <h2 class="text-sm font-black uppercase tracking-[0.18em] text-foreground">Route Preview</h2>
+      </div>
+      <p class="mt-1 text-sm font-medium text-muted-foreground">Preview only. This does not move posted transactions.</p>
+    </div>
+    <span class="text-xs font-medium tabular-nums text-muted-foreground"><%= pluralize(folio_show.route_preview_line_count, "expected line") %></span>
+  </div>
+
+  <div class="divide-y divide-border">
+    <% if folio_show.route_preview_groups.any? %>
+      <% folio_show.route_preview_groups.each do |group| %>
+        <section>
+          <div class="flex items-center justify-between gap-4 bg-muted px-4 py-3">
+            <div>
+              <p class="text-xs font-black uppercase tracking-wider text-muted-foreground">Target Folio</p>
+              <p class="mt-0.5 text-sm font-bold text-foreground"><%= group.target_label %></p>
+              <% if group.target_reference.present? %>
+                <p class="mt-0.5 font-mono text-[11px] text-muted-foreground"><%= group.target_reference %></p>
+              <% end %>
+            </div>
+            <p class="text-sm font-black tabular-nums text-foreground"><%= folio_show.money(group.total) %></p>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[760px] table-fixed text-left text-xs">
+              <thead class="bg-card text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <tr class="border-b border-border">
+                  <th class="w-24 px-4 py-2">Date</th>
+                  <th class="w-24 px-4 py-2">Code</th>
+                  <th class="px-4 py-2">Expected Charge</th>
+                  <th class="w-28 px-4 py-2 text-right">Amount</th>
+                  <th class="w-28 px-4 py-2">Source</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <% group.rows.each do |row| %>
+                  <tr>
+                    <td class="px-4 py-3 font-medium tabular-nums text-muted-foreground"><%= row.date_label %></td>
+                    <td class="px-4 py-3 font-mono text-xs font-bold text-foreground"><%= row.code %></td>
+                    <td class="px-4 py-3">
+                      <p class="font-semibold text-foreground"><%= row.description %></p>
+                      <% if row.warning.present? %>
+                        <p class="mt-0.5 text-[11px] font-bold text-amber-700"><%= row.warning %></p>
+                      <% end %>
+                    </td>
+                    <td class="px-4 py-3 text-right font-black tabular-nums text-foreground"><%= row.amount %></td>
+                    <td class="px-4 py-3 text-xs font-semibold text-muted-foreground"><%= row.source %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      <% end %>
+    <% else %>
+      <div class="px-4 py-10 text-center text-sm font-medium text-muted-foreground">No expected future postings.</div>
+    <% end %>
+  </div>
+</section>

@@ -40,10 +40,17 @@ module Bookings
       return @availability_snapshot if defined?(@availability_snapshot)
 
       # 1. Get room numbers allowed by inventory for these dates
-      inventory_allowed_rooms = (@check_in..(@check_out - 1.day)).map do |date|
+      inventory_allowed_rooms = (@check_in.to_date..(@check_out.to_date - 1.day)).map do |date|
         inv = @room_type.room_inventories.find_by(date: date)
         if inv
-          inv.status == "open" ? inv.available_room_numbers : []
+          if inv.status == "open"
+            # Legacy quantity mode stores open inventory with an empty available_room_numbers array.
+            # In that case, treat all room_type numbers as candidates and let occupancy/locks/status
+            # filters decide final assignability.
+            inv.available_room_numbers.presence || @room_type.room_numbers
+          else
+            []
+          end
         else
           @room_type.room_numbers
         end
@@ -53,18 +60,22 @@ module Bookings
       allowed_rooms = inventory_allowed_rooms.reduce(:&) || []
 
       # 2. Find room numbers already occupied for these dates by other bookings
-      occupied = @hotel.bookings.where(status: [ "confirmed", "checked_in" ])
+      occupied = @hotel.bookings.where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required" ])
       occupied = occupied.where.not(id: @exclude_booking_id) if @exclude_booking_id
 
       occupied_numbers = occupied.where("check_in < ? AND check_out > ?", @check_out, @check_in)
                                  .joins(:booking_rooms)
+                                 .where(booking_rooms: { room_type_id: @room_type.id })
                                  .pluck("booking_rooms.room_number")
                                  .compact
                                  .map(&:to_s)
                                  .uniq
 
       # 3. Find rooms currently locked by other staff members
-      locked_numbers = @hotel.room_locks.active.where.not(user_id: Current.user_id).pluck(:room_number)
+      locked_numbers = @hotel.room_locks.active
+                             .where(room_type_id: @room_type.id)
+                             .where.not(user_id: Current.user_id)
+                             .pluck(:room_number)
 
       # 4. Filter them out
       candidate_rooms = (allowed_rooms - occupied_numbers - locked_numbers).reject(&:blank?).map(&:to_s)
@@ -80,7 +91,7 @@ module Bookings
     end
 
     def room_status_label(room_number)
-      room_status = RoomStatus.find_by(hotel: @hotel, room_number: room_number.to_s)
+      room_status = RoomStatus.find_by(hotel: @hotel, room_type: @room_type, room_number: room_number.to_s)
       room_status&.status.presence || "ready"
     end
 

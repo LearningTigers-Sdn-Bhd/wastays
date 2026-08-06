@@ -1,0 +1,110 @@
+<div class="w-full space-y-3.5">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Pay Invoices",
+        description: "Choose a hotel, select the invoices you want to pay, then choose how — online or by bank transfer.") do |header| %>
+    <% header.with_actions do %>
+      <%= link_to "Prefer to pay a lump sum instead? →", pay_balance_corporate_ar_payments_path, class: "text-sm font-bold text-muted-foreground hover:text-foreground" %>
+    <% end %>
+  <% end %>
+
+  <% if @presenter.relationships.empty? %>
+    <section class="rounded-2xl border border-border bg-card p-12 text-center shadow-sm">
+      <div class="inline-flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        <%= cached_icon "building-2", class: "size-6" %>
+      </div>
+      <h3 class="mt-4 text-sm font-bold text-foreground">No Relationships Found</h3>
+      <p class="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">There are no active corporate hotel relationships available for payment under this account.</p>
+    </section>
+  <% else %>
+    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="p-5">
+        <%= form_with url: pay_invoices_corporate_ar_payments_path, method: :get, data: { controller: "auto-submit" } do %>
+          <label for="hotel_corporate_account_id" class="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Choose Hotel</label>
+          <div class="relative mt-2 max-w-md">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <%= cached_icon "hotel", class: "size-4 text-muted-foreground" %>
+            </div>
+            <%= select_tag :hotel_corporate_account_id,
+              options_from_collection_for_select(@presenter.relationships, :id, ->(relationship) { relationship.hotel.name }, @presenter.selected_relationship&.id),
+              id: "hotel_corporate_account_id",
+              data: { action: "change->auto-submit#submitNow" },
+              class: "block w-full appearance-none rounded-xl border border-border bg-card py-2.5 pl-10 pr-9 text-sm focus:border-border-interactive focus:outline-none focus:ring-1 focus:ring-ring/10 transition-all shadow-sm" %>
+          </div>
+        <% end %>
+      </div>
+    </section>
+
+    <% if @presenter.invoices.any? %>
+      <%= form_with url: choose_method_corporate_ar_payments_path, method: :get, class: "overflow-hidden rounded-2xl border border-border bg-card shadow-sm",
+                    data: { controller: "pay-invoices-selection", pay_invoices_selection_currency_value: @presenter.selected_currency } do %>
+        <%= hidden_field_tag :hotel_corporate_account_id, @presenter.selected_relationship&.id %>
+
+        <header class="border-b border-border bg-muted/60 px-4 py-3 sm:px-5">
+          <h2 class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+            <span class="inline-flex size-6 items-center justify-center rounded bg-primary text-primary-foreground">
+              <%= cached_icon "receipt-text", class: "size-3.5", aria: { hidden: true } %>
+            </span>
+            Open invoices
+          </h2>
+        </header>
+
+        <%
+          currency_label = @presenter.selected_currency
+          money = ->(val) { "#{currency_label} #{format('%.2f', val)}" }
+        %>
+        <section class="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0" aria-label="Open invoice metrics summary">
+          <div class="relative px-4 py-4 sm:px-5">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Selected total</p>
+            <p class="mt-1.5 text-xl font-black tabular-nums text-foreground" data-pay-invoices-selection-target="total"><%= money.call(@presenter.default_amount) %></p>
+            <p class="mt-1 text-[11px] font-medium text-muted-foreground">Updates as you check invoices</p>
+          </div>
+          <div class="relative px-4 py-4 sm:px-5">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Unpaid Invoices</p>
+            <p class="mt-1.5 text-xl font-black tabular-nums text-foreground"><%= pluralize(@presenter.invoices.size, "invoice") %></p>
+            <p class="mt-1 text-[11px] font-medium text-muted-foreground">Matching selected hotel</p>
+          </div>
+        </section>
+
+        <div class="overflow-x-auto border-t border-border">
+          <table class="w-full min-w-[850px] text-left text-sm divide-y divide-border">
+            <thead class="bg-muted/50">
+              <tr>
+                <th scope="col" class="w-16 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <input type="checkbox" checked data-pay-invoices-selection-target="selectAll" data-action="change->pay-invoices-selection#toggleAll" class="size-4 rounded border-border-interactive text-foreground focus:ring-ring focus:ring-offset-2 cursor-pointer" aria-label="Select all invoices" />
+                </th>
+                <th scope="col" class="w-32 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Invoice</th>
+                <th scope="col" class="w-48 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Booking Reference</th>
+                <th scope="col" class="w-36 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Due Date</th>
+                <th scope="col" class="w-48 px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Outstanding Balance</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border bg-card">
+              <% @presenter.invoices.each do |invoice| %>
+                <tr class="transition-colors hover:bg-muted/50">
+                  <td class="px-6 py-3.5">
+                    <%= check_box_tag "invoice_ids[]", invoice.id, true,
+                      data: { pay_invoices_selection_target: "row", amount: invoice.outstanding_amount, action: "change->pay-invoices-selection#recalculate" },
+                      class: "size-4 rounded border-border-interactive text-foreground focus:ring-ring focus:ring-offset-2 cursor-pointer" %>
+                  </td>
+                  <td class="px-6 py-3.5 font-bold text-foreground"><%= invoice.formatted_invoice_number %></td>
+                  <td class="px-6 py-3.5 text-sm font-semibold text-foreground"><%= invoice.booking.confirmation_token %></td>
+                  <td class="px-6 py-3.5 text-sm text-muted-foreground"><%= invoice.due_on.strftime("%d %b %Y") %></td>
+                  <td class="px-6 py-3.5 text-right text-sm font-bold tabular-nums text-foreground"><%= money.call(invoice.outstanding_amount) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 border-t border-border bg-muted/40 p-6">
+          <%= submit_tag "Continue", data: { pay_invoices_selection_target: "continueButton" }, class: "rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" %>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-sm">
+        <p class="text-sm font-semibold text-foreground">No Invoices Available</p>
+        <p class="mt-1 text-xs text-muted-foreground">No unpaid invoices are available for this hotel.</p>
+      </div>
+    <% end %>
+  <% end %>
+</div>

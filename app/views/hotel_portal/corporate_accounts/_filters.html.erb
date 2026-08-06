@@ -1,0 +1,50 @@
+<%# The search input stays outside the results frame so it keeps focus across
+    debounced re-renders; the tabs live inside it so their counts follow the search. %>
+<%= form_with url: hotel_corporate_accounts_path(current_hotel), method: :get,
+  data: { controller: "auto-submit", turbo_frame: "corporate_accounts_results", turbo_action: "advance" } do |form| %>
+  <%= form.hidden_field :account_type, value: presenter.selected_account_type if presenter.selected_account_type.present? %>
+
+  <div class="flex items-center gap-3">
+    <%# Input, SelectMenu, and Button share the :md size scale so the row lines up. %>
+    <div class="relative min-w-0 flex-1">
+      <div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
+        <%= cached_icon "search", stroke_width: 2, class: "size-4 text-muted-foreground" %>
+      </div>
+      <%= render PanelsUI::Input.new(
+        form: form,
+        attribute: :query,
+        type: :search,
+        size: :md,
+        value: presenter.query,
+        placeholder: "Search name, email, code, or phone...",
+        class: "pl-9",
+        aria: { label: "Search external accounts" },
+        data: { action: "input->auto-submit#submit" }) %>
+    </div>
+
+    <div class="w-40 shrink-0 sm:w-44">
+      <%= render PanelsUI::SelectMenu.new(
+        form: form,
+        attribute: :status,
+        size: :md,
+        include_blank: true,
+        prompt: "All statuses",
+        selected: presenter.selected_status,
+        aria: { label: "Filter by status" },
+        choices: presenter.status_options.map { |label, value| { label: label, value: value } },
+        data: { action: "change->auto-submit#submitNow" }) %>
+    </div>
+
+    <%= render PanelsUI::Button.new(
+      as: :a,
+      href: new_hotel_corporate_account_path(current_hotel, return_to: request.fullpath),
+      variant: :primary,
+      size: :md,
+      aria_label: "Invite an external account",
+      class: "shrink-0",
+      data: { turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
+      <%= cached_icon "plus", stroke_width: 2.5, class: "size-4" %>
+      <span class="hidden sm:inline">Invite</span>
+    <% end %>
+  </div>
+<% end %>

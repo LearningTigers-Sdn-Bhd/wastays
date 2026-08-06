@@ -1,0 +1,19 @@
+<% if presenter.group_overview? %>
+  <section aria-label="Group booking overview" class="space-y-8 px-5 py-6" data-testid="group-booking-overview">
+    <% if presenter.stay_dates_vary? || presenter.group_dates_incomplete? %>
+      <%= render PanelsUI::Alert.new(tone: :info, title: "Arrival and departure schedule") do |alert| %>
+        <% alert.with_description { presenter.group_stay_variation_notice } %>
+      <% end %>
+    <% end %>
+
+    <%= render "hotel_portal/bookings/workspaces/booking_details/stay_table", booking: booking, presenter: presenter %>
+    <% if presenter.boat_transfers? %>
+      <%= render "hotel_portal/bookings/workspaces/booking_details/boat_table", presenter: presenter %>
+    <% end %>
+    <%= render "hotel_portal/bookings/workspaces/booking_details/financial_table", presenter: presenter %>
+    <%= render "hotel_portal/bookings/workspaces/booking_details/references_table", presenter: presenter %>
+  </section>
+<% else %>
+  <%= render "hotel_portal/bookings/workspaces/booking_details/stay_details", booking: booking, presenter: booking_presenter, workspace_presenter: presenter %>
+  <%= render "hotel_portal/bookings/workspaces/booking_details/internal_notes", booking: booking %>
+<% end %>

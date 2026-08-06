@@ -1,0 +1,29 @@
+# frozen_string_literal: true
+
+class NightAuditLog < ApplicationRecord
+  belongs_to :night_audit
+  belongs_to :hotel
+  belongs_to :user, optional: true
+
+  validates :action_type, presence: true
+
+  # Define common action types as constants or an enum if preferred
+  ACTION_TYPES = %w[
+    process_started
+    review_started
+    item_detected
+    check_due_outs
+    check_missing_timestamps
+    check_open_requests
+    blocker_found
+    exception_found
+    item_skipped
+    item_failed
+    blocker_resolved
+    completed_audit_repair
+    completed
+    failed
+  ].freeze
+
+  validates :action_type, inclusion: { in: ACTION_TYPES }
+end

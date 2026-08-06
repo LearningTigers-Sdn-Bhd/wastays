@@ -1,7 +1,7 @@
-<div id="top" class="relative overflow-x-hidden bg-landing-bg" data-controller="scroll-reveal">
+<div id="top" class="relative overflow-x-hidden bg-background" data-controller="scroll-reveal">
 
   <!-- ─── HERO ─── -->
-  <div class="relative flex min-h-[100svh] flex-col overflow-visible lg:h-[100dvh] lg:overflow-hidden">
+  <div class="relative flex min-h-[100svh] flex-col overflow-visible lg:h-[100dvh]">
     <!-- Background image -->
     <div class="absolute inset-0">
       <img
@@ -18,7 +18,7 @@
     <!-- Subtle top vignette -->
     <div class="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-black/60 to-transparent z-10"></div>
 
-    <div class="relative z-20 flex-1 flex flex-col items-center justify-center max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div class="relative z-40 flex-1 flex flex-col items-center justify-center max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
 
       <!-- Eyebrow -->
       <div class="inline-flex items-center gap-x-4 mb-6 sm:mb-8 animate-hero-badge">
@@ -38,63 +38,17 @@
 
       <!-- Search form -->
       <div id="search-hotels" class="max-w-6xl w-full mx-auto scroll-mt-24 animate-hero-buttons">
-        <%= form_with url: hotels_path, method: :get, class: "bg-white/95 backdrop-blur-2xl rounded-[2rem] sm:rounded-full shadow-2xl shadow-black/60 p-2 sm:p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-1" do |f| %>
-
-          <!-- Destination -->
-          <div class="flex flex-[1.2] items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group">
-            <svg class="w-5 h-5 sm:w-6 h-6 text-brand-primary/60 flex-none group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-            <div class="flex-1 min-w-0 text-left">
-              <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Destination</p>
-              <%= f.text_field :city,
-                  placeholder: "Where are you going?",
-                  class: "w-full bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary placeholder-neutral-text-secondary/40 focus:outline-none",
-                  value: params[:city] %>
-            </div>
-          </div>
-
-          <div class="hidden sm:block w-px h-10 bg-neutral-border/40"></div>
-
-          <!-- Check-in / Check-out combined -->
-          <div class="flex flex-[1.8] items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group">
-            <svg class="w-5 h-5 sm:w-6 h-6 text-brand-primary/60 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
-            <div class="flex-1 min-w-0 text-left">
-              <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Check-in / Check-out</p>
-              <div class="flex items-center gap-x-2">
-                <%= f.date_field :check_in,
-                    class: "bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary focus:outline-none cursor-pointer w-full sm:w-[145px]",
-                    value: params[:check_in] || Date.today.to_s %>
-                <span class="text-neutral-text-secondary/30 font-light">|</span>
-                <%= f.date_field :check_out,
-                    class: "bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary focus:outline-none cursor-pointer w-full sm:w-[145px]",
-                    value: params[:check_out] || Date.tomorrow.to_s %>
-              </div>
-            </div>
-          </div>
-
-          <div class="hidden sm:block w-px h-10 bg-neutral-border/40"></div>
-
-          <!-- Rooms -->
-          <div class="flex flex-1 items-center gap-x-4 px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-neutral-bg/90 transition-all duration-300 group">
-            <svg class="w-5 h-5 sm:w-6 h-6 text-brand-primary/60 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>
-            <div class="flex-1 min-w-0 text-left">
-              <p class="text-[10px] sm:text-[11px] font-bold text-neutral-text-secondary uppercase tracking-[0.15em] mb-0.5 sm:mb-1">Rooms</p>
-              <%= f.select :rooms,
-                  options_for_select([[1,1],[2,2],[3,3],[4,4],[5,5]], params[:rooms] || 1),
-                  {},
-                  class: "w-full bg-transparent text-sm sm:text-base font-bold text-neutral-text-primary focus:outline-none cursor-pointer" %>
-            </div>
-          </div>
-
-          <%= f.submit "Find Stays",
-              class: "btn btn-primary px-10 sm:px-12 py-4 sm:py-5 rounded-full font-bold text-base sm:text-lg cursor-pointer flex-none hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 sm:ml-2" %>
-
-        <% end %>
+        <%= render "explore_search_bar",
+            city: params[:city],
+            check_in: params[:check_in],
+            check_out: params[:check_out],
+            rooms: params[:rooms] %>
       </div>
 
     </div>
 
     <!-- ─── WHY BOOK DIRECT MARQUEE (Solid footer of the hero) ─── -->
-    <div class="relative z-30 bg-brand-primary py-4 overflow-hidden border-t border-white/5 shadow-[0_-10px_30px_rgba(0,0,0,0.2)]">
+    <div class="relative z-30 bg-primary py-4 overflow-hidden border-t border-white/5 shadow-[0_-10px_30px_rgba(0,0,0,0.2)]">
       <div class="flex whitespace-nowrap animate-marquee items-center">
         <% 12.times do %>
           <span class="text-lg sm:text-2xl lg:text-3xl font-serif italic text-[#d9c5a0] tracking-tight mx-5 sm:mx-8">Best Price</span>
@@ -109,22 +63,22 @@
   </div>
 
   <!-- ─── FEATURED STAYS ─── -->
-  <div class="bg-landing-bg py-10 lg:py-20">
+  <div class="bg-background py-10 lg:py-20">
     <div class="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
 
       <div class="flex items-end justify-between mb-12" data-animate>
         <div>
           <div class="inline-flex items-center gap-x-3 mb-4">
-            <span class="w-8 h-px bg-brand-primary/30"></span>
-            <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Hand-Picked</span>
-            <span class="w-8 h-px bg-brand-primary/30"></span>
+            <span class="w-8 h-px bg-primary/30"></span>
+            <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Hand-Picked</span>
+            <span class="w-8 h-px bg-primary/30"></span>
           </div>
-          <h2 class="text-3xl lg:text-4xl font-serif text-neutral-text-primary tracking-tight">
-            Featured <span class="italic text-brand-primary font-medium">Stays</span>
+          <h2 class="text-3xl lg:text-4xl font-serif text-foreground tracking-tight">
+            Featured <span class="italic text-primary font-medium">Stays</span>
           </h2>
-          <p class="text-neutral-text-secondary mt-2 text-sm font-medium">Local gems for your next trip.</p>
+          <p class="text-muted-foreground mt-2 text-sm font-medium">Local gems for your next trip.</p>
         </div>
-        <%= link_to hotels_path, class: "hidden sm:inline-flex items-center gap-x-2 text-sm font-bold text-brand-primary hover:text-brand-primary-hover transition-colors group/link" do %>
+        <%= link_to hotels_path, class: "hidden sm:inline-flex items-center gap-x-2 text-sm font-bold text-primary hover:text-primary-hover transition-colors group/link" do %>
           Explore all hotels
           <svg class="w-4 h-4 group-hover/link:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
         <% end %>
@@ -133,8 +87,8 @@
       <% if @featured_stays.any? %>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           <% @featured_stays.each_with_index do |(hotel, room_type), i| %>
-            <%= link_to hotel_path(hotel, check_in: Date.current.to_s, check_out: Date.tomorrow.to_s, adults: 2, children: 0, room_count: 1), class: "group bg-white rounded-3xl border border-neutral-border/60 hover:border-brand-primary/20 hover:shadow-2xl hover:shadow-brand-primary/10 transition-all duration-500 overflow-hidden flex flex-col", data: { animate: "" }, style: "transition-delay: #{i * 0.1}s" do %>
-              <div class="relative h-64 overflow-hidden bg-neutral-bg">
+            <%= link_to hotel_path(hotel, check_in: Date.current.to_s, check_out: Date.tomorrow.to_s, adults: 2, children: 0, room_count: 1), class: "group bg-white rounded-3xl border border-border/60 hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 overflow-hidden flex flex-col", data: { animate: "" }, style: "transition-delay: #{i * 0.1}s" do %>
+              <div class="relative h-64 overflow-hidden bg-muted">
                 <% if hotel.featured_photo_attachment.present? %>
                   <%= image_tag hotel.featured_photo_attachment, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" %>
                 <% elsif hotel.photos.attached? %>
@@ -142,18 +96,18 @@
                 <% elsif hotel.room_types.first&.photos&.attached? %>
                   <%= image_tag hotel.room_types.first.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" %>
                 <% else %>
-                  <div class="absolute inset-0 bg-gradient-to-br from-brand-primary/10 to-brand-primary/5 flex items-center justify-center">
-                    <svg class="w-12 h-12 text-brand-primary/20" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>
+                  <div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                    <svg class="w-12 h-12 text-primary/20" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>
                   </div>
                 <% end %>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div class="absolute top-4 left-4">
-                  <span class="inline-flex items-center py-1.5 px-3 rounded-full text-[10px] font-bold bg-white/95 text-brand-primary backdrop-blur-sm shadow-sm tracking-wide uppercase">Featured</span>
+                  <span class="inline-flex items-center py-1.5 px-3 rounded-full text-[10px] font-bold bg-white/95 text-primary backdrop-blur-sm shadow-sm tracking-wide uppercase">Featured</span>
                 </div>
                 <% if hotel.star_rating.to_i > 0 %>
                   <div class="absolute top-4 right-4 flex gap-x-0.5 text-amber-400 drop-shadow">
                     <% hotel.star_rating.to_i.times do %>
-                      <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                      <%= cached_icon "star", library: "phosphor", variant: "fill", class: "w-3.5 h-3.5 fill-current" %>
                     <% end %>
                   </div>
                 <% end %>
@@ -161,23 +115,23 @@
 
               <div class="flex-1 p-6 flex flex-col">
                 <div class="flex justify-between items-start mb-2">
-                  <h3 class="font-bold text-neutral-text-primary group-hover:text-brand-primary transition-colors text-lg truncate flex-1">
+                  <h3 class="font-bold text-foreground group-hover:text-primary transition-colors text-lg truncate flex-1">
                     <%= hotel.name %>
                   </h3>
                 </div>
-                <p class="text-sm text-neutral-text-secondary flex items-center gap-x-1.5 font-medium mb-6">
-                  <svg class="w-4 h-4 text-brand-primary/40 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <p class="text-sm text-muted-foreground flex items-center gap-x-1.5 font-medium mb-6">
+                  <svg class="w-4 h-4 text-primary/40 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                   <%= hotel.city %>, <%= hotel.country %>
                 </p>
-                <div class="flex items-center justify-between mt-auto pt-8 border-t border-neutral-border/50">
+                <div class="flex items-center justify-between mt-auto pt-8 border-t border-border/50">
                   <div>
-                    <p class="text-[10px] text-neutral-text-secondary uppercase font-bold tracking-widest mb-0.5">From</p>
+                    <p class="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-0.5">From</p>
                     <div class="flex items-baseline gap-x-1">
-                      <span class="text-2xl font-black text-neutral-text-primary tracking-tight">RM <%= number_with_precision(@availability_service.calculate_total_price(room_type), precision: 0) %></span>
-                      <span class="text-xs text-neutral-text-secondary font-medium">/ night</span>
+                      <span class="text-2xl font-black text-foreground tracking-tight">RM <%= number_with_precision(@availability_service.calculate_total_price(room_type), precision: 0, delimiter: ",") %></span>
+                      <span class="text-xs text-muted-foreground font-medium">/ night</span>
                     </div>
                   </div>
-                  <div class="btn btn-primary w-11 h-11 rounded-2xl p-0 shadow-lg shadow-brand-primary/20 group-hover:scale-110 transition-transform">
+                  <div class="btn btn-primary w-11 h-11 rounded-2xl p-0 shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                   </div>
                 </div>
@@ -186,12 +140,12 @@
           <% end %> <%# each_with_index %>
         </div>
       <% else %>
-        <div class="card p-16 text-center border-2 border-dashed border-neutral-border">
-          <div class="inline-flex justify-center items-center w-16 h-16 rounded-full bg-brand-primary/5 text-brand-primary/40 mb-5">
+        <div class="card p-16 text-center border-2 border-dashed border-border">
+          <div class="inline-flex justify-center items-center w-16 h-16 rounded-full bg-primary/5 text-primary/40 mb-5">
             <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>
           </div>
-          <h3 class="text-xl font-bold text-neutral-text-primary mb-2">No featured stays available right now</h3>
-          <p class="text-neutral-text-secondary mb-8 max-w-sm mx-auto text-sm">Try a different destination or use the full hotel search to browse everything that's available.</p>
+          <h3 class="text-xl font-bold text-foreground mb-2">No featured stays available right now</h3>
+          <p class="text-muted-foreground mb-8 max-w-sm mx-auto text-sm">Try a different destination or use the full hotel search to browse everything that's available.</p>
           <%= link_to hotels_path, class: "btn btn-primary px-8" do %>
             Explore all hotels
           <% end %>
@@ -210,7 +164,7 @@
 
     <!-- Deep radial glow -->
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <div class="w-[800px] h-[500px] bg-brand-primary/20 rounded-full blur-[140px]"></div>
+      <div class="w-[800px] h-[500px] bg-primary/20 rounded-full blur-[140px]"></div>
     </div>
 
     <!-- Floating star decorations -->
@@ -240,7 +194,7 @@
 
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-        <a href="#top" class="group inline-flex items-center justify-center gap-x-2 btn btn-primary px-10 py-4 rounded-xl text-base font-bold shadow-lg shadow-brand-primary/30 w-full sm:w-auto">
+        <a href="#top" class="group inline-flex items-center justify-center gap-x-2 btn btn-primary px-10 py-4 rounded-xl text-base font-bold shadow-lg shadow-primary/30 w-full sm:w-auto">
           Search Hotels
           <svg class="w-4 h-4 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
         </a>

@@ -2,8 +2,14 @@ class Api::V1::Bookings::HousekeepingRequestsController < Api::V1::BaseControlle
   before_action :set_booking
 
   def create
+    unless Bookings::Occupancy.accepts_guest_requests?(@booking)
+      render json: { error: "Housekeeping requests can only be created for active bookings." }, status: :unprocessable_entity
+      return
+    end
+
     @housekeeping_request = @booking.housekeeping_requests.build(housekeeping_params)
     @housekeeping_request.status ||= "pending"
+    @housekeeping_request.work_context = "guest_request"
     @housekeeping_request.requested_at ||= Time.current
 
     if @housekeeping_request.save
@@ -22,7 +28,7 @@ class Api::V1::Bookings::HousekeepingRequestsController < Api::V1::BaseControlle
   private
 
   def set_booking
-    @booking = booking_scope.find_by(confirmation_token: params[:booking_id]) || booking_scope.find_by(id: params[:booking_id])
+    @booking = booking_scope.with_confirmation_token(params[:booking_id]).first || booking_scope.find_by(id: params[:booking_id])
 
     unless @booking
       render json: { error: "Booking not found or access denied" }, status: :not_found

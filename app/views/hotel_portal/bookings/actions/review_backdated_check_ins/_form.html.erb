@@ -1,0 +1,62 @@
+<% booking = local_assigns.fetch(:booking) { @booking } %>
+<% group = booking.group_booking_id? %>
+<% target_presenter = HotelPortal::BookingLifecycleTargetPresenter.new(booking: booking, action: :backdated_check_in) %>
+
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "review-backdated-check-in-sheet",
+        side: :right,
+        size: group ? :xl : :md,
+        title: "Record an earlier check-in",
+        description: booking.guest_name,
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with model: booking, url: hotel_booking_action_review_backdated_check_in_path(current_hotel, booking), method: :post, class: "flex h-full min-h-0 flex-col", data: { controller: "group-lifecycle-targets" } do |f| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+        <%= f.hidden_field :checked_in_at, value: booking.check_in&.in_time_zone(current_hotel.hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M") %>
+        <div class="min-h-0 flex-1 <%= group ? 'grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>" data-controller="backdate-reason-validation">
+          <%= render "hotel_portal/bookings/actions/shared/group_target_selector", target_presenter: target_presenter %>
+          <% if group %><div class="min-h-0 overflow-y-auto custom-scrollbar"><% end %>
+          <%# backdate_reason / retroactive_reason are top-level params (not booking-scoped),
+              so drive their PanelsUI controls with a blank-scope builder to keep the flat field names. %>
+          <% reason_values = Struct.new(:backdate_reason, :retroactive_reason).new(params[:backdate_reason], params[:retroactive_reason]) %>
+          <% reason_form = ActionView::Helpers::FormBuilder.new("", reason_values, self, {}) %>
+          <div class="space-y-5 p-6">
+            <% if booking.errors.any? %>
+              <div class="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert"><%= booking.errors.full_messages.to_sentence %></div>
+            <% end %>
+            <div>
+              <span class="mb-1 block text-sm font-medium text-muted-foreground">Scheduled check-in</span>
+              <p class="text-sm font-medium text-foreground"><%= booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %></p>
+            </div>
+            <%= render PanelsUI::FormField.new(form: reason_form, attribute: :backdate_reason, label: "Backdate reason", required: true) do |field| %>
+              <% field.with_select_menu(
+                   [ "Guest arrived earlier but was not checked in",
+                     "System / internet issue",
+                     "Manual offline check-in",
+                     "Night audit correction",
+                     "Booking was created late",
+                     "Room was occupied before system update",
+                     "Other" ].map { |reason| { label: reason, value: reason } },
+                   include_blank: true, prompt: "Select reason",
+                   data: { action: "change->backdate-reason-validation#toggle" }) %>
+            <% end %>
+            <div>
+              <div class="mb-1.5 flex items-center justify-between">
+                <%= label_tag :retroactive_reason, "Reason details", class: "text-sm font-medium text-foreground" %>
+                <span data-backdate-reason-validation-target="optionalBadge" class="text-xs text-muted-foreground">Optional</span>
+              </div>
+              <%= render PanelsUI::TextArea.new(form: reason_form, attribute: :retroactive_reason, rows: 4,
+                    placeholder: "Explain why this check-in is being recorded after the business date was closed.") %>
+            </div>
+          </div>
+          <% if group %></div><% end %>
+        </div>
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Recording…" }) do %>Record check-in<% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

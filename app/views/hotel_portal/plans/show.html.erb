@@ -1,0 +1,101 @@
+<div class="space-y-5">
+  <%= render PanelsUI::PageHeader.new(
+        title: "General Settings",
+        description: "Manage core hotel operations, guest communication, rates, and plan access.") %>
+
+  <%= render "hotel_portal/settings/group_tabs" %>
+
+  <% locked_count = @total_count - @included_count %>
+  <div class="grid items-start gap-5 lg:grid-cols-3" data-testid="plan-billing-layout">
+    <aside class="space-y-4 lg:col-span-1" aria-label="Plan summary">
+      <%= render PanelsUI::Card.new(width: :full, as: :section) do |card| %>
+        <% card.with_header(title: "Current Plan", description: "Your hotel’s active WAStays subscription.", title_as: :h2) do |header| %>
+          <% if @plan&.most_popular %>
+            <% header.with_badges do %>
+              <%= render PanelsUI::Badge.new(label: "Most Popular", variant: :warning, size: :sm) %>
+            <% end %>
+          <% end %>
+        <% end %>
+        <% card.with_card_content do %>
+          <p class="text-base font-semibold text-foreground"><%= @plan&.name || "No plan assigned" %></p>
+          <dl class="mt-5 border-t border-border pt-4">
+            <dt class="text-sm text-muted-foreground">Features included</dt>
+            <dd class="mt-1 text-base font-semibold tabular-nums text-foreground">
+              <%= @included_count %>
+              <span class="text-sm font-normal text-muted-foreground">/ <%= @total_count %></span>
+            </dd>
+          </dl>
+        <% end %>
+      <% end %>
+
+      <% if locked_count.positive? %>
+        <%= render PanelsUI::Alert.new(
+              tone: :warning,
+              actions_layout: :stacked,
+              title: "Unlock #{pluralize(locked_count, "more feature")}") do |alert| %>
+          <% alert.with_description do %>
+            Upgrade your plan to get full access to the WAStays platform.
+          <% end %>
+          <% alert.with_actions do %>
+            <%= render PanelsUI::Button.new(
+                  href: "https://wa.me/#{current_hotel.whatsapp_number.to_s.gsub(/\D/, '')}?text=I%20want%20to%20upgrade%20my%20WAStays%20plan",
+                  variant: :warning,
+                  size: :sm,
+                  class: "w-full") do %>
+              Contact us to upgrade
+            <% end %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <%= render PanelsUI::Alert.new(tone: :success, title: "All features included") do |alert| %>
+          <% alert.with_description do %>
+            Your current plan includes every available WAStays feature.
+          <% end %>
+        <% end %>
+      <% end %>
+    </aside>
+
+    <%= render PanelsUI::Card.new(
+          width: :full,
+          as: :section,
+          class: "min-w-0 lg:col-span-2",
+          data: { testid: "plan-feature-card" }) do |card| %>
+      <% card.with_header(
+           title: "What's Included",
+           description: locked_count.positive? ? "Included, add-on, and locked capabilities for your current plan." : "Every available capability is included in your current plan.",
+           title_as: :h2) %>
+
+      <% card.with_card_content do %>
+        <div class="divide-y divide-border">
+          <% @feature_groups.each do |group| %>
+            <% next if group.features.empty? %>
+            <section class="space-y-3 py-4 first:pt-0 last:pb-0" aria-labelledby="feature-group-<%= group.id %>">
+              <h3 id="feature-group-<%= group.id %>" class="text-base font-semibold text-foreground"><%= group.name %></h3>
+              <ul class="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                <% group.features.each do |feature| %>
+                  <% included = @enabled_slugs.include?(feature.slug) %>
+                  <% addon = @addon_slugs.include?(feature.slug) %>
+                  <li class="flex min-w-0 items-start gap-2.5">
+                    <% if included %>
+                      <%= app_icon "check", class: "mt-0.5 size-4 shrink-0 text-success", aria: { hidden: "true" } %>
+                      <span class="text-sm text-foreground"><%= feature.name %></span>
+                      <span class="sr-only">Included</span>
+                    <% elsif addon %>
+                      <%= app_icon "plus", class: "mt-0.5 size-4 shrink-0 text-warning", aria: { hidden: "true" } %>
+                      <span class="text-sm text-foreground"><%= feature.name %></span>
+                      <%= render PanelsUI::Badge.new(label: "Add-on", variant: :warning, size: :sm) %>
+                    <% else %>
+                      <%= app_icon "lock", class: "mt-0.5 size-4 shrink-0 text-muted-foreground", aria: { hidden: "true" } %>
+                      <span class="text-sm text-muted-foreground"><%= feature.name %></span>
+                      <span class="sr-only">Locked</span>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            </section>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

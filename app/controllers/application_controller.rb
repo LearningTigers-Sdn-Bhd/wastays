@@ -2,6 +2,8 @@
 
 class ApplicationController < ActionController::Base
   include Pundit::Authorization
+  include PlanGated
+  include Toastable
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
@@ -9,12 +11,16 @@ class ApplicationController < ActionController::Base
   rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
 
-  helper_method :current_user, :logged_in?
+  helper_method :current_user, :logged_in?, :current_agent_account
   around_action :use_user_time_zone
   before_action :set_current_request_id
   before_action :redirect_legacy_hotel_portal_path
 
   private
+
+  def current_agent_account
+    @current_agent_account ||= HotelCorporateAccount.find_by(id: session[:hotel_corporate_account_id]) if session[:hotel_corporate_account_id]
+  end
 
   def set_current_request_id
     Current.request_id = request.uuid
@@ -65,20 +71,24 @@ class ApplicationController < ActionController::Base
   end
 
   def current_hotel
-    @current_hotel ||= if current_user.superadmin? && params[:hotel_id]
+    return @current_hotel if defined?(@current_hotel)
+
+    @current_hotel = if current_user&.superadmin? && params[:hotel_id]
       find_hotel_for_scope(Hotel.all, params[:hotel_id])
-    elsif params[:hotel_id]
+    elsif current_user && params[:hotel_id]
       find_hotel_for_scope(current_user.hotels, params[:hotel_id])
-    else
+    elsif current_user
       current_user.hotels.first
     end
   end
 
   def permitted_hotels
-    @permitted_hotels ||= if current_user.superadmin?
+    @permitted_hotels ||= if current_user&.superadmin?
       Hotel.all
-    else
+    elsif current_user
       current_user.hotels
+    else
+      Hotel.none
     end
   end
 

@@ -1,0 +1,33 @@
+<%= render "section_shell",
+    title: "Channel Manager",
+    description: "Global connectivity to OTAs through Channex.",
+    icon_name: "waypoints" do %>
+  <%= form_with url: admin_integrations_path, method: :patch, local: true, class: "space-y-5" do %>
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div>
+        <%= label_tag :channex_environment, "Environment", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+        <%= select_tag :channex_environment,
+            options_for_select([ [ "Staging", "staging" ], [ "Production", "production" ] ], @channex_environment),
+            class: "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/10" %>
+      </div>
+
+      <%= render "secret_field",
+          name: :channex_api_key,
+          label: "User API Key",
+          value: @channex_api_key,
+          placeholder: "Enter Channel Manager User API Key" %>
+    </div>
+
+    <div class="rounded-lg border border-blue-100 bg-blue-50 p-4">
+      <h3 class="text-xs font-black uppercase tracking-[0.18em] text-blue-900">Webhook Configuration</h3>
+      <p class="mt-2 text-xs leading-6 text-blue-700">
+        Configure this webhook URL in Channex for real-time booking delivery.
+      </p>
+      <code class="mt-2 block select-all overflow-x-auto rounded-md border border-blue-200 bg-card/70 p-2 font-mono text-xs text-blue-900"><%= root_url %>webhooks/channex</code>
+    </div>
+
+    <div class="flex justify-end border-t border-border pt-4">
+      <%= submit_tag "Save Channel Manager", class: "cursor-pointer rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-brand-secondary" %>
+    </div>
+  <% end %>
+<% end %>

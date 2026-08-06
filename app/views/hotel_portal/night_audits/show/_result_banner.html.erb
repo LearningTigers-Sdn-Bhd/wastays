@@ -1,0 +1,23 @@
+<% banner = presenter.result_banner %>
+<% tone_classes = {
+  "success" => "border-emerald-200 bg-emerald-50 text-emerald-950",
+  "danger" => "border-red-200 bg-red-50 text-red-950",
+  "info" => "border-blue-200 bg-blue-50 text-blue-950",
+  "neutral" => "border-border bg-muted text-foreground"
+} %>
+<% icon_classes = {
+  "success" => "bg-emerald-600 text-primary-foreground",
+  "danger" => "bg-red-600 text-primary-foreground",
+  "info" => "bg-blue-600 text-primary-foreground",
+  "neutral" => "bg-muted text-muted-foreground"
+} %>
+
+<section class="flex items-start gap-3 rounded-xl border px-4 py-3 shadow-sm <%= tone_classes.fetch(banner[:tone]) %>" data-testid="night-audit-result-banner">
+  <span class="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md <%= icon_classes.fetch(banner[:tone]) %>">
+    <%= cached_icon banner[:icon], class: "size-4 #{'animate-spin' if presenter.auto_refresh?}", aria: { hidden: true } %>
+  </span>
+  <div>
+    <h2 class="text-xs font-bold uppercase tracking-wider"><%= banner[:title] %></h2>
+    <p class="mt-0.5 text-sm font-medium"><%= banner[:message] %></p>
+  </div>
+</section>

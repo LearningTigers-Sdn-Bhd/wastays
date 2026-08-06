@@ -1,0 +1,104 @@
+# frozen_string_literal: true
+
+class NotificationMailer < ApplicationMailer
+  before_action :load_delivery_context
+  before_action :attach_brand_logo
+
+  def check_in_confirmation(delivery)
+    assign_delivery(delivery)
+
+    mail(
+      to: @booking.guest_email,
+      subject: "Checked in at #{@payload[:hotel_name]}"
+    )
+  end
+
+  def post_stay_review_request(delivery)
+    assign_delivery(delivery)
+
+    mail(
+      to: @booking.guest_email,
+      subject: "How was your stay at #{@payload[:hotel_name]}?"
+    )
+  end
+
+  def pre_arrival_notification(delivery)
+    assign_delivery(delivery)
+
+    stage_label = @payload[:stage].to_s.upcase.presence || "D1"
+
+    mail(
+      to: @booking.guest_email,
+      subject: "#{stage_label} reminder: your stay at #{@payload[:hotel_name]} is coming up"
+    )
+  end
+
+  def check_out_receipt_message(delivery)
+    assign_delivery(delivery)
+
+    mail(
+      to: @booking.guest_email,
+      subject: "Your checkout invoice from #{@payload[:hotel_name]}"
+    )
+  end
+
+  def in_stay_guest_messaging(delivery)
+    assign_delivery(delivery)
+
+    rule_subject = case @payload[:rule_key].to_s
+    when "mid_stay"
+      "How is your stay going at #{@payload[:hotel_name]}?"
+    when "upsell"
+      "Make your stay even better at #{@payload[:hotel_name]}"
+    else
+      "Things to do before checkout at #{@payload[:hotel_name]}"
+    end
+
+    mail(
+      to: @booking.guest_email,
+      subject: rule_subject
+    )
+  end
+
+  def invoice_package(delivery)
+    assign_delivery(delivery)
+    group = Notifications::InvoiceDelivery.load!(delivery:)
+    pdf = Reports::Bookings::GenerateCombinedInvoices.new(
+      hotel: delivery.hotel,
+      invoices: group.invoices,
+      recipient: group.recipient,
+      printed_by: @payload[:requested_by_name]
+    ).generate
+    attachments["combined-invoices-#{@booking.confirmation_token}.pdf"] = {
+      mime_type: "application/pdf",
+      content: pdf
+    }
+
+    mail(
+      to: @payload.fetch(:recipient_email),
+      subject: "Your invoices from #{@payload[:hotel_name]}"
+    )
+  end
+
+  private
+
+  def load_delivery_context
+    @delivery = nil
+    @booking = nil
+    @payload = {}.with_indifferent_access
+    @guest_first_name = "Guest"
+  end
+
+  def assign_delivery(delivery)
+    @delivery = delivery
+    @booking = delivery.booking
+    @payload = delivery.payload.with_indifferent_access
+    @guest_first_name = @payload[:guest_name].to_s.split.first.presence || "Guest"
+  end
+
+  def attach_brand_logo
+    attachments.inline["long-logo.png"] = File.read(
+      Rails.root.join("app/assets/images/logo/long-logo.png")
+    )
+  end
+end

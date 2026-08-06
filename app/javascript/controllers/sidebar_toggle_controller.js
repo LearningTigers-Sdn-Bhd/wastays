@@ -79,18 +79,23 @@ export default class extends Controller {
     sidebar.classList.toggle("w-[260px]", !collapsed)
     sidebar.classList.toggle("w-[84px]", collapsed)
 
-    const labels = sidebar.querySelectorAll(".sidebar-section-label, a.sidebar-nav-link span")
+    const labels = sidebar.querySelectorAll(".sidebar-section-label, .sidebar-nav-link span, .sidebar-label")
     labels.forEach((node) => node.classList.toggle("hidden", collapsed))
 
-    const links = sidebar.querySelectorAll("a.sidebar-nav-link")
+    const chevrons = sidebar.querySelectorAll(".sidebar-chevron")
+    chevrons.forEach((node) => node.classList.toggle("hidden", collapsed))
+
+    const links = sidebar.querySelectorAll(".sidebar-nav-link, .sidebar-header")
     links.forEach((link) => {
       link.classList.toggle("justify-center", collapsed)
-      const label = link.querySelector("span")?.textContent?.trim()
-      if (collapsed && label) {
-        link.setAttribute("title", label)
-      } else {
-        link.removeAttribute("title")
-      }
+      link.removeAttribute("title")
+    })
+
+    const detailsContent = sidebar.querySelectorAll(".sidebar-details-content")
+    detailsContent.forEach((node) => node.classList.toggle("ps-5", !collapsed))
+
+    sidebar.querySelectorAll("details.sidebar-group").forEach((details) => {
+      details.toggleAttribute("open", !collapsed && details.classList.contains("sidebar-group-active"))
     })
 
     const searchInput = sidebar.querySelector('input[type="search"]')
@@ -98,6 +103,8 @@ export default class extends Controller {
     if (searchContainer) {
       searchContainer.classList.toggle("hidden", collapsed)
     }
+
+    sidebar.dispatchEvent(new CustomEvent("sidebar:state-change", { detail: { collapsed } }))
   }
 
   isDesktopCollapsed(sidebar) {

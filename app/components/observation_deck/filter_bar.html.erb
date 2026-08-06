@@ -1,0 +1,72 @@
+<section class="observation-deck__filter-bar" aria-label="Event stream filters" data-controller="observation-filters">
+  <%= form_with url: admin_observation_deck_index_path,
+                method: :get,
+                class: "observation-deck__filter-form",
+                data: { observation_deck_target: "filterForm" } do |f| %>
+    <div class="observation-deck__filter-primary-row">
+      <label class="observation-deck__search-field">
+        <span class="sr-only">Search events</span>
+        <%= helpers.app_icon "search", class: "size-4", aria: { hidden: true } %>
+        <%= f.search_field :query,
+                           value: @params[:query],
+                           placeholder: "Search paths and tags",
+                           autocomplete: "off",
+                           data: { action: "input->observation-deck#search", observation_deck_target: "search" } %>
+      </label>
+
+      <%= f.hidden_field :entry_type, value: @params[:entry_type] %>
+      <%= f.hidden_field :status_group, value: @params[:status_group] %>
+      <div class="observation-deck__filter-group">
+        <span>Event type</span>
+        <nav class="observation-deck__filter-pills" aria-label="Event type">
+          <% ObservationDeck::FilterBar::TYPE_OPTIONS.each do |label, value| %>
+            <%= link_to label, quick_filter_path(:entry_type, value), class: ["observation-deck__filter-pill", ("is-active" if @params[:entry_type] == value.presence)], aria: { current: ("page" if @params[:entry_type] == value.presence) } %>
+          <% end %>
+        </nav>
+      </div>
+      <div class="observation-deck__filter-group">
+        <span>Status</span>
+        <nav class="observation-deck__filter-pills" aria-label="Event status">
+          <% ObservationDeck::FilterBar::STATUS_OPTIONS.each do |label, value| %>
+            <%= link_to label, quick_filter_path(:status_group, value), class: ["observation-deck__filter-pill", ("is-active" if @params[:status_group] == value.presence)], aria: { current: ("page" if @params[:status_group] == value.presence) } %>
+          <% end %>
+        </nav>
+      </div>
+      <div class="observation-deck__filter-actions">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :time_range, label: "Time range", label_hidden: true, size: :sm) do |field| %>
+          <% field.with_select_menu(ObservationDeck::FilterBar::TIME_RANGE_OPTIONS, selected: @params[:time_range], prompt: "Time range", data: { action: "change->observation-filters#submit" }) %>
+        <% end %>
+        <button type="button" class="observation-deck__secondary-button" aria-haspopup="dialog" aria-controls="observation-more-filters" aria-expanded="false" data-observation-filters-target="trigger" data-action="observation-filters#toggle">
+          <%= helpers.app_icon "sliders-horizontal", class: "size-4", aria: { hidden: true } %>
+          More filters
+        </button>
+      </div>
+    </div>
+
+    <dialog id="observation-more-filters" class="observation-deck__filter-dialog" aria-labelledby="observation-more-filters-title" data-observation-filters-target="panel" data-action="cancel->observation-filters#close close->observation-filters#closed submit->observation-filters#closeAfterSubmit">
+      <header>
+        <div><h2 id="observation-more-filters-title">More filters</h2><p>Refine current event stream.</p></div>
+        <button type="button" class="observation-deck__icon-button" aria-label="Close more filters" data-action="observation-filters#close"><%= helpers.app_icon "x", class: "size-4", aria: { hidden: true } %></button>
+      </header>
+      <div class="observation-deck__filter-fields">
+        <label>Request ID <%= f.text_field :request_id, value: @params[:request_id], autocomplete: "off" %></label>
+        <label>Min duration (ms) <%= f.number_field :min_duration, value: @params[:min_duration], min: 0, step: 1 %></label>
+        <label>Exact status <%= f.number_field :exact_status, value: @params[:exact_status], min: 100, max: 599, step: 1 %></label>
+        <label>Tag <%= f.text_field :tags, value: @params[:tags], autocomplete: "off" %></label>
+      </div>
+      <footer><button type="submit" class="observation-deck__primary-button">Apply filters</button></footer>
+    </dialog>
+  <% end %>
+
+  <% if active_filters.any? %>
+    <div class="observation-deck__active-filters" aria-label="Active filters">
+      <% active_filters.each do |label, key| %>
+        <%= link_to admin_observation_deck_index_path(form_params.except(key)), class: "observation-deck__filter-token" do %>
+          <span><%= label %></span>
+          <%= helpers.app_icon "x", class: "size-3", aria: { hidden: true } %>
+        <% end %>
+      <% end %>
+      <%= link_to "Clear filters", @clear_path, class: "observation-deck__clear-filters" %>
+    </div>
+  <% end %>
+</section>

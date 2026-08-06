@@ -1,0 +1,27 @@
+<div id="offcanvas_drawer_container" 
+     class="fixed inset-0 z-[100] hidden" 
+     data-controller="offcanvas"
+     data-offcanvas-variant-value="right"
+     data-offcanvas-open-class="block"
+     data-offcanvas-closed-class="hidden">
+  
+  <!-- Backdrop -->
+  <div class="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm transition-opacity" 
+       data-action="click->offcanvas#close"></div>
+
+  <!-- Drawer Panel -->
+  <div class="fixed inset-y-0 right-0 z-[110] w-full sm:w-[600px] md:w-[800px] lg:w-[1000px] overscroll-contain bg-white shadow-2xl flex flex-col transform transition-transform duration-300 translate-x-full"
+       role="dialog"
+       aria-modal="true"
+       aria-label="Booking details"
+       tabindex="-1"
+       data-offcanvas-target="panel">
+    
+    <turbo-frame id="offcanvas_drawer" class="flex-1 flex flex-col overflow-hidden" src="" data-offcanvas-target="frame">
+      <!-- Content will be loaded here via Turbo -->
+      <div class="flex items-center justify-center h-full">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      </div>
+    </turbo-frame>
+  </div>
+</div>

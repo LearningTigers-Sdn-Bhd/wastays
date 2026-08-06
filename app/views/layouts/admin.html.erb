@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html class="h-full">
   <head>
-    <title><%= content_for(:title) || "Superadmin | WAStays" %></title>
+    <title><%= content_for(:title) || "Admin Panel | WAStays" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
@@ -12,74 +12,45 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="h-full">
+  <body class="h-full" data-theme="panel-light" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
     <!-- Preline CMS-style layout: flex column (header + body row) -->
-    <div class="flex flex-col h-screen bg-layer-alt">
+    <div class="flex flex-col h-screen bg-background">
 
-      <!-- ═══ Top Navbar ═══ -->
-      <header class="sticky top-0 z-[60] w-full bg-layer border-b border-layer-line">
-        <div class="flex items-center h-14 px-4 gap-x-3">
-
-          <!-- Mobile hamburger -->
-          <button type="button" class="lg:hidden shrink-0 inline-flex justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggle" aria-label="Toggle navigation">
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-
-          <!-- Desktop sidebar collapse -->
-          <button type="button" class="hidden lg:inline-flex shrink-0 justify-center items-center size-8 rounded-lg text-neutral-text-secondary hover:bg-surface-hover transition-colors" data-controller="sidebar-toggle" data-action="click->sidebar-toggle#toggleDesktop" aria-label="Collapse sidebar">
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></svg>
-          </button>
-
-          <!-- Brand -->
-          <a href="<%= admin_dashboard_path %>" class="shrink-0 flex items-center" aria-label="WAStays">
+      <%= render PanelsUI::Navbar.new(key: "admin") do |navbar| %>
+        <% navbar.with_brand do %>
+          <a href="<%= admin_dashboard_path %>" class="flex items-center" aria-label="WAStays">
             <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>
           </a>
-
-          <!-- Separator -->
-          <div class="hidden sm:block w-px h-5 bg-layer-line"></div>
-
-          <!-- Breadcrumbs slot -->
-          <div class="hidden sm:flex items-center">
-            <% if content_for?(:breadcrumbs) %>
-              <%= yield :breadcrumbs %>
-            <% end %>
-          </div>
-
-          <!-- Spacer -->
-          <div class="flex-1"></div>
-
-          <!-- Right Actions -->
-          <div class="flex items-center gap-x-1">
-            <% if content_for?(:header_actions) %>
-              <%= yield :header_actions %>
-            <% end %>
-
-            <%= render "shared/navigation/command_palette", endpoint: admin_global_search_index_path, placeholder: "Search pages, bookings, hotels..." %>
-
-            <!-- Help Link -->
-            <a class="navbar-link hidden sm:flex" href="<%= help_center_path %>">
-              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              Help
-            </a>
-
-            <!-- View Website -->
-            <a class="hidden sm:flex items-center gap-x-1.5 py-1.5 px-2.5 text-sm text-navbar-nav-foreground rounded-lg hover:bg-navbar-nav-hover transition-colors duration-150" href="<%= root_path %>" target="_blank">
-              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Website
-            </a>
-
-            <!-- Divider -->
-            <div class="w-px h-5 bg-layer-line mx-1 hidden sm:block"></div>
-
-            <!-- Profile Dropdown -->
-            <%= render "shared/navigation/admin_profile_dropdown" %>
-          </div>
-        </div>
-      </header>
+        <% end %>
+        <% navbar.with_center do %>
+          <%= render PanelsUI::CommandPalette.new(endpoint: admin_global_search_index_path, placeholder: "Search pages, bookings, hotels...") %>
+        <% end %>
+        <% navbar.with_actions do %>
+          <a class="panel-navbar__action" href="<%= root_path %>" target="_blank" rel="noopener">
+            <%= cached_icon "external-link", class: "size-3.5" %>
+            Website
+          </a>
+          <%= render "shared/navigation/navbar_alerts" %>
+        <% end %>
+        <% navbar.with_profile do %>
+          <%= render PanelsUI::ProfileMenu.new(
+                id: "admin-profile",
+                display_name: current_user.name || "Admin User",
+                secondary_text: current_user.email,
+                trigger_label: "Open account menu"
+              ) do |menu| %>
+            <% menu.with_item(label: "My account", href: edit_admin_profile_path, icon: "user") %>
+            <% menu.with_item(label: "Settings", href: edit_admin_profile_path, icon: "settings") %>
+            <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
+            <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
+          <% end %>
+        <% end %>
+      <% end %>
 
       <!-- ═══ Body: Sidebar + Content ═══ -->
       <div class="flex flex-1 overflow-hidden">
@@ -88,27 +59,37 @@
         <%= render 'shared/navigation/admin_sidebar' %>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col overflow-hidden overflow-y-auto custom-scrollbar">
-          <div class="p-5 sm:p-6 space-y-5">
-            <%= render "shared/feedback/flash_toasts", flash: flash %>
-
-            <div class="grid grid-cols-1 <%= content_for?(:right_sidebar) ? 'xl:grid-cols-4 gap-6' : '' %>">
-              <div class="<%= content_for?(:right_sidebar) ? 'xl:col-span-3' : '' %>">
-                <%= yield %>
+        <main class="flex-1 flex flex-col overflow-hidden">
+          <!-- ═══ Breadcrumb Bar ═══ -->
+          <% if admin_breadcrumb_parts.present? %>
+            <div class="flex h-[37px] shrink-0 items-center border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground sm:px-6">
+              <div class="w-full overflow-x-auto overscroll-x-contain whitespace-nowrap custom-scrollbar">
+                <%= render_admin_breadcrumbs %>
               </div>
+            </div>
+          <% end %>
 
-              <% if content_for?(:right_sidebar) %>
-                <div class="xl:col-span-1 space-y-6">
-                  <%= yield :right_sidebar %>
+          <div class="flex-1 overflow-y-auto custom-scrollbar">
+            <div class="panel-page space-y-5">
+              <div class="grid grid-cols-1 <%= content_for?(:right_sidebar) ? 'xl:grid-cols-4 gap-6' : '' %>">
+                <div class="<%= content_for?(:right_sidebar) ? 'xl:col-span-3' : '' %>">
+                  <%= yield %>
                 </div>
-              <% end %>
+
+                <% if content_for?(:right_sidebar) %>
+                  <div class="xl:col-span-1 space-y-6">
+                    <%= yield :right_sidebar %>
+                  </div>
+                <% end %>
+              </div>
             </div>
           </div>
         </main>
       </div>
     </div>
 
-    <%= render 'shared/navigation/admin_mobile_nav' %>
     <%= render 'shared/turbo_confirm' %>
+    <%= render PanelsUI::ToastViewport.new %>
+    <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
   </body>
 </html>

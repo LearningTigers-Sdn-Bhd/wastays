@@ -33,5 +33,16 @@ RSpec.describe GuestArrival::StartPreCheckin do
       expect(result.success?).to be(false)
       expect(result.message).to include('Failed to start pre-checkin: boom')
     end
+
+    it 'returns existing pre-checkin when a concurrent create wins first' do
+      existing = build(:pre_checkin, booking: booking)
+      allow(booking).to receive(:pre_checkin).and_return(nil, nil, existing)
+      allow(booking).to receive(:create_pre_checkin!).and_raise(ActiveRecord::RecordNotUnique)
+
+      result = described_class.new(booking).call
+
+      expect(result.success?).to be(true)
+      expect(result.pre_checkin).to eq(existing)
+    end
   end
 end

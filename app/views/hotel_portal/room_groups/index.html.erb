@@ -1,0 +1,139 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<%# A failed rename lives on @room_group; swap it into the list so the row shows
+    the attempted name and its error instead of the persisted record. %>
+<% editing_id = @room_group&.persisted? ? @room_group.id : nil %>
+<% groups = @room_groups.map { |group| group.id == editing_id ? @room_group : group } %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "manage-room-groups-sheet",
+          side: :right,
+          size: :md,
+          title: "Manage Room Groups",
+          description: "Group room categories into hotel zones, such as Left Wing or Main Tower.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="space-y-6 py-2">
+          <section aria-labelledby="add-room-group-heading" class="space-y-3">
+            <h2 id="add-room-group-heading" class="text-sm font-semibold text-foreground">Add a group</h2>
+
+            <%= form_with model: [ @hotel, @new_room_group ],
+                          id: "add-room-group-form",
+                          class: "flex items-start gap-2" do |form| %>
+              <%# Explicit control ids: the add form and one rename form per group
+                  all bind :name on the same model in a single document. %>
+              <%= render PanelsUI::FormField.new(
+                    form: form,
+                    attribute: :name,
+                    id: "add-room-group-name",
+                    label: "New group name",
+                    label_hidden: true,
+                    required: true,
+                    class: "flex-1") do |field| %>
+                <% field.with_input(placeholder: "e.g. Left Wing, Main Tower", autocomplete: "off") %>
+              <% end %>
+
+              <%= render PanelsUI::Button.new(
+                    as: :button,
+                    type: :submit,
+                    size: :sm,
+                    class: "shrink-0",
+                    data: { turbo_submits_with: "Adding…" }) do %>
+                <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+                Add
+              <% end %>
+            <% end %>
+          </section>
+
+          <section aria-labelledby="room-groups-list-heading" class="space-y-3 border-t border-border pt-5">
+            <h2 id="room-groups-list-heading" class="text-sm font-semibold text-foreground">
+              Existing groups (<%= groups.size %>)
+            </h2>
+
+            <% if groups.any? %>
+              <div class="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
+                <% groups.each do |group| %>
+                  <%= render PanelsUI::Collapsible.new(
+                        id: "room-group-#{group.id}",
+                        open: group.id == editing_id,
+                        trigger_class: "px-3 py-3 hover:bg-muted/50",
+                        content_class: "border-t border-border bg-muted/30") do |row| %>
+                    <% row.with_trigger do %>
+                      <span class="flex min-w-0 flex-col text-left">
+                        <span class="truncate text-sm font-medium text-foreground"><%= group.name %></span>
+                        <span class="text-xs text-muted-foreground">
+                          <%= pluralize(group.room_types.size, "category") %> assigned
+                        </span>
+                      </span>
+                      <%= app_icon "chevron-down",
+                                   class: "panel-collapsible__indicator size-4 text-muted-foreground",
+                                   aria: { hidden: true } %>
+                    <% end %>
+
+                    <% row.with_body do %>
+                      <div class="space-y-3 px-3 py-3">
+                        <%= form_with model: [ @hotel, group ],
+                                      id: "edit-room-group-#{group.id}-form",
+                                      class: "flex items-start gap-2" do |form| %>
+                          <%= render PanelsUI::FormField.new(
+                                form: form,
+                                attribute: :name,
+                                id: "edit-room-group-#{group.id}-name",
+                                label: "Group name",
+                                label_hidden: true,
+                                required: true,
+                                class: "flex-1") do |field| %>
+                            <% field.with_input(autocomplete: "off") %>
+                          <% end %>
+
+                          <%= render PanelsUI::Button.new(
+                                as: :button,
+                                type: :submit,
+                                size: :sm,
+                                class: "shrink-0",
+                                data: { turbo_submits_with: "Saving…" }) do %>
+                            Save
+                          <% end %>
+                        <% end %>
+
+                        <%= render PanelsUI::Button.new(
+                              href: hotel_room_group_path(@hotel, group),
+                              variant: :ghost,
+                              size: :sm,
+                              class: "text-destructive",
+                              data: {
+                                turbo_method: :delete,
+                                turbo_confirm: "Delete this room group? Assigned room categories will become unassigned.",
+                                turbo_confirm_tone: "destructive"
+                              }) do %>
+                          <%= app_icon "trash-2", class: "size-4", aria: { hidden: true } %>
+                          Delete group
+                        <% end %>
+                      </div>
+                    <% end %>
+                  <% end %>
+                <% end %>
+              </div>
+            <% else %>
+              <div class="rounded-md border border-dashed border-border px-4 py-8 text-center">
+                <%= app_icon "layers", class: "mx-auto size-6 text-muted-foreground", aria: { hidden: true } %>
+                <p class="mt-2 text-sm text-muted-foreground">No room groups defined yet.</p>
+              </div>
+            <% end %>
+          </section>
+        </div>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Close
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
