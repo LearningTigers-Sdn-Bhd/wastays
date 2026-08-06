@@ -83,7 +83,15 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
         expect(page).to have_link("Reports", href: hotel_reports_path(hotel))
         expect(page).to have_css("a[href='#{hotel_folios_path(hotel)}'][target='_blank'][rel='noopener noreferrer']")
         expect(page).to have_css("a[href='#{hotel_reports_path(hotel)}'][target='_blank'][rel='noopener noreferrer']")
+
+        # Leaving the tab is worth saying before the click, not after.
+        expect(page).to have_css("a[href='#{hotel_folios_path(hotel)}'] svg.panel-sidebar__external")
+        expect(page).to have_css("a[href='#{hotel_reports_path(hotel)}'] svg.panel-sidebar__external")
+        expect(page).to have_css("a[href='#{hotel_reports_path(hotel)}'] .sr-only", text: "(opens in a new tab)", visible: :all)
       end
+
+      # Rows that stay in this tab say nothing.
+      expect(page).to have_no_css("a[href='#{hotel_dashboard_path(hotel)}'] svg.panel-sidebar__external")
 
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Financial")
       expect(page).to have_no_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel))
