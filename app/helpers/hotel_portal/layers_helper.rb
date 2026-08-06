@@ -21,6 +21,13 @@ module HotelPortal
         route: :hotel_folios_path,
         search_text: "Financials Folios Ledger Accounts Receivable External Accounts Invoices Payment Record Statements Aging Billing Cashiering",
         permission: [ "view_bookings", "view_reports", "manage_corporate_accounts" ]
+      },
+      reports: {
+        label: "Reports",
+        icon: "chart-bar",
+        route: :hotel_reports_path,
+        search_text: "Reports Financial Summary Daily Report Breakdown Payouts Tax Compliance Guest Reports Night Audit History Operation Logs Notification Logs Inventory Audit Logs",
+        permission: [ "view_reports", "view_audit_logs" ]
       }
     }.freeze
 

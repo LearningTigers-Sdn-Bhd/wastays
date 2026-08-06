@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class HotelPortal::NotificationLogsController < HotelPortal::BaseController
+class HotelPortal::NotificationLogsController < HotelPortal::ReportsBaseController
   before_action :authorize_view_notification_logs!
   before_action :authorize_manage_bookings!, only: [ :resend ]
 

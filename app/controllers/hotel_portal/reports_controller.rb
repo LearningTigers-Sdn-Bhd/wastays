@@ -4,7 +4,7 @@ require "csv"
 require "set"
 
 module HotelPortal
-  class ReportsController < HotelPortal::BaseController
+  class ReportsController < HotelPortal::ReportsBaseController
     include FinancialFiltering
     include ReportDateFiltering
 

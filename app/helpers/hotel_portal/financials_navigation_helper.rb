@@ -36,7 +36,7 @@ module HotelPortal
     end
 
     def hotel_financials_landing_path
-      hotel_financials_visible_sidebar_sections.first&.items&.first&.path
+      hotel_first_nav_path(hotel_financials_visible_sidebar_sections)
     end
 
     def hotel_financials_breadcrumb_parts

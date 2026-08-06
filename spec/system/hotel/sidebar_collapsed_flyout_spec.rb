@@ -12,7 +12,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   before do
     driven_by(:cuprite)
 
-    %w[view_reports view_bookings].each do |slug|
+    %w[view_reports view_bookings manage_hotel_profile].each do |slug|
       permission = Permission.find_by(slug: slug) || create(:permission, name: slug.tr("_", " ").titleize, slug: slug)
       create(:role_permission, role: role, permission: permission)
     end
@@ -23,21 +23,21 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   end
 
   it "expands the compact rail on hover and collapses after pointer leave" do
-    expect(page).to have_css("#hotel-sidebar[data-collapsed='true']")
+    expect(page).to have_css("#hotel-reports-sidebar[data-collapsed='true']")
     compact_section_spacing = page.evaluate_script(<<~JS)
       (() => {
-        const groups = Array.from(document.querySelectorAll("#hotel-sidebar .panel-sidebar__section"))
+        const groups = Array.from(document.querySelectorAll("#hotel-reports-sidebar .panel-sidebar__section"))
         const styles = window.getComputedStyle(groups[0])
         return parseFloat(styles.marginTop) + parseFloat(styles.paddingTop)
       })()
     JS
     expect(compact_section_spacing).to be <= 8
 
-    find("#hotel-sidebar").hover
+    find("#hotel-reports-sidebar").hover
 
-    expect(page).to have_css("#hotel-sidebar[data-collapsed='false'][data-locked='false']")
-    within("#hotel-sidebar") do
-      expect(page).to have_link("Dashboard", visible: :visible)
+    expect(page).to have_css("#hotel-reports-sidebar[data-collapsed='false'][data-locked='false']")
+    within("#hotel-reports-sidebar") do
+      expect(page).to have_link("Tax & Compliance", visible: :visible)
       expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial", visible: :visible)
       expect(page).to have_no_css(".panel-sidebar__flyout[data-state='open']")
       expect(page).to have_no_css("[role='tooltip'][data-state='open']", visible: :visible)
@@ -45,13 +45,13 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
     find("main").hover
 
-    expect(page).to have_css("#hotel-sidebar[data-collapsed='true'][data-locked='false']")
+    expect(page).to have_css("#hotel-reports-sidebar[data-collapsed='true'][data-locked='false']")
   end
 
   xit "pins a clicked group until it is dismissed" do
     find('button[aria-label="Lock navigation open"]').click
 
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       find("summary.sidebar-group-parent", text: "Financial", visible: :all).click
 
       expect(page).to have_css("details.sidebar-group-active[open][data-sidebar-pinned='true']")
@@ -59,7 +59,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
     find("main").hover
 
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       expect(page).to have_css("details.sidebar-group-active[open][data-sidebar-pinned='true']")
 
       find("summary.sidebar-group-parent", text: "Financial", visible: :all).hover
@@ -67,25 +67,25 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
     find("main").hover
 
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       expect(page).to have_css("details.sidebar-group-active[open][data-sidebar-pinned='true']")
     end
 
     page.send_keys(:escape)
 
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       expect(page).to have_no_css("details.sidebar-group[open]")
     end
 
     find('button[aria-label="Unlock navigation"]').click
 
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       expect(page).to have_css("details.sidebar-group-active[open]")
     end
   end
 
   it "renders report flyout leaves directly in a compact rail, without a wrapping Reports group" do
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       open_popover_with_keyboard(find("button.panel-sidebar__group-trigger[aria-label='Financial']", visible: :all))
       expect(page).to have_css(".panel-sidebar__flyout[data-state='open']")
       expect(page).to have_no_css("button.panel-sidebar__group-trigger[aria-label='Reports']", visible: :all)
@@ -95,7 +95,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   end
 
   it "closes compact rail flyouts on Escape" do
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       open_popover_with_keyboard(find("button.panel-sidebar__group-trigger[aria-label='Financial']", visible: :all))
 
       expect(page).to have_css(".panel-sidebar__flyout[data-state='open']")
@@ -103,7 +103,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
     page.send_keys(:escape)
 
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       expect(page).to have_no_css(".panel-sidebar__flyout[data-state='open']", visible: :all)
     end
   end
@@ -117,19 +117,22 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
       document.dispatchEvent(new Event("turbo:load"))
     JS
 
-    within("#hotel-sidebar") do
+    within("#hotel-reports-sidebar") do
       expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
       expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] .panel-sidebar__group[data-state='open']")
     end
   end
 
+  # Two groups open at once is only possible in the operations layer now --
+  # reports has a single group -- so this drives that sidebar directly.
   it "keeps active and user-opened groups expanded through Turbo navigation" do
+    visit hotel_front_desk_path(hotel)
     find('button[aria-label="Lock navigation open"]').click
 
     within("#hotel-sidebar") do
-      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
-      find("button.panel-sidebar__group-trigger", text: "Front Office", visible: :all).click
-      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Front Office")
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Front Office")
+      find("button.panel-sidebar__group-trigger", text: "Planning & Inventory", visible: :all).click
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Planning & Inventory")
     end
 
     page.execute_script(<<~JS)
@@ -140,17 +143,17 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     JS
 
     within("#hotel-sidebar") do
-      click_link "Refund Report"
+      click_link "Stay View"
     end
 
-    expect(page).to have_current_path(refund_report_hotel_reports_path(hotel))
+    expect(page).to have_current_path(hotel_stay_view_path(hotel))
     expect(page.evaluate_script("window.sidebarActiveGroupOpenBeforeVisit")).to be(true)
     expect(page).to have_css("#hotel-sidebar[data-collapsed='false'][data-locked='true']")
 
     within("#hotel-sidebar") do
-      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Refund Report")
-      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
-      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Front Office")
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Stay View")
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Front Office")
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Planning & Inventory")
     end
   end
 
