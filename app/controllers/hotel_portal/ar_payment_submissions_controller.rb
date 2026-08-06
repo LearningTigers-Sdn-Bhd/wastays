@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class ArPaymentSubmissionsController < BaseController
+  class ArPaymentSubmissionsController < FinancialsBaseController
     before_action :authorize_manage_ar_payments!
     before_action :set_submission, only: %i[show reject]
 

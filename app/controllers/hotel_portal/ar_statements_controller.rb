@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class ArStatementsController < BaseController
+  class ArStatementsController < FinancialsBaseController
     before_action :authorize_view_reports!
     before_action :set_relationship, only: :show
 

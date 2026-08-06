@@ -41,17 +41,20 @@ RSpec.describe 'Hotel layout shell', type: :system do
       # collapses and the label is hidden.
       expect(portal_link).to have_css("svg.panel-sidebar__icon")
     end
-    expect(page).to have_css('button.panel-sidebar__group-trigger', text: 'Front Office', visible: :all)
+    expect(page).to have_css('.panel-sidebar__section-label', text: /Front Desk/i)
     expect(page).to have_link('Reservations', href: hotel_front_desk_path(hotel), visible: :all)
     expect(page).to have_link('Rates & Inventory', href: hotel_inventory_index_path(hotel), visible: :all)
     expect(page).to have_link('Guest Records', href: hotel_guests_path(hotel), visible: :all)
     expect(page).to have_no_link('Hotel Details', href: edit_hotel_profile_path(hotel), visible: :all)
     expect(page).to have_no_link('Room Categories', href: hotel_room_types_path(hotel), visible: :all)
     expect(page).to have_no_link('Nearby Attractions', href: hotel_nearby_attractions_path(hotel), visible: :all)
-    expect(page).to have_text('Reports')
-    expect(page).to have_link('Summary', href: hotel_reports_path(hotel), visible: :all)
+    # Reports is a layer of its own now: operations carries the door, not the
+    # individual report pages.
+    expect(page).to have_link('Reports', href: hotel_reports_path(hotel), visible: :all)
+    expect(page).to have_link('Financials', href: hotel_folios_path(hotel), visible: :all)
+    expect(page).to have_no_link('Summary', href: hotel_reports_path(hotel), visible: :all)
     expect(page).to have_link('Run Night Audit', href: hotel_night_audit_run_path(hotel), visible: :all)
-    expect(page).to have_link('Night Audit History', href: hotel_reports_night_audits_path(hotel), visible: :all)
+    expect(page).to have_no_link('Night Audit History', href: hotel_reports_night_audits_path(hotel), visible: :all)
     expect(page).to have_css('#toast-viewport[data-controller="toast"]')
     expect(page).to have_css("header.panel-navbar[data-sticky='true']")
     expect(page).to have_css(".panel-navbar__center [data-controller='panels-ui--command-palette']")
@@ -68,8 +71,8 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']")
     expect(page).to have_no_css("nav[aria-label='Mobile navigation']", visible: :all)
     expect(page).to have_css("#hotel-sidebar a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
-    expect(page).to have_css("#hotel-sidebar button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
-    expect(page).to have_no_css("#hotel-sidebar button.panel-sidebar__group-trigger[aria-current='page']", visible: :all)
+    # Operations is flat, so it has no group triggers left to style.
+    expect(page).to have_no_css("#hotel-sidebar button.panel-sidebar__group-trigger", visible: :all)
   end
 
   it "renders the reduced Navbar while the hotel shell is locked" do
