@@ -7,10 +7,12 @@ RSpec.describe "Hotel portal global search", type: :request do
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
 
   before do
-    Permission.find_or_create_by!(slug: "manage_account") { |permission| permission.name = "Manage Account" }
-    Permission.find_or_create_by!(slug: "manage_hotel_profile") { |permission| permission.name = "Manage Hotel Profile" }
-    RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: "manage_account"))
-    RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: "manage_hotel_profile"))
+    # The palette only offers pages the role can open, so an owner needs the
+    # grants behind the pages these examples look for.
+    %w[manage_account manage_hotel_profile manage_requests view_bookings].each do |slug|
+      Permission.find_or_create_by!(slug: slug) { |permission| permission.name = slug.tr("_", " ").titleize }
+      RolePermission.find_or_create_by!(role: role, permission: Permission.find_by!(slug: slug))
+    end
     UserRole.find_or_create_by!(user: user, role: role)
     UserHotelAccess.find_or_create_by!(user: user, hotel: hotel, role: role)
     sign_in_as(user)

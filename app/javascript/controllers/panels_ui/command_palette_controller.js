@@ -171,19 +171,26 @@ export default class extends Controller {
     if (event.key === "Enter") {
       event.preventDefault()
       const item = this.resultsData[this.activeIndex]
-      if (item) this.navigateTo(item.url)
+      if (item) this.navigateTo(item.url, item.external)
     }
   }
 
   choose(event) {
     const index = Number(event.currentTarget.dataset.index)
     const item = this.resultsData[index]
-    if (item) this.navigateTo(item.url)
+    if (item) this.navigateTo(item.url, item.external)
   }
 
-  navigateTo(url) {
+  // Results the server marks `external` belong to another layer. The sidebar
+  // opens those in a new tab, so the palette does too -- reaching the same page
+  // two ways should not leave you in two different places.
+  navigateTo(url, external = false) {
     if (!url) return
     this.close()
+    if (external) {
+      window.open(url, "_blank", "noopener")
+      return
+    }
     if (window.Turbo && typeof window.Turbo.visit === "function") {
       window.Turbo.visit(url)
     } else {

@@ -2,7 +2,7 @@
 
 module HotelPortal
   module Reports
-    class NightAuditsController < HotelPortal::BaseController
+    class NightAuditsController < HotelPortal::ReportsBaseController
       before_action :authorize_night_audit_report_access!
       before_action :set_night_audit, only: :show
 

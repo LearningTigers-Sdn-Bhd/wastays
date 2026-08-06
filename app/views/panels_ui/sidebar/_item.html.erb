@@ -21,6 +21,13 @@
         <span class="sr-only"><%= entry.label %></span>
       <% else %>
         <span class="panel-sidebar__label"><%= entry.label %></span>
+        <%# An outbound row leaves this tab, so say so before it is clicked
+            rather than after. Hidden from the accessibility tree: the label
+            below already carries the same fact in words. %>
+        <% if entry.external? %>
+          <%= component.helpers.app_icon "arrow-up-right", class: "panel-sidebar__external", aria: { hidden: "true" } %>
+          <span class="sr-only">(opens in a new tab)</span>
+        <% end %>
       <% end %>
     </a>
 <%

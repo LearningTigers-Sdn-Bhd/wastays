@@ -40,52 +40,62 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
     sign_in_through_ui(user)
   end
 
-  it "keeps the expanded reports group subtle while strongly styling its active child" do
-    visit hotel_reports_path(hotel)
-
-    within("#hotel-sidebar") do
-      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] .panel-sidebar__group[data-state='open']")
-      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
-      expect(page).to have_no_css("button.panel-sidebar__group-trigger[aria-current='page']", visible: :all)
-      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
-    end
-  end
-
   it "clusters main navigation by staff role" do
     visit hotel_dashboard_path(hotel)
 
     within("#hotel-sidebar") do
       expect(page).to have_link("Dashboard")
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
-      expect(page).to have_css(".panel-sidebar__section-label", text: "Billing")
-      expect(page).to have_css(".panel-sidebar__section-label", text: "Reports")
+      # Operations is flat: sections carry the grouping, no dropdowns at all.
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", visible: :all)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Front Desk/i)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Housekeeping/i)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Planning/i)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Day Close/i)
+      expect(page).to have_no_css(".panel-sidebar__section-label", text: "Billing")
+      expect(page).to have_no_css(".panel-sidebar__section-label", text: "Reports")
+      expect(page).to have_css(".panel-sidebar__section-label", text: "More")
 
-      within(".panel-sidebar__section[data-section-label='']") do
-        expect(page).to have_link("Dashboard")
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
-        expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel), visible: :all)
-        expect(page).to have_link("Stay View", visible: :all)
-        expect(page).to have_link("Requests", visible: :all)
-        expect(page).to have_link("Run Night Audit", visible: :all)
-        expect(page).to have_link("Rates & Inventory", visible: :all)
-        expect(page).to have_link("Guest Records", visible: :all)
+      within(".panel-sidebar__section[data-section-label='Front Desk']") do
+        expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel))
+        expect(page).to have_link("Stay View")
+        expect(page).to have_link("Guest Records")
       end
 
-      within(".panel-sidebar__section[data-section-label='Billing']") do
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Cashiering")
-        expect(page).to have_no_link("Folios")
-        expect(page).to have_no_link("Payouts")
+      # This role holds manage_requests but not the housekeeping-task grants.
+      within(".panel-sidebar__section[data-section-label='Housekeeping']") do
+        expect(page).to have_link("Requests")
       end
 
-      within(".panel-sidebar__section[data-section-label='Reports']") do
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial")
-        expect(page).to have_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel))
-        expect(page).to have_link("Guest Reports", href: guest_reports_hotel_reports_path(hotel))
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting")
-        expect(page).to have_link("Notification Logs", visible: :all)
+      within(".panel-sidebar__section[data-section-label='Planning']") do
+        expect(page).to have_link("Rates & Inventory")
       end
+
+      within(".panel-sidebar__section[data-section-label='Day Close']") do
+        expect(page).to have_link("Run Night Audit")
+      end
+
+      # Cashiering and Folios live in the financials layer now; operations only
+      # keeps the door to it, which opens in its own tab.
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Cashiering")
+      expect(page).to have_no_link("Payouts")
+      within(".panel-sidebar__section[data-section-label='More']") do
+        expect(page).to have_link("Financials", href: hotel_folios_path(hotel))
+        expect(page).to have_link("Reports", href: hotel_reports_path(hotel))
+        expect(page).to have_css("a[href='#{hotel_folios_path(hotel)}'][target='_blank'][rel='noopener noreferrer']")
+        expect(page).to have_css("a[href='#{hotel_reports_path(hotel)}'][target='_blank'][rel='noopener noreferrer']")
+
+        # Leaving the tab is worth saying before the click, not after.
+        expect(page).to have_css("a[href='#{hotel_folios_path(hotel)}'] svg.panel-sidebar__external")
+        expect(page).to have_css("a[href='#{hotel_reports_path(hotel)}'] svg.panel-sidebar__external")
+        expect(page).to have_css("a[href='#{hotel_reports_path(hotel)}'] .sr-only", text: "(opens in a new tab)", visible: :all)
+      end
+
+      # Rows that stay in this tab say nothing.
+      expect(page).to have_no_css("a[href='#{hotel_dashboard_path(hotel)}'] svg.panel-sidebar__external")
+
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Financial")
+      expect(page).to have_no_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel))
+      expect(page).to have_no_link("Notification Logs", visible: :all)
 
       expect(page).to have_no_link("Room Categories")
       expect(page).to have_no_link("Transaction Code Reference")
@@ -93,30 +103,6 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Team Access")
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "System Logs")
       expect(page).to have_no_link("Your Plan")
-    end
-  end
-
-  it "renders report groups directly under the Reports section, without a wrapping dropdown" do
-    visit hotel_reports_path(hotel)
-
-    within("#hotel-sidebar") do
-      within(".panel-sidebar__section[data-section-label='Reports']") do
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial")
-        expect(page).to have_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel))
-        expect(page).to have_link("Guest Reports", href: guest_reports_hotel_reports_path(hotel))
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting")
-        expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Reports")
-      end
-      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
-    end
-  end
-
-  it "opens the active report group directly, without a wrapping Reports dropdown" do
-    visit hotel_reports_path(hotel)
-
-    within("#hotel-sidebar") do
-      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
-      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
     end
   end
 
@@ -147,15 +133,13 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_no_link("Settings")
       expect(page).to have_no_link("Homepage")
       expect(page).to have_link("Run Night Audit", visible: :all)
-      expect(page).to have_link("Night Audit History", href: hotel_reports_night_audits_path(hotel), visible: :all)
+      expect(page).to have_no_link("Night Audit History", href: hotel_reports_night_audits_path(hotel), visible: :all)
 
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Cashiering")
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
-      expect(page).to have_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel), visible: :all)
-      expect(page).to have_link("Guest Reports", href: guest_reports_hotel_reports_path(hotel), visible: :all)
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting", visible: :all)
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", visible: :all)
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Cashiering")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
+      expect(page).to have_no_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel), visible: :all)
+      expect(page).to have_no_link("Guest Reports", href: guest_reports_hotel_reports_path(hotel), visible: :all)
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Billing", visible: :all)
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Reports", visible: :all)
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "System Logs", visible: :all)
@@ -174,8 +158,8 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_no_link("Your Plan", href: hotel_plan_path(hotel), visible: :all)
       expect(page).to have_no_text("#<struct")
 
-      expect(page).to have_css(".panel-sidebar__section-label", text: "Billing")
-      expect(page).to have_css(".panel-sidebar__section-label", text: "Reports")
+      expect(page).to have_no_css(".panel-sidebar__section-label", text: "Billing")
+      expect(page).to have_no_css(".panel-sidebar__section-label", text: "Reports")
     end
   end
 

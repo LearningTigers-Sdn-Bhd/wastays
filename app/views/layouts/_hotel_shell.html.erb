@@ -34,7 +34,7 @@
         <% end %>
         <% unless locked_hotel_portal_shell? %>
           <% navbar.with_center do %>
-            <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel), placeholder: "Search dashboard pages...") %>
+            <%= render PanelsUI::CommandPalette.new(endpoint: hotel_global_search_index_path(current_hotel, layer: navigation_key), placeholder: "Search dashboard pages...") %>
           <% end %>
         <% end %>
         <% unless locked_hotel_portal_shell? %>
@@ -61,7 +61,10 @@
 
       <div class="flex flex-1 overflow-hidden">
         <% unless locked_hotel_portal_shell? %>
-          <%= render sidebar_partial %>
+          <%= render "shared/navigation/layer_sidebar",
+                     key: navigation_key,
+                     home_path: sidebar_home_path,
+                     sections: sidebar_sections %>
         <% end %>
 
         <main class="flex-1 flex flex-col overflow-hidden">

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class HotelPortal::AuditLogsController < HotelPortal::BaseController
+class HotelPortal::AuditLogsController < HotelPortal::ReportsBaseController
   before_action -> { require_feature!("full_audit_trail") }
 
   def index
