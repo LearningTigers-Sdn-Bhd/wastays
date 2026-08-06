@@ -1,0 +1,21 @@
+<%# The sidebar for one hotel portal layer. Layers differ only in which
+    navigation tree they carry and where "home" is, so they share this render
+    and pass those in -- the portal identity, collapse behavior, and header
+    are the same wherever you are in the portal.
+
+    `key` namespaces the DOM ids (#<key>-sidebar) and the persisted group
+    state, so each layer stays independently addressable. Rail collapse state
+    is deliberately *not* keyed here: the shell passes one navigation_state_key
+    for the whole portal, so a collapsed rail stays collapsed across layers. %>
+<%= render PanelsUI::Sidebar.new(
+      key: key,
+      home_path: home_path,
+      sections: sections,
+      collapsible: true,
+      searchable: false,
+      permanent: true
+    ) do |sidebar| %>
+  <% sidebar.with_header do %>
+    <%= render "shared/navigation/portal_label", label: "Hotel Portal", icon: "hotel", href: hotel_dashboard_path(current_hotel) %>
+  <% end %>
+<% end %>

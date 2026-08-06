@@ -1,7 +1,8 @@
 <%= render layout: "layouts/hotel_shell", locals: {
-      sidebar_partial: "shared/navigation/hotel_settings_sidebar",
       navigation_key: "hotel-settings",
       navigation_state_key: "hotel",
+      sidebar_home_path: hotel_settings_landing_path,
+      sidebar_sections: hotel_settings_visible_sidebar_sections,
       breadcrumb_parts: hotel_settings_breadcrumb_parts,
       breadcrumb_markup: render_hotel_settings_breadcrumbs
     } do %>
