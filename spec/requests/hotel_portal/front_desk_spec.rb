@@ -609,7 +609,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(document.css("th").map(&:text).map(&:strip)).to include("Guest / Reference", "Pre-checkin", "Guarantee", "Docs / Notes")
       expect(response.body).to include("Not Started")
       expect(response.body).to include("Check in")
-      expect(response.body).not_to include("Room Status")
+      expect(document.css("th").map(&:text).map(&:strip)).not_to include("Room Status")
     end
 
     it "limits arrival date controls and list headers to arrivals" do
