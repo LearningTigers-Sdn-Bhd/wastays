@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class ArPaymentsController < BaseController
+  class ArPaymentsController < FinancialsBaseController
     before_action :authorize_view_reports!
     before_action :authorize_manage_ar_payments!, only: %i[new create eligible_invoices]
 

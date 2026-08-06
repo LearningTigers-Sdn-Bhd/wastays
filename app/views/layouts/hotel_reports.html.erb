@@ -1,0 +1,10 @@
+<%= render layout: "layouts/hotel_shell", locals: {
+      navigation_key: "hotel-reports",
+      navigation_state_key: "hotel",
+      sidebar_home_path: hotel_reports_landing_path,
+      sidebar_sections: hotel_reports_visible_sidebar_sections,
+      breadcrumb_parts: hotel_reports_breadcrumb_parts,
+      breadcrumb_markup: render_hotel_reports_breadcrumbs
+    } do %>
+  <%= yield %>
+<% end %>

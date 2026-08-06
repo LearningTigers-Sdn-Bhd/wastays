@@ -119,6 +119,18 @@
     @apply size-4 shrink-0 ms-auto transition-transform;
   }
 
+  /* Sits where a chevron would on a group row, so outbound rows and expandable
+     rows share one trailing-glyph rhythm. Quieter than the label until hover:
+     it is a property of the link, not a thing to aim at. */
+  .panel-sidebar__external {
+    @apply size-3.5 shrink-0 ms-auto;
+    opacity: 0.55;
+  }
+
+  .panel-sidebar__link:is(:hover, :focus-visible) .panel-sidebar__external {
+    opacity: 1;
+  }
+
   .panel-sidebar__group-content {
     @apply mt-1;
   }

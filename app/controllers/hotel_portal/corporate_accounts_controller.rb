@@ -6,7 +6,7 @@ module HotelPortal
   # Routes stay REST; only the rendering and completion contract are Sheet-based.
   # On failure the form is re-rendered into the sheet frame so submitted values
   # survive — the operator has to be able to correct an address in place.
-  class CorporateAccountsController < HotelPortal::BaseController
+  class CorporateAccountsController < HotelPortal::FinancialsBaseController
     include SheetActionCompletion
 
     SHEET_FRAME = "external_account_sheet"
