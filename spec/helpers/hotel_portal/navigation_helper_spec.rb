@@ -30,13 +30,12 @@ RSpec.describe HotelPortal::NavigationHelper, type: :helper do
     leaf = described_class::NavItem.new(label: "Summary", path: "/reports", active: true)
     task_group = described_class::NavItem.new(label: "Reports", path: "/reports", active: false, children: [ leaf ])
     section = described_class::NavSection.new(label: "Navigation", items: [ task_group ])
-    portal_root = { type: :menu, label: "Hotel Portal", path: "/dashboard" }
 
     allow(helper).to receive(:hotel_sidebar_sections).and_return([ section ])
-    allow(helper).to receive(:hotel_portal_root_breadcrumb_part).and_return(portal_root)
 
+    # The trail starts at the active section: the sidebar header already says
+    # which portal this is, so a "Hotel Portal" root only ate horizontal space.
     expect(helper.hotel_breadcrumb_parts).to eq([
-      portal_root,
       { type: :section, label: "Reports" },
       { type: :menu, label: "Summary", path: "/reports", siblings: [ { label: "Summary", path: "/reports" } ] }
     ])

@@ -153,7 +153,7 @@ module HotelPortal
       return breadcrumb_override if respond_to?(:breadcrumbs_overridden?) && breadcrumbs_overridden?
 
       appends = respond_to?(:breadcrumb_appends) ? breadcrumb_appends : []
-      [ hotel_portal_root_breadcrumb_part ] + hotel_default_breadcrumb_parts + appends
+      hotel_default_breadcrumb_parts + appends
     end
 
     def hotel_permission_granted?(permission)
@@ -181,14 +181,6 @@ module HotelPortal
 
     def hotel_nav_item_active?(item)
       nav_item_active?(item)
-    end
-
-    def hotel_portal_root_breadcrumb_part
-      {
-        type: :menu,
-        label: "Hotel Portal",
-        path: hotel_dashboard_path(current_hotel)
-      }
     end
 
     private
