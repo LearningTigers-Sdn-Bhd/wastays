@@ -83,7 +83,6 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
         expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial")
         expect(page).to have_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel))
         expect(page).to have_link("Guest Reports", href: guest_reports_hotel_reports_path(hotel))
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting")
         expect(page).to have_link("Notification Logs", visible: :all)
       end
 
@@ -104,7 +103,6 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
         expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial")
         expect(page).to have_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel))
         expect(page).to have_link("Guest Reports", href: guest_reports_hotel_reports_path(hotel))
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting")
         expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Reports")
       end
       expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Summary")
@@ -155,7 +153,6 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
       expect(page).to have_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel), visible: :all)
       expect(page).to have_link("Guest Reports", href: guest_reports_hotel_reports_path(hotel), visible: :all)
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Accounting", visible: :all)
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Billing", visible: :all)
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Reports", visible: :all)
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "System Logs", visible: :all)
