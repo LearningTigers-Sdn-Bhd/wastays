@@ -26,19 +26,31 @@ module HotelPortal
         NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "landmark", active: reports_action?("deposit_liability"), permission: "view_reports"),
         NavItem.new(label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements Weekly Reports", icon: "banknote", active: reports_action?("payouts"), permission: "view_reports")
       ]
-      financial_nav_active = financial_nav_items.any?(&:active)
 
+      compliance_nav_items = [
+        NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: reports_action?("tax_compliance"), icon: "calculator", permission: "view_reports"),
+        NavItem.new(label: "Night Audit History", path: hotel_reports_night_audits_path(current_hotel), search_text: "Reports Night Audit History Business Date Close", active: controller_path == "hotel_portal/reports/night_audits", icon: "moon", permission: [ "view_reports", "manage_night_audit" ], plan_feature: "no_show_auto_handling")
+      ]
+
+      guest_nav_items = [
+        NavItem.new(label: "Guest Reports", path: guest_reports_hotel_reports_path(current_hotel), search_text: "Reports Guest Reports Arrivals Departures Checkout Registration Cards", active: reports_action?("guest_reports"), icon: "users", permission: "view_reports", plan_feature: "arrivals_departures_list")
+      ]
+
+      log_nav_items = [
+        NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Tracking History Security", icon: "file-text", active: controller_name == "audit_logs", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
+        NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs History Sent Alerts Logs", icon: "bell", active: controller_name == "notification_logs", permission: "view_audit_logs"),
+        NavItem.new(label: "Inventory Audit Logs", path: hotel_inventory_audit_logs_path(current_hotel), search_text: "Inventory Audit Logs Rates Changes History", icon: "calendar-range", active: controller_name == "inventory_audit_logs", permission: "view_audit_logs")
+      ]
+
+      # Four groups rather than sections: a layer that is nothing but reading
+      # material collapses to four icons in the compact rail, each opening a
+      # flyout, instead of fifteen anonymous ones.
       @_hotel_reports_sidebar_sections = [
-        NavSection.new(label: "Reports", items: [
-          NavItem.new(label: "Financial", search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability Payouts Breakdown", active: financial_nav_active, icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
-          NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: reports_action?("tax_compliance"), icon: "calculator", permission: "view_reports"),
-          NavItem.new(label: "Guest Reports", path: guest_reports_hotel_reports_path(current_hotel), search_text: "Reports Guest Reports Arrivals Departures Checkout Registration Cards", active: reports_action?("guest_reports"), icon: "users", permission: "view_reports", plan_feature: "arrivals_departures_list"),
-          NavItem.new(label: "Night Audit History", path: hotel_reports_night_audits_path(current_hotel), search_text: "Reports Night Audit History Business Date Close", active: controller_path == "hotel_portal/reports/night_audits", icon: "moon", permission: [ "view_reports", "manage_night_audit" ], plan_feature: "no_show_auto_handling")
-        ]),
-        NavSection.new(label: "Logs", items: [
-          NavItem.new(label: "Operation Logs", path: hotel_audit_logs_path(current_hotel), search_text: "Operation Logs Audit Tracking History Security", icon: "file-text", active: controller_name == "audit_logs", permission: "view_audit_logs", plan_feature: "full_audit_trail"),
-          NavItem.new(label: "Notification Logs", path: hotel_notification_logs_path(current_hotel), search_text: "Notification Logs History Sent Alerts Logs", icon: "bell", active: controller_name == "notification_logs", permission: "view_audit_logs"),
-          NavItem.new(label: "Inventory Audit Logs", path: hotel_inventory_audit_logs_path(current_hotel), search_text: "Inventory Audit Logs Rates Changes History", icon: "calendar-range", active: controller_name == "inventory_audit_logs", permission: "view_audit_logs")
+        NavSection.new(label: "", items: [
+          NavItem.new(label: "Financial", search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability Payouts Breakdown", active: financial_nav_items.any?(&:active), icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
+          NavItem.new(label: "Compliance", search_text: "Reports Compliance Tax Tourism Tax SST Night Audit History Business Date Close", active: compliance_nav_items.any?(&:active), icon: "calculator", children: compliance_nav_items, permission: "view_reports"),
+          NavItem.new(label: "Guest", search_text: "Reports Guest Arrivals Departures Checkout Registration Cards", active: guest_nav_items.any?(&:active), icon: "users", children: guest_nav_items, permission: "view_reports"),
+          NavItem.new(label: "Logs", search_text: "Logs Operation Notification Inventory Audit Tracking History Security", active: log_nav_items.any?(&:active), icon: "file-text", children: log_nav_items, permission: "view_audit_logs")
         ])
       ]
     end

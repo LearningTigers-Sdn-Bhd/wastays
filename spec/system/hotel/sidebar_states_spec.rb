@@ -45,22 +45,33 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
 
     within("#hotel-sidebar") do
       expect(page).to have_link("Dashboard")
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
+      # Operations is flat: sections carry the grouping, no dropdowns at all.
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", visible: :all)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Front Desk/i)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Housekeeping/i)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Planning/i)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Day Close/i)
       expect(page).to have_no_css(".panel-sidebar__section-label", text: "Billing")
       expect(page).to have_no_css(".panel-sidebar__section-label", text: "Reports")
       expect(page).to have_css(".panel-sidebar__section-label", text: "More")
 
-      within(".panel-sidebar__section[data-section-label='']") do
-        expect(page).to have_link("Dashboard")
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
-        expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
-        expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel), visible: :all)
-        expect(page).to have_link("Stay View", visible: :all)
-        expect(page).to have_link("Requests", visible: :all)
-        expect(page).to have_link("Run Night Audit", visible: :all)
-        expect(page).to have_link("Rates & Inventory", visible: :all)
-        expect(page).to have_link("Guest Records", visible: :all)
+      within(".panel-sidebar__section[data-section-label='Front Desk']") do
+        expect(page).to have_link("Reservations", href: hotel_front_desk_path(hotel))
+        expect(page).to have_link("Stay View")
+        expect(page).to have_link("Guest Records")
+      end
+
+      # This role holds manage_requests but not the housekeeping-task grants.
+      within(".panel-sidebar__section[data-section-label='Housekeeping']") do
+        expect(page).to have_link("Requests")
+      end
+
+      within(".panel-sidebar__section[data-section-label='Planning']") do
+        expect(page).to have_link("Rates & Inventory")
+      end
+
+      within(".panel-sidebar__section[data-section-label='Day Close']") do
+        expect(page).to have_link("Run Night Audit")
       end
 
       # Cashiering and Folios live in the financials layer now; operations only
@@ -116,8 +127,7 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_link("Run Night Audit", visible: :all)
       expect(page).to have_no_link("Night Audit History", href: hotel_reports_night_audits_path(hotel), visible: :all)
 
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Front Office")
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Planning & Inventory")
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", visible: :all)
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Cashiering")
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Financial", visible: :all)
       expect(page).to have_no_link("Tax & Compliance", href: tax_compliance_hotel_reports_path(hotel), visible: :all)

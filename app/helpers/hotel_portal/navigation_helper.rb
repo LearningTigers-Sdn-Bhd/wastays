@@ -8,35 +8,33 @@ module HotelPortal
     def hotel_sidebar_sections
       return @_hotel_sidebar_sections if defined?(@_hotel_sidebar_sections)
 
-      front_desk_children = [
-        NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2", permission: [ "view_bookings", "manage_guest_arrival" ]),
-        NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile"),
-        NavItem.new(label: "Stay View", path: hotel_stay_view_path(current_hotel), search_text: "Stay View Timeline Board Room Status Housekeeping Planning Operations Calendar Tape Chart Front Desk", active: controller_path == "hotel_portal/stay_view/board", icon: "table-2", permission: [ "view_bookings", "manage_bookings", "view_room_readiness", "manage_room_status" ]),
-        NavItem.new(label: "Housekeeping Tasks", path: hotel_housekeeping_tasks_path(current_hotel), search_text: "Housekeeping Tasks Cleaning Room Status Front Desk", active: controller_name == "housekeeping_tasks", icon: "clipboard-check", permission: [ "perform_housekeeping_tasks", "dispatch_housekeeping_tasks" ], plan_feature: "task_assignment_minibar_log"),
-        NavItem.new(label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Reservations", active: controller_name == "requests", icon: "clipboard-list", permission: "manage_requests", plan_feature: "task_assignment_minibar_log"),
-        NavItem.new(
-          label: "Run Night Audit",
-          path: hotel_night_audit_run_path(current_hotel),
-          search_text: "Run Night Audit Business Date Close",
-          active: false,
-          icon: "moon",
-          permission: "manage_night_audit",
-          plan_feature: "no_show_auto_handling",
-          turbo_frame: "booking_action_sheet"
-        )
-      ]
-      front_desk_active = front_desk_children.any?(&:active)
-
-      reservations_children = [
-        NavItem.new(label: "Rates & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Rates Inventory Availability Pricing Reservations", active: controller_name == "inventory_dashboards", icon: "calendar-range", permission: "manage_hotel_profile")
-      ]
-      reservations_active = reservations_children.any?(&:active)
-
       @_hotel_sidebar_sections = [
         NavSection.new(label: "", items: [
-          NavItem.new(label: "Dashboard", path: hotel_dashboard_path(current_hotel), search_text: "Dashboard Home", active: controller_name == "dashboard", icon: "layout-dashboard", permission: "view_bookings"),
-          NavItem.new(label: "Front Office", search_text: "Front Office Reservations Guest Operations", active: front_desk_active, icon: "monitor", children: front_desk_children),
-          NavItem.new(label: "Planning & Inventory", search_text: "Planning Inventory Rates Availability", active: reservations_active, icon: "calendar", children: reservations_children)
+          NavItem.new(label: "Dashboard", path: hotel_dashboard_path(current_hotel), search_text: "Dashboard Home", active: controller_name == "dashboard", icon: "layout-dashboard", permission: "view_bookings")
+        ]),
+        NavSection.new(label: "Front Desk", items: [
+          NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2", permission: [ "view_bookings", "manage_guest_arrival" ]),
+          NavItem.new(label: "Stay View", path: hotel_stay_view_path(current_hotel), search_text: "Stay View Timeline Board Room Status Housekeeping Planning Operations Calendar Tape Chart Front Desk", active: controller_path == "hotel_portal/stay_view/board", icon: "table-2", permission: [ "view_bookings", "manage_bookings", "view_room_readiness", "manage_room_status" ]),
+          NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile")
+        ]),
+        NavSection.new(label: "Housekeeping", items: [
+          NavItem.new(label: "Housekeeping Tasks", path: hotel_housekeeping_tasks_path(current_hotel), search_text: "Housekeeping Tasks Cleaning Room Status Front Desk", active: controller_name == "housekeeping_tasks", icon: "clipboard-check", permission: [ "perform_housekeeping_tasks", "dispatch_housekeeping_tasks" ], plan_feature: "task_assignment_minibar_log"),
+          NavItem.new(label: "Requests", path: hotel_requests_path(current_hotel), search_text: "Requests Housekeeping Complaint Reservations", active: controller_name == "requests", icon: "clipboard-list", permission: "manage_requests", plan_feature: "task_assignment_minibar_log")
+        ]),
+        NavSection.new(label: "Planning", items: [
+          NavItem.new(label: "Rates & Inventory", path: hotel_inventory_index_path(current_hotel), search_text: "Rates Inventory Availability Pricing Reservations", active: controller_name == "inventory_dashboards", icon: "calendar-range", permission: "manage_hotel_profile")
+        ]),
+        NavSection.new(label: "Day Close", items: [
+          NavItem.new(
+            label: "Run Night Audit",
+            path: hotel_night_audit_run_path(current_hotel),
+            search_text: "Run Night Audit Business Date Close",
+            active: false,
+            icon: "moon",
+            permission: "manage_night_audit",
+            plan_feature: "no_show_auto_handling",
+            turbo_frame: "booking_action_sheet"
+          )
         ]),
         NavSection.new(label: "More", items: [
           hotel_layer_nav_item(:financials),
@@ -116,13 +114,21 @@ module HotelPortal
     # Walks any layer's navigation tree for the active leaf. Layers differ in
     # what they contain, not in how a trail is built, so each one hands its own
     # sections to this rather than restating the walk.
+    #
+    # A labelled section seeds the trail. Without it a flat layer's crumbs
+    # collapse to the page name alone: the grouping that used to supply the
+    # first crumb now lives on the section, so that is where it has to come
+    # from. Sections with no label seed nothing, which leaves a grouped layer's
+    # trail exactly as it was.
     def hotel_breadcrumb_trail_for(sections)
       sections.each do |section|
         visible_items = hotel_visible_items(section.items)
+        seed = section.label.present? ? [ { type: :section, label: section.label } ] : []
+
         visible_items.each do |item|
           next unless nav_item_active?(item)
 
-          trail = nav_item_breadcrumb_trail(item, [], visible_items)
+          trail = nav_item_breadcrumb_trail(item, seed, visible_items)
           return trail if trail
         end
       end

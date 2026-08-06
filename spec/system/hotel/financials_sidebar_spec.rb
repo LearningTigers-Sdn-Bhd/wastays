@@ -37,10 +37,10 @@ RSpec.describe "Hotel financials layer sidebar", type: :system do
 
     within("#hotel-financials-sidebar") do
       expect(page).to have_link("Folios", href: hotel_folios_path(hotel))
-      expect(page).to have_css(".panel-sidebar__section-label", text: /Billing/i)
-      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Cashiering")
-      expect(page).to have_link("Invoices", href: hotel_ar_invoices_path(hotel), visible: :all)
-      expect(page).to have_link("External Accounts", href: hotel_corporate_accounts_path(hotel), visible: :all)
+      expect(page).to have_css(".panel-sidebar__section-label", text: /Cashiering/i)
+      expect(page).to have_no_css("button.panel-sidebar__group-trigger", visible: :all)
+      expect(page).to have_link("Invoices", href: hotel_ar_invoices_path(hotel))
+      expect(page).to have_link("External Accounts", href: hotel_corporate_accounts_path(hotel))
 
       expect(page).to have_no_link("Dashboard")
       expect(page).to have_no_css("button.panel-sidebar__group-trigger", text: "Front Office")
@@ -48,13 +48,12 @@ RSpec.describe "Hotel financials layer sidebar", type: :system do
     end
   end
 
-  it "marks the active receivables page and opens its group" do
+  it "marks the active receivables page" do
     visit hotel_ar_invoices_path(hotel)
     lock_navigation_open
 
     within("#hotel-financials-sidebar") do
-      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Invoices")
-      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Cashiering")
+      expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "Invoices")
     end
   end
 

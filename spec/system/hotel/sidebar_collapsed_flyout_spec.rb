@@ -12,7 +12,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
   before do
     driven_by(:cuprite)
 
-    %w[view_reports view_bookings manage_hotel_profile].each do |slug|
+    %w[view_reports view_bookings view_audit_logs manage_hotel_profile].each do |slug|
       permission = Permission.find_by(slug: slug) || create(:permission, name: slug.tr("_", " ").titleize, slug: slug)
       create(:role_permission, role: role, permission: permission)
     end
@@ -37,7 +37,7 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
 
     expect(page).to have_css("#hotel-reports-sidebar[data-collapsed='false'][data-locked='false']")
     within("#hotel-reports-sidebar") do
-      expect(page).to have_link("Tax & Compliance", visible: :visible)
+      expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Compliance", visible: :visible)
       expect(page).to have_css("button.panel-sidebar__group-trigger", text: "Financial", visible: :visible)
       expect(page).to have_no_css(".panel-sidebar__flyout[data-state='open']")
       expect(page).to have_no_css("[role='tooltip'][data-state='open']", visible: :visible)
@@ -123,37 +123,36 @@ RSpec.describe "Hotel collapsed sidebar flyout", type: :system do
     end
   end
 
-  # Two groups open at once is only possible in the operations layer now --
-  # reports has a single group -- so this drives that sidebar directly.
+  # Reports carries four groups now, so the two-groups-open case belongs back
+  # here: Financial is active on this page, Logs is the one the reader opens.
   it "keeps active and user-opened groups expanded through Turbo navigation" do
-    visit hotel_front_desk_path(hotel)
     find('button[aria-label="Lock navigation open"]').click
 
-    within("#hotel-sidebar") do
-      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Front Office")
-      find("button.panel-sidebar__group-trigger", text: "Planning & Inventory", visible: :all).click
-      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Planning & Inventory")
+    within("#hotel-reports-sidebar") do
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
+      find("button.panel-sidebar__group-trigger", text: "Logs", visible: :all).click
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Logs")
     end
 
     page.execute_script(<<~JS)
       document.addEventListener("turbo:before-visit", () => {
         window.sidebarActiveGroupOpenBeforeVisit =
-          document.querySelector("#hotel-sidebar [data-sidebar-group-item][data-sidebar-active] .panel-sidebar__group-trigger")?.getAttribute("aria-expanded") === "true"
+          document.querySelector("#hotel-reports-sidebar [data-sidebar-group-item][data-sidebar-active] .panel-sidebar__group-trigger")?.getAttribute("aria-expanded") === "true"
       }, { once: true })
     JS
 
-    within("#hotel-sidebar") do
-      click_link "Stay View"
+    within("#hotel-reports-sidebar") do
+      click_link "Refund Report"
     end
 
-    expect(page).to have_current_path(hotel_stay_view_path(hotel))
+    expect(page).to have_current_path(refund_report_hotel_reports_path(hotel))
     expect(page.evaluate_script("window.sidebarActiveGroupOpenBeforeVisit")).to be(true)
-    expect(page).to have_css("#hotel-sidebar[data-collapsed='false'][data-locked='true']")
+    expect(page).to have_css("#hotel-reports-sidebar[data-collapsed='false'][data-locked='true']")
 
-    within("#hotel-sidebar") do
-      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Stay View")
-      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Front Office")
-      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Planning & Inventory")
+    within("#hotel-reports-sidebar") do
+      expect(page).to have_css("a.panel-sidebar__child[aria-current='page']", text: "Refund Report")
+      expect(page).to have_css("[data-sidebar-group-item][data-sidebar-active] button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Financial")
+      expect(page).to have_css("button.panel-sidebar__group-trigger[aria-expanded='true']", text: "Logs")
     end
   end
 

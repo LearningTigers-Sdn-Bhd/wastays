@@ -8,15 +8,49 @@ RSpec.describe HotelPortal::NavigationHelper, type: :helper do
   it "builds breadcrumbs for a two-level active navigation group" do
     leaf = described_class::NavItem.new(label: "Summary", path: "/reports", active: true)
     task_group = described_class::NavItem.new(label: "Reports", path: "/reports", active: false, children: [ leaf ])
-    section = described_class::NavSection.new(label: "Navigation", items: [ task_group ])
+    section = described_class::NavSection.new(label: "", items: [ task_group ])
 
     allow(helper).to receive(:hotel_sidebar_sections).and_return([ section ])
 
     # The trail starts at the active section: the sidebar header already says
     # which portal this is, so a "Hotel Portal" root only ate horizontal space.
+    # An unlabelled section contributes nothing, so the group supplies the first
+    # crumb exactly as it always did.
     expect(helper.hotel_breadcrumb_parts).to eq([
       { type: :section, label: "Reports" },
       { type: :menu, label: "Summary", path: "/reports", siblings: [ { label: "Summary", path: "/reports" } ] }
+    ])
+  end
+
+  it "takes the first crumb from the section label when a layer is flat" do
+    active = described_class::NavItem.new(label: "Invoices", path: "/invoices", active: true)
+    sibling = described_class::NavItem.new(label: "Statements", path: "/statements")
+    section = described_class::NavSection.new(label: "Cashiering", items: [ active, sibling ])
+
+    allow(helper).to receive(:hotel_sidebar_sections).and_return([ section ])
+
+    # Nothing wraps the page any more, so without the section label the trail
+    # would collapse to the page name alone.
+    expect(helper.hotel_breadcrumb_parts).to eq([
+      { type: :section, label: "Cashiering" },
+      { type: :menu, label: "Invoices", path: "/invoices", siblings: [
+        { label: "Invoices", path: "/invoices" },
+        { label: "Statements", path: "/statements" }
+      ] }
+    ])
+  end
+
+  it "nests a group under its section label when both are present" do
+    leaf = described_class::NavItem.new(label: "Refund Report", path: "/refunds", active: true)
+    group = described_class::NavItem.new(label: "Financial", children: [ leaf ])
+    section = described_class::NavSection.new(label: "Reports", items: [ group ])
+
+    allow(helper).to receive(:hotel_sidebar_sections).and_return([ section ])
+
+    expect(helper.hotel_breadcrumb_parts).to eq([
+      { type: :section, label: "Reports" },
+      { type: :menu_group, label: "Financial" },
+      { type: :menu, label: "Refund Report", path: "/refunds", siblings: [ { label: "Refund Report", path: "/refunds" } ] }
     ])
   end
 
