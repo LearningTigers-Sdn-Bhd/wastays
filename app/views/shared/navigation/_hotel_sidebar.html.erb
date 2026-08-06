@@ -2,12 +2,11 @@
       key: "hotel",
       home_path: hotel_dashboard_path(current_hotel),
       sections: hotel_visible_sidebar_sections,
-      footer_items: hotel_sidebar_footer_items,
       collapsible: true,
       searchable: false,
       permanent: true
     ) do |sidebar| %>
   <% sidebar.with_header do %>
-    <%= render "shared/navigation/hotel_sidebar_header" %>
+    <%= render "shared/navigation/portal_label", label: "Hotel Portal", icon: "hotel", href: hotel_dashboard_path(current_hotel) %>
   <% end %>
 <% end %>

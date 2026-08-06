@@ -1,0 +1,50 @@
+<%# Shared chrome for a short settings form served into the settings_action_sheet
+    frame. Render it with `render layout:` and a block; the block supplies the
+    form, and the footer submits it by id so the buttons can live outside the
+    form element, in the sheet's own footer.
+
+    Locals: id, title, description, form_id, submit_label, and an optional size.
+
+    Dismissible on purpose: these forms are a field or two, so an Esc or backdrop
+    click discards nothing worth guarding. Longer forms (room categories) lock
+    themselves instead.
+%>
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% size = local_assigns.fetch(:size, :md) %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: id,
+          side: :right,
+          size: size,
+          dismissible: true,
+          title: title,
+          description: description) do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="py-2">
+          <%= yield %>
+        </div>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: form_id,
+              size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>
+          <%= submit_label %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

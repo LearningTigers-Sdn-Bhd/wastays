@@ -128,14 +128,18 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
     expect(page).to have_no_css(".panel-sidebar__tooltip", visible: :all)
   end
 
-  it "renders footer items and the header slot" do
-    render_inline(described_class.new(key: "hotel", home_path: "/", sections: sections,
-                                      footer_items: [ PanelsUI::Navigation::Item.new(label: "Help", path: "/help", icon: "help") ])) do |s|
+  it "renders the header slot and signs the footer with the system mark" do
+    render_inline(described_class.new(key: "hotel", home_path: "/", sections: sections)) do |s|
       s.with_header { "<span class='brand'>Acme</span>".html_safe }
     end
 
+    footer = "aside#hotel-sidebar .panel-sidebar__footer"
     expect(page).to have_css("aside#hotel-sidebar .panel-sidebar__header .brand", text: "Acme")
-    expect(page).to have_css("aside#hotel-sidebar .panel-sidebar__footer a[href='/help']", text: "Help")
+    expect(page).to have_css("#{footer} .panel-sidebar__mark img", count: 2, visible: :all)
+    expect(page).to have_css("#{footer} .panel-sidebar__legal a", text: "Terms of Use")
+    expect(page).to have_css("#{footer} .panel-sidebar__legal a", text: "Privacy Policy")
+    # Nobody is signed in here, so the mark is inert rather than a door into admin.
+    expect(page).to have_no_css("#{footer} a.panel-sidebar__mark")
   end
 
   it "adds the search controller and turbo-permanent flag when requested" do
@@ -166,16 +170,13 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
         PanelsUI::Navigation::Item.new(label: "Resources", children: [ external_child ])
       ])
     ]
-    external_footer = PanelsUI::Navigation::Item.new(label: "Support", path: "/support", external: true)
-
     render_inline(described_class.new(
       key: "external",
       home_path: "/",
-      sections: external_sections,
-      footer_items: [ external_footer ]
+      sections: external_sections
     ))
 
-    [ "/docs", "/child-docs", "/support" ].each do |path|
+    [ "/docs", "/child-docs" ].each do |path|
       links = page.all("a[href='#{path}']", visible: :all)
       expect(links).not_to be_empty
       expect(links).to all(satisfy { |link| link[:target] == "_blank" && link[:rel] == "noopener noreferrer" })

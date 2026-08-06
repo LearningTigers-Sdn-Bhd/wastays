@@ -13,7 +13,7 @@ module PanelsUI
           defaults: {}
 
     def initialize(caption:, density: :default, header_style: :default, striped: false, hoverable: false,
-                   sticky_header: false, bordered: true, wrapper_class: nil,
+                   sticky_header: false, sticky_column: false, bordered: true, wrapper_class: nil,
                    class: nil, **attributes)
       @caption = caption
       @density = DENSITIES.include?(density) ? density : :default
@@ -21,6 +21,7 @@ module PanelsUI
       @striped = striped
       @hoverable = hoverable
       @sticky_header = sticky_header
+      @sticky_column = sticky_column
       @bordered = bordered
       @wrapper_class = wrapper_class
       @class = binding.local_variable_get(:class)
@@ -49,6 +50,7 @@ module PanelsUI
           striped: @striped.to_s,
           hoverable: @hoverable.to_s,
           sticky_header: @sticky_header.to_s,
+          sticky_column: @sticky_column.to_s,
           bordered: @bordered.to_s
         )
       )

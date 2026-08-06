@@ -648,10 +648,12 @@ Rails.application.routes.draw do
       end
 
       scope "team" do
-        resources :users, only: [ :index, :new, :create, :update, :destroy ], path: "staff" do
-          patch :reactivate, on: :member
+        # Revoke and reactivate collapsed into one status toggle on the listing
+        # row; #update owns the role. DELETE is a permanent removal.
+        resources :users, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "staff" do
+          patch :status, on: :member
         end
-        resources :staff_invitations, path: "staff-invitations", only: [ :update, :destroy ] do
+        resources :staff_invitations, path: "staff-invitations", only: [ :edit, :update, :destroy ] do
           post :resend, on: :member
         end
         resources :roles, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "roles-and-permissions" do
@@ -692,10 +694,12 @@ Rails.application.routes.draw do
     get "knowledge_general_infos/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/%{id}/edit")
     get "knowledge_diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/knowledge-diagnostics")
     get "staff", to: redirect("/hotel/%{hotel_id}/settings/team/staff")
-    get "staff/new", to: redirect("/hotel/%{hotel_id}/settings/team/staff/new")
+    # Invite is a Sheet over the list now, so the old deep link lands on the list.
+    get "staff/new", to: redirect("/hotel/%{hotel_id}/settings/team/staff")
     get "roles-and-permissions", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
-    get "roles-and-permissions/new", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/new")
-    get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions/%{id}/edit")
+    # New/edit are Sheets over the matrix now, so old deep links land on it.
+    get "roles-and-permissions/new", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
+    get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
 
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
     resources :rate_plans, only: %i[new create edit update destroy] do

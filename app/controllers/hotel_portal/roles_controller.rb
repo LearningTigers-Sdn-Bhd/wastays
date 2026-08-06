@@ -2,10 +2,11 @@
 
 module HotelPortal
   class RolesController < HotelPortal::SettingsBaseController
+    include SheetActionCompletion
+
     before_action :authorize_manage_users!
     before_action -> { require_feature!("role_based_access_control") }
     before_action :set_role, only: %i[edit update destroy]
-    before_action :load_permissions, only: %i[new create edit update], if: -> { false } # Removed, kept index and bulk_update calls
 
     def index
       @roles = current_hotel.account.roles.includes(:permissions, :user_hotel_accesses).order(:name)
@@ -34,28 +35,30 @@ module HotelPortal
 
     def new
       @role = current_hotel.account.roles.build
+      render layout: false
     end
 
     def create
       @role = current_hotel.account.roles.build(role_attributes)
 
       if save_role
-        redirect_to hotel_roles_path(current_hotel), notice: "Role created successfully."
+        finish_sheet("Role created successfully.")
       else
-        render :new, status: :unprocessable_content
+        render :new, layout: false, status: :unprocessable_content
       end
     end
 
     def edit
+      render layout: false
     end
 
     def update
       @role.assign_attributes(role_attributes)
 
       if save_role
-        redirect_to hotel_roles_path(current_hotel), notice: "Role updated successfully."
+        finish_sheet("Role updated successfully.")
       else
-        render :edit, status: :unprocessable_content
+        render :edit, layout: false, status: :unprocessable_content
       end
     end
 
@@ -110,6 +113,18 @@ module HotelPortal
       end
 
       Permission.where(id: requested_ids).ids
+    end
+
+    def finish_sheet(notice)
+      complete_sheet_action(
+        destination: hotel_roles_path(current_hotel),
+        notice: notice,
+        frame: sheet_frame
+      )
+    end
+
+    def sheet_frame
+      turbo_frame_request_id.presence || "settings_action_sheet"
     end
 
     def save_role

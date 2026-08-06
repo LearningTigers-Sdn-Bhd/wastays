@@ -1,0 +1,14 @@
+<%# The pair that sits left of the avatar: announcements broadcast to everyone,
+    notifications addressed to you. Megaphone first — it is the quieter, less
+    frequently checked of the two, so the bell keeps the position nearest the
+    account menu. %>
+<%= render "shared/navigation/navbar_layer_button",
+           id: "announcements",
+           icon: "megaphone",
+           label: "Announcements",
+           empty_message: "There are no announcements right now." %>
+<%= render "shared/navigation/navbar_layer_button",
+           id: "notifications",
+           icon: "bell",
+           label: "Notifications",
+           empty_message: "You have no notifications right now." %>

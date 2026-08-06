@@ -1,0 +1,46 @@
+<% role_choices = available_roles.map { |role| { label: role.name, value: role.id } } %>
+
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "edit-staff-invitation-sheet",
+             title: "Change Invited Role",
+             description: "Update the role #{@invitation.email} will receive when they accept.",
+             form_id: "edit-staff-invitation-form",
+             submit_label: "Save Changes"
+           } do %>
+  <%= form_with model: @invitation,
+                url: hotel_staff_invitation_path(current_hotel, @invitation),
+                method: :patch,
+                scope: :staff_invitation,
+                id: "edit-staff-invitation-form",
+                class: "space-y-5" do |f| %>
+    <% if @error.present? %>
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: "This change could not be saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %><%= @error %><% end %>
+      <% end %>
+    <% end %>
+
+    <div class="rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+      <p class="text-sm font-medium text-foreground"><%= @invitation.email %></p>
+      <p class="mt-0.5 text-xs text-muted-foreground">
+        Invited by <%= @invitation.invited_by_user.name %> · expires <%= l(@invitation.expires_at, format: :short) %>
+      </p>
+    </div>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :role_id,
+          label: "Role",
+          hint: "The invitation link stays valid; only the role they receive changes.",
+          required: true) do |field| %>
+      <% field.with_select_menu(
+           role_choices,
+           selected: @invitation.role_id,
+           prompt: "Select a role",
+           required: true) %>
+    <% end %>
+  <% end %>
+<% end %>

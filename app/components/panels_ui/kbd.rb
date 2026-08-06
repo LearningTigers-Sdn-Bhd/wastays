@@ -34,7 +34,7 @@ module PanelsUI
       )) do
         parts = @keys.flat_map.with_index do |key, index|
           rendered = [ render_key(key) ]
-          rendered << tag.span(@separator, aria: { hidden: "true" }) if @separator.present? && index < @keys.length - 1
+          rendered << tag.span(@separator, class: "panel-kbd__separator", aria: { hidden: "true" }) if @separator.present? && index < @keys.length - 1
           rendered
         end
         safe_join(parts)

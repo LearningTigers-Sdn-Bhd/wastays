@@ -44,6 +44,7 @@ export default class extends Controller {
 
     const promise = new Promise((resolve) => {
       this.pendingResolve = resolve
+      this.pendingForm = form
     })
     this.element.showModal()
     return promise
@@ -70,8 +71,20 @@ export default class extends Controller {
     if (!this.pendingResolve) return
 
     const resolve = this.pendingResolve
+    const form = this.pendingForm
     this.pendingResolve = null
+    this.pendingForm = null
     resolve(result)
+
+    // A declined confirm never reaches turbo:submit-start, so a control that
+    // already moved (a switch, a checkbox) has no other signal telling it to go
+    // back. Announce the outcome on the form either way and let it decide.
+    form?.dispatchEvent(
+      new CustomEvent("panels-ui:confirm-settled", {
+        bubbles: true,
+        detail: { confirmed: result },
+      })
+    )
   }
 
   contentFor(message, form, submitter) {

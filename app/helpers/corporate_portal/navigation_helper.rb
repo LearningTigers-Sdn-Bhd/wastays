@@ -67,11 +67,6 @@ module CorporatePortal
       ]
     end
 
-    def corporate_sidebar_footer_items
-      @_corporate_sidebar_footer_items ||= [
-        PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false)
-      ]
-    end
 
     def corporate_breadcrumb_trail
       return @_corporate_breadcrumb_trail if defined?(@_corporate_breadcrumb_trail)

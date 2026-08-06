@@ -1,0 +1,27 @@
+<%# An icon control in the navbar action rail: tooltip on the trigger, popover
+    beneath it. Announcements and notifications are different things — one is
+    broadcast to everyone, the other is addressed to you — so they get their own
+    control rather than sharing a feed.
+
+    Neither has a data source in the schema yet, so both render an empty state.
+    The shell is here for a feed to land in.
+
+    Tooltip wraps Popover rather than the reverse: the popover announces itself
+    on the shared `panels-ui:layer-open` channel as it opens, which is what makes
+    the tooltip step aside instead of hanging beside an open panel. %>
+<%= render PanelsUI::Tooltip.new(text: label, placement: :bottom) do %>
+  <%= render PanelsUI::Popover.new(id: id, placement: :bottom_end, offset: 8, class: "w-72") do |popover| %>
+    <% popover.with_trigger(
+         unstyled: true,
+         aria_label: label,
+         class: "panel-navbar__action panel-navbar__action--icon"
+       ) do %>
+      <%= cached_icon icon, class: "size-4" %>
+    <% end %>
+
+    <div class="text-left">
+      <p class="text-sm font-semibold text-foreground"><%= label %></p>
+      <p class="mt-2 text-xs text-muted-foreground"><%= empty_message %></p>
+    </div>
+  <% end %>
+<% end %>

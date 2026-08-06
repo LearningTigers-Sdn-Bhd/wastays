@@ -196,14 +196,12 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(sidebar.text).not_to include("Back to previous page")
 
       breadcrumb_items = document.css("#hotel-breadcrumb .breadcrumb-item")
-      expect(breadcrumb_items[0].at_css("a")&.text&.squish).to eq("Hotel Portal")
-      expect(breadcrumb_items[0].at_css("button[aria-label='Open Hotel Portal navigation']")).to be_nil
-      expect(breadcrumb_items[1].at_css("a")&.text&.squish).to eq("Settings")
-      expect(breadcrumb_items[2].text.squish).to eq("General")
-      expect(breadcrumb_items[2].at_css("a, button")).to be_nil
-      expect(breadcrumb_items[3].at_css("a")&.text&.squish).to eq("General")
-      expect(breadcrumb_items[3].at_css("button[aria-label='Open General navigation']")).to be_present
-      expect(breadcrumb_items[3].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
+      expect(breadcrumb_items[0].at_css("a")&.text&.squish).to eq("Settings")
+      expect(breadcrumb_items[1].text.squish).to eq("General")
+      expect(breadcrumb_items[1].at_css("a, button")).to be_nil
+      expect(breadcrumb_items[2].at_css("a")&.text&.squish).to eq("General")
+      expect(breadcrumb_items[2].at_css("button[aria-label='Open General navigation']")).to be_present
+      expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
         [ "General", "Rate Settings", "Notifications", "Plan & Billing" ]
       )
     end
@@ -212,10 +210,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       get hotel_banking_details_settings_path(hotel)
 
       breadcrumb_items = response.parsed_body.css("#hotel-breadcrumb .breadcrumb-item")
-      expect(breadcrumb_items[2].text.squish).to eq("Finance")
-      expect(breadcrumb_items[2].at_css("a, button")).to be_nil
-      expect(breadcrumb_items[3].at_css("button[aria-label='Open Banking Details navigation']")).to be_present
-      expect(breadcrumb_items[3].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
+      expect(breadcrumb_items[1].text.squish).to eq("Finance")
+      expect(breadcrumb_items[1].at_css("a, button")).to be_nil
+      expect(breadcrumb_items[2].at_css("button[aria-label='Open Banking Details navigation']")).to be_present
+      expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
         [ "Banking Details", "Transaction Code Reference" ]
       )
     end
@@ -243,9 +241,20 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       get hotel_general_settings_path(hotel)
 
       footer_link = response.parsed_body.at_css("#hotel-settings-sidebar .panel-sidebar__footer a[href='#{admin_dashboard_path}']")
-      expect(footer_link.text.squish).to eq("Go to Admin Portal")
-      expect(footer_link["target"]).to eq("_blank")
-      expect(footer_link["rel"]).to eq("noopener noreferrer")
+      expect(footer_link["aria-label"]).to eq("Go to Admin Portal")
+      expect(footer_link["class"]).to include("panel-sidebar__mark--interactive")
+    end
+
+    it "leaves the footer mark inert for everyone else" do
+      hotel.update!(status: "approved")
+
+      get hotel_general_settings_path(hotel)
+
+      footer = response.parsed_body.at_css("#hotel-settings-sidebar .panel-sidebar__footer")
+      expect(footer.at_css("a[href='#{admin_dashboard_path}']")).to be_nil
+      expect(footer.at_css(".panel-sidebar__mark").name).to eq("div")
+      expect(footer.at_css("a[href='#{terms_and_conditions_path}']")).to be_present
+      expect(footer.at_css("a[href='#{privacy_policy_path}']")).to be_present
     end
 
     it "does not expose resource-owned pages as settings panels" do
@@ -692,11 +701,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to have_http_status(:unprocessable_content)
       breadcrumb = response.parsed_body.at_css("#hotel-breadcrumb")
       items = breadcrumb.css(".breadcrumb-item")
-      expect(items[0].at_css("a")&.text&.squish).to eq("Hotel Portal")
-      expect(items[1].at_css("a")&.text&.squish).to eq("Settings")
-      expect(items[2].text.squish).to eq("General")
-      expect(items[2].at_css("a, button")).to be_nil
-      expect(items[3].at_css("button[aria-label='Open General navigation']")).to be_present
+      expect(items[0].at_css("a")&.text&.squish).to eq("Settings")
+      expect(items[1].text.squish).to eq("General")
+      expect(items[1].at_css("a, button")).to be_nil
+      expect(items[2].at_css("button[aria-label='Open General navigation']")).to be_present
 
       hotel.reload
       expect(hotel.default_currency).to eq('MYR')

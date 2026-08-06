@@ -1,28 +1,54 @@
-<div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Invite Staff Member", description: "Send a secure invitation link so a staff member can accept access to this property.") %>
+<% role_choices = available_roles.map { |role| { label: role.name, value: role.id } } %>
 
-  <div class="">
-    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div class="p-6">
-        <%= form_with url: hotel_users_path(current_hotel), method: :post, local: true, class: "space-y-6" do |f| %>
-          <div>
-            <%= f.label :email, "Email Address", class: "mb-2 block text-sm font-medium text-foreground" %>
-            <%= f.email_field :email, placeholder: "staff@example.com", required: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm transition focus:border-border-interactive focus:ring-0 placeholder:text-muted-foreground" %>
-            <p class="mt-2 text-xs text-muted-foreground">They will receive an email invitation and create their account when accepting it.</p>
-          </div>
-
-          <div>
-            <%= f.label :role_id, "Assigned Role", class: "mb-2 block text-sm font-medium text-foreground" %>
-            <%= f.select :role_id, options_from_collection_for_select(@available_roles, :id, :name), { prompt: "Select a role..." }, required: true, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm transition focus:border-border-interactive focus:ring-0" %>
-            <p class="mt-2 text-xs text-muted-foreground">This role controls what they can see and do at this specific property.</p>
-          </div>
-
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-border">
-            <%= link_to "Cancel", hotel_users_path(current_hotel), class: "inline-flex items-center rounded-xl bg-card border border-border px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition hover:bg-muted" %>
-            <%= f.submit "Send Invitation", class: "inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover" %>
-          </div>
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "invite-staff-sheet",
+             title: "Invite Staff Member",
+             description: "Send a secure invitation link so a staff member can accept access to this property.",
+             form_id: "invite-staff-form",
+             submit_label: "Send Invitation"
+           } do %>
+  <%= form_with model: @invitation,
+                url: hotel_users_path(current_hotel),
+                method: :post,
+                scope: :staff_invitation,
+                id: "invite-staff-form",
+                class: "space-y-5" do |f| %>
+    <% if @invitation.errors.any? %>
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: "This invitation could not be sent",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @invitation.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
         <% end %>
-      </div>
-    </section>
-  </div>
-</div>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :email,
+          label: "Email Address",
+          hint: "They will receive an email invitation and create their account when accepting it.",
+          required: true) do |field| %>
+      <% field.with_input(type: :email, placeholder: "staff@example.com", autocomplete: "off", required: true) %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :role_id,
+          label: "Assigned Role",
+          hint: "This role controls what they can see and do at this specific property.",
+          required: true) do |field| %>
+      <% field.with_select_menu(
+           role_choices,
+           selected: @invitation.role_id,
+           prompt: "Select a role",
+           required: true) %>
+    <% end %>
+  <% end %>
+<% end %>

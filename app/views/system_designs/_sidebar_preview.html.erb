@@ -13,9 +13,6 @@
       ])
     ])
   ]
-  sidebar_footer = [
-    nav::Item.new(label: "Help & support", path: "#help", icon: "circle-question-mark")
-  ]
 %>
 
 <section aria-labelledby="sidebar-preview-heading" class="border-t border-border pt-8">
@@ -51,7 +48,7 @@
 
   <div class="flex h-[420px] overflow-hidden rounded-xl border border-border" data-testid="sidebar-demo">
     <%= render PanelsUI::Sidebar.new(key: "sd-nav", home_path: "/system-design",
-                                     sections: sidebar_sections, footer_items: sidebar_footer,
+                                     sections: sidebar_sections,
                                      searchable: true, brand_name: "PanelsUI", brand_initial: "P") do |s| %>
       <% s.with_header do %>
         <div class="flex items-center gap-x-2.5 px-4 py-3">

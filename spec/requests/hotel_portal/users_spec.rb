@@ -21,6 +21,76 @@ RSpec.describe "HotelPortal::Users", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Staff Management")
     end
+
+    it "lists staff with their status and role as plain text" do
+      staff_role = create(:role, account: account, name: "Front Desk", slug: "front_desk")
+      member = create(:user, account: account, name: "Aisha Rahman")
+      UserHotelAccess.create!(user: member, hotel: hotel, role: staff_role)
+
+      get hotel_users_path(hotel)
+
+      expect(response.body).to include("Aisha Rahman")
+      expect(response.body).to include("Front Desk")
+      expect(response.body).to include("Active")
+    end
+
+    it "shows revoked access as revoked" do
+      staff_role = create(:role, account: account, name: "Front Desk", slug: "front_desk")
+      member = create(:user, account: account)
+      UserHotelAccess.create!(user: member, hotel: hotel, role: staff_role, deactivated_at: Time.current)
+
+      get hotel_users_path(hotel)
+
+      expect(response.body).to include("Revoked")
+    end
+
+    it "renders no role select on the listing" do
+      get hotel_users_path(hotel)
+
+      expect(response.body).not_to match(/<select[^>]*name="role_id"/)
+    end
+
+    it "shows an empty state when nobody but the current user has access" do
+      UserHotelAccess.find_by(user: user, hotel: hotel).destroy!
+      superadmin = create(:user, account: account, role: "superadmin")
+      sign_in_as(superadmin)
+
+      get hotel_users_path(hotel)
+
+      expect(response.body).to include("No staff have access yet")
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/staff/new" do
+    it "renders the invite sheet" do
+      get new_hotel_user_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Invite Staff Member")
+    end
+
+    # The sheet renders without a layout, so an old bookmark pointing straight at
+    # it would land on a bare dialog. Send those to the list instead.
+    it "sends the legacy deep link to the list rather than the bare sheet" do
+      get "/hotel/#{hotel.to_param}/staff/new"
+
+      expect(response).to redirect_to(hotel_users_path(hotel))
+    end
+  end
+
+  describe "GET /hotel/:hotel_id/staff/:id/edit" do
+    let(:staff_role) { create(:role, account: account, name: "Front Desk", slug: "front_desk") }
+    let(:other_user) { create(:user, account: account, name: "Aisha Rahman") }
+    let!(:access) { UserHotelAccess.create!(user: other_user, hotel: hotel, role: staff_role) }
+
+    it "renders the access sheet with the role control" do
+      get edit_hotel_user_path(hotel, access)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Edit Access")
+      expect(response.body).to include("Aisha Rahman")
+      expect(response.body).to include("Front Desk")
+    end
   end
 
   describe "POST /hotel/:hotel_id/staff" do
@@ -61,7 +131,8 @@ RSpec.describe "HotelPortal::Users", type: :request do
         post hotel_users_path(hotel), params: { email: existing_user.email, role_id: staff_role.id }
       }.not_to change(StaffInvitation, :count)
 
-      expect(flash[:alert]).to eq("This user already has active access to this property.")
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("already has active access")
     end
 
     it "rejects an email belonging to a corporate user" do
@@ -71,7 +142,8 @@ RSpec.describe "HotelPortal::Users", type: :request do
         post hotel_users_path(hotel), params: { email: corporate_user.email, role_id: staff_role.id }
       }.not_to change(StaffInvitation, :count)
 
-      expect(flash[:alert]).to include("corporate account")
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("corporate account")
     end
 
     it "allows inviting users who have deactivated access" do
@@ -87,21 +159,20 @@ RSpec.describe "HotelPortal::Users", type: :request do
 
     it "fails if email is missing" do
       post hotel_users_path(hotel), params: { email: "", role_id: staff_role.id }
-      expect(response).to redirect_to(hotel_users_path(hotel))
-      expect(flash[:alert]).to include("Email and Role are required")
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Email and role are required")
     end
 
     it "rejects roles with manage_account" do
-      privileged_permission = Permission.find_by(slug: 'manage_account') || create(:permission, slug: 'manage_account')
-      privileged_role = create(:role, account: account, name: "Privileged Role", slug: "privileged_role")
-      privileged_role.permissions << privileged_permission
+      privileged_role = create_privileged_role
 
       expect {
         post hotel_users_path(hotel), params: { email: "owner2@example.com", role_id: privileged_role.id }
       }.not_to change(StaffInvitation, :count)
 
-      expect(response).to redirect_to(hotel_users_path(hotel))
-      expect(flash[:alert]).to eq("Selected role cannot be assigned.")
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Selected role cannot be assigned")
     end
   end
 
@@ -112,21 +183,123 @@ RSpec.describe "HotelPortal::Users", type: :request do
     let!(:access) { UserHotelAccess.create!(user: other_user, hotel: hotel, role: staff_role) }
 
     it "updates the staff role" do
-      patch hotel_user_path(hotel, access), params: { role_id: manager_role.id }
+      patch hotel_user_path(hotel, access), params: { user_hotel_access: { role_id: manager_role.id } }
       expect(access.reload.role).to eq(manager_role)
       expect(response).to redirect_to(hotel_users_path(hotel))
     end
 
-    it "rejects non-assignable roles" do
-      privileged_permission = Permission.find_by(slug: 'manage_account') || create(:permission, slug: 'manage_account')
-      privileged_role = create(:role, account: account, name: "Privileged Role", slug: "privileged_role")
-      privileged_role.permissions << privileged_permission
+    it "never changes access status" do
+      access.deactivate!
 
-      patch hotel_user_path(hotel, access), params: { role_id: privileged_role.id }
+      patch hotel_user_path(hotel, access), params: { user_hotel_access: { role_id: manager_role.id } }
+
+      expect(access.reload.role).to eq(manager_role)
+      expect(access.deactivated_at).not_to be_nil
+    end
+
+    it "rejects non-assignable roles" do
+      privileged_role = create_privileged_role
+
+      patch hotel_user_path(hotel, access), params: { user_hotel_access: { role_id: privileged_role.id } }
 
       expect(access.reload.role).to eq(staff_role)
+      expect(response).to have_http_status(:unprocessable_content)
+    end
+
+    it "prevents editing your own access" do
+      my_access = UserHotelAccess.find_by(user: user, hotel: hotel)
+
+      patch hotel_user_path(hotel, my_access), params: { user_hotel_access: { role_id: manager_role.id } }
+
+      expect(my_access.reload.role).to eq(role)
+      expect(response).to have_http_status(:unprocessable_content)
+    end
+
+    # Anyone reaching this page through a hotel role is themselves an account
+    # manager, so only a superadmin — who has every permission without holding an
+    # access row — can be looking at a genuinely sole account manager.
+    context "as a superadmin" do
+      let(:owner_role) { create(:role, account: account, name: "Owner", slug: "owner") }
+      let!(:owner_access) do
+        owner_role.permissions << manage_account_permission
+        UserHotelAccess.create!(user: create(:user, account: account), hotel: hotel, role: owner_role)
+      end
+
+      before { sign_in_as(create(:user, account: account, role: "superadmin")) }
+
+      it "refuses to demote the last account manager to a role without account management" do
+        patch hotel_user_path(hotel, owner_access),
+              params: { user_hotel_access: { role_id: staff_role.id, active: "1" } }
+
+        expect(owner_access.reload.role).to eq(owner_role)
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+    end
+  end
+
+  describe "PATCH /hotel/:hotel_id/staff/:id/status" do
+    let(:staff_role) { create(:role, account: account, name: "Front Desk", slug: "front_desk") }
+    let(:other_user) { create(:user, account: account, name: "Aisha Rahman") }
+    let!(:access) { UserHotelAccess.create!(user: other_user, hotel: hotel, role: staff_role) }
+
+    it "revokes access without deleting the record" do
+      expect {
+        patch status_hotel_user_path(hotel, access), params: { active: "0" }
+      }.not_to change(UserHotelAccess, :count)
+
+      expect(access.reload.deactivated_at).not_to be_nil
       expect(response).to redirect_to(hotel_users_path(hotel))
-      expect(flash[:alert]).to eq("Selected role cannot be assigned.")
+      expect(flash[:notice]).to eq("Aisha Rahman's access was revoked.")
+    end
+
+    it "restores revoked access" do
+      access.deactivate!
+
+      patch status_hotel_user_path(hotel, access), params: { active: "1" }
+
+      expect(access.reload.deactivated_at).to be_nil
+      expect(flash[:notice]).to eq("Aisha Rahman's access was restored.")
+    end
+
+    it "leaves the role untouched" do
+      patch status_hotel_user_path(hotel, access), params: { active: "0" }
+
+      expect(access.reload.role).to eq(staff_role)
+    end
+
+    it "prevents revoking your own access" do
+      my_access = UserHotelAccess.find_by(user: user, hotel: hotel)
+
+      patch status_hotel_user_path(hotel, my_access), params: { active: "0" }
+
+      expect(my_access.reload.deactivated_at).to be_nil
+      expect(flash[:alert]).to eq("You cannot change your own access.")
+    end
+
+    context "as a superadmin" do
+      let(:owner_role) { create(:role, account: account, name: "Owner", slug: "owner") }
+      let!(:owner_access) do
+        owner_role.permissions << manage_account_permission
+        UserHotelAccess.create!(user: create(:user, account: account), hotel: hotel, role: owner_role)
+      end
+
+      before { sign_in_as(create(:user, account: account, role: "superadmin")) }
+
+      it "refuses to revoke the last account manager" do
+        patch status_hotel_user_path(hotel, owner_access), params: { active: "0" }
+
+        expect(owner_access.reload.deactivated_at).to be_nil
+        expect(flash[:alert]).to include("only person who can manage this account")
+      end
+
+      it "allows revoking an account manager once another one exists" do
+        UserHotelAccess.create!(user: create(:user, account: account), hotel: hotel, role: owner_role)
+
+        patch status_hotel_user_path(hotel, owner_access), params: { active: "0" }
+
+        expect(owner_access.reload.deactivated_at).not_to be_nil
+        expect(response).to redirect_to(hotel_users_path(hotel))
+      end
     end
   end
 
@@ -135,34 +308,73 @@ RSpec.describe "HotelPortal::Users", type: :request do
     let(:other_user) { create(:user, account: account) }
     let!(:access) { UserHotelAccess.create!(user: other_user, hotel: hotel, role: staff_role) }
 
-    it "revokes staff access by deactivating it" do
-      expect {
-        delete hotel_user_path(hotel, access)
-      }.not_to change(UserHotelAccess, :count)
+    # manage_users opens this page; permanent deletion is gated separately on
+    # manage_account, so a manager sees the table but never the delete action.
+    context "without account management" do
+      it "is refused" do
+        expect {
+          delete hotel_user_path(hotel, access)
+        }.not_to change(UserHotelAccess, :count)
 
-      expect(access.reload.deactivated_at).not_to be_nil
-      expect(response).to redirect_to(hotel_users_path(hotel))
-      expect(flash[:notice]).to eq("Staff access revoked successfully.")
+        expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+      end
     end
 
-    it "prevents self-revocation" do
-      my_access = UserHotelAccess.find_by(user: user, hotel: hotel)
-      delete hotel_user_path(hotel, my_access)
-      expect(response).to redirect_to(hotel_users_path(hotel))
-      expect(flash[:alert]).to eq("You cannot revoke your own access.")
+    context "with account management" do
+      before { role.permissions << manage_account_permission }
+
+      it "permanently deletes the access" do
+        expect {
+          delete hotel_user_path(hotel, access)
+        }.to change(UserHotelAccess, :count).by(-1)
+
+        expect(response).to redirect_to(hotel_users_path(hotel))
+        expect(flash[:notice]).to include("permanently deleted")
+      end
+
+      it "leaves the user record intact" do
+        expect {
+          delete hotel_user_path(hotel, access)
+        }.not_to change(User, :count)
+      end
+
+      it "prevents deleting your own access" do
+        my_access = UserHotelAccess.find_by(user: user, hotel: hotel)
+
+        expect {
+          delete hotel_user_path(hotel, my_access)
+        }.not_to change(UserHotelAccess, :count)
+
+        expect(flash[:alert]).to eq("You cannot delete your own access.")
+      end
+    end
+
+    context "as a superadmin facing the sole account manager" do
+      let(:owner_role) { create(:role, account: account, name: "Owner", slug: "owner") }
+      let!(:owner_access) do
+        owner_role.permissions << manage_account_permission
+        UserHotelAccess.create!(user: create(:user, account: account), hotel: hotel, role: owner_role)
+      end
+
+      before { sign_in_as(create(:user, account: account, role: "superadmin")) }
+
+      it "refuses to delete the last account manager" do
+        expect {
+          delete hotel_user_path(hotel, owner_access)
+        }.not_to change(UserHotelAccess, :count)
+
+        expect(flash[:alert]).to include("only person who can manage this account")
+      end
     end
   end
 
-  describe "PATCH /hotel/:hotel_id/staff/:id/reactivate" do
-    let(:staff_role) { create(:role, account: account, name: "Front Desk", slug: "front_desk") }
-    let(:other_user) { create(:user, account: account) }
-    let!(:access) { UserHotelAccess.create!(user: other_user, hotel: hotel, role: staff_role, deactivated_at: Time.current) }
+  def manage_account_permission
+    Permission.find_by(slug: "manage_account") || create(:permission, slug: "manage_account", name: "Manage Account")
+  end
 
-    it "reactivates staff access" do
-      patch reactivate_hotel_user_path(hotel, access)
-      expect(access.reload.deactivated_at).to be_nil
-      expect(response).to redirect_to(hotel_users_path(hotel))
-      expect(flash[:notice]).to eq("Staff access reactivated successfully.")
-    end
+  def create_privileged_role
+    privileged_role = create(:role, account: account, name: "Privileged Role", slug: "privileged_role")
+    privileged_role.permissions << manage_account_permission
+    privileged_role
   end
 end

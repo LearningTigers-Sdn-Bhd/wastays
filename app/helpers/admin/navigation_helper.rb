@@ -74,11 +74,6 @@ module Admin::NavigationHelper
     ]
   end
 
-  def admin_sidebar_footer_items
-    @_admin_sidebar_footer_items ||= [
-      PanelsUI::Navigation::Item.new(label: "Homepage", path: root_path, search_text: "Homepage Website", icon: "house", active: false)
-    ]
-  end
 
   def admin_breadcrumb_trail
     return @_admin_breadcrumb_trail if defined?(@_admin_breadcrumb_trail)

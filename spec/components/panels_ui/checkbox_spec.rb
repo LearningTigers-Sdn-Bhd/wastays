@@ -78,6 +78,30 @@ RSpec.describe PanelsUI::Checkbox, type: :component do
     expect(page).to have_css("input[data-panels-ui--checkbox-target='input']")
   end
 
+  it "keeps a hidden label available to assistive technology and drops the gap beside it" do
+    render_inline(
+      described_class.new(
+        name: "roles[7][permission_ids][]",
+        value: "3",
+        label: "View Bookings for Front Desk",
+        label_hidden: true,
+        description: "Applies to this property only."
+      )
+    )
+
+    expect(page).to have_css("label.panel-checkbox[data-label-hidden='true']")
+    expect(page).to have_css(".panel-checkbox__label.sr-only", text: "View Bookings for Front Desk", visible: :all)
+    # A hidden label hides the name, not the field's own feedback.
+    expect(page).to have_css(".panel-checkbox__description", text: "Applies to this property only.")
+  end
+
+  it "shows the label unless hiding it is asked for" do
+    render_inline(described_class.new(name: "archive", label: "Archive"))
+
+    expect(page).to have_css("label.panel-checkbox[data-label-hidden='false']")
+    expect(page).to have_no_css(".panel-checkbox__label.sr-only")
+  end
+
   it "falls back unknown sizes and variants to the defaults" do
     render_inline(described_class.new(name: "archive", label: "Archive", size: :huge, variant: :pill))
 
