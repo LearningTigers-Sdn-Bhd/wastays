@@ -21,7 +21,7 @@
     <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
       <%= render PanelsUI::Navbar.new(key: "corporate") do |navbar| %>
         <% navbar.with_actions do %>
-          <%= render "shared/navigation/notification_bell" %>
+          <%= render "shared/navigation/navbar_alerts" %>
         <% end %>
         <% navbar.with_profile do %>
           <%= render PanelsUI::ProfileMenu.new(

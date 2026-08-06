@@ -36,7 +36,7 @@
             <%= render PanelsUI::CommandPalette.new(endpoint: guest_global_search_index_path, placeholder: "Search dashboard pages and bookings...") %>
           <% end %>
           <% navbar.with_actions do %>
-            <%= render "shared/navigation/notification_bell" %>
+            <%= render "shared/navigation/navbar_alerts" %>
           <% end %>
           <% navbar.with_profile do %>
             <%= render PanelsUI::ProfileMenu.new(
