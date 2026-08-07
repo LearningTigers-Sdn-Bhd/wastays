@@ -5,7 +5,7 @@ module Admin
     class CreateForm
       include ActiveModel::Model
 
-      attr_accessor :account_name, :user_name, :user_email, :hotel_name, :address, :city, :country, :star_rating, :salesperson_id, :preferred_channel_manager, :amenities, :allow_pax_pricing, :allow_boat_information
+      attr_accessor :account_name, :user_name, :user_email, :hotel_name, :address, :city, :country, :star_rating, :salesperson_id, :preferred_channel_manager, :amenities, :sell_mode, :allow_boat_information
 
       validates :account_name, :user_name, :user_email, :hotel_name, :city, :country, presence: true
 
@@ -44,7 +44,7 @@ module Admin
           preferred_channel_manager: preferred_channel_manager,
           amenities: amenities || [],
           status: "approved",
-          allow_pax_pricing: ActiveModel::Type::Boolean.new.cast(allow_pax_pricing) || false,
+          sell_mode: sell_mode.presence || "per_room",
           allow_boat_information: allow_boat_information.nil? ? true : ActiveModel::Type::Boolean.new.cast(allow_boat_information)
         }
       end

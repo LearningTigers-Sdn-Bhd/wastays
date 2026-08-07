@@ -156,15 +156,9 @@
           </div>
 
           <div>
-            <span class="mb-2 block text-sm font-medium text-slate-700">Per-Pax Pricing Feature</span>
-            <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 cursor-pointer">
-              <span class="text-xs text-slate-600">Allow Hotel to Use Per-Pax Pricing</span>
-              <span class="relative inline-flex items-center">
-                <%= f.check_box :allow_pax_pricing, class: "sr-only peer" %>
-                <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full"></span>
-              </span>
-            </label>
-            <p class="mt-1 text-xs text-slate-400">If enabled, the hotel portal can choose to restrict bookings to per-person rates.</p>
+            <label for="hotel_sell_mode" class="mb-2 block text-sm font-medium text-foreground">Sells By</label>
+            <%= f.select :sell_mode, Hotel.sell_mode_options, {}, class: input_classes %>
+            <p class="mt-1 text-xs text-muted-foreground">Every rate plan follows this. Changing it re-prices the property's plans, so set it before the hotel starts selling.</p>
           </div>
 
           <div>
