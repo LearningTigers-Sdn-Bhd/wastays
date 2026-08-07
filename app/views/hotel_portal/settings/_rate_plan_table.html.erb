@@ -9,7 +9,6 @@
   <% table.with_header do %>
     <tr>
       <th>Name</th>
-      <th>How it's charged</th>
       <th>Currency</th>
       <th>Room categories</th>
       <th class="text-right">Action</th>
@@ -30,7 +29,6 @@
             <% end %>
           </div>
         </td>
-        <td class="text-muted-foreground"><%= rate_plan.sell_mode == "per_person" ? "Per person" : "Per room" %></td>
         <td class="text-muted-foreground" translate="no"><%= rate_plan.currency %></td>
         <td class="text-muted-foreground">
           <% if rate_plan.room_types.any? %>

@@ -83,7 +83,7 @@ RSpec.describe ApplicationHelper, type: :helper do
 
   describe "#pax_pricing_breakdown_items" do
     let(:account) { create(:account) }
-    let(:hotel) { create(:hotel, account: account, allow_pax_pricing: true, pax_pricing_only: true, default_currency: "MYR") }
+    let(:hotel) { create(:hotel, account: account, default_currency: "MYR") }
     let(:room_type) { create(:room_type, hotel: hotel, max_adults: 4, max_children: 2, base_price: 500.0) }
 
     def build_item(rate_plan:, adults:, children:, child_ages: [])
@@ -116,7 +116,7 @@ RSpec.describe ApplicationHelper, type: :helper do
     end
 
     it "falls back to the flat child_price_multiplier when there are no age bands" do
-      rate_plan = create(:rate_plan, hotel: hotel, name: "Per-Pax", sell_mode: "per_person", room_type: room_type, base_occupancy: 2, child_price_multiplier: 0.5)
+      rate_plan = create(:rate_plan, hotel: hotel, name: "Per-Pax", room_type: room_type, base_occupancy: 2, child_price_multiplier: 0.5)
       item = build_item(rate_plan: rate_plan, adults: 2, children: 1)
 
       lines = helper.pax_pricing_breakdown_items(item, hotel, "MYR")

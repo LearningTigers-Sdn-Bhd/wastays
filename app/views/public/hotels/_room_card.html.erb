@@ -71,7 +71,7 @@
             <% end %>
           <% else %>
             <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">
-              <%= @hotel.pax_pricing_only? ? "Price Per Person" : "Price Per Room" %>
+              <%= @hotel.sells_per_person? ? "Price Per Person" : "Price Per Room" %>
             </p>
             <p class="text-sm font-bold text-muted-foreground">Select dates to see price</p>
           <% end %>

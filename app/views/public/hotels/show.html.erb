@@ -90,7 +90,7 @@
        data-room-selector-adults-value="<%= @adults %>" 
        data-room-selector-children-value="<%= @children %>"
        data-room-selector-currency-value="<%= @display_currency %>"
-       data-room-selector-pax-pricing-only-value="<%= @hotel.pax_pricing_only? %>"
+       data-room-selector-pax-pricing-only-value="<%= @hotel.sells_per_person? %>"
        data-room-selector-child-ages-value="<%= @child_ages.to_json %>">
     <div class="flex flex-col md:flex-row gap-8 items-start">
       <%# Main Content %>

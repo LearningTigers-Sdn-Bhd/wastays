@@ -332,10 +332,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(standard_tab.at_css("#rate-plan-row-#{composed.id}")).to be_nil
     end
 
-    it "hides the Walk-in Rate plan row when the hotel is pax_pricing_only" do
-      hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
-      create(:rate_plan, hotel: hotel, name: "Standard Rate", sell_mode: "per_person")
-      create(:rate_plan, :walk_in_tier, hotel: hotel, sell_mode: "per_room")
+    it "hides the Walk-in Rate plan row when the hotel sells per guest" do
+      hotel.update!(sell_mode: "per_person")
+      create(:rate_plan, hotel: hotel, name: "Standard Rate")
+      create(:rate_plan, :walk_in_tier, hotel: hotel)
 
       get hotel_rates_settings_path(hotel)
 

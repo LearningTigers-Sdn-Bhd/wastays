@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe 'HotelPortal::RatePlans', type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'live', allow_pax_pricing: true) }
+  let(:hotel) { create(:hotel, account: account, status: 'live') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
   let!(:room_type) { create(:room_type, hotel: hotel) }
 
@@ -41,33 +41,31 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include("Promo Rate")
     end
 
-    it 'offers both sell modes when the hotel allows pax pricing but is not pax-only' do
+    it 'never asks the operator how the plan is charged — the property decides' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
-      expect(option_values).to contain_exactly('per_room', 'per_person')
+      expect(Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')).to be_nil
     end
 
-    it 'offers only Per Person when the hotel is pax-pricing only' do
-      hotel.update!(pax_pricing_only: true)
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person')
+    it 'shows only the per-room occupancy fields at a per-room hotel' do
+      get edit_hotel_rate_plan_path(hotel, rate_plan)
+
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css('#rate_plan_base_occupancy')).to be_present
+      expect(doc.at_css('#rate_plan_extra_pax_charge')).to be_present
+      expect(doc.at_css('#rate_plan_single_supplement')).to be_nil
+    end
+
+    it 'shows only the per-guest fields at a per-guest hotel' do
+      hotel.update!(sell_mode: "per_person")
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
-      select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
-      expect(option_values).to contain_exactly('per_person')
-    end
-
-    it 'offers only Per Room when the hotel does not allow pax pricing' do
-      hotel.update!(allow_pax_pricing: false)
-
-      get edit_hotel_rate_plan_path(hotel, rate_plan)
-
-      select = Nokogiri::HTML(response.body).at_css('select#rate_plan_sell_mode')
-      option_values = select.css('option').map { |o| o['value'] }.reject(&:blank?)
-      expect(option_values).to contain_exactly('per_room')
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css('#rate_plan_single_supplement')).to be_present
+      expect(doc.at_css('#rate_plan_child_price_multiplier')).to be_present
+      expect(doc.at_css('#rate_plan_base_occupancy')).to be_nil
     end
 
     it 'shows a delete action when the plan has no bookings' do
@@ -104,7 +102,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     end
 
     it 'wires up a live price preview for each age band, using the room type Standard Rate and a mode choice' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
+      hotel.update!(sell_mode: 'per_person')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
@@ -117,7 +116,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     end
 
     it 'shows the prominent empty-state add button when there are no age groups yet' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
+      hotel.update!(sell_mode: 'per_person')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', currency: 'MYR')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
@@ -127,7 +127,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     end
 
     it 'hides the empty-state add button once age groups already exist' do
-      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', sell_mode: 'per_person', currency: 'MYR')
+      hotel.update!(sell_mode: 'per_person')
+      per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
@@ -159,8 +160,17 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       rate_plan = RatePlan.last
       expect(rate_plan.name).to eq('Flexible Breakfast Rate')
-      expect(rate_plan.sell_mode).to eq('per_person')
       expect(rate_plan.room_types).to include(room_type)
+    end
+
+    it 'ignores a submitted sell_mode and takes the hotel’s' do
+      hotel.update!(sell_mode: 'per_person')
+
+      post hotel_rate_plans_path(hotel), params: {
+        rate_plan: { name: 'Smuggled Per Room', sell_mode: 'per_room' }
+      }
+
+      expect(RatePlan.last.sell_mode).to eq('per_person')
     end
 
     it 'creates a room type rate plan with derived multiplier pricing' do

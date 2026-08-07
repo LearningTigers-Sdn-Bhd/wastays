@@ -1,4 +1,4 @@
-<% rate_plans = @presenter.rate_plans.reject { |rp| rp.special_tier_kind == :walk_in && @hotel.pax_pricing_only? } %>
+<% rate_plans = @presenter.rate_plans.reject { |rp| rp.special_tier_kind == :walk_in && @hotel.sells_per_person? } %>
 <%# Two shapes share this page. A standard plan is created automatically with its
     room category and stays bound to it; everything else is a product the hotelier
     composes across categories. Splitting them keeps the system rows from burying

@@ -7,7 +7,7 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   before_action :set_rate_plan, only: %i[edit update destroy archive unarchive]
 
   def new
-    @rate_plan = current_hotel.rate_plans.build(sell_mode: default_sell_mode)
+    @rate_plan = current_hotel.rate_plans.build
     render layout: false
   end
 
@@ -108,14 +108,11 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     @rate_plan = current_hotel.rate_plans.find(params[:id])
   end
 
-  def default_sell_mode
-    current_hotel.pax_pricing_only? ? "per_person" : "per_room"
-  end
-
+  # :sell_mode is deliberately absent — RatePlan inherits it from the hotel, so
+  # a submitted value would only ever be ignored or fight the property setting.
   def rate_plan_params
     params.require(:rate_plan).permit(
       :name,
-      :sell_mode,
       :base_occupancy,
       :extra_pax_charge,
       :single_supplement,

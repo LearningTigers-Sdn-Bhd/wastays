@@ -68,8 +68,7 @@ export default class extends Controller {
     defaultStart: String,
     defaultEnd: String,
     defaultCurrency: String,
-    baseCurrency: String,
-    allowPaxPricing: Boolean
+    baseCurrency: String
   }
 
   initialize() {

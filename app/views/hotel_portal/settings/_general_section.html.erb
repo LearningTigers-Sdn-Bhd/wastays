@@ -192,16 +192,6 @@
               variant: :card) %>
       </div>
 
-      <% if @hotel.allow_pax_pricing? %>
-        <div class="sm:col-span-2">
-          <%= render PanelsUI::Switch.new(
-                form: f,
-                attribute: :pax_pricing_only,
-                label: "Pax Pricing Only",
-                description: "Allow public bookings only through per-person rates.",
-                variant: :card) %>
-        </div>
-      <% end %>
     </div>
   </section>
 

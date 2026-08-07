@@ -3,9 +3,10 @@ require 'rails_helper'
 RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'registered', allow_pax_pricing: true) }
+  # Age bands only apply to per-guest pricing, which is a property-level setting.
+  let(:hotel) { create(:hotel, :per_person, account: account, status: 'registered') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
-  let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: "Per Person Plan", kind: "custom", sell_mode: "per_person") }
+  let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: "Per Person Plan", kind: "custom") }
   let!(:band) { create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child") }
 
   before do

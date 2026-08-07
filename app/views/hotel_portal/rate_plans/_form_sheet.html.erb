@@ -28,40 +28,45 @@
             <% end %>
           <% end %>
 
+          <%# The property decides whether it sells by the room or by the guest
+              (Hotel#sell_mode), so this sheet never asks — it only shows the
+              fields the property's mode actually prices with. %>
+          <% per_person = current_hotel.sells_per_person? %>
+
           <section aria-labelledby="rate-plan-pricing-heading" class="space-y-4">
             <div>
               <h2 id="rate-plan-pricing-heading" class="text-base font-semibold text-foreground">Pricing</h2>
-              <p class="mt-1 text-sm text-muted-foreground">How the nightly price responds to occupancy.</p>
+              <p class="mt-1 text-sm text-muted-foreground">
+                <%= per_person ? "This property sells per guest, so the rate is charged for each guest staying." : "How the nightly price responds to occupancy." %>
+              </p>
             </div>
-
-            <%= render PanelsUI::FormField.new(form: f, attribute: :sell_mode, label: "How it's charged", required: true) do |field| %>
-              <% field.with_select_menu(sell_mode_choices, selected: rate_plan.sell_mode) %>
-            <% end %>
 
             <%# Every field carries a hint so the two columns stay on a shared
                 baseline — a hint on only some of them leaves the rows ragged. %>
             <div class="grid items-start gap-4 sm:grid-cols-2">
-              <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Base occupancy", hint: "Guests included in the room price.") do |field| %>
-                <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
-              <% end %>
+              <% if per_person %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :single_supplement, label: "Single supplement", hint: "Per night, when one guest occupies the room.") do |field| %>
+                  <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+                  <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+                <% end %>
 
-              <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge", hint: "Per night, for each guest above base occupancy.") do |field| %>
-                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-                <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
-              <% end %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :child_price_multiplier, label: "Child price", hint: "0.5 charges a child half the adult rate; 1.0 charges full.") do |field| %>
+                  <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+                <% end %>
+              <% else %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Base occupancy", hint: "Guests included in the room price.") do |field| %>
+                  <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+                <% end %>
 
-              <%= render PanelsUI::FormField.new(form: f, attribute: :single_supplement, label: "Single supplement", hint: "Per night, when one guest occupies the room.") do |field| %>
-                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-                <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
-              <% end %>
-
-              <%= render PanelsUI::FormField.new(form: f, attribute: :child_price_multiplier, label: "Child price", hint: "0.5 charges a child half the adult rate; 1.0 charges full.") do |field| %>
-                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge", hint: "Per night, for each guest above base occupancy.") do |field| %>
+                  <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+                  <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+                <% end %>
               <% end %>
             </div>
           </section>
 
-          <% if rate_plan.sell_mode == "per_person" %>
+          <% if per_person %>
             <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan %>
           <% end %>
 

@@ -7,8 +7,7 @@
      data-inventory-calendar-default-start-value="<%= @start_date %>"
      data-inventory-calendar-default-end-value="<%= @end_date %>"
      data-inventory-calendar-default-currency-value="<%= @display_currency %>"
-     data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>"
-     data-inventory-calendar-allow-pax-pricing-value="<%= current_hotel.allow_pax_pricing? %>">
+     data-inventory-calendar-base-currency-value="<%= @hotel_base_currency %>">
 
   <% if current_hotel.status == 'inventory_incomplete' %>
     <div class=" mb-6">
@@ -145,7 +144,7 @@
               </p>
               <%= f.hidden_field :currency, value: @hotel_base_currency, data: { inventory_calendar_target: "currencyField" } %>
             </div>
-             <div data-inventory-calendar-target="paxFields" class="grid gap-4 <%= current_hotel.allow_pax_pricing? ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
+             <div data-inventory-calendar-target="paxFields" class="grid gap-4 <%= current_hotel.sells_per_person? ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
               <div>
                 <div class="mb-1.5 flex items-center justify-between">
                   <div class="relative flex items-center gap-1.5">
@@ -186,7 +185,7 @@
                 </div>
                 <%= f.number_field :extra_pax_charge, step: 0.01, min: 0, class: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-0", data: { inventory_calendar_target: "extraPaxChargeField", action: "input->inventory-calendar#markTouched" } %>
               </div>
-              <% if current_hotel.allow_pax_pricing? %>
+              <% if current_hotel.sells_per_person? %>
                 <div>
                   <div class="mb-1.5 flex items-center justify-between">
                     <div class="relative flex items-center gap-1.5">

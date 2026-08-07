@@ -331,7 +331,7 @@
                         <span class="text-foreground"><%= item.quantity %>x <%= item.room_type_snapshot['name'] %></span>
                         <span class="text-foreground"><%= display_amount(item.subtotal, quote_currency: @quote.currency, display_currency: @display_currency, hotel: @hotel) %></span>
                       </div>
-                      <% if @hotel.pax_pricing_only? %>
+                      <% if @hotel.sells_per_person? %>
                         <div class="pl-4 space-y-1.5 text-xs text-muted-foreground border-l-2 border-primary/20">
                           <% pax_pricing_breakdown_items(item, @hotel, @display_currency).each do |line| %>
                             <div class="flex justify-between items-center">

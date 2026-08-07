@@ -2,19 +2,6 @@
 
 module HotelPortal
   module RatePlansHelper
-    PER_ROOM = { label: "Per room — extra guest charges", value: "per_room" }.freeze
-    PER_PERSON = { label: "Per person — pax rate plus single supplement", value: "per_person" }.freeze
-
-    # Pax-pricing-only hotels sell exclusively per person; hotels without the
-    # admin-granted allowance cannot offer it at all. RatePlan enforces both,
-    # so the menu only ever offers what would actually validate.
-    def sell_mode_choices(hotel = current_hotel)
-      return [ PER_PERSON ] if hotel.pax_pricing_only?
-      return [ PER_ROOM, PER_PERSON ] if hotel.allow_pax_pricing?
-
-      [ PER_ROOM ]
-    end
-
     # Per-room-type pricing submits as a plain hash under
     # rate_plan[room_type_pricing][<room_type_id>] rather than a nested
     # association, so there is no builder to hand PanelsUI. fields_for with a
