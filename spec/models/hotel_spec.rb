@@ -206,76 +206,67 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
-  describe 'pax pricing settings' do
-    let(:hotel) { create(:hotel, allow_pax_pricing: false, pax_pricing_only: false) }
+  describe 'sell mode' do
+    let(:hotel) { create(:hotel) }
 
-    it 'defaults allow_pax_pricing to false' do
-      expect(hotel.allow_pax_pricing).to be false
+    it 'defaults to per_room' do
+      expect(hotel.sell_mode).to eq('per_room')
     end
 
-    it 'defaults pax_pricing_only to false' do
-      expect(hotel.pax_pricing_only).to be false
+    it 'rejects a value outside the rate plan vocabulary' do
+      hotel.sell_mode = 'per_night'
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:sell_mode]).to be_present
     end
 
-    context 'when allow_pax_pricing is false' do
-      it 'resets pax_pricing_only to false before validation' do
-        hotel.pax_pricing_only = true
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be false
+    describe '#sells_per_person?' do
+      it 'is true only for per_person' do
+        expect(hotel.sells_per_person?).to be false
+        expect(create(:hotel, :per_person).sells_per_person?).to be true
       end
     end
 
-    context 'when allow_pax_pricing is true' do
-      before do
-        hotel.allow_pax_pricing = true
+    describe 'mirroring onto rate plans' do
+      it 'flips every plan when the hotel changes mode' do
+        standard = create(:rate_plan, hotel: hotel)
+        custom = create(:rate_plan, :custom, hotel: hotel)
+
+        hotel.update!(sell_mode: 'per_person')
+
+        expect(standard.reload.sell_mode).to eq('per_person')
+        expect(custom.reload.sell_mode).to eq('per_person')
       end
 
-      it 'allows pax_pricing_only to be true' do
-        hotel.pax_pricing_only = true
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be true
+      it 'flips special tier plans too — nothing is exempt' do
+        walk_in = create(:rate_plan, :walk_in_tier, hotel: hotel)
+        corporate = create(:rate_plan, :corporate_tier, hotel: hotel)
+        ota = create(:rate_plan, :ota_tier, hotel: hotel)
+
+        hotel.update!(sell_mode: 'per_person')
+
+        expect([ walk_in, corporate, ota ].map { |rp| rp.reload.sell_mode }).to all(eq('per_person'))
       end
 
-      it 'resets pax_pricing_only to false when allow_pax_pricing is disabled' do
-        hotel.pax_pricing_only = true
-        hotel.save!
+      it 'flips back to per_room' do
+        hotel = create(:hotel, :per_person)
+        rate_plan = create(:rate_plan, hotel: hotel)
 
-        hotel.allow_pax_pricing = false
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be false
-      end
+        hotel.update!(sell_mode: 'per_room')
 
-      it 'resets rate plans to per_room when allow_pax_pricing is disabled' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-        rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
-
-        hotel.allow_pax_pricing = false
-        expect(hotel).to be_valid
         expect(rate_plan.reload.sell_mode).to eq('per_room')
       end
 
-      it 'logs a warning when disabling allow_pax_pricing force-flips existing per_person rate plans' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-        rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
+      it 'leaves another hotel’s plans alone' do
+        other_plan = create(:rate_plan)
 
-        expect(Rails.logger).to receive(:warn).with(
-          a_string_matching(/Hotel##{hotel.id}.*force-flipped 1 rate plan.*rate_plan_ids=\[#{rate_plan.id}\]/)
-        )
+        hotel.update!(sell_mode: 'per_person')
 
-        hotel.allow_pax_pricing = false
-        hotel.save!
+        expect(other_plan.reload.sell_mode).to eq('per_room')
       end
 
-      it 'does not log anything when there are no per_person rate plans to flip' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-
-        expect(Rails.logger).not_to receive(:warn)
-
-        hotel.allow_pax_pricing = false
-        hotel.save!
+      it 'does not log when no plan needed changing' do
+        expect(Rails.logger).not_to receive(:info)
+        hotel.update!(name: "#{hotel.name} Resort")
       end
     end
   end

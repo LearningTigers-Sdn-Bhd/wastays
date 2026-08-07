@@ -105,10 +105,10 @@ class Hotel < ApplicationRecord
   validate :hotel_prefix_has_not_been_used_by_another_hotel
 
   before_validation :normalize_default_currency
-  before_validation :reset_pax_pricing_only_if_not_allowed
   before_validation :normalize_hotel_prefix
   before_validation :assign_hotel_prefix, on: :create
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
+  after_update_commit :mirror_sell_mode_to_rate_plans, if: :saved_change_to_sell_mode?
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
@@ -116,10 +116,24 @@ class Hotel < ApplicationRecord
   validates :business_starts_at, :business_ends_at, presence: true
   validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
+  validates :sell_mode, inclusion: { in: ->(_) { RatePlan.sell_modes } }
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
   validate :account_must_be_hotel_kind
+
+  # Operator-facing wording for the property's sell mode. The stored values
+  # match rate_plans.sell_mode so the mirror needs no translation, but "per
+  # room"/"per person" is engine vocabulary — staff and admins think in terms
+  # of what the property sells.
+  def self.sell_mode_options
+    [ [ "Room — one price per room, extra guest charges on top", "per_room" ],
+      [ "Guest — one price per guest", "per_person" ] ]
+  end
+
+  def sells_per_person?
+    sell_mode == "per_person"
+  end
 
   def self.const_missing(const_name)
     case const_name
@@ -731,21 +745,18 @@ class Hotel < ApplicationRecord
     google_map_link[fallback_regex, 1]&.to_f
   end
 
-  def reset_pax_pricing_only_if_not_allowed
-    unless allow_pax_pricing?
-      self.pax_pricing_only = false
+  # The property owns the sell mode; rate plans only carry prices. Nothing is
+  # exempt — Standard and the special tiers move too, so a hotel can never hold
+  # plans that disagree with how it sells. RatePlan#inherit_sell_mode_from_hotel
+  # covers plans created afterwards; this covers the ones already there.
+  def mirror_sell_mode_to_rate_plans
+    affected = rate_plans.where.not(sell_mode: sell_mode)
+    count = affected.update_all(sell_mode: sell_mode, updated_at: Time.current)
+    return if count.zero?
 
-      if persisted?
-        affected_ids = rate_plans.where(sell_mode: "per_person").pluck(:id)
-        if affected_ids.any?
-          rate_plans.where(id: affected_ids).update_all(sell_mode: "per_room")
-          Rails.logger.warn(
-            "[Hotel##{id}] allow_pax_pricing disabled: force-flipped #{affected_ids.size} rate plan(s) " \
-            "from per_person to per_room (rate_plan_ids=#{affected_ids})"
-          )
-        end
-      end
-    end
+    Rails.logger.info(
+      "[Hotel##{id}] sell_mode changed to #{sell_mode}: mirrored onto #{count} rate plan(s)"
+    )
   end
 
   def ensure_current_business_date

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_05_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1438,7 +1438,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_120000) do
     t.text "ai_provider_key"
     t.string "ai_provider_name"
     t.boolean "allow_boat_information", default: true, null: false
-    t.boolean "allow_pax_pricing", default: false, null: false
     t.jsonb "amenities", default: [], null: false
     t.integer "arrival_grace_period", default: 7200, null: false
     t.time "business_ends_at", default: "2000-01-01 02:00:00", null: false
@@ -1459,11 +1458,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_120000) do
     t.string "name"
     t.date "onboarding_end_date"
     t.date "onboarding_start_date"
-    t.boolean "pax_pricing_only", default: false, null: false
     t.bigint "plan_id"
     t.string "pre_suspension_status"
     t.string "preferred_channel_manager"
     t.bigint "salesperson_id"
+    t.string "sell_mode", default: "per_room", null: false
     t.string "slug", null: false
     t.boolean "sst_enabled", default: false, null: false
     t.integer "star_rating"
