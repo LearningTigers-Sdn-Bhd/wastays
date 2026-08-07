@@ -2,7 +2,7 @@
 
 module Bookings
   class RateOptions
-    def initialize(room_type:, check_in:, check_out:, apply_stop_sell: false, apply_arrival_departure: false, apply_stay_length: false, corporate_rate: false)
+    def initialize(room_type:, check_in:, check_out:, apply_stop_sell: false, apply_arrival_departure: false, apply_stay_length: false, corporate_rate: false, adults: nil, children: nil, child_ages: [])
       @room_type = room_type
       @check_in = check_in.to_date
       @check_out = check_out.to_date
@@ -10,6 +10,13 @@ module Bookings
       @apply_arrival_departure = ActiveModel::Type::Boolean.new.cast(apply_arrival_departure)
       @apply_stay_length = ActiveModel::Type::Boolean.new.cast(apply_stay_length)
       @corporate_rate = ActiveModel::Type::Boolean.new.cast(corporate_rate)
+      # Per-person plans price off the party staying, so every option has to be
+      # quoted for the same party the booking will be charged for. Omitting
+      # these used to leave CalculateStayPrice on its 2-adult default while
+      # BuildFinancialSnapshot charged for the real party.
+      @adults = adults
+      @children = children
+      @child_ages = child_ages
     end
 
     def call
@@ -43,6 +50,10 @@ module Bookings
 
     private
 
+    def occupancy
+      { adults: @adults, children: @children, child_ages: @child_ages }
+    end
+
     def tier_option(rate_plan, tier, label)
       total = CalculateStayPrice.new(
         room_type: @room_type,
@@ -50,7 +61,8 @@ module Bookings
         check_in: @check_in,
         check_out: @check_out,
         rate_tier: tier,
-        corporate_rate: @corporate_rate
+        corporate_rate: @corporate_rate,
+        **occupancy
       ).call
 
       {
@@ -87,7 +99,8 @@ module Bookings
         check_in: @check_in,
         check_out: @check_out,
         rate_tier: rate_plan.special_tier_kind || :standard,
-        corporate_rate: @corporate_rate
+        corporate_rate: @corporate_rate,
+        **occupancy
       ).call
 
       {
@@ -103,7 +116,8 @@ module Bookings
         room_type: @room_type,
         check_in: @check_in,
         check_out: @check_out,
-        corporate_rate: @corporate_rate
+        corporate_rate: @corporate_rate,
+        **occupancy
       ).call
 
       {

@@ -77,7 +77,9 @@ module Bookings
               room_type: new_room_type,
               rate_plan: new_rate_plan,
               rate_tier: effective_rate_tier(current_rate_selection),
-              manual_total_amount: @booking.manual_rate_override
+              manual_total_amount: @booking.manual_rate_override,
+              adults: @booking.adults,
+              children: @booking.children
             ).call
 
             nightly_rate_snapshot = financial_snapshot.nightly_rate_snapshot.transform_values do |entry|

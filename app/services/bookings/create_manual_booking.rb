@@ -90,7 +90,9 @@ module Bookings
           check_in: booking.check_in,
           check_out: booking.check_out,
           guest_country: booking.guest_country,
-          manual_total_amount: booking.manual_rate_override
+          manual_total_amount: booking.manual_rate_override,
+          adults: booking.adults,
+          children: booking.children
         ).call
       rescue ArgumentError => e
         return OpenStruct.new(success?: false, errors: [ e.message ])

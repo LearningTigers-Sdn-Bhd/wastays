@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Bookings::CalculateStayPrice do
-  let(:hotel) { create(:hotel, allow_pax_pricing: true) }
+  let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, base_price: 100) }
   let(:check_in) { Date.current }
   let(:check_out) { Date.current + 2.days }
@@ -30,7 +30,10 @@ RSpec.describe Bookings::CalculateStayPrice do
   end
 
   context "with per_person sell mode" do
-    let(:rate_plan) { create(:rate_plan, hotel: hotel, sell_mode: "per_person") }
+    # Rate plans inherit the mode from their hotel, so a per-person plan means
+    # a per-person property.
+    let(:hotel) { create(:hotel, :per_person) }
+    let(:rate_plan) { create(:rate_plan, hotel: hotel) }
     subject { described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, pax: 3) }
 
     it "multiplies the price by pax" do
@@ -96,7 +99,7 @@ RSpec.describe Bookings::CalculateStayPrice do
   end
 
   context "with per_room sell mode and extra guest charges" do
-    let(:rate_plan) { create(:rate_plan, hotel: hotel, sell_mode: "per_room", base_occupancy: 2, extra_pax_charge: 30.0) }
+    let(:rate_plan) { create(:rate_plan, hotel: hotel, base_occupancy: 2, extra_pax_charge: 30.0) }
 
     it "does not charge extra if guest count is equal to or less than base occupancy" do
       service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 0)
@@ -116,7 +119,7 @@ RSpec.describe Bookings::CalculateStayPrice do
   end
 
   context "with derived room-type pricing" do
-    let(:rate_plan) { create(:rate_plan, hotel: hotel, sell_mode: "per_room", name: "Non-Refundable") }
+    let(:rate_plan) { create(:rate_plan, hotel: hotel, name: "Non-Refundable") }
 
     it "computes a multiplier off the room type's own Standard Rate price for that date, not the flat base price" do
       standard_plan = room_type.rate_plans.first

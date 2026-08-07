@@ -172,7 +172,9 @@ module Bookings
         room_type: room_type,
         rate_plan: rate_plan,
         check_in: @booking.check_in,
-        check_out: @booking.check_out
+        check_out: @booking.check_out,
+        adults: @booking.adults,
+        children: @booking.children
       ).call
     end
   end

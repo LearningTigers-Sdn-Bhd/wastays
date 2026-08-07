@@ -19,7 +19,9 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
       check_in: Date.parse(params[:check_in]),
       check_out: Date.parse(params[:check_out]),
       guest_country: params[:guest_country].presence || current_hotel.country,
-      corporate_rate: params[:corporate_rate] == "true"
+      corporate_rate: params[:corporate_rate] == "true",
+      adults: params[:adults].presence,
+      children: params[:children].presence
     ).call
     tourism_tax_total = Booking.tourism_tax_total_for(snapshot.tax_lines)
     payable_tax_total = Booking.non_tourism_tax_total_for(snapshot.tax_lines)
