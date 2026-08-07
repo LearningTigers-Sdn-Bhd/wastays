@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe BookingEngine::CreateQuote do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
-  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved", allow_pax_pricing: true) }
+  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved") }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:check_in) { Date.today }
@@ -153,9 +153,11 @@ RSpec.describe BookingEngine::CreateQuote do
     end
 
     context "with per_person pricing plan" do
-      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", sell_mode: "per_person", single_supplement: 15.0, currency: "MYR") }
+      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", single_supplement: 15.0, currency: "MYR") }
 
       before do
+        hotel.update!(sell_mode: "per_person")
+        pax_rate_plan.reload
         RoomTypeRatePlan.create!(room_type: room_type, rate_plan: pax_rate_plan)
         stay_dates.each do |date|
           RoomRate.create!(room_type: room_type, rate_plan: pax_rate_plan, date: date, price: 30.0, currency: "MYR")
@@ -236,9 +238,11 @@ RSpec.describe BookingEngine::CreateQuote do
 
     context "with age-banded per_person pricing plan" do
       let!(:family_room) { RoomType.create!(hotel: hotel, name: "Family", quantity: 3, max_adults: 2, max_children: 3, base_price: 100, room_number_mode: "range") }
-      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", sell_mode: "per_person", child_price_multiplier: 0.6, currency: "MYR") }
+      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", child_price_multiplier: 0.6, currency: "MYR") }
 
       before do
+        hotel.update!(sell_mode: "per_person")
+        pax_rate_plan.reload
         RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
         RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
         RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_value: 20, label: "Teen")

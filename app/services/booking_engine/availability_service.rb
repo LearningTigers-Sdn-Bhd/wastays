@@ -436,11 +436,12 @@ module BookingEngine
     end
 
     def candidate_rate_plans_for(room_type)
-      if room_type.hotel.pax_pricing_only?
-        room_type.rate_plans.active.where(sell_mode: "per_person").to_a
-      else
-        [ nil ] + room_type.rate_plans.active.where(sell_mode: "per_room").to_a
-      end
+      plans = room_type.rate_plans.publicly_bookable.to_a
+
+      # A per-room property also offers the unplanned "base" option (nil),
+      # priced straight off the room type. A per-guest property has no
+      # per-room number to fall back to, so every option carries a plan.
+      room_type.hotel.sells_per_person? ? plans : [ nil ] + plans
     end
 
     def greedy_allocate(total_pax, room_type_data)

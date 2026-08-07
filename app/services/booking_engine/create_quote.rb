@@ -79,11 +79,7 @@ module BookingEngine
         quote_currency = nil
 
         grouped_allocations.each do |(room_type, r_adults, r_children, r_child_ages), quantity|
-          rate_plan = if @hotel.pax_pricing_only?
-            @rate_plan_id.present? ? room_type.rate_plans.active.where(sell_mode: "per_person").find_by(id: @rate_plan_id) : nil
-          else
-            @rate_plan_id.present? ? room_type.rate_plans.active.find_by(id: @rate_plan_id) : nil
-          end
+          rate_plan = @rate_plan_id.presence && room_type.rate_plans.publicly_bookable.find_by(id: @rate_plan_id)
           pricing_summary = availability_service.pricing_summary_for(
             room_type,
             rate_plan: rate_plan,
