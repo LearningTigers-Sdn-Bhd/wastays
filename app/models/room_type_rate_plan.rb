@@ -32,6 +32,10 @@ class RoomTypeRatePlan < ApplicationRecord
   def trigger_ari_sync
     return if Thread.current[:skip_ari_sync]
     return if room_type.hotel.preferred_channel_manager.blank?
+    # Both jobs below no-op for a per-person plan — the structure sync is
+    # refused by the adapter, and with no structure there is no mapping for the
+    # rate push to hang off. Skip enqueueing them at all.
+    return unless rate_plan.channex_syncable?
 
     # 1. First ensure the Rate Plan structure exists in the Channel Manager
     ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")

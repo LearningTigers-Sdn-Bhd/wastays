@@ -167,6 +167,19 @@
             <% end %>
           </div>
 
+          <%# A per-guest property has nothing the channel manager can carry:
+              Channex models one flat child fee per rate plan, taken from a
+              property-level policy, with no per-band pricing. Room types and
+              availability still sync; rates and restrictions do not. %>
+          <% if @hotel.sells_per_person? %>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p class="text-xs font-semibold text-amber-900">Rates will not be distributed</p>
+              <p class="mt-1 text-xs leading-relaxed text-amber-800">
+                This property sells per guest, which the channel manager cannot represent. Room types and availability still sync; rate plans and restrictions are skipped.
+              </p>
+            </div>
+          <% end %>
+
           <% if @hotel.channel_mapping&.external_id.present? %>
             <div class="rounded-xl bg-muted p-3 border border-border">
               <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Mapped Entities</p>

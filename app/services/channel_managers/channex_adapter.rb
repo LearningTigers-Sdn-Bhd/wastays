@@ -90,10 +90,9 @@ module ChannelManagers
     end
 
     def sync_rate_plan(rate_plan, room_type: nil)
-      # Per-person rate plans (including age-banded ones) are intentionally excluded from
-      # Channex sync: Channex only supports a single flat children/infants fee per rate plan,
-      # sourced from a property-level Hotel Policy, not per-band per-rate-plan pricing.
-      return nil if rate_plan.sell_mode == "per_person"
+      # Per-person rate plans (including age-banded ones) are intentionally
+      # excluded from Channex sync — see RatePlan#channex_syncable?.
+      return nil unless rate_plan.channex_syncable?
 
       client = Channex::Client.new
       property_id = mapping_for(@hotel).external_id
@@ -234,11 +233,20 @@ module ChannelManagers
 
       # 2. Push Restrictions/Rates (Rate Plan level)
       if sync_rates || sync_restrictions
+        # Every rate plan of a per-person hotel is unsyncable, so the push
+        # below silently produces zero values. Reporting that as a successful
+        # ARI push hides the fact that nothing reached the channel manager.
+        return success("No rates pushed: this property sells per guest, which the channel manager cannot represent.") if no_syncable_rate_plans?
+
         restrictions_result = push_restrictions(client, property_id, date_range, rate_plan_ids: rate_plan_ids, sync_rates: sync_rates, sync_restrictions: sync_restrictions, rate_plan_fields: rate_plan_fields)
         return failure(restrictions_result[:message]) unless restrictions_result[:ok]
       end
 
       success("ARI pushed to Channel Manager")
+    end
+
+    def no_syncable_rate_plans?
+      @hotel.rate_plans.none?(&:channex_syncable?)
     end
 
     def push_booking(booking)
@@ -723,13 +731,16 @@ module ChannelManagers
         rate_plan = @hotel.rate_plans.create!(
           name: "Standard Rate",
           kind: "standard",
-          sell_mode: "per_room",
           currency: @hotel.default_currency || "MYR"
         )
         room_type.room_type_rate_plans.create!(rate_plan: rate_plan)
       end
 
-      room_type.rate_plans.all? do |rate_plan|
+      # Per-person plans are skipped, not failed. A hotel that sells by the
+      # guest has nothing Channex can represent, and treating that as an
+      # onboarding failure would abort after the property and room types were
+      # already created remotely, leaving a half-onboarded property behind.
+      room_type.rate_plans.select(&:channex_syncable?).all? do |rate_plan|
         sync_rate_plan(rate_plan, room_type: room_type).present?
       end
     end
