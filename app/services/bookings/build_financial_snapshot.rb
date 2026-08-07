@@ -4,7 +4,7 @@ require "ostruct"
 
 module Bookings
   class BuildFinancialSnapshot
-    def initialize(hotel:, check_in:, check_out:, guest_country:, booking: nil, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard)
+    def initialize(hotel:, check_in:, check_out:, guest_country:, booking: nil, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard, adults: nil, children: nil, child_ages: [])
       @hotel = hotel
       @booking = booking
       @check_in = check_in.to_date
@@ -18,6 +18,16 @@ module Bookings
       @room_items = room_items
       @corporate_rate = corporate_rate
       @rate_tier = rate_tier&.to_sym || :standard
+
+      # Occupancy only moves the number for per-person plans, but it has to be
+      # carried on every path: this service produces booking.total_amount, the
+      # folio charges and the tax base, so a party size it doesn't know about
+      # is a party size the guest isn't billed for. The default of 2 adults
+      # matches CalculateStayPrice so the two agree when a caller omits it.
+      @adults = (adults || 2).to_i
+      @children = (children || 0).to_i
+      ages = Array(child_ages).map(&:to_i)
+      @child_ages = (ages.size == @children) ? ages : []
     end
 
     def call
@@ -79,24 +89,28 @@ module Bookings
         if rate.present?
           tier_kind = @rate_tier != :standard ? @rate_tier : rate.rate_plan&.special_tier_kind
 
-          price = case tier_kind
+          base = case tier_kind
           when :walk_in then rate.walk_in_price
           when :corporate then rate.corporate_price
           else
             @corporate_rate ? rate.corporate_price : nil
           end
-          price ||= rate.price
+          base ||= rate.price
 
           rate.as_json.merge(
             "room_rate_id" => rate.id,
             "source" => "room_rate",
-            "price" => price.to_d.to_s("F"),
+            # The requested plan decides how the party is priced, even when the
+            # matched row came from the standard plan (or from no plan at all)
+            # via the plans_to_try fallback. CalculateStayPrice resolves it the
+            # same way, which is what keeps a quote and its charge equal.
+            "price" => nightly_price(base, rate: rate, rate_plan: @rate_plan || rate.rate_plan).to_d.to_s("F"),
             "currency" => rate.currency
           )
         else
           {
             "date" => date.iso8601,
-            "price" => @room_type.base_price.to_d.to_s("F"),
+            "price" => nightly_price(@room_type.base_price, rate: nil, rate_plan: @rate_plan).to_d.to_s("F"),
             "currency" => currency,
             "rate_plan_id" => @rate_plan&.id,
             "room_type_id" => @room_type.id,
@@ -112,6 +126,21 @@ module Bookings
         total_amount: total,
         nightly_rate_snapshot: snapshot
       }
+    end
+
+    # The tier columns and base_price hold a *base* nightly rate; what the
+    # guest pays depends on the plan's sell mode and the party staying. Shared
+    # with CalculateStayPrice so a quote and the charge it turns into can never
+    # be computed by two different formulas.
+    def nightly_price(base_nightly_rate, rate:, rate_plan:)
+      Bookings::NightlyPaxPrice.call(
+        base_nightly_rate: base_nightly_rate.to_d,
+        rate: rate,
+        rate_plan: rate_plan,
+        adults: @adults,
+        children: @children,
+        child_ages: @child_ages
+      )
     end
 
     def build_manual_override_room_item

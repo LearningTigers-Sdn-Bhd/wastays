@@ -186,4 +186,94 @@ RSpec.describe Bookings::BuildFinancialSnapshot do
       end
     end
   end
+
+  describe "per-person pricing" do
+    let(:hotel) { create(:hotel, :per_person) }
+    let!(:rate_plan) { room_type.rate_plans.first }
+
+    def snapshot_for(adults:, children: 0)
+      described_class.new(
+        hotel: hotel,
+        check_in: check_in,
+        check_out: check_out,
+        guest_country: guest_country,
+        room_type: room_type,
+        rate_plan: rate_plan,
+        adults: adults,
+        children: children
+      ).call
+    end
+
+    it "charges the nightly rate for each adult" do
+      # 3 adults * 100 * 2 nights
+      expect(snapshot_for(adults: 3).room_total).to eq(600.0)
+    end
+
+    it "charges children at the plan's child multiplier" do
+      rate_plan.update!(child_price_multiplier: 0.5)
+
+      # (2 * 100 + 1 * 50) * 2 nights
+      expect(snapshot_for(adults: 2, children: 1).room_total).to eq(500.0)
+    end
+
+    it "adds the single supplement for a lone guest" do
+      rate_plan.update!(single_supplement: 20)
+
+      expect(snapshot_for(adults: 1).room_total).to eq(240.0)
+    end
+
+    it "prices the base_price fallback per guest too" do
+      RoomRate.where(room_type: room_type).delete_all
+
+      expect(snapshot_for(adults: 3).room_total).to eq(room_type.base_price * 3 * 2)
+    end
+
+    it "does not re-apply pax math to an already-priced snapshot" do
+      # room_items replays a stored snapshot whose prices already went through
+      # the pax calculation at booking time. Multiplying again would silently
+      # inflate every folio refresh and payment quote.
+      stored = snapshot_for(adults: 3).nightly_rate_snapshot
+
+      replayed = described_class.new(
+        hotel: hotel,
+        check_in: check_in,
+        check_out: check_out,
+        guest_country: guest_country,
+        adults: 3,
+        room_items: [ { nightly_rate_snapshot: stored, quantity: 1 } ]
+      ).call
+
+      expect(replayed.room_total).to eq(600.0)
+    end
+  end
+
+  describe "quote and charge parity" do
+    let(:hotel) { create(:hotel, :per_person) }
+    let!(:rate_plan) { room_type.rate_plans.first }
+
+    it "charges exactly what Bookings::RateOptions quoted for the same party" do
+      rate_plan.update!(child_price_multiplier: 0.5)
+
+      quoted = Bookings::RateOptions.new(
+        room_type: room_type,
+        check_in: check_in,
+        check_out: check_out,
+        adults: 3,
+        children: 1
+      ).call.find { |option| option[:id] == rate_plan.id }
+
+      charged = described_class.new(
+        hotel: hotel,
+        check_in: check_in,
+        check_out: check_out,
+        guest_country: guest_country,
+        room_type: room_type,
+        rate_plan: rate_plan,
+        adults: 3,
+        children: 1
+      ).call
+
+      expect(quoted[:total_amount].to_d).to eq(charged.room_total)
+    end
+  end
 end
