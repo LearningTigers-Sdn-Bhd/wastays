@@ -2,8 +2,9 @@ FactoryBot.define do
   factory :rate_plan do
     name { "Standard Rate" }
     association :hotel
-    sell_mode { "per_room" }
     currency { "MYR" }
+    # sell_mode is not set here — RatePlan inherits it from its hotel. Use the
+    # hotel's :per_person trait to build per-person plans.
     # Mirrors the default name. Specs that override :name to an ordinary plan
     # should pass kind: "custom" (or use the :custom trait) so the record is
     # deletable and archivable the way a hotelier-created plan is.
@@ -40,7 +41,7 @@ FactoryBot.define do
     end
 
     trait :age_banded do
-      sell_mode { "per_person" }
+      association :hotel, factory: [ :hotel, :per_person ]
 
       after(:create) do |rate_plan|
         create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")

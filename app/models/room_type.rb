@@ -101,14 +101,14 @@ class RoomType < ApplicationRecord
     # Nightly prices would survive a shared plan — room_rates is unique on
     # (room_type_id, rate_plan_id, date, currency), so each room type keeps its
     # own price row either way. What does not survive is everything held on the
-    # plan itself: sell_mode, currency, child_price_multiplier and the age
-    # bands are single values, so a shared plan silently applies one room
-    # type's rules to another, and leaves the second without a plan of its own
-    # to edit.
+    # plan itself: currency, child_price_multiplier and the age bands are
+    # single values, so a shared plan silently applies one room type's rules to
+    # another, and leaves the second without a plan of its own to edit.
+    #
+    # sell_mode is not passed — RatePlan inherits it from the hotel.
     rate_plan = hotel.rate_plans.create!(
       name: "Standard Rate",
       kind: "standard",
-      sell_mode: "per_room",
       currency: hotel.default_currency || "MYR"
     )
 

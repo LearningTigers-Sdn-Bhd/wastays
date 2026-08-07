@@ -17,8 +17,6 @@ class RatePlan < ApplicationRecord
   validates :name, presence: true
   validates :kind, presence: true, inclusion: { in: KINDS }
   validates :sell_mode, presence: true, inclusion: { in: %w[per_room per_person] }
-  validate :pax_pricing_allowed_for_person_mode
-  validate :sell_mode_matches_hotel_exclusivity
   validates :currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :single_supplement, numericality: { greater_than_or_equal_to: 0 }
   validates :child_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
@@ -26,9 +24,15 @@ class RatePlan < ApplicationRecord
   validates :extra_pax_charge, numericality: { greater_than_or_equal_to: 0 }
 
   before_validation :normalize_currency
+  before_validation :inherit_sell_mode_from_hotel
 
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
+  # Walk-in, corporate and OTA plans are internal price anchors — they carry
+  # room_rates.walk_in_price / .corporate_price for the front desk and are
+  # never inventory a guest can pick. Bookings::RateOptions rejects them the
+  # same way for the staff-facing dropdown.
+  scope :publicly_bookable, -> { active.where.not(kind: SPECIAL_TIER_KINDS) }
 
   after_commit :sync_with_channel_manager, on: [ :create, :update ]
   after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
@@ -71,6 +75,13 @@ class RatePlan < ApplicationRecord
     sell_mode == "per_person" && rate_plan_age_bands.any?
   end
 
+  # Channex models a rate plan with a single flat children/infants fee taken
+  # from a property-level Hotel Policy — it has no representation for per-band
+  # per-plan pricing, so per-person plans cannot be pushed at all.
+  def channex_syncable?
+    sell_mode == "per_room"
+  end
+
   def band_for_age(age)
     rate_plan_age_bands.find { |band| age.to_i.between?(band.min_age, band.max_age) }
   end
@@ -87,29 +98,17 @@ class RatePlan < ApplicationRecord
     self.currency = CurrencyCatalog.normalize(currency)
   end
 
-  def pax_pricing_allowed_for_person_mode
-    if sell_mode == "per_person" && !hotel&.allow_pax_pricing?
-      errors.add(:sell_mode, "cannot be set to Per Person unless allowed by admin")
-    end
-  end
-
-  # Per-pax hotels sell exclusively to premium/package guests: once a hotel
-  # is flipped to pax_pricing_only, its bookable rate plans cannot mix
-  # per_room and per_person. Special tiers and standard plans are exempt
-  # because they anchor data other parts of the system read regardless of
-  # mode — room_rates.walk_in_price and .corporate_price for the tiers, and
-  # the per-room-type base price for standard.
-  def sell_mode_matches_hotel_exclusivity
-    return unless hotel&.pax_pricing_only?
-    return unless sell_mode == "per_room"
-    return if special_tier? || standard_rate?
-
-    errors.add(:sell_mode, "must be Per Person while this hotel is set to pax-pricing only")
+  # The hotel decides how it sells; a rate plan only decides how much. Nothing
+  # writes sell_mode directly any more — not the rate plan sheet, not the
+  # callers that create Standard plans — so this is the single point where the
+  # value is set, on create and on every update.
+  def inherit_sell_mode_from_hotel
+    self.sell_mode = hotel.sell_mode if hotel
   end
 
   def sync_with_channel_manager
     return if hotel.preferred_channel_manager.blank?
-    return if sell_mode == "per_person"
+    return unless channex_syncable?
 
     ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
   end

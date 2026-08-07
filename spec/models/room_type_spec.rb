@@ -25,6 +25,12 @@ RSpec.describe RoomType, type: :model do
       expect(room_type.standard_rate_plan).to eq(room_type.rate_plans.sole)
     end
 
+    it 'creates the plan in the hotel’s own sell mode' do
+      pax_room_type = create(:room_type, hotel: create(:hotel, :per_person))
+
+      expect(pax_room_type.standard_rate_plan.sell_mode).to eq('per_person')
+    end
+
     it 'ignores a plan shared in from another category' do
       anchor = room_type.standard_rate_plan
       create(:rate_plan, :custom, hotel: hotel, name: "All Inclusive Package", room_type: room_type)

@@ -339,7 +339,6 @@ module HotelDemoManagement
       rate_plan = @hotel.rate_plans.create!(
         name: name,
         kind: kind,
-        sell_mode: "per_room",
         currency: @hotel.default_currency || "MYR"
       )
       room_type.room_type_rate_plans.create!(rate_plan: rate_plan)

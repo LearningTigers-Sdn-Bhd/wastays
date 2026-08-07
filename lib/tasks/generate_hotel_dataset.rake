@@ -125,13 +125,11 @@ namespace :hotel_generator do
 
       walk_in_plan = hotel.rate_plans.create!(
         name: "Walk-in Rate",
-        sell_mode: "per_room",
         currency: "MYR"
       )
 
       corporate_plan = hotel.rate_plans.create!(
         name: "Corporate Rate",
-        sell_mode: "per_room",
         currency: "MYR"
       )
 

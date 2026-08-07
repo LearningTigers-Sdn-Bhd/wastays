@@ -52,70 +52,60 @@ RSpec.describe RatePlan, type: :model do
     end
   end
 
-  describe 'custom validations' do
-    let(:hotel) { create(:hotel, allow_pax_pricing: false) }
-    let(:rate_plan) { build(:rate_plan, hotel: hotel, sell_mode: 'per_person') }
+  describe '#inherit_sell_mode_from_hotel' do
+    let(:hotel) { create(:hotel, :per_person) }
 
-    context 'when allow_pax_pricing is false' do
-      it 'does not allow sell_mode to be per_person' do
-        expect(rate_plan).not_to be_valid
-        expect(rate_plan.errors[:sell_mode]).to include("cannot be set to Per Person unless allowed by admin")
-      end
-
-      it 'allows sell_mode to be per_room' do
-        rate_plan.sell_mode = 'per_room'
-        expect(rate_plan).to be_valid
-      end
+    it 'takes the hotel’s mode on create' do
+      expect(create(:rate_plan, hotel: hotel).sell_mode).to eq('per_person')
     end
 
-    context 'when allow_pax_pricing is true' do
-      before do
-        hotel.update!(allow_pax_pricing: true)
-      end
+    it 'ignores a sell_mode passed in directly' do
+      rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_room')
 
-      it 'allows sell_mode to be per_person' do
-        expect(rate_plan).to be_valid
-      end
+      expect(rate_plan.sell_mode).to eq('per_person')
+    end
+
+    it 'applies to special tiers and the standard rate — nothing is exempt' do
+      standard = create(:rate_plan, hotel: hotel)
+      walk_in = create(:rate_plan, :walk_in_tier, hotel: hotel)
+
+      expect(standard.sell_mode).to eq('per_person')
+      expect(walk_in.sell_mode).to eq('per_person')
+    end
+
+    it 're-asserts the hotel’s mode on update' do
+      rate_plan = create(:rate_plan, :custom, hotel: hotel)
+
+      rate_plan.update!(sell_mode: 'per_room', name: 'Bed & Breakfast')
+
+      expect(rate_plan.reload.sell_mode).to eq('per_person')
+    end
+
+    it 'follows a per_room hotel' do
+      expect(create(:rate_plan, hotel: create(:hotel)).sell_mode).to eq('per_room')
     end
   end
 
-  describe '#sell_mode_matches_hotel_exclusivity' do
-    let(:hotel) { create(:hotel, allow_pax_pricing: true, pax_pricing_only: true) }
-
-    context 'when the hotel is pax_pricing_only' do
-      it 'rejects a per_room rate plan that is not a special tier or the standard rate' do
-        rate_plan = build(:rate_plan, hotel: hotel, name: 'Bed & Breakfast', kind: 'custom', sell_mode: 'per_room')
-
-        expect(rate_plan).not_to be_valid
-        expect(rate_plan.errors[:sell_mode]).to include('must be Per Person while this hotel is set to pax-pricing only')
-      end
-
-      it 'allows a per_person rate plan' do
-        rate_plan = build(:rate_plan, hotel: hotel, name: 'Bed & Breakfast', sell_mode: 'per_person')
-
-        expect(rate_plan).to be_valid
-      end
-
-      it 'exempts the system "Standard Rate" plan even in per_room mode' do
-        rate_plan = build(:rate_plan, hotel: hotel, name: 'Standard Rate', sell_mode: 'per_room')
-
-        expect(rate_plan).to be_valid
-      end
-
-      it 'exempts special-tier plans like Walk-in Rate even in per_room mode' do
-        rate_plan = build(:rate_plan, :walk_in_tier, hotel: hotel, sell_mode: 'per_room')
-
-        expect(rate_plan).to be_valid
-      end
+  describe '#channex_syncable?' do
+    it 'is true for a per_room plan and false for a per_person one' do
+      expect(create(:rate_plan, hotel: create(:hotel))).to be_channex_syncable
+      expect(create(:rate_plan, hotel: create(:hotel, :per_person))).not_to be_channex_syncable
     end
+  end
 
-    context 'when the hotel is not pax_pricing_only' do
-      it 'allows a per_room rate plan' do
-        hotel.update!(pax_pricing_only: false)
-        rate_plan = build(:rate_plan, hotel: hotel, name: 'Bed & Breakfast', kind: 'custom', sell_mode: 'per_room')
+  describe '.publicly_bookable' do
+    let(:hotel) { create(:hotel) }
 
-        expect(rate_plan).to be_valid
-      end
+    it 'excludes special tiers and archived plans, keeping standard and custom' do
+      standard = create(:rate_plan, hotel: hotel)
+      custom = create(:rate_plan, :custom, hotel: hotel)
+      create(:rate_plan, :walk_in_tier, hotel: hotel)
+      create(:rate_plan, :corporate_tier, hotel: hotel)
+      create(:rate_plan, :ota_tier, hotel: hotel)
+      archived = create(:rate_plan, :custom, hotel: hotel, name: 'Old Promo')
+      archived.archive!
+
+      expect(hotel.rate_plans.publicly_bookable).to match_array([ standard, custom ])
     end
   end
 
@@ -167,23 +157,21 @@ RSpec.describe RatePlan, type: :model do
   end
 
   describe '#age_banded?' do
-    let(:hotel) { create(:hotel, allow_pax_pricing: true) }
-
     it 'is false for a per_room rate plan even with bands present' do
-      rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_room')
+      rate_plan = create(:rate_plan, hotel: create(:hotel))
       create(:rate_plan_age_band, rate_plan: rate_plan)
 
       expect(rate_plan.age_banded?).to be false
     end
 
     it 'is false for a per_person rate plan with no bands configured' do
-      rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
+      rate_plan = create(:rate_plan, hotel: create(:hotel, :per_person))
 
       expect(rate_plan.age_banded?).to be false
     end
 
     it 'is true for a per_person rate plan with bands configured' do
-      rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
+      rate_plan = create(:rate_plan, hotel: create(:hotel, :per_person))
       create(:rate_plan_age_band, rate_plan: rate_plan)
 
       expect(rate_plan.age_banded?).to be true
@@ -191,7 +179,7 @@ RSpec.describe RatePlan, type: :model do
   end
 
   describe '#band_for_age' do
-    let(:hotel) { create(:hotel, allow_pax_pricing: true) }
+    let(:hotel) { create(:hotel, :per_person) }
     let(:rate_plan) { create(:rate_plan, :age_banded, hotel: hotel) }
 
     it 'resolves the band covering the given age' do
@@ -205,17 +193,19 @@ RSpec.describe RatePlan, type: :model do
   end
 
   describe '#sync_with_channel_manager' do
-    let(:hotel) { create(:hotel, allow_pax_pricing: true, preferred_channel_manager: 'channex') }
+    it 'does not enqueue a sync job for a plan at a per-person hotel' do
+      hotel = create(:hotel, :per_person, preferred_channel_manager: 'channex')
 
-    it 'does not enqueue a sync job for a per_person rate plan' do
       expect {
-        create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
+        create(:rate_plan, hotel: hotel)
       }.not_to have_enqueued_job(ChannelManagers::SyncStructureJob)
     end
 
-    it 'enqueues a sync job for a per_room rate plan' do
+    it 'enqueues a sync job for a plan at a per-room hotel' do
+      hotel = create(:hotel, preferred_channel_manager: 'channex')
+
       expect {
-        create(:rate_plan, hotel: hotel, sell_mode: 'per_room')
+        create(:rate_plan, hotel: hotel)
       }.to have_enqueued_job(ChannelManagers::SyncStructureJob)
     end
   end
