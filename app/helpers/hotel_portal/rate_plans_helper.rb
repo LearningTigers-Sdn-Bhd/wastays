@@ -10,9 +10,9 @@ module HotelPortal
 
     def room_type_pricing_choices
       [
-        { label: "I'll set the price myself", value: "fixed" },
-        { label: "% of standard rate", value: "multiplier" },
-        { label: "Standard rate ± an amount", value: "offset" }
+        { label: "I'll set prices by date", value: "fixed" },
+        { label: "Adjust Standard Rate by %", value: "multiplier" },
+        { label: "Adjust Standard Rate by amount", value: "offset" }
       ]
     end
 

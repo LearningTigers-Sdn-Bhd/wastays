@@ -33,6 +33,8 @@ export default class extends Controller {
     "baseOccupancyField",
     "extraPaxChargeField",
     "singleSupplementField",
+    "occupancyPriceField",
+    "occupancyPriceRow",
     "currencyField",
     "minStayField",
     "maxStayField",
@@ -68,6 +70,7 @@ export default class extends Controller {
     defaultStart: String,
     defaultEnd: String,
     defaultCurrency: String,
+    chargingModel: String,
     baseCurrency: String
   }
 
@@ -229,6 +232,7 @@ export default class extends Controller {
     this.initialValues = {
       quantity: "", status: "", price: "", 
       base_occupancy: "", extra_pax_charge: "", single_supplement: "",
+      occupancy_prices: {},
       min_stay: "", max_stay: "", 
       closed_to_arrival: false, closed_to_departure: false, stop_sell: false
     }
@@ -314,6 +318,7 @@ export default class extends Controller {
       if (this.hasBaseOccupancyFieldTarget) this.baseOccupancyFieldTarget.value = data.baseOccupancy || ""
       if (this.hasExtraPaxChargeFieldTarget) this.extraPaxChargeFieldTarget.value = data.extraPaxCharge || ""
       if (this.hasSingleSupplementFieldTarget) this.singleSupplementFieldTarget.value = data.singleSupplement || ""
+      this.syncOccupancyPriceFields(data.maxAdults, data.occupancyPrices)
       
       const currency = data.currency || this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
       this.syncCurrencySelect(currency)
@@ -347,6 +352,7 @@ export default class extends Controller {
       base_occupancy: this.hasBaseOccupancyFieldTarget ? this.baseOccupancyFieldTarget.value : "",
       extra_pax_charge: this.hasExtraPaxChargeFieldTarget ? this.extraPaxChargeFieldTarget.value : "",
       single_supplement: this.hasSingleSupplementFieldTarget ? this.singleSupplementFieldTarget.value : "",
+      occupancy_prices: this.occupancyPricesFromForm(),
       min_stay: this.minStayFieldTarget.value,
       max_stay: this.maxStayFieldTarget.value,
       closed_to_arrival: this.ctaFieldTarget.checked,
@@ -408,7 +414,7 @@ export default class extends Controller {
       } else {
         // Single cell: check for actual diff
         // We use string conversion for numbers to be safe
-        if (current.toString() !== initial.toString()) {
+        if (JSON.stringify(current) !== JSON.stringify(initial)) {
           modifiedFields.push(key)
         }
       }
@@ -420,7 +426,7 @@ export default class extends Controller {
     }
 
     const applyInventory = modifiedFields.some(f => ["quantity", "status"].includes(f))
-    const applyRates = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement"].includes(f))
+    const applyRates = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement", "occupancy_prices"].includes(f))
     const applyRestrictions = modifiedFields.some(f => ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"].includes(f))
 
     const channelId = this.hasChannelIdFieldTarget ? this.channelIdFieldTarget.value : ""
@@ -442,6 +448,7 @@ export default class extends Controller {
       base_occupancy: currentValues.base_occupancy,
       extra_pax_charge: currentValues.extra_pax_charge,
       single_supplement: currentValues.single_supplement,
+      occupancy_prices: currentValues.occupancy_prices,
       currency: this.baseCurrencyValue || this.defaultCurrencyValue || "MYR",
       min_stay: currentValues.min_stay,
       max_stay: currentValues.max_stay,
@@ -472,7 +479,7 @@ export default class extends Controller {
       if (invParts.length > 0) details.push(invParts.join(", "))
     }
     
-    const rateModified = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement"].includes(f))
+    const rateModified = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement", "occupancy_prices"].includes(f))
     if (rateModified) {
       actions.push("Rates")
       const rateParts = []
@@ -487,6 +494,11 @@ export default class extends Controller {
       }
       if (modifiedFields.includes("single_supplement") && values.single_supplement !== "") {
         rateParts.push(`Single Supp: ${this.baseCurrencyValue || "MYR"} ${values.single_supplement}`)
+      }
+      if (modifiedFields.includes("occupancy_prices")) {
+        Object.entries(values.occupancy_prices).forEach(([adults, amount]) => {
+          rateParts.push(`${adults} adult${adults === "1" ? "" : "s"}: ${this.baseCurrencyValue || "MYR"} ${amount}`)
+        })
       }
       if (rateParts.length > 0) details.push(rateParts.join(", "))
     }
@@ -559,6 +571,7 @@ export default class extends Controller {
                 base_occupancy: change.apply_rates ? change.base_occupancy : undefined,
                 extra_pax_charge: change.apply_rates ? change.extra_pax_charge : undefined,
                 single_supplement: change.apply_rates ? change.single_supplement : undefined,
+                occupancy_prices: change.apply_rates ? change.occupancy_prices : undefined,
                 currency: change.currency,
                 min_stay: change.apply_restrictions ? change.min_stay : undefined,
                 max_stay: change.apply_restrictions ? change.max_stay : undefined,
@@ -591,6 +604,7 @@ export default class extends Controller {
                 base_occupancy: change.apply_rates ? change.base_occupancy : undefined,
                 extra_pax_charge: change.apply_rates ? change.extra_pax_charge : undefined,
                 single_supplement: change.apply_rates ? change.single_supplement : undefined,
+                occupancy_prices: change.apply_rates ? change.occupancy_prices : undefined,
                 currency: change.currency,
                 min_stay: change.apply_restrictions ? change.min_stay : undefined,
                 max_stay: change.apply_restrictions ? change.max_stay : undefined,
@@ -685,6 +699,11 @@ export default class extends Controller {
         if (data.base_occupancy !== undefined && data.base_occupancy !== "") cell.dataset.baseOccupancy = data.base_occupancy
         if (data.extra_pax_charge !== undefined && data.extra_pax_charge !== "") cell.dataset.extraPaxCharge = data.extra_pax_charge
         if (data.single_supplement !== undefined && data.single_supplement !== "") cell.dataset.singleSupplement = data.single_supplement
+        if (data.occupancy_prices && Object.keys(data.occupancy_prices).length > 0) {
+          cell.dataset.occupancyPrices = JSON.stringify(data.occupancy_prices)
+          const displayPrice = data.occupancy_prices[cell.dataset.maxAdults]
+          if (displayPrice !== undefined) cell.dataset.price = displayPrice
+        }
       }
     }
   }
@@ -993,11 +1012,13 @@ export default class extends Controller {
     this.statusFieldTarget.value = ""
     this.priceFieldTarget.value = ""
     if (this.hasPriceLabelTarget) {
-      this.priceLabelTarget.textContent = `Price (${this.baseCurrencyValue || "MYR"})`
+      const priceKind = this.chargingModelValue === "per_person" ? "Adult price" : "Room price"
+      this.priceLabelTarget.textContent = `${priceKind} (${this.baseCurrencyValue || "MYR"})`
     }
     if (this.hasBaseOccupancyFieldTarget) this.baseOccupancyFieldTarget.value = ""
     if (this.hasExtraPaxChargeFieldTarget) this.extraPaxChargeFieldTarget.value = ""
     if (this.hasSingleSupplementFieldTarget) this.singleSupplementFieldTarget.value = ""
+    this.syncOccupancyPriceFields(null, {})
     if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
     if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = ""
     
@@ -1128,8 +1149,36 @@ export default class extends Controller {
 
   markTouched(event) {
     const target = event.currentTarget
-    const fieldName = target.name.split("[").pop().replace("]", "")
+    const fieldName = target.dataset.fieldName || target.name.split("[").pop().replace("]", "")
     this.touchedFields.add(fieldName)
+  }
+
+  occupancyPricesFromForm() {
+    return this.occupancyPriceFieldTargets.reduce((prices, field) => {
+      if (!field.closest("[data-inventory-calendar-target='occupancyPriceRow']")?.classList.contains("hidden") && field.value !== "") {
+        prices[field.dataset.adults] = field.value
+      }
+      return prices
+    }, {})
+  }
+
+  syncOccupancyPriceFields(maxAdults, rawPrices) {
+    let prices = rawPrices || {}
+    if (typeof prices === "string") {
+      try {
+        prices = JSON.parse(prices)
+      } catch (_error) {
+        prices = {}
+      }
+    }
+
+    const maximum = Number.parseInt(maxAdults || "0", 10)
+    this.occupancyPriceRowTargets.forEach(row => {
+      row.classList.toggle("hidden", maximum > 0 && Number.parseInt(row.dataset.adults, 10) > maximum)
+    })
+    this.occupancyPriceFieldTargets.forEach(field => {
+      field.value = prices[field.dataset.adults] ?? ""
+    })
   }
 
   showTooltip(event) {

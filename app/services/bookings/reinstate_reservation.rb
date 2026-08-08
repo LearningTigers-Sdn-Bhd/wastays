@@ -168,7 +168,7 @@ module Bookings
     end
 
     def subtotal_for(room_type, rate_plan)
-      Bookings::CalculateStayPrice.new(
+      subtotal = Bookings::CalculateStayPrice.new(
         room_type: room_type,
         rate_plan: rate_plan,
         check_in: @booking.check_in,
@@ -176,6 +176,13 @@ module Bookings
         adults: @booking.adults,
         children: @booking.children
       ).call
+
+      # Reinstating re-prices the stay at today's rates. If a night no longer
+      # has a price for this party, the reservation cannot be reinstated at a
+      # total we can stand behind — the alternative is reinstating it at zero.
+      raise "This stay no longer has a price for every night. Set the missing rates and try again." if subtotal.nil?
+
+      subtotal
     end
   end
 end

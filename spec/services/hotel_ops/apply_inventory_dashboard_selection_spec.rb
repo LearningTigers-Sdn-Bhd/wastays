@@ -57,6 +57,32 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(member_rate.room_rates.find_by(date: start_date, currency: "MYR").price.to_f).to eq(333.0)
     end
 
+    it "stores date-specific prices for each supported adult occupancy" do
+      hotel.update!(sell_mode: "per_person")
+      room_type = create(:room_type, hotel: hotel, max_adults: 2, base_price: 100)
+      rate_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          apply_rates: "1",
+          modified_fields: [ "occupancy_prices" ],
+          occupancy_prices: { "1" => "180.00", "2" => "300.00" },
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      rate = rate_plan.room_rates.find_by!(room_type: room_type, date: start_date, currency: "MYR")
+      expect(rate.occupancy_prices).to eq("1" => "180.0", "2" => "300.0")
+      expect(rate.price).to eq(300.to_d)
+    end
+
     it "writes rate updates in the requested currency and updates the rate plan currency" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
       jpy_plan = create(:rate_plan, room_type: room_type, currency: "JPY")

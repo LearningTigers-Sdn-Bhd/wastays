@@ -3,7 +3,7 @@
 
 <section aria-labelledby="rate-plan-room-types-heading" class="space-y-4 border-t border-border pt-5">
   <div>
-    <h2 id="rate-plan-room-types-heading" class="text-base font-semibold text-foreground">Room categories &amp; pricing</h2>
+    <h2 id="rate-plan-room-types-heading" class="text-base font-semibold text-foreground">Rooms and prices</h2>
     <% if rate_plan.standard_rate? %>
       <p class="mt-1 text-sm text-muted-foreground">
         A standard plan is created with its room category and stays bound to it, so the assignment cannot be changed here.
@@ -11,12 +11,17 @@
       </p>
     <% else %>
       <p class="mt-1 text-sm text-muted-foreground">
-        Manual prices are entered per date in the rates calendar, the same as Standard Rate. The derived modes compute
-        from that room&rsquo;s Standard Rate for each date, so they need no calendar entry unless you want to override a
-        specific date.
+        Select every room category that offers this plan. Enter a starting price for prices you set yourself, then use
+        Rates &amp; Availability for date-specific changes. Adjusted prices follow that room&rsquo;s Standard Rate until a date is overridden.
       </p>
     <% end %>
   </div>
+
+  <% if rate_plan.errors[:room_types].any? %>
+    <p id="rate-plan-room-types-error" class="text-sm text-destructive" role="alert">
+      <%= rate_plan.errors[:room_types].to_sentence %>
+    </p>
+  <% end %>
 
   <%# Reassigning a standard plan would attach a second category to another
       category's anchor plan and orphan the first, so the picker is read-only. %>
@@ -39,11 +44,13 @@
   <div class="space-y-2">
     <% room_types.each do |room_type| %>
       <% rtrp = rtrp_by_room_type_id[room_type.id] %>
+      <% occupancy_prices = rtrp&.occupancy_prices&.index_by(&:adults) || {} %>
       <% scope = "rate_plan[room_type_pricing][#{room_type.id}]" %>
       <div class="rounded-md border border-border p-3 space-y-2"
            data-controller="room-type-pricing-row"
            data-room-type-pricing-row-anchor-price-value="<%= room_type.base_price %>"
            data-room-type-pricing-row-currency-value="<%= rate_plan.currency %>"
+           data-room-type-pricing-row-per-person-value="<%= current_hotel.sells_per_person? %>"
            data-action="input->room-type-pricing-row#update change->room-type-pricing-row#update">
         <div class="flex flex-wrap items-center gap-3">
           <%= render PanelsUI::Checkbox.new(
@@ -51,7 +58,8 @@
                 id: "rate_plan_room_type_pricing_#{room_type.id}_enabled",
                 checked: rtrp.present?,
                 label: room_type.name,
-                description: "Standard Rate: #{rate_plan.currency} #{number_with_precision(room_type.base_price, precision: 2, delimiter: ',')}") %>
+                description: "Standard Rate: #{rate_plan.currency} #{number_with_precision(room_type.base_price, precision: 2, delimiter: ',')}",
+                aria: { describedby: ("rate-plan-room-types-error" if rate_plan.errors[:room_types].any?) }) %>
 
           <%= fields_for scope, HotelPortal::RatePlansHelper::RoomTypePricingScope.new(rtrp&.pricing_mode || "fixed", rtrp&.pricing_value) do |pf| %>
             <div class="ml-auto flex items-center gap-2">
@@ -62,16 +70,40 @@
                 <% end %>
               </div>
 
-              <div class="w-28 <%= "hidden" unless rtrp&.derives_price? %>" data-room-type-pricing-row-target="value">
+              <div class="w-32" data-room-type-pricing-row-target="value">
                 <%= render PanelsUI::FormField.new(form: pf, attribute: :pricing_value,
-                      label: "#{room_type.name} price adjustment", label_hidden: true, size: :sm) do |field| %>
-                  <% field.with_input(type: :number, step: 0.01, inputmode: "decimal", placeholder: "-10") %>
+                      label: "#{room_type.name} starting price or adjustment", label_hidden: true, size: :sm) do |field| %>
+                  <% field.with_input(type: :number, step: 0.01, inputmode: "decimal", placeholder: number_with_precision(room_type.base_price, precision: 2)) %>
                 <% end %>
               </div>
             </div>
           <% end %>
         </div>
-        <p class="text-right text-xs text-muted-foreground" data-room-type-pricing-row-target="preview"></p>
+        <p class="text-xs text-muted-foreground">
+          Allows up to <%= pluralize(room_type.max_adults, "adult") %> and <%= pluralize(room_type.max_children, "child") %>.
+          Capacity is managed in the room category.
+        </p>
+        <% if current_hotel.sells_per_person? %>
+          <fieldset class="grid gap-3 sm:grid-cols-2" data-room-type-pricing-row-target="occupancy">
+            <legend class="sr-only"><%= room_type.name %> adult occupancy prices</legend>
+            <% 1.upto(room_type.max_adults) do |adults| %>
+              <div>
+                <label for="rate_plan_room_type_pricing_<%= room_type.id %>_occupancy_<%= adults %>" class="mb-1 block text-sm font-medium text-foreground">
+                  <%= pluralize(adults, "adult") %>
+                </label>
+                <div class="flex rounded-md border border-border bg-background focus-within:border-border-interactive">
+                  <span class="px-3 py-2 text-sm text-muted-foreground"><%= rate_plan.currency %></span>
+                  <%= number_field_tag "#{scope}[occupancy_prices][#{adults}]",
+                        occupancy_prices[adults]&.price,
+                        id: "rate_plan_room_type_pricing_#{room_type.id}_occupancy_#{adults}",
+                        min: 0, step: 0.01, inputmode: "decimal",
+                        class: "min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-0" %>
+                </div>
+              </div>
+            <% end %>
+          </fieldset>
+        <% end %>
+        <p class="text-right text-xs text-muted-foreground" data-room-type-pricing-row-target="preview" aria-live="polite"></p>
       </div>
     <% end %>
     </div>

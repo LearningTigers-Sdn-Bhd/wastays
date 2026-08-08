@@ -143,7 +143,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
         :closed_to_arrival, :closed_to_departure, :stop_sell, :mode,
         :base_occupancy, :extra_pax_charge, :single_supplement,
         :channel_id, :channel_rate_plan_id,
-        room_type_ids: [], rate_plan_ids: [], modified_fields: []
+        room_type_ids: [], rate_plan_ids: [], modified_fields: [], occupancy_prices: {}
       ).to_h.symbolize_keys
     end
 
@@ -449,8 +449,10 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :channel_rate_plan_id,
       room_type_ids: [],
       rate_plan_ids: [],
+      modified_fields: [],
       view_currencies: [],
-      available_room_numbers: []
+      available_room_numbers: [],
+      occupancy_prices: {}
     )
   end
 

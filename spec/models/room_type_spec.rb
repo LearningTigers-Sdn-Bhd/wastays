@@ -13,6 +13,15 @@ RSpec.describe RoomType, type: :model do
     it { is_expected.to validate_numericality_of(:quantity).is_greater_than_or_equal_to(0) }
     it { is_expected.to validate_presence_of(:max_adults) }
     it { is_expected.to validate_numericality_of(:max_adults).is_greater_than(0) }
+    it { is_expected.to validate_numericality_of(:max_children).only_integer.is_greater_than_or_equal_to(0) }
+
+    it "defaults missing child capacity to zero" do
+      room_type = build(:room_type, max_children: nil)
+
+      room_type.validate
+
+      expect(room_type.max_children).to eq(0)
+    end
     it { is_expected.to validate_presence_of(:base_price) }
     it { is_expected.to validate_numericality_of(:base_price).is_greater_than_or_equal_to(0) }
   end

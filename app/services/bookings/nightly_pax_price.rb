@@ -12,7 +12,7 @@ module Bookings
       new(...).call
     end
 
-    def initialize(base_nightly_rate:, rate:, rate_plan:, adults:, children:, child_ages: [])
+    def initialize(base_nightly_rate:, rate:, rate_plan:, adults:, children:, child_ages: [], adult_occupancy_price: nil)
       @base_nightly_rate = base_nightly_rate
       @rate = rate
       @rate_plan = rate_plan
@@ -20,6 +20,7 @@ module Bookings
       @children = children.to_i
       ages = Array(child_ages).map(&:to_i)
       @child_ages = (ages.size == @children) ? ages : []
+      @adult_occupancy_price = adult_occupancy_price
     end
 
     def call
@@ -33,7 +34,7 @@ module Bookings
     private
 
     def per_person_price
-      adults_cost = @adults * @base_nightly_rate
+      adults_cost = @adult_occupancy_price || (@adults * @base_nightly_rate)
       children_cost =
         if @child_ages.any?
           @child_ages.sum { |age| per_child_price(age) }
@@ -43,7 +44,7 @@ module Bookings
 
       price = adults_cost + children_cost
 
-      if (@adults + @children) == 1
+      if @adult_occupancy_price.nil? && (@adults + @children) == 1
         price += @rate&.single_supplement || @rate_plan.single_supplement || 0.to_d
       end
 

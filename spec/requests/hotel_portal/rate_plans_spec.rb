@@ -27,6 +27,26 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include("New rate plan")
       expect(Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog')).to be_present
     end
+
+    it 'shows the hotel charging model and default currency as inherited context' do
+      hotel.update!(sell_mode: 'per_person', default_currency: 'USD')
+
+      get new_hotel_rate_plan_path(hotel)
+
+      context = Nokogiri::HTML(response.body).at_css('dl[aria-label="Property-controlled rate plan settings"]')
+      expect(context.text.squish).to include('How the property charges Price per guest')
+      expect(context.text.squish).to include('Currency USD')
+      expect(Nokogiri::HTML(response.body).at_css('#rate_plan_sell_mode')).to be_nil
+    end
+
+    it 'explains the current distribution limit for a connected per-guest hotel' do
+      hotel.update!(sell_mode: 'per_person', preferred_channel_manager: 'channex')
+
+      get new_hotel_rate_plan_path(hotel)
+
+      expect(response.body).to include('Per-guest rates are not distributed yet')
+      expect(response.body).to include('Room availability continues to sync')
+    end
   end
 
   describe 'GET /hotel/:hotel_id/rate_plans/:id/edit' do
@@ -54,6 +74,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.at_css('#rate_plan_base_occupancy')).to be_present
       expect(doc.at_css('#rate_plan_extra_pax_charge')).to be_present
       expect(doc.at_css('#rate_plan_single_supplement')).to be_nil
+      expect(doc.text.squish).to include('Guests included')
+      expect(doc.text.squish).to include('Extra guest charge')
     end
 
     it 'shows only the per-guest fields at a per-guest hotel' do
@@ -66,6 +88,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.at_css('#rate_plan_single_supplement')).to be_present
       expect(doc.at_css('#rate_plan_child_price_multiplier')).to be_present
       expect(doc.at_css('#rate_plan_base_occupancy')).to be_nil
+      expect(doc.text.squish).to include('One-guest surcharge')
+      expect(doc.text.squish).to include('Default child price')
     end
 
     it 'shows a delete action when the plan has no bookings' do
@@ -88,7 +112,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      expect(response.body).to include("% of standard rate")
+      expect(response.body).to include("Adjust Standard Rate by %")
       expect(response.body).to include("rate_plan[room_type_pricing][#{room_type.id}][pricing_mode]")
       expect(response.body).to include('value="-15.0"')
     end
@@ -115,15 +139,16 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('Fixed price per child')
     end
 
-    it 'shows the prominent empty-state add button when there are no age groups yet' do
+    it 'shows child pricing guidance and the add button when there are no age groups yet' do
       hotel.update!(sell_mode: 'per_person')
       per_person_plan = create(:rate_plan, hotel: hotel, name: 'Family Plan', kind: 'custom', currency: 'MYR')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
       empty_state = Nokogiri::HTML(response.body).at_css('[data-rate-plan-age-bands-target="emptyState"]')
-      expect(empty_state.text).to include('Add your first age group')
+      expect(empty_state.text).to include('No age groups yet')
       expect(empty_state["class"]).not_to include("hidden")
+      expect(response.body).to include('Add age group')
     end
 
     it 'hides the empty-state add button once age groups already exist' do
@@ -149,7 +174,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
             extra_pax_charge: 50.0,
             single_supplement: 30.0,
             child_price_multiplier: 0.5,
-            room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "fixed" } }
+            room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "fixed", pricing_value: "120" } }
           }
         }
       }.to change(RatePlan, :count).by(1)
@@ -161,16 +186,93 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       rate_plan = RatePlan.last
       expect(rate_plan.name).to eq('Flexible Breakfast Rate')
       expect(rate_plan.room_types).to include(room_type)
+      expect(rate_plan.room_type_rate_plans.find_by(room_type: room_type).pricing_value).to eq(120.to_d)
     end
 
     it 'ignores a submitted sell_mode and takes the hotel’s' do
       hotel.update!(sell_mode: 'per_person')
+      room_type.update!(max_adults: 2)
 
       post hotel_rate_plans_path(hotel), params: {
-        rate_plan: { name: 'Smuggled Per Room', sell_mode: 'per_room' }
+        rate_plan: {
+          name: 'Smuggled Per Room',
+          sell_mode: 'per_room',
+          room_type_pricing: {
+            room_type.id.to_s => {
+              enabled: "1",
+              pricing_mode: "fixed",
+              occupancy_prices: { "1" => "100", "2" => "180" }
+            }
+          }
+        }
       }
 
       expect(RatePlan.last.sell_mode).to eq('per_person')
+      expect(RatePlan.last.room_type_rate_plans.sole.occupancy_prices.order(:adults).pluck(:price)).to eq([ 100.to_d, 180.to_d ])
+    end
+
+    it 'stores a separate starting price for each supported adult occupancy' do
+      hotel.update!(sell_mode: 'per_person')
+      room_type.update!(max_adults: 2)
+
+      post hotel_rate_plans_path(hotel), params: {
+        rate_plan: {
+          name: 'Per Guest Flexible',
+          room_type_pricing: {
+            room_type.id.to_s => {
+              enabled: "1",
+              pricing_mode: "fixed",
+              occupancy_prices: { "1" => "180", "2" => "300" }
+            }
+          }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
+      assignment = RatePlan.last.room_type_rate_plans.sole
+      expect(assignment.occupancy_prices.order(:adults).pluck(:adults, :price)).to eq([
+        [ 1, 180.to_d ],
+        [ 2, 300.to_d ]
+      ])
+    end
+
+    it 'requires every adult occupancy supported by the room category' do
+      hotel.update!(sell_mode: 'per_person')
+      room_type.update!(max_adults: 2)
+
+      expect {
+        post hotel_rate_plans_path(hotel), params: {
+          rate_plan: {
+            name: 'Incomplete Per Guest Plan',
+            room_type_pricing: {
+              room_type.id.to_s => {
+                enabled: "1",
+                pricing_mode: "fixed",
+                occupancy_prices: { "1" => "180", "2" => "" }
+              }
+            }
+          }
+        }
+      }.not_to change(RatePlan, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("enter the price for 2 adults")
+    end
+
+    it 'rejects a rate plan without a room category' do
+      expect {
+        post hotel_rate_plans_path(hotel), params: {
+          rate_plan: {
+            name: 'Unassigned Plan',
+            room_type_pricing: { room_type.id.to_s => { enabled: "0", pricing_mode: "fixed" } }
+          }
+        }
+      }.not_to change(RatePlan, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css('#rate-plan-room-types-error').text.squish).to eq('must include at least one room category')
+      expect(doc.at_css("#rate_plan_room_type_pricing_#{room_type.id}_enabled")['aria-describedby']).to include('rate-plan-room-types-error')
     end
 
     it 'creates a room type rate plan with derived multiplier pricing' do
@@ -186,6 +288,20 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       rtrp = rate_plan.room_type_rate_plans.find_by(room_type: room_type)
       expect(rtrp.pricing_mode).to eq('multiplier')
       expect(rtrp.pricing_value.to_f).to eq(-10.0)
+    end
+
+    it 'requires a starting price when staff set prices by date' do
+      expect {
+        post hotel_rate_plans_path(hotel), params: {
+          rate_plan: {
+            name: 'Flexible',
+            room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "fixed", pricing_value: "" } }
+          }
+        }
+      }.not_to change(RatePlan, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("#{room_type.name}: enter a starting price")
     end
 
     it 're-renders with errors when a derived room type row is missing its pricing value' do
@@ -216,7 +332,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
     it 'updates the rate plan' do
       patch hotel_rate_plan_path(hotel, rate_plan), params: {
-        rate_plan: { extra_pax_charge: 75.0, room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "fixed" } } }
+        rate_plan: { extra_pax_charge: 75.0, room_type_pricing: { room_type.id.to_s => { enabled: "1", pricing_mode: "fixed", pricing_value: "100" } } }
       }
 
       expect(response).to redirect_to(hotel_rates_settings_path(hotel))
@@ -224,15 +340,16 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.room_types).to include(room_type)
     end
 
-    it 'removes a room type when unchecked' do
+    it 'rejects an update that removes the final room category' do
       create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: 'fixed')
 
       patch hotel_rate_plan_path(hotel, rate_plan), params: {
         rate_plan: { room_type_pricing: { room_type.id.to_s => { enabled: "0" } } }
       }
 
-      expect(response).to redirect_to(hotel_rates_settings_path(hotel))
-      expect(rate_plan.reload.room_types).not_to include(room_type)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(rate_plan.reload.room_types).to contain_exactly(room_type)
+      expect(response.body).to include('must include at least one room category')
     end
 
     # Previously RoomTypeRatePlan's per-row callback enqueued a separate
@@ -241,7 +358,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       hotel.update!(preferred_channel_manager: 'channex')
       others = Array.new(2) { |i| create(:room_type, hotel: hotel, name: "Villa #{i}") }
       all_room_types = [ room_type ] + others
-      pricing = all_room_types.to_h { |rt| [ rt.id.to_s, { enabled: "1", pricing_mode: "fixed" } ] }
+      pricing = all_room_types.to_h { |rt| [ rt.id.to_s, { enabled: "1", pricing_mode: "fixed", pricing_value: "100" } ] }
 
       ActiveJob::Base.queue_adapter = :test
       ActiveJob::Base.queue_adapter.enqueued_jobs.clear
@@ -279,14 +396,22 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     # An unchecked PanelsUI::Checkbox submits no `enabled` key at all — the row
     # only reaches the server because its pricing_mode field always submits.
     it 'removes a room type when the enabled key is omitted entirely' do
+      other_room_type = create(:room_type, hotel: hotel, name: 'Suite')
       create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: 'fixed')
+      create(:room_type_rate_plan, room_type: other_room_type, rate_plan: rate_plan, pricing_mode: 'fixed')
 
       patch hotel_rate_plan_path(hotel, rate_plan), params: {
-        rate_plan: { room_type_pricing: { room_type.id.to_s => { pricing_mode: "fixed" } } }
+        rate_plan: {
+          room_type_pricing: {
+            room_type.id.to_s => { pricing_mode: "fixed" },
+            other_room_type.id.to_s => { enabled: "1", pricing_mode: "fixed", pricing_value: "100" }
+          }
+        }
       }
 
       expect(response).to redirect_to(hotel_rates_settings_path(hotel))
       expect(rate_plan.reload.room_types).not_to include(room_type)
+      expect(rate_plan.room_types).to contain_exactly(other_room_type)
     end
   end
 

@@ -11,6 +11,13 @@ RSpec.describe RoomTypeRatePlan, type: :model do
       expect(rtrp).to be_valid
     end
 
+    it 'rejects a negative starting price when pricing_mode is fixed' do
+      rtrp = build(:room_type_rate_plan, pricing_mode: 'fixed', pricing_value: -1)
+
+      expect(rtrp).not_to be_valid
+      expect(rtrp.errors[:pricing_value]).to be_present
+    end
+
     it 'requires pricing_value when pricing_mode is multiplier' do
       rtrp = build(:room_type_rate_plan, pricing_mode: 'multiplier', pricing_value: nil)
       expect(rtrp).not_to be_valid

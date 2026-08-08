@@ -79,6 +79,54 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
   end
 
   describe '#cell_for' do
+    it "shows the same derived nightly price used by bookings" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      standard = room_type.standard_rate_plan
+      package = create(:rate_plan, :custom, hotel: hotel, name: "Breakfast Package", currency: "MYR")
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: package, pricing_mode: "offset", pricing_value: 25)
+      create(:room_rate, room_type: room_type, rate_plan: standard, date: start_date, price: 200, currency: "MYR")
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+      row = presenter.rows.find { |item| item.rate_row? && item.rate_plan_id == package.id }
+
+      expect(presenter.cell_for(row, start_date)).to include(
+        formatted_price: "225.00",
+        price_source: :standard_daily_rate
+      )
+    end
+
+    it "shows a fixed plan's persisted starting price when the date has no override" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      package = create(:rate_plan, :custom, hotel: hotel, name: "Flexible", currency: "MYR")
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: package, pricing_mode: "fixed", pricing_value: 175)
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+      row = presenter.rows.find { |item| item.rate_row? && item.rate_plan_id == package.id }
+
+      expect(presenter.cell_for(row, start_date)).to include(
+        formatted_price: "175.00",
+        price_source: :starting_price
+      )
+    end
+
+    it "exposes each per-guest occupancy price and displays the room's maximum-adult price" do
+      hotel.update!(sell_mode: "per_person")
+      room_type = create(:room_type, hotel: hotel, max_adults: 2, base_price: 100)
+      package = create(:rate_plan, :custom, hotel: hotel, name: "Flexible", currency: "MYR")
+      assignment = create(:room_type_rate_plan, room_type: room_type, rate_plan: package, pricing_mode: "fixed")
+      assignment.occupancy_prices.create!(adults: 1, price: 180)
+      assignment.occupancy_prices.create!(adults: 2, price: 300)
+
+      presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
+      row = presenter.rows.find { |item| item.rate_row? && item.rate_plan_id == package.id }
+
+      expect(presenter.cell_for(row, start_date)).to include(
+        formatted_price: "300.00",
+        display_adults: 2,
+        occupancy_prices: { "1" => 180.to_d, "2" => 300.to_d }
+      )
+    end
+
     it 'falls back to the standard rate for walk-in and corporate rows when special prices are missing' do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 1)
       rate_plan = room_type.rate_plans.first # Use auto-created Standard Rate plan

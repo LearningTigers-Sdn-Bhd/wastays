@@ -418,14 +418,16 @@
                                 data-single-supplement="<%= cell[:single_supplement] %>"
                                 data-base-occupancy="<%= cell[:base_occupancy] %>"
                                 data-extra-pax-charge="<%= cell[:extra_pax_charge] %>"
-                                data-sell-mode="<%= cell[:sell_mode] %>">
+                                data-sell-mode="<%= cell[:sell_mode] %>"
+                                data-max-adults="<%= cell[:max_adults] %>"
+                                data-occupancy-prices="<%= cell[:occupancy_prices].to_json %>">
                           
                           <div class="flex flex-col items-center justify-center min-h-[16px] relative">
                             <% if cell[:conversion_missing] %>
                               <span class="text-[8px] sm:text-[9px] font-black text-rose-500 uppercase leading-none">No FX Rate</span>
                             <% else %>
                               <span class="block truncate text-xs sm:text-sm tabular-nums text-foreground">
-                                <%= cell[:formatted_price] %>
+                                <%= cell[:formatted_price] %><%= " / #{cell[:display_adults]} adults" if cell[:sell_mode] == "per_person" %>
                               </span>
                             <% end %>
                           </div>

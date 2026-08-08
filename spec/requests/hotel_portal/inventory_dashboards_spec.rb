@@ -3,6 +3,7 @@ require 'rails_helper'
 RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
   let(:hotel) { create(:hotel, default_currency: "MYR") }
   let(:user) { create(:user) }
+  let!(:room_type) { create(:room_type, hotel: hotel, max_adults: 2) }
 
   before do
     Permission.find_or_create_by!(slug: 'manage_hotel_profile') { |permission| permission.name = 'Manage Hotel Profile' }
@@ -13,6 +14,32 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
   end
 
   describe "GET /index" do
+    it "shows only room-price occupancy fields when the property charges per room" do
+      get hotel_inventory_index_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_field("selection_update[base_occupancy]")
+      expect(page).to have_field("selection_update[extra_pax_charge]")
+      expect(page).not_to have_field("selection_update[single_supplement]")
+      expect(page).to have_content("Guests included")
+      expect(page).to have_content("Extra guest charge")
+      expect(page).to have_content("Room price (MYR)")
+    end
+
+    it "shows only per-guest occupancy fields when the property charges per guest" do
+      hotel.update!(sell_mode: "per_person")
+
+      get hotel_inventory_index_path(hotel)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_field("selection_update[occupancy_prices][1]")
+      expect(page).to have_field("selection_update[occupancy_prices][2]")
+      expect(page).not_to have_field("selection_update[base_occupancy]")
+      expect(page).not_to have_field("selection_update[extra_pax_charge]")
+      expect(page).to have_content("Adult occupancy prices")
+      expect(page).to have_content("Child prices and age groups come from the selected rate plan")
+    end
+
     it "renders validated tabs and nested breadcrumb labels" do
       get hotel_inventory_index_path(hotel), params: { tab: "advanced", subtab: "overrides" }
 

@@ -43,6 +43,11 @@ module AiConcierge
           min_check_in = all_check_ins.min
           room_type_ids = room_types.map(&:id)
 
+          ActiveRecord::Associations::Preloader.new(
+            records: room_types,
+            associations: [ :rate_plans, { room_type_rate_plans: :occupancy_prices } ]
+          ).call
+
           @inventories_by_type = RoomInventory
             .where(room_type_id: room_type_ids, date: min_check_in...max_check_out)
             .group_by(&:room_type_id)
@@ -187,7 +192,7 @@ module AiConcierge
         def build_option(room_type, check_in:, check_out:)
           stay_dates = (check_in...check_out).to_a
           rates = rates_for(room_type, stay_dates)
-          rate_plans = build_rate_plans(rates, stay_dates)
+          rate_plans = build_rate_plans(room_type, rates, stay_dates)
           cheapest = rate_plans.min_by { |rp| rp["total_price"] } || {}
 
           {
@@ -205,7 +210,7 @@ module AiConcierge
           }
         end
 
-        def build_rate_plans(rates, stay_dates)
+        def build_rate_plans(room_type, rates, stay_dates)
           rates.group_by(&:rate_plan_id).filter_map do |rate_plan_id, plan_rates|
             plan_by_date = plan_rates.group_by(&:date)
             next unless stay_dates.all? { |d| plan_by_date.key?(d) }
@@ -214,19 +219,18 @@ module AiConcierge
             currency = plan_rates.first&.currency || "MYR"
             name = rate_plan&.name || "Standard Rate"
 
-            # Uses the same per-pax calculator as the real booking engine (adults/children,
-            # age bands, single-occupancy supplement, extra-pax-over-base-occupancy charge)
-            # so this preview never quotes a different price than the final quote/booking.
-            # Works off the already-preloaded RoomRate rows (no extra queries).
+            assignment = rate_plan && room_type.room_type_rate_plans.find { |item| item.rate_plan_id == rate_plan.id }
             per_room_total = stay_dates.sum do |date|
-              rate = plan_by_date[date].first
-              Bookings::NightlyPaxPrice.call(
-                base_nightly_rate: rate.price.to_d,
-                rate: rate,
+              Rates::ResolveEffectiveNightlyPrice.call(
+                room_type: room_type,
                 rate_plan: rate_plan,
+                date: date,
+                currency: currency,
                 adults: adults,
-                children: children
-              )
+                children: children,
+                room_rates: rates,
+                room_type_rate_plan: assignment
+              ).amount
             end
             total = per_room_total * room_count
 

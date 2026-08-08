@@ -74,49 +74,39 @@ module Bookings
 
       currency = @rate_plan&.currency.presence || @hotel.default_currency.presence || "MYR"
       all_eligible_rates = @room_type.room_rates.includes(:rate_plan).where(date: stay_dates, currency: currency)
-      rates_by_plan_and_date = all_eligible_rates.group_by(&:rate_plan_id)
-
-      plans_to_try = [ @rate_plan, @room_type.standard_rate_plan, nil ].uniq
-      plan_ids_to_try = plans_to_try.map { |p| p.respond_to?(:id) ? p.id : p }
+      assignment = @rate_plan && @room_type.room_type_rate_plans.find_by(rate_plan: @rate_plan)
 
       snapshot = stay_dates.index_with do |date|
-        rate = nil
-        plan_ids_to_try.each do |pid|
-          rate = rates_by_plan_and_date[pid]&.find { |r| r.date == date }
-          break if rate
+        resolved = Rates::ResolveEffectiveNightlyPrice.call(
+          room_type: @room_type,
+          rate_plan: @rate_plan,
+          date: date,
+          currency: currency,
+          adults: @adults,
+          children: @children,
+          child_ages: @child_ages,
+          rate_tier: effective_rate_tier,
+          room_rates: all_eligible_rates,
+          room_type_rate_plan: assignment
+        )
+
+        # This snapshot becomes booking.total_amount and the folio charges, so a
+        # night the resolver cannot price has to stop the booking. `nil.to_d` is
+        # 0, which billed the guest nothing for that night instead.
+        if resolved.amount.nil?
+          raise ArgumentError,
+            "No price for #{@room_type.name} on #{date.iso8601} at #{@adults} adults / #{@children} children."
         end
 
-        if rate.present?
-          tier_kind = @rate_tier != :standard ? @rate_tier : rate.rate_plan&.special_tier_kind
-
-          base = case tier_kind
-          when :walk_in then rate.walk_in_price
-          when :corporate then rate.corporate_price
-          else
-            @corporate_rate ? rate.corporate_price : nil
-          end
-          base ||= rate.price
-
-          rate.as_json.merge(
-            "room_rate_id" => rate.id,
-            "source" => "room_rate",
-            # The requested plan decides how the party is priced, even when the
-            # matched row came from the standard plan (or from no plan at all)
-            # via the plans_to_try fallback. CalculateStayPrice resolves it the
-            # same way, which is what keeps a quote and its charge equal.
-            "price" => nightly_price(base, rate: rate, rate_plan: @rate_plan || rate.rate_plan).to_d.to_s("F"),
-            "currency" => rate.currency
-          )
-        else
-          {
-            "date" => date.iso8601,
-            "price" => nightly_price(@room_type.base_price, rate: nil, rate_plan: @rate_plan).to_d.to_s("F"),
-            "currency" => currency,
-            "rate_plan_id" => @rate_plan&.id,
-            "room_type_id" => @room_type.id,
-            "source" => "base_price_fallback"
-          }
-        end
+        (resolved.room_rate&.as_json || {}).merge(
+          "room_rate_id" => resolved.room_rate&.id,
+          "date" => date.iso8601,
+          "price" => resolved.amount.to_d.to_s("F"),
+          "currency" => resolved.currency,
+          "rate_plan_id" => @rate_plan&.id,
+          "room_type_id" => @room_type.id,
+          "source" => resolved.source.to_s
+        ).compact
       end.transform_keys(&:iso8601)
 
       total = stay_dates.sum { |date| snapshot.dig(date.iso8601, "price").to_d * @quantity }
@@ -128,19 +118,10 @@ module Bookings
       }
     end
 
-    # The tier columns and base_price hold a *base* nightly rate; what the
-    # guest pays depends on the plan's sell mode and the party staying. Shared
-    # with CalculateStayPrice so a quote and the charge it turns into can never
-    # be computed by two different formulas.
-    def nightly_price(base_nightly_rate, rate:, rate_plan:)
-      Bookings::NightlyPaxPrice.call(
-        base_nightly_rate: base_nightly_rate.to_d,
-        rate: rate,
-        rate_plan: rate_plan,
-        adults: @adults,
-        children: @children,
-        child_ages: @child_ages
-      )
+    def effective_rate_tier
+      return :corporate if @rate_tier == :standard && @corporate_rate
+
+      @rate_tier
     end
 
     def build_manual_override_room_item

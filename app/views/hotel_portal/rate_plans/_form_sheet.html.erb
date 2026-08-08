@@ -33,11 +33,35 @@
               fields the property's mode actually prices with. %>
           <% per_person = current_hotel.sells_per_person? %>
 
+          <dl aria-label="Property-controlled rate plan settings" class="grid gap-3 rounded-md border border-border bg-muted/40 p-3 sm:grid-cols-2">
+            <div class="space-y-1">
+              <dt class="text-xs text-muted-foreground">How the property charges</dt>
+              <dd class="text-sm font-medium text-foreground"><%= per_person ? "Price per guest" : "One price per room" %></dd>
+            </div>
+            <div class="space-y-1">
+              <dt class="text-xs text-muted-foreground">Currency</dt>
+              <dd class="text-sm font-medium text-foreground"><%= rate_plan.currency %></dd>
+            </div>
+            <div class="sm:col-span-2">
+              <p class="text-xs text-muted-foreground">
+                The charging model comes from property setup. Daily prices and restrictions are managed under Rates &amp; Availability.
+              </p>
+            </div>
+          </dl>
+
+          <% if per_person && current_hotel.preferred_channel_manager.present? %>
+            <%= render PanelsUI::Alert.new(tone: :warning, title: "Per-guest rates are not distributed yet", role: :status) do |alert| %>
+              <% alert.with_description do %>
+                Room availability continues to sync, but this plan&rsquo;s prices and restrictions currently stay in Wastays.
+              <% end %>
+            <% end %>
+          <% end %>
+
           <section aria-labelledby="rate-plan-pricing-heading" class="space-y-4">
             <div>
-              <h2 id="rate-plan-pricing-heading" class="text-base font-semibold text-foreground">Pricing</h2>
+              <h2 id="rate-plan-pricing-heading" class="text-base font-semibold text-foreground"><%= per_person ? "Guest pricing" : "Occupancy pricing" %></h2>
               <p class="mt-1 text-sm text-muted-foreground">
-                <%= per_person ? "This property sells per guest, so the rate is charged for each guest staying." : "How the nightly price responds to occupancy." %>
+                <%= per_person ? "Set adjustments to the nightly adult price for single guests and children." : "Set how the nightly room price responds to occupancy." %>
               </p>
             </div>
 
@@ -45,16 +69,13 @@
                 baseline — a hint on only some of them leaves the rows ragged. %>
             <div class="grid items-start gap-4 sm:grid-cols-2">
               <% if per_person %>
-                <%= render PanelsUI::FormField.new(form: f, attribute: :single_supplement, label: "Single supplement", hint: "Per night, when one guest occupies the room.") do |field| %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :single_supplement, label: "One-guest surcharge", hint: "Added per night when one guest occupies the room.") do |field| %>
                   <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
                   <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
                 <% end %>
 
-                <%= render PanelsUI::FormField.new(form: f, attribute: :child_price_multiplier, label: "Child price", hint: "0.5 charges a child half the adult rate; 1.0 charges full.") do |field| %>
-                  <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-                <% end %>
               <% else %>
-                <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Base occupancy", hint: "Guests included in the room price.") do |field| %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Guests included", hint: "Number of guests covered by the room price.") do |field| %>
                   <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
                 <% end %>
 

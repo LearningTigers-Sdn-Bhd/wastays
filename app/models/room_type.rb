@@ -22,11 +22,13 @@ class RoomType < ApplicationRecord
   MAX_PHOTOS = 10
 
   before_validation :set_default_room_number_mode, on: :create
+  before_validation :set_default_max_children
   after_create :ensure_standard_rate_plan
 
   validates :name, presence: true
   validates :quantity, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :max_adults, presence: true, numericality: { greater_than: 0 }
+  validates :max_children, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :base_price, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :room_number_mode, presence: true, inclusion: { in: %w[range custom] }
   validate :amenities_must_be_from_list
@@ -77,6 +79,10 @@ class RoomType < ApplicationRecord
   end
 
   private
+
+  def set_default_max_children
+    self.max_children = 0 if max_children.nil?
+  end
 
   def amenities_must_be_from_list
     return if amenities.blank?

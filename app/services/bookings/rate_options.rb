@@ -21,7 +21,7 @@ module Bookings
 
     def call
       all_plans = @room_type.rate_plans.active.order(:name, :id).to_a
-      return [ base_rate_option ] if all_plans.empty?
+      return [ base_rate_option ].compact if all_plans.empty?
 
       # Filter out plans that are actually special tiers
       standard_plans = all_plans.reject(&:special_tier?)
@@ -33,8 +33,9 @@ module Bookings
 
       # Add virtual tiers if they exist on the standard plan (usually the first one)
       standard_plan = all_plans.first
-      if standard_plan
-        options << tier_option(standard_plan, :walk_in, "Walk-in Rate") if has_tier_price?(standard_plan, :walk_in)
+      if standard_plan && has_tier_price?(standard_plan, :walk_in)
+        walk_in = tier_option(standard_plan, :walk_in, "Walk-in Rate")
+        options << walk_in if walk_in
       end
 
       options
@@ -64,6 +65,10 @@ module Bookings
         corporate_rate: @corporate_rate,
         **occupancy
       ).call
+
+      # An unpriced night means this option cannot be sold; offering it at a
+      # made-up total is worse than not offering it.
+      return if total.nil?
 
       {
         id: RateSelection.tier_token(tier, rate_plan.id),
@@ -103,6 +108,8 @@ module Bookings
         **occupancy
       ).call
 
+      return if total.nil?
+
       {
         id: rate_plan.id,
         name: rate_plan.name,
@@ -119,6 +126,8 @@ module Bookings
         corporate_rate: @corporate_rate,
         **occupancy
       ).call
+
+      return if total.nil?
 
       {
         id: nil,

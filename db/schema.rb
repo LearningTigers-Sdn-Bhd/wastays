@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_08_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2142,6 +2142,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
     t.decimal "extra_pax_charge", precision: 10, scale: 2
     t.integer "max_stay"
     t.integer "min_stay"
+    t.jsonb "occupancy_prices", default: {}, null: false
     t.decimal "price", precision: 10, scale: 2, null: false
     t.bigint "rate_plan_id"
     t.bigint "room_type_id", null: false
@@ -2177,6 +2178,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
     t.index ["hotel_id"], name: "index_room_statuses_on_hotel_id"
     t.index ["last_changed_by_id"], name: "index_room_statuses_on_last_changed_by_id"
     t.index ["room_type_id"], name: "index_room_statuses_on_room_type_id"
+  end
+
+  create_table "room_type_rate_plan_occupancy_prices", force: :cascade do |t|
+    t.integer "adults", null: false
+    t.datetime "created_at", null: false
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.bigint "room_type_rate_plan_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_type_rate_plan_id", "adults"], name: "idx_rtrp_occupancy_prices_unique", unique: true
   end
 
   create_table "room_type_rate_plans", force: :cascade do |t|
@@ -2546,6 +2556,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
   add_foreign_key "room_statuses", "room_types"
   add_foreign_key "room_statuses", "users", column: "assigned_to_id"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
+  add_foreign_key "room_type_rate_plan_occupancy_prices", "room_type_rate_plans"
   add_foreign_key "room_type_rate_plans", "rate_plans"
   add_foreign_key "room_type_rate_plans", "room_types"
   add_foreign_key "room_types", "hotels"

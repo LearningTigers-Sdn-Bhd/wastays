@@ -8,6 +8,7 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
 
   def new
     @rate_plan = current_hotel.rate_plans.build
+    @rate_plan.currency = current_hotel.default_currency || "MYR"
     render layout: false
   end
 
@@ -177,8 +178,17 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
         rtrp.pricing_mode = attrs[:pricing_mode].presence || "fixed"
         rtrp.pricing_value = attrs[:pricing_value].presence
 
+        if rtrp.pricing_mode == "fixed" && !current_hotel.sells_per_person? && rtrp.pricing_value.blank?
+          rate_plan.errors.add(:base, "#{room_type.name}: enter a starting price")
+          return false
+        end
+
         unless rtrp.save
           rate_plan.errors.add(:base, "#{room_type.name}: #{rtrp.errors.full_messages.to_sentence}")
+          return false
+        end
+
+        unless sync_occupancy_prices!(rate_plan, rtrp, room_type, attrs[:occupancy_prices])
           return false
         end
       elsif rtrp.persisted?
@@ -186,6 +196,39 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
       end
     end
 
+    if rate_plan.room_type_rate_plans.reload.none?
+      rate_plan.errors.add(:room_types, "must include at least one room category")
+      return false
+    end
+
+    true
+  end
+
+  def sync_occupancy_prices!(rate_plan, assignment, room_type, submitted_prices)
+    unless current_hotel.sells_per_person? && assignment.pricing_mode == "fixed"
+      assignment.occupancy_prices.destroy_all
+      return true
+    end
+
+    prices = submitted_prices.to_h.stringify_keys
+    expected = (1..room_type.max_adults).to_a
+
+    expected.each do |adults|
+      value = prices[adults.to_s].presence
+      if value.blank?
+        rate_plan.errors.add(:base, "#{room_type.name}: enter the price for #{adults} #{adults == 1 ? 'adult' : 'adults'}")
+        return false
+      end
+
+      occupancy_price = assignment.occupancy_prices.find_or_initialize_by(adults: adults)
+      occupancy_price.price = value
+      unless occupancy_price.save
+        rate_plan.errors.add(:base, "#{room_type.name}, #{adults} #{adults == 1 ? 'adult' : 'adults'}: #{occupancy_price.errors.full_messages.to_sentence}")
+        return false
+      end
+    end
+
+    assignment.occupancy_prices.where.not(adults: expected).destroy_all
     true
   end
 

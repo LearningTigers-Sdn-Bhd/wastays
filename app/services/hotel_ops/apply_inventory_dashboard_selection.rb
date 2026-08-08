@@ -14,7 +14,7 @@ module HotelOps
       return failure("Choose at least one action to apply.") unless apply_inventory? || apply_rates? || apply_restrictions?
       return failure("Start date is required.") if start_date.blank?
       return failure("End date is required.") if end_date.blank?
-      return failure("Price is required when applying rates.") if channel_id.blank? && apply_rates? && price.blank? && selection[:single_supplement].blank? && selection[:base_occupancy].blank? && selection[:extra_pax_charge].blank?
+      return failure("Enter at least one price when applying rates.") if channel_id.blank? && apply_rates? && price.blank? && occupancy_prices.empty? && selection[:single_supplement].blank? && selection[:base_occupancy].blank? && selection[:extra_pax_charge].blank?
       return failure("Per-pax pricing fields (base occupancy, extra pax charge, single supplement) don't apply to OTA channel rates.") if channel_id.present? && pax_fields_requested?
 
       ActiveRecord::Base.transaction do
@@ -169,6 +169,14 @@ module HotelOps
       BigDecimal(raw.to_s)
     end
 
+    def occupancy_prices
+      @occupancy_prices ||= selection.fetch(:occupancy_prices, {}).to_h.each_with_object({}) do |(adults, amount), prices|
+        next if amount.blank?
+
+        prices[adults.to_s] = BigDecimal(amount.to_s)
+      end
+    end
+
     def currency
       requested_currency = selection[:currency].presence || hotel.default_currency || "MYR"
       CurrencyCatalog.valid?(requested_currency) ? CurrencyCatalog.normalize(requested_currency) : hotel.default_currency
@@ -280,7 +288,8 @@ module HotelOps
             stop_sell: rate.stop_sell,
             base_occupancy: rate.base_occupancy,
             extra_pax_charge: rate.extra_pax_charge&.to_f,
-            single_supplement: rate.single_supplement&.to_f
+            single_supplement: rate.single_supplement&.to_f,
+            occupancy_prices: rate.occupancy_prices
           }
 
           # Apply price update.
@@ -298,10 +307,12 @@ module HotelOps
               rate.base_occupancy = base_occupancy if selection[:modified_fields].include?("base_occupancy")
               rate.extra_pax_charge = extra_pax_charge if selection[:modified_fields].include?("extra_pax_charge")
               rate.single_supplement = single_supplement if selection[:modified_fields].include?("single_supplement")
+              rate.occupancy_prices = occupancy_prices_for(room_type) if selection[:modified_fields].include?("occupancy_prices")
             else
               rate.base_occupancy = base_occupancy if selection.key?(:base_occupancy) && selection[:base_occupancy].present?
               rate.extra_pax_charge = extra_pax_charge if selection.key?(:extra_pax_charge) && selection[:extra_pax_charge].present?
               rate.single_supplement = single_supplement if selection.key?(:single_supplement) && selection[:single_supplement].present?
+              rate.occupancy_prices = occupancy_prices_for(room_type) if occupancy_prices.any?
             end
           end
 
@@ -312,7 +323,10 @@ module HotelOps
             rate.closed_to_departure = restriction_values[:closed_to_departure]
             rate.stop_sell = restriction_values[:stop_sell]
           end
-          rate.price ||= resting_price_for(room_type, rate_plan, date) if target_currency == hotel.default_currency
+          if rate.price.blank? && rate.occupancy_prices.present?
+            rate.price = rate.occupancy_prices[room_type.max_adults.to_s] || rate.occupancy_prices.values.last
+          end
+          rate.price ||= resting_price_for(room_type, rate_plan, date, target_currency) if target_currency == hotel.default_currency
           next if rate.price.blank?
           rate.save!
 
@@ -337,7 +351,8 @@ module HotelOps
               stop_sell: rate.stop_sell,
               base_occupancy: rate.base_occupancy,
               extra_pax_charge: rate.extra_pax_charge&.to_f,
-              single_supplement: rate.single_supplement&.to_f
+              single_supplement: rate.single_supplement&.to_f,
+              occupancy_prices: rate.occupancy_prices
             },
             metadata: { source: "inventory_dashboard_selection", rate_tier: tier || "online" }
           )
@@ -355,17 +370,15 @@ module HotelOps
     # wrong number, and writing it is permanent: BookingEngine and
     # CalculateStayPrice only derive while no explicit row exists, so a min-stay
     # would drop a +20% plan back to the anchor for that date, for good.
-    def resting_price_for(room_type, rate_plan, date)
-      anchor_plan = room_type.standard_rate_plan
-      anchor = if anchor_plan.present? && anchor_plan.id != rate_plan.id
-        room_type.room_rates.find_by(rate_plan: anchor_plan, date: date, currency: currency)&.price
-      end
-      anchor ||= room_type.base_price
-
-      rtrp = room_type_rate_plan_for(room_type, rate_plan)
-      return anchor unless rtrp&.derives_price?
-
-      rtrp.derive_price(anchor) || anchor
+    def resting_price_for(room_type, rate_plan, date, target_currency)
+      Rates::ResolveEffectiveNightlyPrice.call(
+        room_type: room_type,
+        rate_plan: rate_plan,
+        date: date,
+        currency: target_currency,
+        adults: rate_plan.sell_mode == "per_person" ? room_type.max_adults : 2,
+        room_type_rate_plan: room_type_rate_plan_for(room_type, rate_plan)
+      ).base_amount
     end
 
     def room_type_rate_plan_for(room_type, rate_plan)
@@ -424,7 +437,12 @@ module HotelOps
         old_values[:stop_sell] != rate.stop_sell ||
         old_values[:base_occupancy] != rate.base_occupancy ||
         old_values[:extra_pax_charge] != rate.extra_pax_charge&.to_f ||
-        old_values[:single_supplement] != rate.single_supplement&.to_f
+        old_values[:single_supplement] != rate.single_supplement&.to_f ||
+        old_values[:occupancy_prices] != rate.occupancy_prices
+    end
+
+    def occupancy_prices_for(room_type)
+      occupancy_prices.select { |adults, _amount| adults.to_i <= room_type.max_adults.to_i }
     end
 
     def cast_boolean(value)

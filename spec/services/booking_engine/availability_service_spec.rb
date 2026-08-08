@@ -55,6 +55,13 @@ RSpec.describe BookingEngine::AvailabilityService do
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
       expect(service.available_rooms_for_hotel(hotel)).to be_empty
     end
+
+    it "returns empty when the requested children exceed the room category capacity" do
+      room_type.update!(max_children: 0)
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 1, children: 1, child_ages: [ 8 ])
+
+      expect(service.available_rooms_for_hotel(hotel)).to be_empty
+    end
   end
 
   describe "#calculate_total_price" do

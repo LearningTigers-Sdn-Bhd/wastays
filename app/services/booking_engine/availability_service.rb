@@ -46,8 +46,16 @@ module BookingEngine
       stay_dates_list = stay_dates
       return [] if stay_dates_list.empty?
 
-      # 1. Basic occupancy filter and preload associations for performance
-      potential_room_types = hotel.room_types.where("max_adults >= ?", @adults).to_a
+      # Capacity belongs to the room category. Apply the same adults, children,
+      # total-capacity, and one-adult-per-room rules used by final quote allocation.
+      potential_room_types = hotel.room_types.to_a.select do |room_type|
+        distribute_guests(
+          @adults,
+          @children,
+          Array.new(@room_count) { room_type },
+          child_ages: @child_ages
+        ).present?
+      end
       preload_availability_data(potential_room_types)
 
       # 2. Date-based availability & rate check
@@ -268,13 +276,6 @@ module BookingEngine
 
     private
 
-    def per_child_price(price, rate_plan, age)
-      band = rate_plan.age_banded? ? rate_plan.band_for_age(age) : nil
-      return band.price_for(price) if band
-
-      price * (rate_plan.child_price_multiplier || 1.to_d)
-    end
-
     def human_rule_name(rule_type)
       case rule_type
       when "ph" then "Public Holiday Rate"
@@ -337,7 +338,7 @@ module BookingEngine
 
       ActiveRecord::Associations::Preloader.new(
         records: room_types,
-        associations: :room_type_rate_plans
+        associations: { room_type_rate_plans: :occupancy_prices }
       ).call
     end
 
@@ -520,7 +521,6 @@ module BookingEngine
     def pricing_option_for(room_type, rate_plan, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
       r_adults = (adults || pax || (@adults + @children)).to_i
       r_children = (children || 0).to_i
-      r_pax = r_adults + r_children
       r_child_ages = Array(child_ages).map(&:to_i)
 
       room_count ||= @room_count
@@ -560,55 +560,45 @@ module BookingEngine
 
       stay_dates.each do |date|
         rate = rates_by_date[date]
-        price = nightly_price_for(date, rate, room_type, rate_plan)
-        return nil if price.nil? # Stay is restricted or unpriced on this date
+        standard_rate = (rate.nil? || rate.rate_plan_id.nil?) ? standard_rate_for(date, room_type) : nil
+        restriction_rate = rate || standard_rate
 
-        if rate_plan&.sell_mode == "per_person"
-          adults_cost = r_adults * price
-          children_cost =
-            if r_child_ages.size == r_children && r_child_ages.any?
-              r_child_ages.sum { |age| per_child_price(price, rate_plan, age) }
-            else
-              r_children * price * (rate_plan.child_price_multiplier || 1.to_d)
-            end
+        return nil if restriction_rate&.stop_sell?
+        return nil if date == stay_dates.first && restriction_rate&.closed_to_arrival?
+        return nil if date == stay_dates.last && restriction_rate&.closed_to_departure?
+        return nil if restriction_rate&.min_stay.present? && nights < restriction_rate.min_stay
+        return nil if restriction_rate&.max_stay.present? && nights > restriction_rate.max_stay
 
-          price = adults_cost + children_cost
-
-          if r_pax == 1
-            supplement = rate&.single_supplement || rate_plan.single_supplement || 0.to_d
-            price += supplement
-          end
-        else
-          # Per-room sell mode with extra pax charges
-          base_occ = rate&.base_occupancy || rate_plan&.base_occupancy || 2
-          extra_charge = rate&.extra_pax_charge || rate_plan&.extra_pax_charge || 0.to_d
-
-          billable_pax = r_adults + r_children
-          if billable_pax > base_occ && extra_charge.positive?
-            extra_guests = billable_pax - base_occ
-            price += extra_guests * extra_charge
-          end
-        end
+        resolved = Rates::ResolveEffectiveNightlyPrice.call(
+          room_type: room_type,
+          rate_plan: rate_plan,
+          date: date,
+          currency: currency,
+          adults: r_adults,
+          children: r_children,
+          child_ages: r_child_ages,
+          rate_tier: @corporate_rate ? :corporate : :standard,
+          room_rates: room_type.room_rates,
+          room_type_rate_plan: rate_plan && room_type_rate_plan_for(room_type, rate_plan)
+        )
+        price = resolved.amount
+        return nil if price.nil?
 
         nightly_total += price
 
-        snapshot_data = if rate.present?
-          rate.as_json.merge("price" => price.to_d.to_s("F"), "source" => "room_rate")
-        else
-          {
-            "date" => date,
-            "price" => price.to_d.to_s("F"),
-            "currency" => currency,
-            "rate_plan_id" => rate_plan&.id,
-            "room_type_id" => room_type.id,
-            "applied_rule_type" => "base",
-            "source" => "base_price_fallback"
-          }
-        end
+        snapshot_data = (resolved.room_rate&.as_json || {}).merge(
+          "date" => date,
+          "price" => price.to_d.to_s("F"),
+          "currency" => resolved.currency,
+          "rate_plan_id" => rate_plan&.id,
+          "room_type_id" => room_type.id,
+          "applied_rule_type" => resolved.room_rate&.applied_rule_type || "base",
+          "source" => resolved.source.to_s
+        )
 
         complete_rates_by_date[date] = snapshot_data
 
-        rule_type = rate&.applied_rule_type || "base"
+        rule_type = resolved.room_rate&.applied_rule_type || "base"
         priority = RULE_PRIORITY[rule_type] || 0
         if priority > highest_priority
           highest_priority = priority
@@ -624,52 +614,6 @@ module BookingEngine
         nightly_rates: complete_rates_by_date,
         winning_rule: winning_rule
       )
-    end
-
-    def nightly_price_for(date, rate, room_type, rate_plan)
-      std_rate = nil
-
-      if rate.nil? || rate.rate_plan_id.nil?
-        std_rate = standard_rate_for(date, room_type)
-        if std_rate.present?
-          return nil if std_rate.stop_sell?
-          return nil if date == stay_dates.first && std_rate.closed_to_arrival?
-          return nil if date == stay_dates.last && std_rate.closed_to_departure?
-          return nil if std_rate.min_stay.present? && nights < std_rate.min_stay
-          return nil if std_rate.max_stay.present? && nights > std_rate.max_stay
-        end
-      end
-
-      if rate.present?
-        # 1. Check Restrictions
-        return nil if rate.stop_sell?
-        return nil if date == stay_dates.first && rate.closed_to_arrival?
-        return nil if date == stay_dates.last && rate.closed_to_departure?
-        return nil if rate.min_stay.present? && nights < rate.min_stay
-        return nil if rate.max_stay.present? && nights > rate.max_stay
-
-        # 2. Resolve Price
-        if @corporate_rate && rate.corporate_price.present?
-          rate.corporate_price
-        else
-          rate.price
-        end
-      else
-        # 3. Fallback to the Standard Rate's price (or the room type's flat
-        # base price), transformed through the rate plan's derived pricing
-        # (multiplier/offset) when applicable.
-        anchor = std_rate&.price || room_type.base_price.presence
-        derive_if_needed(rate_plan, room_type, anchor)
-      end
-    end
-
-    def derive_if_needed(rate_plan, room_type, anchor_price)
-      return anchor_price if rate_plan.blank? || anchor_price.nil?
-
-      rtrp = room_type_rate_plan_for(room_type, rate_plan)
-      return anchor_price unless rtrp&.derives_price?
-
-      rtrp.derive_price(anchor_price) || anchor_price
     end
 
     def room_type_rate_plan_for(room_type, rate_plan)
