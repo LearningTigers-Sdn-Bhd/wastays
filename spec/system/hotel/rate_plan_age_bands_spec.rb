@@ -8,6 +8,17 @@ RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
   let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: "Per Person Plan", kind: "custom") }
   let!(:band) { create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child") }
+  # A plan with no category assignment fails validation on save, so every edit
+  # in here would come back with "must include at least one room category".
+  let!(:room_type) { create(:room_type, hotel: hotel, max_adults: 2, base_price: 300) }
+  let!(:assignment) do
+    create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan).tap do |rtrp|
+      # A per-person plan must price every adult count the category seats, so
+      # without these the form comes back asking for them instead of saving.
+      rtrp.occupancy_prices.create!(adults: 1, price: 200)
+      rtrp.occupancy_prices.create!(adults: 2, price: 300)
+    end
+  end
 
   before do
     driven_by(:rack_test)
@@ -27,7 +38,7 @@ RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
 
     first(:link, 'Manage').click
 
-    expect(page).to have_content('Child age groups')
+    expect(page).to have_content('Child pricing')
 
     find("input[name='rate_plan[rate_plan_age_bands_attributes][0][max_age]']").set('12')
     find("input[name='rate_plan[rate_plan_age_bands_attributes][0][price_value]']").set('35')

@@ -61,6 +61,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     within(".panel-navbar__brand") do
       identity = find_link(hotel.name, href: hotel_dashboard_path(hotel))
       expect(identity).to have_css(".panel-navbar__identity-meta", text: "##{hotel.id}")
+      expect(page).to have_css("[data-testid='hotel-sell-mode-badge']", text: "Sells per room")
     end
     expect(page).to have_css("#hotel-profile a[href='#{help_center_path}']", text: "Help")
     expect(page).to have_css(".panel-navbar__actions button[aria-label='Announcements'][aria-expanded='false']")
@@ -73,6 +74,16 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_css("#hotel-sidebar a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
     # Operations is flat, so it has no group triggers left to style.
     expect(page).to have_no_css("#hotel-sidebar button.panel-sidebar__group-trigger", visible: :all)
+  end
+
+  it "names the per-person sell mode in the Navbar badge" do
+    hotel.update!(sell_mode: "per_person")
+
+    visit hotel_dashboard_path(hotel)
+
+    within(".panel-navbar__brand") do
+      expect(page).to have_css("[data-testid='hotel-sell-mode-badge']", text: "Sells per person")
+    end
   end
 
   it "renders the reduced Navbar while the hotel shell is locked" do

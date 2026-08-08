@@ -135,6 +135,13 @@ class Hotel < ApplicationRecord
     sell_mode == "per_person"
   end
 
+  # Navbar badge wording. Short enough to sit beside the property name, and
+  # phrased as a statement about the property rather than as the choice itself
+  # — sell_mode_options spells out the trade-off for whoever is picking it.
+  def sell_mode_label
+    sells_per_person? ? "Sells per person" : "Sells per room"
+  end
+
   def self.const_missing(const_name)
     case const_name
     when :HOTEL_AMENITIES

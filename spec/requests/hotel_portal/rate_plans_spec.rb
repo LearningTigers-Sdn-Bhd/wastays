@@ -28,6 +28,16 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog')).to be_present
     end
 
+    it 'renders an age band template the add button can actually clone' do
+      hotel.update!(sell_mode: 'per_person')
+
+      get new_hotel_rate_plan_path(hotel)
+
+      # fields_for captures rather than writes, so an ERB <% here leaves the
+      # <template> empty and the add button silently appends nothing.
+      expect(response.body).to include('rate_plan[rate_plan_age_bands_attributes][NEW_RECORD][min_age]')
+    end
+
     it 'shows the hotel charging model and default currency as inherited context' do
       hotel.update!(sell_mode: 'per_person', default_currency: 'USD')
 

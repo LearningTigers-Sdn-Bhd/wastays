@@ -702,6 +702,15 @@ Rails.application.routes.draw do
     get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
 
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
+    # Creating a rate plan is a wizard; editing one keeps the sheet on
+    # rate_plans#edit. Declared before the resource so the literal "wizard"
+    # segment is matched before any member route.
+    get    "rate_plans/wizard", to: "rate_plan_wizards#start", as: :start_rate_plan_wizard
+    delete "rate_plans/wizard", to: "rate_plan_wizards#destroy", as: :rate_plan_wizard
+    post   "rate_plans/wizard/complete", to: "rate_plan_wizards#create", as: :complete_rate_plan_wizard
+    get    "rate_plans/wizard/:step", to: "rate_plan_wizards#show", as: :rate_plan_wizard_step
+    patch  "rate_plans/wizard/:step", to: "rate_plan_wizards#update"
+
     resources :rate_plans, only: %i[new create edit update destroy] do
       member do
         patch :archive

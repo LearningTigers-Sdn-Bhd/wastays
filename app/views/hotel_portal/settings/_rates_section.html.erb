@@ -12,7 +12,9 @@
       <h2 id="rate-plans-heading" class="text-base font-semibold text-foreground">Rate plans</h2>
       <p class="mt-1 text-sm text-muted-foreground">Configure how guest rates are calculated from occupancy, extra guests, and children.</p>
     </div>
-    <%= render PanelsUI::Button.new(href: new_hotel_rate_plan_path(@hotel), size: :sm, class: "shrink-0",
+    <%# Creating walks through a wizard, editing opens the single-form sheet —
+        both in the same action sheet, so the settings page stays put. %>
+    <%= render PanelsUI::Button.new(href: hotel_start_rate_plan_wizard_path(@hotel), size: :sm, class: "shrink-0",
           data: { turbo_frame: "settings_action_sheet" }) do %>
       <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
       New rate plan

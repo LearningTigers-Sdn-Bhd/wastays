@@ -1,0 +1,37 @@
+<%# Progress rail. Answered steps link back so a correction costs one click;
+    steps ahead of the draft are plain text, because reaching them would show a
+    form the wizard has no context for yet. %>
+<% keys = wizard.step_keys %>
+<% current_index = wizard.step_index(step).to_i %>
+
+<nav aria-label="Rate plan steps">
+  <ol class="flex flex-wrap items-center gap-x-2 gap-y-2">
+    <% keys.each_with_index do |key, index| %>
+      <% label = wizard_step_label(wizard, key) %>
+      <% state = if index < current_index && wizard.step_complete?(key)
+                   :done
+                 elsif index == current_index
+                   :current
+                 else
+                   :upcoming
+                 end %>
+      <li class="flex items-center gap-2">
+        <% if index.positive? %>
+          <span aria-hidden="true" class="text-muted-foreground"><%= app_icon "chevron-right", class: "size-3.5" %></span>
+        <% end %>
+
+        <% if state == :done %>
+          <%= link_to hotel_rate_plan_wizard_step_path(current_hotel, key),
+                class: "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" do %>
+            <%= app_icon "check", class: "size-3.5 text-success", aria: { hidden: "true" } %>
+            <%= label %>
+          <% end %>
+        <% else %>
+          <%= tag.span label,
+                class: "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm #{state == :current ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}",
+                aria: { current: ("step" if state == :current) } %>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+</nav>

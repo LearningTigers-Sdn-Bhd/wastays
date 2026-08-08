@@ -60,8 +60,11 @@
     No age groups yet. The default child price applies to every age.
   </p>
 
+  <%# fields_for captures its block and returns the markup rather than writing
+      it, so this has to be <%= — with <% the template renders empty and the add
+      button appends nothing. %>
   <template data-rate-plan-age-bands-target="template">
-    <% f.fields_for :rate_plan_age_bands, RatePlanAgeBand.new, child_index: "NEW_RECORD" do |band_form| %>
+    <%= f.fields_for :rate_plan_age_bands, RatePlanAgeBand.new, child_index: "NEW_RECORD" do |band_form| %>
       <%= render "hotel_portal/rate_plans/age_band_row", band_form: band_form, band: nil, currency: rate_plan.currency %>
     <% end %>
   </template>

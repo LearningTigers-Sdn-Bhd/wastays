@@ -1,0 +1,96 @@
+<% rate_plan = wizard.rate_plan %>
+<% per_person = current_hotel.sells_per_person? %>
+<% currency = rate_plan.currency %>
+<% room_types = current_hotel.room_types.order(:id).to_a %>
+<% selected_ids = wizard.selected_room_type_ids %>
+
+<%= form_with model: rate_plan,
+              url: hotel_rate_plan_wizard_step_path(current_hotel, HotelPortal::RatePlanWizard::STEP_DETAILS),
+              method: :patch,
+              id: "rate-plan-wizard-details",
+              class: "space-y-8" do |f| %>
+  <% if rate_plan.errors.any? %>
+    <%= render PanelsUI::Alert.new(tone: :destructive, title: "This step could not be saved", role: :alert) do |alert| %>
+      <% alert.with_description { rate_plan.errors.full_messages.to_sentence } %>
+    <% end %>
+  <% end %>
+
+  <section aria-labelledby="wizard-plan-heading" class="space-y-4">
+    <div>
+      <h2 id="wizard-plan-heading" class="text-base font-semibold text-foreground">What this plan is</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Prices in <%= currency %>.</p>
+    </div>
+
+    <div class="grid items-start gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true) do |field| %>
+        <% field.with_input(placeholder: "Non-refundable rate", autocomplete: "off") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
+        <% field.with_input(placeholder: "Pay in full at booking. No changes or refunds.", autocomplete: "off") %>
+      <% end %>
+    </div>
+  </section>
+
+  <section aria-labelledby="wizard-rooms-heading" class="space-y-4 border-t border-border pt-6">
+    <div>
+      <h2 id="wizard-rooms-heading" class="text-base font-semibold text-foreground">Which room categories</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Each category you tick becomes its own pricing step, sized to how many adults it seats.
+      </p>
+    </div>
+
+    <% if room_types.any? %>
+      <div class="divide-y divide-border rounded-md border border-border">
+        <% room_types.each do |room_type| %>
+          <div class="flex flex-wrap items-center gap-3 p-3">
+            <%= render PanelsUI::Checkbox.new(
+                  name: "rate_plan[room_type_ids][]",
+                  id: "wizard_room_type_#{room_type.id}",
+                  value: room_type.id,
+                  checked: selected_ids.include?(room_type.id),
+                  label: room_type.name,
+                  description: "#{pluralize(room_type.max_adults, 'adult')} max · standard rate #{wizard_money(room_type.base_price, currency)}") %>
+          </div>
+        <% end %>
+      </div>
+      <%= hidden_field_tag "rate_plan[room_type_ids][]", "" %>
+    <% else %>
+      <%= render PanelsUI::Alert.new(tone: :warning, title: "No room categories yet", role: :status) do |alert| %>
+        <% alert.with_description do %>
+          Add one under Settings &rarr; Property &rarr; Room Categories, then start this plan again.
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="wizard-guests-heading" class="space-y-4 border-t border-border pt-6">
+    <div>
+      <h2 id="wizard-guests-heading" class="text-base font-semibold text-foreground">How it prices guests</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        <%= per_person ? "What children cost on this plan. Adult prices come next, one category at a time — including the one-guest rate." : "Rules that apply to every category on this plan." %>
+      </p>
+    </div>
+
+    <%# No single supplement here. A per-person plan prices every adult count
+        explicitly, so "rate for 1 person" already is the single supplement —
+        and Bookings::NightlyPaxPrice only adds the separate field when no
+        occupancy price exists, which never happens for a plan built here. %>
+    <% unless per_person %>
+      <div class="grid items-start gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Base occupancy", hint: "Guests covered by the room price.") do |field| %>
+          <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra pax charge", hint: "Per night, for each guest above base occupancy.") do |field| %>
+          <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+          <% field.with_addon(align: :inline_start) { currency } %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if per_person %>
+      <%= render "age_bands", f: f, rate_plan: rate_plan %>
+    <% end %>
+  </section>
+<% end %>
