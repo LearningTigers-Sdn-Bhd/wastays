@@ -22,17 +22,18 @@ RSpec.describe HotelOps::ApplyPricingRules do
       expect {
         result = service.call
         expect(result[:success]).to eq(true)
-      }.to change(RoomRate, :count).by(7)
+      }.to change(RoomRate, :count).by(8)
     end
 
     it "uses highest price rule and tier tie-breaker" do
       service.call
 
-      rate = room_type.room_rates.find_by(date: Date.new(2026, 4, 25))
-      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 23)).price.to_f).to eq(100.0) # GP
-      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 24)).price.to_f).to eq(220.0) # SC beats WK
+      rate = room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 25))
+      expect(room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 23)).price.to_f).to eq(100.0) # GP
+      expect(room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 24)).price.to_f).to eq(220.0) # SC beats WK
       expect(rate.price.to_f).to eq(260.0) # Online winner is PH
-      expect(rate.walk_in_price.to_f).to eq(300.0) # Walk-in winner is WI
+      walk_in = room_type.room_rates.find_by!(rate_plan: room_type.walk_in_rate_plan, date: Date.new(2026, 4, 25))
+      expect(walk_in.price.to_f).to eq(300.0)
     end
 
     it "prioritizes rule tier over price amount" do
@@ -42,7 +43,7 @@ RSpec.describe HotelOps::ApplyPricingRules do
 
       service.call
 
-      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 23)).price.to_f).to eq(200.0) # PH beats GP even if cheaper
+      expect(room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 23)).price.to_f).to eq(200.0) # PH beats GP even if cheaper
     end
 
     it "supports custom weekend-day definitions" do
@@ -53,8 +54,8 @@ RSpec.describe HotelOps::ApplyPricingRules do
 
       custom_service.call
 
-      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 23)).price.to_f).to eq(170.0) # Thu
-      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 26)).price.to_f).to eq(100.0) # Sun
+      expect(room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 23)).price.to_f).to eq(170.0) # Thu
+      expect(room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 26)).price.to_f).to eq(100.0) # Sun
     end
 
     it "supports one-day public holiday by leaving end date blank" do
@@ -65,12 +66,12 @@ RSpec.describe HotelOps::ApplyPricingRules do
 
       one_day_service.call
 
-      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 23)).price.to_f).to eq(300.0)
-      expect(room_type.room_rates.find_by(date: Date.new(2026, 4, 24)).price.to_f).to eq(100.0)
+      expect(room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 23)).price.to_f).to eq(300.0)
+      expect(room_type.room_rates.find_by(rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 24)).price.to_f).to eq(100.0)
     end
 
     it "removes stale room rates when no rule applies anymore" do
-      create(:room_rate, room_type: room_type, date: Date.new(2026, 4, 23), price: 180)
+      create(:room_rate, room_type: room_type, rate_plan: room_type.standard_rate_plan, date: Date.new(2026, 4, 23), price: 180)
       hotel.pricing_rules.delete_all
 
       expect {

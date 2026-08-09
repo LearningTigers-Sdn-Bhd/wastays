@@ -1,352 +1,393 @@
-# Rate Settings and Inventory Implementation Checklist
+# Rates and inventory — current status and roadmap
 
-Last updated: 2026-08-08
+Last reviewed against the implementation on 2026-08-10.
+
+This file tracks the current system and remaining work. It supersedes the
+earlier plan built around a multi-room rate-plan wizard, a separate Rate
+Settings registry, and a tabbed full-bottom editor. Those interfaces have been
+deleted.
 
 ## Status legend
 
-- [x] Complete
+- [x] Shipped and represented by the current implementation
+- [~] Partially shipped or still missing an important part
 - [ ] Not started or still required
-- [~] Deliberately deferred to a later phase
 
-## Agreed product decisions
+## Current product boundaries
 
-- [x] The hotel is the operator-controlled source of truth for how the property charges: one price per room or price per guest.
-- [x] A rate plan does not expose its own charging-model selector.
-- [x] Staff-facing screens use familiar hotel language. Technical terms such as `sell_mode`, `rate_mode`, `manual`, `derived`, `multiplier`, and `offset` stay internal.
-- [x] Wastays does not need to copy the Channex form. Wastays collects hotelier decisions and translates them into Channex payloads in the integration layer.
-- [x] Daily prices, availability, and restrictions remain date-based operations under Rates & Availability.
-- [x] UI verification in this workspace uses request tests, source-level accessibility checks, and lint. Do not use browser tools or plugins for testing.
+- **Room Inventory** owns room categories, room groups, reusable rate-plan
+  assignments, and standing prices.
+- **Rates & Availability** owns date-specific rates, availability,
+  restrictions, pricing rules, and channel rows.
+- The **hotel** owns the charging model. Rate plans inherit it.
+- A **rate plan** owns shared offer details, occupancy rules, and child-pricing
+  rules.
+- A **room/rate-plan assignment** owns the standing scalar price rule or adult
+  occupancy-price matrix for one room category.
+- A **RoomRate** owns date-specific overrides and restrictions.
+- A standing price is a fallback, not a request to generate hundreds of future
+  daily rows.
+- Per-room percentage and amount adjustments remain live.
+- Per-person generators materialize complete direct-price matrices.
+- Child age bands are plan-wide; capacity remains room-category-owned.
+- Per-person pricing is local-only until channel distribution is implemented.
 
-## Agreed staff-facing vocabulary
+## Staff-facing vocabulary
 
 | Internal concept | Staff-facing wording |
 | --- | --- |
 | Charging model | How the property charges |
-| `per_room` | One price per room |
-| `per_person` | Price per guest |
-| Fixed/manual pricing | I'll set prices by date |
+| `per_room` | One price per room / charges per room |
+| `per_person` | Price per guest / charges per guest |
+| Fixed/manual pricing | Direct price or starting price, according to context |
 | Percentage adjustment | Adjust Standard Rate by % |
 | Amount adjustment | Adjust Standard Rate by amount |
 | Base occupancy | Guests included |
 | Extra pax charge | Extra guest charge |
 | Single supplement | One-guest surcharge |
 | Child price multiplier | Default child price |
-| Room categories and pricing | Rooms and prices |
+| Room/rate-plan relationship | Assigned rate plan |
+| Date-specific rate workspace | Rates & Availability |
 
-## Phase 1 — Rate-plan sheet correctness
+## Phase 1 — Room Inventory and reusable rate plans
 
-Goal: make the sheet understandable and safe for hotel staff without changing the underlying pricing engine.
+Goal: manage rooms and their sellable offers in one connected workspace.
 
-### Completed
+### Shipped
 
-- [x] Show the inherited charging model as read-only context.
-- [x] Show the plan currency as read-only context.
-- [x] Initialize a new plan with the hotel's default currency.
-- [x] Keep the sell-mode selector out of the rate-plan sheet and strong parameters.
-- [x] Use mode-specific sections:
-  - [x] One price per room: guests included and extra guest charge.
-  - [x] Price per guest: one-guest surcharge and default child price.
-- [x] Apply the agreed staff-facing vocabulary to pricing choices and descriptions.
-- [x] Explain that prices set by date belong under Rates & Availability.
-- [x] Keep live adjustment previews and announce preview changes accessibly.
-- [x] Require at least one room category for every custom rate plan.
-- [x] Roll back an update that attempts to remove the final room category.
-- [x] Show the room-selection error next to the room list and associate it with the checkboxes.
-- [x] Show connected price-per-guest properties the current distribution limitation: availability syncs, while prices and restrictions remain in Wastays.
-- [x] Cover inherited context, friendly labels, selection validation, rollback behavior, and distribution messaging with request specs.
-
-### Verification completed
-
-- [x] Focused Phase 1 request suite: 33 examples, 0 failures.
-- [x] Broader related suite: 123 examples, 0 failures.
-- [x] Targeted RuboCop: no offenses.
-- [x] `git diff --check`: clean.
-
-### Deferred to Phase 2
-
-- [~] Add a persisted starting price for plans where staff choose "I'll set prices by date."
-- [~] Add per-guest occupancy price previews.
-- [~] Decide the date range initialized by a starting price; do not invent or duplicate a pricing horizon in the sheet.
-
-## Phase 2 — One consistent local pricing engine
-
-Goal: ensure the rate-plan sheet, inventory calendar, booking quotes, bookings, and future channel exports calculate the same effective price.
-
-### Prepared implementation approach
-
-Phase 2 will be delivered in small, independently testable slices. The shared
-resolver comes first; UI changes only follow after booking and calendar callers
-use the same result.
-
-#### Shared resolver contract
-
-- [x] Trace the existing sheet, calendar, availability, quote, booking snapshot,
-  restriction-write, preview, and future channel-export pricing paths.
-- [x] Define the shared service boundary: `Rates::ResolveEffectiveNightlyPrice`.
-- [x] Add a result object that exposes at least:
-  - [x] the effective nightly amount for the requested occupancy;
-  - [x] the underlying adult/room amount before occupancy charges;
-  - [x] currency;
-  - [x] source (`daily_override`, `standard_daily_rate`, `starting_price`, or
-    `room_category_default`);
-  - [x] the effective `RoomRate`, when one supplied daily values.
-- [x] Accept a room category, rate plan, date, currency, adults, children,
-  child ages, and optional rate tier.
-- [x] Allow callers with preloaded rates and room-plan assignments to pass them
-  in, so calendar and availability ranges do not introduce per-cell queries.
-- [x] Keep booking eligibility restrictions outside the price formula. A
-  restriction may block sale, but must not independently change the amount.
-
-#### Effective-price precedence
-
-Use this precedence consistently for every caller:
-
-1. An explicit daily price for the selected room category and rate plan wins.
-2. A requested walk-in or corporate tier on the Standard Rate row wins for that
-   tier.
-3. A fixed plan uses its persisted starting price when no daily price exists.
-4. A percentage or amount adjustment derives from that date's Standard Rate;
-   when the date has no Standard Rate row, it derives from the room category's
-   default nightly price.
-5. The Standard Rate falls back from its daily row to the room category's
-   default nightly price.
-6. Legacy unattributed daily rows remain readable as Standard Rate anchors
-   until the data is cleaned up.
-
-After the underlying adult/room amount is resolved, apply occupancy pricing in
-one place:
-
-- One price per room: add the extra guest charge only above guests included.
-- Price per guest: charge each adult, apply age-band or default child pricing,
-  and add the one-guest surcharge only when total occupancy is one.
-
-#### Persisted starting price
-
-- [x] Choose the storage approach: use the existing
-  `room_type_rate_plans.pricing_value` for fixed plans as that room category's
-  starting price; do not create hundreds of future `RoomRate` rows.
-- [x] Require a non-negative starting price for newly created or edited fixed
-  assignments.
-- [x] Preserve compatibility for existing fixed assignments with a blank value
-  by falling back to the room category's default nightly price until edited.
-- [x] Add one starting-price input per selected room category in the rate-plan
+- [x] Replace the separate Rate Settings registry with
+  **Settings → Property → Room Inventory**.
+- [x] Show room categories as expandable rows with group, capacity, room count,
+  rate issues, and actions.
+- [x] Search by room-category or rate-plan name.
+- [x] Filter by one or more room groups, including unassigned rooms.
+- [x] Create and edit room categories from the same workspace.
+- [x] Manage room groups and assign groups to several categories.
+- [x] Show attached rate plans beneath each room category.
+- [x] Create or configure a plan for exactly one room category in a right-side
   sheet.
-- [x] Treat a daily `RoomRate` as an override of the starting price for that
-  date only.
+- [x] Resolve a free-entry rate-plan name to one existing active custom plan or
+  create a new plan.
+- [x] Refuse ambiguous duplicate-name resolution.
+- [x] Attach one reusable custom plan to several room categories without
+  collecting cross-room pricing in the attachment sheet.
+- [x] Bootstrap new per-room assignments as a live 0% Standard Rate adjustment.
+- [x] Bootstrap new per-person assignments with a complete occupancy matrix.
+- [x] Skip relationships that already exist rather than create duplicates.
+- [x] Batch channel synchronization for only the newly affected rooms.
+- [x] Archive and restore eligible custom plans.
+- [x] Keep Standard and special tier plans protected from ordinary destructive
+  actions.
 
-#### Delivery slices
+### Remaining
 
-1. [x] Add the resolver and focused unit specs for precedence, currency,
-   adjustment floors, occupancy, child age bands, and daily overrides.
-2. [x] Refactor `Bookings::CalculateStayPrice`, booking availability, and
-   financial snapshots to use it; delete duplicated calculations only after
-   regression parity is proven.
-   - [ ] Migrate the public `BookingEngine::RateCalendarService` minimum-price
-     endpoint, which still summarizes raw `RoomRate` rows.
-3. [x] Refactor the inventory calendar presenter and restriction-only writes to
-   use it, including derived prices and fixed starting prices.
-4. [x] Add the starting-price and occupancy previews to the rate-plan sheet,
-   using the agreed staff-facing vocabulary.
-   - [x] Starting-price and adjusted-price previews.
-   - [x] Complete per-guest occupancy inputs and capacity context.
-5. [x] Make inventory editing mode-specific and remove irrelevant inputs.
-6. [ ] Expose the resolver as the only local price source consumed by Phase 3
-   channel export.
+- [ ] Decide whether Room Inventory's assignment-level issue count needs a
+  direct repair action instead of only opening the editor.
+- [ ] Add an auditable report for legacy assignments whose pricing is invalid or
+  incomplete.
 
-#### Known inconsistencies found during preparation
+## Phase 2 — Focused rate-plan create and edit
 
-- [x] The inventory calendar currently shows the room category default when an
-  adjusted plan has no explicit daily row, while bookings derive from the
-  Standard Rate for that date.
-- [x] Nightly resolution is duplicated across booking availability,
-  `Bookings::CalculateStayPrice`, and financial snapshot creation.
-- [x] `Bookings::CalculateStayPrice` does not consistently constrain fallback
-  `RoomRate` lookup by currency.
-- [x] Restriction-only writes contain a separate copy of derived-price fallback
-  logic.
-- [x] The AI booking preview only prices dates that already have complete
-  `RoomRate` rows, so it cannot represent every fallback the booking engine can.
-- [x] Daily occupancy overrides currently exist for both charging models, even
-  when some fields are irrelevant to the hotel's charging model.
+Goal: configure one room's price without hiding shared plan-wide consequences.
 
-#### Phase boundary
+### Shipped
 
-- Phase 2 changes local pricing only. It does not enable price-per-guest Channex
-  distribution or change external payloads.
-- Channel-specific markups remain separate from the hotel's effective local
-  price. Phase 3 applies them, if retained, after the local price is resolved.
-- No browser or plugin testing will be used in this workspace.
+- [x] Redirect old wizard URLs to the current single-room sheet.
+- [x] Show the inherited hotel charging model and plan currency as read-only
+  context.
+- [x] Keep `sell_mode` out of hotel-facing rate-plan parameters.
+- [x] Allow the New rate sheet to select either an existing custom plan or a new
+  name.
+- [x] Preserve an existing selected plan's shared details while configuring the
+  selected room assignment.
+- [x] Save a newly resolved plan and its first room price in one transaction.
+- [x] Replace the tabbed full-bottom editor with one focused right-side sheet.
+- [x] Select one attached room category and render only its pricing fields.
+- [x] Save shared plan details and the selected room's pricing together.
+- [x] Protect dirty state when switching rooms, closing, archiving, or deleting.
+- [x] Keep Standard Rate identity locked while allowing applicable pricing
+  fields to be maintained.
+- [x] Refuse detaching the final room category.
+- [x] Refuse detaching a room/plan assignment referenced by bookings.
+- [x] Remove a detached assignment's channel mapping after commit.
+- [x] Display the per-person channel limitation directly in the create sheet
+  for connected properties.
 
-#### Preparation baseline
+### Remaining
 
-- [x] Existing focused pricing and inventory regression suite: 109 examples,
-  0 failures.
+- [ ] Make shared plan-wide fields visually unmistakable when a plan is attached
+  to several rooms.
+- [ ] Consider showing the affected room count beside shared details and child
+  pricing before save.
 
-#### Current Phase 2 verification
+## Phase 3 — Consistent local pricing
 
-- [x] Shared resolver and cross-consumer consistency specs added.
-- [x] Focused pricing, booking, inventory, preview, model, and request suites:
-  188 examples, 0 failures after the occupancy-matrix and child-pricing changes.
-- [x] Booking-domain regression: 932 examples, 0 failures.
-- [x] Channel-manager regression: 70 examples, 0 failures.
-- [x] Targeted RuboCop: no offenses.
+Goal: make rate-plan sheets, the inventory calendar, quotes, bookings, and
+financial snapshots resolve the same local price.
 
-### Pricing behavior
+### Resolver and persistence shipped
 
-- [x] Establish one service that resolves the effective nightly price for a room category, rate plan, date, currency, and occupancy.
-- [~] Reuse the service in booking availability, stay pricing, rate previews, and channel export.
-  - [x] Local booking availability, stay pricing, financial snapshots, AI price previews, and inventory calendar.
-  - [ ] Channel export is implemented in Phase 3.
-- [x] Make percentage and amount adjustments follow the room category's Standard Rate on every date.
-- [x] Preserve an explicit daily override when staff replace an adjusted price for a specific date.
-- [x] Ensure restrictions applied to an unpriced date do not silently change its effective price.
-- [x] Define and persist the starting-price behavior for "I'll set prices by date."
+- [x] Use `Rates::ResolveEffectiveNightlyPrice` as the shared local pricing
+  boundary.
+- [x] Return the effective amount, base room/adult amount, currency, source,
+  contributing `RoomRate`, and whether an occupancy matrix supplied the amount.
+- [x] Accept preloaded rates and assignments so range callers avoid per-cell
+  queries.
+- [x] Resolve requested walk-in/corporate tier prices before ordinary plan
+  values when that tier applies.
+- [x] Let an explicit daily plan price override its standing behavior.
+- [x] Persist a fixed per-room standing price on
+  `room_type_rate_plans.pricing_value`.
+- [x] Derive multiplier/offset plans from that date's Standard Rate and fall
+  back to the room category's default nightly price.
+- [x] Preserve legacy unattributed daily rows as readable Standard Rate anchors.
+- [x] Keep restrictions outside the price formula.
+- [x] Apply per-room extra-guest charges in one downstream pricing service.
+- [x] Store per-person standing amounts by room assignment and adult count.
+- [x] Resolve daily occupancy override → assignment occupancy price → derived
+  Standard occupancy price.
+- [x] Apply default or age-banded child pricing after resolving the adult amount.
+- [x] Keep the one-guest surcharge only as a legacy fallback when an occupancy
+  matrix did not provide the adult total.
 
-### Inventory experience
+### Consumers shipped
 
-- [x] Make the rate inventory calendar display the same adjusted price used by bookings.
-- [x] One price per room: show only room price, guests included, and extra guest charge.
-- [x] Price per guest: show one total nightly price for every supported adult occupancy and applicable child-pricing information.
-- [x] Remove base-occupancy and extra-pax inputs from price-per-guest inventory editing.
-- [x] Add clear effective-price previews for each selected room category.
-- [x] Add occupancy previews for price-per-guest plans when an adult nightly price is available.
+- [x] Local booking availability.
+- [x] Stay-price calculation.
+- [x] Booking financial snapshots and repricing.
+- [x] AI booking price previews.
+- [x] Rates & Availability calendar presentation.
+- [x] Restriction-only write paths.
 
-### Occupancy capacity and per-guest price matrix
+### Remaining
 
-- [x] Keep capacity owned by each room category: maximum adults and maximum
-  children are not editable on a rate plan.
-- [x] Add server-side validation that maximum children is a non-negative whole
-  number; the room-category form currently requires it but the model does not.
-- [x] Make lightweight hotel/API availability checks enforce maximum adults,
-  maximum children, and total capacity, matching final quote allocation.
-- [x] In each selected room-category row, show its adult and child capacity as
-  read-only context.
-- [x] For price-per-guest properties, generate one editable starting-price row
-  for every valid adult occupancy from 1 through that room category's maximum
-  adults.
-- [x] Do not allow staff to add an adult occupancy above the room category's
-  maximum adults.
-- [x] Persist occupancy prices per room-category/rate-plan assignment rather
-  than as one global adult unit price.
-- [x] Add matching date-specific occupancy overrides to Rates & Availability.
-- [x] Update the effective-nightly-price resolver to select the requested adult
-  occupancy price before applying child pricing.
-- [x] Retain the current adult-unit-price formula only as a documented legacy
-  fallback during migration.
+- [ ] Migrate `BookingEngine::RateCalendarService` minimum-price summaries away
+  from raw `RoomRate` rows if that endpoint still needs full fallback parity.
+- [ ] Make the shared resolver the source for supported channel exports.
+- [ ] Audit every remaining direct `RoomRate#price` consumer and document valid
+  exceptions.
 
-### Child pricing and age-group discoverability
+## Phase 4 — Per-person occupancy and child pricing
 
-- [x] Put a clearly labeled "Child pricing" section directly after adult
-  occupancy prices in every price-per-guest rate-plan sheet.
-- [x] Explain that the room category controls how many children are allowed,
-  while the rate plan controls what permitted children cost.
-- [x] Provide two clear choices:
-  - [x] Use one default child price for every age.
-  - [x] Set different prices by age group.
-- [x] Keep an always-visible "Add age group" action when age-group pricing is
-  selected; do not rely on a low-prominence empty state.
-- [x] Use staff-facing labels: age group name, youngest age, oldest age, and
-  nightly child price.
-- [x] Allow each age group to use either a fixed nightly amount or a percentage
-  of the selected adult occupancy price.
-- [x] Reject an oldest age below the youngest age.
-- [x] Reject overlapping age groups within the same rate plan.
-- [x] Show uncovered ages explicitly as using the default child price.
-- [ ] Show an example child total for the currently selected room category and
-  adult occupancy.
-- [x] Keep age-group definitions in Rate Settings. The inventory timeline may
-  preview the computed child amount but does not redefine age ranges by date.
+Goal: make every supported occupancy explicit and prevent silently incomplete
+new configurations.
 
-### Phase 2 acceptance checks
+### Shipped
 
-- [x] The sheet, calendar, quote, and booking totals agree for fixed prices.
-- [x] The sheet, calendar, quote, and booking totals agree for percentage adjustments.
-- [x] The sheet, calendar, quote, and booking totals agree for amount adjustments.
-- [x] Per-room extra guest charges agree across previews and final bookings.
-- [x] Per-guest adult, child, and age-group calculations agree across previews and final bookings; legacy one-guest surcharge remains only for plans without an occupancy matrix.
-- [x] Focused service, request, and booking regression suites pass.
+- [x] Keep `max_adults`, `max_children`, and total capacity on the room category.
+- [x] Validate room-category child capacity server-side.
+- [x] Enforce capacity during lightweight availability checks and final quote
+  allocation.
+- [x] Render adult occupancy inputs from 1 through the selected room category's
+  `max_adults`.
+- [x] Refuse manual create/edit saves with a missing adult count.
+- [x] Refuse prices above the category's supported adult count through the form
+  boundary.
+- [x] Generate complete Derived and Auto matrices through one occupancy-ladder
+  service.
+- [x] Replace the complete stored matrix atomically when room pricing is saved.
+- [x] Bootstrap newly attached per-person plans with a complete matrix.
+- [x] Add date-specific occupancy overrides to Rates & Availability.
+- [x] Size a clicked calendar cell's occupancy editor to that room category,
+  rather than the hotel's largest room.
+- [x] Keep child age bands non-overlapping and validate age order.
+- [x] Support fixed and percentage age-band pricing.
+- [x] Explain that room capacity and plan child pricing have different owners.
 
-## Phase 3 — Channex rate-plan and ARI support
+### Remaining
 
-Goal: distribute Wastays pricing correctly instead of treating every price-per-guest property as unsupported.
+- [ ] Build a legacy occupancy-matrix audit/backfill workflow.
+- [ ] Decide how to enforce completeness when `room_type.max_adults` changes.
+- [ ] Show an example child total for the selected room and adult occupancy.
+- [ ] Replace the calendar's shared multi-room occupancy block with one
+  capacity-sized block per selected room category, or prevent incompatible
+  multi-room selections.
 
-### Rate-plan structure
+## Phase 5 — Rates & Availability guidance
 
-- [ ] Replace the blanket `per_person` rejection with a capability-based decision.
-- [ ] Create Channex rate plans for both one-price-per-room and price-per-guest hotels.
-- [ ] Source Channex `sell_mode` from the hotel-level charging model.
-- [ ] Initially send Wastays-calculated plans to Channex using `rate_mode: manual` to avoid maintaining two pricing engines.
-- [ ] Generate the required Channex occupancy options for price-per-guest plans.
-- [ ] Select and document the primary occupancy for each external rate plan.
+Goal: make date-specific pricing understandable and lead staff to incomplete
+setup before it affects bookings.
 
-### Daily ARI payloads
+### Shipped
 
-- [ ] Send a scalar daily rate for one-price-per-room plans.
-- [ ] Send occupancy-specific daily `rates` arrays for price-per-guest plans.
-- [ ] Use the Phase 2 effective-price service to calculate exported prices.
-- [ ] Continue to send availability at room-category level.
-- [ ] Continue to send min/max stay, closed-to-arrival, closed-to-departure, and stop-sell restrictions.
-- [ ] Verify Channex rate units and fraction handling against staging.
-- [ ] Verify the current Channex field name for maximum stay; reconcile `max_stay` versus `max_stay_arrival`.
+- [x] Render local calendar prices through the shared resolver.
+- [x] Use charging-model-specific rate editors.
+- [x] Separate availability-only editing from rate-plan editing.
+- [x] Open cell editors through a server-rendered Turbo Frame.
+- [x] Stage several browser-side changes before one confirmed persistence batch.
+- [x] Apply only touched fields.
+- [x] Support 14-day, 21-day, and month ranges.
+- [x] Accept one `room_type_id` and one `rate_plan_id` for server-side calendar
+  scoping.
+- [x] Preserve relevant inventory state across server-rendered date navigation.
+- [x] Keep pricing rules, availability overrides, channel-derived pricing, and
+  channel availability rules in Advanced Pricing.
 
-### Child-pricing policy
+### Partially shipped
 
-- [ ] Decide how Wastays age groups map to Channex's flatter child and infant pricing model.
-- [ ] Choose one explicit behavior:
-  - [ ] Flatten Wastays age groups to a documented channel child fee.
-  - [ ] Let each OTA own child pricing while Wastays exports adult occupancy rates.
-  - [ ] Mark only incompatible age-banded plans as direct-only.
-  - [ ] Maintain a separate channel-compatible rate plan.
-- [ ] Show the chosen behavior in staff-facing distribution messaging.
+- [~] Calendar filtering: single-room/single-plan server-side scoping exists,
+  but a complete multi-select filter and removable context chips do not.
+- [~] Price-origin information: the presenter retains the resolver's source,
+  but cells do not explain or label it.
+- [~] Pricing issue visibility: Room Inventory reports assignment-level issues,
+  but future date coverage is not audited.
 
-### Phase 3 acceptance checks
+### Remaining
 
-- [ ] Contract specs cover Channex rate-plan payloads for both charging models.
-- [ ] Contract specs cover scalar and multi-occupancy ARI payloads.
-- [ ] Channex staging accepts rates, restrictions, and availability without warnings.
-- [ ] The amount displayed in Wastays matches the amount exported for every supported occupancy.
-- [ ] Sync results distinguish full success, availability-only success, unsupported pricing, and failure.
+- [ ] Add `Rates::SetupGaps` or an equivalent query with a clearly defined
+  coverage window and result contract.
+- [ ] Add a direct post-create or post-edit continuation into a scoped Rates &
+  Availability view when setup needs date-specific work.
+- [ ] Add a Rates & Availability nudge for incomplete future coverage.
+- [ ] Add a price-source legend and an accessible “explain this price” detail.
+- [ ] Finish the filter UX, including clearing and preserving room/plan context.
 
-## Phase 4 — Sell-mode transitions and reconciliation
+## Phase 6 — Channex rate-plan and ARI support
 
-Goal: make changes between one-price-per-room and price-per-guest safe for connected properties.
+Goal: distribute compatible Wastays pricing correctly instead of treating all
+per-person plans as unsupported forever.
 
-### Transition workflow
+### Current state
 
-- [ ] Replace callback-only mirroring with an explicit hotel charging-model transition service.
-- [ ] Detect whether the hotel has an active channel-manager connection before changing the model.
-- [ ] Reconcile, replace, or recreate external rate-plan structures when the charging model changes.
-- [ ] Preserve valid local rate-plan-to-room-category assignments.
-- [ ] Reconcile `ChannelMapping` records with the structures that actually exist remotely.
-- [ ] Push a complete availability, rate, and restriction snapshot after the transition.
-- [ ] Report partial failures and provide a retry path.
-- [ ] Prevent staff from seeing a generic success message when only availability was synchronized.
+- [x] Per-room plans can synchronize structure, scalar rates, restrictions, and
+  room-level availability.
+- [x] Rate-plan create/edit and attachment flows batch ARI work for affected
+  rooms.
+- [x] Per-person plans are explicitly rejected by
+  `RatePlan#channex_syncable?`.
+- [x] Connected per-person properties see that availability continues to sync
+  while plan prices and restrictions remain in Wastays.
 
-### Data ownership cleanup
+### Remaining
 
-- [ ] Decide whether to remove `rate_plans.sell_mode` and derive it from `Hotel#sell_mode` everywhere.
-- [ ] If the duplicated column remains, add a database-level consistency guarantee and reconciliation check.
-- [ ] Backfill or repair any plans whose stored value differs from their hotel.
+- [ ] Replace the blanket per-person rejection with a capability-based policy.
+- [ ] Confirm the current Channex contract for occupancy options, rate units,
+  fraction handling, and maximum-stay fields against staging.
+- [ ] Create channel rate-plan structures for every supported charging model.
+- [ ] Select and document the primary occupancy for external plans.
+- [ ] Send scalar daily rates for per-room plans through the shared resolver
+  where not already guaranteed.
+- [ ] Send occupancy-specific daily rate arrays for supported per-person plans.
+- [ ] Define how Wastays age bands map to Channex's flatter child and infant
+  pricing model.
+- [ ] Choose an explicit fallback for incompatible age-banded plans: flatten,
+  OTA-owned child pricing, direct-only, or a separate channel plan.
+- [ ] Retire plans that were pushed before `channex_syncable?` narrowed to
+  `RatePlan::DISTRIBUTABLE_KINDS`. Walk-in and corporate plans are now excluded,
+  but nothing deletes what was already sent — those plans keep their
+  `channel_mapping` and simply stop receiving updates, so the rates left live on
+  the channel drift. `delete_from_channel_manager` only fires on destroy.
+- [ ] Make sync results distinguish full success, availability-only success,
+  unsupported pricing, and failure.
+- [ ] Add contract specs for scalar and occupancy-specific structure and ARI
+  payloads.
 
-### Phase 4 acceptance checks
+## Phase 7 — Charging-model transitions
 
-- [ ] Connected transition from one price per room to price per guest is covered end to end.
-- [ ] Connected transition from price per guest to one price per room is covered end to end.
-- [ ] Unconnected transitions remain simple and do not enqueue unnecessary channel work.
-- [ ] Failed remote transitions leave an observable, recoverable state.
-- [ ] Full related model, service, request, job, and channel regression suites pass.
+Goal: make switching between per-room and per-person safe for connected and
+unconnected properties.
 
-## Current implementation files
+### Current risk
 
-The current rate-plan work is centred on:
+`Hotel#mirror_sell_mode_to_rate_plans` uses `update_all`. It keeps stored plan
+values aligned with the hotel but skips rate-plan callbacks and does not
+reconcile data whose meaning changes with the charging model.
 
-- `app/controllers/hotel_portal/rate_plans_controller.rb`
-- `app/controllers/hotel_portal/rate_plan_room_pricings_controller.rb`
-- `app/services/rate_plans/save_room_pricing.rb`
-- `app/views/hotel_portal/rate_plans/_editor_sheet.html.erb`
-- `app/javascript/controllers/rate_plan_editor_controller.js`
+### Remaining
 
-## Next action
+- [ ] Replace callback-only mirroring with an explicit transition service.
+- [ ] Detect active channel-manager connections before changing the model.
+- [ ] Inventory the scalar prices, occupancy matrices, daily occupancy
+  overrides, extra-guest charges, one-guest surcharges, and age bands affected
+  by the transition.
+- [ ] Define which values are transformed, retained as inactive history, or
+  deleted.
+- [ ] Preserve valid room/rate-plan assignments.
+- [ ] Reconcile or recreate external rate-plan structures and channel mappings.
+- [ ] Push a complete availability, rate, and restriction snapshot after a
+  successful transition.
+- [ ] Report partial failure and provide a retry path.
+- [ ] Prevent a generic success result when only availability synchronized.
+- [ ] Decide whether `rate_plans.sell_mode` should remain duplicated or be
+  derived from the hotel everywhere.
+- [ ] If it remains, add a database-level consistency guarantee and repair
+  existing mismatches.
+- [ ] Cover connected transitions in both directions end to end.
 
-- [x] Replace the monolithic rate-plan edit form with the tabbed full bottom sheet.
-- [ ] Continue with the rate-inventory setup-gap query and scoped calendar filter described in the handover.
+## Current implementation map
+
+### Room Inventory and assignment
+
+```text
+app/controllers/hotel_portal/room_types_controller.rb
+app/controllers/hotel_portal/rate_plan_attachments_controller.rb
+app/queries/room_types_query.rb
+app/services/rate_plans/resolve.rb
+app/services/rate_plans/attach.rb
+app/services/rate_plans/autocomplete.rb
+app/services/rate_plans/bootstrap_assignment.rb
+app/views/hotel_portal/room_types/
+app/views/hotel_portal/rate_plan_attachments/
+```
+
+### Rate-plan pricing
+
+```text
+app/controllers/concerns/rate_plan_editor_loading.rb
+app/controllers/hotel_portal/rate_plans_controller.rb
+app/controllers/hotel_portal/rate_plan_room_pricings_controller.rb
+app/forms/hotel_portal/rate_plan_room_pricing.rb
+app/services/rate_plans/save_room_pricing.rb
+app/services/rate_plans/remove_room_type.rb
+app/services/rate_plans/occupancy_ladder.rb
+app/views/hotel_portal/rate_plans/
+```
+
+### Effective pricing and inventory
+
+```text
+app/services/rates/resolve_effective_nightly_price.rb
+app/services/bookings/nightly_pax_price.rb
+app/controllers/hotel_portal/inventory_dashboards_controller.rb
+app/services/hotel_portal/inventory_calendar_presenter.rb
+app/services/hotel_ops/apply_inventory_dashboard_selection.rb
+app/views/hotel_portal/inventory_dashboards/
+app/javascript/controllers/inventory_calendar_controller.js
+```
+
+## Open findings from the system-plan review
+
+Raised while reviewing the change that turned the virtual walk-in/corporate
+tiers into real rate plans (2026-08-10). The data-safety and correctness items
+from that review are fixed; these were deliberately left open.
+
+- [ ] **Decide whether the public rate calendar still shows corporate pricing
+  for a partner code.** `BookingEngine::RateCalendarService` used to resolve a
+  partner from `@partner_code` and take
+  `LEAST(price, COALESCE(corporate_price, price))`. Materializing the tiers
+  dropped both, and `@partner_code` is now an unused ivar the caller still
+  passes. This is a product call, not a cleanup: either rebuild it against the
+  corporate rate plan, or remove the parameter so the calendar is honestly
+  public-only.
+- [ ] **Give a new per-person category a Standard occupancy ladder.**
+  `RatePlans::EnsureSystemPlans` creates the standard assignment directly, while
+  walk-in and corporate go through `RatePlans::BootstrapAssignment`, which
+  materializes a full ladder. On a per-person hotel a fresh category therefore
+  shows Standard as "Needs pricing" while the two tiers read "Ready". Cosmetic,
+  but it points the operator at the wrong row.
+- [ ] **Reconsider the rate-plan fallback when the room category changes.**
+  `Bookings::UpdateStayService` keeps `current_room.rate_plan` when only the room
+  type changes, so a stay can end up on a plan that is not assigned to the new
+  category. An explicitly picked rate that no longer resolves now fails loudly;
+  this path still does not.
+
+## Recommended next slice
+
+1. [ ] Implement a read-only legacy pricing audit covering incomplete
+   per-person matrices and missing room/rate-plan standing prices.
+2. [ ] Define the expected future-coverage window and turn that audit into the
+   setup-gap query used by Room Inventory and Rates & Availability.
+3. [ ] Add scoped continuation and nudge UI only after the query contract is
+   stable.
+4. [ ] Complete multi-room per-person bulk editing without assuming every room
+   has the same adult capacity.

@@ -113,9 +113,6 @@ module HotelPortal
           )
         end
 
-        walk_in_row = Row.new(key: "room-#{room_type.id}-walk-in", kind: :walk_in, room_type: room_type)
-        corporate_row = Row.new(key: "room-#{room_type.id}-corporate", kind: :corporate, room_type: room_type)
-
         rate_and_sub_rows = rate_plans_for(room_type).flat_map do |rate_plan|
           parent_row = Row.new(key: "room-#{room_type.id}-rate-#{rate_plan.id}", kind: :rate, room_type: room_type, rate_plan: rate_plan)
 
@@ -144,7 +141,7 @@ module HotelPortal
           [ parent_row ] + sub_rows
         end
 
-        [ inventory_row ] + summary_rows + inventory_sub_rows + rate_and_sub_rows + [ walk_in_row, corporate_row ]
+        [ inventory_row ] + summary_rows + inventory_sub_rows + rate_and_sub_rows
       end
     end
 
@@ -154,17 +151,9 @@ module HotelPortal
 
     def rate_plan_options_struct
       @rate_plan_options_struct ||= visible_room_types.flat_map do |room_type|
-        plans = rate_plans_for(room_type).map do |rate_plan|
-          OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id, kind: :standard)
+        rate_plans_for(room_type).map do |rate_plan|
+          OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id, kind: :rate)
         end
-
-        # Virtual Pricing Tiers, written onto the anchor plan's rate rows.
-        tiers = [
-          OpenStruct.new(label: "#{room_type.name} - Walk-in Rate", id: "tier_walk_in_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
-          OpenStruct.new(label: "#{room_type.name} - Corporate Rate", id: "tier_corporate_#{room_type.id}", room_type_id: room_type.id, kind: :tier)
-        ]
-
-        plans + tiers
       end
     end
 
@@ -191,10 +180,6 @@ module HotelPortal
         channel_summary_cell(row.room_type, date)
       elsif row.channel_availability_row?
         channel_availability_cell(row.room_type, row.channel, date)
-      elsif row.walk_in_row?
-        tier_cell(row.room_type, date, :walk_in)
-      elsif row.corporate_row?
-        tier_cell(row.room_type, date, :corporate)
       elsif row.channel_rate_row?
         channel_rate_cell(row.room_type, row.rate_plan, row.channel_rate_plan_id, row.channel, date)
       else
@@ -272,45 +257,6 @@ module HotelPortal
       rooms.values.include?(ext_rt_id)
     end
 
-    def tier_cell(room_type, date, tier_type)
-      # walk_in_price/corporate_price live on the anchor plan's rate rows, which
-      # is where ApplyInventoryDashboardSelection writes them.
-      rate_plan = room_type.standard_rate_plan
-      return { date: date } if rate_plan.blank?
-
-      rate = rate_for(room_type, rate_plan, date)
-
-      actual_price = case tier_type
-      when :walk_in then rate&.walk_in_price
-      when :corporate then rate&.corporate_price
-      end
-
-      price = actual_price.presence || rate&.price || room_type.base_price
-      native_currency = default_currency
-
-      display_conversion = display_conversion_for(price, from: native_currency)
-      conversion_missing = price.present? && display_currency != native_currency && display_conversion.nil?
-
-      display_price = display_conversion&.amount || price
-      formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
-
-      {
-        date: date,
-        price: actual_price, # Original set price
-        rate_plan_id: rate_plan.id,
-        rate_tier: tier_type,
-        formatted_price: format_price(display_price, formatted_currency),
-        currency: native_currency,
-        display_currency: formatted_currency,
-        estimated: display_conversion.present? && native_currency != formatted_currency,
-        conversion_missing: conversion_missing,
-        is_modified: actual_price.present?,
-        sell_mode: rate_plan&.sell_mode || "per_room",
-        restriction_badges: [],
-        restriction_compact: nil
-      }
-    end
-
     def sold_counts_by_room_type
       @sold_counts_by_room_type ||= begin
         counts = hotel.bookings.revenue_generating
@@ -348,18 +294,12 @@ module HotelPortal
       end
     end
 
-    # Special tiers get their own rows and are written through the anchor plan,
-    # so they never appear as ordinary rate rows. Identified by kind rather than
-    # by name: renaming "Walk-in Rate" used to turn it into an ordinary row that
-    # the walk-in row still read from, and naming an ordinary plan "Corporate"
-    # used to hide it from the grid while it stayed bookable.
-    #
     # Archived plans are excluded to match the booking side, which offers only
     # RatePlan.active — showing rows the operator can edit and push to channels
     # for a plan no guest can book is worse than not showing them.
     def rate_plans_for(room_type)
       plans = room_type.rate_plans.sort_by(&:id)
-      plans = plans.reject { |rate_plan| rate_plan.special_tier? || rate_plan.archived? }
+      plans = plans.reject(&:archived?)
       plans = plans.select { |rate_plan| rate_plan.id == selected_rate_plan_id } if selected_rate_plan_id.present?
       plans
     end
@@ -451,6 +391,7 @@ module HotelPortal
 
     def rate_cell(room_type, rate_plan, date)
       rate = rate_for(room_type, rate_plan, date)
+      restriction_rate = rate_plan.anchored? ? rate_for(room_type, room_type.standard_rate_plan, date) : rate
       native_currency = default_currency
       display_adults = rate_plan.sell_mode == "per_person" ? room_type.max_adults : 2
       resolved = Rates::ResolveEffectiveNightlyPrice.call(
@@ -485,11 +426,11 @@ module HotelPortal
         conversion_missing: conversion_missing,
         is_modified: is_modified,
         price_source: resolved.source,
-        min_stay: rate&.min_stay,
-        max_stay: rate&.max_stay,
-        closed_to_arrival: rate&.closed_to_arrival? || false,
-        closed_to_departure: rate&.closed_to_departure? || false,
-        stop_sell: rate&.stop_sell? || false,
+        min_stay: restriction_rate&.min_stay,
+        max_stay: restriction_rate&.max_stay,
+        closed_to_arrival: restriction_rate&.closed_to_arrival? || false,
+        closed_to_departure: restriction_rate&.closed_to_departure? || false,
+        stop_sell: restriction_rate&.stop_sell? || false,
         applied_rule_type: rate&.applied_rule_type,
         single_supplement: rate&.single_supplement || rate_plan.single_supplement,
         base_occupancy: rate&.base_occupancy || rate_plan.base_occupancy,
@@ -498,8 +439,8 @@ module HotelPortal
         max_adults: room_type.max_adults,
         display_adults: display_adults,
         occupancy_prices: occupancy_prices_for(room_type, rate_plan, date),
-        restriction_badges: restriction_badges(rate),
-        restriction_compact: restriction_compact(rate)
+        restriction_badges: restriction_badges(restriction_rate),
+        restriction_compact: restriction_compact(restriction_rate)
       }
     end
 

@@ -12,7 +12,25 @@ class RatePlan < ApplicationRecord
   accepts_nested_attributes_for :rate_plan_age_bands, allow_destroy: true, reject_if: :all_blank
 
   KINDS = %w[standard walk_in corporate ota custom].freeze
-  SPECIAL_TIER_KINDS = %w[walk_in corporate ota].freeze
+
+  # Who may be sold each kind. Walk-in is front-desk only; corporate needs a
+  # negotiated relationship; ota is distribution-only and sold by nobody here.
+  # Every caller that filters plans by audience reads this rather than spelling
+  # the list out — they drifted apart the last time they were written by hand.
+  AUDIENCE_KINDS = {
+    public: %w[standard custom],
+    corporate: %w[standard custom corporate],
+    staff: %w[standard custom walk_in corporate]
+  }.freeze
+
+  # Kinds a channel manager may carry. Not an audience: ota exists only to be
+  # distributed, and walk-in/corporate must never leave the property.
+  DISTRIBUTABLE_KINDS = %w[standard custom ota].freeze
+
+  # Kinds that carry their own price but read restrictions off the category's
+  # standard plan — stop-sell and CTA/CTD are properties of the night, not of
+  # which desk sold it.
+  ANCHORED_KINDS = %w[walk_in corporate].freeze
 
   validates :name, presence: true
   validates :kind, presence: true, inclusion: { in: KINDS }
@@ -28,11 +46,7 @@ class RatePlan < ApplicationRecord
 
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
-  # Walk-in, corporate and OTA plans are internal price anchors — they carry
-  # room_rates.walk_in_price / .corporate_price for the front desk and are
-  # never inventory a guest can pick. Bookings::RateOptions rejects them the
-  # same way for the staff-facing dropdown.
-  scope :publicly_bookable, -> { active.where.not(kind: SPECIAL_TIER_KINDS) }
+  scope :for_audience, ->(audience) { active.where(kind: RatePlan.kinds_for(audience)) }
 
   after_commit :sync_with_channel_manager, on: [ :create, :update ]
   after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
@@ -41,26 +55,37 @@ class RatePlan < ApplicationRecord
     %w[per_room per_person]
   end
 
-  def special_tier?
-    kind.in?(SPECIAL_TIER_KINDS)
+  def self.kinds_for(audience)
+    AUDIENCE_KINDS.fetch(audience.to_sym)
   end
 
   def standard_rate?
     kind == "standard"
   end
 
+  # Only a hotelier-created plan is deletable; every other kind is structural.
   def deletable?
-    !special_tier? && !standard_rate? && !booking_rooms.exists?
+    kind == "custom" && !booking_rooms.exists?
+  end
+
+  def anchored?
+    kind.in?(ANCHORED_KINDS)
+  end
+
+  def bookable_by?(audience)
+    !archived? && kind.in?(self.class.kinds_for(audience))
   end
 
   def archived?
     archived_at.present?
   end
 
-  # Standard Rate and special tiers (walk-in/corporate/ota) are structurally
-  # required and must always stay bookable, so they can't be archived either.
+  # Walk-in and Corporate can be archived — nothing else reads their rows. The
+  # Standard plan cannot: it is the price anchor every other plan resolves
+  # against, the restriction row walk-in/corporate read, and the only plan the
+  # booking paths fall back to. Archiving it leaves the room category unsellable.
   def archivable?
-    !special_tier? && !standard_rate?
+    !standard_rate?
   end
 
   def archive!
@@ -79,17 +104,11 @@ class RatePlan < ApplicationRecord
   # from a property-level Hotel Policy — it has no representation for per-band
   # per-plan pricing, so per-person plans cannot be pushed at all.
   def channex_syncable?
-    sell_mode == "per_room"
+    sell_mode == "per_room" && kind.in?(DISTRIBUTABLE_KINDS)
   end
 
   def band_for_age(age)
     rate_plan_age_bands.find { |band| age.to_i.between?(band.min_age, band.max_age) }
-  end
-
-  # Symbol tier name for the pricing paths that key off it (rate_options,
-  # build_financial_snapshot); nil for standard and custom plans.
-  def special_tier_kind
-    kind.to_sym if special_tier?
   end
 
   private

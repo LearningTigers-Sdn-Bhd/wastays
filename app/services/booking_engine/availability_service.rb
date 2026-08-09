@@ -87,22 +87,13 @@ module BookingEngine
 
       candidate_rate_plans_for(room_type).each do |rate_plan|
         currency = rate_plan&.currency.presence || room_type.hotel.default_currency.presence || "MYR"
+        restriction_plan = room_type.restriction_plan_for(rate_plan)
 
         # Check check-out date for CTD restriction
         checkout_rate = room_type.room_rates.find do |rr|
           rr.date == @check_out &&
             rr.currency == currency &&
-            (rate_plan.present? ? rr.rate_plan_id == rate_plan.id : rr.rate_plan_id.nil?)
-        end
-
-        if (checkout_rate.nil? || checkout_rate.rate_plan_id.nil?) && room_type.rate_plans.present?
-          standard_plan = room_type.standard_rate_plan
-          std_checkout_rate = room_type.room_rates.find do |rr|
-            rr.date == @check_out &&
-              rr.currency == currency &&
-              rr.rate_plan_id == standard_plan.id
-          end
-          checkout_rate = std_checkout_rate if std_checkout_rate
+            rr.rate_plan_id == restriction_plan.id
         end
 
         if checkout_rate&.closed_to_departure?
@@ -112,29 +103,11 @@ module BookingEngine
         rates_by_date = room_type.room_rates.select do |rr|
           stay_dates_list.include?(rr.date) &&
             rr.currency == currency &&
-            (rate_plan.present? ? rr.rate_plan_id == rate_plan.id : rr.rate_plan_id.nil?)
+            rr.rate_plan_id == restriction_plan.id
         end.index_by(&:date)
 
         stay_dates_list.each do |date|
           rate = rates_by_date[date]
-
-          if rate.nil? || rate.rate_plan_id.nil?
-            std_rate = standard_rate_for(date, room_type)
-            if std_rate.present?
-              if date == @check_in && std_rate.closed_to_arrival?
-                messages << "Check-in is not allowed on this date (Closed to Arrival)."
-              end
-              if date == stay_dates_list.last && std_rate.closed_to_departure?
-                messages << "Check-out is not allowed on this date (Closed to Departure)."
-              end
-              if std_rate.min_stay.present? && nights < std_rate.min_stay
-                messages << "Minimum stay is #{std_rate.min_stay} night(s) for this room."
-              end
-              if std_rate.max_stay.present? && nights > std_rate.max_stay
-                messages << "Maximum stay is #{std_rate.max_stay} night(s) for this room."
-              end
-            end
-          end
 
           if rate.present?
             if date == @check_in && rate.closed_to_arrival?
@@ -437,12 +410,8 @@ module BookingEngine
     end
 
     def candidate_rate_plans_for(room_type)
-      plans = room_type.rate_plans.publicly_bookable.to_a
-
-      # A per-room property also offers the unplanned "base" option (nil),
-      # priced straight off the room type. A per-guest property has no
-      # per-room number to fall back to, so every option carries a plan.
-      room_type.hotel.sells_per_person? ? plans : [ nil ] + plans
+      kinds = RatePlan.kinds_for(@corporate_rate ? :corporate : :public)
+      room_type.rate_plans.select { |plan| plan.archived_at.nil? && plan.kind.in?(kinds) }
     end
 
     def greedy_allocate(total_pax, room_type_data)
@@ -524,24 +493,14 @@ module BookingEngine
       r_child_ages = Array(child_ages).map(&:to_i)
 
       room_count ||= @room_count
-      currency = rate_plan&.currency.presence || room_type.hotel.default_currency.presence || "MYR"
+      currency = rate_plan.currency.presence || room_type.hotel.default_currency.presence || "MYR"
+      restriction_plan = room_type.restriction_plan_for(rate_plan)
 
       # Check check-out date for CTD restriction
       checkout_rate = room_type.room_rates.find do |rr|
         rr.date == @check_out &&
           rr.currency == currency &&
-          (rate_plan.present? ? rr.rate_plan_id == rate_plan.id : rr.rate_plan_id.nil?)
-      end
-
-      # Fallback to standard rate plan if checking base plan (nil)
-      if (checkout_rate.nil? || checkout_rate.rate_plan_id.nil?) && room_type.rate_plans.present?
-        standard_plan = room_type.standard_rate_plan
-        std_checkout_rate = room_type.room_rates.find do |rr|
-          rr.date == @check_out &&
-            rr.currency == currency &&
-            rr.rate_plan_id == standard_plan.id
-        end
-        checkout_rate = std_checkout_rate if std_checkout_rate
+          rr.rate_plan_id == restriction_plan.id
       end
 
       return nil if checkout_rate&.closed_to_departure?
@@ -550,7 +509,7 @@ module BookingEngine
       rates_by_date = room_type.room_rates.select do |rr|
         stay_dates.include?(rr.date) &&
           rr.currency == currency &&
-          (rate_plan.present? ? rr.rate_plan_id == rate_plan.id : rr.rate_plan_id.nil?)
+          rr.rate_plan_id == restriction_plan.id
       end.index_by(&:date)
 
       nightly_total = 0.to_d
@@ -560,8 +519,7 @@ module BookingEngine
 
       stay_dates.each do |date|
         rate = rates_by_date[date]
-        standard_rate = (rate.nil? || rate.rate_plan_id.nil?) ? standard_rate_for(date, room_type) : nil
-        restriction_rate = rate || standard_rate
+        restriction_rate = rate
 
         return nil if restriction_rate&.stop_sell?
         return nil if date == stay_dates.first && restriction_rate&.closed_to_arrival?
@@ -577,7 +535,6 @@ module BookingEngine
           adults: r_adults,
           children: r_children,
           child_ages: r_child_ages,
-          rate_tier: @corporate_rate ? :corporate : :standard,
           room_rates: room_type.room_rates,
           room_type_rate_plan: rate_plan && room_type_rate_plan_for(room_type, rate_plan)
         )

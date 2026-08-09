@@ -33,6 +33,10 @@ class HotelPortal::RatePlanRoomPricingsController < HotelPortal::BaseController
   end
 
   def destroy
+    if @rate_plan.kind != "custom"
+      return respond_to_removal_error("System rate plans cannot be detached from their room category.")
+    end
+
     result = RatePlans::RemoveRoomType.call(rate_plan: @rate_plan, room_type: @room_type)
     if return_to_inventory?
       message = result.success? ? "#{@rate_plan.name} detached from #{@room_type.name}." : result.error
@@ -82,5 +86,14 @@ class HotelPortal::RatePlanRoomPricingsController < HotelPortal::BaseController
 
   def return_to_inventory?
     params[:return_to].to_s == hotel_room_types_path(current_hotel)
+  end
+
+  def respond_to_removal_error(message)
+    if return_to_inventory?
+      return redirect_to hotel_room_types_path(current_hotel), status: :see_other, alert: message
+    end
+
+    @rate_plan.errors.add(:base, message)
+    render_editor_errors(room_type_id: @room_type.id)
   end
 end

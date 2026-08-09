@@ -1,216 +1,286 @@
 # Rate plans in plain English
 
-Who this is for: anyone who has to explain, test, or support the pricing
-screens. No code knowledge assumed. The mechanics behind it are in
+Last reviewed against the product on 2026-08-10.
+
+Who this is for: anyone who explains, tests, or supports room and rate setup.
+The implementation details are in
 `docs/rate-plan-and-inventory-handover.md`.
 
----
+## The two places to remember
 
-## The one idea to hold on to
+Pricing work is split between two connected screens:
 
-There are **two kinds of pricing work**, and they live in two different places
-for a good reason:
-
-| | Where | Answers |
-| --- | --- | --- |
-| **Rate plan** | Settings → Rates | "What is this deal, and what does it normally cost?" |
-| **Rate calendar** | Rates & Inventory | "What does it cost *on these particular dates*?" |
-
-A rate plan is the **standing price list**. The calendar is the **exceptions
-list**: school holidays, a quiet Tuesday, a stop-sell weekend.
-
-If you only ever set up a rate plan and never touch the calendar, the hotel
-still sells — every night just uses the standing price. That is the intended
-behaviour, not a gap.
-
-### How the property charges — set once, for the whole property
-
-Every property is either **per room** ("MYR 300 a night for the room, however
-many of you are in it") or **per person** ("MYR 150 per adult per night"). This
-is a property-wide fact — you can see it as a badge next to the property name in
-the top bar. Hoteliers cannot flip it themselves; support/admin does, because
-changing it invalidates prices already entered.
-
-Everything below behaves differently depending on which one you are.
-
----
-
-## 1. Creating a rate plan — the wizard
-
-**Settings → Rates → New rate plan.** A full-screen panel opens with a progress
-strip along the top. Nothing is saved until the very last click; abandoning
-halfway leaves no mess behind.
-
-### Step 1 — Plan details
-
-Name it ("Non-refundable", "Long stay"), describe it, and tick **which room
-categories it applies to**. A plan doesn't have to cover every room.
-
-Also here, depending on how the property charges:
-
-- **Per room:** base occupancy ("price includes 2 pax") and the extra pax charge.
-- **Per person:** the default child price and age bands (e.g. 0–3 free, 4–11 half).
-
-### Steps 2..n — one step per room category
-
-This is the part that makes the wizard long, and it is deliberate. A beach suite
-that sleeps 4 and a twin room that sleeps 2 cannot share one price grid, so each
-category gets its own step, sized to its own capacity.
-
-On each step you pick how the price is decided:
-
-- **Manual** — you type the number. Most common, most predictable.
-- **Derived** — "always 10% below the Standard Rate", or "MYR 50 above it".
-  Per room, this stays *live*: change the standard rate later and this plan
-  follows automatically.
-- **Auto** (per-person only) — you give one anchor price and a step ("MYR 220 for
-  1 adult, +MYR 100 per extra adult") and the system fills the whole grid.
-
-A shortcut button copies the current step's answers to the remaining categories.
-
-Important quirk of per-person: Derived and Auto **fill in real numbers once, now**
-— they don't keep tracking the standard rate afterwards. If you reopen the plan
-later you'll see plain typed prices, not the rule you used. That's on purpose:
-a half-filled price grid makes a room unsellable, so the system guarantees a
-complete grid instead of a live formula.
-
-### Final step — Review
-
-A per-category summary of everything, then **Create**. If a per-person grid is
-incomplete (say 1 and 3 adults priced but not 2), the wizard refuses to save.
-Loud refusal beats a room that quietly stops appearing in search results.
-
-If the plan is per-person, review also warns that **prices for this plan won't
-reach OTA channels** — the channel connection has no way to express per-person
-pricing. Availability still syncs; the prices stay inside Wastays.
-
-### What happens on Create
-
-The plan is written, each room category gets its price (or price grid), and one
-batched update is pushed to the channel manager.
-
----
-
-## 2. Editing a rate plan — the tabbed sheet
-
-**Settings → Rates → click a plan.** A different screen on purpose: the wizard
-serves someone who doesn't know what's needed yet, edit serves someone who came
-to change one specific thing.
-
-A bottom sheet opens with three tabs:
-
-| Tab | What's in it |
+| Screen | What it answers |
 | --- | --- |
-| **Plan details** | Name, description, base occupancy / extra pax — the plan-wide settings |
-| **Rooms and prices** | A list of room categories down the left; click one, edit its prices on the right |
-| **Child pricing** | Default child price and age bands |
+| **Settings → Property → Room Inventory** | Which rooms exist, which offers apply to them, and what do those offers normally cost? |
+| **Rates & Availability** | What changes on particular dates? |
 
-Rules that surprise people the first time:
+Room Inventory is the standing setup. Rates & Availability is the calendar for
+daily prices, availability, restrictions, and exceptions.
 
-- **Each tab saves on its own.** "Save" saves the tab you're looking at, and the
-  sheet stays open. There is no one big save at the end.
-- **The rooms tab saves one category at a time** — the one selected in the left
-  rail, not all of them.
-- **Unsaved changes are protected.** Switching tabs, switching rooms, or closing
-  with unsaved edits pops a confirm-discard prompt you have to answer.
-- A ⚠ next to a room in the rail means its prices are incomplete.
-- **Adding a room category creates nothing** until you save valid prices for it.
-- **Removing a room category is refused** if it's the last one, or if that
-  room + plan combination is already on a booking. If it was mapped to a channel,
-  the mapping is removed too.
-- **Standard Rate** uses the same sheet, but its name and room membership are
-  locked — it's the anchor everything else can be derived from.
+If a sellable rate plan has a valid standing price, the hotel does not need a
+separate price row for every future date. The calendar can show and use the
+standing price until someone adds a daily override.
 
-The price editor itself is literally the same component the wizard uses, so
-Manual / Derived / Auto behave identically here.
+## How the property charges
 
----
+Every property uses one charging model:
 
-## 3. Changing prices for specific dates — the rate calendar
+- **One price per room** — one nightly room price, with an optional extra charge
+  above the number of guests included.
+- **Price per guest** — a total nightly room price for each possible number of
+  adults, plus child pricing.
 
-**Rates & Inventory** in the main sidebar. A grid: room categories and rate plans
-down the side, dates across the top. Each cell is one room + one plan + one night.
+This is a property-wide setting, shown beside the property name. Hotel staff
+cannot change it themselves because switching models can invalidate existing
+prices and channel mappings.
 
-### The staging model
+## 1. Start in Room Inventory
 
-This is the single most important thing to understand about the calendar:
-**editing a cell does not save anything.** Changes pile up as a draft.
+Open **Settings → Property → Room Inventory**. Each room category appears as an
+expandable row showing its group, capacity, number of rooms, and any rate
+issues. Expand a category to see the rate plans guests can book for it.
 
-1. **Click a cell** (or **Bulk edit** for a date range across many rooms/plans).
-   A dialog opens showing what's currently there.
-2. Change what you want — price, occupancy prices, room quantity, open/closed,
-   min/max stay, closed-to-arrival, closed-to-departure, stop-sell.
-3. **Stage Update.** The dialog closes; affected cells get highlighted with a dot.
-   Still nothing saved to the database.
-4. Repeat as many times as you like. The draft survives a page refresh (it's kept
-   in the browser), and a counter shows how many pending changes you have.
-5. **Review** lists every staged change in words; anything can be removed here.
-6. **Sync / Save.** Now everything is written at once, in one transaction, and
-   one channel-manager push goes out for the affected dates.
+You can search by room-category or rate-plan name and filter by room group.
 
-Only the fields you actually touched are applied — untouched fields on the
-dialog are left alone rather than overwritten with blanks.
+From here there are two ways to add a rate:
 
-### Bulk tools (the "Advanced" tab)
+- **New rate** on one room category: configure one plan and its price for that
+  category.
+- **Assign → Assign Room Rate** at the top of the page: attach one reusable rate
+  plan to several categories quickly.
 
-Beyond cell-by-cell, there are rule-based tools:
+These actions solve different jobs.
 
-- **Pricing rules** — general price, weekend price (you pick which days count),
-  school holidays, public holidays, walk-in and corporate tiers, each with its
-  own date window. Applied across selected room categories in one go, and
-  re-applied automatically if you later delete a rule.
-- **Availability override** — set room quantity or open/close a date range.
-- **Channels & OTAs** — per-channel rates and availability, where a channel is
-  connected.
+## 2. New rate — configure one room completely
 
-### What a calendar price actually overrides
+Click **New rate** inside an expanded room category. A right-side sheet opens.
+It always configures one room category at a time.
 
-A calendar entry is the **most specific** answer for that room + plan + date, so
-it wins over everything the rate plan says. That's the whole point of it.
+### Choose the room and rate plan
 
----
+The room is preselected when the sheet was opened from that room's row, but it
+can be changed.
 
-## How the three fit together — where a nightly price comes from
+In **Rate plan name**, either:
 
-When the system needs "what does this room cost on 14 August for this plan?", it
-walks down this list and takes the first answer it finds:
+- choose an existing custom rate plan from the suggestions; or
+- type a new name, such as “Non-refundable” or “Long stay.”
 
-1. **A walk-in or corporate tier price** on that date — the most specific.
-2. **A calendar price** you set for that plan and date.
-3. **The plan's standing price** for that room category (from the wizard/edit sheet).
-4. **The room category's own base price** (the fallback in Room Categories).
-5. **The Standard Rate's price for that date, adjusted** — for a Derived plan
-   like "10% off standard".
+Choosing an existing plan reuses its shared name, description, occupancy, and
+child-pricing rules. The sheet then configures only this room category's price.
 
-Practical translation: *calendar beats plan, plan beats room category.* If a
-price on screen isn't what you expected, work down that list — most surprises are
-a forgotten calendar entry at level 2 sitting on top of a correct plan price.
+Typing a new name creates a reusable custom plan. Its description and shared
+guest-pricing rules are saved with it.
 
-Per-person properties run a second, parallel version of this list for the adult
-price grid (calendar grid → plan grid → derived from standard).
+### Set the standing price
 
-### The one trap worth memorising
+For a property charging **one price per room**, choose either:
 
-In per-person mode, if a room has *some* adult counts priced but not all, a
-booking request for a missing count returns **no price at all** — the room
-silently disappears from availability rather than falling back to something.
-New plans can't be created that way any more, but plans created before this rule
-existed can still be in that state. If a room "isn't showing up" and nothing
-looks wrong, check for a gap in its adult price grid.
+- a direct standing price;
+- a percentage adjustment from Standard Rate; or
+- an amount adjustment from Standard Rate.
 
----
+An adjusted price stays live. For example, a plan set to 10% below Standard
+Rate follows later Standard Rate changes unless a daily calendar price overrides
+it.
 
-## The setup order, start to finish
+For a property charging **per guest**, enter a complete price for every adult
+count the room supports, or use one of the helpers:
 
+- **Derived** starts from an adjustment to the room's base price and fills the
+  occupancy ladder.
+- **Auto** starts from a typed anchor price and fills the ladder by the chosen
+  increases or decreases.
+
+Derived and Auto generate real stored prices. They are not live formulas. When
+the plan is reopened, the generated values appear as normal editable prices.
+
+The sheet refuses to save an incomplete adult-price ladder.
+
+### Shared child pricing
+
+For a per-guest property, the plan also controls child pricing. You can use one
+default child price or define non-overlapping age groups with fixed or
+percentage prices.
+
+Child-pricing rules apply everywhere the rate plan is attached. Room capacity
+still belongs to each room category.
+
+### What happens when you save
+
+The plan and the selected room's pricing are saved together. If a channel
+manager is connected and the plan is compatible, Wastays queues the relevant
+rate-plan and rate updates for that room category.
+
+The sheet then closes and returns to Room Inventory.
+
+## 3. Assign Room Rate — reuse a plan across rooms
+
+Use **Assign → Assign Room Rate** when the main job is to attach the same offer
+to several room categories.
+
+The sheet asks for:
+
+- an existing custom rate plan or a new plan name; and
+- one or more room categories.
+
+It intentionally does not show pricing controls. Each new assignment receives
+a safe starting point:
+
+- **Per room:** it initially follows that room's Standard Rate with no
+  adjustment.
+- **Per guest:** it copies that room's complete Standard Rate occupancy prices.
+  Missing Standard values fall back to the room's base price multiplied by the
+  adult count.
+
+Open the assigned plan under each room category afterwards when its price
+should differ.
+
+Assigning a plan that is already attached does not create a duplicate.
+
+## 4. Editing a rate plan
+
+Expand a room category in Room Inventory and click one of its rate plans. The
+right-side editor opens.
+
+The editor has one save action. It shows:
+
+- the selected attached room category;
+- the property's charging model and plan currency;
+- shared plan details;
+- the selected room's pricing;
+- child pricing for per-guest properties; and
+- archive, restore, or delete actions where allowed.
+
+Changing the room-category selector reloads the same plan for another attached
+room. Only the selected room's price is shown and saved, but changes to the
+plan's name, description, occupancy rules, or child pricing are shared by every
+room using that plan.
+
+Unsaved changes are protected when switching rooms, closing the sheet, or
+starting a destructive action.
+
+### Standard Rate
+
+Standard Rate uses the same editor but is protected:
+
+- it cannot be archived;
+- its identity cannot be renamed like a custom offer;
+- its room assignment cannot be removed as an ordinary custom plan.
+
+For a one-price-per-room property, Standard Rate's standing amount comes from
+the room category's default nightly price. Change that amount on the room
+category, or use Rates & Availability for specific dates.
+
+### Removing, archiving, and deleting
+
+- **Remove from this room** detaches only that room category. It is refused if
+  this is the plan's final room or if bookings use that room-plan combination.
+- **Archive** stops a custom plan being offered for new bookings without
+  deleting its history.
+- **Delete** is available only for eligible custom plans with no booking use.
+- System plans such as Standard, walk-in, corporate, and OTA anchors cannot be
+  treated like ordinary custom plans.
+
+## 5. Rates & Availability — change specific dates
+
+Open **Rates & Availability** from the main navigation. The calendar shows room
+availability and rate-plan prices across dates.
+
+Click a cell to change one night, or widen the editor to several dates, rooms,
+or rate plans.
+
+### Changes are staged before saving
+
+Editing a cell does not immediately write to the database:
+
+1. Open a rate or availability cell.
+2. Choose the date range and targets.
+3. Change only the required fields.
+4. Click **Stage update**.
+5. Repeat for other changes if needed.
+6. Review the pending changes.
+7. Click **Confirm Update** to save and synchronize the batch.
+
+Untouched fields are left alone. Pending changes can be reviewed or removed
+before confirmation.
+
+### What can be changed
+
+Depending on the row and charging model, the editor can change:
+
+- room price or adult occupancy prices;
+- rooms bookable and open/closed status;
+- minimum and maximum stay;
+- closed to arrival or departure;
+- stop sell; and
+- channel-specific rates and availability where supported.
+
+For a per-guest local rate, the adult-price fields are sized to the room
+category whose cell was opened. Child prices and age groups still come from the
+rate plan and are not redefined by date.
+
+### Advanced Pricing
+
+The Advanced Pricing area contains broader tools, including pricing rules,
+availability overrides, derived channel pricing, and channel availability
+rules.
+
+## 6. Where tonight's price comes from
+
+For a normal rate-plan request, Wastays resolves the first applicable answer:
+
+1. A requested walk-in or corporate tier price, when that special tier applies.
+2. A daily calendar price for this room and rate plan.
+3. The plan's standing fixed price.
+4. A live adjustment from that date's Standard Rate.
+5. The same adjustment from the room category's default nightly price when
+   Standard Rate has no daily value.
+6. Standard Rate or the room category's default nightly price.
+
+Practical translation: a daily calendar price overrides a plan's normal
+standing behavior. A derived plan follows Standard Rate until a daily override
+is entered for that derived plan.
+
+For per-guest pricing, Wastays also looks for the requested adult count in this
+order:
+
+1. that date's occupancy price;
+2. the rate plan's stored occupancy price for the room; then
+3. a derived Standard Rate occupancy price, where applicable.
+
+Child pricing is added after the adult or room amount is resolved.
+
+## 7. The missing-occupancy trap
+
+If a per-guest room has an occupancy matrix but lacks the requested adult count,
+Wastays returns no price instead of inventing a fallback. The room can therefore
+disappear from availability for that search.
+
+The current create and edit sheets require complete matrices, and newly
+assigned plans are bootstrapped with complete matrices. Older data may still be
+incomplete. If a room unexpectedly disappears, check all adult counts supported
+by that room category.
+
+## 8. Channel limitation for per-guest plans
+
+Per-guest rate plans are not currently distributed to Channex. Room-category
+availability can continue to sync, but the plan's prices and restrictions stay
+inside Wastays.
+
+When a connected property creates a per-guest plan, the rate-plan sheet shows
+this warning directly.
+
+## Setup order
+
+```text
+Room Inventory
+  1. Create the room category and set its capacity/default nightly price.
+  2. Use New rate to configure one room and offer completely.
+  3. Use Assign Room Rate when the offer should be reused by other rooms.
+
+Rates & Availability
+  4. Add date-specific prices, availability, restrictions, or pricing rules.
+  5. Review staged changes and confirm the batch.
 ```
-Room category   →   Rate plan            →   Rate calendar
-(how many pax,      (what the deal is,       (what changes on
- base price)         standing price)          specific dates)
-
-Settings →          Settings →               Rates & Inventory
-Property            Rates                    (sidebar)
-```
-
-The three steps genuinely are one sequence even though they sit in three
-different parts of the app under three different names. That's a known rough
-edge, not something you're missing.

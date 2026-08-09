@@ -201,6 +201,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       expect(delete_action_labels(response.body)).to include("Delete")
+      expect(response.body).not_to include(archive_hotel_rate_plan_path(hotel, rate_plan))
+      expect(response.body).not_to include(unarchive_hotel_rate_plan_path(hotel, rate_plan))
     end
 
     it 'hides the delete action once the plan has a booking' do
@@ -693,6 +695,22 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include("existing bookings use this rate plan")
       expect(rate_plan.reload.room_types).to include(room_type)
     end
+
+    it "blocks detaching every system rate kind at the controller boundary" do
+      %w[standard walk_in corporate].each do |kind|
+        system_plan = room_type.rate_plans.find { |plan| plan.kind == kind }
+        assignment = system_plan.room_type_rate_plans.find_by!(room_type: room_type)
+
+        expect {
+          delete hotel_rate_plan_room_pricing_path(hotel, system_plan, room_type),
+            params: { return_to: hotel_room_types_path(hotel) }
+        }.not_to change(RoomTypeRatePlan, :count)
+
+        expect(response).to redirect_to(hotel_room_types_path(hotel))
+        expect(flash[:alert]).to eq("System rate plans cannot be detached from their room category.")
+        expect(RoomTypeRatePlan.exists?(assignment.id)).to be true
+      end
+    end
   end
 
   describe 'DELETE /hotel/:hotel_id/rate_plans/:id' do
@@ -743,33 +761,60 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.reload.archived?).to be true
     end
 
-    # The registry's Archive button targets _top and the editor's targets the
-    # sheet, but both send a turbo_stream Accept header. Only the frame tells
-    # "navigate the page" apart from "stay in the sheet".
-    it 'navigates the page when archiving from the settings registry' do
-      patch archive_hotel_rate_plan_path(hotel, rate_plan), headers: { "Accept" => Mime[:turbo_stream].to_s }
+    it 'replaces the affected inventory row and appends a success toast' do
+      assignment = create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_value: 120)
 
-      expect(response.body).to include('action="complete_sheet"')
-      expect(response.body).not_to include('edit-rate-plan-sheet')
-    end
-
-    it 'stays in the sheet when archiving from the editor' do
       patch archive_hotel_rate_plan_path(hotel, rate_plan),
-        headers: { "Accept" => Mime[:turbo_stream].to_s, "Turbo-Frame" => "settings_action_sheet" }
+        params: { room_type_id: room_type.id }, as: :turbo_stream
 
-      expect(response.body).to include('edit-rate-plan-sheet')
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(action="replace" target="room-inventory-rate-plan-#{assignment.id}"))
+      expect(response.body).to include('action="append" target="toast-viewport"')
+      expect(response.body).to include("Archived", "Restore Promo Rate for #{room_type.name}")
       expect(response.body).not_to include('action="complete_sheet"')
       expect(rate_plan.reload.archived?).to be true
     end
 
-    it 'prevents archiving the standard rate plan' do
-      standard_rate = hotel.rate_plans.find_by(name: 'Standard Rate') || create(:rate_plan, hotel: hotel, name: 'Standard Rate')
+    # The UI disables the control, but the route is still reachable — without a
+    # guard here the category loses the plan every booking path falls back to.
+    it 'refuses to archive the standard rate plan' do
+      standard_rate = room_type.standard_rate_plan
 
       patch archive_hotel_rate_plan_path(hotel, standard_rate)
 
       expect(response).to redirect_to(hotel_room_types_path(hotel))
       expect(flash[:alert]).to include("cannot be archived")
       expect(standard_rate.reload.archived?).to be false
+    end
+
+    it 'refuses over turbo_stream without replacing the inventory row' do
+      standard_rate = room_type.standard_rate_plan
+      assignment = room_type.room_type_rate_plans.find_by(rate_plan: standard_rate)
+
+      patch archive_hotel_rate_plan_path(hotel, standard_rate),
+        params: { room_type_id: room_type.id }, as: :turbo_stream
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).not_to include(%(action="replace" target="room-inventory-rate-plan-#{assignment.id}"))
+      expect(response.body).to include("cannot be archived")
+      expect(standard_rate.reload.archived?).to be false
+    end
+
+    it 'leaves the row unchanged and appends an error toast when archiving fails' do
+      assignment = create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_value: 120)
+      allow_any_instance_of(RatePlan).to receive(:archive!) do |plan|
+        plan.errors.add(:base, "Status could not be changed")
+        raise ActiveRecord::RecordInvalid, plan
+      end
+
+      patch archive_hotel_rate_plan_path(hotel, rate_plan),
+        params: { room_type_id: room_type.id }, as: :turbo_stream
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).not_to include(%(action="replace" target="room-inventory-rate-plan-#{assignment.id}"))
+      expect(response.body).to include('action="append" target="toast-viewport"')
+      expect(response.body).to include("Status could not be changed")
+      expect(rate_plan.reload.archived?).to be false
     end
 
     it 'excludes an archived rate plan from availability search results' do
@@ -790,6 +835,19 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       patch unarchive_hotel_rate_plan_path(hotel, rate_plan)
 
       expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(rate_plan.reload.archived?).to be false
+    end
+
+    it 'replaces the affected inventory row and appends a success toast' do
+      assignment = create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_value: 120)
+
+      patch unarchive_hotel_rate_plan_path(hotel, rate_plan),
+        params: { room_type_id: room_type.id }, as: :turbo_stream
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(action="replace" target="room-inventory-rate-plan-#{assignment.id}"))
+      expect(response.body).to include('action="append" target="toast-viewport"')
+      expect(response.body).to include("Archive Promo Rate for #{room_type.name}")
       expect(rate_plan.reload.archived?).to be false
     end
   end

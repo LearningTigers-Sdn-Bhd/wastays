@@ -50,10 +50,8 @@ module Bookings
           else
             @rate_plan_id.present? && @rate_plan_id.to_i != old_rate_plan_id
           end
-          rate_tier_changing = @rate_selection_provided && @resolved_rate_selection.tier != current_rate_selection.tier
-
           # 3. Handle Financial and Inventory Changes if anything relevant changed
-          if dates_changing || room_type_changing || rate_plan_changing || rate_tier_changing
+          if dates_changing || room_type_changing || rate_plan_changing
             # Release old inventory using old dates and old room type
             InventoryManager.new(@booking).release_by_dates(old_check_in, old_check_out)
 
@@ -66,6 +64,8 @@ module Bookings
             else
               current_room&.rate_plan
             end
+            new_rate_plan ||= new_room_type.standard_rate_plan
+            raise "Selected rate is no longer available." if new_rate_plan.blank? || new_rate_plan.archived?
 
             # Recalculate Price using BuildFinancialSnapshot (includes taxes)
             financial_snapshot = BuildFinancialSnapshot.new(
@@ -76,15 +76,10 @@ module Bookings
               guest_country: @booking.guest_country,
               room_type: new_room_type,
               rate_plan: new_rate_plan,
-              rate_tier: effective_rate_tier(current_rate_selection),
               manual_total_amount: @booking.manual_rate_override,
               adults: @booking.adults,
               children: @booking.children
             ).call
-
-            nightly_rate_snapshot = financial_snapshot.nightly_rate_snapshot.transform_values do |entry|
-              entry.to_h.merge("rate_tier" => effective_rate_tier(current_rate_selection).to_s)
-            end
 
             # Update the booking room
             if current_room
@@ -93,7 +88,7 @@ module Bookings
                 room_type_snapshot: new_room_type.as_json,
                 rate_plan: new_rate_plan,
                 subtotal: financial_snapshot.room_total,
-                nightly_rate_snapshot:
+                nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot
               )
             end
 
@@ -265,15 +260,19 @@ module Bookings
       else
         current_selection
       end
+
+      # A picked rate that no longer resolves is an error, not a reason to
+      # silently reprice the stay at the category's default — the operator would
+      # see the update succeed at a total they never chose. A blank selection is
+      # different: that is "no rate picked", which does fall back.
+      if @rate_selection_provided && @rate_selection_value.present? && @resolved_rate_selection.rate_plan.blank?
+        raise "Selected rate is no longer available for this room category."
+      end
       @rate_selection_changed = @resolved_rate_selection.token != current_selection.token
 
       if @rate_selection_provided && @rate_selection_changed && @booking.manual_rate_override.present?
         @params[:manual_rate_override] = nil
       end
-    end
-
-    def effective_rate_tier(current_selection)
-      @rate_selection_provided ? @resolved_rate_selection.tier : current_selection.tier
     end
 
     def extract_assigned_room_number

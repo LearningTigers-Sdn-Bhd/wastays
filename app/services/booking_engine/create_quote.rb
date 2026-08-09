@@ -79,7 +79,11 @@ module BookingEngine
         quote_currency = nil
 
         grouped_allocations.each do |(room_type, r_adults, r_children, r_child_ages), quantity|
-          rate_plan = @rate_plan_id.presence && room_type.rate_plans.publicly_bookable.find_by(id: @rate_plan_id)
+          audience = @corporate_rate ? :corporate : :public
+          rate_plan = @rate_plan_id.presence && room_type.rate_plans.for_audience(audience).find_by(id: @rate_plan_id)
+          if @rate_plan_id.present? && rate_plan.blank?
+            return OpenStruct.new(success?: false, message: "Selected rate is no longer available.")
+          end
           pricing_summary = availability_service.pricing_summary_for(
             room_type,
             rate_plan: rate_plan,

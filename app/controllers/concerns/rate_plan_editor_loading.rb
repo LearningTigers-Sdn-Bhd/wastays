@@ -32,14 +32,6 @@ module RatePlanEditorLoading
     end
   end
 
-  # True only for requests Turbo aimed at the editor's own frame. The settings
-  # registry drives the same archive/unarchive routes with turbo_frame "_top",
-  # and both carry a turbo_stream Accept header — the frame is what separates
-  # "stay in the sheet" from "navigate the page".
-  def rate_plan_editor_request?
-    turbo_frame_request_id == EDITOR_FRAME
-  end
-
   def render_editor_success(message, room_type_id: params[:room_type_id])
     load_rate_plan_editor(room_type_id: room_type_id)
 

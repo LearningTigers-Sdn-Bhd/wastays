@@ -28,7 +28,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
     it "lists rooms as a compact, default-closed inventory accordion with rate issues" do
       grouped_room_type.update!(description: "Description should not appear in the inventory row")
       ungrouped_room_type.update!(max_children: 0)
-      custom_plan = create(:rate_plan, :custom, hotel: hotel, name: "Non-refundable")
+      custom_plan = create(:rate_plan, :custom, hotel: hotel, name: "Non-refundable", archived_at: Time.current)
       custom_assignment = create(
         :room_type_rate_plan,
         room_type: grouped_room_type,
@@ -89,7 +89,16 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       end
 
       assignment_row = document.at_css("#room-inventory-rate-plan-#{custom_assignment.id}")
-      expect(assignment_row.text.squish).to include("Non-refundable", "Adjusts Standard Rate", "Ready", "Edit rate", "Detach rate")
+      expect(assignment_row.text.squish).to include("Non-refundable", "Archived", "Adjusts Standard Rate", "Ready", "Edit rate", "Detach rate")
+      # An archived plan reads as off, and restoring is not confirmed — the
+      # confirm belongs on the direction that takes a plan out of use.
+      restore_form = assignment_row.at_css("form[action='#{unarchive_hotel_rate_plan_path(hotel, custom_plan, room_type_id: grouped_room_type.id)}']")
+      expect(restore_form).to be_present
+      expect(restore_form.at_css("input[name='_method']")["value"]).to eq("patch")
+      expect(restore_form["data-turbo-confirm"]).to be_nil
+      restore_switch = restore_form.at_css("input[role='switch']")
+      expect(restore_switch["checked"]).to be_nil
+      expect(assignment_row.text.squish).to include("Restore Non-refundable for #{grouped_room_type.name}")
       expect(assignment_row.at_css("button[aria-label='Actions for Non-refundable in #{grouped_room_type.name}']")).to be_present
       detach_action = assignment_row.css("button").find { |button| button.text.squish == "Detach rate" }
       expect(detach_action).to be_present
@@ -97,18 +106,55 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
 
       incomplete_row = document.at_css("#room-inventory-rate-plan-#{incomplete_assignment.id}")
       expect(incomplete_row.text.squish).to include("Advance purchase", "Not priced", "Needs pricing")
+      archive_form = incomplete_row.at_css("form[action='#{archive_hotel_rate_plan_path(hotel, incomplete_plan, room_type_id: grouped_room_type.id)}']")
+      expect(archive_form).to be_present
+      expect(archive_form["data-turbo-confirm-title"]).to eq("Archive rate plan")
+      expect(archive_form["data-turbo-confirm-tone"]).to eq("warning")
+      # A declined confirm has to put the switch back — it has already moved by
+      # the time the dialog opens.
+      expect(archive_form["data-action"]).to include("panels-ui:confirm-settled->tax-registry-status#settled")
+      expect(archive_form.at_css("input[role='switch']")["checked"]).to eq("checked")
 
       standard_assignment = grouped_room_type.room_type_rate_plans.find { |assignment| assignment.rate_plan.standard_rate? }
       standard_row = document.at_css("#room-inventory-rate-plan-#{standard_assignment.id}")
       expect(standard_row.text.squish).to include("Standard Rate", "Default", "MYR 99.99", "Ready")
       expect(standard_row.text.squish).not_to include("Standard Rate MYR", "Detach rate")
+      # Every other plan prices against Standard, so the switch is locked on
+      # rather than absent — the row still reads as having an availability slot,
+      # and it can never post an archive request.
+      expect(standard_row.at_css("form")).to be_nil
+      standard_switch = standard_row.at_css("input[role='switch']")
+      expect(standard_switch["disabled"]).to eq("disabled")
+      expect(standard_switch["checked"]).to eq("checked")
+      expect(standard_row.text.squish).to include("Standard Rate is the price anchor for #{grouped_room_type.name} and is always offered")
+
+      system_rows = grouped_room_type.room_type_rate_plans.select { |assignment| assignment.rate_plan.kind.in?(%w[walk_in corporate]) }
+      system_rows.each do |system_assignment|
+        row = document.at_css("#room-inventory-rate-plan-#{system_assignment.id}")
+        expect(row.text.squish).not_to include("Detach rate")
+        form = row.at_css("form")
+        expect(form["action"]).to eq(archive_hotel_rate_plan_path(hotel, system_assignment.rate_plan, room_type_id: grouped_room_type.id))
+        expect(form.at_css("input[role='switch']")["disabled"]).to be_nil
+      end
+
+      # One switch per row on one page: a shared field name would generate one
+      # shared id and every label would bind to the first row's control.
+      switch_ids = document.css("input[role='switch']").map { |input| input["id"] }
+      expect(switch_ids).to all(be_present)
+      expect(switch_ids.uniq.size).to eq(switch_ids.size)
+
+      rate_header = document.at_css("#room-inventory-#{grouped_room_type.id} [aria-label='Rate plan columns']")
+      first_header_cell = rate_header.element_children.first
+      expect(first_header_cell.text.squish).to eq("Rate availability")
+      expect(first_header_cell.at_css(".sr-only")).to be_present
+      expect(document.at_css("#room-inventory-#{grouped_room_type.id} h4").text.squish).to eq("Rate plans (5)")
 
       new_rate = document.css("#room-inventory-#{grouped_room_type.id} a").find { |link| link.text.squish == "New rate" }
       expect(new_rate["href"]).to eq(new_hotel_rate_plan_path(hotel, room_type_id: grouped_room_type.id))
       expect(document.at_css("a[aria-label='Assign group to #{ungrouped_room_type.name}']")["href"]).to eq(
         new_hotel_room_group_assignment_path(hotel, room_type_id: ungrouped_room_type.id)
       )
-      expect(document.at_css("body").text).to include("Rooms", "Rate issues", "Rate plans (3)", "New rate")
+      expect(document.at_css("body").text).to include("Rooms", "Rate issues", "Rate plans (5)", "New rate")
       expect(document.at_css("body").text).not_to include("New Rate", "Standard Rate (MYR)")
       expect(document.at_css("body").text).to include("Assign Room Group", "Assign Room Rate")
       expect(document.css("a[aria-label^='Attach rate plan to']")).to be_empty

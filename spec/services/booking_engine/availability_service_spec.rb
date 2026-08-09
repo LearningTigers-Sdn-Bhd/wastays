@@ -100,14 +100,14 @@ RSpec.describe BookingEngine::AvailabilityService do
       expect(service.available_rooms_for_hotel(hotel)).to be_empty
     end
 
-    it "ignores corporate_price even if available" do
-      RoomRate.update_all(corporate_price: 80)
+    it "does not offer Corporate plans to anonymous guests" do
+      stay_dates.each { |date| create(:room_rate, room_type:, rate_plan: room_type.corporate_rate_plan, date:, price: 80) }
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
       expect(service.calculate_total_price(room_type)).to eq(200.0) # 100 * 2 nights
     end
 
-    it "uses corporate_price when corporate_rate is true" do
-      RoomRate.update_all(corporate_price: 80)
+    it "offers the real Corporate plan when corporate_rate is true" do
+      stay_dates.each { |date| create(:room_rate, room_type:, rate_plan: room_type.corporate_rate_plan, date:, price: 80) }
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, corporate_rate: true)
       expect(service.calculate_total_price(room_type)).to eq(160.0) # 80 * 2 nights
     end
@@ -369,10 +369,10 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
 
     context "when the hotel sells per room" do
-      it "returns nil alongside the bookable rate plans" do
+      it "returns only real bookable rate plans" do
         service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
         plans = service.send(:candidate_rate_plans_for, room_type)
-        expect(plans).to include(nil)
+        expect(plans).not_to include(nil)
         expect(plans).to include(pax_rate_plan)
         expect(plans).to include(room_type.rate_plans.first)
       end

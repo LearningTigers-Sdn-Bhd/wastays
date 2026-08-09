@@ -13,10 +13,8 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     create(:room_inventory, room_type: @room_type, date: Date.current, quantity: 10, status: "open")
     create(:room_inventory, room_type: @room_type, date: Date.tomorrow, quantity: 10, status: "open")
 
-    # Setup standard rate plan with corporate price
-    @standard_plan = create(:rate_plan, hotel: hotel, name: "Standard Rate")
-    create(:room_type_rate_plan, room_type: @room_type, rate_plan: @standard_plan)
-    @standard_rate = create(:room_rate, room_type: @room_type, rate_plan: @standard_plan, date: Date.current, price: 150.0, corporate_price: 120.0)
+    @standard_plan = @room_type.standard_rate_plan
+    @standard_rate = create(:room_rate, room_type: @room_type, rate_plan: @standard_plan, date: Date.current, price: 150.0)
 
     # Ensure hotel is publicly bookable
     hotel.update!(status: "approved")

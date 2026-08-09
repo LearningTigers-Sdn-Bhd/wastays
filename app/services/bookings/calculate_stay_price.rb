@@ -2,13 +2,11 @@
 
 module Bookings
   class CalculateStayPrice
-    def initialize(room_type:, check_in:, check_out:, rate_plan: nil, corporate_rate: false, rate_tier: :standard, pax: nil, adults: nil, children: nil, child_ages: [])
+    def initialize(room_type:, check_in:, check_out:, rate_plan:, pax: nil, adults: nil, children: nil, child_ages: [])
       @room_type = room_type
       @check_in = check_in&.to_date
       @check_out = check_out&.to_date
       @rate_plan = rate_plan
-      @corporate_rate = corporate_rate
-      @rate_tier = rate_tier.to_sym
 
       @adults = (adults || pax || 2).to_i
       @children = (children || 0).to_i
@@ -33,8 +31,7 @@ module Bookings
           currency: currency,
           adults: @adults,
           children: @children,
-          child_ages: @child_ages,
-          rate_tier: effective_rate_tier
+          child_ages: @child_ages
         ).amount
       end
 
@@ -44,12 +41,6 @@ module Bookings
     end
 
     private
-
-    def effective_rate_tier
-      return :corporate if @rate_tier == :standard && @corporate_rate
-
-      @rate_tier
-    end
 
     def currency
       @rate_plan&.currency.presence || @room_type.hotel.default_currency.presence || "MYR"

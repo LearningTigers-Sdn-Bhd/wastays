@@ -533,12 +533,6 @@ export default class extends Controller {
             change.rate_plan_ids.forEach(ratePlanId => {
               let testid = `rate-cell-${roomTypeId}-${ratePlanId}-${date}`
 
-              // Handle virtual tiers (e.g. tier_walk_in_123)
-              if (typeof ratePlanId === 'string' && ratePlanId.startsWith('tier_')) {
-                const tierName = ratePlanId.split('_')[1].replace('_', '-')
-                testid = `${tierName}-cell-${roomTypeId}-${date}`
-              }
-
               this.markCellDirty(testid, {
                 price: change.apply_rates ? change.price : undefined,
                 base_occupancy: change.apply_rates ? change.base_occupancy : undefined,

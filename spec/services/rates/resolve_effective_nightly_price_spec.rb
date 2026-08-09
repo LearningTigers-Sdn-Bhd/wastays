@@ -71,10 +71,11 @@ RSpec.describe Rates::ResolveEffectiveNightlyPrice do
     expect(result).to have_attributes(amount: 100.to_d, currency: "MYR")
   end
 
-  it "uses requested tier pricing from the Standard Rate row" do
-    rate = create(:room_rate, room_type: room_type, rate_plan: standard_plan, date: date, price: 150, corporate_price: 120)
+  it "uses a real Corporate plan price" do
+    corporate_plan = room_type.corporate_rate_plan
+    rate = create(:room_rate, room_type: room_type, rate_plan: corporate_plan, date: date, price: 120)
 
-    tier_result = described_class.call(room_type: room_type, rate_plan: rate_plan, date: date, rate_tier: :corporate)
+    tier_result = described_class.call(room_type: room_type, rate_plan: corporate_plan, date: date)
 
     expect(tier_result).to have_attributes(amount: 120.to_d, base_amount: 120.to_d, source: :daily_override, room_rate: rate)
   end

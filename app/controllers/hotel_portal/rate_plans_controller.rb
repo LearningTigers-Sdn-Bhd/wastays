@@ -135,26 +135,52 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   end
 
   def archive
-    return finish_sheet(alert: "System rate plans cannot be archived.") unless @rate_plan.archivable?
+    unless @rate_plan.archivable?
+      return respond_to_status_change("'#{@rate_plan.name}' is the category's price anchor and cannot be archived.", success: false)
+    end
 
     @rate_plan.archive!
-    if rate_plan_editor_request?
-      render_editor_success("Rate plan '#{@rate_plan.name}' archived.")
-    else
-      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' archived. It will no longer be offered for new bookings.")
-    end
+    respond_to_status_change("Rate plan '#{@rate_plan.name}' archived. It will no longer be offered for new bookings.")
+  rescue ActiveRecord::RecordInvalid => error
+    respond_to_status_change(error.record.errors.full_messages.to_sentence.presence || "Rate plan could not be archived.", success: false)
   end
 
   def unarchive
     @rate_plan.unarchive!
-    if rate_plan_editor_request?
-      render_editor_success("Rate plan '#{@rate_plan.name}' restored.")
-    else
-      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' restored.")
-    end
+    respond_to_status_change("Rate plan '#{@rate_plan.name}' restored.")
+  rescue ActiveRecord::RecordInvalid => error
+    respond_to_status_change(error.record.errors.full_messages.to_sentence.presence || "Rate plan could not be restored.", success: false)
   end
 
   private
+
+  def respond_to_status_change(message, success: true)
+    destination = hotel_room_types_path(current_hotel)
+    assignment = @rate_plan.room_type_rate_plans
+      .includes(:channel_mapping, :occupancy_prices, :rate_plan, :room_type)
+      .find_by(room_type_id: params[:room_type_id])
+
+    respond_to do |format|
+      format.turbo_stream do
+        streams = []
+        if success && assignment
+          streams << turbo_stream.replace(
+            "room-inventory-rate-plan-#{assignment.id}",
+            partial: "hotel_portal/room_types/inventory_rate_plan",
+            locals: { assignment: assignment, room_type: assignment.room_type }
+          )
+        end
+        streams << toast_stream(message, type: success ? :success : :error)
+        render turbo_stream: streams, status: success ? :ok : :unprocessable_content
+      end
+      format.html do
+        redirect_to destination,
+                    notice: (message if success),
+                    alert: (message unless success),
+                    status: :see_other
+      end
+    end
+  end
 
   # Closes the sheet and returns to Room Inventory. This mirrors
   # SheetActionCompletion#complete_sheet_action while also carrying alerts for
@@ -212,12 +238,18 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   end
 
   def load_new_rate_plan_form(room_type_id:, preserve_pricing: false)
-    @room_types = current_hotel.room_types.order(:name, :id).to_a
+    @room_types = current_hotel.room_types
+      .includes(:rate_plans, room_type_rate_plans: :occupancy_prices)
+      .order(:name, :id)
+      .to_a
     @selected_room_type ||= @room_types.find { |room_type| room_type.id == room_type_id.to_i } || @room_types.first
     return unless @selected_room_type
     return if preserve_pricing && @room_pricing
 
-    standard_assignment = @selected_room_type.standard_rate_plan&.room_type_rate_plans&.find_by(room_type: @selected_room_type)
+    standard_plan = @selected_room_type.standard_rate_plan
+    standard_assignment = @selected_room_type.room_type_rate_plans.find do |assignment|
+      assignment.rate_plan_id == standard_plan&.id
+    end
     @room_pricing = HotelPortal::RatePlanRoomPricing.from_assignment(
       standard_assignment,
       room_type: @selected_room_type,

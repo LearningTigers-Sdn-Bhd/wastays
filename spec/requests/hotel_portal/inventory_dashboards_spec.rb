@@ -112,7 +112,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
 
     it "opens without a matching row rather than failing on an unknown cell" do
       get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
-        mode: "rates", room_type_id: room_type.id, rate_plan_id: "tier_walk_in_#{room_type.id}", date: Date.current.to_s
+        mode: "rates", room_type_id: room_type.id, rate_plan_id: "999999", date: Date.current.to_s
       }
 
       expect(response).to have_http_status(:success)

@@ -16,7 +16,7 @@ class HotelPortal::Bookings::RateOptionsController < HotelPortal::BaseController
       apply_stop_sell: params[:apply_stop_sell_restriction],
       apply_arrival_departure: params[:apply_arrival_departure_restrictions],
       apply_stay_length: params[:apply_stay_length_restrictions],
-      corporate_rate: params[:corporate_rate] == "true",
+      audience: :staff,
       adults: params[:adults].presence,
       children: params[:children].presence
     ).call

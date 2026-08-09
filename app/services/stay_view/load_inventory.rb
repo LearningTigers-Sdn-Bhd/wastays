@@ -104,7 +104,10 @@ module StayView
       return [] unless capabilities.view_rates?
 
       @rate_plan_rows ||= RoomTypeRatePlan.joins(:rate_plan, :room_type)
-        .where(room_types: { hotel_id: hotel.id }, rate_plans: { hotel_id: hotel.id })
+        .where(
+          room_types: { hotel_id: hotel.id },
+          rate_plans: { hotel_id: hotel.id, archived_at: nil, kind: RatePlan.kinds_for(:staff) }
+        )
         .order("room_type_rate_plans.room_type_id", "room_type_rate_plans.rate_plan_id")
         .pluck(
           "room_type_rate_plans.room_type_id",

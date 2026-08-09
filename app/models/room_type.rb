@@ -23,7 +23,7 @@ class RoomType < ApplicationRecord
 
   before_validation :set_default_room_number_mode, on: :create
   before_validation :set_default_max_children
-  after_create :ensure_standard_rate_plan
+  after_create :ensure_system_rate_plans
 
   validates :name, presence: true
   validates :quantity, presence: true, numericality: { greater_than_or_equal_to: 0 }
@@ -41,23 +41,64 @@ class RoomType < ApplicationRecord
     max_adults.to_i + max_children.to_i
   end
 
-  # The plan that anchors this category's pricing: the one ensure_standard_rate_plan
-  # creates alongside the category, and the row the pricing rules and the nightly
-  # price fallbacks write to and read from.
+  # The plan that anchors this category's pricing: the one EnsureSystemPlans
+  # creates alongside the category, the row the pricing rules write to, and the
+  # plan every booking path falls back to when no rate was picked.
   #
-  # Falls back to the oldest plan for categories that predate the kind column and
-  # whose anchor was renamed to something the backfill did not recognise — that
-  # plan was created with the category, so it still sorts first. Ordering matters:
-  # a plan shared across several categories is always added later and must never
-  # win here, or the rules would write onto the shared plan's rows.
-  # Resolved in Ruby rather than through find_by so a preloaded :rate_plans
-  # association is used as-is — AvailabilityService and the rates calendar both
-  # preload it and would otherwise pay a query per category.
+  # This is the single answer to "which plan is Standard here". Resolving it two
+  # ways — this method for pricing and restrictions, an active-scoped find_by for
+  # bookings — let the two disagree the moment a category held more than one.
+  #
+  # Falls back to the oldest active plan for categories that predate the kind
+  # column and whose anchor was renamed to something the backfill did not
+  # recognise; that plan was created with the category, so it still sorts first.
+  # The fallback is oldest-first, unlike system_rate_plan below — there is no
+  # dedicated plan to prefer, so the category's original plan is the best guess.
   def standard_rate_plan
-    @standard_rate_plan ||= begin
-      plans = rate_plans.sort_by(&:id)
-      plans.find { |plan| plan.kind == "standard" } || plans.first
-    end
+    return @standard_rate_plan if defined?(@standard_rate_plan)
+
+    @standard_rate_plan = system_rate_plan("standard") || active_rate_plans.first
+  end
+
+  def walk_in_rate_plan
+    system_rate_plan("walk_in")
+  end
+
+  def corporate_rate_plan
+    system_rate_plan("corporate")
+  end
+
+  # Newest wins. EnsureSystemPlans deliberately leaves a shared legacy plan
+  # attached for historical use and creates a dedicated one alongside it, so the
+  # plan created for this category is always the later id and must be the one
+  # that answers here.
+  def system_rate_plan(kind)
+    active_rate_plans.select { |plan| plan.kind == kind.to_s }.max_by(&:id)
+  end
+
+  # Which plan's rows carry the restrictions in force for a given plan. Walk-in
+  # and corporate price their own nights but do not close them: stop-sell and
+  # CTA/CTD belong to the night, so they are read off the anchor.
+  def restriction_plan_for(rate_plan)
+    rate_plan&.anchored? ? standard_rate_plan : rate_plan
+  end
+
+  # Anything that attaches or archives a plan for this category has to call this,
+  # or the memo above keeps answering from the plan set as it was. EnsureSystemPlans
+  # resolves the anchor while it is still building the category, so without a reset
+  # it would memoize "no standard plan" and hand that to every later caller.
+  def reset_rate_plan_cache!
+    remove_instance_variable(:@standard_rate_plan) if defined?(@standard_rate_plan)
+    remove_instance_variable(:@active_rate_plans) if defined?(@active_rate_plans)
+    rate_plans.reset
+    room_type_rate_plans.reset
+    self
+  end
+
+  # reload clears the association cache but not the memos built from it, which
+  # would otherwise keep answering with the plan set as it was before the reload.
+  def reload(*)
+    super.tap { reset_rate_plan_cache! }
   end
 
   def attach_photos_with_limit(photo_files)
@@ -99,26 +140,16 @@ class RoomType < ApplicationRecord
     self.room_number_mode = room_number_mode.presence || "range"
   end
 
-  def ensure_standard_rate_plan
-    return if rate_plans.exists?
+  # Sorted oldest-first so callers can pick either end deterministically.
+  # Resolved in Ruby rather than through a scope so a preloaded :rate_plans
+  # association is used as-is — AvailabilityService and the rates calendar both
+  # preload it and would otherwise pay a query per category.
+  def active_rate_plans
+    @active_rate_plans ||= rate_plans.reject(&:archived?).sort_by(&:id)
+  end
 
-    # Create a dedicated standard rate plan for this room type.
-    #
-    # Nightly prices would survive a shared plan — room_rates is unique on
-    # (room_type_id, rate_plan_id, date, currency), so each room type keeps its
-    # own price row either way. What does not survive is everything held on the
-    # plan itself: currency, child_price_multiplier and the age bands are
-    # single values, so a shared plan silently applies one room type's rules to
-    # another, and leaves the second without a plan of its own to edit.
-    #
-    # sell_mode is not passed — RatePlan inherits it from the hotel.
-    rate_plan = hotel.rate_plans.create!(
-      name: "Standard Rate",
-      kind: "standard",
-      currency: hotel.default_currency || "MYR"
-    )
-
-    room_type_rate_plans.create!(rate_plan: rate_plan)
+  def ensure_system_rate_plans
+    RatePlans::EnsureSystemPlans.call!(room_type: self)
   end
 
   def sync_with_channel_manager

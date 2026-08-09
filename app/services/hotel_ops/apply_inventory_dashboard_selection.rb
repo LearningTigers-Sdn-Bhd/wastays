@@ -229,58 +229,44 @@ module HotelOps
     end
 
     def apply_rates_to(room_type)
-      # 1. Handle Standard Rate Plans
-      real_rate_plan_ids = rate_plan_ids.select { |id| id.is_a?(Integer) }
+      plans = room_type.rate_plans.active
+      plans = plans.where(id: rate_plan_ids.select { |id| id.is_a?(Integer) }) if rate_plan_ids.any?
 
-      # If the user specifically selected rate plans (could be virtual tiers or standard ones),
-      # we should only update standard plans if they are explicitly in the selection.
-      # If NOTHING was selected (rate_plan_ids.empty?), then we default to updating all standard plans.
-      if rate_plan_ids.empty? || real_rate_plan_ids.any?
-        # Archived plans are not offered for new bookings, so a bulk edit should
-        # not price them or push them to the channel manager.
-        rate_plans_to_update = room_type.rate_plans.active
-        rate_plans_to_update = rate_plans_to_update.where(id: real_rate_plan_ids) if real_rate_plan_ids.any?
+      anchor_restrictions_pending = false
 
-        rate_plans_to_update.find_each do |rate_plan|
-          update_rates_for_plan(room_type, rate_plan, tier: nil)
-        end
+      plans.find_each do |rate_plan|
+        anchor_restrictions_pending ||= rate_plan.anchored?
+        update_rates_for_plan(
+          room_type,
+          rate_plan,
+          apply_price: apply_rates?,
+          apply_plan_restrictions: apply_restrictions? && !rate_plan.anchored?
+        )
       end
 
-      # 2. Handle Virtual Pricing Tiers (Walk-in, Corporate)
-      # These are stored on the category's anchor plan, which is where
-      # InventoryCalendarPresenter#tier_cell reads them back from.
-      master_plan = room_type.standard_rate_plan
-      return if master_plan.blank?
+      # Walk-in and corporate keep their restrictions on the anchor, so selecting
+      # both writes the same rows twice. Applied once, after the loop, or the
+      # operator gets a duplicate audit entry for a single edit.
+      return unless anchor_restrictions_pending && apply_restrictions?
 
-      virtual_tier_keys = rate_plan_ids.select { |id| id.is_a?(String) && id.start_with?("tier_") }
-      virtual_tier_keys.each do |key|
-        # Virtual ID format: tier_[tier_type]_[room_type_id]
-        parts = key.split("_")
+      anchor = room_type.standard_rate_plan
+      # If the anchor was itself in the selection the loop already wrote them.
+      return if anchor.blank? || plans.exists?(id: anchor.id)
 
-        # Ensure we only process tiers for the current room_type
-        next unless parts.last.to_i == room_type.id
-
-        tier_type = if parts[1] == "walk" then :walk_in
-        elsif parts[1] == "corporate" then :corporate
-        end
-
-        update_rates_for_plan(room_type, master_plan, tier: tier_type) if tier_type
-      end
+      update_rates_for_plan(room_type, anchor, apply_price: false, apply_plan_restrictions: true)
     end
 
-    def update_rates_for_plan(room_type, rate_plan, tier: nil)
+    def update_rates_for_plan(room_type, rate_plan, apply_price:, apply_plan_restrictions:)
       # Ensure rate plan currency follows the requested currency when applying rates
-      if apply_rates? && rate_plan.currency != currency
+      if apply_price && rate_plan.currency != currency
         rate_plan.update!(currency: currency)
       end
 
       (start_date..end_date).each do |date|
-        target_currencies_for(rate_plan, date, room_type: room_type).each do |target_currency|
+        target_currencies_for(rate_plan, date, room_type: room_type, apply_price:, apply_plan_restrictions:).each do |target_currency|
           rate = rate_plan.room_rates.find_or_initialize_by(date: date, currency: target_currency, room_type: room_type)
           old_values = {
             price: rate.price&.to_f,
-            walk_in_price: rate.walk_in_price&.to_f,
-            corporate_price: rate.corporate_price&.to_f,
             min_stay: rate.min_stay,
             max_stay: rate.max_stay,
             closed_to_arrival: rate.closed_to_arrival,
@@ -293,14 +279,9 @@ module HotelOps
           }
 
           # Apply price update.
-          should_apply_price = apply_rates? && target_currency == currency
+          should_apply_price = apply_price && target_currency == currency
           if should_apply_price
-            case tier
-            when :walk_in then rate.walk_in_price = price
-            when :corporate then rate.corporate_price = price
-            else
-              rate.price = price if selection[:price].present?
-            end
+            rate.price = price if selection[:price].present?
 
             # Apply per-pax rules
             if selection[:modified_fields].present?
@@ -316,7 +297,7 @@ module HotelOps
             end
           end
 
-          if apply_restrictions?
+          if apply_plan_restrictions
             rate.min_stay = restriction_values[:min_stay]
             rate.max_stay = restriction_values[:max_stay]
             rate.closed_to_arrival = restriction_values[:closed_to_arrival]
@@ -342,8 +323,6 @@ module HotelOps
               rate_plan_id: rate_plan.id,
               currency: target_currency,
               price: rate.price.to_f,
-              walk_in_price: rate.walk_in_price&.to_f,
-              corporate_price: rate.corporate_price&.to_f,
               min_stay: rate.min_stay,
               max_stay: rate.max_stay,
               closed_to_arrival: rate.closed_to_arrival,
@@ -354,7 +333,7 @@ module HotelOps
               single_supplement: rate.single_supplement&.to_f,
               occupancy_prices: rate.occupancy_prices
             },
-            metadata: { source: "inventory_dashboard_selection", rate_tier: tier || "online" }
+            metadata: { source: "inventory_dashboard_selection", rate_kind: rate_plan.kind }
           )
         end
       end
@@ -387,9 +366,9 @@ module HotelOps
         room_type.room_type_rate_plans.find_by(rate_plan: rate_plan)
     end
 
-    def target_currencies_for(rate_plan, date, room_type:)
-      return [ currency ] if apply_rates?
-      return [ currency ] unless apply_restrictions?
+    def target_currencies_for(rate_plan, date, room_type:, apply_price:, apply_plan_restrictions:)
+      return [ currency ] if apply_price
+      return [ currency ] unless apply_plan_restrictions
 
       # If we are applying restrictions, we must apply them to ALL currencies
       # that this hotel has ever used to avoid discrepancies between currency views.
@@ -428,8 +407,6 @@ module HotelOps
 
     def changed_rate?(old_values, rate)
       old_values[:price] != rate.price.to_f ||
-        old_values[:walk_in_price] != rate.walk_in_price&.to_f ||
-        old_values[:corporate_price] != rate.corporate_price&.to_f ||
         old_values[:min_stay] != rate.min_stay ||
         old_values[:max_stay] != rate.max_stay ||
         old_values[:closed_to_arrival] != rate.closed_to_arrival ||

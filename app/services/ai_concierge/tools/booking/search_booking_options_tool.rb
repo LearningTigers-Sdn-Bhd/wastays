@@ -215,12 +215,14 @@ module AiConcierge
             plan_by_date = plan_rates.group_by(&:date)
             next unless stay_dates.all? { |d| plan_by_date.key?(d) }
 
-            rate_plan = plan_rates.first&.rate_plan
-            currency = plan_rates.first&.currency || "MYR"
-            name = rate_plan&.name || "Standard Rate"
+            rate_plan = plan_rates.first&.rate_plan || room_type.standard_rate_plan
+            next unless rate_plan&.bookable_by?(:public)
 
-            assignment = rate_plan && room_type.room_type_rate_plans.find { |item| item.rate_plan_id == rate_plan.id }
-            per_room_total = stay_dates.sum do |date|
+            currency = plan_rates.first&.currency || "MYR"
+            name = rate_plan.name
+
+            assignment = room_type.room_type_rate_plans.find { |item| item.rate_plan_id == rate_plan.id }
+            nightly_amounts = stay_dates.map do |date|
               Rates::ResolveEffectiveNightlyPrice.call(
                 room_type: room_type,
                 rate_plan: rate_plan,
@@ -232,9 +234,12 @@ module AiConcierge
                 room_type_rate_plan: assignment
               ).amount
             end
+            next if nightly_amounts.any?(&:nil?)
+
+            per_room_total = nightly_amounts.sum
             total = per_room_total * room_count
 
-            { "rate_plan_id" => rate_plan_id, "name" => name, "total_price" => total, "currency" => currency }
+            { "rate_plan_id" => rate_plan.id, "name" => name, "total_price" => total, "currency" => currency }
           end
         end
 

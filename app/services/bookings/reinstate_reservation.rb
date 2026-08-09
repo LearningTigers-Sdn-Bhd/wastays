@@ -157,12 +157,14 @@ module Bookings
     def rate_plan_for(attributes, room_type, booking_room)
       if attributes[:rate_plan_id].blank?
         # Check if the existing rate plan is still valid for the (potentially new) room type
-        return booking_room.rate_plan if booking_room.rate_plan && room_type.room_type_rate_plans.exists?(rate_plan_id: booking_room.rate_plan_id)
+        if booking_room.rate_plan&.archived_at.nil? && room_type.room_type_rate_plans.exists?(rate_plan_id: booking_room.rate_plan_id)
+          return booking_room.rate_plan
+        end
 
-        return
+        return room_type.standard_rate_plan
       end
 
-      room_type.rate_plans.find(attributes[:rate_plan_id])
+      room_type.rate_plans.active.find(attributes[:rate_plan_id])
     rescue ActiveRecord::RecordNotFound
       raise "Selected rate is not available for the selected room category."
     end

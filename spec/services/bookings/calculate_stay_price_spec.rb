@@ -8,7 +8,7 @@ RSpec.describe Bookings::CalculateStayPrice do
   let(:check_in) { Date.current }
   let(:check_out) { Date.current + 2.days }
 
-  subject { described_class.new(room_type: room_type, check_in: check_in, check_out: check_out) }
+  subject { described_class.new(room_type: room_type, rate_plan: room_type&.standard_rate_plan, check_in: check_in, check_out: check_out) }
 
   it "calculates total price using base price when no rates exist" do
     expect(subject.call).to eq(200) # 100 * 2 nights
@@ -20,12 +20,12 @@ RSpec.describe Bookings::CalculateStayPrice do
   end
 
   it "returns 0 if room_type is nil" do
-    service = described_class.new(room_type: nil, check_in: check_in, check_out: check_out)
+    service = described_class.new(room_type: nil, rate_plan: nil, check_in: check_in, check_out: check_out)
     expect(service.call).to eq(0)
   end
 
   it "returns 0 if check_in is nil" do
-    service = described_class.new(room_type: room_type, check_in: nil, check_out: check_out)
+    service = described_class.new(room_type: room_type, rate_plan: room_type.standard_rate_plan, check_in: nil, check_out: check_out)
     expect(service.call).to eq(0)
   end
 
@@ -119,10 +119,10 @@ RSpec.describe Bookings::CalculateStayPrice do
   end
 
   context "with derived room-type pricing" do
-    let(:rate_plan) { create(:rate_plan, hotel: hotel, name: "Non-Refundable") }
+    let(:rate_plan) { create(:rate_plan, :custom, hotel: hotel, name: "Non-Refundable") }
 
     it "computes a multiplier off the room type's own Standard Rate price for that date, not the flat base price" do
-      standard_plan = room_type.rate_plans.first
+      standard_plan = room_type.standard_rate_plan
       create(:room_rate, room_type: room_type, rate_plan: standard_plan, date: check_in, price: 200)
       create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: "multiplier", pricing_value: -10)
 
@@ -147,19 +147,16 @@ RSpec.describe Bookings::CalculateStayPrice do
     end
   end
 
-  context "with corporate rates" do
+  context "with a corporate plan" do
+    let(:corporate_plan) { room_type.corporate_rate_plan }
+
     before do
-      create(:room_rate, room_type: room_type, date: check_in, price: 100, corporate_price: 80)
-      create(:room_rate, room_type: room_type, date: check_in + 1.day, price: 100, corporate_price: 80)
+      create(:room_rate, room_type: room_type, rate_plan: corporate_plan, date: check_in, price: 80)
+      create(:room_rate, room_type: room_type, rate_plan: corporate_plan, date: check_in + 1.day, price: 80)
     end
 
-    it "uses corporate price when corporate_rate is true" do
-      service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, corporate_rate: true)
-      expect(service.call).to eq(160)
-    end
-
-    it "uses corporate price when rate_tier is corporate" do
-      service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_tier: :corporate)
+    it "uses the corporate plan's ordinary prices" do
+      service = described_class.new(room_type: room_type, rate_plan: corporate_plan, check_in: check_in, check_out: check_out)
       expect(service.call).to eq(160)
     end
   end

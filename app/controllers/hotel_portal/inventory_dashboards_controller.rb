@@ -412,9 +412,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   end
 
   # The clicked cell names itself with the same identifiers the grid renders, so
-  # the row it belongs to can be found again rather than reconstructed. A tier
-  # cell has no rate plan record: it carries a synthetic `tier_walk_in_<id>` id
-  # that ApplyInventoryDashboardSelection also understands.
+  # the row it belongs to can be found again rather than reconstructed.
   def selected_calendar_row
     room_type_id = params[:room_type_id].to_i
     rate_plan_id = params[:rate_plan_id].to_s
@@ -428,12 +426,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
         row.channel_availability_row? && row.channel["id"].to_s == params[:channel_id].to_s
       when "channel_rates"
         row.channel_rate_row? && row.channel_rate_plan_id.to_s == params[:channel_rate_plan_id].to_s
-      else
-        case rate_plan_id
-        when /\Atier_walk_in_/ then row.walk_in_row?
-        when /\Atier_corporate_/ then row.corporate_row?
-        else row.rate_row? && row.rate_plan_id.to_s == rate_plan_id
-        end
+      else row.rate_row? && row.rate_plan_id.to_s == rate_plan_id
       end
     end
   end

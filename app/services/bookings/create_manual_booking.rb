@@ -4,7 +4,7 @@ require "ostruct"
 
 module Bookings
   class CreateManualBooking
-    def initialize(hotel:, params:, user: nil, rate_tier: :standard)
+    def initialize(hotel:, params:, user: nil)
       @hotel = hotel
       @params = params.dup
       @room_type_id = @params.delete(:room_type_id)
@@ -31,7 +31,6 @@ module Bookings
       @financial_posting_options = @params.delete(:financial_posting_options).to_h.symbolize_keys
 
       @user = user
-      @rate_tier = rate_tier
     end
 
     def call
@@ -53,7 +52,7 @@ module Bookings
         selected_guest = nil
       end
 
-      if @rate_plan_id.present? && rate_plan.blank?
+      if rate_plan.blank?
         return OpenStruct.new(success?: false, errors: [ "Selected rate plan could not be found for this room category." ])
       end
 
@@ -86,7 +85,6 @@ module Bookings
           hotel: @hotel,
           room_type: room_type,
           rate_plan: rate_plan,
-          rate_tier: @rate_tier,
           check_in: booking.check_in,
           check_out: booking.check_out,
           guest_country: booking.guest_country,
@@ -224,9 +222,9 @@ module Bookings
     end
 
     def rate_plan_from_param(room_type)
-      return if @rate_plan_id.blank?
+      return room_type.standard_rate_plan if @rate_plan_id.blank?
 
-      room_type.rate_plans.find_by(id: @rate_plan_id)
+      room_type.rate_plans.active.find_by(id: @rate_plan_id)
     end
 
     def rate_plan_allowed?(room_type, booking, rate_plan)
@@ -238,7 +236,8 @@ module Bookings
         check_out: booking.check_out,
         apply_stop_sell: @apply_stop_sell_restriction,
         apply_arrival_departure: @apply_arrival_departure_restrictions,
-        apply_stay_length: @apply_stay_length_restrictions
+        apply_stay_length: @apply_stay_length_restrictions,
+        audience: :staff
       ).allowed?(rate_plan)
     end
 

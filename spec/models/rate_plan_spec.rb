@@ -25,12 +25,12 @@ RSpec.describe RatePlan, type: :model do
       expect(RatePlan.new.kind).to eq('custom')
     end
 
-    it 'reports special_tier_kind for each tier and nil otherwise' do
-      expect(build(:rate_plan, :walk_in_tier).special_tier_kind).to eq(:walk_in)
-      expect(build(:rate_plan, :corporate_tier).special_tier_kind).to eq(:corporate)
-      expect(build(:rate_plan, :ota_tier).special_tier_kind).to eq(:ota)
-      expect(build(:rate_plan).special_tier_kind).to be_nil
-      expect(build(:rate_plan, :custom).special_tier_kind).to be_nil
+    it 'reports which kinds read their restrictions off the anchor' do
+      expect(build(:rate_plan, :walk_in_tier)).to be_anchored
+      expect(build(:rate_plan, :corporate_tier)).to be_anchored
+      expect(build(:rate_plan, :ota_tier)).not_to be_anchored
+      expect(build(:rate_plan)).not_to be_anchored
+      expect(build(:rate_plan, :custom)).not_to be_anchored
     end
 
     # The whole point of the column: identity used to be string-matched off the
@@ -47,8 +47,9 @@ RSpec.describe RatePlan, type: :model do
     it 'does not promote an ordinary plan by naming it after a tier' do
       plan = create(:rate_plan, hotel: hotel, name: 'Corporate Rate', kind: 'custom')
 
-      expect(plan.special_tier?).to be false
+      expect(plan).not_to be_anchored
       expect(plan.archivable?).to be true
+      expect(plan.bookable_by?(:public)).to be true
     end
   end
 
@@ -91,21 +92,45 @@ RSpec.describe RatePlan, type: :model do
       expect(create(:rate_plan, hotel: create(:hotel))).to be_channex_syncable
       expect(create(:rate_plan, hotel: create(:hotel, :per_person))).not_to be_channex_syncable
     end
+
+    it 'keeps internal Walk-in and Corporate plans out of channel distribution' do
+      expect(create(:rate_plan, :walk_in_tier, hotel: create(:hotel))).not_to be_channex_syncable
+      expect(create(:rate_plan, :corporate_tier, hotel: create(:hotel))).not_to be_channex_syncable
+    end
   end
 
-  describe '.publicly_bookable' do
+  describe '.for_audience' do
     let(:hotel) { create(:hotel) }
+    let!(:standard) { create(:rate_plan, hotel: hotel) }
+    let!(:custom) { create(:rate_plan, :custom, hotel: hotel) }
+    let!(:walk_in) { create(:rate_plan, :walk_in_tier, hotel: hotel) }
+    let!(:corporate) { create(:rate_plan, :corporate_tier, hotel: hotel) }
 
-    it 'excludes special tiers and archived plans, keeping standard and custom' do
-      standard = create(:rate_plan, hotel: hotel)
-      custom = create(:rate_plan, :custom, hotel: hotel)
-      create(:rate_plan, :walk_in_tier, hotel: hotel)
-      create(:rate_plan, :corporate_tier, hotel: hotel)
+    before do
       create(:rate_plan, :ota_tier, hotel: hotel)
-      archived = create(:rate_plan, :custom, hotel: hotel, name: 'Old Promo')
-      archived.archive!
+      create(:rate_plan, :custom, hotel: hotel, name: 'Old Promo').archive!
+    end
 
-      expect(hotel.rate_plans.publicly_bookable).to match_array([ standard, custom ])
+    it 'offers the public only standard and custom' do
+      expect(hotel.rate_plans.for_audience(:public)).to match_array([ standard, custom ])
+    end
+
+    it 'adds the corporate plan for a negotiated booking' do
+      expect(hotel.rate_plans.for_audience(:corporate)).to match_array([ standard, custom, corporate ])
+    end
+
+    it 'adds walk-in for the front desk' do
+      expect(hotel.rate_plans.for_audience(:staff)).to match_array([ standard, custom, walk_in, corporate ])
+    end
+
+    # ota is distribution-only — it is carried to the channel manager but is not
+    # something any desk here can sell.
+    it 'never offers an ota plan, and never an archived one' do
+      RatePlan::AUDIENCE_KINDS.each_key do |audience|
+        expect(hotel.rate_plans.for_audience(audience).pluck(:kind)).not_to include('ota')
+        expect(hotel.rate_plans.for_audience(audience).map(&:name)).not_to include('Old Promo')
+      end
+      expect(RatePlan::DISTRIBUTABLE_KINDS).to include('ota')
     end
   end
 
@@ -134,14 +159,28 @@ RSpec.describe RatePlan, type: :model do
       expect(rate_plan.archivable?).to be true
     end
 
+    # Every other plan resolves its price against the standard plan, walk-in and
+    # corporate read their restrictions off it, and the booking paths fall back
+    # to it. Archiving it leaves the room category unsellable.
     it 'is not archivable for the standard rate plan' do
       rate_plan = create(:rate_plan, hotel: hotel, name: 'Standard Rate')
       expect(rate_plan.archivable?).to be false
     end
 
-    it 'is not archivable for a special-tier plan' do
+    it 'is archivable for a special-tier plan' do
       rate_plan = create(:rate_plan, :walk_in_tier, hotel: hotel)
-      expect(rate_plan.archivable?).to be false
+      expect(rate_plan.archivable?).to be true
+    end
+
+    it 'archives and restores system plans without making them deletable' do
+      rate_plan = create(:rate_plan, :corporate_tier, hotel: hotel)
+
+      rate_plan.archive!
+      expect(rate_plan).to be_archived
+      expect(rate_plan).not_to be_deletable
+
+      rate_plan.unarchive!
+      expect(rate_plan).not_to be_archived
     end
 
     it 'scopes .active to non-archived plans and .archived to archived plans' do

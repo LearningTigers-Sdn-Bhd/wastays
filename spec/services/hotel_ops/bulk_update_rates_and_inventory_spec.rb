@@ -24,6 +24,7 @@ RSpec.describe HotelOps::BulkUpdateRatesAndInventory do
     result = described_class.new(
       hotel: hotel,
       room_type_ids: [ room_type.id ],
+      rate_plan_ids: [ rate_plan.id ],
       start_date: Date.current,
       end_date: Date.current + 1,
       price: 150,

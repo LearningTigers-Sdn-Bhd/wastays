@@ -164,10 +164,9 @@ namespace :hotel_generator do
               is_weekend = date.friday? || date.saturday?
               multiplier = is_weekend ? 1.2 : 1.0
 
-              if rp.name == "Walk-in Rate"
-                multiplier *= 1.1
-              elsif rp.name == "Corporate Rate"
-                multiplier *= 0.85
+              case rp.kind
+              when "walk_in" then multiplier *= 1.1
+              when "corporate" then multiplier *= 0.85
               end
 
               price = (rt.base_price * multiplier).round(2)
@@ -177,9 +176,7 @@ namespace :hotel_generator do
                 rate_plan: rp,
                 date: date,
                 price: price,
-                currency: "MYR",
-                walk_in_price: (price * 1.1).round(2),
-                corporate_price: (price * 0.85).round(2)
+                currency: "MYR"
               )
             end
           end

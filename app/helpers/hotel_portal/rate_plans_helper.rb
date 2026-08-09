@@ -68,14 +68,6 @@ module HotelPortal
       "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
     end
 
-    # "Walk-in"/"Corporate"/"OTA" say what the row is; "virtual tier" is an
-    # internal notion staff have no reason to learn.
-    TIER_LABELS = { "walk_in" => "Walk-in", "corporate" => "Corporate", "ota" => "OTA" }.freeze
-
-    def rate_tier_label(rate_plan)
-      TIER_LABELS[rate_plan.kind]
-    end
-
     def age_band_pricing_choices
       [
         { label: "% of the adult rate", value: "multiplier" },

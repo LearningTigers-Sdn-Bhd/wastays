@@ -75,7 +75,6 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
     it 'still syncs a per_room rate plan (regression guard)' do
       rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
-      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan)
 
       allow(client_double).to receive(:post).and_return({ "data" => { "id" => "ch_rp_999" } })
 

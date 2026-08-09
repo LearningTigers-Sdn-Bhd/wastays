@@ -27,7 +27,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
   end
 
   describe '#rows' do
-    it 'filters out walk-in named rate plans from regular rows' do
+    it 'renders every active real rate plan as a regular row' do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 1)
       # room_type already has one "Standard Rate" plan from after_create callback
       create(:rate_plan, :walk_in_tier, room_type: room_type, currency: "MYR")
@@ -36,17 +36,17 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
 
       rate_labels = presenter.rows.select(&:rate_row?).map(&:sublabel)
 
-      expect(rate_labels).to contain_exactly("Standard Rate")
-      expect(presenter.rows.select(&:walk_in_row?).size).to eq(1)
+      expect(rate_labels).to include("Standard Rate", "Walk-in Rate", "Corporate Rate")
+      expect(presenter.rows.select(&:walk_in_row?)).to be_empty
     end
 
-    it 'identifies special tiers by kind, so a renamed tier stays a tier' do
+    it 'keeps a renamed system plan as a real rate row' do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin")
       create(:rate_plan, :walk_in_tier, room_type: room_type, name: "Rack Rate", currency: "MYR")
 
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
 
-      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to contain_exactly("Standard Rate")
+      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to include("Rack Rate")
     end
 
     it 'keeps an ordinary plan named like a tier as an ordinary row' do
@@ -55,7 +55,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
 
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
 
-      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to contain_exactly("Standard Rate", "Corporate")
+      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to include("Standard Rate", "Walk-in Rate", "Corporate Rate", "Corporate")
     end
 
     it 'leaves archived plans out of the grid and the filter list' do
@@ -65,7 +65,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
 
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
 
-      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to contain_exactly("Standard Rate")
+      expect(presenter.rows.select(&:rate_row?).map(&:sublabel)).to contain_exactly("Standard Rate", "Walk-in Rate", "Corporate Rate")
       expect(presenter.rate_plan_options_struct.map(&:id)).not_to include(archived.id)
     end
 
@@ -127,16 +127,15 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
       )
     end
 
-    it 'falls back to the standard rate for walk-in and corporate rows when special prices are missing' do
+    it 'derives Walk-in and Corporate plan cells from Standard when overrides are missing' do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 1)
-      rate_plan = room_type.rate_plans.first # Use auto-created Standard Rate plan
-      rate_plan.update!(name: "Standard Rate") # Ensure it has the right name if needed
-      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, walk_in_price: nil, corporate_price: nil)
+      rate_plan = room_type.standard_rate_plan
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150)
 
       presenter = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR")
 
-      walk_in_row = presenter.rows.find(&:walk_in_row?)
-      corporate_row = presenter.rows.find(&:corporate_row?)
+      walk_in_row = presenter.rows.find { |row| row.rate_plan_id == room_type.walk_in_rate_plan.id }
+      corporate_row = presenter.rows.find { |row| row.rate_plan_id == room_type.corporate_rate_plan.id }
 
       expect(presenter.cell_for(walk_in_row, start_date)[:formatted_price]).to eq("150.00")
       expect(presenter.cell_for(corporate_row, start_date)[:formatted_price]).to eq("150.00")

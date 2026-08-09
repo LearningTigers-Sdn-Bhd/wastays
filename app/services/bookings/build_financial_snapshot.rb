@@ -4,20 +4,18 @@ require "ostruct"
 
 module Bookings
   class BuildFinancialSnapshot
-    def initialize(hotel:, check_in:, check_out:, guest_country:, booking: nil, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard, adults: nil, children: nil, child_ages: [])
+    def initialize(hotel:, check_in:, check_out:, guest_country:, booking: nil, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, adults: nil, children: nil, child_ages: [])
       @hotel = hotel
       @booking = booking
       @check_in = check_in.to_date
       @check_out = check_out.to_date
       @guest_country = guest_country
       @room_type = room_type
-      @rate_plan = rate_plan
+      @rate_plan = rate_plan || room_type&.standard_rate_plan
       @quantity = quantity.to_i
       @manual_total_amount = manual_total_amount.presence&.to_d
       @nightly_rate_snapshot = nightly_rate_snapshot
       @room_items = room_items
-      @corporate_rate = corporate_rate
-      @rate_tier = rate_tier&.to_sym || :standard
 
       # Occupancy only moves the number for per-person plans, but it has to be
       # carried on every path: this service produces booking.total_amount, the
@@ -85,7 +83,6 @@ module Bookings
           adults: @adults,
           children: @children,
           child_ages: @child_ages,
-          rate_tier: effective_rate_tier,
           room_rates: all_eligible_rates,
           room_type_rate_plan: assignment
         )
@@ -116,12 +113,6 @@ module Bookings
         total_amount: total,
         nightly_rate_snapshot: snapshot
       }
-    end
-
-    def effective_rate_tier
-      return :corporate if @rate_tier == :standard && @corporate_rate
-
-      @rate_tier
     end
 
     def build_manual_override_room_item

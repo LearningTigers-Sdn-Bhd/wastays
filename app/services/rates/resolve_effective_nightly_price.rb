@@ -22,7 +22,6 @@ module Rates
       adults: 2,
       children: 0,
       child_ages: [],
-      rate_tier: :standard,
       room_rates: nil,
       room_type_rate_plan: nil
     )
@@ -33,12 +32,15 @@ module Rates
       @adults = adults.to_i
       @children = children.to_i
       @child_ages = child_ages
-      @rate_tier = rate_tier.to_sym
       @room_rates = room_rates
       @supplied_room_type_rate_plan = room_type_rate_plan
     end
 
     def call
+      unless @rate_plan
+        return Result.new(amount: nil, base_amount: nil, currency: @currency, source: nil, room_rate: nil, occupancy_priced: false)
+      end
+
       occupancy_amount, occupancy_source, occupancy_room_rate = resolve_occupancy_amount
       base_amount, source, price_rate = resolve_base_amount
       if base_amount.nil?
@@ -104,10 +106,6 @@ module Rates
     end
 
     def resolve_base_amount
-      if tier_price.present?
-        return [ tier_price, :daily_override, selected_rate || anchor_rate ]
-      end
-
       if selected_rate.present?
         source = selected_rate.rate_plan_id == standard_rate_plan&.id ? :standard_daily_rate : :daily_override
         return [ selected_rate.price, source, selected_rate ]
@@ -129,19 +127,10 @@ module Rates
       [ anchor, anchor_source, anchor_rate ]
     end
 
-    def tier_price
-      rate = selected_rate || anchor_rate
-
-      case @rate_tier
-      when :walk_in then rate&.walk_in_price
-      when :corporate then rate&.corporate_price
-      end
-    end
-
     def selected_rate
       @selected_rate ||= begin
         plan_id = @rate_plan&.id
-        find_rate(plan_id) || (find_rate(nil) if @rate_plan.nil?)
+        find_rate(plan_id)
       end
     end
 

@@ -9,20 +9,13 @@ RSpec.describe Bookings::RateOptions do
   let(:check_out) { Date.current + 2.days }
   let(:service) { described_class.new(room_type: room_type, check_in: check_in, check_out: check_out) }
 
-  before do
-    create(:room_rate, room_type: room_type, date: check_in, price: 150.0)
-  end
+  before { create(:room_rate, room_type: room_type, rate_plan: room_type.standard_rate_plan, date: check_in, price: 150.0) }
 
   describe "#call" do
     context "when no rate plans exist" do
       before { room_type.rate_plans.destroy_all }
 
-      it "returns base rate option" do
-        options = service.call
-        expect(options.size).to eq(1)
-        expect(options.first[:name]).to eq("Base Rate")
-        expect(options.first[:total_amount]).to eq("150.0")
-      end
+      it("returns no options") { expect(service.call).to be_empty }
     end
 
     context "when rate plans exist" do
@@ -54,18 +47,15 @@ RSpec.describe Bookings::RateOptions do
       end
     end
 
-    context "when a shared plan has a walk-in price on a different room type" do
-      let(:other_room_type) { create(:room_type, hotel: hotel) }
-      let(:shared_plan) { room_type.standard_rate_plan }
+    it "offers real Walk-in and Corporate plans to staff" do
+      expect(service.call.pluck(:id)).to include(room_type.walk_in_rate_plan.id, room_type.corporate_rate_plan.id)
+    end
 
-      before do
-        create(:room_type_rate_plan, rate_plan: shared_plan, room_type: other_room_type)
-        create(:room_rate, room_type: other_room_type, rate_plan: shared_plan, date: check_in, price: 150.0, walk_in_price: 400.0)
-      end
+    it "limits corporate callers to Standard, Custom, and Corporate" do
+      options = described_class.new(room_type:, check_in:, check_out:, audience: :corporate).call
 
-      it "does not offer a walk-in option on the room type without one" do
-        expect(service.call.any? { |o| o[:tier_kind] == :walk_in }).to be false
-      end
+      expect(options.pluck(:id)).to include(room_type.standard_rate_plan.id, room_type.corporate_rate_plan.id)
+      expect(options.pluck(:id)).not_to include(room_type.walk_in_rate_plan.id)
     end
   end
 end

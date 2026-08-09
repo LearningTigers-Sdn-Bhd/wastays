@@ -44,30 +44,15 @@
   <% end %>
 <% end %>
 
-<% unless rate_plan.standard_rate? %>
+<% if rate_plan.deletable? %>
   <section aria-labelledby="rate-plan-status-heading" class="space-y-4">
-    <h3 id="rate-plan-status-heading" class="text-base font-semibold text-foreground">Plan status</h3>
+    <h3 id="rate-plan-status-heading" class="text-base font-semibold text-foreground">Plan actions</h3>
     <div class="flex flex-wrap items-center gap-2">
-      <% if rate_plan.archived? %>
-        <%= render PanelsUI::Button.new(href: unarchive_hotel_rate_plan_path(current_hotel, rate_plan), variant: :secondary, size: :sm,
-              data: { turbo_method: :patch, turbo_frame: "settings_action_sheet", rate_plan_editor_guard: "true" }) do %>
-          Unarchive
-        <% end %>
-      <% elsif rate_plan.archivable? %>
-        <%= render PanelsUI::Button.new(href: archive_hotel_rate_plan_path(current_hotel, rate_plan), variant: :secondary, size: :sm,
-              data: { turbo_method: :patch, turbo_frame: "settings_action_sheet", rate_plan_editor_guard: "true",
-                      turbo_confirm: "Archive '#{rate_plan.name}'? It will no longer be offered for new bookings, but existing bookings and history are kept.",
-                      turbo_confirm_title: "Archive rate plan" }) do %>
-          Archive
-        <% end %>
-      <% end %>
-      <% if rate_plan.deletable? %>
-        <%= render PanelsUI::Button.new(href: hotel_rate_plan_path(current_hotel, rate_plan), variant: :ghost, size: :sm, class: "text-destructive",
-              data: { turbo_method: :delete, turbo_frame: "settings_action_sheet", rate_plan_editor_guard: "true",
-                      turbo_confirm: "Delete '#{rate_plan.name}'? This permanently removes the rate plan.",
-                      turbo_confirm_title: "Delete rate plan", turbo_confirm_color: "red" }) do %>
-          Delete
-        <% end %>
+      <%= render PanelsUI::Button.new(href: hotel_rate_plan_path(current_hotel, rate_plan), variant: :ghost, size: :sm, class: "text-destructive",
+            data: { turbo_method: :delete, turbo_frame: "settings_action_sheet", rate_plan_editor_guard: "true",
+                    turbo_confirm: "Delete '#{rate_plan.name}'? This permanently removes the rate plan.",
+                    turbo_confirm_title: "Delete rate plan", turbo_confirm_color: "red" }) do %>
+        Delete
       <% end %>
     </div>
   </section>
