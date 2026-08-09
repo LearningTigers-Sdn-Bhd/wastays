@@ -133,13 +133,13 @@ RSpec.describe 'HotelPortal::RatePlanWizards', type: :request do
       expect(assignment.pricing_value).to eq(-10)
     end
 
-    it 'does not offer Auto, which has no adult count to step through' do
+    it 'does not offer the occupancy generator, which has no adult count to step through' do
       get hotel_start_rate_plan_wizard_path(hotel)
       submit_details(room_types: [ twin ])
       get step_path(room_step(twin))
 
-      expect(response.body).to include('Manual')
-      expect(response.body).to include('Derived')
+      expect(response.body).to include('Set prices directly')
+      expect(response.body).to include('Adjust Standard Rate')
       expect(response.body).not_to include('Start from a rate you set')
     end
   end

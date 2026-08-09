@@ -49,14 +49,7 @@ module RatePlans
 
     def assign!(rate_plan, room_type)
       pricing = @wizard.room_pricing(room_type)
-      assignment = rate_plan.room_type_rate_plans.create!(
-        room_type: room_type,
-        **pricing.assignment_attributes
-      )
-
-      pricing.occupancy_matrix.each do |adults, price|
-        assignment.occupancy_prices.create!(adults: adults, price: price)
-      end
+      RatePlans::SaveRoomPricing.call!(rate_plan: rate_plan, room_type: room_type, pricing: pricing)
     end
 
     def with_batched_ari_sync

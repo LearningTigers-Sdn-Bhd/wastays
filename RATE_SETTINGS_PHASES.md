@@ -338,15 +338,15 @@ Goal: make changes between one-price-per-room and price-per-guest safe for conne
 
 ## Current implementation files
 
-Phase 1 currently changes:
+The current rate-plan work is centred on:
 
 - `app/controllers/hotel_portal/rate_plans_controller.rb`
-- `app/helpers/hotel_portal/rate_plans_helper.rb`
-- `app/javascript/controllers/room_type_pricing_row_controller.js`
-- `app/views/hotel_portal/rate_plans/_form_sheet.html.erb`
-- `app/views/hotel_portal/rate_plans/_room_type_pricing.html.erb`
-- `spec/requests/hotel_portal/rate_plans_spec.rb`
+- `app/controllers/hotel_portal/rate_plan_room_pricings_controller.rb`
+- `app/services/rate_plans/save_room_pricing.rb`
+- `app/views/hotel_portal/rate_plans/_editor_sheet.html.erb`
+- `app/javascript/controllers/rate_plan_editor_controller.js`
 
 ## Next action
 
-- [ ] Begin Phase 2 by extracting and testing the shared effective-nightly-price calculation before changing more UI or Channex payloads.
+- [x] Replace the monolithic rate-plan edit form with the tabbed full bottom sheet.
+- [ ] Continue with the rate-inventory setup-gap query and scoped calendar filter described in the handover.

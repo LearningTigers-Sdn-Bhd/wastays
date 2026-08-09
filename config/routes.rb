@@ -712,6 +712,10 @@ Rails.application.routes.draw do
     patch  "rate_plans/wizard/:step", to: "rate_plan_wizards#update"
 
     resources :rate_plans, only: %i[new create edit update destroy] do
+      resources :room_pricings,
+        only: %i[edit update destroy],
+        param: :room_type_id,
+        controller: "rate_plan_room_pricings"
       member do
         patch :archive
         patch :unarchive

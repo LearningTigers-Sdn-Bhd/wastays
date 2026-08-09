@@ -1,0 +1,93 @@
+<section aria-labelledby="rate-plan-rooms-heading" class="space-y-4">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h3 id="rate-plan-rooms-heading" class="text-base font-semibold text-foreground">Rooms and prices</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Edit one room category at a time. Capacity remains controlled by the room category.</p>
+    </div>
+    <% if @available_room_types.any? && !rate_plan.standard_rate? %>
+      <%= render PanelsUI::Collapsible.new(id: "add-rate-plan-room", class: "shrink-0") do |item| %>
+        <% item.with_trigger do %>
+          <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+            <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+            Add room category
+          </span>
+        <% end %>
+        <% item.with_body do %>
+          <div class="mt-2 w-72 space-y-1 rounded-md border border-border bg-card p-2 shadow-sm">
+            <% @available_room_types.each do |room_type| %>
+              <%= link_to edit_hotel_rate_plan_room_pricing_path(current_hotel, rate_plan, room_type),
+                    class: "block rounded-md px-3 py-2 text-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring",
+                    data: { turbo_frame: "settings_action_sheet", rate_plan_editor_room_url: "true" } do %>
+                <span class="block font-medium text-foreground"><%= room_type.name %></span>
+                <span class="block text-xs text-muted-foreground"><%= pluralize(room_type.max_adults, "adult") %> · <%= pluralize(room_type.max_children, "child") %></span>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @assigned_room_types.any? %>
+    <div class="lg:hidden">
+      <% choices = @assigned_room_types.map do |room_type| %>
+        <% { label: room_type.name, value: edit_hotel_rate_plan_room_pricing_path(current_hotel, rate_plan, room_type) } %>
+      <% end %>
+      <% if selected_room_type && !@assigned_room_types.include?(selected_room_type) %>
+        <% choices << { label: "#{selected_room_type.name} — not added yet", value: edit_hotel_rate_plan_room_pricing_path(current_hotel, rate_plan, selected_room_type) } %>
+      <% end %>
+      <% selected_url = edit_hotel_rate_plan_room_pricing_path(current_hotel, rate_plan, selected_room_type || @assigned_room_types.first) %>
+      <%= fields_for :rate_plan_room_selector, HotelPortal::RatePlansHelper::RoomSelectionScope.new(selected_url) do |selector| %>
+        <%= render PanelsUI::FormField.new(form: selector, attribute: :room_type_id, label: "Room category", size: :sm) do |field| %>
+          <% field.with_select_menu(choices, selected: selected_url, data: { action: "change->rate-plan-editor#selectRoom" }) %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="grid min-h-0 gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+    <nav aria-label="Room categories on this rate plan" class="hidden border-r border-border pr-4 lg:block">
+      <ul class="space-y-1">
+        <% @assignments.each do |assignment| %>
+          <% room_type = assignment.room_type %>
+          <% complete = room_pricing_complete?(assignment, room_type) %>
+          <li>
+            <%= link_to edit_hotel_rate_plan_room_pricing_path(current_hotel, rate_plan, room_type),
+                  class: "block rounded-md border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-ring #{selected_room_type&.id == room_type.id ? 'border-border-interactive bg-muted/50' : 'border-transparent hover:bg-muted/40'}",
+                  aria: { current: ("page" if selected_room_type&.id == room_type.id) },
+                  data: { turbo_frame: "settings_action_sheet", rate_plan_editor_room_url: "true" } do %>
+              <span class="flex items-start justify-between gap-2">
+                <span>
+                  <span class="block text-sm font-medium text-foreground"><%= room_type.name %></span>
+                  <span class="mt-1 block text-xs text-muted-foreground"><%= pluralize(room_type.max_adults, "adult") %> · <%= pluralize(room_type.max_children, "child") %></span>
+                </span>
+                <%= render PanelsUI::Badge.new(label: complete ? "Complete" : "Needs pricing", variant: complete ? :success : :warning, size: :sm) %>
+              </span>
+              <span class="mt-2 block text-xs text-muted-foreground"><%= room_pricing_summary(assignment, room_type, rate_plan.currency) %></span>
+            <% end %>
+          </li>
+        <% end %>
+        <% if selected_room_type && !@assigned_room_types.include?(selected_room_type) %>
+          <li class="rounded-md border border-border-interactive bg-muted/50 px-3 py-3">
+            <span class="block text-sm font-medium text-foreground"><%= selected_room_type.name %></span>
+            <span class="mt-1 block text-xs text-muted-foreground">Not added yet · complete pricing to add</span>
+          </li>
+        <% end %>
+      </ul>
+    </nav>
+
+    <div class="min-w-0">
+      <% if selected_room_type && room_pricing %>
+        <%= render "hotel_portal/rate_plans/editor_room_pricing",
+              rate_plan: rate_plan,
+              room_type: selected_room_type,
+              assignment: @selected_assignment,
+              pricing: room_pricing %>
+      <% else %>
+        <%= render PanelsUI::Alert.new(tone: :warning, title: "No room category assigned", role: :status) do |alert| %>
+          <% alert.with_description { "Add a room category and configure its starting price." } %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>

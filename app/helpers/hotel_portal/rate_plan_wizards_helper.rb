@@ -22,15 +22,15 @@ module HotelPortal
     def wizard_rate_mode_options(pricing)
       {
         "manual" => {
-          label: "Manual",
+          label: "Set prices directly",
           hint: pricing.per_person? ? "Type the price for each number of adults." : "Type one nightly price for the room."
         },
         "derived" => {
-          label: "Derived",
+          label: "Adjust Standard Rate",
           hint: "Start from this category's standard rate."
         },
         "auto" => {
-          label: "Auto",
+          label: "Generate from a starting rate",
           hint: "Start from a rate you set, then step per adult."
         }
       }.slice(*pricing.available_modes)

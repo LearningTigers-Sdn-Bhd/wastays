@@ -62,4 +62,15 @@ RSpec.describe ChannelManagers::SyncRatePlanAri do
 
     expect(enqueued_jobs).to be_empty
   end
+
+  it "does not enqueue unsupported per-person channel pushes" do
+    hotel.update!(sell_mode: "per_person")
+    room_type = create(:room_type, hotel: hotel)
+    link(room_type)
+    clear_enqueued_jobs
+
+    described_class.call(rate_plan: rate_plan, room_type_ids: [ room_type.id ])
+
+    expect(enqueued_jobs).to be_empty
+  end
 end

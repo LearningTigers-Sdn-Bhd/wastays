@@ -2,8 +2,9 @@
 
 class HotelPortal::RatePlansController < HotelPortal::BaseController
   include SheetActionCompletion
+  include RatePlanEditorLoading
 
-  before_action :authorize!
+  before_action :authorize_rate_plan_editor!
   before_action :set_rate_plan, only: %i[edit update destroy archive unarchive]
 
   def new
@@ -13,6 +14,7 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   end
 
   def edit
+    load_rate_plan_editor(tab: params[:tab], room_type_id: params[:room_type_id])
     render layout: false
   end
 
@@ -41,23 +43,15 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   end
 
   def update
-    attrs = rate_plan_params
-    room_type_pricing = attrs.delete(:room_type_pricing) || {}
+    section = params[:section].presence_in(%w[details children]) || "details"
 
-    saved = false
-    with_batched_ari_sync do
-      ActiveRecord::Base.transaction do
-        saved = @rate_plan.update(attrs)
-        saved = sync_room_type_pricing!(@rate_plan, room_type_pricing) if saved
-        raise ActiveRecord::Rollback unless saved
-      end
-    end
+    attrs = section == "children" ? child_pricing_params : detail_params
+    attrs = attrs.except(:name, :description) if @rate_plan.standard_rate?
 
-    if saved
-      push_ari(@rate_plan, room_type_pricing)
-      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' updated successfully.")
+    if @rate_plan.update(attrs)
+      render_editor_success(section == "children" ? "Child pricing saved." : "Plan details saved.", tab: section)
     else
-      render :edit, layout: false, status: :unprocessable_content
+      render_editor_errors(tab: section)
     end
   end
 
@@ -75,12 +69,20 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     return finish_sheet(alert: "System rate plans cannot be archived.") unless @rate_plan.archivable?
 
     @rate_plan.archive!
-    finish_sheet(notice: "Rate plan '#{@rate_plan.name}' archived. It will no longer be offered for new bookings.")
+    if rate_plan_editor_request?
+      render_editor_success("Rate plan '#{@rate_plan.name}' archived.", tab: "details")
+    else
+      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' archived. It will no longer be offered for new bookings.")
+    end
   end
 
   def unarchive
     @rate_plan.unarchive!
-    finish_sheet(notice: "Rate plan '#{@rate_plan.name}' restored.")
+    if rate_plan_editor_request?
+      render_editor_success("Rate plan '#{@rate_plan.name}' restored.", tab: "details")
+    else
+      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' restored.")
+    end
   end
 
   private
@@ -102,11 +104,31 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   end
 
   def sheet_frame
-    turbo_frame_request_id.presence || "settings_action_sheet"
+    turbo_frame_request_id.presence || EDITOR_FRAME
   end
 
   def set_rate_plan
     @rate_plan = current_hotel.rate_plans.find(params[:id])
+  end
+
+  # A section save posts only its own tab's fields, and a tab can legitimately
+  # have none — Standard Rate on a per-guest property owns neither its name nor
+  # any occupancy rule. fetch rather than require so that saves as a no-op
+  # instead of a 400.
+  def section_params = params.fetch(:rate_plan, {})
+
+  def detail_params
+    permitted = section_params.permit(:name, :description, :base_occupancy, :extra_pax_charge)
+    current_hotel.sells_per_person? ? permitted.slice(:name, :description) : permitted
+  end
+
+  def child_pricing_params
+    return ActionController::Parameters.new.permit! unless current_hotel.sells_per_person?
+
+    section_params.permit(
+      :child_price_multiplier,
+      rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ]
+    )
   end
 
   # :sell_mode is deliberately absent — RatePlan inherits it from the hotel, so
@@ -137,20 +159,6 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     return true if rate_plan.standard_rate?
 
     sync_room_type_pricing_rows!(rate_plan, room_type_pricing)
-  end
-
-  # RoomTypeRatePlan#trigger_ari_sync fires per row, which would enqueue a
-  # separate 500-day rate push for every room category on the plan. push_ari
-  # sends one instead.
-  #
-  # This has to wrap the whole transaction, not just the writes: the callback
-  # is after_commit, so a flag reset inside the transaction block would already
-  # be cleared by the time it runs.
-  def with_batched_ari_sync
-    Thread.current[:skip_ari_sync] = true
-    yield
-  ensure
-    Thread.current[:skip_ari_sync] = nil
   end
 
   def push_ari(rate_plan, room_type_pricing)
@@ -230,9 +238,5 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
 
     assignment.occupancy_prices.where.not(adults: expected).destroy_all
     true
-  end
-
-  def authorize!
-    raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
   end
 end

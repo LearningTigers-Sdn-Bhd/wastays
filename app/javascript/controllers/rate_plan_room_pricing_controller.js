@@ -9,7 +9,7 @@ import { Controller } from "@hotwired/stimulus"
 // only ever writes to a <p>.
 export default class extends Controller {
   static targets = ["mode", "manualPanel", "derivedPanel", "autoPanel", "ladderPanel", "preview"]
-  static values = { anchor: Number, maxAdults: Number, currency: String }
+  static values = { anchor: Number, maxAdults: Number, currency: String, perPerson: Boolean }
 
   connect() {
     this.refresh()
@@ -42,7 +42,17 @@ export default class extends Controller {
 
     const anchor = mode === "auto" ? this.field("default_rate") : this.derivedAnchor()
     if (anchor === null || Number.isNaN(anchor)) {
-      this.previewTarget.textContent = "Enter a rate to preview the ladder."
+      this.previewTarget.textContent = this.perPersonValue
+        ? "Enter a rate to preview the ladder."
+        : "Enter an adjustment to preview the nightly price."
+      return
+    }
+
+    // A per-room plan prices the room once. Stepping through adult counts here
+    // would print the same figure max_adults times and imply an occupancy
+    // matrix this plan does not have.
+    if (!this.perPersonValue) {
+      this.previewTarget.textContent = `${this.currencyValue} ${this.money(Math.max(anchor, 0))} per night`
       return
     }
 

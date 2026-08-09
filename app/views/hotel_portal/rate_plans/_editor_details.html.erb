@@ -1,0 +1,25 @@
+<%# Standard Rate on a per-guest property owns neither its name nor any
+    occupancy rule, so this tab has nothing to submit. Render it without a form
+    at all — the footer's Save button binds to a form id, and an empty one
+    would report a save that never happened. %>
+<% editable = !(rate_plan.standard_rate? && current_hotel.sells_per_person?) %>
+
+<% if rate_plan.errors.any? %>
+  <div tabindex="-1" data-rate-plan-editor-error-summary class="mb-6">
+    <%= render PanelsUI::Alert.new(tone: :destructive, title: "Plan details could not be saved", role: :alert) do |alert| %>
+      <% alert.with_description { rate_plan.errors.full_messages.to_sentence } %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if editable %>
+  <%= form_with model: [ current_hotel, rate_plan ], id: "rate-plan-details-#{rate_plan.id}", method: :patch,
+        class: "space-y-8", data: { rate_plan_editor_target: "form", editor_section: "details" } do |f| %>
+    <%= hidden_field_tag :section, "details" %>
+    <%= render "hotel_portal/rate_plans/editor_details_fields", rate_plan: rate_plan, f: f %>
+  <% end %>
+<% else %>
+  <div class="space-y-8">
+    <%= render "hotel_portal/rate_plans/editor_details_fields", rate_plan: rate_plan, f: nil %>
+  </div>
+<% end %>

@@ -1,0 +1,13 @@
+<% form_id = "rate-plan-child-pricing-#{rate_plan.id}" %>
+<%= form_with model: [ current_hotel, rate_plan ], id: form_id, method: :patch,
+      class: "space-y-6", data: { rate_plan_editor_target: "form", editor_section: "children" } do |f| %>
+  <%= hidden_field_tag :section, "children" %>
+  <% if rate_plan.errors.any? %>
+    <div tabindex="-1" data-rate-plan-editor-error-summary>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Child pricing could not be saved", role: :alert) do |alert| %>
+        <% alert.with_description { rate_plan.errors.full_messages.to_sentence } %>
+      <% end %>
+    </div>
+  <% end %>
+  <%= render "hotel_portal/rate_plan_wizards/age_bands", f: f, rate_plan: rate_plan %>
+<% end %>

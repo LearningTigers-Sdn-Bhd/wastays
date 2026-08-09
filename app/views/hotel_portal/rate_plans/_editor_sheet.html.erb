@@ -1,0 +1,110 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% active_tab = local_assigns.fetch(:active_tab, @active_tab || "details") %>
+<% selected_room_type = local_assigns.fetch(:selected_room_type, @selected_room_type) %>
+<% room_pricing = local_assigns.fetch(:room_pricing, @room_pricing) %>
+<%# Every tab whose fields are all property- or category-owned renders no form,
+    so there is nothing for the footer to submit. Keep this in step with the
+    same conditions in _editor_details and _editor_room_pricing. %>
+<% initial_form_id, initial_save_label = case active_tab
+   when "children" then [ "rate-plan-child-pricing-#{rate_plan.id}", "Save child pricing" ]
+   when "rooms"
+     if selected_room_type && !(rate_plan.standard_rate? && !current_hotel.sells_per_person?)
+       [ "rate-plan-room-pricing-#{selected_room_type.id}", "Save room pricing" ]
+     end
+   else
+     unless rate_plan.standard_rate? && current_hotel.sells_per_person?
+       [ "rate-plan-details-#{rate_plan.id}", "Save plan details" ]
+     end
+   end %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame rate-plan-editor"
+       data-rate-plan-editor-edit-url-value="<%= edit_hotel_rate_plan_path(current_hotel, rate_plan) %>"
+       data-rate-plan-editor-room-type-id-value="<%= selected_room_type&.id %>">
+    <%= render PanelsUI::Sheet.new(
+          id: "edit-rate-plan-sheet",
+          side: :bottom,
+          size: :full,
+          dismissible: false,
+          aria_label: "Edit #{rate_plan.name}",
+          body_class: "overflow-hidden p-0") do |sheet| %>
+      <% sheet.with_header do %>
+        <header class="shrink-0 border-b border-border px-4 pt-4">
+          <div class="mx-auto flex w-full max-w-7xl items-start justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="truncate text-base font-semibold text-foreground" tabindex="-1" data-panels-ui--sheet-target="initialFocus"><%= rate_plan.name %></h2>
+                <%= render PanelsUI::Badge.new(label: rate_plan.archived? ? "Archived" : "Active", variant: rate_plan.archived? ? :warning : :success, size: :sm) %>
+              </div>
+              <p class="mt-1 text-sm text-muted-foreground">
+                <%= current_hotel.sells_per_person? ? "Price per guest" : "One price per room" %> · <span translate="no"><%= rate_plan.currency %></span><%= " · Standard Rate" if rate_plan.standard_rate? %>
+              </p>
+            </div>
+            <button type="button"
+                    class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+                    aria-label="Close rate plan editor"
+                    data-action="rate-plan-editor#requestClose">
+              <%= app_icon "x", class: "size-4", aria: { hidden: true } %>
+            </button>
+          </div>
+        </header>
+      <% end %>
+
+      <% sheet.with_body do %>
+        <%= render PanelsUI::Tabs.new(
+              id: "rate-plan-editor-tabs",
+              active: active_tab,
+              variant: :line,
+              aria_label: "Rate plan editor sections",
+              class: "flex min-h-0 h-full flex-col",
+              list_class: "shrink-0 px-4",
+              panels_class: "min-h-0 flex-1 overflow-y-auto") do |tabs| %>
+          <% tabs.with_tab(name: "details", label: "Plan details", data: { rate_plan_editor_destination: "details" }) %>
+          <% tabs.with_tab(name: "rooms", label: "Rooms and prices", count: @assigned_room_types.size, data: { rate_plan_editor_destination: "rooms" }) %>
+          <% if current_hotel.sells_per_person? %>
+            <% tabs.with_tab(name: "children", label: "Child pricing", data: { rate_plan_editor_destination: "children" }) %>
+          <% end %>
+
+          <% tabs.with_panel(name: "details", class: "mx-auto w-full max-w-7xl p-4 sm:p-6") do %>
+            <%= render "hotel_portal/rate_plans/editor_details", rate_plan: rate_plan %>
+          <% end %>
+          <% tabs.with_panel(name: "rooms", class: "mx-auto w-full max-w-7xl p-4 sm:p-6") do %>
+            <%= render "hotel_portal/rate_plans/editor_rooms",
+                  rate_plan: rate_plan,
+                  selected_room_type: selected_room_type,
+                  room_pricing: room_pricing %>
+          <% end %>
+          <% if current_hotel.sells_per_person? %>
+            <% tabs.with_panel(name: "children", class: "mx-auto w-full max-w-7xl p-4 sm:p-6") do %>
+              <%= render "hotel_portal/rate_plans/editor_child_pricing", rate_plan: rate_plan %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <div class="mx-auto flex w-full max-w-7xl items-center justify-end gap-2">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+                data: { action: "rate-plan-editor#requestClose" }) do %>
+            Cancel
+          <% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm,
+                form: initial_form_id, hidden: initial_form_id.blank?,
+                data: { rate_plan_editor_target: "saveButton", turbo_submits_with: "Saving…" }) do %>
+            <span data-rate-plan-editor-target="saveLabel"><%= initial_save_label || "Save changes" %></span>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%= render PanelsUI::AlertDialog.new(
+          id: "rate-plan-editor-discard-alert",
+          title: "Discard your changes?",
+          description: "The changes in this section have not been saved. Discard them and continue?",
+          tone: :warning) do |alert| %>
+      <% alert.with_icon { app_icon "triangle-alert", class: "size-5", aria: { hidden: true } } %>
+      <% alert.with_cancel(label: "Keep editing", data: { action: "rate-plan-editor#keepEditing" }) %>
+      <% alert.with_action(label: "Discard changes", data: { action: "rate-plan-editor#discardChanges" }) %>
+    <% end %>
+  </div>
+<% end %>

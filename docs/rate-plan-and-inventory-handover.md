@@ -155,58 +155,42 @@ spec/system/hotel/layout_shell_spec.rb                 +2 badge
 
 ---
 
-## 4. Next: rate plan edit
+## 4. Rate plan edit — shipped
 
-**Not started.** Agreed shape only.
-
-The edit page is a **reference screen**, not a stepper — you arrive knowing what
-you came to change, and every row is a landing target.
+Edit uses a full bottom action sheet with line tabs, not the earlier proposed
+inline-expanding registry. That proposal was never established by the product
+decisions and exposed internal words such as “manual” and “derived.”
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ Non-refundable rate            [per person] [MYR] [custom]   │
+┌─ full bottom sheet ──────────────────────────────────────────┐
+│ Non-refundable rate · Price per guest · MYR · Active        │
+│ [Plan details] [Rooms and prices 2] [Child pricing]          │
 ├──────────────────────────────────────────────────────────────┤
-│ Plan details                                        [Edit]   │
+│ Rooms rail              │ One focused room-pricing editor    │
+│ Deluxe twin       ✓     │ shared with the create wizard      │
+│ Garden villa      ⚠     │                                    │
 ├──────────────────────────────────────────────────────────────┤
-│ Room categories                        [+ Add category]      │
-│   Deluxe twin        2 pax  manual   1p 220 · 2p 320   ✓  ›  │
-│   Garden villa       3 pax  derived  1p 380 · 2p 480      ›  │
-│                                      ⚠ 3p unpriced           │
-├──────────────────────────────────────────────────────────────┤
-│ Child pricing                                       [Edit]   │
-├──────────────────────────────────────────────────────────────┤
-│ Archive · Delete                                             │
+│                                      Cancel · Save this tab  │
 └──────────────────────────────────────────────────────────────┘
-     ›  expands in place, using the wizard's room-step body
 ```
 
-**What must be shared with the wizard — and what must not:**
+Each top-level tab saves independently and remains open after success. Switching
+tabs or rooms, closing, or starting a destructive action while the active form
+is dirty opens a non-dismissible discard alert. The rooms tab saves only the
+selected category; adding a category creates nothing until valid pricing is
+saved.
 
-```
-share     the room-pricing fields partial (mode + fields + coverage)
-          the write path that materialises Derived/Auto
-separate  chrome, navigation, save semantics
-```
+The wizard and editor share both the room-pricing fields and
+`RatePlans::SaveRoomPricing`. Per-room adjustments stay live. Per-person
+generators fill and materialise a complete direct-price matrix; reopening shows
+the stored direct prices because generator provenance is deliberately not
+persisted.
 
-If the two diverge on what "Derived" means, the bug is invisible until a guest
-gets a wrong quote. Extract `RatePlans::SaveRoomPricing` from
-`CreateFromWizard` before building the edit page, not after.
-
-**Two things edit has that create doesn't:**
-
-- Removing a category is destructive — it drops the `room_type_rate_plan` and
-  its prices. Needs a confirm naming what goes, and a hard block when
-  `booking_rooms` reference the plan (`dependent: :restrict_with_error` on
-  `RatePlan` raises otherwise, surfacing as an ugly failure).
-- **Standard Rate plans have no create flow at all.** They are auto-created
-  bound to one category by `RoomType#ensure_standard_rate_plan`, so the edit
-  page is their only surface: category list read-only, pricing row expandable.
-
-The current edit sheet (`rate_plans/_form_sheet.html.erb` + `_room_type_pricing`
-+ `_age_bands`) still carries everything the wizard removed — the read-only
-"how the property charges" `<dl>`, the per-category card with a nested
-fieldset, the "Preview using" selector in the field flow. Roughly 70 controls
-for 8 categories at 4 pax. Replacing it is the point of this piece.
+Removing a category is handled by `RatePlans::RemoveRoomType`: it refuses the
+final category, refuses a matching room/plan pair used by bookings, and deletes
+an existing channel-side mapping after commit. Standard Rate uses the same shell
+with name and membership locked; its applicable occupancy and child pricing
+remain editable.
 
 ---
 

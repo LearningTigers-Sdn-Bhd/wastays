@@ -7,6 +7,37 @@ module HotelPortal
     # association, so there is no builder to hand PanelsUI. fields_for with a
     # string scope over this stand-in produces exactly those names.
     RoomTypePricingScope = Struct.new(:pricing_mode, :pricing_value)
+    RoomSelectionScope = Struct.new(:room_type_id)
+
+    # A per-room assignment carries one figure whichever mode it is in, so
+    # presence of pricing_value is the whole test. A per-guest one is only
+    # complete when it prices every adult count the category can hold.
+    def room_pricing_complete?(assignment, room_type, per_person: current_hotel.sells_per_person?)
+      return room_type.base_price.present? if assignment&.rate_plan&.standard_rate? && !per_person
+      return false unless assignment
+      return assignment.pricing_value.present? unless per_person
+
+      assignment.occupancy_prices.map(&:adults).sort == (1..room_type.max_adults).to_a
+    end
+
+    def room_pricing_summary(assignment, room_type, currency, per_person: current_hotel.sells_per_person?)
+      return "Standard Rate #{money_summary(room_type.base_price, currency)}" if assignment&.rate_plan&.standard_rate? && !per_person
+      return "Pricing not configured" unless assignment
+      return "Adjusts Standard Rate" if assignment.derives_price?
+
+      if per_person
+        rungs = assignment.occupancy_prices.sort_by(&:adults)
+        return "Pricing not configured" if rungs.empty?
+
+        "#{currency} #{rungs.map { |rung| "#{rung.adults}p #{number_with_precision(rung.price, precision: 0, delimiter: ',')}" }.join(' · ')}"
+      else
+        money_summary(assignment.pricing_value, currency)
+      end
+    end
+
+    def money_summary(amount, currency)
+      "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
+    end
 
     def room_type_pricing_choices
       [

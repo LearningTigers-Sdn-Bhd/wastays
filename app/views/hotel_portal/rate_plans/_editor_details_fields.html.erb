@@ -1,0 +1,84 @@
+<%# `f` is nil when the section is read-only for this plan — every builder use
+    below sits behind the same condition that makes the section editable. %>
+<section aria-labelledby="rate-plan-details-heading" class="space-y-4">
+  <div>
+    <h3 id="rate-plan-details-heading" class="text-base font-semibold text-foreground">Plan details</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Name the offer and confirm the property-controlled pricing context.</p>
+  </div>
+
+  <% unless rate_plan.standard_rate? %>
+    <div class="grid items-start gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true) do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
+        <% field.with_input(autocomplete: "off", placeholder: "Pay in full at booking. No changes or refunds.") %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <dl aria-label="Property-controlled rate plan settings" class="grid gap-4 border-y border-border py-4 sm:grid-cols-2">
+    <div>
+      <dt class="text-xs text-muted-foreground">How the property charges</dt>
+      <dd class="mt-1 text-sm font-medium text-foreground"><%= current_hotel.sells_per_person? ? "Price per guest" : "One price per room" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs text-muted-foreground">Currency</dt>
+      <dd class="mt-1 text-sm font-medium text-foreground" translate="no"><%= rate_plan.currency %></dd>
+    </div>
+  </dl>
+  <p class="text-sm text-muted-foreground">Daily prices, availability, and restrictions are managed under Rates &amp; Availability.</p>
+</section>
+
+<% unless current_hotel.sells_per_person? %>
+  <section aria-labelledby="rate-plan-occupancy-heading" class="space-y-4 border-t border-border pt-6">
+    <div>
+      <h3 id="rate-plan-occupancy-heading" class="text-base font-semibold text-foreground">Occupancy pricing</h3>
+      <p class="mt-1 text-sm text-muted-foreground">These rules apply to every room category on this plan.</p>
+    </div>
+    <div class="grid items-start gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Guests included", hint: "Number of guests covered by the room price.") do |field| %>
+        <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge", hint: "Per night, for each guest above the included occupancy.") do |field| %>
+        <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+        <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<% if current_hotel.sells_per_person? && current_hotel.preferred_channel_manager.present? %>
+  <%= render PanelsUI::Alert.new(tone: :warning, title: "Per-guest rates are not distributed yet", role: :status) do |alert| %>
+    <% alert.with_description { "Availability continues to sync, but this plan’s prices and restrictions remain in Wastays." } %>
+  <% end %>
+<% end %>
+
+<% unless rate_plan.standard_rate? %>
+  <section aria-labelledby="rate-plan-status-heading" class="space-y-4 border-t border-border pt-6">
+    <h3 id="rate-plan-status-heading" class="text-base font-semibold text-foreground">Plan status</h3>
+    <div class="flex flex-wrap items-center gap-2">
+      <% if rate_plan.archived? %>
+        <%= render PanelsUI::Button.new(href: unarchive_hotel_rate_plan_path(current_hotel, rate_plan), variant: :secondary, size: :sm,
+              data: { turbo_method: :patch, turbo_frame: "settings_action_sheet", rate_plan_editor_guard: "true" }) do %>
+          Unarchive
+        <% end %>
+      <% elsif rate_plan.archivable? %>
+        <%= render PanelsUI::Button.new(href: archive_hotel_rate_plan_path(current_hotel, rate_plan), variant: :secondary, size: :sm,
+              data: { turbo_method: :patch, turbo_frame: "settings_action_sheet", rate_plan_editor_guard: "true",
+                      turbo_confirm: "Archive '#{rate_plan.name}'? It will no longer be offered for new bookings, but existing bookings and history are kept.",
+                      turbo_confirm_title: "Archive rate plan" }) do %>
+          Archive
+        <% end %>
+      <% end %>
+      <% if rate_plan.deletable? %>
+        <%= render PanelsUI::Button.new(href: hotel_rate_plan_path(current_hotel, rate_plan), variant: :ghost, size: :sm, class: "text-destructive",
+              data: { turbo_method: :delete, turbo_frame: "settings_action_sheet", rate_plan_editor_guard: "true",
+                      turbo_confirm: "Delete '#{rate_plan.name}'? This permanently removes the rate plan.",
+                      turbo_confirm_title: "Delete rate plan", turbo_confirm_color: "red" }) do %>
+          Delete
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+<% end %>

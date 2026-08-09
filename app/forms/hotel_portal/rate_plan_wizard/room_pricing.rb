@@ -50,6 +50,27 @@ module HotelPortal
         pricing
       end
 
+      def self.from_assignment(assignment, room_type:, sells_per_person:)
+        return from_h({}, room_type: room_type, sells_per_person: sells_per_person) unless assignment
+
+        attrs = if sells_per_person
+          {
+            "rate_mode" => "manual",
+            "prices" => assignment.occupancy_prices.index_by(&:adults).transform_values(&:price)
+          }
+        elsif assignment.derives_price?
+          {
+            "rate_mode" => "derived",
+            "derive_mode" => assignment.pricing_mode,
+            "derive_value" => assignment.pricing_value
+          }
+        else
+          { "rate_mode" => "manual", "default_rate" => assignment.pricing_value }
+        end
+
+        from_h(attrs, room_type: room_type, sells_per_person: sells_per_person)
+      end
+
       def to_h
         attributes.merge("prices" => prices.transform_keys(&:to_s).transform_values(&:to_s))
       end
