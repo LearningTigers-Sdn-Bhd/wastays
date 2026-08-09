@@ -128,7 +128,8 @@ module HotelPortal
       when :property
         [
           { key: "hotel-details", label: "Hotel Details", path: edit_hotel_profile_path(current_hotel), icon: "building-2", active: controller_name == "profiles" },
-          { key: "room-inventory", label: "Room Inventory", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name.in?(%w[room_types rate_plan_attachments rate_plans rate_plan_room_pricings]) },
+          { key: "room-groups", label: "Room Groups", path: hotel_room_groups_path(current_hotel), icon: "layout-grid", active: controller_name == "room_groups" },
+          { key: "room-inventory", label: "Room Inventory", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name.in?(%w[room_types room_group_assignments rate_plan_attachments rate_plans rate_plan_room_pricings]) },
           { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" }
         ]
       when :commercial

@@ -324,7 +324,7 @@ Rails.application.routes.draw do
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
     end
-    resources :room_groups, only: %i[index create update destroy]
+    get "room_groups", to: redirect("/hotel/%{hotel_id}/settings/property/room-groups"), as: :legacy_room_groups
     get "stay-view", to: "stay_view/board#index", as: :stay_view
     scope "stay-view", module: :stay_view, as: :stay_view do
       get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
@@ -597,12 +597,16 @@ Rails.application.routes.draw do
         get "room-categories/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory")
         get "room-categories/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory")
 
+        resources :room_groups, path: "room-groups", except: :show
         resources :room_types, path: "room-inventory", except: [ :show ] do
           member do
             delete :destroy_photo
             delete :bulk_destroy_photos
           end
         end
+        resource :room_group_assignment,
+                 path: "room-inventory/room-group-assignment",
+                 only: %i[new create]
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do
           get :autocomplete, on: :collection
         end
