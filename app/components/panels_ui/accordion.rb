@@ -10,11 +10,13 @@ module PanelsUI
     class Item < PanelsUI::BaseComponent
       renders_one :trigger
       renders_one :body
+      renders_one :header_content
 
       attr_reader :value
 
       def initialize(accordion:, value:, disabled: false, region: false, id: nil,
-                     class: nil, trigger_class: nil, content_class: nil)
+                     class: nil, trigger_class: nil, content_class: nil,
+                     header_class: nil, **attributes)
         @accordion = accordion
         @value = value.to_s
         @disabled = ActiveModel::Type::Boolean.new.cast(disabled)
@@ -23,6 +25,8 @@ module PanelsUI
         @class = binding.local_variable_get(:class)
         @trigger_class = trigger_class
         @content_class = content_class
+        @header_class = header_class
+        @attributes = attributes
         @open = false
         @locked_open = false
       end
@@ -44,6 +48,9 @@ module PanelsUI
         # Materialize the slot in this component's view context before passing
         # it through to the nested Collapsible component.
         body_content = body.to_s
+        header_content_value = header_content.to_s if header_content?
+        attributes = @attributes.deep_dup
+        caller_data = attributes.delete(:data) || attributes.delete("data") || {}
 
         render PanelsUI::Collapsible.new(
           id: @id,
@@ -54,11 +61,13 @@ module PanelsUI
           class: tw_merge("panel-accordion__item", @class),
           trigger_class: tw_merge("panel-accordion__trigger", @trigger_class),
           content_class: tw_merge("panel-accordion__content", @content_class),
+          header_class: @header_class,
           trigger_attributes: {
             aria: { disabled: ("true" if @locked_open) },
             data: { accordion_trigger: "" }
           },
-          data: { accordion_item: "", accordion_value: value }
+          **attributes,
+          data: caller_data.merge(accordion_item: "", accordion_value: value)
         ) do |collapsible|
           collapsible.with_trigger do
             safe_join([
@@ -66,6 +75,7 @@ module PanelsUI
               helpers.app_icon("chevron-down", class: "panel-accordion__indicator", aria: { hidden: "true" })
             ])
           end
+          collapsible.with_header_content { header_content_value } if header_content_value
           collapsible.with_body { body_content }
         end
       end

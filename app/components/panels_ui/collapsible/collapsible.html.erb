@@ -5,7 +5,16 @@
     <% end %>
   <% end %>
 
-  <% if heading_tag %>
+  <% if header_content? %>
+    <div class="<%= header_classes %>">
+      <% if heading_tag %>
+        <%= tag.public_send(heading_tag, trigger_button, class: "panel-collapsible__heading") %>
+      <% else %>
+        <%= trigger_button %>
+      <% end %>
+      <%= header_content %>
+    </div>
+  <% elsif heading_tag %>
     <%= tag.public_send(heading_tag, trigger_button, class: "panel-collapsible__heading") %>
   <% else %>
     <%= trigger_button %>

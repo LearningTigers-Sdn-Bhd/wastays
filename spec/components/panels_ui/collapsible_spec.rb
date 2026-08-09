@@ -57,6 +57,19 @@ RSpec.describe PanelsUI::Collapsible, type: :component do
     expect(page).to have_css("#booking-details-content[role='region'][aria-labelledby='booking-details-trigger']", visible: :all)
   end
 
+  it "renders interactive header content beside, not inside, the trigger" do
+    render_inline(described_class.new(id: "inventory-row", heading_level: 3, header_class: "grid")) do |collapsible|
+      collapsible.with_trigger { "Room category" }
+      collapsible.with_header_content { '<a href="/assign">Assign Group</a>'.html_safe }
+      collapsible.with_body { "Rate plans" }
+    end
+
+    expect(page).to have_css("#inventory-row > .panel-collapsible__header.grid")
+    expect(page).to have_css(".panel-collapsible__header > h3 > button", text: "Room category")
+    expect(page).to have_css(".panel-collapsible__header > a[href='/assign']", text: "Assign Group")
+    expect(page).to have_no_css("button a")
+  end
+
   it "requires both composition slots" do
     expect do
       render_inline(described_class.new(id: "incomplete")) { |collapsible| collapsible.with_trigger { "Trigger" } }
