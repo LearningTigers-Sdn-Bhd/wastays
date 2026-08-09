@@ -16,8 +16,8 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     @room_types = @all_room_types.page(params[:page]).per(25)
 
     @room_groups = @hotel.room_groups.order(:name)
-    @unassigned_count = @hotel.room_types.unassigned.count
-    @active_group_id = params[:room_group_id]
+    @selected_room_group_ids = Array(params[:room_group_ids]).compact_blank.map(&:to_s)
+    @filters_active = params[:q].present? || @selected_room_group_ids.any?
   end
 
   def new

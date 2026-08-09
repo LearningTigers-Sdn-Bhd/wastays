@@ -48,16 +48,18 @@ module HotelPortal
     end
 
     def room_pricing_summary(assignment, room_type, currency, per_person: current_hotel.sells_per_person?)
-      return "Standard Rate #{money_summary(room_type.base_price, currency)}" if assignment&.rate_plan&.standard_rate? && !per_person
-      return "Pricing not configured" unless assignment
-      return "Adjusts Standard Rate" if assignment.derives_price?
+      return money_summary(room_type.base_price, currency) if assignment&.rate_plan&.standard_rate? && !per_person
+      return "Not priced" unless assignment
 
       if per_person
         rungs = assignment.occupancy_prices.sort_by(&:adults)
-        return "Pricing not configured" if rungs.empty?
+        return "Not priced" if rungs.empty?
 
         "#{currency} #{rungs.map { |rung| "#{rung.adults}p #{number_with_precision(rung.price, precision: 0, delimiter: ',')}" }.join(' · ')}"
       else
+        return "Not priced" if assignment.pricing_value.blank?
+        return "Adjusts Standard Rate" if assignment.derives_price?
+
         money_summary(assignment.pricing_value, currency)
       end
     end

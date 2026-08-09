@@ -1,13 +1,3 @@
-<%
-  active_room_group_tab = if @active_group_id == "unassigned" && @unassigned_count.positive?
-    "unassigned"
-  elsif @room_groups.any? { |group| group.id.to_s == @active_group_id.to_s }
-    "group-#{@active_group_id}"
-  else
-    "all"
-  end
-%>
-
 <div class="w-full space-y-6">
   <% if onboarding_incomplete?(current_hotel) %>
     <%= render PanelsUI::Button.new(
@@ -29,14 +19,24 @@
         <p class="mt-1 text-sm text-muted-foreground">Manage each room category and the rate plans guests can book.</p>
       </div>
       <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        <%= render PanelsUI::Button.new(
-              href: hotel_room_groups_path(current_hotel),
-              variant: :secondary,
-              size: :sm,
-              class: "w-full sm:w-auto",
-              data: { turbo_frame: "settings_action_sheet" }) do %>
-          <%= app_icon "layout-grid", class: "size-4", aria: { hidden: true } %>
-          Manage room groups
+        <%= render PanelsUI::DropdownMenu.new(id: "room-inventory-assign-menu", placement: :bottom_end, class: "w-52") do |menu| %>
+          <% menu.with_trigger(variant: :secondary, size: :sm, class: "w-full justify-center sm:w-auto") do %>
+            <%= app_icon "link", class: "size-4", aria: { hidden: true } %>
+            <span>Assign</span>
+            <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+          <% end %>
+          <% menu.with_item(
+               href: new_hotel_room_group_assignment_path(current_hotel),
+               data: { turbo_frame: "settings_action_sheet" }) do %>
+            <%= app_icon "layout-grid", class: "size-4", aria: { hidden: true } %>
+            <span>Assign Room Group</span>
+          <% end %>
+          <% menu.with_item(
+               href: new_hotel_rate_plan_attachment_path(current_hotel),
+               data: { turbo_frame: "settings_action_sheet" }) do %>
+            <%= app_icon "badge-dollar-sign", class: "size-4", aria: { hidden: true } %>
+            <span>Assign Room Rate</span>
+          <% end %>
         <% end %>
         <%= render PanelsUI::Button.new(
               href: new_hotel_room_type_path(current_hotel),
@@ -49,73 +49,97 @@
       </div>
     </div>
 
-    <turbo-frame id="room_types_results">
-      <% if @room_groups.any? %>
-        <div class="mb-5">
-          <%= render PanelsUI::Tabs.new(
-                id: "room-group-filter",
-                active: active_room_group_tab,
-                variant: :pill,
-                aria_label: "Room Group Filter") do |tabs| %>
-            <% tabs.with_tab(
-                 name: "all",
-                 label: "All",
-                 href: hotel_room_types_path(current_hotel),
-                 data: { turbo_action: "advance" }) %>
-            <% @room_groups.each do |group| %>
-              <% tabs.with_tab(
-                   name: "group-#{group.id}",
-                   label: group.name,
-                   href: hotel_room_types_path(current_hotel, room_group_id: group.id),
-                   data: { turbo_action: "advance" }) %>
-            <% end %>
-            <% if @unassigned_count.positive? %>
-              <% tabs.with_tab(
-                   name: "unassigned",
-                   label: "Unassigned",
-                   href: hotel_room_types_path(current_hotel, room_group_id: "unassigned"),
-                   data: { turbo_action: "advance" }) %>
-            <% end %>
-          <% end %>
-        </div>
+    <%= form_with url: hotel_room_types_path(current_hotel),
+                  method: :get,
+                  class: "grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(16rem,.7fr)]",
+                  data: {
+                    controller: "auto-submit",
+                    turbo_frame: "room_types_results",
+                    turbo_action: "advance",
+                    action: "change->auto-submit#submitNow"
+                  } do |form| %>
+      <%= render PanelsUI::FormField.new(
+            form: form,
+            attribute: :q,
+            label: "Search inventory",
+            label_hidden: true) do |field| %>
+        <% field.with_input(
+             value: params[:q],
+             type: :search,
+             placeholder: "Search room category or rate plan name",
+             autocomplete: "off",
+             aria: { label: "Search room category or rate plan name" },
+             data: { action: "input->auto-submit#submit" }) %>
       <% end %>
 
+      <%= render PanelsUI::FormField.new(
+            form: form,
+            attribute: :room_group_ids,
+            label: "Filter by room groups",
+            label_hidden: true) do |field| %>
+        <% field.with_multi_select(
+             [ { label: "Unassigned", value: "unassigned" } ] +
+               @room_groups.map { |group| { label: group.name, value: group.id } },
+             selected: @selected_room_group_ids,
+             prompt: "Filter by room groups") %>
+      <% end %>
+    <% end %>
+
+    <turbo-frame id="room_types_results">
       <% if @room_types.any? %>
         <div class="overflow-hidden rounded-lg border border-border bg-card" aria-label="Room categories and rate plans">
-          <div class="hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,.7fr)_minmax(0,1fr)_auto] gap-4 border-b border-border bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground md:grid" aria-hidden="true">
+          <div class="hidden grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,.9fr)_minmax(0,.6fr)_minmax(0,.75fr)_auto] gap-4 border-b border-border bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground md:grid" aria-hidden="true">
             <span>Room category</span>
+            <span>Group</span>
             <span>Capacity</span>
-            <span>Quantity</span>
-            <span>Standard Rate</span>
-            <span class="w-44">Actions</span>
+            <span>Rooms</span>
+            <span>Rate issues</span>
+            <span class="text-right">Actions</span>
           </div>
 
-          <div class="divide-y divide-border" role="list">
+          <%= render PanelsUI::Accordion.new(
+                id: "room-inventory-accordion",
+                type: :single,
+                collapsible: true,
+                default_open: [],
+                heading_level: 3,
+                aria: { label: "Room inventory" }) do |accordion| %>
             <% @room_types.each do |room_type| %>
-              <%= render "hotel_portal/room_types/inventory_room", room_type: room_type %>
+              <%= render "hotel_portal/room_types/inventory_room", room_type: room_type, accordion: accordion %>
             <% end %>
-          </div>
+          <% end %>
         </div>
       <% else %>
         <div class="rounded-lg border border-dashed border-border px-4 py-10 text-center">
           <div class="mx-auto flex size-10 items-center justify-center rounded-md bg-muted text-muted-foreground" aria-hidden="true">
             <%= app_icon "bed-double", class: "size-5" %>
           </div>
-          <h3 class="mt-3 text-sm font-medium text-foreground">No room categories found</h3>
-          <p class="mt-1 text-sm text-muted-foreground">Create a room category to start building inventory and rates.</p>
+          <h3 class="mt-3 text-sm font-medium text-foreground"><%= @filters_active ? "No matching room categories" : "No room categories found" %></h3>
+          <p class="mt-1 text-sm text-muted-foreground">
+            <%= @filters_active ? "Try another search or change the selected room groups." : "Create a room category to start building inventory and rates." %>
+          </p>
           <div class="mt-4">
-            <%= render PanelsUI::Button.new(
-                  label: "Create room category",
-                  href: new_hotel_room_type_path(current_hotel),
-                  size: :sm,
-                  data: { turbo_frame: "settings_action_sheet" }) %>
+            <% if @filters_active %>
+              <%= render PanelsUI::Button.new(
+                    label: "Clear filters",
+                    href: hotel_room_types_path(current_hotel),
+                    variant: :secondary,
+                    size: :sm,
+                    data: { turbo_frame: "_top" }) %>
+            <% else %>
+              <%= render PanelsUI::Button.new(
+                    label: "Create room category",
+                    href: new_hotel_room_type_path(current_hotel),
+                    size: :sm,
+                    data: { turbo_frame: "settings_action_sheet" }) %>
+            <% end %>
           </div>
         </div>
       <% end %>
 
       <% if @room_types.total_pages > 1 %>
         <div class="mt-5 flex justify-center">
-          <%= paginate @room_types %>
+          <%= paginate @room_types, params: { q: params[:q], room_group_ids: @selected_room_group_ids }, data: { turbo_action: "advance" } %>
         </div>
       <% end %>
     </turbo-frame>

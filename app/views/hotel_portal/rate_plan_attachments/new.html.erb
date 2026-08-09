@@ -4,11 +4,11 @@
 <%= turbo_frame_tag frame_id do %>
   <div data-controller="panels-ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
-          id: "attach-rate-plan-sheet",
+          id: "assign-room-rate-sheet",
           side: :right,
           size: :md,
-          title: "Attach rate plan",
-          description: "Choose a plan and the room categories that will offer it.") do |sheet| %>
+          title: "Assign Room Rate",
+          description: "Choose a rate plan and the room categories that will offer it.") do |sheet| %>
       <% sheet.with_body do %>
         <%= form_with model: @attachment,
               scope: :rate_plan_attachment,
@@ -24,7 +24,7 @@
                 data: { rate_plan_attachment_target: "ratePlanId" } %>
 
           <% if @attachment_error.present? %>
-            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Rate plan could not be attached", role: :alert) do |alert| %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Room rate could not be assigned", role: :alert) do |alert| %>
               <% alert.with_description { @attachment_error } %>
             <% end %>
           <% end %>
@@ -77,7 +77,7 @@
                 form: form_id,
                 size: :sm,
                 data: { turbo_submits_with: "Attaching…" }) do %>
-            Attach rate plan
+            Assign room rate
           <% end %>
         <% end %>
       <% end %>

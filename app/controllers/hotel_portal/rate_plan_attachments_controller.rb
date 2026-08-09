@@ -64,9 +64,9 @@ class HotelPortal::RatePlanAttachmentsController < HotelPortal::SettingsBaseCont
   end
 
   def attachment_notice(result)
-    return "#{result.rate_plan.name} is already attached to the selected room categories." if result.attached_count.zero?
+    return "#{result.rate_plan.name} is already assigned to the selected room categories." if result.attached_count.zero?
 
-    "#{result.rate_plan.name} attached to #{helpers.pluralize(result.attached_count, 'room category')}."
+    "#{result.rate_plan.name} assigned to #{helpers.pluralize(result.attached_count, 'room category')}."
   end
 
   def finish_sheet(notice)

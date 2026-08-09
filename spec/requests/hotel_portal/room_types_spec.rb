@@ -25,7 +25,9 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
     let!(:grouped_room_type) { create(:room_type, hotel: hotel, room_group: room_group) }
     let!(:ungrouped_room_type) { create(:room_type, hotel: hotel, room_group: nil) }
 
-    it "lists rooms as default-open inventory rows with their rate plans" do
+    it "lists rooms as a compact, default-closed inventory accordion with rate issues" do
+      grouped_room_type.update!(description: "Description should not appear in the inventory row")
+      ungrouped_room_type.update!(max_children: 0)
       custom_plan = create(:rate_plan, :custom, hotel: hotel, name: "Non-refundable")
       custom_assignment = create(
         :room_type_rate_plan,
@@ -33,6 +35,14 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
         rate_plan: custom_plan,
         pricing_mode: "multiplier",
         pricing_value: -10
+      )
+      incomplete_plan = create(:rate_plan, :custom, hotel: hotel, name: "Advance purchase")
+      incomplete_assignment = create(
+        :room_type_rate_plan,
+        room_type: grouped_room_type,
+        rate_plan: incomplete_plan,
+        pricing_mode: "fixed",
+        pricing_value: nil
       )
 
       get hotel_room_types_path(hotel)
@@ -42,67 +52,177 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(document.css("h1").map { |heading| heading.text.squish }).to eq([ "Property Details Settings" ])
       expect(document.at_css("h2#room-inventory-heading").text.squish).to eq("Room Inventory")
       expect(document.at_css("[aria-label='Room categories and rate plans']")).to be_present
-      expect(document.at_css("#room-inventory-#{grouped_room_type.id}")["data-state"]).to eq("open")
-      expect(document.at_css("#room-inventory-rate-plan-#{custom_assignment.id}").text.squish).to include("Non-refundable")
-      expect(document.at_css("a[aria-label='Detach Non-refundable from #{grouped_room_type.name}']")).to be_present
-      expect(document.at_css("a[aria-label='Create rate plan for #{grouped_room_type.name}']")["href"]).to eq(
-        new_hotel_rate_plan_path(hotel, room_type_id: grouped_room_type.id)
+
+      accordion = document.at_css("#room-inventory-accordion")
+      expect(accordion["data-panels-ui--accordion-type-value"]).to eq("single")
+      expect(accordion["data-panels-ui--accordion-collapsible-value"]).to eq("true")
+      expect(accordion["aria-label"]).to eq("Room inventory")
+      expect(document.css("[data-room-type-id]")).to all(satisfy { |room| room["data-state"] == "closed" })
+      expect(document.css("[data-room-type-id] .panel-collapsible__content")).to all(
+        satisfy { |content| content.key?("hidden") && content.key?("inert") }
       )
-      expect(document.at_css("a[aria-label='Attach rate plan to #{grouped_room_type.name}']")["href"]).to eq(
-        new_hotel_rate_plan_attachment_path(hotel, room_type_id: grouped_room_type.id)
+
+      room_trigger = document.at_css("#room-inventory-#{grouped_room_type.id} .panel-collapsible__trigger")
+      expect(room_trigger["aria-expanded"]).to eq("false")
+      expect(room_trigger["aria-controls"]).to eq("room-inventory-#{grouped_room_type.id}-content")
+      expect(document.css("[aria-label='Room categories and rate plans'] > div:first-child > span").map { |header| header.text.squish }).to eq(
+        [ "Room category", "Group", "Capacity", "Rooms", "Rate issues", "Actions" ]
       )
-      expect(document.at_css("body").text).to include("Quantity", "Standard Rate")
+      expect(document.at_css("#room-inventory-#{grouped_room_type.id} [aria-label='1 Adult'] svg")).to be_present
+      expect(document.at_css("#room-inventory-#{grouped_room_type.id} [aria-label='1 Child'] svg")).to be_present
+      expect(document.at_css("#room-inventory-#{grouped_room_type.id} [aria-label='1 room'] svg")).to be_present
+      expect(document.at_css("#room-inventory-#{ungrouped_room_type.id} [aria-label$='Child']")).to be_nil
+
+      grouped_header = document.at_css("#room-inventory-#{grouped_room_type.id} > .panel-collapsible__header")
+      expect(grouped_header.text.squish).not_to include("Description should not appear", grouped_room_type.base_price.to_s)
+      expect(grouped_header.at_css("[aria-label='1 rate pricing issue'] svg")).to be_present
+      expect(grouped_header.at_css("[aria-label='1 rate pricing issue']").text.squish).to eq("1")
+      expect(document.at_css("#room-inventory-#{ungrouped_room_type.id} > .panel-collapsible__header").text.squish).to include("No issues")
+
+      expected_room_names = [ room_type, grouped_room_type, ungrouped_room_type ].index_by { |room| room.id.to_s }
+      document.css("[data-room-type-id]").each do |room|
+        room_name = expected_room_names.fetch(room["data-room-type-id"]).name
+        rate_plan_list = room.at_css("[role='list'][aria-label='Rate plans for #{room_name}']")
+
+        expect(rate_plan_list).to be_present
+        expect(rate_plan_list.css("[role='listitem']")).not_to be_empty
+      end
+
+      assignment_row = document.at_css("#room-inventory-rate-plan-#{custom_assignment.id}")
+      expect(assignment_row.text.squish).to include("Non-refundable", "Adjusts Standard Rate", "Ready", "Edit rate", "Detach rate")
+      expect(assignment_row.at_css("button[aria-label='Actions for Non-refundable in #{grouped_room_type.name}']")).to be_present
+      detach_action = assignment_row.css("button").find { |button| button.text.squish == "Detach rate" }
+      expect(detach_action).to be_present
+      expect(detach_action["data-turbo-confirm-tone"]).to eq("destructive")
+
+      incomplete_row = document.at_css("#room-inventory-rate-plan-#{incomplete_assignment.id}")
+      expect(incomplete_row.text.squish).to include("Advance purchase", "Not priced", "Needs pricing")
+
+      standard_assignment = grouped_room_type.room_type_rate_plans.find { |assignment| assignment.rate_plan.standard_rate? }
+      standard_row = document.at_css("#room-inventory-rate-plan-#{standard_assignment.id}")
+      expect(standard_row.text.squish).to include("Standard Rate", "Default", "MYR 99.99", "Ready")
+      expect(standard_row.text.squish).not_to include("Standard Rate MYR", "Detach rate")
+
+      new_rate = document.css("#room-inventory-#{grouped_room_type.id} a").find { |link| link.text.squish == "New rate" }
+      expect(new_rate["href"]).to eq(new_hotel_rate_plan_path(hotel, room_type_id: grouped_room_type.id))
+      expect(document.at_css("a[aria-label='Assign group to #{ungrouped_room_type.name}']")["href"]).to eq(
+        new_hotel_room_group_assignment_path(hotel, room_type_id: ungrouped_room_type.id)
+      )
+      expect(document.at_css("body").text).to include("Rooms", "Rate issues", "Rate plans (3)", "New rate")
+      expect(document.at_css("body").text).not_to include("New Rate", "Standard Rate (MYR)")
+      expect(document.at_css("body").text).to include("Assign Room Group", "Assign Room Rate")
+      expect(document.css("a[aria-label^='Attach rate plan to']")).to be_empty
       expect(document.css(".dropdown-menu-root").count).to be >= 2
       expect(document.css("button[data-turbo-confirm-tone='destructive']").count).to be >= 2
       expect(document.at_css("body").text).not_to include("Total Categories")
     end
 
-    it "filters by room group id" do
-      get hotel_room_types_path(hotel), params: { room_group_id: room_group.id }
-      expect(response).to have_http_status(:ok)
+    it "filters by multiple room groups and unassigned" do
+      another_group = create(:room_group, hotel: hotel)
+      another_room = create(:room_type, hotel: hotel, room_group: another_group)
+
+      get hotel_room_types_path(hotel), params: { room_group_ids: [ room_group.id, "unassigned" ] }
+
+      ids = response.parsed_body.css("[data-room-type-id]").map { |row| row["data-room-type-id"] }
+      expect(ids).to include(grouped_room_type.id.to_s, ungrouped_room_type.id.to_s)
+      expect(ids).not_to include(another_room.id.to_s)
     end
 
-    it "filters by unassigned room group" do
-      get hotel_room_types_path(hotel), params: { room_group_id: "unassigned" }
-      expect(response).to have_http_status(:ok)
+    it "searches by room category and attached rate plan name without duplicate rows" do
+      matching_plan = create(:rate_plan, :custom, hotel: hotel, name: "Weekend Escape")
+      create(:room_type_rate_plan, room_type: grouped_room_type, rate_plan: matching_plan)
+      second_matching_plan = create(:rate_plan, :custom, hotel: hotel, name: "Weekend Saver")
+      create(:room_type_rate_plan, room_type: grouped_room_type, rate_plan: second_matching_plan)
+
+      get hotel_room_types_path(hotel), params: { q: "WEEKEND" }
+
+      ids = response.parsed_body.css("[data-room-type-id]").map { |row| row["data-room-type-id"] }
+      expect(ids).to eq([ grouped_room_type.id.to_s ])
     end
 
-    it "falls back to the All tab for an unknown room group" do
-      get hotel_room_types_path(hotel), params: { room_group_id: "missing" }
+    it "ignores unknown room group filters" do
+      get hotel_room_types_path(hotel), params: { room_group_ids: [ "missing" ] }
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body.at_css("#room-group-filter-tab-all")[:"aria-current"]).to eq("page")
+      expect(response.parsed_body.css("[data-room-type-id]").size).to eq(3)
     end
 
-    it "renders the room group filter tab navigation when room groups exist" do
+    it "renders search and multi-group filters instead of group tabs" do
       get hotel_room_types_path(hotel)
-      expect(response.parsed_body.at_css("nav[aria-label='Room Group Filter']")).to be_present
-      expect(response.body).not_to include("Unassigned (")
+      document = response.parsed_body
+      expect(document.at_css("input[name='q']")).to be_present
+      expect(document.at_css("select[name='room_group_ids[]'][multiple]")).to be_present
+      expect(document.at_css("nav[aria-label='Room Group Filter']")).to be_nil
     end
 
-    context "when there are no room groups" do
-      before do
-        hotel.room_groups.destroy_all
-      end
+    it "paginates filtered results at 25 and retains filter state" do
+      create_list(:room_type, 26, hotel: hotel, room_group: room_group, name: "Searchable Category")
 
-      it "does not render the room group filter tab navigation" do
-        get hotel_room_types_path(hotel)
-        expect(response.body).not_to include('aria-label="Room Group Filter"')
-      end
+      get hotel_room_types_path(hotel), params: { q: "Searchable", room_group_ids: [ room_group.id ] }
+
+      document = response.parsed_body
+      expect(document.css("[data-room-type-id]").size).to eq(25)
+      page_two = document.css("a").find { |link| link.text.squish == "2" }
+      query = Rack::Utils.parse_nested_query(URI.parse(page_two["href"]).query)
+      expect(query).to include("q" => "Searchable", "page" => "2")
+      expect(query["room_group_ids"]).to eq([ room_group.id.to_s ])
     end
   end
 
   describe "GET #new" do
-    it "renders the flattened form as a sheet, with every section on one surface" do
+    it "renders a right xl single-column sheet without photo controls" do
       get new_hotel_room_type_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("new-room-category-sheet")
-      expect(response.body).to include('data-panels-ui--sheet-dismissible-value="false"')
-      %w[basics capacity amenities restrictions numbering photos].each do |section|
-        expect(response.body).to include("room-category-#{section}-heading")
+      document = response.parsed_body
+      sheet = document.at_css("dialog#new-room-category-sheet")
+      form = document.at_css("form#new-room-category-form")
+      basics_fields = document.at_css("section[aria-labelledby='room-category-basics-heading'] > div:nth-child(2)")
+      capacity_fields = document.at_css("section[aria-labelledby='room-category-capacity-heading'] > div:nth-child(2)")
+      restriction_fields = document.at_css("section[aria-labelledby='room-category-restrictions-heading'] > div:nth-child(2)")
+
+      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+      expect(sheet["class"].split).to include("right-0", "w-[48rem]")
+      expect(sheet["class"].split).not_to include("left-0", "bottom-0", "w-dvw")
+      expect(form["class"].split).to include("space-y-8")
+      expect(form["class"].split).not_to include("lg:grid-cols-2")
+      expect(basics_fields["class"].split).not_to include("sm:grid-cols-2")
+      expect(capacity_fields["class"].split).to include("sm:grid-cols-2")
+      expect(restriction_fields["class"].split).to include("sm:grid-cols-2")
+      expect(document.at_css("[class~='sm:col-span-2']")).to be_nil
+
+      %w[basics capacity amenities restrictions numbering].each do |section|
+        expect(document.at_css("#room-category-#{section}-heading")).to be_present
       end
-      expect(response.body).not_to include('data-panels-ui--tabs-target="tab"')
+      expect(document.at_css("#room-category-photos-heading")).to be_nil
+      expect(document.at_css("#room-type-photos-manager")).to be_nil
+      expect(document.at_css("#bulk-delete-photos-form")).to be_nil
+      expect(document.at_css("input[type='file']")).to be_nil
+      expect(document.at_css('[data-panels-ui--tabs-target="tab"]')).to be_nil
+    end
+  end
+
+  describe "GET #edit" do
+    it "retains the full bottom two-column sheet with photo management" do
+      get edit_hotel_room_type_path(hotel, room_type)
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      sheet = document.at_css("dialog#edit-room-category-sheet")
+      form = document.at_css("form#edit-room-category-#{room_type.id}-form")
+      restriction_fields = document.at_css("section[aria-labelledby='room-category-restrictions-heading'] > div:nth-child(2)")
+      rendered_classes = form.css("[class]").flat_map { |element| element["class"].split }
+
+      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+      expect(sheet["class"].split).to include("bottom-0", "h-dvh", "rounded-none")
+      expect(sheet["class"].split).not_to include("left-0", "w-[48rem]")
+      expect(form["class"].split).to include("lg:grid-cols-2")
+      expect(rendered_classes).to include("sm:grid-cols-2", "sm:col-span-2")
+      expect(restriction_fields["class"].split).to include("sm:grid-cols-2")
+      expect(document.at_css("#room-category-photos-heading")).to be_present
+      expect(document.at_css("#room-type-photos-manager")).to be_present
+      expect(document.at_css("#bulk-delete-photos-form")).to be_present
+      expect(document.at_css("input[type='file']")).to be_present
     end
   end
 
@@ -126,7 +246,13 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       post hotel_room_types_path(hotel), params: { room_type: valid_params[:room_type].merge(name: "") }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("new-room-category-sheet")
+      document = response.parsed_body
+      sheet = document.at_css("dialog#new-room-category-sheet")
+      form = document.at_css("form#new-room-category-form")
+
+      expect(sheet["class"].split).to include("right-0", "w-[48rem]")
+      expect(form["class"].split).to include("space-y-8")
+      expect(document.at_css("#room-category-photos-heading")).to be_nil
       expect(response.body).to include("Name can&#39;t be blank")
     end
   end
@@ -146,7 +272,13 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       patch hotel_room_type_path(hotel, room_type), params: { room_type: { name: "" } }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("edit-room-category-#{room_type.id}-form")
+      document = response.parsed_body
+      sheet = document.at_css("dialog#edit-room-category-sheet")
+      form = document.at_css("form#edit-room-category-#{room_type.id}-form")
+
+      expect(sheet["class"].split).to include("bottom-0", "h-dvh")
+      expect(form["class"].split).to include("lg:grid-cols-2")
+      expect(document.at_css("#room-category-photos-heading")).to be_present
       expect(response.body).to include("Name can&#39;t be blank")
     end
   end

@@ -31,8 +31,9 @@ RSpec.describe "HotelPortal::RatePlanAttachments", type: :request do
 
       expect(response).to have_http_status(:ok)
       document = response.parsed_body
-      sheet = document.at_css("#attach-rate-plan-sheet")
+      sheet = document.at_css("#assign-room-rate-sheet")
       expect(sheet).to be_present
+      expect(sheet.text.squish).to include("Assign Room Rate", "Assign room rate")
       expect(sheet.at_css(".panel-autocomplete input[name='rate_plan_attachment[rate_plan_name]']")).to be_present
 
       rooms = sheet.at_css("select[name='rate_plan_attachment[room_type_ids][]'][multiple]")

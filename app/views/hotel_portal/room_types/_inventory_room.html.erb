@@ -1,83 +1,110 @@
 <% assignments = room_type.room_type_rate_plans.sort_by { |assignment| [ assignment.rate_plan.standard_rate? ? 0 : 1, assignment.rate_plan.name.downcase, assignment.id ] } %>
+<% pricing_issue_count = assignments.count { |assignment| !room_pricing_complete?(assignment, room_type) } %>
 
-<article class="relative" role="listitem" data-room-type-id="<%= room_type.id %>">
-  <%= render PanelsUI::Collapsible.new(
-        id: "room-inventory-#{room_type.id}",
-        open: true,
-        region: true,
-        heading_level: 3,
-        trigger_class: "w-full px-4 py-4 pr-32 text-left hover:bg-muted/30 sm:pr-72",
-        content_class: "border-t border-border bg-muted/20") do |item| %>
-    <% item.with_trigger do %>
-      <span class="grid min-w-0 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,.7fr)_minmax(0,1fr)] md:items-center md:gap-4">
-        <span class="flex min-w-0 items-start gap-2.5">
-          <%= app_icon "chevron-down", class: "panel-collapsible__indicator mt-0.5 size-4 shrink-0 text-muted-foreground", aria: { hidden: true } %>
-          <span class="min-w-0">
-            <span class="block truncate text-sm font-medium text-foreground"><%= room_type.name %></span>
-            <span class="mt-1 block truncate text-xs font-normal text-muted-foreground"><%= room_type.description.presence || room_type.room_group&.name || "No description added" %></span>
-          </span>
-        </span>
-        <span class="ml-6 flex items-center gap-1.5 text-xs font-normal text-muted-foreground md:ml-0">
-          <%= pluralize(room_type.max_adults, "adult") %>
-          <span aria-hidden="true">·</span>
-          <%= pluralize(room_type.max_children.to_i, "child") %>
-        </span>
-        <span class="ml-6 text-xs font-normal text-muted-foreground md:ml-0">
-          <%= pluralize(room_type.quantity, "unit") %>
-        </span>
-        <span class="ml-6 text-xs font-medium text-foreground md:ml-0">
-          <%= current_hotel.default_currency || "MYR" %> <%= number_with_precision(room_type.base_price, precision: 2, delimiter: ",") %>
-        </span>
-      </span>
-    <% end %>
-
-    <% item.with_body do %>
-      <div class="divide-y divide-border/70">
-        <% assignments.each do |assignment| %>
-          <%= render "hotel_portal/room_types/inventory_rate_plan", assignment: assignment, room_type: room_type %>
-        <% end %>
-      </div>
-    <% end %>
+<% accordion.with_item(
+     value: room_type.id,
+     id: "room-inventory-#{room_type.id}",
+     region: true,
+     class: "last:border-b-0",
+     header_class: "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 hover:bg-muted/30 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,.9fr)_minmax(0,.6fr)_minmax(0,.75fr)_auto] md:gap-4",
+     trigger_class: "min-h-0 flex-row-reverse justify-end gap-2 py-0 hover:no-underline",
+     content_class: "border-t border-border bg-muted/20",
+     data: { room_type_id: room_type.id }) do |item| %>
+  <% item.with_trigger do %>
+    <span class="block min-w-0 truncate text-sm font-medium text-foreground"><%= room_type.name %></span>
   <% end %>
 
-  <div class="absolute right-3 top-3 flex items-center gap-1">
-    <%= render PanelsUI::Button.new(
-          href: new_hotel_rate_plan_path(current_hotel, room_type_id: room_type.id),
-          variant: :secondary,
-          size: :sm,
-          class: "hidden sm:inline-flex",
-          data: { turbo_frame: "settings_action_sheet" }) do %>
-      <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
-      New rate plan
-    <% end %>
-    <%= render PanelsUI::Button.new(
-          href: new_hotel_rate_plan_path(current_hotel, room_type_id: room_type.id),
-          variant: :secondary,
-          size: :icon_sm,
-          class: "sm:hidden",
-          aria_label: "Create rate plan for #{room_type.name}",
-          data: { turbo_frame: "settings_action_sheet" }) do %>
-      <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
-    <% end %>
-    <%= render PanelsUI::Button.new(
-          href: new_hotel_rate_plan_attachment_path(current_hotel, room_type_id: room_type.id),
-          variant: :ghost,
-          size: :sm,
-          class: "hidden sm:inline-flex",
-          aria_label: "Attach rate plan to #{room_type.name}",
-          data: { turbo_frame: "settings_action_sheet" }) do %>
-      <%= app_icon "link", class: "size-4", aria: { hidden: true } %>
-      Attach
-    <% end %>
-    <%= render PanelsUI::Button.new(
-          href: new_hotel_rate_plan_attachment_path(current_hotel, room_type_id: room_type.id),
-          variant: :ghost,
-          size: :icon_sm,
-          class: "sm:hidden",
-          aria_label: "Attach rate plan to #{room_type.name}",
-          data: { turbo_frame: "settings_action_sheet" }) do %>
-      <%= app_icon "link", class: "size-4", aria: { hidden: true } %>
-    <% end %>
-    <%= render "hotel_portal/room_types/record_actions", room_type: room_type, id_prefix: "inventory" %>
-  </div>
-</article>
+  <% item.with_header_content do %>
+    <div class="col-span-2 ml-6 min-w-0 md:col-auto md:ml-0">
+      <% if room_type.room_group %>
+        <span class="block truncate text-xs font-normal text-muted-foreground"><span class="md:sr-only">Group: </span><%= room_type.room_group.name %></span>
+      <% else %>
+        <%= render PanelsUI::Button.new(
+              href: new_hotel_room_group_assignment_path(current_hotel, room_type_id: room_type.id),
+              variant: :ghost,
+              size: :xs,
+              aria_label: "Assign group to #{room_type.name}",
+              data: { turbo_frame: "settings_action_sheet" }) do %>
+          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+          Assign group
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="col-span-2 ml-6 flex flex-wrap items-center gap-4 md:contents">
+      <div class="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+        <%= render PanelsUI::Tooltip.new(text: pluralize(room_type.max_adults, "Adult"), delay: 150) do %>
+          <span class="inline-flex cursor-help items-center gap-1 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="<%= pluralize(room_type.max_adults, 'Adult') %>">
+            <%= cached_icon "adult", library: "guest", class: "size-4 fill-current", aria: { hidden: "true" }, focusable: "false" %>
+            <span aria-hidden="true"><%= room_type.max_adults %></span>
+          </span>
+        <% end %>
+        <% if room_type.max_children.to_i.positive? %>
+          <%= render PanelsUI::Tooltip.new(text: pluralize(room_type.max_children.to_i, "Child"), delay: 150) do %>
+            <span class="inline-flex cursor-help items-center gap-1 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="<%= pluralize(room_type.max_children.to_i, 'Child') %>">
+              <%= cached_icon "child", library: "guest", class: "size-3 fill-current", aria: { hidden: "true" }, focusable: "false" %>
+              <span aria-hidden="true"><%= room_type.max_children.to_i %></span>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="text-xs font-normal text-muted-foreground">
+        <%= render PanelsUI::Tooltip.new(text: pluralize(room_type.quantity, "room"), delay: 150) do %>
+          <span class="inline-flex cursor-help items-center gap-1 rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="<%= pluralize(room_type.quantity, 'room') %>">
+            <%= app_icon "bed-double", class: "size-4", aria: { hidden: true } %>
+            <span aria-hidden="true"><%= room_type.quantity %></span>
+          </span>
+        <% end %>
+      </div>
+
+      <div class="text-xs font-normal text-muted-foreground">
+        <% if pricing_issue_count.zero? %>
+          <span>No issues</span>
+        <% else %>
+          <span class="inline-flex items-center gap-1 text-warning-foreground" aria-label="<%= pluralize(pricing_issue_count, 'rate pricing issue') %>">
+            <%= app_icon "triangle-alert", class: "size-4", aria: { hidden: true } %>
+            <span aria-hidden="true"><%= pricing_issue_count %></span>
+          </span>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="col-start-2 row-start-1 flex items-center justify-end md:col-auto md:row-auto">
+      <%= render "hotel_portal/room_types/record_actions", room_type: room_type, id_prefix: "inventory" %>
+    </div>
+  <% end %>
+
+  <% item.with_body do %>
+    <section aria-labelledby="room-inventory-<%= room_type.id %>-rate-plans-heading">
+      <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+        <h4 id="room-inventory-<%= room_type.id %>-rate-plans-heading" class="text-sm font-medium text-foreground">Rate plans (<%= assignments.size %>)</h4>
+        <%= render PanelsUI::Button.new(
+              href: new_hotel_rate_plan_path(current_hotel, room_type_id: room_type.id),
+              variant: :ghost,
+              size: :xs,
+              data: { turbo_frame: "settings_action_sheet" }) do %>
+          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+          New rate
+        <% end %>
+      </div>
+
+      <div class="p-2.5">
+        <div class="overflow-hidden rounded-md border border-border bg-card">
+          <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,.8fr)_auto] gap-4 border-b border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground sm:grid" aria-hidden="true">
+            <span>Rate plan</span>
+            <span>Price</span>
+            <span>Status</span>
+            <span class="sr-only">Actions</span>
+          </div>
+
+          <div class="divide-y divide-border/70" role="list" aria-label="Rate plans for <%= room_type.name %>">
+            <% assignments.each do |assignment| %>
+              <%= render "hotel_portal/room_types/inventory_rate_plan", assignment: assignment, room_type: room_type %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </section>
+  <% end %>
+<% end %>

@@ -6,14 +6,18 @@
 <% room_group_choices = @hotel.room_groups.order(:name).map { |group| { label: group.name, value: group.id } } %>
 <% custom_numbering = room_type.room_number_mode == "custom" %>
 <% currency = @hotel.default_currency %>
+<% form_classes = single_column ? "space-y-8" : "grid grid-cols-1 items-start gap-x-10 gap-y-10 lg:grid-cols-2" %>
+<% basics_grid_classes = single_column ? "mt-4 grid items-start gap-4" : "mt-4 grid items-start gap-4 sm:grid-cols-2" %>
+<% capacity_grid_classes = "mt-4 grid items-start gap-4 sm:grid-cols-2" %>
+<% restrictions_grid_classes = "mt-4 grid gap-3 sm:grid-cols-2" %>
 
 <%= form_with model: [ @hotel, room_type ],
               local: true,
               id: form_id,
-              class: "grid grid-cols-1 items-start gap-x-10 gap-y-10 lg:grid-cols-2",
+              class: form_classes,
               data: { controller: "room-number-generator" } do |f| %>
   <% if room_type.errors.any? %>
-    <div class="lg:col-span-2">
+    <div class="<%= "lg:col-span-2" unless single_column %>">
       <%= render PanelsUI::Alert.new(
             tone: :destructive,
             title: pluralize(room_type.errors.count, "error") + " prevented this room category from being saved",
@@ -39,7 +43,7 @@
         <p class="mt-2 text-sm text-muted-foreground">Name this room category and place it in a room group.</p>
       </div>
 
-      <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
+      <div class="<%= basics_grid_classes %>">
         <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Room Category Name", required: true) do |field| %>
           <% field.with_input(placeholder: "e.g. Deluxe Twin Room", autocomplete: "off") %>
         <% end %>
@@ -59,7 +63,7 @@
               form: f,
               attribute: :description,
               label: "Description",
-              class: "sm:col-span-2") do |field| %>
+              class: ("sm:col-span-2" unless single_column)) do |field| %>
           <% field.with_text_area(rows: 3, placeholder: "e.g. Spacious room with two twin beds and a city view.") %>
         <% end %>
       </div>
@@ -71,7 +75,7 @@
         <p class="mt-2 text-sm text-muted-foreground">Base occupancy, how many units exist, and this category's default nightly price.</p>
       </div>
 
-      <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
+      <div class="<%= capacity_grid_classes %>">
         <%= render PanelsUI::FormField.new(form: f, attribute: :max_adults, label: "Max Adults", required: true) do |field| %>
           <% field.with_input(type: :number, min: 1, step: 1) %>
         <% end %>
@@ -130,7 +134,7 @@
         <p class="mt-2 text-sm text-muted-foreground">House rules that apply to this room category.</p>
       </div>
 
-      <div class="mt-4 grid gap-3">
+      <div class="<%= restrictions_grid_classes %>">
         <%= render PanelsUI::Switch.new(
               form: f,
               attribute: :smoking_allowed,
@@ -212,34 +216,36 @@
       </div>
     </section>
 
-    <section aria-labelledby="room-category-photos-heading">
-      <div>
-        <h2 id="room-category-photos-heading" class="text-base font-semibold text-foreground">Photos</h2>
-        <p class="mt-2 text-sm text-muted-foreground">Show off this room category to guests.</p>
-      </div>
+    <% if show_photos %>
+      <section aria-labelledby="room-category-photos-heading">
+        <div>
+          <h2 id="room-category-photos-heading" class="text-base font-semibold text-foreground">Photos</h2>
+          <p class="mt-2 text-sm text-muted-foreground">Show off this room category to guests.</p>
+        </div>
 
-      <div class="mt-4 space-y-4">
-        <%= render PanelsUI::FormField.new(
-              form: f,
-              attribute: :photos,
-              label: "Room category photos",
-              label_hidden: true) do |field| %>
-          <% field.with_dropzone(
-               accept: "image/*",
-               multiple: true,
-               max_files: RoomType::MAX_PHOTOS,
-               existing_count: room_type.photos.count,
-               preview: :image,
-               description: "PNG, JPG, or JPEG · maximum #{RoomType::MAX_PHOTOS} photos") %>
-        <% end %>
+        <div class="mt-4 space-y-4">
+          <%= render PanelsUI::FormField.new(
+                form: f,
+                attribute: :photos,
+                label: "Room category photos",
+                label_hidden: true) do |field| %>
+            <% field.with_dropzone(
+                 accept: "image/*",
+                 multiple: true,
+                 max_files: RoomType::MAX_PHOTOS,
+                 existing_count: room_type.photos.count,
+                 preview: :image,
+                 description: "PNG, JPG, or JPEG · maximum #{RoomType::MAX_PHOTOS} photos") %>
+          <% end %>
 
-        <%= render "photo_manager", room_type: room_type %>
-      </div>
-    </section>
+          <%= render "photo_manager", room_type: room_type %>
+        </div>
+      </section>
+    <% end %>
   </div>
 <% end %>
 
-<% unless room_type.new_record? %>
+<% if show_photos && room_type.persisted? %>
   <%= form_with url: bulk_destroy_photos_hotel_room_type_path(@hotel, room_type), method: :delete, id: "bulk-delete-photos-form", class: "hidden" do |form| %>
   <% end %>
 <% end %>

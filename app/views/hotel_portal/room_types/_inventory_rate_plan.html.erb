@@ -1,20 +1,23 @@
 <% rate_plan = assignment.rate_plan %>
 <% complete = room_pricing_complete?(assignment, room_type) %>
 
-<div id="room-inventory-rate-plan-<%= assignment.id %>" class="grid gap-3 px-4 py-3 pl-10 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] sm:items-center">
+<div id="room-inventory-rate-plan-<%= assignment.id %>" class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,.8fr)_auto] sm:items-center sm:gap-4" role="listitem">
   <div class="min-w-0">
     <div class="flex flex-wrap items-center gap-2">
       <p class="truncate text-sm font-medium text-foreground"><%= rate_plan.name %></p>
       <% if rate_plan.standard_rate? %>
-        <%= render PanelsUI::Badge.new(label: "Standard", variant: :outline, size: :sm) %>
+        <%= render PanelsUI::Badge.new(label: "Default", variant: :outline, size: :sm) %>
       <% elsif rate_plan.archived? %>
         <%= render PanelsUI::Badge.new(label: "Archived", variant: :neutral, size: :sm) %>
       <% end %>
     </div>
-    <p class="mt-1 text-xs text-muted-foreground"><%= room_pricing_summary(assignment, room_type, rate_plan.currency) %></p>
   </div>
 
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="col-start-1 text-xs text-muted-foreground sm:col-auto">
+    <span class="sm:sr-only">Price: </span><%= room_pricing_summary(assignment, room_type, rate_plan.currency) %>
+  </div>
+
+  <div class="col-start-1 flex flex-wrap items-center gap-2 sm:col-auto">
     <%= render PanelsUI::Badge.new(
           label: complete ? "Ready" : "Needs pricing",
           variant: complete ? :success : :warning,
@@ -25,36 +28,43 @@
     <% end %>
   </div>
 
-  <div class="flex items-center gap-1 sm:justify-end">
-    <%= render PanelsUI::Button.new(
-          href: edit_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: room_type.id),
-          variant: :ghost,
-          size: :sm,
-          class: "w-full sm:w-auto",
-          data: { turbo_frame: "settings_action_sheet" }) do %>
-      Edit
-      <%= app_icon "chevron-right", class: "size-4", aria: { hidden: true } %>
-    <% end %>
-    <% unless rate_plan.standard_rate? %>
-      <%= render PanelsUI::Button.new(
-            href: hotel_rate_plan_room_pricing_path(
-              current_hotel,
-              rate_plan,
-              room_type,
-              return_to: hotel_room_types_path(current_hotel)
-            ),
-            variant: :ghost,
-            size: :sm,
-            aria_label: "Detach #{rate_plan.name} from #{room_type.name}",
-            data: {
-              turbo_method: :delete,
-              turbo_frame: "_top",
-              turbo_confirm: "Detach '#{rate_plan.name}' from #{room_type.name}? The rate plan remains available to its other room categories.",
-              turbo_confirm_title: "Detach rate plan",
-              turbo_confirm_tone: "destructive"
-            }) do %>
-        <%= app_icon "unlink", class: "size-4", aria: { hidden: true } %>
-        <span class="hidden sm:inline">Detach</span>
+  <div class="col-start-2 row-span-3 row-start-1 flex items-start justify-end sm:col-auto sm:row-auto sm:items-center">
+    <%= render PanelsUI::DropdownMenu.new(
+          id: "inventory-rate-plan-#{assignment.id}-actions",
+          placement: :bottom_end,
+          class: "w-48") do |menu| %>
+      <% menu.with_trigger(
+           variant: :ghost,
+           size: :icon_sm,
+           aria_label: "Actions for #{rate_plan.name} in #{room_type.name}") do %>
+        <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+      <% menu.with_item(
+           href: edit_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: room_type.id),
+           data: { turbo_frame: "settings_action_sheet" }) do %>
+        <%= app_icon "pencil", class: "size-4", aria: { hidden: true } %>
+        <span>Edit rate</span>
+      <% end %>
+      <% unless rate_plan.standard_rate? %>
+        <% menu.with_separator %>
+        <% menu.with_item(
+             href: hotel_rate_plan_room_pricing_path(
+               current_hotel,
+               rate_plan,
+               room_type,
+               return_to: hotel_room_types_path(current_hotel)
+             ),
+             method: :delete,
+             variant: :danger,
+             data: {
+               turbo_frame: "_top",
+               turbo_confirm: "Detach '#{rate_plan.name}' from #{room_type.name}? The rate plan remains available to its other room categories.",
+               turbo_confirm_title: "Detach rate plan",
+               turbo_confirm_tone: "destructive"
+             }) do %>
+          <%= app_icon "unlink", class: "size-4", aria: { hidden: true } %>
+          <span>Detach rate</span>
+        <% end %>
       <% end %>
     <% end %>
   </div>

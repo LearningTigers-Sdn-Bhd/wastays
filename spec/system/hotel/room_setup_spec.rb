@@ -33,10 +33,11 @@ RSpec.describe 'Room Setup', type: :system do
 
     expect(page).to have_content('Room category created successfully.')
     expect(page).to have_content('Deluxe Suite')
-    expect(page).to have_css(".panel-collapsible[data-state='open']", text: 'Deluxe Suite')
-    first("a[aria-label='Attach rate plan to Deluxe Suite']", visible: :all).click
+    expect(page).to have_css(".panel-collapsible[data-state='closed']", text: 'Deluxe Suite')
+    click_button 'Assign'
+    click_link 'Assign Room Rate'
 
-    within '#attach-rate-plan-sheet' do
+    within '#assign-room-rate-sheet' do
       expect(page).to have_css('.panel-autocomplete', text: '')
       expect(page).to have_css('.panel-multi-select', text: 'Deluxe Suite')
       expect(page).to have_no_content('Guest pricing')
@@ -44,6 +45,7 @@ RSpec.describe 'Room Setup', type: :system do
     end
 
     visit hotel_dashboard_path(hotel)
-    expect(page).to have_content('Hotel Portal')
+    expect(page).to have_current_path(hotel_dashboard_path(hotel))
+    expect(page).to have_content('Rates & Inventory')
   end
 end
