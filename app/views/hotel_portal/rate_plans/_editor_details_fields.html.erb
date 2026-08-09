@@ -7,31 +7,21 @@
   </div>
 
   <% unless rate_plan.standard_rate? %>
-    <div class="grid items-start gap-4 sm:grid-cols-2">
+    <div class="grid items-start gap-4">
       <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true) do |field| %>
         <% field.with_input(autocomplete: "off") %>
       <% end %>
       <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
-        <% field.with_input(autocomplete: "off", placeholder: "Pay in full at booking. No changes or refunds.") %>
+        <% field.with_text_area(rows: 3, placeholder: "Pay in full at booking. No changes or refunds.") %>
       <% end %>
     </div>
   <% end %>
 
-  <dl aria-label="Property-controlled rate plan settings" class="grid gap-4 border-y border-border py-4 sm:grid-cols-2">
-    <div>
-      <dt class="text-xs text-muted-foreground">How the property charges</dt>
-      <dd class="mt-1 text-sm font-medium text-foreground"><%= current_hotel.sells_per_person? ? "Price per guest" : "One price per room" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs text-muted-foreground">Currency</dt>
-      <dd class="mt-1 text-sm font-medium text-foreground" translate="no"><%= rate_plan.currency %></dd>
-    </div>
-  </dl>
   <p class="text-sm text-muted-foreground">Daily prices, availability, and restrictions are managed under Rates &amp; Availability.</p>
 </section>
 
 <% unless current_hotel.sells_per_person? %>
-  <section aria-labelledby="rate-plan-occupancy-heading" class="space-y-4 border-t border-border pt-6">
+  <section aria-labelledby="rate-plan-occupancy-heading" class="space-y-4">
     <div>
       <h3 id="rate-plan-occupancy-heading" class="text-base font-semibold text-foreground">Occupancy pricing</h3>
       <p class="mt-1 text-sm text-muted-foreground">These rules apply to every room category on this plan.</p>
@@ -55,7 +45,7 @@
 <% end %>
 
 <% unless rate_plan.standard_rate? %>
-  <section aria-labelledby="rate-plan-status-heading" class="space-y-4 border-t border-border pt-6">
+  <section aria-labelledby="rate-plan-status-heading" class="space-y-4">
     <h3 id="rate-plan-status-heading" class="text-base font-semibold text-foreground">Plan status</h3>
     <div class="flex flex-wrap items-center gap-2">
       <% if rate_plan.archived? %>

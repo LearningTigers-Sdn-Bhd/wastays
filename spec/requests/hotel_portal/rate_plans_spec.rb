@@ -32,7 +32,34 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("New rate plan")
-      expect(Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog')).to be_present
+      sheet = Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog#new-rate-plan-sheet')
+      expect(sheet).to be_present
+      expect(sheet["class"]).to include("w-[48rem]")
+      expect(sheet["data-panels-ui-sheet-side"]).to eq("right")
+      expect(sheet["data-panels-ui-sheet-variant"]).to eq("edge")
+      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+    end
+
+    it 'puts the full-width room context first and uses a two-column occupancy grid' do
+      get new_hotel_rate_plan_path(hotel)
+
+      doc = Nokogiri::HTML(response.body)
+      form = doc.at_css('form#new-rate-plan-form')
+      room_selector = form.at_css('select[name="rate_plan[room_type_id]"]')
+      details = doc.at_css('section[aria-labelledby="new-rate-plan-details-heading"]')
+      occupancy = doc.at_css('section[aria-labelledby="new-rate-plan-occupancy-heading"]')
+      pricing = doc.at_css('section[aria-labelledby="new-rate-plan-room-pricing-heading"]')
+      pricing_context = form.at_css('.panel-alert[data-tone="info"]')
+
+      expect(form.to_html.index(room_selector.to_html)).to be < form.to_html.index('new-rate-plan-details-heading')
+      expect(room_selector.ancestors.map { |node| node["class"] }.compact.join(" ")).not_to include("max-w-sm")
+      expect(pricing_context.text.squish).to include("Property pricing settings", "The property charges per room", "Prices use MYR")
+      expect(form.at_css('textarea#rate_plan_description')).to be_present
+      expect(details.at_css('.grid.items-start.gap-4')["class"]).not_to include("sm:grid-cols-2")
+      expect(occupancy.at_css('.grid.items-start.gap-4')["class"]).to include("sm:grid-cols-2")
+      expect(form.at_css('dl[aria-label="Property-controlled rate plan settings"]')).to be_nil
+      expect(occupancy["class"]).not_to include("border-t")
+      expect(pricing["class"]).not_to include("border-t")
     end
 
     it 'uses autocomplete and one room selector as the pricing context' do
@@ -77,9 +104,9 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       get new_hotel_rate_plan_path(hotel)
 
-      context = Nokogiri::HTML(response.body).at_css('dl[aria-label="Property-controlled rate plan settings"]')
-      expect(context.text.squish).to include('How the property charges Price per guest')
-      expect(context.text.squish).to include('Currency USD')
+      context = Nokogiri::HTML(response.body).at_css('.panel-alert[data-tone="info"]')
+      expect(context.text.squish).to include('The property charges per guest')
+      expect(context.text.squish).to include('Prices use USD')
       expect(Nokogiri::HTML(response.body).at_css('#rate_plan_sell_mode')).to be_nil
     end
 
@@ -96,15 +123,16 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   describe 'GET /hotel/:hotel_id/rate_plans/:id/edit' do
     let!(:rate_plan) { create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Promo Rate') }
 
-    it 'renders a non-dismissible full bottom sheet as one form without tabs' do
+    it 'renders a non-dismissible XL right edge sheet as one form without tabs' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       expect(response).to have_http_status(:ok)
       doc = Nokogiri::HTML(response.body)
       sheet = doc.at_css('turbo-frame#settings_action_sheet dialog#edit-rate-plan-sheet')
       expect(sheet).to be_present
-      expect(sheet["class"]).to include("h-dvh")
-      expect(sheet["data-panels-ui-sheet-side"]).to eq("bottom")
+      expect(sheet["class"]).to include("w-[48rem]")
+      expect(sheet["data-panels-ui-sheet-side"]).to eq("right")
+      expect(sheet["data-panels-ui-sheet-variant"]).to eq("edge")
       expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
       expect(doc.at_css("form#edit-rate-plan-#{rate_plan.id}-form")).to be_present
       expect(doc.css('[role="tab"]')).to be_empty
@@ -112,6 +140,30 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.text.squish).to include("Room pricing")
       expect(doc.at_css('dialog[role="alertdialog"]')).to be_present
       expect(response.body).to include("Promo Rate")
+    end
+
+    it 'puts the full-width room context first and uses a two-column occupancy grid' do
+      get edit_hotel_rate_plan_path(hotel, rate_plan)
+
+      doc = Nokogiri::HTML(response.body)
+      form = doc.at_css("form#edit-rate-plan-#{rate_plan.id}-form")
+      room_selector = form.at_css('select[name="rate_plan[room_type_id]"]')
+      details = doc.at_css('section[aria-labelledby="rate-plan-details-heading"]')
+      occupancy = doc.at_css('section[aria-labelledby="rate-plan-occupancy-heading"]')
+      pricing = doc.at_css('section[aria-labelledby="rate-plan-room-pricing-heading"]')
+      status = doc.at_css('section[aria-labelledby="rate-plan-status-heading"]')
+      pricing_context = form.at_css('.panel-alert[data-tone="info"]')
+
+      expect(form.to_html.index(room_selector.to_html)).to be < form.to_html.index('rate-plan-details-heading')
+      expect(room_selector.ancestors.map { |node| node["class"] }.compact.join(" ")).not_to include("max-w-sm")
+      expect(pricing_context.text.squish).to include("Property pricing settings", "The property charges per room", "Prices use MYR")
+      expect(form.at_css('textarea#rate_plan_description')).to be_present
+      expect(details.at_css('.grid.items-start.gap-4')["class"]).not_to include("sm:grid-cols-2")
+      expect(occupancy.at_css('.grid.items-start.gap-4')["class"]).to include("sm:grid-cols-2")
+      expect(form.at_css('dl[aria-label="Property-controlled rate plan settings"]')).to be_nil
+      expect(occupancy["class"]).not_to include("border-t")
+      expect(pricing["class"]).not_to include("border-t")
+      expect(status["class"]).not_to include("border-t")
     end
 
     it 'never asks the operator how the plan is charged — the property decides' do
@@ -201,9 +253,33 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
       empty_state = Nokogiri::HTML(response.body).at_css('[data-rate-plan-age-bands-target="emptyState"]')
-      expect(empty_state.text).to include('No age groups yet')
+      child_pricing = Nokogiri::HTML(response.body).at_css('section[aria-labelledby="rate-plan-child-pricing-heading"]')
+      expect(empty_state.text).to include('No age-specific pricing added')
       expect(empty_state["class"]).not_to include("hidden")
+      expect(child_pricing["class"]).not_to include("border", "rounded-md", "p-4")
+      expect(child_pricing.text.squish).not_to include("Child age groups")
       expect(response.body).to include('Add age group')
+    end
+
+    it 'keeps cards only for the pricing mode choices' do
+      hotel.update!(sell_mode: "per_person")
+      per_person_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Family Plan')
+
+      get edit_hotel_rate_plan_path(hotel, per_person_plan)
+
+      doc = Nokogiri::HTML(response.body)
+      primary_rate_row = doc.at_css('[data-rate-plan-room-pricing-target="autoPanel"]')
+      ladder = doc.at_css('[data-rate-plan-room-pricing-target="ladderPanel"]')
+      mode_choice = doc.at_css('input[data-rate-plan-room-pricing-target="mode"]').parent
+
+      expect(primary_rate_row["class"]).to include("grid", "sm:grid-cols-3")
+      expect(primary_rate_row.css('.panel-form-field[data-size="md"]').size).to eq(3)
+      expect(primary_rate_row.at_css('select[name="room_pricing[increase_unit]"]')).to be_present
+      expect(primary_rate_row.at_css('select[name="room_pricing[decrease_unit]"]')).to be_present
+      expect(ladder["class"]).not_to include("border", "rounded-md", "p-4")
+      expect(ladder.at_css('select[name="room_pricing[increase_unit]"]')).to be_nil
+      expect(ladder.at_css('select[name="room_pricing[decrease_unit]"]')).to be_nil
+      expect(mode_choice["class"]).to include("border", "rounded-md", "p-3")
     end
 
     it 'hides the empty-state add button once age groups already exist' do

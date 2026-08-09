@@ -60,14 +60,20 @@
 <% end %>
 
 <% if per_person %>
-  <div data-rate-plan-room-pricing-target="autoPanel" class="max-w-sm">
+  <div data-rate-plan-room-pricing-target="autoPanel" class="grid items-start gap-4 sm:grid-cols-3">
     <%= render PanelsUI::FormField.new(form: f, attribute: :default_rate, label: "Rate at primary occupancy") do |field| %>
       <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
       <% field.with_addon(align: :inline_start) { currency } %>
     <% end %>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :increase_unit, label: "Increase unit") do |field| %>
+      <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.increase_unit) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :decrease_unit, label: "Decrease unit") do |field| %>
+      <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.decrease_unit) %>
+    <% end %>
   </div>
 
-  <div data-rate-plan-room-pricing-target="ladderPanel" class="space-y-4 rounded-md border border-border p-4">
+  <div data-rate-plan-room-pricing-target="ladderPanel" class="space-y-4">
     <p class="text-sm text-muted-foreground">Use these controls to fill the direct occupancy prices above. The generated amounts become editable starting prices when saved.</p>
     <div class="grid items-start gap-4 sm:grid-cols-3">
       <%= render PanelsUI::FormField.new(form: f, attribute: :primary_occupancy, label: "Primary occupancy", hint: "The adult count the rate above refers to.") do |field| %>
@@ -78,14 +84,6 @@
       <% end %>
       <%= render PanelsUI::FormField.new(form: f, attribute: :decrease_by, label: "Decrease by", hint: "Per adult below primary.") do |field| %>
         <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-      <% end %>
-    </div>
-    <div class="grid items-start gap-4 sm:grid-cols-2">
-      <%= render PanelsUI::FormField.new(form: f, attribute: :increase_unit, label: "Increase unit", size: :sm) do |field| %>
-        <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.increase_unit) %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form: f, attribute: :decrease_unit, label: "Decrease unit", size: :sm) do |field| %>
-        <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.decrease_unit) %>
       <% end %>
     </div>
     <p class="text-sm text-muted-foreground" data-rate-plan-room-pricing-target="preview" aria-live="polite"></p>
