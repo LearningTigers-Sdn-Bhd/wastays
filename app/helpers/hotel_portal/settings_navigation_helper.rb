@@ -122,14 +122,13 @@ module HotelPortal
         [
           hotel_permission_granted?("manage_hotel_profile") ? { key: "general", label: "General", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
           hotel_permission_granted?("manage_hotel_profile") && current_hotel.allow_boat_information? ? { key: "boat", label: "Boat Settings", path: hotel_boat_settings_path(current_hotel), icon: "ship", active: controller_name.in?(%w[settings boat_schedules]) && settings_active_page == "boat" } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { key: "rates", label: "Rate Settings", path: hotel_rates_settings_path(current_hotel), icon: "badge-dollar-sign", active: controller_name == "settings" && settings_active_page == "rates" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "notifications", label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" } : nil,
           { key: "plan", label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
         ].compact
       when :property
         [
           { key: "hotel-details", label: "Hotel Details", path: edit_hotel_profile_path(current_hotel), icon: "building-2", active: controller_name == "profiles" },
-          { key: "room-categories", label: "Room Categories", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name == "room_types" },
+          { key: "room-inventory", label: "Room Inventory", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name.in?(%w[room_types rate_plan_attachments rate_plans rate_plan_room_pricings]) },
           { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" }
         ]
       when :commercial

@@ -10,48 +10,117 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   def new
     @rate_plan = current_hotel.rate_plans.build
     @rate_plan.currency = current_hotel.default_currency || "MYR"
+    load_new_rate_plan_form(room_type_id: params[:room_type_id])
     render layout: false
   end
 
   def edit
-    load_rate_plan_editor(tab: params[:tab], room_type_id: params[:room_type_id])
+    load_rate_plan_editor(room_type_id: params[:room_type_id])
     render layout: false
   end
 
   def create
     attrs = rate_plan_params
-    room_type_pricing = attrs.delete(:room_type_pricing) || {}
+    room_type_id = attrs.delete(:room_type_id)
+    selected_rate_plan_id = attrs.delete(:rate_plan_id)
+    @selected_room_type = current_hotel.room_types.find_by(id: room_type_id)
+    @room_pricing = HotelPortal::RatePlanRoomPricing.from_h(
+      room_pricing_params,
+      room_type: @selected_room_type,
+      sells_per_person: current_hotel.sells_per_person?
+    )
 
-    @rate_plan = current_hotel.rate_plans.build(attrs)
-    @rate_plan.currency = current_hotel.default_currency || "MYR"
-
-    saved = false
+    result = nil
+    pricing_result = nil
     with_batched_ari_sync do
       ActiveRecord::Base.transaction do
-        saved = @rate_plan.save
-        saved = sync_room_type_pricing!(@rate_plan, room_type_pricing) if saved
-        raise ActiveRecord::Rollback unless saved
+        unless @selected_room_type
+          @rate_plan = current_hotel.rate_plans.build(attrs)
+          @rate_plan.errors.add(:base, "Select a room category")
+          raise ActiveRecord::Rollback
+        end
+
+        result = RatePlans::Resolve.call(
+          hotel: current_hotel,
+          rate_plan_id: selected_rate_plan_id,
+          rate_plan_name: attrs[:name],
+          create_attributes: attrs.except(:name).merge(currency: current_hotel.default_currency || "MYR")
+        )
+        unless result.success?
+          @rate_plan = result.rate_plan || current_hotel.rate_plans.build(attrs)
+          @rate_plan.errors.add(:base, result.error)
+          raise ActiveRecord::Rollback
+        end
+
+        @rate_plan = result.rate_plan
+        pricing_result = RatePlans::SaveRoomPricing.call(
+          rate_plan: @rate_plan,
+          room_type: @selected_room_type,
+          pricing: @room_pricing
+        )
+        unless pricing_result.success?
+          @rate_plan.errors.add(:base, pricing_result.error)
+          raise ActiveRecord::Rollback
+        end
       end
     end
 
-    if saved
-      push_ari(@rate_plan, room_type_pricing)
+    if result&.success? && pricing_result&.success?
+      ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: [ @selected_room_type.id ])
       finish_sheet(notice: "Rate plan '#{@rate_plan.name}' created successfully.")
     else
+      load_new_rate_plan_form(room_type_id: room_type_id, preserve_pricing: true)
       render :new, layout: false, status: :unprocessable_content
     end
   end
 
   def update
-    section = params[:section].presence_in(%w[details children]) || "details"
-
-    attrs = section == "children" ? child_pricing_params : detail_params
+    attrs = rate_plan_params
+    room_type_id = attrs.delete(:room_type_id)
+    attrs.delete(:rate_plan_id)
     attrs = attrs.except(:name, :description) if @rate_plan.standard_rate?
+    @selected_room_type = @rate_plan.room_types.find_by(id: room_type_id)
+    @room_pricing = if @selected_room_type
+      HotelPortal::RatePlanRoomPricing.from_h(
+        room_pricing_params,
+        room_type: @selected_room_type,
+        sells_per_person: current_hotel.sells_per_person?
+      )
+    end
 
-    if @rate_plan.update(attrs)
-      render_editor_success(section == "children" ? "Child pricing saved." : "Plan details saved.", tab: section)
+    saved = false
+    with_batched_ari_sync do
+      ActiveRecord::Base.transaction do
+        unless @selected_room_type
+          @rate_plan.errors.add(:base, "Select an attached room category")
+          raise ActiveRecord::Rollback
+        end
+
+        unless @rate_plan.update(attrs)
+          raise ActiveRecord::Rollback
+        end
+
+        unless @rate_plan.standard_rate? && !current_hotel.sells_per_person?
+          pricing_result = RatePlans::SaveRoomPricing.call(
+            rate_plan: @rate_plan,
+            room_type: @selected_room_type,
+            pricing: @room_pricing
+          )
+          unless pricing_result.success?
+            @rate_plan.errors.add(:base, pricing_result.error)
+            raise ActiveRecord::Rollback
+          end
+        end
+
+        saved = true
+      end
+    end
+
+    if saved
+      ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: [ @selected_room_type.id ])
+      render_editor_success("Rate plan saved.", room_type_id: @selected_room_type.id)
     else
-      render_editor_errors(tab: section)
+      render_editor_errors(room_type_id: room_type_id)
     end
   end
 
@@ -70,7 +139,7 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
 
     @rate_plan.archive!
     if rate_plan_editor_request?
-      render_editor_success("Rate plan '#{@rate_plan.name}' archived.", tab: "details")
+      render_editor_success("Rate plan '#{@rate_plan.name}' archived.")
     else
       finish_sheet(notice: "Rate plan '#{@rate_plan.name}' archived. It will no longer be offered for new bookings.")
     end
@@ -79,7 +148,7 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   def unarchive
     @rate_plan.unarchive!
     if rate_plan_editor_request?
-      render_editor_success("Rate plan '#{@rate_plan.name}' restored.", tab: "details")
+      render_editor_success("Rate plan '#{@rate_plan.name}' restored.")
     else
       finish_sheet(notice: "Rate plan '#{@rate_plan.name}' restored.")
     end
@@ -87,11 +156,11 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
 
   private
 
-  # Closes the sheet (when the request came from one) and lands back on the
-  # rates settings page. Mirrors SheetActionCompletion#complete_sheet_action,
-  # which only carries a notice — archive/delete guards need an alert too.
+  # Closes the sheet and returns to Room Inventory. This mirrors
+  # SheetActionCompletion#complete_sheet_action while also carrying alerts for
+  # archive/delete guards.
   def finish_sheet(notice: nil, alert: nil)
-    destination = hotel_rates_settings_path(current_hotel)
+    destination = hotel_room_types_path(current_hotel)
 
     respond_to do |format|
       format.turbo_stream do
@@ -111,132 +180,51 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     @rate_plan = current_hotel.rate_plans.find(params[:id])
   end
 
-  # A section save posts only its own tab's fields, and a tab can legitimately
-  # have none — Standard Rate on a per-guest property owns neither its name nor
-  # any occupancy rule. fetch rather than require so that saves as a no-op
-  # instead of a 400.
-  def section_params = params.fetch(:rate_plan, {})
-
-  def detail_params
-    permitted = section_params.permit(:name, :description, :base_occupancy, :extra_pax_charge)
-    current_hotel.sells_per_person? ? permitted.slice(:name, :description) : permitted
-  end
-
-  def child_pricing_params
-    return ActionController::Parameters.new.permit! unless current_hotel.sells_per_person?
-
-    section_params.permit(
-      :child_price_multiplier,
-      rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ]
-    )
-  end
-
   # :sell_mode is deliberately absent — RatePlan inherits it from the hotel, so
   # a submitted value would only ever be ignored or fight the property setting.
   def rate_plan_params
     params.require(:rate_plan).permit(
       :name,
+      :description,
+      :room_type_id,
+      :rate_plan_id,
       :base_occupancy,
       :extra_pax_charge,
       :single_supplement,
       :child_price_multiplier,
-      rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ],
-      room_type_pricing: {}
+      rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ]
     )
   end
 
-  # Syncs which room types this rate plan applies to, and each room type's
-  # pricing_mode/pricing_value, from the per-room-type rows submitted by the
-  # form. Returns false (adding an error onto rate_plan) if any row fails to
-  # save, so the caller can roll back the whole create/update.
-  #
-  # A standard plan is created with its room category and stays bound to it:
-  # reassigning one would attach a second category to another category's anchor
-  # plan and leave the first without an anchor of its own. The form renders that
-  # section read-only, and this drops the parameters regardless of what was
-  # submitted.
-  def sync_room_type_pricing!(rate_plan, room_type_pricing)
-    return true if rate_plan.standard_rate?
-
-    sync_room_type_pricing_rows!(rate_plan, room_type_pricing)
+  def room_pricing_params
+    params.fetch(:room_pricing, {}).permit(
+      :rate_mode,
+      :default_rate,
+      :derive_mode,
+      :derive_value,
+      :primary_occupancy,
+      :increase_by,
+      :increase_unit,
+      :decrease_by,
+      :decrease_unit,
+      prices: {}
+    )
   end
 
-  def push_ari(rate_plan, room_type_pricing)
-    return if rate_plan.standard_rate?
+  def load_new_rate_plan_form(room_type_id:, preserve_pricing: false)
+    @room_types = current_hotel.room_types.order(:name, :id).to_a
+    @selected_room_type ||= @room_types.find { |room_type| room_type.id == room_type_id.to_i } || @room_types.first
+    return unless @selected_room_type
+    return if preserve_pricing && @room_pricing
 
-    # room_type_pricing is ActionController::Parameters, which has each_pair but
-    # not the full Enumerable surface.
-    enabled_ids = []
-    room_type_pricing.each_pair do |room_type_id, attrs|
-      enabled_ids << room_type_id.to_i if ActiveModel::Type::Boolean.new.cast(attrs[:enabled])
+    standard_assignment = @selected_room_type.standard_rate_plan&.room_type_rate_plans&.find_by(room_type: @selected_room_type)
+    @room_pricing = HotelPortal::RatePlanRoomPricing.from_assignment(
+      standard_assignment,
+      room_type: @selected_room_type,
+      sells_per_person: current_hotel.sells_per_person?
+    )
+    if !current_hotel.sells_per_person? && @room_pricing.default_rate.blank?
+      @room_pricing.default_rate = @selected_room_type.base_price
     end
-
-    ChannelManagers::SyncRatePlanAri.call(rate_plan: rate_plan, room_type_ids: enabled_ids)
-  end
-
-  def sync_room_type_pricing_rows!(rate_plan, room_type_pricing)
-    room_type_pricing.each do |room_type_id, attrs|
-      room_type = current_hotel.room_types.find_by(id: room_type_id)
-      next unless room_type
-
-      rtrp = rate_plan.room_type_rate_plans.find_or_initialize_by(room_type_id: room_type.id)
-      enabled = ActiveModel::Type::Boolean.new.cast(attrs[:enabled])
-
-      if enabled
-        rtrp.pricing_mode = attrs[:pricing_mode].presence || "fixed"
-        rtrp.pricing_value = attrs[:pricing_value].presence
-
-        if rtrp.pricing_mode == "fixed" && !current_hotel.sells_per_person? && rtrp.pricing_value.blank?
-          rate_plan.errors.add(:base, "#{room_type.name}: enter a starting price")
-          return false
-        end
-
-        unless rtrp.save
-          rate_plan.errors.add(:base, "#{room_type.name}: #{rtrp.errors.full_messages.to_sentence}")
-          return false
-        end
-
-        unless sync_occupancy_prices!(rate_plan, rtrp, room_type, attrs[:occupancy_prices])
-          return false
-        end
-      elsif rtrp.persisted?
-        rtrp.destroy
-      end
-    end
-
-    if rate_plan.room_type_rate_plans.reload.none?
-      rate_plan.errors.add(:room_types, "must include at least one room category")
-      return false
-    end
-
-    true
-  end
-
-  def sync_occupancy_prices!(rate_plan, assignment, room_type, submitted_prices)
-    unless current_hotel.sells_per_person? && assignment.pricing_mode == "fixed"
-      assignment.occupancy_prices.destroy_all
-      return true
-    end
-
-    prices = submitted_prices.to_h.stringify_keys
-    expected = (1..room_type.max_adults).to_a
-
-    expected.each do |adults|
-      value = prices[adults.to_s].presence
-      if value.blank?
-        rate_plan.errors.add(:base, "#{room_type.name}: enter the price for #{adults} #{adults == 1 ? 'adult' : 'adults'}")
-        return false
-      end
-
-      occupancy_price = assignment.occupancy_prices.find_or_initialize_by(adults: adults)
-      occupancy_price.price = value
-      unless occupancy_price.save
-        rate_plan.errors.add(:base, "#{room_type.name}, #{adults} #{adults == 1 ? 'adult' : 'adults'}: #{occupancy_price.errors.full_messages.to_sentence}")
-        return false
-      end
-    end
-
-    assignment.occupancy_prices.where.not(adults: expected).destroy_all
-    true
   end
 end

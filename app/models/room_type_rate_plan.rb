@@ -10,6 +10,7 @@ class RoomTypeRatePlan < ApplicationRecord
   attr_accessor :included
 
   validates :pricing_mode, presence: true, inclusion: { in: %w[fixed multiplier offset] }
+  validates :rate_plan_id, uniqueness: { scope: :room_type_id }
   validates :pricing_value, presence: true, numericality: true, unless: -> { pricing_mode == "fixed" }
   validates :pricing_value, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true, if: -> { pricing_mode == "fixed" }
 

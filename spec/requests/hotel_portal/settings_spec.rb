@@ -41,6 +41,13 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to have_http_status(:moved_permanently)
     end
 
+    it "permanently redirects the old Room Categories URL to Room Inventory" do
+      get "/hotel/#{hotel.to_param}/settings/property/room-categories"
+
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+    end
+
     it "permanently redirects the settings root to General" do
       get hotel_settings_path(hotel)
 
@@ -51,7 +58,6 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     it "uses the shared heading for General settings pages" do
       {
         hotel_general_settings_path(hotel) => "General Settings",
-        hotel_rates_settings_path(hotel) => "General Settings",
         hotel_ai_concierge_settings_path(hotel) => "AI Concierge",
         hotel_notification_settings_path(hotel) => "General Settings",
         hotel_banking_details_settings_path(hotel) => "Banking Details"
@@ -202,7 +208,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[2].at_css("a")&.text&.squish).to eq("General")
       expect(breadcrumb_items[2].at_css("button[aria-label='Open General navigation']")).to be_present
       expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "General", "Rate Settings", "Notifications", "Plan & Billing" ]
+        [ "General", "Notifications", "Plan & Billing" ]
       )
     end
 
@@ -280,6 +286,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to redirect_to(hotel_notification_settings_path(hotel))
       expect(response).to have_http_status(:moved_permanently)
 
+      get hotel_settings_path(hotel, tab: "rates")
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+
       get hotel_settings_path(hotel, tab: "banking")
       expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
       expect(response).to have_http_status(:moved_permanently)
@@ -305,42 +315,11 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   end
 
   describe "GET /hotel/:hotel_id/settings/general/rates" do
-    it "renders the rate settings tab with a rate plan list and a New Rate Plan trigger" do
+    it "permanently redirects to Room Inventory" do
       get hotel_rates_settings_path(hotel)
 
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Rate Settings")
-      expect(response.body).to include("New rate plan")
-      expect(Nokogiri::HTML(response.body).at_css('[data-testid="rate-plans-registry"]')).to be_present
-    end
-
-    it "splits standard plans onto their own tab, so system rows do not bury composed plans" do
-      room_type = create(:room_type, hotel: hotel, name: "Ocean Villa")
-      composed = create(:rate_plan, hotel: hotel, name: "Breakfast Rate", kind: "custom", room_type: room_type)
-      standard = room_type.rate_plans.find_by(kind: "standard")
-
-      get hotel_rates_settings_path(hotel)
-      plans_tab = Nokogiri::HTML(response.body)
-      expect(plans_tab.at_css('[data-testid="rate-plans-registry"]')).to be_present
-      expect(plans_tab.at_css("#rate-plan-row-#{composed.id}")).to be_present
-      expect(plans_tab.at_css("#rate-plan-row-#{standard.id}")).to be_nil
-
-      get hotel_rates_settings_path(hotel, view: "standard")
-      standard_tab = Nokogiri::HTML(response.body)
-      expect(standard_tab.at_css('[data-testid="standard-rates-registry"]')).to be_present
-      expect(standard_tab.at_css("#rate-plan-row-#{standard.id}")).to be_present
-      expect(standard_tab.at_css("#rate-plan-row-#{composed.id}")).to be_nil
-    end
-
-    it "hides the Walk-in Rate plan row when the hotel sells per guest" do
-      hotel.update!(sell_mode: "per_person")
-      create(:rate_plan, hotel: hotel, name: "Standard Rate")
-      create(:rate_plan, :walk_in_tier, hotel: hotel)
-
-      get hotel_rates_settings_path(hotel)
-
-      expect(response).to have_http_status(:ok)
-      expect(response.body).not_to include("Walk-in Rate")
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
     end
   end
 

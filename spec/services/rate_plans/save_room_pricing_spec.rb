@@ -6,7 +6,7 @@ RSpec.describe RatePlans::SaveRoomPricing do
   let(:rate_plan) { create(:rate_plan, :custom, hotel: hotel) }
 
   def pricing(attrs)
-    HotelPortal::RatePlanWizard::RoomPricing.from_h(
+    HotelPortal::RatePlanRoomPricing.from_h(
       attrs,
       room_type: room_type,
       sells_per_person: hotel.sells_per_person?

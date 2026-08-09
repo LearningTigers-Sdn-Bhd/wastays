@@ -46,7 +46,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_link('Rates & Inventory', href: hotel_inventory_index_path(hotel), visible: :all)
     expect(page).to have_link('Guest Records', href: hotel_guests_path(hotel), visible: :all)
     expect(page).to have_no_link('Hotel Details', href: edit_hotel_profile_path(hotel), visible: :all)
-    expect(page).to have_no_link('Room Categories', href: hotel_room_types_path(hotel), visible: :all)
+    expect(page).to have_no_link('Room Inventory', href: hotel_room_types_path(hotel), visible: :all)
     expect(page).to have_no_link('Nearby Attractions', href: hotel_nearby_attractions_path(hotel), visible: :all)
     # Reports is a layer of its own now: operations carries the door, not the
     # individual report pages.

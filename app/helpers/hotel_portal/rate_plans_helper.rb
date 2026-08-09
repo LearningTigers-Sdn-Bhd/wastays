@@ -2,12 +2,39 @@
 
 module HotelPortal
   module RatePlansHelper
-    # Per-room-type pricing submits as a plain hash under
-    # rate_plan[room_type_pricing][<room_type_id>] rather than a nested
-    # association, so there is no builder to hand PanelsUI. fields_for with a
-    # string scope over this stand-in produces exactly those names.
-    RoomTypePricingScope = Struct.new(:pricing_mode, :pricing_value)
     RoomSelectionScope = Struct.new(:room_type_id)
+
+    def rate_plan_rate_mode_options(pricing)
+      {
+        "manual" => {
+          label: "Set prices directly",
+          hint: pricing.per_person? ? "Type the price for each number of adults." : "Type one nightly price for the room."
+        },
+        "derived" => {
+          label: "Adjust Standard Rate",
+          hint: "Start from this category's standard rate."
+        },
+        "auto" => {
+          label: "Generate from a starting rate",
+          hint: "Start from a rate you set, then step per adult."
+        }
+      }.slice(*pricing.available_modes)
+    end
+
+    def rate_plan_derive_choices
+      [
+        { label: "Adjust standard rate by %", value: "multiplier" },
+        { label: "Adjust standard rate by amount", value: "offset" }
+      ]
+    end
+
+    def rate_plan_step_unit_choices(currency)
+      [ { label: currency, value: "amount" }, { label: "%", value: "percent" } ]
+    end
+
+    def rate_plan_money(amount, currency)
+      "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
+    end
 
     # A per-room assignment carries one figure whichever mode it is in, so
     # presence of pricing_value is the whole test. A per-guest one is only
@@ -38,20 +65,6 @@ module HotelPortal
     def money_summary(amount, currency)
       "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
     end
-
-    def room_type_pricing_choices
-      [
-        { label: "I'll set prices by date", value: "fixed" },
-        { label: "Adjust Standard Rate by %", value: "multiplier" },
-        { label: "Adjust Standard Rate by amount", value: "offset" }
-      ]
-    end
-
-    # Backs the age-band "preview using" selector. It exists only to pick which
-    # room type the example prices are calculated against, so it is scoped
-    # outside :rate_plan and never reaches strong params — but PanelsUI selects
-    # all require a real form builder, hence the stand-in object.
-    PreviewScope = Struct.new(:room_type_id)
 
     # "Walk-in"/"Corporate"/"OTA" say what the row is; "virtual tier" is an
     # internal notion staff have no reason to learn.

@@ -8,24 +8,25 @@
   end
 %>
 
-<div class="w-full space-y-3.5">
+<div class="w-full space-y-6">
   <% if onboarding_incomplete?(current_hotel) %>
-    <div>
-      <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-brand-primary/20 bg-brand-primary/5 px-3 py-1.5 text-xs font-bold text-brand-primary transition-colors hover:bg-brand-primary/10" do %>
-        <%= app_icon "chevron-left", class: "size-3.5", aria: { hidden: "true" } %>
-        Back to Onboarding
-      <% end %>
-    </div>
+    <%= render PanelsUI::Button.new(
+          href: hotel_dashboard_path(current_hotel),
+          variant: :ghost,
+          size: :sm) do %>
+      <%= app_icon "chevron-left", class: "size-4", aria: { hidden: true } %>
+      Back to onboarding
+    <% end %>
   <% end %>
 
   <%= render "hotel_portal/settings/property_page_header" %>
   <%= render "hotel_portal/settings/group_tabs" %>
 
-  <section aria-labelledby="room-categories-heading">
+  <section aria-labelledby="room-inventory-heading" class="space-y-5">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h2 id="room-categories-heading" class="text-base font-semibold text-foreground">Room Categories</h2>
-        <p class="mt-2 text-sm text-muted-foreground">Define room configurations, occupancy limits, inventory, and base pricing.</p>
+        <h2 id="room-inventory-heading" class="text-base font-semibold text-foreground">Room Inventory</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Manage each room category and the rate plans guests can book.</p>
       </div>
       <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
         <%= render PanelsUI::Button.new(
@@ -34,23 +35,23 @@
               size: :sm,
               class: "w-full sm:w-auto",
               data: { turbo_frame: "settings_action_sheet" }) do %>
-          <%= app_icon "layout-grid", class: "size-4", aria: { hidden: "true" } %>
-          <span>Manage Room Groups</span>
+          <%= app_icon "layout-grid", class: "size-4", aria: { hidden: true } %>
+          Manage room groups
         <% end %>
         <%= render PanelsUI::Button.new(
               href: new_hotel_room_type_path(current_hotel),
               size: :sm,
               class: "w-full sm:w-auto",
               data: { turbo_frame: "settings_action_sheet" }) do %>
-          <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
-          <span>Create</span>
+          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+          Create room category
         <% end %>
       </div>
     </div>
 
     <turbo-frame id="room_types_results">
       <% if @room_groups.any? %>
-        <div class="mt-5">
+        <div class="mb-5">
           <%= render PanelsUI::Tabs.new(
                 id: "room-group-filter",
                 active: active_room_group_tab,
@@ -79,122 +80,44 @@
         </div>
       <% end %>
 
-      <div class="mt-5 hidden md:block">
-        <%= render PanelsUI::Table.new(
-              caption: "Room categories",
-              hoverable: true,
-              wrapper_class: "rounded-lg border border-border bg-card") do |table| %>
-          <% table.with_header do %>
-            <tr>
-              <th scope="col">Category / Description</th>
-              <th scope="col">Adults</th>
-              <th scope="col">Children</th>
-              <th scope="col">Units</th>
-              <th scope="col">Base Price</th>
-              <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
-            </tr>
-          <% end %>
-          <% table.with_body do %>
-            <% if @room_types.any? %>
-              <% @room_types.each do |room_type| %>
-                <tr>
-                  <th scope="row">
-                    <div class="min-w-0">
-                      <p class="font-semibold text-foreground"><%= room_type.name %></p>
-                      <p class="mt-1 line-clamp-2 text-xs font-normal text-muted-foreground"><%= room_type.description.presence || "No description added." %></p>
-                    </div>
-                  </th>
-                  <td class="tabular-nums"><%= room_type.max_adults %></td>
-                  <td class="tabular-nums"><%= room_type.max_children.to_i %></td>
-                  <td class="tabular-nums"><%= room_type.quantity %></td>
-                  <td class="whitespace-nowrap font-medium tabular-nums text-foreground">MYR <%= number_with_precision(room_type.base_price, precision: 2, delimiter: ",") %></td>
-                  <td class="text-right">
-                    <%= render "hotel_portal/room_types/record_actions",
-                               room_type: room_type,
-                               id_prefix: "table" %>
-                  </td>
-                </tr>
-              <% end %>
-            <% else %>
-              <tr>
-                <td colspan="6" class="h-40 text-center">
-                  <p class="font-medium text-foreground">No room categories found.</p>
-                  <p class="mt-1 text-muted-foreground">Create the first room configuration for this property.</p>
-                  <div class="mt-4">
-                    <%= render PanelsUI::Button.new(
-                          label: "Create Room Category",
-                          href: new_hotel_room_type_path(current_hotel),
-                          size: :sm,
-                          data: { turbo_frame: "settings_action_sheet" }) %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          <% end %>
-        <% end %>
-      </div>
+      <% if @room_types.any? %>
+        <div class="overflow-hidden rounded-lg border border-border bg-card" aria-label="Room categories and rate plans">
+          <div class="hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,.7fr)_minmax(0,1fr)_auto] gap-4 border-b border-border bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground md:grid" aria-hidden="true">
+            <span>Room category</span>
+            <span>Capacity</span>
+            <span>Quantity</span>
+            <span>Standard Rate</span>
+            <span class="w-44">Actions</span>
+          </div>
 
-      <div class="mt-5 space-y-3 md:hidden">
-        <% if @room_types.any? %>
-          <% @room_types.each do |room_type| %>
-            <%= render PanelsUI::Card.new(
-                  width: :full,
-                  density: :compact,
-                  variant: :outlined,
-                  as: :article) do |card| %>
-              <% card.with_header(
-                   title: room_type.name,
-                   description: room_type.description.presence || "No description added.") do |header| %>
-                <% header.with_actions do %>
-                  <%= render "hotel_portal/room_types/record_actions",
-                             room_type: room_type,
-                             id_prefix: "card" %>
-                <% end %>
-              <% end %>
-              <% card.with_card_content do %>
-                <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  <div>
-                    <dt class="text-xs text-muted-foreground">Adults</dt>
-                    <dd class="mt-1 font-medium tabular-nums text-foreground"><%= room_type.max_adults %></dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-muted-foreground">Children</dt>
-                    <dd class="mt-1 font-medium tabular-nums text-foreground"><%= room_type.max_children.to_i %></dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-muted-foreground">Units</dt>
-                    <dd class="mt-1 font-medium tabular-nums text-foreground"><%= room_type.quantity %></dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-muted-foreground">Base Price</dt>
-                    <dd class="mt-1 font-medium tabular-nums text-foreground">MYR <%= number_with_precision(room_type.base_price, precision: 2, delimiter: ",") %></dd>
-                  </div>
-                </dl>
-              <% end %>
+          <div class="divide-y divide-border" role="list">
+            <% @room_types.each do |room_type| %>
+              <%= render "hotel_portal/room_types/inventory_room", room_type: room_type %>
             <% end %>
-          <% end %>
-        <% else %>
-          <%= render PanelsUI::Card.new(width: :full, density: :compact, variant: :outlined) do |card| %>
-            <% card.with_card_content do %>
-              <div class="py-6 text-center">
-                <p class="text-sm font-medium text-foreground">No room categories found.</p>
-                <p class="mt-1 text-sm text-muted-foreground">Create the first room configuration for this property.</p>
-                <div class="mt-4">
-                  <%= render PanelsUI::Button.new(
-                        label: "Create Room Category",
-                        href: new_hotel_room_type_path(current_hotel),
-                        size: :sm,
-                        data: { turbo_frame: "settings_action_sheet" }) %>
-                </div>
-              </div>
-            <% end %>
-          <% end %>
-        <% end %>
-      </div>
+          </div>
+        </div>
+      <% else %>
+        <div class="rounded-lg border border-dashed border-border px-4 py-10 text-center">
+          <div class="mx-auto flex size-10 items-center justify-center rounded-md bg-muted text-muted-foreground" aria-hidden="true">
+            <%= app_icon "bed-double", class: "size-5" %>
+          </div>
+          <h3 class="mt-3 text-sm font-medium text-foreground">No room categories found</h3>
+          <p class="mt-1 text-sm text-muted-foreground">Create a room category to start building inventory and rates.</p>
+          <div class="mt-4">
+            <%= render PanelsUI::Button.new(
+                  label: "Create room category",
+                  href: new_hotel_room_type_path(current_hotel),
+                  size: :sm,
+                  data: { turbo_frame: "settings_action_sheet" }) %>
+          </div>
+        </div>
+      <% end %>
 
-      <div class="mt-5 flex justify-center">
-        <%= paginate @room_types %>
-      </div>
+      <% if @room_types.total_pages > 1 %>
+        <div class="mt-5 flex justify-center">
+          <%= paginate @room_types %>
+        </div>
+      <% end %>
     </turbo-frame>
   </section>
 </div>

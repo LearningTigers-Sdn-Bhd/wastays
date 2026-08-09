@@ -6,6 +6,14 @@ RSpec.describe RoomTypeRatePlan, type: :model do
     it { should belong_to(:rate_plan) }
     it { should validate_inclusion_of(:pricing_mode).in_array(%w[fixed multiplier offset]) }
 
+    it "allows a rate plan only once per room category" do
+      assignment = create(:room_type_rate_plan)
+      duplicate = build(:room_type_rate_plan, room_type: assignment.room_type, rate_plan: assignment.rate_plan)
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:rate_plan_id]).to include("has already been taken")
+    end
+
     it 'does not require pricing_value when pricing_mode is fixed' do
       rtrp = build(:room_type_rate_plan, pricing_mode: 'fixed', pricing_value: nil)
       expect(rtrp).to be_valid

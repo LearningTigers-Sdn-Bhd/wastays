@@ -92,11 +92,7 @@
               form: f,
               attribute: :base_price,
               label: "Standard Rate (#{currency})",
-              hint: safe_join([
-                "The default nightly price for any date without an override. Other plans derive from it in ",
-                link_to("Rate Settings", hotel_rates_settings_path(@hotel), class: "underline"),
-                "."
-              ]),
+              hint: "The default nightly price for dates without an override. Other rate plans can derive from it.",
               required: true) do |field| %>
           <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
         <% end %>

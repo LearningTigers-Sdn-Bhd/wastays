@@ -1,4 +1,4 @@
-<% modes = wizard_rate_mode_options(pricing) %>
+<% modes = rate_plan_rate_mode_options(pricing) %>
 <% per_person = pricing.per_person? %>
 
 <fieldset class="space-y-3">
@@ -48,7 +48,7 @@
 
 <div data-rate-plan-room-pricing-target="derivedPanel" class="grid items-start gap-4 sm:grid-cols-2">
   <%= render PanelsUI::FormField.new(form: f, attribute: :derive_mode, label: "Relationship to Standard Rate") do |field| %>
-    <% field.with_select_menu(wizard_derive_choices, selected: pricing.derive_mode) %>
+    <% field.with_select_menu(rate_plan_derive_choices, selected: pricing.derive_mode) %>
   <% end %>
   <%= render PanelsUI::FormField.new(form: f, attribute: :derive_value, label: "Adjustment", hint: "Negative to discount, positive to add.") do |field| %>
     <% field.with_input(type: :number, step: 0.01, inputmode: "decimal") %>
@@ -82,10 +82,10 @@
     </div>
     <div class="grid items-start gap-4 sm:grid-cols-2">
       <%= render PanelsUI::FormField.new(form: f, attribute: :increase_unit, label: "Increase unit", size: :sm) do |field| %>
-        <% field.with_select_menu(wizard_step_unit_choices(currency), selected: pricing.increase_unit) %>
+        <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.increase_unit) %>
       <% end %>
       <%= render PanelsUI::FormField.new(form: f, attribute: :decrease_unit, label: "Decrease unit", size: :sm) do |field| %>
-        <% field.with_select_menu(wizard_step_unit_choices(currency), selected: pricing.decrease_unit) %>
+        <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.decrease_unit) %>
       <% end %>
     </div>
     <p class="text-sm text-muted-foreground" data-rate-plan-room-pricing-target="preview" aria-live="polite"></p>

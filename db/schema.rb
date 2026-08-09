@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_08_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_09_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2198,6 +2198,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_08_090000) do
     t.datetime "updated_at", null: false
     t.index ["rate_plan_id"], name: "index_room_type_rate_plans_on_rate_plan_id"
     t.index ["room_type_id"], name: "index_room_type_rate_plans_on_room_type_id"
+    t.index ["room_type_id", "rate_plan_id"], name: "idx_room_type_rate_plans_unique_assignment", unique: true
   end
 
   create_table "room_types", force: :cascade do |t|

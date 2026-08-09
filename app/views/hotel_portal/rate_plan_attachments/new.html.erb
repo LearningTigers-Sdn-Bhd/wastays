@@ -1,0 +1,86 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = "attach-rate-plan-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "attach-rate-plan-sheet",
+          side: :right,
+          size: :md,
+          title: "Attach rate plan",
+          description: "Choose a plan and the room categories that will offer it.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @attachment,
+              scope: :rate_plan_attachment,
+              url: hotel_rate_plan_attachments_path(current_hotel),
+              method: :post,
+              id: form_id,
+              class: "space-y-5 py-2",
+              data: {
+                controller: "rate-plan-attachment",
+                action: "input->rate-plan-attachment#clearRatePlanSelection panels-ui:autocomplete-select->rate-plan-attachment#selectRatePlan"
+              } do |form| %>
+          <%= form.hidden_field :rate_plan_id,
+                data: { rate_plan_attachment_target: "ratePlanId" } %>
+
+          <% if @attachment_error.present? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Rate plan could not be attached", role: :alert) do |alert| %>
+              <% alert.with_description { @attachment_error } %>
+            <% end %>
+          <% end %>
+
+          <% if @room_types.any? %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :rate_plan_name,
+                  label: "Rate plan name",
+                  hint: "Select an existing plan or enter a name to create one.",
+                  required: true) do |field| %>
+              <% field.with_autocomplete(
+                   endpoint: autocomplete_hotel_rate_plan_attachments_path(current_hotel),
+                   placeholder: "Search or enter a rate plan name",
+                   min_length: 1) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :room_type_ids,
+                  label: "Room categories",
+                  hint: "Each room starts with pricing from its own Standard Rate.",
+                  required: true) do |field| %>
+              <% field.with_multi_select(
+                   @room_types.map { |room_type| { label: "#{room_type.name} · #{pluralize(room_type.max_adults, 'adult')}", value: room_type.id } },
+                   selected: @selected_room_type_ids,
+                   prompt: "Search and select room categories") %>
+            <% end %>
+          <% else %>
+            <%= render PanelsUI::Alert.new(tone: :warning, title: "Create a room category first", role: :status) do |alert| %>
+              <% alert.with_description { "A rate plan needs at least one room category." } %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <% if @room_types.any? %>
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                form: form_id,
+                size: :sm,
+                data: { turbo_submits_with: "Attaching…" }) do %>
+            Attach rate plan
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

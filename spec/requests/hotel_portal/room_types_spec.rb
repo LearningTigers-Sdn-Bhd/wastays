@@ -25,17 +25,33 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
     let!(:grouped_room_type) { create(:room_type, hotel: hotel, room_group: room_group) }
     let!(:ungrouped_room_type) { create(:room_type, hotel: hotel, room_group: nil) }
 
-    it "lists all room types by default" do
+    it "lists rooms as default-open inventory rows with their rate plans" do
+      custom_plan = create(:rate_plan, :custom, hotel: hotel, name: "Non-refundable")
+      custom_assignment = create(
+        :room_type_rate_plan,
+        room_type: grouped_room_type,
+        rate_plan: custom_plan,
+        pricing_mode: "multiplier",
+        pricing_value: -10
+      )
+
       get hotel_room_types_path(hotel)
 
       expect(response).to have_http_status(:ok)
       document = response.parsed_body
       expect(document.css("h1").map { |heading| heading.text.squish }).to eq([ "Property Details Settings" ])
-      expect(document.at_css("h2#room-categories-heading").text.squish).to eq("Room Categories")
-      expect(document.at_css(".panel-table caption.sr-only").text.squish).to eq("Room categories")
-      table_headings = document.css(".panel-table thead th").map { |heading| heading.text.squish }
-      expect(table_headings).to include("Adults", "Children")
-      expect(document.css(".panel-card").count).to be >= 1
+      expect(document.at_css("h2#room-inventory-heading").text.squish).to eq("Room Inventory")
+      expect(document.at_css("[aria-label='Room categories and rate plans']")).to be_present
+      expect(document.at_css("#room-inventory-#{grouped_room_type.id}")["data-state"]).to eq("open")
+      expect(document.at_css("#room-inventory-rate-plan-#{custom_assignment.id}").text.squish).to include("Non-refundable")
+      expect(document.at_css("a[aria-label='Detach Non-refundable from #{grouped_room_type.name}']")).to be_present
+      expect(document.at_css("a[aria-label='Create rate plan for #{grouped_room_type.name}']")["href"]).to eq(
+        new_hotel_rate_plan_path(hotel, room_type_id: grouped_room_type.id)
+      )
+      expect(document.at_css("a[aria-label='Attach rate plan to #{grouped_room_type.name}']")["href"]).to eq(
+        new_hotel_rate_plan_attachment_path(hotel, room_type_id: grouped_room_type.id)
+      )
+      expect(document.at_css("body").text).to include("Quantity", "Standard Rate")
       expect(document.css(".dropdown-menu-root").count).to be >= 2
       expect(document.css("button[data-turbo-confirm-tone='destructive']").count).to be >= 2
       expect(document.at_css("body").text).not_to include("Total Categories")
