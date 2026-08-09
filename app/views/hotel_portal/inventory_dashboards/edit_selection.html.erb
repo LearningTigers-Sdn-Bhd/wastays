@@ -1,0 +1,212 @@
+<%# Cell editor for the rate calendar, served into the page's sheet frame.
+
+    Every value here is resolved server-side from the clicked cell, so the grid
+    no longer has to carry the whole editable state in data attributes and the
+    Stimulus controller no longer has to reassemble a form from them. What stays
+    client-side is the staging step: submitting does not save, it adds the
+    change to the local draft that the Sync button later applies in one batch.
+%>
+<% frame_id = turbo_frame_request_id.presence || "inventory_selection_sheet" %>
+<% form_id = "inventory-selection-form" %>
+<% availability = @mode == "availability" %>
+<% per_person = current_hotel.sells_per_person? %>
+<% channel_override = params[:channel_id].present? %>
+<% max_adults = [ @room_type&.max_adults.to_i, 1 ].max %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "inventory-selection-sheet",
+          side: :right,
+          size: :lg,
+          dismissible: true,
+          title: availability ? "Update availability" : "Update rates",
+          description: "#{l(@date, format: :long)}#{" · #{@room_type.name}" if @room_type}") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with scope: :selection_update,
+              url: bulk_save_ari_hotel_inventory_dashboards_path(current_hotel),
+              method: :post,
+              id: form_id,
+              class: "space-y-6",
+              data: {
+                inventory_calendar_target: "form",
+                action: "submit->inventory-calendar#confirmSubmit",
+                mode: @mode,
+                room_type_id: params[:room_type_id],
+                rate_plan_id: params[:rate_plan_id],
+                date: @date.to_s
+              } do |f| %>
+          <%= hidden_field_tag :tab, params[:tab] %>
+          <%= hidden_field_tag :subtab, params[:subtab] %>
+          <%= f.hidden_field :mode, value: @mode, data: { inventory_calendar_target: "mode" } %>
+          <%= f.hidden_field :channel_id, value: params[:channel_id], data: { inventory_calendar_target: "channelIdField" } %>
+          <%= f.hidden_field :channel_rate_plan_id, value: params[:channel_rate_plan_id], data: { inventory_calendar_target: "channelRatePlanIdField" } %>
+          <%= f.hidden_field :apply_inventory, value: availability ? "1" : "0", data: { inventory_calendar_target: "applyInventory" } %>
+          <%= f.hidden_field :apply_rates, value: availability ? "0" : "1", data: { inventory_calendar_target: "applyRates" } %>
+          <%= f.hidden_field :apply_restrictions, value: availability ? "0" : "1", data: { inventory_calendar_target: "applyRestrictions" } %>
+          <%= f.hidden_field :currency, value: @hotel_base_currency, data: { inventory_calendar_target: "currencyField" } %>
+
+          <section class="space-y-4" aria-labelledby="inventory-selection-scope">
+            <h3 id="inventory-selection-scope" class="text-base font-semibold text-foreground">Where this applies</h3>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: f, attribute: :start_date, label: "First night") do |field| %>
+                <% field.with_date_picker(value: @date.iso8601) %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form: f, attribute: :end_date, label: "Last night",
+                    hint: "Leave as the first night to change one date only.") do |field| %>
+                <% field.with_date_picker(value: @date.iso8601) %>
+              <% end %>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: f, attribute: :room_type_ids, label: "Room categories") do |field| %>
+              <% field.with_multi_select(
+                   @calendar.room_type_options.map { |room_type| [ room_type.name, room_type.id.to_s ] },
+                   selected: @selected_room_type_ids,
+                   prompt: "Search room categories") %>
+            <% end %>
+
+            <% unless availability %>
+              <%= render PanelsUI::FormField.new(form: f, attribute: :rate_plan_ids, label: "Rate plans") do |field| %>
+                <% field.with_multi_select(
+                     inventory_rate_plan_choices(@calendar),
+                     selected: @selected_rate_plan_ids,
+                     prompt: "Search rate plans") %>
+              <% end %>
+            <% end %>
+          </section>
+
+          <% if availability %>
+            <section class="space-y-4" aria-labelledby="inventory-selection-availability">
+              <h3 id="inventory-selection-availability" class="text-base font-semibold text-foreground">Availability</h3>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <%= render PanelsUI::FormField.new(form: f, attribute: :quantity, label: "Rooms bookable",
+                      hint: "Currently #{@cell[:quantity].to_i}.") do |field| %>
+                  <% field.with_input(type: :number, min: 0, value: nil,
+                       placeholder: "No change",
+                       data: { inventory_calendar_target: "quantityField", action: "input->inventory-calendar#markTouched" }) %>
+                <% end %>
+
+                <%= render PanelsUI::FormField.new(form: f, attribute: :status, label: "Status",
+                      hint: "Currently #{@cell[:status] == 'closed' ? 'closed' : 'open'}.") do |field| %>
+                  <% field.with_select_menu(
+                       [ [ "No change", "" ], [ "Open", "open" ], [ "Closed", "closed" ] ],
+                       data: { inventory_calendar_target: "statusField", action: "change->inventory-calendar#markTouched" }) %>
+                <% end %>
+              </div>
+            </section>
+          <% else %>
+            <section class="space-y-4" aria-labelledby="inventory-selection-rates">
+              <h3 id="inventory-selection-rates" class="text-base font-semibold text-foreground">Price</h3>
+
+              <% if per_person && !channel_override %>
+                <div class="space-y-3" data-inventory-calendar-target="paxFields">
+                  <p class="text-sm text-muted-foreground">
+                    Set the total nightly room price for each number of adults.
+                    <%= @room_type ? "#{@room_type.name} sleeps #{pluralize(max_adults, 'adult')}." : "" %>
+                  </p>
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <% (1..max_adults).each do |adults| %>
+                      <div data-inventory-calendar-target="occupancyPriceRow" data-adults="<%= adults %>">
+                        <%= render PanelsUI::FormField.new(
+                              form: f,
+                              attribute: :"occupancy_price_#{adults}",
+                              label: "#{pluralize(adults, 'adult')} (#{@hotel_base_currency})") do |field| %>
+                          <% field.with_input(
+                               type: :number,
+                               step: 0.01,
+                               min: 0,
+                               name: "selection_update[occupancy_prices][#{adults}]",
+                               value: @cell[:occupancy_prices].to_h[adults.to_s] || @cell[:occupancy_prices].to_h[adults],
+                               data: {
+                                 inventory_calendar_target: "occupancyPriceField",
+                                 adults: adults,
+                                 field_name: "occupancy_prices",
+                                 action: "input->inventory-calendar#markTouched"
+                               }) %>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                  <p class="text-sm text-muted-foreground">
+                    Child prices and age groups come from the rate plan. Change them under Rate plans.
+                  </p>
+                </div>
+              <% else %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :price,
+                      label: "Room price (#{@hotel_base_currency})",
+                      hint: "Applies to every room category selected above. To charge different prices per category, stage them one at a time.") do |field| %>
+                  <% field.with_input(type: :number, step: 0.01, value: @cell[:price],
+                       data: { inventory_calendar_target: "priceField", action: "input->inventory-calendar#markTouched" }) %>
+                <% end %>
+
+                <% unless channel_override %>
+                  <div class="grid gap-4 sm:grid-cols-2" data-inventory-calendar-target="paxFields">
+                    <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Guests included",
+                          hint: "Guests covered by the room price.") do |field| %>
+                      <% field.with_input(type: :number, min: 1, value: @cell[:base_occupancy],
+                           data: { inventory_calendar_target: "baseOccupancyField", action: "input->inventory-calendar#markTouched" }) %>
+                    <% end %>
+                    <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge",
+                          hint: "Charged nightly for each guest above the included number.") do |field| %>
+                      <% field.with_input(type: :number, step: 0.01, min: 0, value: @cell[:extra_pax_charge],
+                           data: { inventory_calendar_target: "extraPaxChargeField", action: "input->inventory-calendar#markTouched" }) %>
+                    <% end %>
+                  </div>
+                <% end %>
+              <% end %>
+            </section>
+
+            <section class="space-y-4" aria-labelledby="inventory-selection-restrictions">
+              <h3 id="inventory-selection-restrictions" class="text-base font-semibold text-foreground">Stay restrictions</h3>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <%= render PanelsUI::FormField.new(form: f, attribute: :min_stay, label: "Minimum stay") do |field| %>
+                  <% field.with_input(type: :number, min: 1, value: @cell[:min_stay],
+                       placeholder: "No minimum",
+                       data: { inventory_calendar_target: "minStayField", action: "input->inventory-calendar#markTouched" }) %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :max_stay, label: "Maximum stay") do |field| %>
+                  <% field.with_input(type: :number, min: 1, value: @cell[:max_stay],
+                       placeholder: "No maximum",
+                       data: { inventory_calendar_target: "maxStayField", action: "input->inventory-calendar#markTouched" }) %>
+                <% end %>
+              </div>
+
+              <div class="space-y-2.5">
+                <%= render PanelsUI::Checkbox.new(form: f, attribute: :closed_to_arrival,
+                      label: "Closed to arrival", variant: :card,
+                      checked: @cell[:closed_to_arrival].present?,
+                      data: { inventory_calendar_target: "ctaField", action: "change->inventory-calendar#markTouched" }) %>
+                <%= render PanelsUI::Checkbox.new(form: f, attribute: :closed_to_departure,
+                      label: "Closed to departure", variant: :card,
+                      checked: @cell[:closed_to_departure].present?,
+                      data: { inventory_calendar_target: "ctdField", action: "change->inventory-calendar#markTouched" }) %>
+                <%# Stop sell is owned by Channels & OTAs > Availability Rules; carried so
+                    the staged change keeps its current value rather than clearing it. %>
+                <%= f.check_box :stop_sell, { class: "hidden", checked: @cell[:stop_sell].present?,
+                      data: { inventory_calendar_target: "stopSellField" } } %>
+              </div>
+            </section>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { inventory_calendar_target: "submitButton" }) do %>
+          Stage update
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

@@ -3,6 +3,7 @@
 class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   INVENTORY_TABS = %w[calendar advanced channels].freeze
   INVENTORY_SUBTABS = %w[pricing overrides derived_settings availability_rules].freeze
+  SELECTION_MODES = %w[rates availability channel_rates channel_availability].freeze
 
   def index
     authorize current_hotel, :update?, policy_class: HotelPolicy
@@ -66,6 +67,36 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
                                 .order("booking_rooms.room_number ASC, bookings.guest_name ASC")
 
     @grouped_booking_rooms = @booking_rooms.group_by(&:room_type).sort_by { |room_type, _| room_type.id }
+
+    render layout: false
+  end
+
+  # Serves the cell editor into the shared sheet frame. The grid used to carry
+  # every editable value on each cell as data attributes and let JavaScript
+  # assemble the form; here the clicked cell only identifies itself and the
+  # server resolves its current values. Prefill is read in the hotel's base
+  # currency because that is the currency the form saves in — reading it in the
+  # display currency prefilled a converted figure that would then be stored as
+  # a base-currency price.
+  def edit_selection
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    @mode = params[:mode].presence_in(SELECTION_MODES) || "rates"
+    @date = parsed_selection_date
+    @hotel_base_currency = current_hotel.default_currency || "MYR"
+
+    @calendar = HotelPortal::InventoryCalendarPresenter.new(
+      hotel: current_hotel,
+      start_date: @date,
+      end_date: @date,
+      display_currency: @hotel_base_currency
+    )
+
+    @row = selected_calendar_row
+    @cell = @row ? @calendar.cell_for(@row, @date) : {}
+    @room_type = @row&.room_type
+    @selected_room_type_ids = [ params[:room_type_id].presence ].compact
+    @selected_rate_plan_ids = [ params[:rate_plan_id].presence ].compact
 
     render layout: false
   end
@@ -373,6 +404,39 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   end
 
   private
+
+  def parsed_selection_date
+    params[:date].presence&.to_date || Date.current
+  rescue Date::Error, ArgumentError
+    Date.current
+  end
+
+  # The clicked cell names itself with the same identifiers the grid renders, so
+  # the row it belongs to can be found again rather than reconstructed. A tier
+  # cell has no rate plan record: it carries a synthetic `tier_walk_in_<id>` id
+  # that ApplyInventoryDashboardSelection also understands.
+  def selected_calendar_row
+    room_type_id = params[:room_type_id].to_i
+    rate_plan_id = params[:rate_plan_id].to_s
+
+    @calendar.rows.find do |row|
+      next false unless row.room_type_id == room_type_id
+
+      case @mode
+      when "availability" then row.inventory_row?
+      when "channel_availability"
+        row.channel_availability_row? && row.channel["id"].to_s == params[:channel_id].to_s
+      when "channel_rates"
+        row.channel_rate_row? && row.channel_rate_plan_id.to_s == params[:channel_rate_plan_id].to_s
+      else
+        case rate_plan_id
+        when /\Atier_walk_in_/ then row.walk_in_row?
+        when /\Atier_corporate_/ then row.corporate_row?
+        else row.rate_row? && row.rate_plan_id.to_s == rate_plan_id
+        end
+      end
+    end
+  end
 
   def build_calendar
     presenter = HotelPortal::InventoryCalendarPresenter.new(

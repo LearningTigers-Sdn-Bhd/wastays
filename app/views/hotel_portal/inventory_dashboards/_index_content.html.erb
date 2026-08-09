@@ -242,10 +242,12 @@
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
                       <td class="min-w-[52px] <%= room_border_class %> <%= room_side_class %> px-1 py-1 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
-                        <button type="button"
-                                class="w-full px-0.5 sm:px-1 py-1 text-center transition hover:bg-muted rounded-lg group"
+                        <a href="<%= edit_selection_hotel_inventory_dashboards_path(current_hotel, mode: "availability", room_type_id: row.room_type_id, date: date, tab: @active_tab, subtab: @active_subtab) %>"
+                                data-turbo-frame="inventory_selection_sheet"
+                                aria-label="Edit availability for <%= row.room_type.name %> on <%= l(date, format: :long) %>"
+                                class="block w-full px-0.5 sm:px-1 py-1 text-center transition hover:bg-muted rounded-lg group"
                                 data-testid="availability-cell-<%= row.room_type_id %>-<%= date %>"
-                                data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
+                                data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear"
                                 data-mode="availability"
                                 data-room-type-id="<%= row.room_type_id %>"
                                 data-date="<%= date %>"
@@ -282,7 +284,7 @@
                             </div>
                             <span class="text-[12px] tabular-nums text-muted-foreground"><%= sold %> sold</span>
                           </div>
-                        </button>
+                        </a>
                       </td>
                     <% end %>
                   </tr>
@@ -400,10 +402,12 @@
                       <% cell = inventory_calendar_cell(@calendar, row, date) %>
                       <% weekend = [5, 6].include?(date.wday) %>
                       <td class="min-w-[52px] <%= room_border_class %> <%= room_side_class %> px-1 py-0.5 text-center last:border-r-0 <%= weekend ? 'bg-indigo-50' : '' %>">
-                        <button type="button"
+                        <a href="<%= edit_selection_hotel_inventory_dashboards_path(current_hotel, mode: "rates", room_type_id: row.room_type_id, rate_plan_id: row.rate_plan_id, date: date, tab: @active_tab, subtab: @active_subtab) %>"
+                                data-turbo-frame="inventory_selection_sheet"
+                                aria-label="Edit <%= row.rate_plan&.name %> for <%= row.room_type.name %> on <%= l(date, format: :long) %>"
                                 class="group relative mx-auto block rounded-md px-1 py-0.5 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
                                 data-testid="rate-cell-<%= row.room_type_id %>-<%= row.rate_plan_id %>-<%= date %>"
-                                data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
+                                data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear"
                                 data-mode="rates"
                                 data-room-type-id="<%= row.room_type_id %>"
                                 data-rate-plan-id="<%= row.rate_plan_id %>"
@@ -434,7 +438,7 @@
                           <% if cell[:restriction_compact].present? %>
                             <span class="mt-0.5 block truncate text-center text-[7px] sm:text-[8px] font-bold uppercase tracking-[0.02em] text-amber-700 bg-amber-50 rounded px-0.5 sm:px-1"><%= cell[:restriction_compact] %></span>
                           <% end %>
-                        </button>
+                        </a>
                       </td>
                     <% end %>
                   </tr>
@@ -530,10 +534,12 @@
                               when :corporate then "tier_corporate_#{row.room_type_id}"
                             end
                           %>
-                          <button type="button"
+                          <a href="<%= edit_selection_hotel_inventory_dashboards_path(current_hotel, mode: "rates", room_type_id: row.room_type_id, rate_plan_id: rate_plan_id, date: date, tab: @active_tab, subtab: @active_subtab) %>"
+                                  data-turbo-frame="inventory_selection_sheet"
+                                  aria-label="Edit <%= row.sublabel %> for <%= row.room_type.name %> on <%= l(date, format: :long) %>"
                                   class="group relative mx-auto block rounded-md px-1 py-0.5 text-sm font-medium tabular-nums text-foreground hover:bg-muted hover:text-foreground transition-colors w-full"
                                   data-testid="<%= testid %>"
-                                  data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear click->inventory-calendar#openCell"
+                                  data-action="mouseenter->inventory-highlight#highlight mouseleave->inventory-highlight#clear"
                                   data-mode="rates"
                                   data-rate-plan-id="<%= rate_plan_id %>"
                                   data-room-type-id="<%= row.room_type_id %>"
@@ -551,7 +557,7 @@
                                 </span>
                               <% end %>
                             </div>
-                          </button>
+                          </a>
                       </td>
                     <% end %>
                   </tr>

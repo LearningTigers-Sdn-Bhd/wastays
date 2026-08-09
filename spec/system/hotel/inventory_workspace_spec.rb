@@ -37,4 +37,16 @@ RSpec.describe "Hotel inventory calendar", type: :system do
     expect(page).to have_css("[data-testid='rate-cell-#{room_type.id}-#{rate_plan.id}-#{Date.current}']", text: "MIN2")
     expect(page).to have_css("[data-testid='rate-cell-#{room_type.id}-#{rate_plan.id}-#{Date.current}']", text: "STOP")
   end
+
+  # The editor is a plain link into a frame, so it opens without JavaScript.
+  it "opens the cell editor from the calendar" do
+    create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 333, currency: "MYR")
+
+    visit hotel_inventory_index_path(hotel, start_date: Date.current)
+    find("[data-testid='rate-cell-#{room_type.id}-#{rate_plan.id}-#{Date.current}']").click
+
+    expect(page).to have_content("Update rates")
+    expect(page).to have_field("selection_update[price]", with: "333.0")
+    expect(page).to have_button("Stage update")
+  end
 end

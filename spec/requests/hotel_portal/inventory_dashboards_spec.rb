@@ -13,9 +13,15 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
     sign_in_as(user)
   end
 
-  describe "GET /index" do
+  describe "GET /edit_selection" do
+    let!(:rate_plan) { create(:rate_plan, room_type: room_type, name: "Best Available") }
+
     it "shows only room-price occupancy fields when the property charges per room" do
-      get hotel_inventory_index_path(hotel)
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "rates", room_type_id: room_type.id, rate_plan_id: rate_plan.id, date: Date.current.to_s
+      }
+
+      expect(response).to have_http_status(:success)
 
       page = Capybara.string(response.body)
       expect(page).to have_field("selection_update[base_occupancy]")
@@ -29,15 +35,102 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
     it "shows only per-guest occupancy fields when the property charges per guest" do
       hotel.update!(sell_mode: "per_person")
 
-      get hotel_inventory_index_path(hotel)
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "rates", room_type_id: room_type.id, rate_plan_id: rate_plan.id, date: Date.current.to_s
+      }
 
       page = Capybara.string(response.body)
       expect(page).to have_field("selection_update[occupancy_prices][1]")
       expect(page).to have_field("selection_update[occupancy_prices][2]")
       expect(page).not_to have_field("selection_update[base_occupancy]")
       expect(page).not_to have_field("selection_update[extra_pax_charge]")
-      expect(page).to have_content("Adult occupancy prices")
-      expect(page).to have_content("Child prices and age groups come from the selected rate plan")
+      expect(page).to have_content("Child prices and age groups come from the rate plan")
+    end
+
+    # The old dialog sized this grid to the largest room in the property and let
+    # the save path silently drop anything above the category's own maximum.
+    it "sizes the occupancy grid to the clicked category, not the property maximum" do
+      hotel.update!(sell_mode: "per_person")
+      create(:room_type, hotel: hotel, name: "Family Suite", max_adults: 4)
+
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "rates", room_type_id: room_type.id, rate_plan_id: rate_plan.id, date: Date.current.to_s
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_field("selection_update[occupancy_prices][2]")
+      expect(page).not_to have_field("selection_update[occupancy_prices][3]")
+    end
+
+    it "prefills the cell's saved values and preselects its room type and rate plan" do
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current,
+             price: 250, currency: "MYR", min_stay: 2, max_stay: 5)
+
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "rates", room_type_id: room_type.id, rate_plan_id: rate_plan.id, date: Date.current.to_s
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_field("selection_update[price]", with: "250.0")
+      expect(page).to have_field("selection_update[min_stay]", with: "2")
+      expect(page).to have_field("selection_update[max_stay]", with: "5")
+      expect(page).to have_css("select[name='selection_update[room_type_ids][]'] option[selected][value='#{room_type.id}']", visible: :all)
+      expect(page).to have_css("select[name='selection_update[rate_plan_ids][]'] option[selected][value='#{rate_plan.id}']", visible: :all)
+    end
+
+    # A shared plan used to appear once per category it is assigned to. Those
+    # duplicates share a value, so the first one's label won and a Penthouse cell
+    # showed its own plan as belonging to another category.
+    it "lists a plan shared by several categories once, under its own name" do
+      other_room_type = create(:room_type, hotel: hotel, name: "Ocean Villa King")
+      shared_plan = create(:rate_plan, hotel: hotel, room_type: room_type, name: "Breakfast Rate", kind: "custom")
+      create(:room_type_rate_plan, rate_plan: shared_plan, room_type: other_room_type)
+
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "rates", room_type_id: room_type.id, rate_plan_id: shared_plan.id, date: Date.current.to_s
+      }
+
+      page = Capybara.string(response.body)
+      options = page.all("select[name='selection_update[rate_plan_ids][]'] option[value='#{shared_plan.id}']", visible: :all)
+      expect(options.size).to eq(1)
+      expect(options.first.text).to eq("Breakfast Rate")
+      expect(page).not_to have_css(
+        "select[name='selection_update[rate_plan_ids][]'] option", text: "Ocean Villa King - Breakfast Rate", visible: :all
+      )
+    end
+
+    it "renders availability fields without rate plans in availability mode" do
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "availability", room_type_id: room_type.id, date: Date.current.to_s
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_field("selection_update[quantity]")
+      expect(page).not_to have_field("selection_update[price]")
+      expect(page).not_to have_css("select[name='selection_update[rate_plan_ids][]']", visible: :all)
+    end
+
+    it "opens without a matching row rather than failing on an unknown cell" do
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "rates", room_type_id: room_type.id, rate_plan_id: "tier_walk_in_#{room_type.id}", date: Date.current.to_s
+      }
+
+      expect(response).to have_http_status(:success)
+    end
+  end
+
+  describe "GET /index" do
+    it "links each cell to the editor instead of carrying the form inline" do
+      rate_plan = create(:rate_plan, room_type: room_type, name: "Best Available")
+
+      get hotel_inventory_index_path(hotel), params: { start_date: Date.current.to_s }
+
+      page = Capybara.string(response.body)
+      expect(page).not_to have_field("selection_update[price]")
+      expect(page).to have_css(
+        "a[data-testid='rate-cell-#{room_type.id}-#{rate_plan.id}-#{Date.current}'][data-turbo-frame='inventory_selection_sheet']"
+      )
+      expect(page).to have_css("turbo-frame#inventory_selection_sheet", visible: :all)
     end
 
     it "renders validated tabs and nested breadcrumb labels" do
