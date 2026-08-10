@@ -19,7 +19,8 @@ deleted.
   assignments, and standing prices.
 - **Rates & Availability** owns date-specific rates, availability,
   restrictions, pricing rules, and channel rows.
-- The **hotel** owns the charging model. Rate plans inherit it.
+- The **hotel** owns the charging model. Rate plans inherit it, and the choice
+  locks once the property is bookable or has taken a booking.
 - A **rate plan** owns shared offer details, occupancy rules, and child-pricing
   rules.
 - A **room/rate-plan assignment** owns the standing scalar price rule or adult
@@ -257,6 +258,11 @@ per-person plans as unsupported forever.
   `RatePlan#channex_syncable?`.
 - [x] Connected per-person properties see that availability continues to sync
   while plan prices and restrictions remain in Wastays.
+- [x] Surface the limitation on the Channels and OTAs tab, not only in the rate
+  plan create sheet, so the exclusion is not silent.
+- [x] Drop the stale `per_pax_booking` Coming Soon badge from the plan catalog.
+  The slug gates no code; per-pax pricing is shipped for direct channels, and
+  OTA distribution is the phase boundary rather than the feature's status.
 
 ### Remaining
 
@@ -287,14 +293,31 @@ per-person plans as unsupported forever.
 Goal: make switching between per-room and per-person safe for connected and
 unconnected properties.
 
+### Shipped
+
+- [x] Lock `sell_mode` once the hotel is bookable (`approved` or `live`) or has
+  taken a booking. `Hotel#sell_mode_locked?` drives both the validation and the
+  disabled admin field, so the setup rule the form only ever hinted at is now
+  enforced.
+
 ### Current risk
 
-`Hotel#mirror_sell_mode_to_rate_plans` uses `update_all`. It keeps stored plan
-values aligned with the hotel but skips rate-plan callbacks and does not
-reconcile data whose meaning changes with the charging model.
+The lock removes the live-property failure mode rather than solving the
+transition: a hotel that switches before launch still goes through
+`Hotel#mirror_sell_mode_to_rate_plans`, which uses `update_all`. That keeps
+stored plan values aligned with the hotel but skips rate-plan callbacks and does
+not reconcile data whose meaning changes with the charging model. Before launch
+there is little such data to lose, which is what makes the lock a sufficient
+answer for now.
+
+The open question is whether post-launch transitions are ever supported. Until
+they are, the remaining items below are unscheduled rather than pending — a
+property that picks wrong and has started selling has no admin path back.
 
 ### Remaining
 
+- [ ] Decide whether post-launch transitions are supported at all. Everything
+  below is only required if they are.
 - [ ] Replace callback-only mirroring with an explicit transition service.
 - [ ] Detect active channel-manager connections before changing the model.
 - [ ] Inventory the scalar prices, occupancy matrices, daily occupancy
