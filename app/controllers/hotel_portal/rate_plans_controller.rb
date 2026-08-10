@@ -117,7 +117,9 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     end
 
     if saved
-      ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: [ @selected_room_type.id ])
+      # Plan-level fields (including flattened Channex child fees) apply to
+      # every assignment, so one batched reconciliation covers them all.
+      ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: @rate_plan.room_type_ids)
       render_editor_success("Rate plan saved.", room_type_id: @selected_room_type.id)
     else
       render_editor_errors(room_type_id: room_type_id)
@@ -218,6 +220,8 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
       :extra_pax_charge,
       :single_supplement,
       :child_price_multiplier,
+      :channex_children_fee,
+      :channex_infant_fee,
       rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ]
     )
   end

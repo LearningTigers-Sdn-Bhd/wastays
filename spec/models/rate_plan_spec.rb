@@ -1,6 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe RatePlan, type: :model do
+  include ActiveJob::TestHelper
+
   describe 'associations' do
     it { should belong_to(:hotel) }
     it { should have_many(:room_type_rate_plans).dependent(:destroy) }
@@ -13,6 +15,15 @@ RSpec.describe RatePlan, type: :model do
   describe 'validations' do
     it { should validate_presence_of(:name) }
     it { should validate_presence_of(:sell_mode) }
+
+    it 'allows nil or zero Channex child fees but rejects negative values' do
+      plan = build(:rate_plan, hotel: create(:hotel), channex_children_fee: 0, channex_infant_fee: nil)
+      expect(plan).to be_valid
+
+      plan.channex_infant_fee = -0.01
+      expect(plan).not_to be_valid
+      expect(plan.errors[:channex_infant_fee]).to be_present
+    end
     it { should validate_inclusion_of(:sell_mode).in_array(%w[per_room per_person]) }
     it { should validate_presence_of(:currency) }
     it { should validate_inclusion_of(:kind).in_array(RatePlan::KINDS) }
@@ -88,14 +99,90 @@ RSpec.describe RatePlan, type: :model do
   end
 
   describe '#channex_syncable?' do
-    it 'is true for a per_room plan and false for a per_person one' do
-      expect(create(:rate_plan, hotel: create(:hotel))).to be_channex_syncable
-      expect(create(:rate_plan, hotel: create(:hotel, :per_person))).not_to be_channex_syncable
+    def add_occupancy_ladder(assignment, through: assignment.room_type.max_adults)
+      (1..through).each do |adults|
+        assignment.occupancy_prices.create!(adults: adults, price: 100 + adults)
+      end
     end
 
-    it 'keeps internal Walk-in and Corporate plans out of channel distribution' do
-      expect(create(:rate_plan, :walk_in_tier, hotel: create(:hotel))).not_to be_channex_syncable
-      expect(create(:rate_plan, :corporate_tier, hotel: create(:hotel))).not_to be_channex_syncable
+    it 'supports every distributable per-room kind' do
+      hotel = create(:hotel)
+      room_type = create(:room_type, hotel: hotel)
+
+      %w[standard custom ota].each do |kind|
+        plan = create(:rate_plan, hotel: hotel, room_type: room_type, kind: kind, name: "#{kind} plan")
+        expect(plan.channex_capability.status).to eq(:full)
+      end
+    end
+
+    it 'keeps internal and incomplete plans out of channel distribution' do
+      hotel = create(:hotel, :per_person)
+      room_type = create(:room_type, hotel: hotel, max_adults: 3)
+      plan = create(:rate_plan, hotel: hotel, room_type: room_type)
+      assignment = plan.room_type_rate_plans.find_by!(room_type: room_type)
+      add_occupancy_ladder(assignment, through: 2)
+
+      expect(plan.channex_capability(room_type: room_type)).to have_attributes(
+        status: :unsupported,
+        missing_occupancies: { room_type.id => [ 3 ] }
+      )
+      expect(create(:rate_plan, :walk_in_tier, hotel: hotel)).not_to be_channex_syncable
+      expect(create(:rate_plan, :corporate_tier, hotel: hotel)).not_to be_channex_syncable
+    end
+
+    it 'supports a complete per-person occupancy ladder' do
+      hotel = create(:hotel, :per_person)
+      room_type = create(:room_type, hotel: hotel, max_adults: 3)
+      plan = create(:rate_plan, hotel: hotel, room_type: room_type)
+      add_occupancy_ladder(plan.room_type_rate_plans.find_by!(room_type: room_type))
+
+      expect(plan.channex_capability(room_type: room_type).status).to eq(:full)
+      expect(plan.channex_syncable?(room_type: room_type)).to be(true)
+    end
+
+    it 'supports a derived per-person ladder when every standard occupancy can resolve' do
+      hotel = create(:hotel, :per_person)
+      room_type = create(:room_type, hotel: hotel, max_adults: 3)
+      standard = room_type.standard_rate_plan
+      standard_assignment = standard.room_type_rate_plans.find_by!(room_type: room_type)
+      add_occupancy_ladder(standard_assignment)
+      plan = create(:rate_plan, :custom, hotel: hotel)
+      create(
+        :room_type_rate_plan,
+        room_type: room_type,
+        rate_plan: plan,
+        pricing_mode: 'multiplier',
+        pricing_value: 10
+      )
+
+      expect(plan.channex_capability(room_type: room_type).status).to eq(:full)
+    end
+
+    it 'requires explicit child and infant fees for age-banded plans and accepts zero' do
+      hotel = create(:hotel, :per_person)
+      room_type = create(:room_type, hotel: hotel, max_adults: 2)
+      plan = create(:rate_plan, :age_banded, hotel: hotel, room_type: room_type)
+      add_occupancy_ladder(plan.room_type_rate_plans.find_by!(room_type: room_type))
+
+      expect(plan.channex_capability(room_type: room_type).status).to eq(:unsupported)
+
+      plan.update!(channex_children_fee: 0, channex_infant_fee: 0)
+      expect(plan.channex_capability(room_type: room_type).status).to eq(:flattened)
+    end
+
+    it 'evaluates shared plans against each room category capacity' do
+      hotel = create(:hotel, :per_person)
+      small = create(:room_type, hotel: hotel, max_adults: 2)
+      large = create(:room_type, hotel: hotel, max_adults: 4)
+      plan = create(:rate_plan, hotel: hotel)
+      small_assignment = create(:room_type_rate_plan, room_type: small, rate_plan: plan)
+      large_assignment = create(:room_type_rate_plan, room_type: large, rate_plan: plan)
+      add_occupancy_ladder(small_assignment)
+      add_occupancy_ladder(large_assignment, through: 3)
+
+      expect(plan.channex_capability(room_type: small).status).to eq(:full)
+      expect(plan.channex_capability(room_type: large).missing_occupancies).to eq(large.id => [ 4 ])
+      expect(plan.channex_capability.status).to eq(:unsupported)
     end
   end
 
@@ -232,20 +319,26 @@ RSpec.describe RatePlan, type: :model do
   end
 
   describe '#sync_with_channel_manager' do
-    it 'does not enqueue a sync job for a plan at a per-person hotel' do
+    it 'queues retirement reconciliation but no structure sync for an unsupported assignment' do
       hotel = create(:hotel, :per_person, preferred_channel_manager: 'channex')
+      room_type = create(:room_type, hotel: hotel, max_adults: 2)
+      clear_enqueued_jobs
 
-      expect {
-        create(:rate_plan, hotel: hotel)
-      }.not_to have_enqueued_job(ChannelManagers::SyncStructureJob)
+      create(:rate_plan, hotel: hotel, room_type: room_type)
+
+      expect(enqueued_jobs.none? { |job| job[:job] == ChannelManagers::SyncStructureJob }).to be(true)
+      expect(enqueued_jobs.count { |job| job[:job] == ChannelManagers::SyncJob }).to eq(1)
     end
 
-    it 'enqueues a sync job for a plan at a per-room hotel' do
+    it 'enqueues structure and ARI syncs for a compatible assignment' do
       hotel = create(:hotel, preferred_channel_manager: 'channex')
+      room_type = create(:room_type, hotel: hotel)
+      clear_enqueued_jobs
 
-      expect {
-        create(:rate_plan, hotel: hotel)
-      }.to have_enqueued_job(ChannelManagers::SyncStructureJob)
+      create(:rate_plan, hotel: hotel, room_type: room_type)
+
+      expect(enqueued_jobs.count { |job| job[:job] == ChannelManagers::SyncStructureJob }).to eq(1)
+      expect(enqueued_jobs.count { |job| job[:job] == ChannelManagers::SyncJob }).to eq(1)
     end
   end
 end

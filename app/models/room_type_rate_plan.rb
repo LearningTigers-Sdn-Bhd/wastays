@@ -42,24 +42,7 @@ class RoomTypeRatePlan < ApplicationRecord
   def trigger_ari_sync
     return if Thread.current[:skip_ari_sync]
     return if room_type.hotel.preferred_channel_manager.blank?
-    # Both jobs below no-op for a per-person plan — the structure sync is
-    # refused by the adapter, and with no structure there is no mapping for the
-    # rate push to hang off. Skip enqueueing them at all.
-    return unless rate_plan.channex_syncable?
 
-    # 1. First ensure the Rate Plan structure exists in the Channel Manager
-    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
-
-    # 2. Then trigger a sync for a large window to cover future derived prices
-    ChannelManagers::SyncJob.perform_later(
-      room_type.hotel_id,
-      Date.current,
-      Date.current + 499.days,
-      sync_availability: false,
-      sync_rates: true,
-      sync_restrictions: true,
-      room_type_ids: [ room_type_id ],
-      rate_plan_ids: [ rate_plan_id ]
-    )
+    ChannelManagers::SyncRatePlanAri.call(rate_plan: rate_plan, room_type_ids: [ room_type_id ])
   end
 end

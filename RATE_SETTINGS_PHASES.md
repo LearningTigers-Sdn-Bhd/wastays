@@ -248,45 +248,36 @@ setup before it affects bookings.
 Goal: distribute compatible Wastays pricing correctly instead of treating all
 per-person plans as unsupported forever.
 
-### Current state
+### Shipped
 
-- [x] Per-room plans can synchronize structure, scalar rates, restrictions, and
-  room-level availability.
-- [x] Rate-plan create/edit and attachment flows batch ARI work for affected
-  rooms.
-- [x] Per-person plans are explicitly rejected by
-  `RatePlan#channex_syncable?`.
-- [x] Connected per-person properties see that availability continues to sync
-  while plan prices and restrictions remain in Wastays.
-- [x] Surface the limitation on the Channels and OTAs tab, not only in the rate
-  plan create sheet, so the exclusion is not silent.
-- [x] Drop the stale `per_pax_booking` Coming Soon badge from the plan catalog.
-  The slug gates no code; per-pax pricing is shipped for direct channels, and
-  OTA distribution is the phase boundary rather than the feature's status.
+- [x] Per-room and complete per-person assignments synchronize structure,
+  resolver-backed rates, restrictions, and room-level availability.
+- [x] Per-person structures use one manual option per adult occupancy and a
+  clamped base occupancy as the single primary option.
+- [x] Age-banded plans require explicit flat Channex child and infant fees;
+  direct bookings retain the richer age-band prices.
+- [x] Rate-plan create/edit and attachment flows batch structure and ARI work
+  across affected room assignments.
+- [x] Channels and OTAs reports unsupported and flattened plans from the same
+  assignment-scoped capability policy used by callbacks and jobs.
+- [x] Mapped plans that become unsupported are stop-sold for 500 days and keep
+  their mapping for manual channel-side removal.
+- [x] ARI results distinguish full, partial, availability-only, unsupported,
+  and failed outcomes while retaining warnings and Channex task IDs.
+- [x] Transport errors, throttling, and server failures retry; unsupported
+  pricing and validation warnings are terminal until input changes.
+- [x] Stubbed contracts cover scalar and occupancy ARI, decimals, `max_stay`,
+  flattened fees, resolver fallbacks, warning rejection, task IDs, compression,
+  and retirement.
+- [x] An isolated, directly invoked staging contract creates, reads, and
+  non-force deletes its own fixtures. It is excluded from default channel runs.
 
-### Remaining
+### Verification remaining
 
-- [ ] Replace the blanket per-person rejection with a capability-based policy.
 - [ ] Confirm the current Channex contract for occupancy options, rate units,
-  fraction handling, and maximum-stay fields against staging.
-- [ ] Create channel rate-plan structures for every supported charging model.
-- [ ] Select and document the primary occupancy for external plans.
-- [ ] Send scalar daily rates for per-room plans through the shared resolver
-  where not already guaranteed.
-- [ ] Send occupancy-specific daily rate arrays for supported per-person plans.
-- [ ] Define how Wastays age bands map to Channex's flatter child and infant
-  pricing model.
-- [ ] Choose an explicit fallback for incompatible age-banded plans: flatten,
-  OTA-owned child pricing, direct-only, or a separate channel plan.
-- [ ] Retire plans that were pushed before `channex_syncable?` narrowed to
-  `RatePlan::DISTRIBUTABLE_KINDS`. Walk-in and corporate plans are now excluded,
-  but nothing deletes what was already sent — those plans keep their
-  `channel_mapping` and simply stop receiving updates, so the rates left live on
-  the channel drift. `delete_from_channel_manager` only fires on destroy.
-- [ ] Make sync results distinguish full success, availability-only success,
-  unsupported pricing, and failure.
-- [ ] Add contract specs for scalar and occupancy-specific structure and ARI
-  payloads.
+  fraction handling, and maximum-stay fields against staging. The contract is
+  implemented and gated; live verification still requires
+  `CHANNEX_STAGING_API_KEY`.
 
 ## Phase 7 — Charging-model transitions
 

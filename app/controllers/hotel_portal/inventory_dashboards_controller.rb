@@ -608,10 +608,17 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @channels = adapter.connected_channels(force_refresh: force)
       @derived_settings_by_channel_id = current_hotel.channel_derived_settings.index_by(&:channel_id)
       @availability_rules = current_hotel.channel_availability_rules.order(created_at: :desc)
+      # Walk-in and corporate plans are internal by design. Reporting them as
+      # unsupported would leave a warning the hotel can never clear.
+      @channex_plan_capabilities = current_hotel.rate_plans.active
+        .where(kind: RatePlan::DISTRIBUTABLE_KINDS)
+        .includes(:rate_plan_age_bands, room_type_rate_plans: [ :room_type, :occupancy_prices ])
+        .index_with(&:channex_capability)
     else
       @channels = []
       @derived_settings_by_channel_id = {}
       @availability_rules = []
+      @channex_plan_capabilities = {}
     end
   end
 end

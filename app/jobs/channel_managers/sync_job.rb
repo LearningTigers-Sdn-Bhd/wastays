@@ -21,9 +21,15 @@ module ChannelManagers
         rate_plan_fields: rate_plan_fields
       )
 
-      return if result.success?
+      # Transport failures, 429s and 5xx responses are raised by the adapter
+      # and handled by retry_on above. Unsupported pricing and Channex
+      # validation warnings are terminal until an operator changes the input.
+      return if result.success? || result.unsupported?
 
-      raise Channex::Client::RetryableRequestError, result.message
+      Rails.logger.error(
+        "Channel manager sync failed without retry hotel_id=#{hotel.id} " \
+        "status=#{result.status} message=#{result.message.inspect} warnings=#{result.warnings.to_json}"
+      )
     end
   end
 end

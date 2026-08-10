@@ -7,7 +7,8 @@ module RatePlans
   class Resolve
     CREATABLE_ATTRIBUTES = %i[
       description base_occupancy extra_pax_charge single_supplement
-      child_price_multiplier rate_plan_age_bands_attributes
+      child_price_multiplier channex_children_fee channex_infant_fee
+      rate_plan_age_bands_attributes
     ].freeze
 
     Result = Data.define(:rate_plan, :created, :error) do

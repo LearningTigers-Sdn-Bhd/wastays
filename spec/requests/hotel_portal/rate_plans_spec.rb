@@ -3,7 +3,9 @@ require 'rails_helper'
 RSpec.describe 'HotelPortal::RatePlans', type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'live') }
+  # These editor examples exercise both charging models. A live hotel locks
+  # sell_mode by design, so keep the fixture in setup while editing it.
+  let(:hotel) { create(:hotel, account: account, status: 'registered') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
   let!(:room_type) { create(:room_type, hotel: hotel) }
 
@@ -110,13 +112,15 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(Nokogiri::HTML(response.body).at_css('#rate_plan_sell_mode')).to be_nil
     end
 
-    it 'explains the current distribution limit for a connected per-guest hotel' do
+    it 'explains the capability requirements for a connected per-guest hotel' do
       hotel.update!(sell_mode: 'per_person', preferred_channel_manager: 'channex')
 
       get new_hotel_rate_plan_path(hotel)
 
-      expect(response.body).to include('Per-guest rates are not distributed yet')
-      expect(response.body).to include('Room availability continues to sync')
+      expect(response.body).to include('Per-guest channel requirements')
+      expect(response.body).to include('Complete every adult occupancy price')
+      expect(response.body).to include('rate_plan_channex_children_fee')
+      expect(response.body).to include('rate_plan_channex_infant_fee')
     end
   end
 
@@ -424,6 +428,27 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         [ 1, 180.to_d ],
         [ 2, 300.to_d ]
       ])
+    end
+
+    it 'persists explicit flattened child and infant fees for Channex' do
+      hotel.update!(sell_mode: 'per_person')
+      room_type.update!(max_adults: 2)
+
+      post hotel_rate_plans_path(hotel), params: {
+        rate_plan: {
+          name: 'Family OTA Rate',
+          room_type_id: room_type.id,
+          channex_children_fee: '25.50',
+          channex_infant_fee: '0.00'
+        },
+        room_pricing: { rate_mode: 'manual', prices: { '1' => '180', '2' => '300' } }
+      }
+
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(hotel.rate_plans.find_by!(name: 'Family OTA Rate')).to have_attributes(
+        channex_children_fee: 25.5.to_d,
+        channex_infant_fee: 0.to_d
+      )
     end
 
     it 'requires every adult occupancy supported by the room category' do

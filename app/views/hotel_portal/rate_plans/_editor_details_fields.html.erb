@@ -39,8 +39,8 @@
 <% end %>
 
 <% if current_hotel.sells_per_person? && current_hotel.preferred_channel_manager.present? %>
-  <%= render PanelsUI::Alert.new(tone: :warning, title: "Per-guest rates are not distributed yet", role: :status) do |alert| %>
-    <% alert.with_description { "Availability continues to sync, but this plan’s prices and restrictions remain in Wastays." } %>
+  <%= render PanelsUI::Alert.new(tone: :info, title: "Per-guest channel requirements", role: :status) do |alert| %>
+    <% alert.with_description { "Complete every adult occupancy price for each room category. Plans with age groups also need explicit flat child and infant fees for OTAs." } %>
   <% end %>
 <% end %>
 

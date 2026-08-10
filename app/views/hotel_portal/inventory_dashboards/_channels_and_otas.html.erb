@@ -1,9 +1,22 @@
 <% active_channel_subtab = @active_subtab.in?(%w[derived_settings availability_rules]) ? @active_subtab : "derived_settings" %>
-<% if current_hotel.sells_per_person? %>
+<% unsupported_plans = @channex_plan_capabilities.select { |_plan, capability| capability.unsupported? } %>
+<% flattened_plans = @channex_plan_capabilities.select { |_plan, capability| capability.flattened? } %>
+
+<% if unsupported_plans.any? %>
   <div class="mb-4">
-    <%= render PanelsUI::Alert.new(tone: :info, title: "Rates from this property are not sent to OTAs") do |alert| %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Some rates are not sent to OTAs") do |alert| %>
       <% alert.with_description do %>
-        Channel managers carry one price per room. They have no way to hold an occupancy ladder or per-plan child age bands, so a property that sells per person cannot be represented. Its rate plans stay on direct booking and the front desk.
+        <%= unsupported_plans.map { |plan, capability| "#{plan.name}: #{capability.reason}" }.join(" · ") %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if flattened_plans.any? %>
+  <div class="mb-4">
+    <%= render PanelsUI::Alert.new(tone: :info, title: "Child prices are flattened for OTAs") do |alert| %>
+      <% alert.with_description do %>
+        <%= flattened_plans.keys.map(&:name).to_sentence %> use one child fee and one infant fee on connected channels. Direct bookings continue to use age-specific prices.
       <% end %>
     <% end %>
   </div>

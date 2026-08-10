@@ -25,6 +25,29 @@
     <% end %>
   </div>
 
+  <div class="space-y-3 rounded-md border border-border p-4">
+    <div>
+      <h4 class="text-sm font-medium text-foreground">Channel child pricing</h4>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Channex cannot carry separate age bands. Set one child fee and one infant fee for OTAs; direct bookings continue to use the age-specific prices.
+      </p>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :channex_children_fee,
+            label: "Flat child fee",
+            hint: "Enter 0 when children stay free on connected channels.") do |field| %>
+        <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :channex_infant_fee,
+            label: "Flat infant fee",
+            hint: "Enter 0 when infants stay free on connected channels.") do |field| %>
+        <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+      <% end %>
+    </div>
+  </div>
+
   <div data-rate-plan-age-bands-target="rows" class="space-y-3">
     <% rate_plan.rate_plan_age_bands.each_with_index do |band, index| %>
       <%= f.fields_for :rate_plan_age_bands, band, child_index: index do |band_form| %>

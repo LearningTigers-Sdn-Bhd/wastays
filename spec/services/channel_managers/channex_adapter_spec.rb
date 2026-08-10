@@ -49,14 +49,15 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(hotel.reload.channel_mapping.external_id).to eq("ch_prop_123")
     end
 
-    it 'reports that nothing was pushed rather than a successful ARI sync' do
+    it 'reports unsupported pricing rather than a successful ARI sync' do
       hotel.create_channel_mapping(provider: "channex", external_id: "ch_prop_123")
       create(:rate_plan, hotel: hotel, room_type: room_type)
 
       result = adapter.push_ari(date_range: Date.current..(Date.current + 2.days), sync_availability: false)
 
-      expect(result.success?).to be true
-      expect(result.message).to match(/sells per guest/i)
+      expect(result.success?).to be false
+      expect(result.status).to eq(:unsupported_pricing)
+      expect(result.warnings.first[:rate_plan_id]).to be_present
     end
   end
 
@@ -64,13 +65,25 @@ RSpec.describe ChannelManagers::ChannexAdapter do
     let!(:hotel_mapping) { create(:channel_mapping, mappable: hotel, external_id: "ch_prop_123") }
     let!(:room_type_mapping) { create(:channel_mapping, mappable: room_type, external_id: "ch_rt_123") }
 
-    it 'does not call Channex and returns nil for a per_person rate plan' do
+    it 'creates manual occupancy options for a complete per-person rate plan' do
       hotel.update!(sell_mode: "per_person")
       rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
+      assignment = rate_plan.room_type_rate_plans.find_by!(room_type: room_type)
+      assignment.occupancy_prices.create!(adults: 1, price: 123.45)
+      assignment.occupancy_prices.create!(adults: 2, price: 200.67)
 
-      expect(client_double).not_to receive(:post)
-      expect(client_double).not_to receive(:put)
-      expect(adapter.sync_rate_plan(rate_plan)).to be_nil
+      expect(client_double).to receive(:post).with("/rate_plans", {
+        rate_plan: hash_including(
+          sell_mode: "per_person",
+          rate_mode: "manual",
+          options: [
+            { occupancy: 1, is_primary: false, rate: "123.45" },
+            { occupancy: 2, is_primary: true, rate: "200.67" }
+          ]
+        )
+      }).and_return({ "data" => { "id" => "ch_rp_person" } })
+
+      expect(adapter.sync_rate_plan(rate_plan)).to eq("ch_rp_person")
     end
 
     it 'still syncs a per_room rate plan (regression guard)' do
@@ -82,6 +95,17 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
       expect(result).not_to be_nil
       expect(client_double).to have_received(:post).with("/rate_plans", hash_including(rate_plan: hash_including(sell_mode: "per_room")))
+    end
+
+    it 'rejects a structure response containing Channex warnings' do
+      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
+      allow(client_double).to receive(:post).and_return(
+        "data" => { "id" => "ch_rp_warned" },
+        "meta" => { "warnings" => [ { "message" => "invalid option" } ] }
+      )
+
+      expect(adapter.sync_rate_plan(rate_plan)).to be_nil
+      expect(rate_plan.room_type_rate_plans.find_by!(room_type: room_type).channel_mapping.external_id).to start_with("pending")
     end
   end
 
@@ -132,7 +156,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             date_to: end_date.to_s,
             rate: "200.00",
             min_stay_arrival: 1,
-            max_stay_arrival: 999,
+            max_stay: 0,
             closed_to_arrival: 0,
             closed_to_departure: 0,
             stop_sell: 0
@@ -142,6 +166,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
       result = adapter.push_ari(date_range: (start_date..end_date))
       expect(result.success?).to be true
+      expect(result.task_ids).to eq(availability: "task_1", restrictions: "task_2")
     end
 
     it 'creates multiple ranges for non-contiguous dates or different values' do
@@ -205,7 +230,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             date_to: start_date.to_s,
             rate: "250.00",
             min_stay_arrival: 1,
-            max_stay_arrival: 999,
+            max_stay: 0,
             closed_to_arrival: 0,
             closed_to_departure: 0,
             stop_sell: 1
@@ -215,8 +240,9 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             rate_plan_id: "ch_rp_123",
             date_from: (start_date + 1.day).to_s,
             date_to: (start_date + 1.day).to_s,
+            rate: "99.99",
             min_stay_arrival: 1,
-            max_stay_arrival: 999,
+            max_stay: 0,
             closed_to_arrival: 0,
             closed_to_departure: 0,
             stop_sell: 0

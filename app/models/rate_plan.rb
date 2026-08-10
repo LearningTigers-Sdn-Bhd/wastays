@@ -40,6 +40,8 @@ class RatePlan < ApplicationRecord
   validates :child_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
   validates :base_occupancy, numericality: { only_integer: true, greater_than: 0 }
   validates :extra_pax_charge, numericality: { greater_than_or_equal_to: 0 }
+  validates :channex_children_fee, :channex_infant_fee,
+    numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   before_validation :normalize_currency
   before_validation :inherit_sell_mode_from_hotel
@@ -100,11 +102,12 @@ class RatePlan < ApplicationRecord
     sell_mode == "per_person" && rate_plan_age_bands.any?
   end
 
-  # Channex models a rate plan with a single flat children/infants fee taken
-  # from a property-level Hotel Policy — it has no representation for per-band
-  # per-plan pricing, so per-person plans cannot be pushed at all.
-  def channex_syncable?
-    sell_mode == "per_room" && kind.in?(DISTRIBUTABLE_KINDS)
+  def channex_capability(room_type: nil)
+    ChannelManagers::ChannexRatePlanCapability.call(rate_plan: self, room_type: room_type)
+  end
+
+  def channex_syncable?(room_type: nil)
+    channex_capability(room_type: room_type).supported?
   end
 
   def band_for_age(age)
@@ -126,10 +129,12 @@ class RatePlan < ApplicationRecord
   end
 
   def sync_with_channel_manager
+    return if Thread.current[:skip_ari_sync]
     return if hotel.preferred_channel_manager.blank?
-    return unless channex_syncable?
+    room_ids = room_type_rate_plans.pluck(:room_type_id)
+    return if room_ids.empty?
 
-    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
+    ChannelManagers::SyncRatePlanAri.call(rate_plan: self, room_type_ids: room_ids)
   end
 
   def delete_from_channel_manager

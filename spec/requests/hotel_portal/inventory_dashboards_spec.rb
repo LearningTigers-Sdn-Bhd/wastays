@@ -13,6 +13,58 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
     sign_in_as(user)
   end
 
+  describe "GET /hotel/:hotel_id/inventory?tab=channels" do
+    let(:channel_adapter) { instance_double(ChannelManagers::ChannexAdapter, connected_channels: []) }
+
+    before do
+      hotel.update!(sell_mode: "per_person", preferred_channel_manager: "channex")
+      room_type.update!(max_adults: 2)
+      allow(ChannelManagers::SyncOrchestrator).to receive(:adapter_for).with(hotel).and_return(channel_adapter)
+    end
+
+    it "identifies unsupported plans using their capability reason" do
+      create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: "Incomplete OTA Rate")
+
+      get hotel_inventory_index_path(hotel), params: { tab: "channels" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Some rates are not sent to OTAs")
+      expect(response.body).to include("Incomplete OTA Rate: Complete the adult occupancy prices")
+    end
+
+    it "leaves internal plan kinds out of the unsupported warning" do
+      create(:rate_plan, :walk_in_tier, hotel: hotel, room_type: room_type, name: "Walk In Rate")
+
+      get hotel_inventory_index_path(hotel), params: { tab: "channels" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include("Walk in plans are not distributed to channels")
+    end
+
+    it "identifies age-banded plans whose OTA child pricing is flattened" do
+      plan = create(
+        :rate_plan,
+        :custom,
+        hotel: hotel,
+        room_type: room_type,
+        name: "Family Rate",
+        channex_children_fee: 20,
+        channex_infant_fee: 0
+      )
+      assignment = plan.room_type_rate_plans.find_by!(room_type: room_type)
+      assignment.occupancy_prices.create!(adults: 1, price: 100)
+      assignment.occupancy_prices.create!(adults: 2, price: 180)
+      create(:rate_plan_age_band, rate_plan: plan, min_age: 0, max_age: 17)
+
+      get hotel_inventory_index_path(hotel), params: { tab: "channels" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Child prices are flattened for OTAs")
+      expect(response.body).to include("Family Rate")
+      expect(response.body).to include("Direct bookings continue to use age-specific prices")
+    end
+  end
+
   describe "GET /edit_selection" do
     let!(:rate_plan) { create(:rate_plan, room_type: room_type, name: "Best Available") }
 
