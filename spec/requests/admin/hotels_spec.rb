@@ -217,7 +217,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
   describe 'PATCH /admin/hotels/:id' do
     let(:hotel_account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
-    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'approved', sell_mode: "per_room") }
+    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'inventory_incomplete', sell_mode: "per_room") }
 
     it 'allows superadmin to switch the hotel to selling per guest' do
       patch admin_hotel_path(hotel), params: { hotel: { sell_mode: 'per_person' } }
@@ -231,6 +231,15 @@ RSpec.describe 'Admin::Hotels', type: :request do
       patch admin_hotel_path(hotel), params: { hotel: { sell_mode: 'per_person' } }
 
       expect(rate_plan.reload.sell_mode).to eq('per_person')
+    end
+
+    it 'refuses to switch a hotel that is already bookable' do
+      hotel.update_column(:status, 'live')
+
+      patch admin_hotel_path(hotel), params: { hotel: { sell_mode: 'per_person' } }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(hotel.reload.sell_mode).to eq('per_room')
     end
   end
 end

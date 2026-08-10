@@ -1,4 +1,13 @@
 <% active_channel_subtab = @active_subtab.in?(%w[derived_settings availability_rules]) ? @active_subtab : "derived_settings" %>
+<% if current_hotel.sells_per_person? %>
+  <div class="mb-4">
+    <%= render PanelsUI::Alert.new(tone: :info, title: "Rates from this property are not sent to OTAs") do |alert| %>
+      <% alert.with_description do %>
+        Channel managers carry one price per room. They have no way to hold an occupancy ladder or per-plan child age bands, so a property that sells per person cannot be represented. Its rate plans stay on direct booking and the front desk.
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
 <%= render PanelsUI::Tabs.new(id: "channel-subtabs", active: active_channel_subtab, variant: :pill, url: { param: "subtab" }, aria_label: "Channels and OTAs sections") do |tabs| %>
   <% tabs.with_tab(name: "derived_settings", label: "Derived Pricing & Allocations", icon: "percent", panel_id: "channels-derived-panel") %>
   <% tabs.with_tab(name: "availability_rules", label: "Availability Rules", icon: "calendar-cog", panel_id: "channels-rules-panel") %>

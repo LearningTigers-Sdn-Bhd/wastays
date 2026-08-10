@@ -121,6 +121,7 @@ class Hotel < ApplicationRecord
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
   validate :account_must_be_hotel_kind
+  validate :sell_mode_is_locked_once_selling, on: :update, if: :sell_mode_changed?
 
   # Operator-facing wording for the property's sell mode. The stored values
   # match rate_plans.sell_mode so the mirror needs no translation, but "per
@@ -140,6 +141,15 @@ class Hotel < ApplicationRecord
   # — sell_mode_options spells out the trade-off for whoever is picking it.
   def sell_mode_label
     sells_per_person? ? "Sells per person" : "Sells per room"
+  end
+
+  # The sell mode rewrites every rate plan (mirror_sell_mode_to_rate_plans), and
+  # a per-person plan prices off occupancy ladders that only exist once someone
+  # fills them in. Flipping a property that is already selling would leave live
+  # plans with no resolvable price, so the choice is fixed the moment the hotel
+  # becomes bookable or takes its first booking — whichever happens first.
+  def sell_mode_locked?
+    active? || bookings.exists?
   end
 
   def self.const_missing(const_name)
@@ -750,6 +760,12 @@ class Hotel < ApplicationRecord
     return matches.last.to_f if matches.any?
 
     google_map_link[fallback_regex, 1]&.to_f
+  end
+
+  def sell_mode_is_locked_once_selling
+    return unless sell_mode_locked?
+
+    errors.add(:sell_mode, "cannot be changed once the hotel is bookable or has taken a booking")
   end
 
   # The property owns the sell mode; rate plans only carry prices. Nothing is

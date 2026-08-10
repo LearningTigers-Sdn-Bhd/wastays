@@ -156,9 +156,14 @@
           </div>
 
           <div>
+            <% sell_mode_locked = hotel.persisted? && hotel.sell_mode_locked? %>
             <label for="hotel_sell_mode" class="mb-2 block text-sm font-medium text-foreground">Sells By</label>
-            <%= f.select :sell_mode, Hotel.sell_mode_options, {}, class: input_classes %>
-            <p class="mt-1 text-xs text-muted-foreground">Every rate plan follows this. Changing it re-prices the property's plans, so set it before the hotel starts selling.</p>
+            <%= f.select :sell_mode, Hotel.sell_mode_options, {}, class: input_classes, disabled: sell_mode_locked %>
+            <% if sell_mode_locked %>
+              <p class="mt-1 text-xs text-muted-foreground">Locked. This property is already selling, and switching would leave its rate plans without prices.</p>
+            <% else %>
+              <p class="mt-1 text-xs text-muted-foreground">Every rate plan follows this. It locks once the hotel becomes bookable, so set it before the hotel starts selling.</p>
+            <% end %>
           </div>
 
           <div>

@@ -269,5 +269,28 @@ RSpec.describe Hotel, type: :model do
         hotel.update!(name: "#{hotel.name} Resort")
       end
     end
+
+    describe 'locking once the hotel is selling' do
+      it 'refuses the change once the hotel is bookable' do
+        hotel.update_column(:status, 'live')
+
+        expect(hotel.update(sell_mode: 'per_person')).to be false
+        expect(hotel.errors[:sell_mode]).to be_present
+        expect(hotel.reload.sell_mode).to eq('per_room')
+      end
+
+      it 'refuses the change once the hotel has taken a booking' do
+        create(:booking, hotel: hotel)
+
+        expect(hotel.update(sell_mode: 'per_person')).to be false
+        expect(hotel.reload.sell_mode).to eq('per_room')
+      end
+
+      it 'leaves the hotel’s other attributes editable while locked' do
+        hotel.update_column(:status, 'live')
+
+        expect(hotel.update(name: "#{hotel.name} Resort")).to be true
+      end
+    end
   end
 end
