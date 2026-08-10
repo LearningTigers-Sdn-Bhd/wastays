@@ -11,7 +11,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
   end
 
   describe "#call" do
-    it "updates inventory across multiple room types" do
+    it "updates inventory across multiple room types without a rate plan scope" do
       deluxe = create(:room_type, hotel: hotel, quantity: 5)
       twin = create(:room_type, hotel: hotel, quantity: 3)
 
@@ -55,6 +55,50 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(result[:success]).to be(true)
       expect(best_available.room_rates.find_by(date: start_date, currency: "MYR").price.to_f).to eq(333.0)
       expect(member_rate.room_rates.find_by(date: start_date, currency: "MYR").price.to_f).to eq(333.0)
+    end
+
+    it "rejects a rate update without a selected rate plan" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      create(:rate_plan, room_type: room_type)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [],
+          apply_rates: "1",
+          price: "333.00",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result).to eq(success: false, error: "Select at least one rate plan.")
+      expect(RoomRate.where(room_type: room_type)).to be_empty
+    end
+
+    it "rejects a restriction update without a selected rate plan" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      create(:rate_plan, room_type: room_type)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [],
+          apply_restrictions: "1",
+          min_stay: "2",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result).to eq(success: false, error: "Select at least one rate plan.")
+      expect(RoomRate.where(room_type: room_type)).to be_empty
     end
 
     it "stores date-specific prices for each supported adult occupancy" do

@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
+import { syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
 
 export default class extends Controller {
   static targets = ["form", "selectedRatePlanId"]
@@ -130,8 +131,6 @@ export default class extends Controller {
     if (!this.roomSelect || this.roomSelect.value === this.roomSelectValue) return
 
     this.roomSelect.value = this.roomSelectValue
-    const root = this.roomSelect.closest("[data-controller~='panels-ui--select-menu']")
-    const controller = root && this.application.getControllerForElementAndIdentifier(root, "panels-ui--select-menu")
-    controller?.syncFromNative()
+    syncSelectMenu(this.application, this.roomSelect)
   }
 }

@@ -14,6 +14,12 @@ module HotelOps
       return failure("Choose at least one action to apply.") unless apply_inventory? || apply_rates? || apply_restrictions?
       return failure("Start date is required.") if start_date.blank?
       return failure("End date is required.") if end_date.blank?
+      # A rate or restriction edit has to name its plans. An empty list used to
+      # mean "every active plan in the category", which turned one unselected
+      # field into a property-wide price change.
+      if channel_id.blank? && (apply_rates? || apply_restrictions?) && rate_plan_ids.empty?
+        return failure("Select at least one rate plan.")
+      end
       return failure("Enter at least one price when applying rates.") if channel_id.blank? && apply_rates? && price.blank? && occupancy_prices.empty? && selection[:single_supplement].blank? && selection[:base_occupancy].blank? && selection[:extra_pax_charge].blank?
       return failure("Per-pax pricing fields (base occupancy, extra pax charge, single supplement) don't apply to OTA channel rates.") if channel_id.present? && pax_fields_requested?
 
@@ -229,8 +235,9 @@ module HotelOps
     end
 
     def apply_rates_to(room_type)
-      plans = room_type.rate_plans.active
-      plans = plans.where(id: rate_plan_ids.select { |id| id.is_a?(Integer) }) if rate_plan_ids.any?
+      # The selection always names its plans, so there is no all-plans fallback:
+      # a list holding only OTA tier ids resolves to no plan and writes nothing.
+      plans = room_type.rate_plans.active.where(id: rate_plan_ids.grep(Integer))
 
       anchor_restrictions_pending = false
 

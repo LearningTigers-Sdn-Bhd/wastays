@@ -84,19 +84,21 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     @mode = params[:mode].presence_in(SELECTION_MODES) || "rates"
     @date = parsed_selection_date
     @hotel_base_currency = current_hotel.default_currency || "MYR"
+    @room_type = current_hotel.room_types.find_by(id: params[:room_type_id])
 
     @calendar = HotelPortal::InventoryCalendarPresenter.new(
       hotel: current_hotel,
       start_date: @date,
       end_date: @date,
-      display_currency: @hotel_base_currency
+      display_currency: @hotel_base_currency,
+      room_type_id: params[:room_type_id]
     )
 
+    @selected_rate_plan_id = params[:rate_plan_id].presence || default_selection_rate_plan_id
+    @selected_rate_plan_ids = [ @selected_rate_plan_id ].compact
     @row = selected_calendar_row
     @cell = @row ? @calendar.cell_for(@row, @date) : {}
-    @room_type = @row&.room_type
-    @selected_room_type_ids = [ params[:room_type_id].presence ].compact
-    @selected_rate_plan_ids = [ params[:rate_plan_id].presence ].compact
+    @stale_selection = @row.blank?
 
     render layout: false
   end
@@ -415,7 +417,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   # the row it belongs to can be found again rather than reconstructed.
   def selected_calendar_row
     room_type_id = params[:room_type_id].to_i
-    rate_plan_id = params[:rate_plan_id].to_s
+    rate_plan_id = @selected_rate_plan_id.to_s
 
     @calendar.rows.find do |row|
       next false unless row.room_type_id == room_type_id
@@ -429,6 +431,12 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       else row.rate_row? && row.rate_plan_id.to_s == rate_plan_id
       end
     end
+  end
+
+  def default_selection_rate_plan_id
+    return unless @mode == "rates"
+
+    @calendar.rows.find(&:rate_row?)&.rate_plan_id
   end
 
   def build_calendar

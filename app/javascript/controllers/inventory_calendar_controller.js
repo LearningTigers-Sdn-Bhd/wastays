@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
 
 // Staged-change field name -> the Stimulus target holding it in the editor.
 const FIELD_TARGETS = {
@@ -74,6 +75,7 @@ export default class extends Controller {
   initialize() {
     this.stagedChanges = []
     this.initialValues = {}
+    this.initialFormSnapshot = ""
     this.touchedFields = new Set()
   }
 
@@ -92,6 +94,7 @@ export default class extends Controller {
         this.touchedFields.clear()
         this.applyStagedValuesToForm()
         this.initialValues = this.getFormValues()
+        this.initialFormSnapshot = this.formSnapshot()
       }
       this.sheetFrame.addEventListener("turbo:frame-load", this.sheetLoadHandler)
     }
@@ -335,13 +338,12 @@ export default class extends Controller {
   confirmSubmit(event) {
     // Submitting stages the change locally; nothing is written until Sync.
     event.preventDefault()
-    this.stageCurrentSelection()
-    this.closeSheet()
+    if (this.stageCurrentSelection()) this.closeSheet()
     this.skipConfirm = false
   }
 
   stageCurrentSelection() {
-    const selectedRoomTypes = this.selectedOptions("room_type_ids")
+    const selectedRoomTypes = this.fixedRoomTypeScope()
     const selectedRatePlans = this.selectedOptions("rate_plan_ids")
 
     const currentValues = this.getFormValues()
@@ -362,12 +364,17 @@ export default class extends Controller {
 
     if (modifiedFields.length === 0) {
       alert("No changes detected. Please update at least one field.")
-      return
+      return false
     }
 
     const applyInventory = modifiedFields.some(f => ["quantity", "status"].includes(f))
     const applyRates = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement", "occupancy_prices"].includes(f))
     const applyRestrictions = modifiedFields.some(f => ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"].includes(f))
+
+    if ((applyRates || applyRestrictions) && selectedRatePlans.length === 0) {
+      alert("Select at least one rate plan to update.")
+      return false
+    }
 
     const channelId = this.hasChannelIdFieldTarget ? this.channelIdFieldTarget.value : ""
     const channelRatePlanId = this.hasChannelRatePlanIdFieldTarget ? this.channelRatePlanIdFieldTarget.value : ""
@@ -405,6 +412,50 @@ export default class extends Controller {
     this.saveStagedChanges()
     this.updateSyncButton()
     this.highlightStagedCells(change)
+    return true
+  }
+
+  fixedRoomTypeScope() {
+    if (!this.hasFormTarget) return []
+
+    const { roomTypeId, roomTypeName } = this.formTarget.dataset
+    if (!roomTypeId) return []
+
+    return [{ id: roomTypeId, name: roomTypeName || "Room category" }]
+  }
+
+  switchRoomType(event) {
+    if (!this.hasFormTarget) return
+
+    const select = event.target.closest("select")
+    const roomTypeId = select?.value
+    if (!roomTypeId || !this.formTarget.dataset.contextUrl) return
+
+    if (this.formSnapshot() !== this.initialFormSnapshot && !window.confirm("Switch room categories and discard the unstaged changes in this sheet?")) {
+      this.restoreRoomTypeContext(select)
+      return
+    }
+
+    const destination = new URL(this.formTarget.dataset.contextUrl, window.location.origin)
+    destination.searchParams.set("room_type_id", roomTypeId)
+    destination.searchParams.delete("rate_plan_id")
+
+    if (this.sheetFrame) this.sheetFrame.src = destination.toString()
+  }
+
+  formSnapshot() {
+    if (!this.hasFormTarget) return ""
+
+    return Array.from(new FormData(this.formTarget).entries())
+      .filter(([key]) => key !== "selection_update[room_type_context_id]")
+      .map(([key, value]) => `${key}=${value instanceof File ? `${value.name}:${value.size}` : value}`)
+      .sort()
+      .join("&")
+  }
+
+  restoreRoomTypeContext(select) {
+    select.value = this.formTarget.dataset.roomTypeId
+    syncSelectMenu(this.application, select)
   }
 
   buildSummary(selectedRoomTypes, selectedRatePlans, modifiedFields, values) {

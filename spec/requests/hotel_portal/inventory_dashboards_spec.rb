@@ -62,7 +62,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(page).not_to have_field("selection_update[occupancy_prices][3]")
     end
 
-    it "prefills the cell's saved values and preselects its room type and rate plan" do
+    it "prefills the cell's saved values and preselects its room category and rate plan" do
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current,
              price: 250, currency: "MYR", min_stay: 2, max_stay: 5)
 
@@ -74,17 +74,34 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(page).to have_field("selection_update[price]", with: "250.0")
       expect(page).to have_field("selection_update[min_stay]", with: "2")
       expect(page).to have_field("selection_update[max_stay]", with: "5")
-      expect(page).to have_css("select[name='selection_update[room_type_ids][]'] option[selected][value='#{room_type.id}']", visible: :all)
+      expect(page).to have_css("select[name='selection_update[room_type_context_id]'] option[selected][value='#{room_type.id}']", visible: :all)
+      expect(page).to have_css("input[type='hidden'][name='selection_update[room_type_ids][]'][value='#{room_type.id}']", visible: :all)
+      expect(page).not_to have_css("select[name='selection_update[room_type_ids][]']", visible: :all)
       expect(page).to have_css("select[name='selection_update[rate_plan_ids][]'] option[selected][value='#{rate_plan.id}']", visible: :all)
     end
 
-    # A shared plan used to appear once per category it is assigned to. Those
-    # duplicates share a value, so the first one's label won and a Penthouse cell
-    # showed its own plan as belonging to another category.
-    it "lists a plan shared by several categories once, under its own name" do
+    it "defaults to the selected category's first active plan when changing context" do
+      other_room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
+      first_plan = other_room_type.rate_plans.active.order(:id).first
+
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "rates", room_type_id: other_room_type.id, date: Date.current.to_s
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("select[name='selection_update[room_type_context_id]'] option[selected][value='#{other_room_type.id}']", visible: :all)
+      expect(page).to have_css("select[name='selection_update[rate_plan_ids][]'] option[selected][value='#{first_plan.id}']", visible: :all)
+      expect(page).to have_button("Stage update")
+    end
+
+    it "lists only active plans attached to the fixed category" do
       other_room_type = create(:room_type, hotel: hotel, name: "Ocean Villa King")
       shared_plan = create(:rate_plan, hotel: hotel, room_type: room_type, name: "Breakfast Rate", kind: "custom")
       create(:room_type_rate_plan, rate_plan: shared_plan, room_type: other_room_type)
+      attached_plan = create(:rate_plan, room_type: room_type, name: "Member Rate")
+      unrelated_plan = create(:rate_plan, room_type: other_room_type, name: "Villa Exclusive")
+      archived_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: "Old Package")
+      archived_plan.archive!
 
       get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
         mode: "rates", room_type_id: room_type.id, rate_plan_id: shared_plan.id, date: Date.current.to_s
@@ -94,9 +111,9 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       options = page.all("select[name='selection_update[rate_plan_ids][]'] option[value='#{shared_plan.id}']", visible: :all)
       expect(options.size).to eq(1)
       expect(options.first.text).to eq("Breakfast Rate")
-      expect(page).not_to have_css(
-        "select[name='selection_update[rate_plan_ids][]'] option", text: "Ocean Villa King - Breakfast Rate", visible: :all
-      )
+      expect(page).to have_css("option[value='#{attached_plan.id}']", text: "Member Rate", visible: :all)
+      expect(page).not_to have_css("option[value='#{unrelated_plan.id}']", visible: :all)
+      expect(page).not_to have_css("option[value='#{archived_plan.id}']", visible: :all)
     end
 
     it "renders availability fields without rate plans in availability mode" do
@@ -106,16 +123,85 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
 
       page = Capybara.string(response.body)
       expect(page).to have_field("selection_update[quantity]")
+      expect(page).to have_css("select[name='selection_update[room_type_context_id]'] option[selected][value='#{room_type.id}']", visible: :all)
+      expect(page).to have_css("input[type='hidden'][name='selection_update[room_type_ids][]'][value='#{room_type.id}']", visible: :all)
+      expect(page).not_to have_css("select[name='selection_update[room_type_ids][]']", visible: :all)
       expect(page).not_to have_field("selection_update[price]")
       expect(page).not_to have_css("select[name='selection_update[rate_plan_ids][]']", visible: :all)
     end
 
-    it "opens without a matching row rather than failing on an unknown cell" do
+    it "renders a non-actionable state for an unknown calendar cell" do
       get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
         mode: "rates", room_type_id: room_type.id, rate_plan_id: "999999", date: Date.current.to_s
       }
 
       expect(response).to have_http_status(:success)
+      page = Capybara.string(response.body)
+      expect(page).to have_content("This calendar item is no longer available")
+      expect(page).to have_content("Refresh the calendar")
+      expect(page).not_to have_button("Stage update")
+      expect(page).not_to have_css("form#inventory-selection-form")
+    end
+
+    it "renders a non-actionable state for a rate plan from another category" do
+      other_room_type = create(:room_type, hotel: hotel)
+      other_plan = create(:rate_plan, room_type: other_room_type)
+
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "rates", room_type_id: room_type.id, rate_plan_id: other_plan.id, date: Date.current.to_s
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_content("This calendar item is no longer available")
+      expect(page).not_to have_button("Stage update")
+    end
+
+    it "renders a non-actionable state for an unknown room category" do
+      get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+        mode: "availability", room_type_id: "999999", date: Date.current.to_s
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_content("This calendar item is no longer available")
+      expect(page).not_to have_button("Stage update")
+      expect(page).not_to have_css("form#inventory-selection-form")
+    end
+
+    # An OTA row is reached through a channel rate plan that belongs to one
+    # category, so there is nothing to switch to and no originating rate plan to
+    # name in the hint. Both used to be assumed present.
+    context "on a channel availability cell" do
+      let(:channel_data) do
+        {
+          "id" => "chan-123",
+          "attributes" => {
+            "title" => "BookingCom",
+            "channel" => "BookingCom",
+            "settings" => { "mappingSettings" => { "rooms" => { "ota_room_id" => "ext-rt-mapped" } } }
+          }
+        }
+      end
+
+      before do
+        hotel.update!(preferred_channel_manager: "channex")
+        create(:channel_mapping, mappable: room_type, provider: "channex", external_id: "ext-rt-mapped")
+        allow_any_instance_of(HotelPortal::InventoryCalendarPresenter)
+          .to receive(:connected_channels).and_return([ channel_data ])
+      end
+
+      it "renders without a room category switcher or an originating rate plan" do
+        get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
+          mode: "channel_availability", room_type_id: room_type.id,
+          channel_id: "chan-123", date: Date.current.to_s
+        }
+
+        expect(response).to have_http_status(:success)
+        page = Capybara.string(response.body)
+        expect(page).not_to have_content("This calendar item is no longer available")
+        expect(page).not_to have_css("select[name='selection_update[room_type_context_id]']", visible: :all)
+        expect(page).to have_content("Every selected plan receives the same update.")
+        expect(page).not_to have_content("Values below come from")
+      end
     end
   end
 
