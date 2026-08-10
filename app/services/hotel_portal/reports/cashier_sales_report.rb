@@ -15,6 +15,7 @@ module HotelPortal
       Result = Struct.new(
         :start_date, :end_date, :totals, :advance_scope, :settlement_scope,
         :mode_by_transaction_id, :mode_summary_rows, :mode_totals, :currency_summary_rows, :grand_total,
+        :ota_credit_scope, :ota_credit_totals,
         keyword_init: true
       )
 
@@ -28,19 +29,22 @@ module HotelPortal
         scope = base_scope
         transactions = exclude_gateway_movements(scope.to_a)
         visible_scope = scope.where(id: transactions.map(&:id))
-        advances, settlements = transactions.partition { |transaction| section_for(transaction) == "Advance" }
+        cash_transactions, ota_credits = transactions.partition { |transaction| !ota_non_cash_movement?(transaction) }
+        advances, settlements = cash_transactions.partition { |transaction| section_for(transaction) == "Advance" }
 
         Result.new(
           start_date: @start_date,
           end_date: @end_date,
-          totals: totals_for(transactions),
+          totals: totals_for(cash_transactions),
           advance_scope: visible_scope.where(id: advances.map(&:id)),
           settlement_scope: visible_scope.where(id: settlements.map(&:id)),
           mode_by_transaction_id: transactions.to_h { |transaction| [ transaction.id, mode_label_for(transaction) ] },
-          mode_summary_rows: mode_summary_for(transactions),
-          mode_totals: mode_totals_for(transactions),
-          currency_summary_rows: currency_summary_for(transactions),
-          grand_total: grand_total_for(transactions)
+          mode_summary_rows: mode_summary_for(cash_transactions),
+          mode_totals: mode_totals_for(cash_transactions),
+          currency_summary_rows: currency_summary_for(cash_transactions),
+          grand_total: grand_total_for(cash_transactions),
+          ota_credit_scope: visible_scope.where(id: ota_credits.map(&:id)),
+          ota_credit_totals: totals_for(ota_credits)
         )
       end
 
@@ -82,7 +86,7 @@ module HotelPortal
             :transaction_code,
             :user,
             reversal_of_transaction: :transaction_code,
-            booking_folio: [ :booking_room, { booking: :booking_rooms } ]
+            booking_folio: [ :booking_room, :booking_billing_party, { booking: :booking_rooms } ]
           )
           .order(Arel.sql(
             "folio_transactions.posting_date DESC, folio_transactions.posted_at DESC NULLS LAST, folio_transactions.id DESC"
@@ -99,6 +103,20 @@ module HotelPortal
           total_refunded: refunded.round(2),
           net_cash: (collected - refunded).round(2)
         }
+      end
+
+      def ota_non_cash_movement?(transaction)
+        return true if transaction.ota_collected_credit?
+        return false unless transaction.category == "refund"
+
+        transaction.reversal_of_transaction&.ota_collected_credit? || ota_reconciliation_refund?(transaction)
+      end
+
+      def ota_reconciliation_refund?(transaction)
+        return false unless transaction.metadata.to_h.stringify_keys["refund_source"] == "ota_reconciliation"
+
+        folio = transaction.booking_folio
+        folio&.folio_type == "external" && folio.payer_type == "ota" && folio.booking_billing_party&.party_kind == "ota"
       end
 
       def section_for(transaction)
