@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_11_091000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -260,6 +260,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_110000) do
     t.datetime "archived_at"
     t.bigint "booking_guest_id"
     t.bigint "booking_id", null: false
+    t.bigint "booking_source_id"
     t.datetime "created_at", null: false
     t.bigint "created_by_id"
     t.bigint "hotel_corporate_account_id"
@@ -268,16 +269,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_110000) do
     t.datetime "updated_at", null: false
     t.index ["booking_guest_id"], name: "idx_booking_billing_parties_unique_guest", unique: true, where: "(booking_guest_id IS NOT NULL)"
     t.index ["booking_guest_id"], name: "index_booking_billing_parties_on_booking_guest_id"
+    t.index ["booking_id", "booking_source_id"], name: "idx_booking_billing_parties_unique_ota", unique: true, where: "(booking_source_id IS NOT NULL)"
     t.index ["booking_id", "hotel_corporate_account_id"], name: "idx_booking_billing_parties_unique_company", unique: true, where: "(hotel_corporate_account_id IS NOT NULL)"
     t.index ["booking_id", "party_kind"], name: "index_booking_billing_parties_on_booking_id_and_party_kind"
     t.index ["booking_id"], name: "index_booking_billing_parties_on_booking_id"
+    t.index ["booking_source_id"], name: "index_booking_billing_parties_on_booking_source_id"
     t.index ["created_by_id"], name: "index_booking_billing_parties_on_created_by_id"
     t.index ["hotel_corporate_account_id"], name: "index_booking_billing_parties_on_hotel_corporate_account_id"
     t.index ["hotel_id", "archived_at"], name: "index_booking_billing_parties_on_hotel_id_and_archived_at"
     t.index ["hotel_id"], name: "index_booking_billing_parties_on_hotel_id"
-    t.check_constraint "((booking_guest_id IS NOT NULL)::integer + (hotel_corporate_account_id IS NOT NULL)::integer) = 1", name: "booking_billing_parties_one_identity"
+    t.check_constraint "((booking_guest_id IS NOT NULL)::integer + (hotel_corporate_account_id IS NOT NULL)::integer + (booking_source_id IS NOT NULL)::integer) = 1", name: "booking_billing_parties_one_identity"
     t.check_constraint "account_type IS NULL OR (account_type::text = ANY (ARRAY['company'::text, 'government'::text, 'travel_agent'::text, 'airline'::text, 'salesperson'::text]))", name: "booking_billing_parties_account_type_allowed"
-    t.check_constraint "party_kind::text = ANY (ARRAY['guest'::character varying, 'company'::character varying]::text[])", name: "booking_billing_parties_kind_allowed"
+    t.check_constraint "party_kind::text = 'guest'::text AND booking_guest_id IS NOT NULL AND hotel_corporate_account_id IS NULL AND booking_source_id IS NULL OR party_kind::text = 'company'::text AND booking_guest_id IS NULL AND hotel_corporate_account_id IS NOT NULL AND booking_source_id IS NULL OR party_kind::text = 'ota'::text AND booking_guest_id IS NULL AND hotel_corporate_account_id IS NULL AND booking_source_id IS NOT NULL", name: "booking_billing_parties_identity_matches_kind"
+    t.check_constraint "party_kind::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'ota'::character varying]::text[])", name: "booking_billing_parties_kind_allowed"
   end
 
   create_table "booking_billing_terms", force: :cascade do |t|
@@ -351,7 +355,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_110000) do
     t.check_constraint "(invoice_number IS NULL) = (invoice_year IS NULL)", name: "booking_folios_invoice_year_pair"
     t.check_constraint "folio_type::text <> 'guest'::text OR payer_type::text = 'guest'::text", name: "booking_folios_guest_type_is_guest_payer"
     t.check_constraint "folio_type::text = ANY (ARRAY['guest'::character varying, 'external'::character varying, 'house'::character varying]::text[])", name: "booking_folios_folio_type_allowed"
-    t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'agent'::character varying, 'hotel'::character varying, 'custom'::character varying]::text[])", name: "booking_folios_payer_type_allowed"
+    t.check_constraint "payer_type::text = ANY (ARRAY['guest'::character varying, 'company'::character varying, 'ota'::character varying, 'agent'::character varying, 'hotel'::character varying, 'custom'::character varying]::text[])", name: "booking_folios_payer_type_allowed"
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying, 'voided'::character varying]::text[])", name: "booking_folios_status_allowed"
   end
 
@@ -2346,6 +2350,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_110000) do
   add_foreign_key "booking_audit_logs", "hotels"
   add_foreign_key "booking_audit_logs", "users"
   add_foreign_key "booking_billing_parties", "booking_guests"
+  add_foreign_key "booking_billing_parties", "booking_sources"
   add_foreign_key "booking_billing_parties", "bookings"
   add_foreign_key "booking_billing_parties", "hotel_corporate_accounts"
   add_foreign_key "booking_billing_parties", "hotels"
@@ -2387,6 +2392,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_110000) do
   add_foreign_key "channel_derived_settings", "hotels"
   add_foreign_key "channel_room_rates", "rate_plans"
   add_foreign_key "channel_room_rates", "room_types"
+  add_foreign_key "channel_settlement_allocations", "booking_folios"
+  add_foreign_key "channel_settlement_allocations", "bookings"
+  add_foreign_key "channel_settlement_allocations", "channel_settlements"
+  add_foreign_key "channel_settlement_receipt_allocations", "channel_settlement_allocations"
+  add_foreign_key "channel_settlement_receipt_allocations", "channel_settlement_receipts"
+  add_foreign_key "channel_settlement_receipts", "booking_sources"
+  add_foreign_key "channel_settlement_receipts", "hotel_payment_methods"
+  add_foreign_key "channel_settlement_receipts", "hotels"
+  add_foreign_key "channel_settlement_receipts", "users", column: "recorded_by_id"
+  add_foreign_key "channel_settlements", "booking_sources"
+  add_foreign_key "channel_settlements", "hotels"
   add_foreign_key "check_out_requests", "bookings"
   add_foreign_key "check_out_requests", "users", column: "acknowledged_by_user_id"
   add_foreign_key "complaint_requests", "bookings"

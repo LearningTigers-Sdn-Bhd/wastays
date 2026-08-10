@@ -2,6 +2,40 @@
 
 module ChannelManagers
   class ChannexAdapter < BaseAdapter
+    SETTLEMENT_SOURCE_ALIASES = {
+      "bookingcom" => "booking_com",
+      "booking_dot_com" => "booking_com",
+      "agoda_com" => "agoda",
+      "expediacom" => "expedia",
+      "traveloka_com" => "traveloka"
+    }.freeze
+    COLLECTION_BY_MAP = {
+      "property" => "property",
+      "hotel" => "property",
+      "guest" => "property",
+      "direct" => "property",
+      "ota" => "ota",
+      "channel" => "ota",
+      "agency" => "ota",
+      "online_travel_agency" => "ota"
+    }.freeze
+    SETTLEMENT_METHOD_MAP = {
+      "credit_card" => "guest_card",
+      "creditcard" => "guest_card",
+      "card" => "guest_card",
+      "debit_card" => "guest_card",
+      "guest_card" => "guest_card",
+      "bank_transfer" => "bank_transfer",
+      "banktransfer" => "bank_transfer",
+      "wire_transfer" => "bank_transfer",
+      "wire" => "bank_transfer",
+      "virtual_card" => "virtual_card",
+      "virtualcard" => "virtual_card",
+      "virtual_credit_card" => "virtual_card",
+      "vcc" => "virtual_card",
+      "virtual" => "virtual_card",
+      "bank" => "bank_transfer"
+    }.freeze
     def onboard_hotel
       @room_types_for_sync = nil
       client = Channex::Client.new
@@ -355,6 +389,7 @@ module ChannelManagers
       # 1. Single revision: { "data": { "arrival_date": "...", ... } }
       # 2. List item: { "attributes": { "arrival_date": "...", ... }, "id": "..." }
 
+      payload = payload.to_h.with_indifferent_access
       raw_data = payload["data"] || payload
       attributes = raw_data["attributes"] || raw_data
 
@@ -374,22 +409,20 @@ module ChannelManagers
         check_out ||= first_room["departure_date"] || first_room["checkout_date"]
       end
 
-      # Extract revision number
-      # Some Channex payloads have a numeric revision_id, others only have a UUID id.
-      # To ensure ordering and duplicate detection in our integer revision_number column,
-      # we fallback to a timestamp-based integer if revision_id is not a number.
-      revision_val = attributes["revision_id"] || attributes["id"]
-      numeric_revision = if revision_val.to_s =~ /^\d+$/
-        revision_val.to_i
-      else
-        safe_parse_datetime(attributes["inserted_at"]).to_i
-      end
+      # Keep the provider identity separate from Booking#revision_number. A
+      # Channex revision can be a UUID, and replacing it with a timestamp would
+      # make settlement idempotency and audit trails impossible.
+      revision_id = fetch_attribute(attributes, raw_data, "revision_id").presence ||
+        fetch_attribute(attributes, raw_data, "id").presence
+      external_reference = attributes["ota_reservation_id"].presence || attributes["unique_id"].presence || attributes["id"].presence
+      channel_manager_reference = attributes["booking_id"].presence || attributes["id"].presence
 
       {
         hotel: @hotel,
-        external_reference: attributes["ota_reservation_id"] || attributes["unique_id"] || attributes["id"],
-        channel_manager_reference: attributes["booking_id"] || attributes["id"],
-        revision_number: numeric_revision,
+        external_reference: external_reference,
+        channel_manager_reference: channel_manager_reference,
+        revision_number: numeric_revision_for(revision_id, attributes["inserted_at"]),
+        revision_id: revision_id,
         status: wa_status,
         check_in: safe_parse_date(check_in),
         check_out: safe_parse_date(check_out),
@@ -402,11 +435,226 @@ module ChannelManagers
         rooms: parse_booking_rooms(attributes["rooms"] || []),
         total_amount: attributes["amount"].to_f,
         currency: attributes["currency"] || "MYR",
-        source: attributes["ota_name"] || "channex"
+        source: attributes["ota_name"] || "channex",
+        settlement: settlement_for(
+          attributes: attributes,
+          channel_manager_reference: channel_manager_reference,
+          external_reference: external_reference,
+          revision_id: revision_id
+        )
       }
     end
 
     private
+
+    def settlement_for(attributes:, channel_manager_reference:, external_reference:, revision_id:)
+      source_value = first_present(attributes["ota_name"], attributes["source"])
+      source = booking_source_for(source_value)
+      source_resolution = source_resolution_for(source, source_value)
+      currency = valid_currency(attributes["currency"])
+      gross_amount = decimal_amount(attributes["amount"])
+      commission_amount = [ decimal_amount(
+        first_present(attributes["commission_amount"], attributes["commission"], attributes.dig("fees", "commission"))
+      ), gross_amount ].min
+      virtual_card = virtual_card_metadata(
+        attributes: attributes,
+        currency: currency,
+        settlement_method: settlement_method_for(attributes)
+      )
+      collection_by = collection_by_for(attributes)
+      settlement_method = settlement_method_for(attributes)
+
+      {
+        provider: provider_name,
+        booking_source_key: source&.key,
+        channel_manager_reference: channel_manager_reference,
+        external_reference: external_reference,
+        revision_id: revision_id,
+        collection_by: collection_by,
+        settlement_method: settlement_method,
+        currency: currency,
+        gross_amount: gross_amount,
+        commission_amount: commission_amount,
+        expected_net_amount: gross_amount - commission_amount,
+        status: settlement_status(
+          attributes: attributes,
+          source_resolution: source_resolution,
+          collection_by: collection_by,
+          settlement_method: settlement_method,
+          virtual_card: virtual_card
+        ),
+        virtual_card: virtual_card,
+        metadata: safe_settlement_metadata(
+          attributes: attributes,
+          source_resolution: source_resolution,
+          collection_by: collection_by,
+          settlement_method: settlement_method
+        )
+      }
+    end
+
+    def booking_source_for(source_value)
+      return nil if source_value.blank?
+
+      normalized = BookingSource.normalize(source_value)
+      canonical_key = SETTLEMENT_SOURCE_ALIASES.fetch(normalized, normalized)
+      BookingSource.find_by(key: canonical_key) || BookingSource.find_by_source(source_value)
+    end
+
+    def source_resolution_for(source, source_value)
+      return "unknown" if source_value.blank? || source.blank?
+      return "inactive" unless source.active?
+      return "non_ota" unless source.kind == "ota"
+
+      "resolved"
+    end
+
+    def collection_by_for(attributes)
+      value = normalized_token(
+        first_present(
+          attributes["payment_collect"],
+          attributes.dig("payment", "collect"),
+          attributes.dig("payment", "payment_collect")
+        )
+      )
+      COLLECTION_BY_MAP.fetch(value, "unknown")
+    end
+
+    def settlement_method_for(attributes)
+      payment_type = normalized_token(
+        first_present(
+          attributes["payment_type"],
+          attributes.dig("payment", "type"),
+          attributes.dig("payment", "payment_type")
+        )
+      )
+      guarantee = attributes["guarantee"].presence || attributes.dig("payment", "guarantee")
+      guarantee = guarantee.is_a?(Hash) ? guarantee : {}
+      virtual_card = truthy?(first_value(guarantee, "is_virtual", "virtual", "is_virtual_card")) ||
+        normalized_token(guarantee["card_type"]).in?(%w[virtual virtual_card virtual_credit_card vcc])
+      return "virtual_card" if virtual_card
+
+      SETTLEMENT_METHOD_MAP.fetch(payment_type, "unknown")
+    end
+
+    def settlement_status(attributes:, source_resolution:, collection_by:, settlement_method:, virtual_card:)
+      return "needs_attention" unless source_resolution == "resolved"
+      return "cancelled" if normalized_token(attributes["status"]) == "cancelled"
+      return "property_collection_required" if collection_by == "property"
+      return "needs_attention" if collection_by == "unknown" || settlement_method == "unknown"
+      return "awaiting_ota_settlement" unless settlement_method == "virtual_card"
+
+      effective_date = virtual_card[:effective_date]
+      return "virtual_card_not_ready" if effective_date.present? && effective_date > Date.current
+
+      "ready_to_charge"
+    end
+
+    # Only the fields required to decide how a virtual card may be handled are
+    # copied. In particular, never copy the provider's guarantee object: it can
+    # contain PANs, CVVs, card numbers, tokens, or opaque authorization data.
+    def virtual_card_metadata(attributes:, currency:, settlement_method:)
+      guarantee = attributes["guarantee"].presence || attributes.dig("payment", "guarantee")
+      guarantee = guarantee.is_a?(Hash) ? guarantee : {}
+      guarantee_card = guarantee["card"].is_a?(Hash) ? guarantee["card"] : {}
+      virtual_card = attributes["virtual_card"].is_a?(Hash) ? attributes["virtual_card"] : {}
+      values = guarantee.merge(guarantee_card).merge(virtual_card)
+      return {} if values.empty? && settlement_method != "virtual_card"
+
+      is_virtual_value = first_value(values, "is_virtual", "virtual", "is_virtual_card")
+      is_virtual = if is_virtual_value.nil?
+        settlement_method == "virtual_card" ? true : nil
+      else
+        truthy?(is_virtual_value)
+      end
+
+      {
+        is_virtual: is_virtual,
+        currency: valid_currency(values["currency"] || values["card_currency"] || currency),
+        available_balance: decimal_or_nil(
+          values["available_balance"] || values["available_amount"] || values["balance"]
+        ),
+        effective_date: safe_parse_date(
+          values["effective_date"] || values["card_effective_date"] || values["activation_date"]
+        ),
+        expiration_date: safe_parse_date(
+          values["expiration_date"] || values["card_expiration_date"] || values["expiry_date"]
+        )
+      }.compact
+    end
+
+    def safe_settlement_metadata(attributes:, source_resolution:, collection_by:, settlement_method:)
+      {
+        "ota_name" => attributes["ota_name"].to_s.strip.presence,
+        "provider_status" => normalized_token(attributes["status"]).presence,
+        "payment_collect" => normalized_token(
+          first_present(
+            attributes["payment_collect"],
+            attributes.dig("payment", "collect"),
+            attributes.dig("payment", "payment_collect")
+          )
+        ).presence,
+        "payment_type" => normalized_token(
+          first_present(
+            attributes["payment_type"],
+            attributes.dig("payment", "type"),
+            attributes.dig("payment", "payment_type")
+          )
+        ).presence,
+        "source_resolution" => source_resolution,
+        "collection_by" => collection_by,
+        "settlement_method" => settlement_method
+      }.compact
+    end
+
+    def first_present(*values)
+      values.find(&:present?)
+    end
+
+    def first_value(hash, *keys)
+      keys.each do |key|
+        return hash[key] if hash.key?(key)
+        return hash[key.to_sym] if hash.key?(key.to_sym)
+      end
+
+      nil
+    end
+
+    def fetch_attribute(attributes, raw_data, key)
+      attributes[key] || attributes[key.to_sym] || raw_data[key] || raw_data[key.to_sym]
+    end
+
+    def numeric_revision_for(revision_id, inserted_at)
+      return revision_id.to_i if revision_id.to_s.match?(/\A\d+\z/)
+
+      safe_parse_datetime(inserted_at)&.to_i || 0
+    end
+
+    def normalized_token(value)
+      value.to_s.downcase.strip.gsub(/[-\s]+/, "_")
+    end
+
+    def truthy?(value)
+      value == true || value.to_s.downcase.in?(%w[true 1 yes y])
+    end
+
+    def decimal_amount(value)
+      value = value["amount"] || value[:amount] if value.is_a?(Hash)
+      BigDecimal(value.to_s)
+    rescue ArgumentError, TypeError
+      BigDecimal("0")
+    end
+
+    def decimal_or_nil(value)
+      return nil if value.blank?
+
+      decimal_amount(value)
+    end
+
+    def valid_currency(value)
+      normalized = CurrencyCatalog.normalize(value, fallback: @hotel.default_currency || "MYR")
+      CurrencyCatalog.valid?(normalized) ? normalized : (@hotel.default_currency || "MYR")
+    end
 
     def parse_booking_rooms(rooms_data)
       rooms_data.map do |room|

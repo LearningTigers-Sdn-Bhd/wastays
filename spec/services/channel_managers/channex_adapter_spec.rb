@@ -288,6 +288,123 @@ RSpec.describe ChannelManagers::ChannexAdapter do
     end
   end
 
+  describe "#settlement mapping" do
+    let!(:booking_source) do
+      BookingSource.find_or_initialize_by(key: "booking_com").tap { |record| record.update!(label: "Booking.com", kind: "ota", active: true) }
+    end
+
+    it "maps collection, payment, amounts, revision identity and safe virtual-card fields" do
+      payload = {
+        "data" => {
+          "id" => "revision-12",
+          "booking_id" => "cm-booking-1",
+          "revision_id" => 12,
+          "ota_reservation_id" => "ota-reservation-1",
+          "ota_name" => "Booking.com",
+          "status" => "new",
+          "amount" => "120.00",
+          "commission_amount" => "20.00",
+          "currency" => "EUR",
+          "payment_collect" => "ota",
+          "payment_type" => "credit_card",
+          "guarantee" => {
+            "is_virtual" => true,
+            "currency" => "EUR",
+            "available_balance" => "120.00",
+            "effective_date" => Date.current.to_s,
+            "expiration_date" => (Date.current + 30.days).to_s,
+            "card_number" => "4111111111111111",
+            "cvv" => "123",
+            "token" => "secret-token"
+          },
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "customer" => { "name" => "Guest" },
+          "rooms" => []
+        }
+      }
+
+      settlement = adapter.ingest_booking(payload: payload).fetch(:settlement)
+
+      expect(settlement).to include(
+        provider: "channex",
+        booking_source_key: "booking_com",
+        channel_manager_reference: "cm-booking-1",
+        external_reference: "ota-reservation-1",
+        revision_id: 12,
+        collection_by: "ota",
+        settlement_method: "virtual_card",
+        currency: "EUR",
+        gross_amount: 120.to_d,
+        commission_amount: 20.to_d,
+        expected_net_amount: 100.to_d,
+        status: "ready_to_charge",
+        virtual_card: hash_including(
+          is_virtual: true,
+          currency: "EUR",
+          available_balance: 120.to_d,
+          effective_date: Date.current,
+          expiration_date: Date.current + 30.days
+        )
+      )
+      expect(settlement.to_json).not_to include("4111111111111111", "123", "secret-token", "card_number", "cvv")
+    end
+
+    it "marks property collection as requiring collection without treating it as paid" do
+      payload = {
+        "data" => {
+          "id" => "revision-property",
+          "booking_id" => "cm-property",
+          "revision_id" => 1,
+          "ota_name" => "Booking.com",
+          "amount" => "50.00",
+          "currency" => "MYR",
+          "payment_collect" => "property",
+          "payment_type" => "credit_card",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "customer" => { "name" => "Guest" },
+          "rooms" => []
+        }
+      }
+
+      settlement = adapter.ingest_booking(payload: payload).fetch(:settlement)
+
+      expect(settlement).to include(
+        collection_by: "property",
+        settlement_method: "guest_card",
+        status: "property_collection_required"
+      )
+    end
+
+    it "marks an unknown source for attention instead of resolving it as an OTA" do
+      payload = {
+        "data" => {
+          "id" => "revision-unknown",
+          "booking_id" => "cm-unknown",
+          "revision_id" => 1,
+          "ota_name" => "Unrecognized Marketplace",
+          "amount" => "50.00",
+          "currency" => "MYR",
+          "payment_collect" => "ota",
+          "payment_type" => "credit_card",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "customer" => { "name" => "Guest" },
+          "rooms" => []
+        }
+      }
+
+      settlement = adapter.ingest_booking(payload: payload).fetch(:settlement)
+
+      expect(settlement).to include(
+        booking_source_key: nil,
+        status: "needs_attention",
+        metadata: include("source_resolution" => "unknown")
+      )
+    end
+  end
+
   describe "#push_booking" do
     it "records the channel reference revision in the booking history" do
       rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
