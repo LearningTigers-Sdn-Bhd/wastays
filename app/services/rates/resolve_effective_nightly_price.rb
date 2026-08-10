@@ -8,7 +8,10 @@ module Rates
     # that display base_amount cannot tell those apart from `source` — both
     # paths report daily_override/starting_price/standard_daily_rate — and the
     # calendar was labelling the per-adult figure as an occupancy total.
-    Result = Data.define(:amount, :base_amount, :currency, :source, :room_rate, :occupancy_priced)
+    # breakdown carries the adults/children/supplement split behind `amount`
+    # (a Bookings::NightlyPaxPrice::Breakdown), so quotes can freeze the parts
+    # rather than re-deriving them from live rate plans later.
+    Result = Data.define(:amount, :base_amount, :currency, :source, :room_rate, :occupancy_priced, :breakdown)
 
     def self.call(...)
       new(...).call
@@ -38,17 +41,17 @@ module Rates
 
     def call
       unless @rate_plan
-        return Result.new(amount: nil, base_amount: nil, currency: @currency, source: nil, room_rate: nil, occupancy_priced: false)
+        return blank_result(nil)
       end
 
       occupancy_amount, occupancy_source, occupancy_room_rate = resolve_occupancy_amount
       base_amount, source, price_rate = resolve_base_amount
       if base_amount.nil?
-        return Result.new(amount: nil, base_amount: nil, currency: @currency, source: nil, room_rate: price_rate, occupancy_priced: false)
+        return blank_result(price_rate)
       end
 
       if matrix_configured? && occupancy_amount.nil?
-        return Result.new(amount: nil, base_amount: nil, currency: @currency, source: nil, room_rate: occupancy_room_rate, occupancy_priced: false)
+        return blank_result(occupancy_room_rate)
       end
 
       child_anchor = if occupancy_amount.present? && @adults.positive?
@@ -57,7 +60,7 @@ module Rates
         base_amount
       end
 
-      amount = Bookings::NightlyPaxPrice.call(
+      breakdown = Bookings::NightlyPaxPrice.breakdown(
         base_nightly_rate: child_anchor,
         rate: occupancy_rate,
         rate_plan: @rate_plan,
@@ -68,16 +71,29 @@ module Rates
       )
 
       Result.new(
-        amount: amount,
+        amount: breakdown.total,
         base_amount: occupancy_amount || base_amount,
         currency: @currency,
         source: occupancy_source || source,
         room_rate: occupancy_room_rate || price_rate,
-        occupancy_priced: occupancy_amount.present?
+        occupancy_priced: occupancy_amount.present?,
+        breakdown: breakdown
       )
     end
 
     private
+
+    def blank_result(room_rate)
+      Result.new(
+        amount: nil,
+        base_amount: nil,
+        currency: @currency,
+        source: nil,
+        room_rate: room_rate,
+        occupancy_priced: false,
+        breakdown: nil
+      )
+    end
 
     def resolve_occupancy_amount
       return [ nil, nil, nil ] unless @rate_plan&.sell_mode == "per_person" && @adults.positive?

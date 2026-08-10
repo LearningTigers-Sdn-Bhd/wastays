@@ -34,6 +34,8 @@
 
         <%# Guests segment — click to open stepper dropdown %>
         <div class="relative flex-none" data-controller="dropdown hotel-search-bar"
+             data-hotel-search-bar-min-child-age-value="<%= RatePlanAgeBand::AGE_RANGE.min %>"
+             data-hotel-search-bar-max-child-age-value="<%= RatePlanAgeBand::AGE_RANGE.max %>"
              data-action="rate-calendar:dates-selected@window->dropdown#open">
           <button type="button" data-action="click->dropdown#toggle"
                   class="flex items-center gap-x-1.5 px-3 sm:px-4 py-2 cursor-pointer hover:bg-muted transition-colors h-full">
@@ -83,7 +85,7 @@
             <div class="flex items-center justify-between py-2 border-t border-border">
               <div>
                 <p class="text-sm font-semibold text-foreground">Children</p>
-                <p class="text-xs text-muted-foreground">Age 0–12</p>
+                <p class="text-xs text-muted-foreground">Age <%= RatePlanAgeBand::AGE_RANGE.min %>–<%= RatePlanAgeBand::AGE_RANGE.max %></p>
               </div>
               <div class="flex items-center gap-x-3">
                 <button type="button"
@@ -110,7 +112,7 @@
               <p class="text-xs text-neutral-text-secondary">Child ages</p>
               <div class="flex flex-wrap gap-1.5" data-hotel-search-bar-target="childAgesContainer">
                 <% children.times do |i| %>
-                  <%= select_tag "child_ages[]", options_for_select((0..17).to_a, child_ages[i]), class: "rounded-lg border border-neutral-border text-xs px-2 py-1", data: { hotel_search_bar_target: "childAgeInput" } %>
+                  <%= select_tag "child_ages[]", options_for_select(RatePlanAgeBand::AGE_RANGE.to_a, child_ages[i]), class: "rounded-lg border border-neutral-border text-xs px-2 py-1", data: { hotel_search_bar_target: "childAgeInput" } %>
                 <% end %>
               </div>
             </div>

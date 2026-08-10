@@ -222,7 +222,7 @@ module BookingEngine
       options.uniq { |opt| opt.rooms.map { |r| [ r.room_type.id, r.quantity, r.adults, r.children, r.child_ages.to_a.sort ] }.sort }.sort_by(&:total_price)
     end
 
-    def pricing_summary_for(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
+    def pricing_summary_for(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
       option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages) : lowest_pricing_option_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
       return {} if option.blank?
 
@@ -242,7 +242,7 @@ module BookingEngine
       }
     end
 
-    def calculate_total_price(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
+    def calculate_total_price(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
       option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages) : lowest_pricing_option_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
       option&.total_price || 0.to_d
     end
@@ -279,7 +279,7 @@ module BookingEngine
     def normalize_child_ages(raw_ages, children_count)
       ages = Array(raw_ages).map(&:to_i)
       return [] if ages.size != children_count
-      ages
+      ages.map { |age| age.clamp(RatePlanAgeBand::AGE_RANGE.min, RatePlanAgeBand::AGE_RANGE.max) }
     end
 
     # Preloads only the room_inventories/room_rates rows relevant to this
@@ -397,13 +397,13 @@ module BookingEngine
       occupancies
     end
 
-    def pricing_options_for(room_type, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
+    def pricing_options_for(room_type, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
       candidate_rate_plans_for(room_type).filter_map do |rate_plan|
         pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
       end
     end
 
-    def lowest_pricing_option_for(room_type, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
+    def lowest_pricing_option_for(room_type, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
       pricing_options_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages).sort_by { |opt|
         [ -RULE_PRIORITY.fetch(opt.winning_rule, 0), opt.total_price ]
       }.first
@@ -487,10 +487,20 @@ module BookingEngine
       )
     end
 
-    def pricing_option_for(room_type, rate_plan, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: [])
-      r_adults = (adults || pax || (@adults + @children)).to_i
-      r_children = (children || 0).to_i
-      r_child_ages = Array(child_ages).map(&:to_i)
+    def pricing_option_for(room_type, rate_plan, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
+      # Callers that name an occupancy own the whole party: adults, children and
+      # ages together. Callers that name none get the searched party as-is —
+      # never the headcount collapsed into adults, which would skip child
+      # pricing and ask the occupancy matrix for an adult row that isn't there.
+      if adults.nil? && pax.nil? && children.nil?
+        r_adults = @adults
+        r_children = @children
+        r_child_ages = @child_ages
+      else
+        r_adults = (adults || pax).to_i
+        r_children = children.to_i
+        r_child_ages = Array(child_ages).map(&:to_i)
+      end
 
       room_count ||= @room_count
       currency = rate_plan.currency.presence || room_type.hotel.default_currency.presence || "MYR"
@@ -552,6 +562,16 @@ module BookingEngine
           "applied_rule_type" => resolved.room_rate&.applied_rule_type || "base",
           "source" => resolved.source.to_s
         )
+
+        if resolved.breakdown&.adults_cost
+          snapshot_data["pax_breakdown"] = {
+            "adults" => r_adults,
+            "children" => r_children,
+            "adults_cost" => resolved.breakdown.adults_cost.to_d.to_s("F"),
+            "children_cost" => resolved.breakdown.children_cost.to_d.to_s("F"),
+            "supplement" => resolved.breakdown.supplement.to_d.to_s("F")
+          }
+        end
 
         complete_rates_by_date[date] = snapshot_data
 

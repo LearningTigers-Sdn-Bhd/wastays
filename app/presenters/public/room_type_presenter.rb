@@ -90,12 +90,50 @@ module Public
       pricing_summary[:rate_plan]&.child_price_multiplier
     end
 
+    def stay_nights
+      stay_dates.size
+    end
+
+    # Average nightly room total for every adult count this room can hold,
+    # resolved by the same service the quote uses. The browser preview needs the
+    # whole ladder, not one per-person figure: under an occupancy matrix a room
+    # is not "adults x per-person", and each rung implies its own child anchor.
+    # Averaging across nights is exact for the stay total, since percentage
+    # bands are linear and flat amounts are per night.
+    def pax_occupancy_nightly_prices
+      @pax_occupancy_nightly_prices ||= begin
+        rate_plan = pricing_summary[:rate_plan]
+        dates = stay_dates
+
+        if rate_plan.blank? || !per_pax_billing? || dates.empty?
+          {}
+        else
+          (1..@room_type.max_adults.to_i).each_with_object({}) do |count, prices|
+            total = dates.sum do |date|
+              amount = nightly_amount_for(rate_plan, date, count)
+              break nil if amount.nil?
+              amount
+            end
+
+            prices[count] = (total / dates.size).to_f if total
+          end
+        end
+      end
+    end
+
     def pax_rate_value
       return 0.0 unless pricing_summary[:rate_plan] && @availability_service
+
+      # Prefer the rung the guest actually searched for — RoomRate#price is the
+      # max-occupancy room total, which would read as a wildly high "per person".
+      searched_adults = @availability_service.adults.to_i
+      rung = pax_occupancy_nightly_prices[searched_adults]
+      return (rung / searched_adults).round(2) if rung && searched_adults.positive?
+
       rp = pricing_summary[:rate_plan]
       currency = pricing_summary[:currency]
 
-      dates = @availability_service.send(:stay_dates)
+      dates = stay_dates
       return 0.0 if dates.empty?
 
       rates_by_date = @room_type.room_rates.select { |rr| dates.include?(rr.date) && rr.rate_plan_id == rp.id && rr.currency == currency }.index_by(&:date)
@@ -139,6 +177,24 @@ module Public
 
     def photo_url
       photos.attached? ? @view_context.url_for(photos.first) : nil
+    end
+
+    private
+
+    def stay_dates
+      @stay_dates ||= @availability_service ? @availability_service.send(:stay_dates) : []
+    end
+
+    def nightly_amount_for(rate_plan, date, adults)
+      Rates::ResolveEffectiveNightlyPrice.call(
+        room_type: @room_type,
+        rate_plan: rate_plan,
+        date: date,
+        currency: pricing_summary[:currency],
+        adults: adults,
+        children: 0,
+        room_rates: @room_type.room_rates
+      ).amount
     end
   end
 end

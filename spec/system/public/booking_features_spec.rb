@@ -73,4 +73,37 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
       expect(page).to have_content(/160\.00/)
     end
   end
+
+  it "previews age-banded children at the band's percentage, not its raw value", js: true do
+    add_pax_plan!
+    create(:rate_plan_age_band, rate_plan: @pax_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
+
+    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2, children: 1, child_ages: [ 8 ])
+    within ".group", text: @room_type.name do
+      click_button "Add to Stay"
+    end
+
+    # 2 adults @ 80 + 1 child @ 40% of 80 = 192. A raw 40x multiplier would
+    # have shown 3,360.
+    within "[data-room-selector-target='stickyBar']" do
+      expect(page).to have_content(/192\.00/)
+    end
+  end
+
+  it "previews an occupancy matrix as a room total, not adults x a per-person rate", js: true do
+    add_pax_plan!
+    create(:rate_plan_age_band, rate_plan: @pax_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
+    @pax_rate.update!(price: 300.0, occupancy_prices: { "1" => 180.0, "2" => 300.0 })
+
+    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2, children: 1, child_ages: [ 8 ])
+    within ".group", text: @room_type.name do
+      click_button "Add to Stay"
+    end
+
+    # 2 adults = the 300 matrix total; child(8) = 40% of the 150 per-adult
+    # anchor. Reading RoomRate#price as per-person would have shown 900.
+    within "[data-room-selector-target='stickyBar']" do
+      expect(page).to have_content(/360\.00/)
+    end
+  end
 end

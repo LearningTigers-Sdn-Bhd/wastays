@@ -276,12 +276,60 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
 
     it "prices a flat-amount band regardless of the nightly rate" do
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 18, max_age: 25, pricing_mode: "amount", price_value: 15.0, label: "Young Adult")
-      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 1, child_ages: [ 20 ])
-      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 1, child_ages: [ 20 ])
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 3, pricing_mode: "amount", price_value: 15.0, label: "Infant")
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 1, child_ages: [ 2 ])
+      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 1, child_ages: [ 2 ])
 
       # 2 adults @ 50 + 1 flat-amount child @ 15 = 115/night, 2 nights = 230
       expect(total).to eq(230.0)
+    end
+  end
+
+  describe "callers that do not name an occupancy" do
+    # Search and the room cards ask for a price without repeating the party.
+    # They must get the searched adults/children/ages, not the headcount
+    # collapsed into adults — which skips child pricing and asks the occupancy
+    # matrix for an adult row that was never configured.
+    let!(:family_room) { RoomType.create!(hotel: hotel, name: "Family", quantity: 3, max_adults: 2, max_children: 2, base_price: 200, room_number_mode: "range") }
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per-Pax Plan", child_price_multiplier: 0.5, currency: "MYR") }
+
+    before do
+      hotel.update!(sell_mode: "per_person")
+      pax_rate_plan.reload
+      RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
+
+      stay_dates.each do |date|
+        RoomInventory.create!(room_type: family_room, date: date, quantity: 3, status: "open")
+        # Every plan on a per-person room carries the matrix, so no plan has a
+        # row for 4 adults — exactly the setup that used to drop the room.
+        [ pax_rate_plan, family_room.standard_rate_plan ].compact.each do |plan|
+          RoomRate.create!(
+            room_type: family_room, rate_plan: plan, date: date,
+            price: 300.0, currency: "MYR",
+            occupancy_prices: { "1" => 180.0, "2" => 300.0 }
+          )
+        end
+      end
+    end
+
+    it "keeps a room whose matrix has no row for the collapsed headcount" do
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6, 6 ])
+
+      expect(service.available_rooms_for_hotel(hotel)).to include(family_room)
+    end
+
+    it "prices the searched family rather than 4 adults" do
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6, 6 ])
+
+      # 2 adults @ 300 + 2 children @ (300/2)*0.4 = 300 + 120 = 420/night, 2 nights
+      expect(service.pricing_summary_for(family_room)[:total_price]).to eq(840.0)
+    end
+
+    it "still honours an explicitly named occupancy" do
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6, 6 ])
+
+      expect(service.calculate_total_price(family_room, adults: 1, children: 0)).to eq(360.0)
     end
   end
 

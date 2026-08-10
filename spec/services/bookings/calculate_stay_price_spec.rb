@@ -72,8 +72,8 @@ RSpec.describe Bookings::CalculateStayPrice do
       end
 
       it "prices a flat-amount band regardless of the nightly rate" do
-        create(:rate_plan_age_band, :amount, rate_plan: rate_plan, min_age: 18, max_age: 25, price_value: 15.0, label: "Young Adult")
-        service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 1, child_ages: [ 20 ])
+        create(:rate_plan_age_band, :amount, rate_plan: rate_plan, min_age: 0, max_age: 3, price_value: 15.0, label: "Infant")
+        service = described_class.new(room_type: room_type, check_in: check_in, check_out: check_out, rate_plan: rate_plan, adults: 2, children: 1, child_ages: [ 2 ])
         # (2*100 + 15 flat) * 2 nights = 215 * 2 = 430
         expect(service.call).to eq(430)
       end

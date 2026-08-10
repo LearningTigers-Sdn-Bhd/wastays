@@ -13,6 +13,13 @@ export default class extends Controller {
     "childAgeInput"
   ]
 
+  // Bounds come from RatePlanAgeBand::AGE_RANGE so the picker can never offer
+  // an age the rate plans are not allowed to price.
+  static values = {
+    minChildAge: { type: Number, default: 0 },
+    maxChildAge: { type: Number, default: 17 }
+  }
+
   step(event) {
     const field = event.params.field
     const delta = Number(event.params.delta)
@@ -45,7 +52,7 @@ export default class extends Controller {
         select.name = "child_ages[]"
         select.className = "rounded-lg border border-neutral-border text-xs px-2 py-1"
         select.dataset.hotelSearchBarTarget = "childAgeInput"
-        for (let age = 0; age <= 17; age++) {
+        for (let age = this.minChildAgeValue; age <= this.maxChildAgeValue; age++) {
           const option = document.createElement("option")
           option.value = String(age)
           option.textContent = String(age)
