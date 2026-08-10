@@ -113,6 +113,22 @@ class FolioTransaction < ApplicationRecord
     voided_by_transaction_id.present?
   end
 
+  # Canonical classifier for money collected by an OTA. Metadata alone is
+  # intentionally insufficient: old/generic booking payments can carry OTA
+  # references, while a canonical credit must retain the OTA folio identity
+  # and the hotel's OTA payment code.
+  def ota_collected_credit?
+    return false if reversed?
+    return false unless payment? && amount.to_d.positive?
+
+    folio = booking_folio
+    party = folio&.booking_billing_party
+    return false unless folio&.payer_type == "ota" && folio.folio_type == "external"
+    return false unless party&.party_kind == "ota" && party.booking_source_id.present?
+
+    transaction_code&.kind == "payment" && transaction_code.system_key == "ota_collected_payment"
+  end
+
   private
 
   def snapshot_transaction_code
