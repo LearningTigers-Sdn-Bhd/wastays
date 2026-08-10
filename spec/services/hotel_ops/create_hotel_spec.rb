@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe HotelOps::CreateHotel do
   let(:account_params) { { name: 'Green Hotel Group' } }
   let(:user_params) { { name: 'Sarah Lim', email: 'sarah@example.com', password: 'password' } }
-  let(:hotel_params) { { name: 'Green Hotel KL', city: 'Kuala Lumpur', country: 'Malaysia' } }
+  let(:hotel_params) { { name: 'Green Hotel KL', city: 'Kuala Lumpur', country: 'Malaysia', sell_mode: 'per_room' } }
 
   subject { described_class.new(account_params: account_params, user_params: user_params, hotel_params: hotel_params) }
 
@@ -75,6 +75,19 @@ RSpec.describe HotelOps::CreateHotel do
           result = subject.call
           expect(result[:success]).to be false
           expect(result[:error]).to be_present
+        }.not_to change(Account, :count)
+      end
+
+      it 'rolls back every record when the charging model is missing' do
+        expect {
+          result = described_class.new(
+            account_params: account_params,
+            user_params: { name: 'Sarah Lim', email: 'sarah@example.com', password: 'password' },
+            hotel_params: hotel_params.except(:sell_mode)
+          ).call
+
+          expect(result[:success]).to be false
+          expect(result[:error]).to include("Sell mode can't be blank")
         }.not_to change(Account, :count)
       end
     end

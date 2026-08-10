@@ -1,7 +1,13 @@
 require 'rails_helper'
 
 RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
-  let(:hotel) { create(:hotel, default_currency: "MYR") }
+  let(:hotel) do
+    create(
+      :hotel,
+      default_currency: "MYR",
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
+    )
+  end
   let(:user) { create(:user) }
   let!(:room_type) { create(:room_type, hotel: hotel, max_adults: 2) }
 
@@ -13,11 +19,11 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
     sign_in_as(user)
   end
 
-  describe "GET /hotel/:hotel_id/inventory?tab=channels" do
+  describe "GET /hotel/:hotel_id/inventory?tab=channels", :per_person do
     let(:channel_adapter) { instance_double(ChannelManagers::ChannexAdapter, connected_channels: []) }
 
     before do
-      hotel.update!(sell_mode: "per_person", preferred_channel_manager: "channex")
+      hotel.update!(preferred_channel_manager: "channex")
       room_type.update!(max_adults: 2)
       allow(ChannelManagers::SyncOrchestrator).to receive(:adapter_for).with(hotel).and_return(channel_adapter)
     end
@@ -84,9 +90,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(page).to have_content("Room price (MYR)")
     end
 
-    it "shows only per-guest occupancy fields when the property charges per guest" do
-      hotel.update!(sell_mode: "per_person")
-
+    it "shows only per-guest occupancy fields when the property charges per guest", :per_person do
       get edit_selection_hotel_inventory_dashboards_path(hotel), params: {
         mode: "rates", room_type_id: room_type.id, rate_plan_id: rate_plan.id, date: Date.current.to_s
       }
@@ -101,8 +105,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
 
     # The old dialog sized this grid to the largest room in the property and let
     # the save path silently drop anything above the category's own maximum.
-    it "sizes the occupancy grid to the clicked category, not the property maximum" do
-      hotel.update!(sell_mode: "per_person")
+    it "sizes the occupancy grid to the clicked category, not the property maximum", :per_person do
       create(:room_type, hotel: hotel, name: "Family Suite", max_adults: 4)
 
       get edit_selection_hotel_inventory_dashboards_path(hotel), params: {

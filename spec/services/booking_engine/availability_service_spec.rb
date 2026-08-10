@@ -2,7 +2,12 @@ require 'rails_helper'
 
 RSpec.describe BookingEngine::AvailabilityService do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
-  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel) do
+    Hotel.create!(
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room",
+      name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved"
+    )
+  end
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:check_in) { Date.today }
@@ -184,11 +189,10 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
   end
 
-  describe "#allocation_options_for_hotel (Per Person with Single Supplement)" do
+  describe "#allocation_options_for_hotel (Per Person with Single Supplement)", :per_person do
     let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", single_supplement: 20.0, currency: "MYR") }
 
     before do
-      hotel.update!(sell_mode: "per_person")
       pax_rate_plan.reload
       # Link pax_rate_plan to room_type
       RoomTypeRatePlan.create!(room_type: room_type, rate_plan: pax_rate_plan)
@@ -226,12 +230,11 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
   end
 
-  describe "#calculate_total_price with age-banded per_person rate plan" do
+  describe "#calculate_total_price with age-banded per_person rate plan", :per_person do
     let!(:family_room) { RoomType.create!(hotel: hotel, name: "Family", quantity: 3, max_adults: 2, max_children: 3, base_price: 100, room_number_mode: "range") }
     let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", child_price_multiplier: 0.6, currency: "MYR") }
 
     before do
-      hotel.update!(sell_mode: "per_person")
       pax_rate_plan.reload
       RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
       RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
@@ -285,7 +288,7 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
   end
 
-  describe "callers that do not name an occupancy" do
+  describe "callers that do not name an occupancy", :per_person do
     # Search and the room cards ask for a price without repeating the party.
     # They must get the searched adults/children/ages, not the headcount
     # collapsed into adults — which skips child pricing and asks the occupancy
@@ -294,7 +297,6 @@ RSpec.describe BookingEngine::AvailabilityService do
     let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per-Pax Plan", child_price_multiplier: 0.5, currency: "MYR") }
 
     before do
-      hotel.update!(sell_mode: "per_person")
       pax_rate_plan.reload
       RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
       RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
@@ -333,12 +335,11 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
   end
 
-  describe "#allocation_options_for_hotel groups rooms by child ages, not just counts" do
+  describe "#allocation_options_for_hotel groups rooms by child ages, not just counts", :per_person do
     let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", child_price_multiplier: 1.0, currency: "MYR") }
     let!(:room_a) { RoomType.create!(hotel: hotel, name: "Room A", quantity: 2, max_adults: 1, max_children: 1, base_price: 100, room_number_mode: "range") }
 
     before do
-      hotel.update!(sell_mode: "per_person")
       pax_rate_plan.reload
       RoomTypeRatePlan.create!(room_type: room_a, rate_plan: pax_rate_plan)
       RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 5, price_value: 10, label: "Toddler")
@@ -434,9 +435,8 @@ RSpec.describe BookingEngine::AvailabilityService do
       end
     end
 
-    context "when the hotel sells per guest" do
+    context "when the hotel sells per guest", :per_person do
       before do
-        hotel.update!(sell_mode: "per_person")
         pax_rate_plan.reload
       end
 

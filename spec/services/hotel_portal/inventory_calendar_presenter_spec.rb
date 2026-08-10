@@ -1,7 +1,13 @@
 require 'rails_helper'
 
 RSpec.describe HotelPortal::InventoryCalendarPresenter do
-  let(:hotel) { create(:hotel, default_currency: "MYR") }
+  let(:hotel) do
+    create(
+      :hotel,
+      default_currency: "MYR",
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
+    )
+  end
   let(:start_date) { Date.current }
   let(:end_date) { start_date + 6.days }
   let(:presenter) { described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, display_currency: "MYR") }
@@ -109,8 +115,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
       )
     end
 
-    it "exposes each per-guest occupancy price and displays the room's maximum-adult price" do
-      hotel.update!(sell_mode: "per_person")
+    it "exposes each per-guest occupancy price and displays the room's maximum-adult price", :per_person do
       room_type = create(:room_type, hotel: hotel, max_adults: 2, base_price: 100)
       package = create(:rate_plan, :custom, hotel: hotel, name: "Flexible", currency: "MYR")
       assignment = create(:room_type_rate_plan, room_type: room_type, rate_plan: package, pricing_mode: "fixed")

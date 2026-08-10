@@ -209,8 +209,12 @@ RSpec.describe Hotel, type: :model do
   describe 'sell mode' do
     let(:hotel) { create(:hotel) }
 
-    it 'defaults to per_room' do
-      expect(hotel.sell_mode).to eq('per_room')
+    it 'requires an explicit value on creation' do
+      account = create(:account)
+
+      expect(build(:hotel, account: account, sell_mode: nil)).not_to be_valid
+      expect(build(:hotel, account: account, sell_mode: 'per_room')).to be_valid
+      expect(build(:hotel, account: account, sell_mode: 'per_person')).to be_valid
     end
 
     it 'rejects a value outside the rate plan vocabulary' do
@@ -226,69 +230,21 @@ RSpec.describe Hotel, type: :model do
       end
     end
 
-    describe 'mirroring onto rate plans' do
-      it 'flips every plan when the hotel changes mode' do
-        standard = create(:rate_plan, hotel: hotel)
-        custom = create(:rate_plan, :custom, hotel: hotel)
-
-        hotel.update!(sell_mode: 'per_person')
-
-        expect(standard.reload.sell_mode).to eq('per_person')
-        expect(custom.reload.sell_mode).to eq('per_person')
+    describe 'locking after creation' do
+      it 'refuses a per-room to per-guest change before the hotel is bookable' do
+        expect(hotel.update(sell_mode: 'per_person')).to be false
+        expect(hotel.errors[:sell_mode]).to include('cannot be changed after the hotel is created')
+        expect(hotel.reload.sell_mode).to eq('per_room')
       end
 
-      it 'flips special tier plans too — nothing is exempt' do
-        walk_in = create(:rate_plan, :walk_in_tier, hotel: hotel)
-        corporate = create(:rate_plan, :corporate_tier, hotel: hotel)
-        ota = create(:rate_plan, :ota_tier, hotel: hotel)
-
-        hotel.update!(sell_mode: 'per_person')
-
-        expect([ walk_in, corporate, ota ].map { |rp| rp.reload.sell_mode }).to all(eq('per_person'))
-      end
-
-      it 'flips back to per_room' do
+      it 'refuses a per-guest to per-room change' do
         hotel = create(:hotel, :per_person)
-        rate_plan = create(:rate_plan, hotel: hotel)
 
-        hotel.update!(sell_mode: 'per_room')
-
-        expect(rate_plan.reload.sell_mode).to eq('per_room')
-      end
-
-      it 'leaves another hotel’s plans alone' do
-        other_plan = create(:rate_plan)
-
-        hotel.update!(sell_mode: 'per_person')
-
-        expect(other_plan.reload.sell_mode).to eq('per_room')
-      end
-
-      it 'does not log when no plan needed changing' do
-        expect(Rails.logger).not_to receive(:info)
-        hotel.update!(name: "#{hotel.name} Resort")
-      end
-    end
-
-    describe 'locking once the hotel is selling' do
-      it 'refuses the change once the hotel is bookable' do
-        hotel.update_column(:status, 'live')
-
-        expect(hotel.update(sell_mode: 'per_person')).to be false
-        expect(hotel.errors[:sell_mode]).to be_present
-        expect(hotel.reload.sell_mode).to eq('per_room')
-      end
-
-      it 'refuses the change once the hotel has taken a booking' do
-        create(:booking, hotel: hotel)
-
-        expect(hotel.update(sell_mode: 'per_person')).to be false
-        expect(hotel.reload.sell_mode).to eq('per_room')
+        expect(hotel.update(sell_mode: 'per_room')).to be false
+        expect(hotel.reload.sell_mode).to eq('per_person')
       end
 
       it 'leaves the hotel’s other attributes editable while locked' do
-        hotel.update_column(:status, 'live')
-
         expect(hotel.update(name: "#{hotel.name} Resort")).to be true
       end
     end

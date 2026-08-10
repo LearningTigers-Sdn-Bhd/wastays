@@ -3,9 +3,14 @@ require 'rails_helper'
 RSpec.describe 'HotelPortal::RatePlans', type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  # These editor examples exercise both charging models. A live hotel locks
-  # sell_mode by design, so keep the fixture in setup while editing it.
-  let(:hotel) { create(:hotel, account: account, status: 'registered') }
+  let(:hotel) do
+    create(
+      :hotel,
+      account: account,
+      status: 'registered',
+      sell_mode: RSpec.current_example.metadata[:per_person] ? 'per_person' : 'per_room'
+    )
+  end
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
   let!(:room_type) { create(:room_type, hotel: hotel) }
 
@@ -77,8 +82,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include("Pricing for Grand Villa")
     end
 
-    it 'renders only the selected room occupancy ladder in per-guest mode' do
-      hotel.update!(sell_mode: "per_person")
+    it 'renders only the selected room occupancy ladder in per-guest mode', :per_person do
       room_type.update!(max_adults: 2)
       villa = create(:room_type, hotel: hotel, name: "Grand Villa", max_adults: 12)
 
@@ -91,9 +95,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).not_to include("Pricing for #{room_type.name}")
     end
 
-    it 'renders an age band template the add button can actually clone' do
-      hotel.update!(sell_mode: 'per_person')
-
+    it 'renders an age band template the add button can actually clone', :per_person do
       get new_hotel_rate_plan_path(hotel)
 
       # fields_for captures rather than writes, so an ERB <% here leaves the
@@ -101,8 +103,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('rate_plan[rate_plan_age_bands_attributes][NEW_RECORD][min_age]')
     end
 
-    it 'shows the hotel charging model and default currency as inherited context' do
-      hotel.update!(sell_mode: 'per_person', default_currency: 'USD')
+    it 'shows the hotel charging model and default currency as inherited context', :per_person do
+      hotel.update!(default_currency: 'USD')
 
       get new_hotel_rate_plan_path(hotel)
 
@@ -112,8 +114,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(Nokogiri::HTML(response.body).at_css('#rate_plan_sell_mode')).to be_nil
     end
 
-    it 'explains the capability requirements for a connected per-guest hotel' do
-      hotel.update!(sell_mode: 'per_person', preferred_channel_manager: 'channex')
+    it 'explains the capability requirements for a connected per-guest hotel', :per_person do
+      hotel.update!(preferred_channel_manager: 'channex')
 
       get new_hotel_rate_plan_path(hotel)
 
@@ -187,8 +189,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.text.squish).to include('Extra guest charge')
     end
 
-    it 'shows only the per-guest fields at a per-guest hotel' do
-      hotel.update!(sell_mode: "per_person")
+    it 'shows only the per-guest fields at a per-guest hotel', :per_person do
       per_person_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Family Plan')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
@@ -238,8 +239,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('data-rate-plan-room-pricing-target="preview"')
     end
 
-    it 'wires up a live price preview for each age band, using the room type Standard Rate and a mode choice' do
-      hotel.update!(sell_mode: 'per_person')
+    it 'wires up a live price preview for each age band, using the room type Standard Rate and a mode choice', :per_person do
       per_person_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Family Plan', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
@@ -252,8 +252,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('Fixed price per child')
     end
 
-    it 'shows child pricing guidance and the add button when there are no age groups yet' do
-      hotel.update!(sell_mode: 'per_person')
+    it 'shows child pricing guidance and the add button when there are no age groups yet', :per_person do
       per_person_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Family Plan', currency: 'MYR')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
@@ -267,8 +266,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('Add age group')
     end
 
-    it 'keeps cards only for the pricing mode choices' do
-      hotel.update!(sell_mode: "per_person")
+    it 'keeps cards only for the pricing mode choices', :per_person do
       per_person_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Family Plan')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
@@ -288,8 +286,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(mode_choice["class"]).to include("border", "rounded-md", "p-3")
     end
 
-    it 'hides the empty-state add button once age groups already exist' do
-      hotel.update!(sell_mode: 'per_person')
+    it 'hides the empty-state add button once age groups already exist', :per_person do
       per_person_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Family Plan', currency: 'MYR')
       create(:rate_plan_age_band, rate_plan: per_person_plan, min_age: 4, max_age: 11, price_value: 40, label: 'Child')
 
@@ -312,8 +309,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(delete_action_labels(response.body)).to be_empty
     end
 
-    it "allows Standard Rate occupancy and child pricing for a per-guest hotel" do
-      hotel.update!(sell_mode: "per_person")
+    it "allows Standard Rate occupancy and child pricing for a per-guest hotel", :per_person do
       room_type.update!(max_adults: 2)
       standard = room_type.standard_rate_plan
       assignment = standard.room_type_rate_plans.sole
@@ -393,8 +389,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(existing.room_type_rate_plans).to be_empty
     end
 
-    it 'takes the sell mode from the hotel' do
-      hotel.update!(sell_mode: 'per_person')
+    it 'takes the sell mode from the hotel', :per_person do
       room_type.update!(max_adults: 2)
 
       post hotel_rate_plans_path(hotel), params: {
@@ -410,8 +405,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(RatePlan.last.room_type_rate_plans.sole.occupancy_prices.order(:adults).pluck(:price)).to eq([ 100.to_d, 180.to_d ])
     end
 
-    it 'stores a separate starting price for each supported adult occupancy' do
-      hotel.update!(sell_mode: 'per_person')
+    it 'stores a separate starting price for each supported adult occupancy', :per_person do
       room_type.update!(max_adults: 2)
 
       post hotel_rate_plans_path(hotel), params: {
@@ -430,8 +424,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       ])
     end
 
-    it 'persists explicit flattened child and infant fees for Channex' do
-      hotel.update!(sell_mode: 'per_person')
+    it 'persists explicit flattened child and infant fees for Channex', :per_person do
       room_type.update!(max_adults: 2)
 
       post hotel_rate_plans_path(hotel), params: {
@@ -451,8 +444,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       )
     end
 
-    it 'requires every adult occupancy supported by the room category' do
-      hotel.update!(sell_mode: 'per_person')
+    it 'requires every adult occupancy supported by the room category', :per_person do
       room_type.update!(max_adults: 2)
 
       expect {
@@ -560,8 +552,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.room_type_rate_plans.sole.pricing_value).to eq(225.to_d)
     end
 
-    it "saves child pricing and only the selected room occupancy matrix" do
-      hotel.update!(sell_mode: "per_person")
+    it "saves child pricing and only the selected room occupancy matrix", :per_person do
       room_type.update!(max_adults: 2)
 
       patch hotel_rate_plan_path(hotel, rate_plan), params: {
@@ -583,8 +574,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.room_type_rate_plans.sole.occupancy_prices.order(:adults).pluck(:price)).to eq([ 180.to_d, 300.to_d ])
     end
 
-    it "keeps Standard Rate identity locked while saving its per-guest room pricing" do
-      hotel.update!(sell_mode: "per_person")
+    it "keeps Standard Rate identity locked while saving its per-guest room pricing", :per_person do
       room_type.update!(max_adults: 2)
       standard = room_type.standard_rate_plan
 
@@ -617,11 +607,12 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
     # A per-room plan prices the room once, so the preview must not walk adult
     # counts and imply an occupancy matrix the plan does not have.
-    it "tells the preview whether this property prices per guest" do
+    it "tells the preview that a per-room property does not price per guest" do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
       expect(response.body).to include('data-rate-plan-room-pricing-per-person-value="false"')
+    end
 
-      hotel.update!(sell_mode: "per_person")
+    it "tells the preview that a per-guest property prices per guest", :per_person do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
       expect(response.body).to include('data-rate-plan-room-pricing-per-person-value="true"')
     end
@@ -640,8 +631,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).not_to include(unattached_room.name)
     end
 
-    it "renders only the selected room's per-guest occupancy fields" do
-      hotel.update!(sell_mode: "per_person")
+    it "renders only the selected room's per-guest occupancy fields", :per_person do
       room_type.update!(max_adults: 2)
       villa = create(:room_type, hotel: hotel, name: "Grand villa", max_adults: 12)
       create(:room_type_rate_plan, rate_plan: rate_plan, room_type: villa)
@@ -676,8 +666,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response).to have_http_status(:not_found)
     end
 
-    it "returns the selected room and validation errors for an incomplete per-guest matrix" do
-      hotel.update!(sell_mode: "per_person")
+    it "returns the selected room and validation errors for an incomplete per-guest matrix", :per_person do
       room_type.update!(max_adults: 2)
 
       put hotel_rate_plan_room_pricing_path(hotel, rate_plan, room_type), params: {

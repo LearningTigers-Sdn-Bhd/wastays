@@ -7,6 +7,7 @@ FactoryBot.define do
     country { "Malaysia" }
     star_rating { 4 }
     status { "registered" }
+    sell_mode { "per_room" }
 
     transient do
       initialize_current_business_date { true }

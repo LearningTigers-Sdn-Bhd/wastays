@@ -281,52 +281,26 @@ per-person plans as unsupported forever.
 
 ## Phase 7 — Charging-model transitions
 
-Goal: make switching between per-room and per-person safe for connected and
-unconnected properties.
+Goal: make the hotel charging model an explicit, permanent structural choice.
 
 ### Shipped
 
-- [x] Lock `sell_mode` once the hotel is bookable (`approved` or `live`) or has
-  taken a booking. `Hotel#sell_mode_locked?` drives both the validation and the
-  disabled admin field, so the setup rule the form only ever hinted at is now
-  enforced.
+- [x] Require every admin-created and self-registered hotel to explicitly choose
+  `per_room` or `per_person`.
+- [x] Keep the database column non-null without silently defaulting new hotels
+  to `per_room`.
+- [x] Make the choice immutable immediately after hotel creation, regardless of
+  status, bookings, room setup, or channel connections.
+- [x] Show the saved model as read-only context on the admin edit form.
+- [x] Reject attempted changes in both directions at the model boundary.
+- [x] Keep new rate plans inheriting the hotel's permanent charging model.
+- [x] Remove callback-based transition and mirroring behavior.
 
-### Current risk
+### Product boundary
 
-The lock removes the live-property failure mode rather than solving the
-transition: a hotel that switches before launch still goes through
-`Hotel#mirror_sell_mode_to_rate_plans`, which uses `update_all`. That keeps
-stored plan values aligned with the hotel but skips rate-plan callbacks and does
-not reconcile data whose meaning changes with the charging model. Before launch
-there is little such data to lose, which is what makes the lock a sufficient
-answer for now.
-
-The open question is whether post-launch transitions are ever supported. Until
-they are, the remaining items below are unscheduled rather than pending — a
-property that picks wrong and has started selling has no admin path back.
-
-### Remaining
-
-- [ ] Decide whether post-launch transitions are supported at all. Everything
-  below is only required if they are.
-- [ ] Replace callback-only mirroring with an explicit transition service.
-- [ ] Detect active channel-manager connections before changing the model.
-- [ ] Inventory the scalar prices, occupancy matrices, daily occupancy
-  overrides, extra-guest charges, one-guest surcharges, and age bands affected
-  by the transition.
-- [ ] Define which values are transformed, retained as inactive history, or
-  deleted.
-- [ ] Preserve valid room/rate-plan assignments.
-- [ ] Reconcile or recreate external rate-plan structures and channel mappings.
-- [ ] Push a complete availability, rate, and restriction snapshot after a
-  successful transition.
-- [ ] Report partial failure and provide a retry path.
-- [ ] Prevent a generic success result when only availability synchronized.
-- [ ] Decide whether `rate_plans.sell_mode` should remain duplicated or be
-  derived from the hotel everywhere.
-- [ ] If it remains, add a database-level consistency guarantee and repair
-  existing mismatches.
-- [ ] Cover connected transitions in both directions end to end.
+Charging-model transitions are unsupported. Correcting a mistaken choice is an
+administrative data-recovery operation, not a hotel settings workflow. No price
+conversion, channel remapping, or ARI transition service is planned.
 
 ## Current implementation map
 

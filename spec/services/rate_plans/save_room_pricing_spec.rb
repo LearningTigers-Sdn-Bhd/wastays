@@ -1,7 +1,9 @@
 require "rails_helper"
 
 RSpec.describe RatePlans::SaveRoomPricing do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) do
+    create(:hotel, sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room")
+  end
   let(:room_type) { create(:room_type, hotel: hotel, max_adults: 3, base_price: 300) }
   let(:rate_plan) { create(:rate_plan, :custom, hotel: hotel) }
 
@@ -36,8 +38,7 @@ RSpec.describe RatePlans::SaveRoomPricing do
     expect(result.assignment).to have_attributes(pricing_mode: "multiplier", pricing_value: -15.to_d)
   end
 
-  it "materializes and replaces a complete per-guest occupancy matrix" do
-    hotel.update!(sell_mode: "per_person")
+  it "materializes and replaces a complete per-guest occupancy matrix", :per_person do
     assignment = create(:room_type_rate_plan, rate_plan: rate_plan, room_type: room_type)
     assignment.occupancy_prices.create!(adults: 1, price: 999)
 
@@ -62,9 +63,7 @@ RSpec.describe RatePlans::SaveRoomPricing do
     ])
   end
 
-  it "refuses an incomplete direct per-guest matrix without writing" do
-    hotel.update!(sell_mode: "per_person")
-
+  it "refuses an incomplete direct per-guest matrix without writing", :per_person do
     result = described_class.call(
       rate_plan: rate_plan,
       room_type: room_type,

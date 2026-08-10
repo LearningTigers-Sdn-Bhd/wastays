@@ -156,13 +156,21 @@
           </div>
 
           <div>
-            <% sell_mode_locked = hotel.persisted? && hotel.sell_mode_locked? %>
-            <label for="hotel_sell_mode" class="mb-2 block text-sm font-medium text-foreground">Sells By</label>
-            <%= f.select :sell_mode, Hotel.sell_mode_options, {}, class: input_classes, disabled: sell_mode_locked %>
-            <% if sell_mode_locked %>
-              <p class="mt-1 text-xs text-muted-foreground">Locked. This property is already selling, and switching would leave its rate plans without prices.</p>
+            <% if hotel.persisted? %>
+              <p class="mb-2 text-sm font-medium text-foreground">How the property charges</p>
+              <p class="text-sm text-foreground"><%= hotel.sell_mode_label %></p>
+              <p class="mt-1 text-xs text-muted-foreground">Permanent. The charging model cannot be changed after the hotel is created.</p>
             <% else %>
-              <p class="mt-1 text-xs text-muted-foreground">Every rate plan follows this. It locks once the hotel becomes bookable, so set it before the hotel starts selling.</p>
+              <%= render PanelsUI::RadioGroup.new(
+                    form: f,
+                    attribute: :sell_mode,
+                    label: "How does the property charge?",
+                    description: "Choose carefully. Every rate plan follows this model, and it cannot be changed after the hotel is created.",
+                    options: [
+                      { label: "Per room", value: "per_room", description: "One nightly price for the room, with optional extra guest charges." },
+                      { label: "Per guest", value: "per_person", description: "A different nightly total for each number of adults." }
+                    ],
+                    required: true) %>
             <% end %>
           </div>
 

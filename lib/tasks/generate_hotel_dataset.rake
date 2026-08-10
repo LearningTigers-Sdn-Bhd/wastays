@@ -30,6 +30,7 @@ namespace :hotel_generator do
         city: "Kundasang",
         country: "Malaysia",
         status: "live",
+        sell_mode: "per_room",
         star_rating: 4,
         default_currency: "MYR",
         preferred_channel_manager: "channex",

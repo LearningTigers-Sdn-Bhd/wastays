@@ -5,7 +5,16 @@ RSpec.describe 'Hotel layout shell', type: :system do
   let(:user) { create(:user, account: account, role: 'admin', email: 'owner@example.com') }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, account: account, plan: plan, name: "O'Conner Hotel", status: 'approved') }
+  let(:hotel) do
+    create(
+      :hotel,
+      account: account,
+      plan: plan,
+      name: "O'Conner Hotel",
+      status: 'approved',
+      sell_mode: RSpec.current_example.metadata[:per_person] ? 'per_person' : 'per_room'
+    )
+  end
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -76,9 +85,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_no_css("#hotel-sidebar button.panel-sidebar__group-trigger", visible: :all)
   end
 
-  it "names the per-person sell mode in the Navbar badge" do
-    hotel.update!(sell_mode: "per_person")
-
+  it "names the per-person sell mode in the Navbar badge", :per_person do
     visit hotel_dashboard_path(hotel)
 
     within(".panel-navbar__brand") do

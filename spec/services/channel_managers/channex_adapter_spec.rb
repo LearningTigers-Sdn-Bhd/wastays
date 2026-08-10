@@ -1,7 +1,14 @@
 require 'rails_helper'
 
 RSpec.describe ChannelManagers::ChannexAdapter do
-  let(:hotel) { create(:hotel, name: "Test Hotel", city: "KL") }
+  let(:hotel) do
+    create(
+      :hotel,
+      name: "Test Hotel",
+      city: "KL",
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
+    )
+  end
   let!(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2) }
   let(:adapter) { described_class.new(hotel: hotel) }
   let(:client_double) { instance_double(Channex::Client) }
@@ -65,8 +72,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
     let!(:hotel_mapping) { create(:channel_mapping, mappable: hotel, external_id: "ch_prop_123") }
     let!(:room_type_mapping) { create(:channel_mapping, mappable: room_type, external_id: "ch_rt_123") }
 
-    it 'creates manual occupancy options for a complete per-person rate plan' do
-      hotel.update!(sell_mode: "per_person")
+    it 'creates manual occupancy options for a complete per-person rate plan', :per_person do
       rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
       assignment = rate_plan.room_type_rate_plans.find_by!(room_type: room_type)
       assignment.occupancy_prices.create!(adults: 1, price: 123.45)

@@ -2,7 +2,15 @@ require "rails_helper"
 
 RSpec.describe "Booking Features (Per Pax)", type: :system do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved", time_zone: "UTC") }
+  let(:hotel) do
+    create(
+      :hotel,
+      account: account,
+      status: "approved",
+      time_zone: "UTC",
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
+    )
+  end
 
   before do
     # Driven by cuprite
@@ -23,7 +31,6 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
   # A rate plan's mode follows its property, so the per-pax plan only exists
   # once the hotel itself sells per guest.
   def add_pax_plan!
-    hotel.update!(sell_mode: "per_person")
     @pax_plan = create(:rate_plan, hotel: hotel, name: "Per Pax Rate")
     create(:room_type_rate_plan, room_type: @room_type, rate_plan: @pax_plan)
     @pax_rate = create(:room_rate, room_type: @room_type, rate_plan: @pax_plan, date: Date.current, price: 80.0)
@@ -48,7 +55,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     end
   end
 
-  it "forces per-pax pricing only when the hotel sells per guest on the hotel", js: true do
+  it "forces per-pax pricing only when the hotel sells per guest on the hotel", :per_person, js: true do
     add_pax_plan!
 
     # 1 adult -> card shows price per person (80).
@@ -74,7 +81,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     end
   end
 
-  it "previews age-banded children at the band's percentage, not its raw value", js: true do
+  it "previews age-banded children at the band's percentage, not its raw value", :per_person, js: true do
     add_pax_plan!
     create(:rate_plan_age_band, rate_plan: @pax_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
 
@@ -90,7 +97,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     end
   end
 
-  it "previews an occupancy matrix as a room total, not adults x a per-person rate", js: true do
+  it "previews an occupancy matrix as a room total, not adults x a per-person rate", :per_person, js: true do
     add_pax_plan!
     create(:rate_plan_age_band, rate_plan: @pax_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
     @pax_rate.update!(price: 300.0, occupancy_prices: { "1" => 180.0, "2" => 300.0 })

@@ -108,7 +108,6 @@ class Hotel < ApplicationRecord
   before_validation :normalize_hotel_prefix
   before_validation :assign_hotel_prefix, on: :create
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
-  after_update_commit :mirror_sell_mode_to_rate_plans, if: :saved_change_to_sell_mode?
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :city, presence: true
@@ -116,17 +115,17 @@ class Hotel < ApplicationRecord
   validates :business_starts_at, :business_ends_at, presence: true
   validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
-  validates :sell_mode, inclusion: { in: ->(_) { RatePlan.sell_modes } }
+  validates :sell_mode, presence: true
+  validates :sell_mode, inclusion: { in: ->(_) { RatePlan.sell_modes } }, allow_blank: true
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
   validate :account_must_be_hotel_kind
-  validate :sell_mode_is_locked_once_selling, on: :update, if: :sell_mode_changed?
+  validate :sell_mode_is_immutable, on: :update, if: :will_save_change_to_sell_mode?
 
   # Operator-facing wording for the property's sell mode. The stored values
-  # match rate_plans.sell_mode so the mirror needs no translation, but "per
-  # room"/"per person" is engine vocabulary — staff and admins think in terms
-  # of what the property sells.
+  # match rate_plans.sell_mode, but "per room"/"per person" is engine
+  # vocabulary — staff and admins think in terms of what the property sells.
   def self.sell_mode_options
     [ [ "Room — one price per room, extra guest charges on top", "per_room" ],
       [ "Guest — one price per guest", "per_person" ] ]
@@ -141,15 +140,6 @@ class Hotel < ApplicationRecord
   # — sell_mode_options spells out the trade-off for whoever is picking it.
   def sell_mode_label
     sells_per_person? ? "Sells per person" : "Sells per room"
-  end
-
-  # The sell mode rewrites every rate plan (mirror_sell_mode_to_rate_plans), and
-  # a per-person plan prices off occupancy ladders that only exist once someone
-  # fills them in. Flipping a property that is already selling would leave live
-  # plans with no resolvable price, so the choice is fixed the moment the hotel
-  # becomes bookable or takes its first booking — whichever happens first.
-  def sell_mode_locked?
-    active? || bookings.exists?
   end
 
   def self.const_missing(const_name)
@@ -762,24 +752,12 @@ class Hotel < ApplicationRecord
     google_map_link[fallback_regex, 1]&.to_f
   end
 
-  def sell_mode_is_locked_once_selling
-    return unless sell_mode_locked?
-
-    errors.add(:sell_mode, "cannot be changed once the hotel is bookable or has taken a booking")
-  end
-
-  # The property owns the sell mode; rate plans only carry prices. Nothing is
-  # exempt — Standard and the special tiers move too, so a hotel can never hold
-  # plans that disagree with how it sells. RatePlan#inherit_sell_mode_from_hotel
-  # covers plans created afterwards; this covers the ones already there.
-  def mirror_sell_mode_to_rate_plans
-    affected = rate_plans.where.not(sell_mode: sell_mode)
-    count = affected.update_all(sell_mode: sell_mode, updated_at: Time.current)
-    return if count.zero?
-
-    Rails.logger.info(
-      "[Hotel##{id}] sell_mode changed to #{sell_mode}: mirrored onto #{count} rate plan(s)"
-    )
+  # The charging model determines the shape and meaning of every price stored
+  # for the property, so it is chosen once at creation and never transitioned in
+  # place — regardless of status, bookings, or channel connections. Correcting a
+  # mistaken choice is a data-recovery operation, not a settings change.
+  def sell_mode_is_immutable
+    errors.add(:sell_mode, "cannot be changed after the hotel is created")
   end
 
   def ensure_current_business_date

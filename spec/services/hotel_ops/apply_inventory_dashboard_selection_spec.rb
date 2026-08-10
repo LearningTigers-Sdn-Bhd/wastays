@@ -1,7 +1,13 @@
 require "rails_helper"
 
 RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
-  let(:hotel) { create(:hotel, preferred_channel_manager: "channex") }
+  let(:hotel) do
+    create(
+      :hotel,
+      preferred_channel_manager: "channex",
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
+    )
+  end
   let(:user) { create(:user, account: hotel.account) }
   let(:start_date) { Date.current }
   let(:end_date) { Date.current + 1.day }
@@ -101,8 +107,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(RoomRate.where(room_type: room_type)).to be_empty
     end
 
-    it "stores date-specific prices for each supported adult occupancy" do
-      hotel.update!(sell_mode: "per_person")
+    it "stores date-specific prices for each supported adult occupancy", :per_person do
       room_type = create(:room_type, hotel: hotel, max_adults: 2, base_price: 100)
       rate_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type)
 

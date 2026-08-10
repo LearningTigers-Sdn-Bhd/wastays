@@ -37,10 +37,11 @@ RSpec.describe Admin::Hotels::UpdateService, type: :service do
     context "when sell_mode is updated" do
       let(:hotel_params) { { name: "Updated Hotel", sell_mode: "per_person" } }
 
-      it "updates the sell_mode field successfully" do
+      it "rejects the whole update" do
         result = subject.call
-        expect(result.success?).to be true
-        expect(hotel.reload.sell_mode).to eq("per_person")
+        expect(result.success?).to be false
+        expect(result.error).to include("Sell mode cannot be changed after the hotel is created")
+        expect(hotel.reload).to have_attributes(name: "Old Name", sell_mode: "per_room")
       end
     end
   end
