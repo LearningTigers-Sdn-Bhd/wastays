@@ -57,4 +57,52 @@ RSpec.describe ChannelManagers::IngestRevisionJob, type: :job do
     expect(booking).to be_present
     expect(booking.external_reference).to eq('OTA-555')
   end
+
+  it "applies a persisted settlement across group children by their totals" do
+    BookingSource.find_by(key: "booking_com") || create(:booking_source, key: "booking_com", label: "Booking.com")
+    allow(client_double).to receive(:get).with('/booking_revisions/rev_group_100').and_return(
+      {
+        'data' => {
+          'id' => 'ch_group_1',
+          'status' => 'new',
+          'revision_id' => 1,
+          'ota_reservation_id' => 'OTA-GROUP-555',
+          'arrival_date' => '2026-06-01',
+          'departure_date' => '2026-06-02',
+          'amount' => '300.0',
+          'commission_amount' => '30.0',
+          'currency' => 'MYR',
+          'ota_name' => 'booking.com',
+          'payment_collect' => 'ota',
+          'payment_type' => 'credit_card',
+          'customer' => {
+            'name' => 'Jane Guest',
+            'email' => 'jane@example.com',
+            'phone' => '+60120000000',
+            'country' => 'Malaysia'
+          },
+          'rooms' => [
+            { 'room_type_id' => 'rt_1', 'rate_plan_id' => 'rp_1', 'count' => 1, 'amount' => '100.0' },
+            { 'room_type_id' => 'rt_1', 'rate_plan_id' => 'rp_1', 'count' => 1, 'amount' => '200.0' }
+          ]
+        }
+      }
+    )
+    expect(client_double).to receive(:post).with('/booking_revisions/rev_group_100/ack')
+      .and_return({ 'meta' => { 'message' => 'Success' } })
+
+    described_class.perform_now(hotel.id, 'rev_group_100')
+
+    group = GroupBooking.find_by!(channel_manager_reference: 'ch_group_1')
+    settlement = ChannelSettlement.find_by!(channel_manager_reference: 'ch_group_1')
+    children = group.bookings.order(:group_position).to_a
+    allocations = children.map { |child| settlement.channel_settlement_allocations.find_by!(booking: child) }
+
+    expect(children.map(&:total_amount)).to eq([ 100.to_d, 200.to_d ])
+    expect(allocations.map(&:gross_amount)).to eq([ 100.to_d, 200.to_d ])
+    expect(allocations.map(&:commission_amount)).to eq([ 10.to_d, 20.to_d ])
+    expect(allocations.sum { |allocation| allocation.booking_folio.folio_transactions.payment.sum(:amount) })
+      .to eq(300.to_d)
+    expect(allocations.map { |allocation| allocation.booking_folio.folio_transactions.first.receipt }).to all(be_nil)
+  end
 end

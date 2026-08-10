@@ -27,6 +27,30 @@ module ChannelManagers
 
       result = ChannelManagers::IngestBookingService.new(booking_data: booking_data).call
 
+      # Settlement persistence is intentionally separate from booking/folio
+      # ingestion. An unresolved source is operator attention, not a reason to
+      # mark a booking paid or to block the booking revision acknowledgement.
+      if result.success? && booking_data[:settlement].present?
+        settlement_result = ChannelManagers::PersistSettlement.new(
+          hotel: hotel,
+          settlement_data: booking_data[:settlement]
+        ).call
+        unless settlement_result.success?
+          Rails.logger.warn(
+            "Channel Manager settlement not persisted for revision #{revision_id}: #{settlement_result.message}"
+          )
+        end
+
+        if settlement_result.success? && settlement_result.settlement.present?
+          application_result = apply_settlement(result, settlement_result.settlement)
+          unless application_result.success?
+            Rails.logger.warn(
+              "Channel Manager settlement not applied for revision #{revision_id}: #{application_result.error}"
+            )
+          end
+        end
+      end
+
       if result.success?
         Rails.logger.info("Channel Manager: Successfully ingested revision #{revision_id}. Acknowledging...")
         # Channex expects acknowledgement on the processed booking revision itself.
@@ -42,6 +66,22 @@ module ChannelManagers
         end
       else
         Rails.logger.error "Channel Manager Ingestion Failed for ID #{revision_id}: #{result.message}"
+      end
+    end
+
+    private
+
+    def apply_settlement(result, settlement)
+      if result.respond_to?(:bookings) && result.bookings.present?
+        ChannelManagers::ApplyOtaSettlement.call_many(
+          bookings: result.bookings,
+          settlement: settlement
+        )
+      else
+        ChannelManagers::ApplyOtaSettlement.call(
+          booking: result.booking,
+          settlement: settlement
+        )
       end
     end
   end
