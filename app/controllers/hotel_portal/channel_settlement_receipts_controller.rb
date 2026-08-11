@@ -3,6 +3,7 @@
 module HotelPortal
   class ChannelSettlementReceiptsController < ReportsBaseController
     before_action :authorize_manage_ar_payments!
+    before_action :set_breadcrumbs
 
     def new
       @form = HotelPortal::ChannelSettlementReceiptForm.new(
@@ -33,6 +34,14 @@ module HotelPortal
     end
 
     private
+
+    def set_breadcrumbs
+      override_breadcrumbs(
+        { label: "Financial Reports", path: hotel_reports_path(current_hotel) },
+        { label: "OTA Settlements", path: channel_settlements_hotel_reports_path(current_hotel) },
+        { label: "Record Receipt" }
+      )
+    end
 
     def receipt_params
       params.fetch(:channel_settlement_receipt, {}).permit(

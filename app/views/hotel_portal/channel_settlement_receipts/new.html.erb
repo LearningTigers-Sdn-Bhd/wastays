@@ -149,7 +149,10 @@
 
       <div class="flex flex-wrap justify-end gap-3">
         <%= render PanelsUI::Button.new(label: "Cancel", as: :a, href: channel_settlements_hotel_reports_path(current_hotel), variant: :secondary) %>
-        <%= render PanelsUI::Button.new(label: "Record receipt", as: :button, type: :submit, disabled: @allocations.empty?) %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, disabled: @allocations.empty?) do %>
+          <%= app_icon "receipt", class: "size-4", aria: { hidden: "true" } %>
+          <span>Record receipt</span>
+        <% end %>
       </div>
     <% end %>
   <% end %>

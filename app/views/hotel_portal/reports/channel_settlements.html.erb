@@ -13,10 +13,12 @@
     <% header.with_actions do %>
       <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
         <%= render PanelsUI::Button.new(
-              label: "Record receipt",
               as: :a,
               href: new_hotel_channel_settlement_receipt_path(current_hotel),
-              variant: :primary) %>
+              variant: :primary) do %>
+          <%= app_icon "receipt", class: "size-4", aria: { hidden: "true" } %>
+          <span>Record receipt</span>
+        <% end %>
       <% end %>
       <%= render "preset_report_actions",
         form_url: channel_settlements_hotel_reports_path(current_hotel), form_id: "channel-settlements-range-form",

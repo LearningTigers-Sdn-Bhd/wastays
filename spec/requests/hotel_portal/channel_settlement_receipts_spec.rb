@@ -34,6 +34,10 @@ RSpec.describe "HotelPortal::ChannelSettlementReceipts", type: :request do
     expect(response.body).to include("Booking Test")
     expect(response.body).to include(settlement.channel_manager_reference)
     expect(response.body).to include('data-controller="panels-ui--select-menu"')
+    page = Capybara.string(response.body)
+    document = Nokogiri::HTML(response.body)
+    expect(document.at_css("#hotel-breadcrumb").text.squish).to eq("Financial Reports OTA Settlements Record Receipt")
+    expect(document.at_css("button.panel-button svg")).to be_present
   end
 
   it "records and allocates a receipt, then returns to reconciliation" do
