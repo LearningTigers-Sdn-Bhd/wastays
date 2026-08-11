@@ -2297,8 +2297,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_091000) do
     t.bigint "room_type_id", null: false
     t.datetime "updated_at", null: false
     t.index ["rate_plan_id"], name: "index_room_type_rate_plans_on_rate_plan_id"
-    t.index ["room_type_id"], name: "index_room_type_rate_plans_on_room_type_id"
     t.index ["room_type_id", "rate_plan_id"], name: "idx_room_type_rate_plans_unique_assignment", unique: true
+    t.index ["room_type_id"], name: "index_room_type_rate_plans_on_room_type_id"
   end
 
   create_table "room_types", force: :cascade do |t|
