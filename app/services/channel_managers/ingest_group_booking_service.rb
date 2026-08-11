@@ -44,6 +44,9 @@ module ChannelManagers
         group.save!
 
         children = reconcile_children!(group, children, units, effective_check_in, effective_check_out, incoming_status)
+        children.each do |booking|
+          ChannelManagers::AutoAssignRoom.new(booking: booking).call if inventory_held_status?(booking.status)
+        end
         children.each { |booking| Bookings::InventoryManager.new(booking).deduct if inventory_held_status?(booking.status) }
 
         Bookings::RecordAuditLog.call!(
@@ -52,11 +55,11 @@ module ChannelManagers
           source: "channel_manager",
           old_value: old_audit_value,
           new_value: audit_values(group, children),
-          metadata: {
+          metadata: audit_metadata({
             "source" => group.source,
             "external_reference" => group.external_reference,
             "revision" => group.revision_number
-          }
+          })
         )
 
         children.each do |booking|
@@ -72,6 +75,11 @@ module ChannelManagers
     end
 
     private
+
+    def audit_metadata(metadata)
+      metadata["currency_conversion"] = @data[:currency_conversion] if @data[:currency_conversion].present?
+      metadata
+    end
 
     def find_or_initialize_group
       @hotel.group_bookings.find_by(channel_manager_reference: @data[:channel_manager_reference]) ||

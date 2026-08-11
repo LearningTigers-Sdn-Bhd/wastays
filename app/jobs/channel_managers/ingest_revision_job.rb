@@ -72,6 +72,13 @@ module ChannelManagers
         end
       else
         Rails.logger.error "Channel Manager Ingestion Failed for ID #{revision_id}: #{result.message}"
+
+        # Blocked on hotel configuration (e.g. a missing exchange rate): the revision
+        # stays unacknowledged, so fail loudly instead of dropping it into the log.
+        if result.failure_code.present?
+          raise ChannelManagers::IngestBookingService::UnprocessableBooking,
+            "Revision #{revision_id} for hotel #{hotel.id}: #{result.message}"
+        end
       end
     end
 

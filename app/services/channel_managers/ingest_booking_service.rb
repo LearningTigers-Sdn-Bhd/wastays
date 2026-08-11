@@ -5,6 +5,9 @@ require "ostruct"
 module ChannelManagers
   class IngestBookingService
     IngestionFailure = Class.new(StandardError)
+    # Raised by callers when a revision can never be ingested without an operator
+    # fixing hotel configuration first (so it lands in the failed jobs queue).
+    UnprocessableBooking = Class.new(StandardError)
 
     def initialize(booking_data:)
       @data = booking_data
@@ -12,6 +15,13 @@ module ChannelManagers
     end
 
     def call
+      conversion = ChannelManagers::ConvertBookingCurrency.new(booking_data: @data).call
+      unless conversion.success?
+        return OpenStruct.new(success?: false, message: conversion.message, failure_code: :missing_exchange_rate)
+      end
+
+      @data = conversion.booking_data
+
       if group_ingestion?
         return IngestGroupBookingService.new(booking_data: @data).call
       end
@@ -85,6 +95,7 @@ module ChannelManagers
 
           # 5. Deduct New Inventory: If the new state is active, deduct the rooms
           if inventory_held_status?(booking.status)
+            ChannelManagers::AutoAssignRoom.new(booking: booking).call
             Bookings::InventoryManager.new(booking).deduct
           end
 
@@ -96,7 +107,11 @@ module ChannelManagers
             source: "channel_manager",
             old_value: old_audit_value,
             new_value: audit_values(booking),
-            metadata: { "source" => booking.source, "external_reference" => booking.external_reference, "revision" => booking.revision_number }
+            metadata: audit_metadata(
+              source: booking.source,
+              external_reference: booking.external_reference,
+              revision: booking.revision_number
+            )
           )
 
           dispatch_lifecycle_event(booking, is_existing_booking, previous_check_in, previous_check_out, previous_status)
@@ -117,6 +132,16 @@ module ChannelManagers
     end
 
     private
+
+    def audit_metadata(source:, external_reference:, revision:)
+      metadata = {
+        "source" => source,
+        "external_reference" => external_reference,
+        "revision" => revision
+      }
+      metadata["currency_conversion"] = @data[:currency_conversion] if @data[:currency_conversion].present?
+      metadata
+    end
 
     def group_ingestion?
       total_room_quantity > 1 || GroupBooking.exists?(
@@ -255,7 +280,9 @@ module ChannelManagers
     end
 
     def sync_rooms(booking)
-      # For modifications, we'll just recreate room items for now
+      # For modifications, we'll just recreate room items for now. Physical room
+      # assignments are carried over so an unrelated revision never moves a guest.
+      assigned_room_numbers = assigned_room_numbers_by_room_type(booking)
       booking.booking_rooms.destroy_all
 
       @data[:rooms].each do |room_item|
@@ -264,10 +291,19 @@ module ChannelManagers
           booking.booking_rooms.create!(
             room_type: room_item[:room_type],
             rate_plan: room_item[:rate_plan],
-            subtotal: (room_item[:amount].to_d / qty).round(2)
+            subtotal: (room_item[:amount].to_d / qty).round(2),
+            room_number: assigned_room_numbers[room_item[:room_type]&.id].shift
             # snapshots to be added if needed
           )
         end
+      end
+    end
+
+    def assigned_room_numbers_by_room_type(booking)
+      booking.booking_rooms.each_with_object(Hash.new { |numbers, key| numbers[key] = [] }) do |room, numbers|
+        next if room.room_number.blank?
+
+        numbers[room.room_type_id] << room.room_number
       end
     end
 
