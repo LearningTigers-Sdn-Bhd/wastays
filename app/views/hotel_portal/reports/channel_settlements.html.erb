@@ -91,11 +91,12 @@
             selected: params[:currency],
             aria: { label: "Filter by currency" }) %>
       <div class="flex items-center gap-2">
-        <%= render PanelsUI::Button.new(type: :submit, variant: :secondary) { "Apply filters" } %>
+        <%= render PanelsUI::Button.new(label: "Apply filters", type: :submit, variant: :secondary) %>
         <%= render PanelsUI::Button.new(
+              label: "Clear",
               as: :a,
               href: channel_settlements_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset),
-              variant: :ghost) { "Clear" } %>
+              variant: :ghost) %>
       </div>
     <% end %>
   </section>
