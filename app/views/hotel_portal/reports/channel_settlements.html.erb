@@ -62,7 +62,11 @@
   <section class="space-y-5" aria-labelledby="ota-settlement-filters-heading">
     <h2 id="ota-settlement-filters-heading" class="sr-only">Settlement filters</h2>
     <%= form_with url: channel_settlements_hotel_reports_path(current_hotel), method: :get,
-          class: "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(16rem,1fr)_14rem_10rem_auto]" do |form| %>
+          class: "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(16rem,1fr)_14rem_10rem_auto]",
+          data: {
+            controller: "auto-submit",
+            action: "input->auto-submit#submit change->auto-submit#submitNow"
+          } do |form| %>
       <%= form.hidden_field :start_date, value: @report.start_date %>
       <%= form.hidden_field :end_date, value: @report.end_date %>
       <%= form.hidden_field :date_preset, value: @date_preset %>
@@ -90,8 +94,7 @@
             prompt: "All currencies",
             selected: params[:currency],
             aria: { label: "Filter by currency" }) %>
-      <div class="flex items-center gap-2">
-        <%= render PanelsUI::Button.new(label: "Apply filters", type: :submit, variant: :secondary) %>
+      <div class="flex items-center">
         <%= render PanelsUI::Button.new(
               label: "Clear",
               as: :a,
