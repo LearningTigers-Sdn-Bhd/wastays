@@ -43,15 +43,7 @@ module TransactionCodes
     private
 
     def replace_tax_rules!
-      @transaction_code.transaction_code_taxes.destroy_all
-      @proposed_keys.each do |key|
-        if key.start_with?("primary:")
-          @transaction_code.transaction_code_taxes.create!(primary_tax_key: key.delete_prefix("primary:"))
-        else
-          tax = @hotel.hotel_taxes.find(key.delete_prefix("hotel_tax:"))
-          @transaction_code.transaction_code_taxes.create!(hotel_tax: tax)
-        end
-      end
+      AssignTaxRules.call(transaction_code: @transaction_code, keys: @proposed_keys)
     end
 
     def refresh_forecasts_if_needed

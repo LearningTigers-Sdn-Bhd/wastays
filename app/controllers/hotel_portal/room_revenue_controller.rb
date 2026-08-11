@@ -134,34 +134,13 @@ module HotelPortal
 
     def save_without_hotel_wide_confirmation
       if @room_revenue_code.save
-        assign_tax_rules
+        ::TransactionCodes::AssignTaxRules.call(transaction_code: @room_revenue_code, keys: tax_rule_keys_param)
         redirect_to hotel_room_revenue_path(current_hotel), notice: "Room revenue tax rules updated."
       else
         render_tax_rule_error(@room_revenue_code.errors.full_messages.to_sentence)
       end
     rescue ArgumentError => e
       render_tax_rule_error(e.message)
-    end
-
-    def assign_tax_rules
-      keys = tax_rule_keys_param
-      invalid = keys - available_tax_rule_keys
-      raise ArgumentError, "A selected tax rule is unavailable for this hotel." if invalid.any?
-
-      @room_revenue_code.transaction_code_taxes.destroy_all
-      keys.each do |key|
-        if key.start_with?("primary:")
-          @room_revenue_code.transaction_code_taxes.create!(primary_tax_key: key.delete_prefix("primary:"))
-        else
-          tax = current_hotel.hotel_taxes.find(key.delete_prefix("hotel_tax:"))
-          @room_revenue_code.transaction_code_taxes.create!(hotel_tax: tax)
-        end
-      end
-    end
-
-    def available_tax_rule_keys
-      @available_tax_rule_keys ||= TransactionCodeTax::PRIMARY_TAX_KEYS.map { |key| "primary:#{key}" } +
-        current_hotel.hotel_taxes.pluck(:id).map { |id| "hotel_tax:#{id}" }
     end
 
     def render_tax_rule_error(message)
