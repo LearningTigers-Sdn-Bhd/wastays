@@ -4,6 +4,18 @@ module HotelPortal
   class OnboardingController < BaseController
     layout "onboarding"
 
+    # Sections that have their own form and completion contract. Everything else
+    # still runs on the shell's placeholder contract, which Onboarding::Readiness
+    # treats as a blocking issue so a stub cannot be submitted. The view reads the
+    # same list, so the two cannot drift.
+    IMPLEMENTED_SECTIONS = %w[
+      property_profile
+      roles_permissions
+      staff_setup
+      taxes_fees
+      room_revenue
+    ].freeze
+
     before_action :authorize_onboarding!
     before_action :build_navigation
     before_action :set_current_entry, except: :index
@@ -20,8 +32,8 @@ module HotelPortal
     def update
       return redirect_read_only if pending_review?
 
-      if phase_four_section?
-        update_phase_four_section
+      if implemented_section?
+        update_implemented_section
       else
         update_placeholder_section
       end
@@ -50,7 +62,7 @@ module HotelPortal
                   alert: "Complete the earlier onboarding steps before opening this page."
     end
 
-    def prepare_section(staff_entries: nil)
+    def prepare_section(entries: nil)
       @presenter = OnboardingPresenter.new(
         hotel: current_hotel,
         navigation: @navigation,
@@ -65,7 +77,7 @@ module HotelPortal
         @preset_roles = preset_roles.includes(:permissions)
       when "staff_setup"
         @staff_roles = preset_roles
-        @staff_entries = staff_entries || current_hotel.onboarding_staff_drafts.includes(:role).order(:created_at, :id).map do |draft|
+        @staff_entries = entries || current_hotel.onboarding_staff_drafts.includes(:role).order(:created_at, :id).map do |draft|
           {
             "name" => draft.name,
             "email" => draft.email,
@@ -75,10 +87,33 @@ module HotelPortal
           }
         end
         @staff_entries = @staff_entries + [ {} ] unless @presenter.read_only?
+      when "taxes_fees"
+        # No trailing blank row here: its required fields would block submission
+        # for a property that simply has no fees of its own. Rows are added
+        # deliberately instead.
+        @tax_entries = entries || persisted_tax_entries
+      when "room_revenue"
+        @room_revenue_presenter = HotelPortal::RoomRevenuePresenter.new(hotel: current_hotel, active_tab: "tax_rules")
       end
     end
 
-    def update_phase_four_section
+    # The onboarding tax table submits the same row shape it renders, so a failed
+    # save can hand back what the owner typed instead of what is stored.
+    def persisted_tax_entries
+      current_hotel.hotel_taxes.order(:created_at, :id).map do |tax|
+        {
+          "id" => tax.id.to_s,
+          "name" => tax.name,
+          "charge_type" => tax.charge_type,
+          "rate_type" => tax.rate_type,
+          "amount" => tax.amount.to_s,
+          "enabled" => tax.enabled.to_s,
+          "foreign_guests_only" => tax.foreign_guests_only.to_s
+        }
+      end
+    end
+
+    def update_implemented_section
       action = params.require(:navigation_action)
       return skip_staff_setup if action == "skip" && @current_entry.definition.key == "staff_setup"
       return head :unprocessable_entity unless action.in?(%w[save_draft save_continue])
@@ -102,9 +137,24 @@ module HotelPortal
             entries: params[:staff_entries] || {},
             complete: complete
           ).call
+        when "taxes_fees"
+          Onboarding::SaveTaxesFees.new(
+            hotel: current_hotel,
+            actor: current_user,
+            params: params,
+            confirmed: params[:confirm_taxes],
+            complete: complete
+          ).call
+        when "room_revenue"
+          Onboarding::SaveRoomRevenue.new(
+            hotel: current_hotel,
+            actor: current_user,
+            params: params,
+            complete: complete
+          ).call
         end
 
-      return render_phase_four_error(result) unless result.success?
+      return render_section_error(result) unless result.success?
 
       build_navigation
       destination = complete ? (@navigation.next_entry(@current_entry.definition.key) || @navigation.fetch(@current_entry.definition.key)) : @navigation.fetch(@current_entry.definition.key)
@@ -124,11 +174,11 @@ module HotelPortal
       end
     end
 
-    def render_phase_four_error(result)
+    def render_section_error(result)
       current_hotel.assign_attributes(property_profile_params) if @current_entry.definition.key == "property_profile"
       build_navigation
       @current_entry = @navigation.fetch(@current_entry.definition.key)
-      prepare_section(staff_entries: result.respond_to?(:entries) ? result.entries : nil)
+      prepare_section(entries: result.respond_to?(:entries) ? result.entries : nil)
       flash.now[:alert] = result.error
       render :show, status: :unprocessable_content
     end
@@ -145,7 +195,7 @@ module HotelPortal
 
     def skip_staff_setup
       result = Onboarding::DecideNoAdditionalStaff.new(hotel: current_hotel, actor: current_user).call
-      return render_phase_four_error(result) unless result.success?
+      return render_section_error(result) unless result.success?
 
       build_navigation
       destination = @navigation.next_entry(@current_entry.definition.key) || @navigation.fetch(@current_entry.definition.key)
@@ -204,8 +254,8 @@ module HotelPortal
                    .order(Arel.sql("CASE slug WHEN 'hotel_owner' THEN 0 WHEN 'general_manager' THEN 1 WHEN 'front_desk' THEN 2 WHEN 'housekeeper' THEN 3 ELSE 4 END"))
     end
 
-    def phase_four_section?
-      @current_entry.definition.key.in?(%w[property_profile roles_permissions staff_setup])
+    def implemented_section?
+      @current_entry.definition.key.in?(IMPLEMENTED_SECTIONS)
     end
 
     def redirect_result_error(result)

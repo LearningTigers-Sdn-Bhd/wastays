@@ -39,10 +39,12 @@ their settings controllers' index actions. `PLAN.md` explicitly forbids that pat
 onboarding: "default financial records are initialized deliberately rather than as a side
 effect of visiting an index page."
 
-Phase 5 hits the same problem first (`RoomRevenueController` has a
-`before_action :ensure_defaults`). Check how Phase 5 resolved it and follow the same
-approach here rather than inventing a second one. Do not add `EnsureDefaults` to a
-`before_action` in the onboarding controller.
+Phase 5 hit the same problem first and settled it: the `Onboarding::*` service calls the
+relevant `EnsureDefaults` **inside its own transaction, on a save the owner initiated** —
+see `Onboarding::SaveTaxesFees` (`Financials::EnsureDefaultTransactionCodes`) and
+`Onboarding::SaveRoomRevenue` (`ReservationPolicies::EnsureDefaults`). Follow that here
+rather than inventing a second approach. Do not add `EnsureDefaults` to a `before_action`
+in the onboarding controller.
 
 ## Cross-section dependencies
 

@@ -193,6 +193,103 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(response.body).to include("Add a clear exterior photo.")
   end
 
+  describe "finance phase" do
+    def resolve_team_phase!
+      Onboarding::InitializeProgress.new(hotel: hotel).call
+      %w[property_profile roles_permissions staff_setup].each do |key|
+        hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
+      end
+    end
+
+    before { resolve_team_phase! }
+
+    it "renders the taxes and fees form" do
+      get hotel_onboarding_section_path(hotel, section_key: "taxes_fees")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Service Tax (SST)", "Tourism Tax (TTx)", "Add tax or fee")
+      expect(response.body).to include("I confirm these are the taxes and fees this property charges")
+    end
+
+    it "refuses to complete taxes without the confirmation" do
+      patch hotel_onboarding_section_path(hotel, section_key: "taxes_fees"),
+            params: { navigation_action: "save_continue", hotel: { sst_enabled: "1", tourism_tax_enabled: "0" } }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Confirm that you reviewed")
+      expect(hotel.onboarding_sections.find_by!(section_key: "taxes_fees").state).not_to eq("complete")
+    end
+
+    it "completes taxes and advances to room revenue" do
+      patch hotel_onboarding_section_path(hotel, section_key: "taxes_fees"),
+            params: {
+              navigation_action: "save_continue",
+              confirm_taxes: "1",
+              hotel: { sst_enabled: "1", tourism_tax_enabled: "0", tourism_tax_amount: "10.0" },
+              tax_entries: { "0" => { name: "Heritage levy", charge_type: "charge", rate_type: "flat", amount: "5.00", enabled: "1" } }
+            }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "room_revenue"))
+      expect(hotel.onboarding_sections.find_by!(section_key: "taxes_fees").state).to eq("complete")
+      expect(hotel.hotel_taxes.pluck(:name)).to eq([ "Heritage levy" ])
+    end
+
+    it "locks room revenue until taxes are resolved" do
+      get hotel_onboarding_section_path(hotel, section_key: "room_revenue")
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "taxes_fees"))
+    end
+
+    it "renders and completes room revenue" do
+      hotel.onboarding_sections.find_by!(section_key: "taxes_fees").update!(state: "complete")
+
+      get hotel_onboarding_section_path(hotel, section_key: "room_revenue")
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Taxes and fees applied", "Posting preview")
+
+      patch hotel_onboarding_section_path(hotel, section_key: "room_revenue"),
+            params: {
+              navigation_action: "save_continue",
+              transaction_code: { tax_rule_keys: [ "primary:sst_tax" ] },
+              hotel_transaction_configuration: { room_revenue_tax_rule_application: "new_bookings_only" }
+            }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "rooms"))
+      expect(hotel.onboarding_sections.find_by!(section_key: "room_revenue").state).to eq("complete")
+      expect(TransactionCodes::Resolver.for(hotel).room_revenue.transaction_code_taxes.map(&:tax_rule_key))
+        .to eq([ "primary:sst_tax" ])
+    end
+
+    it "rejects a tax rule that does not belong to the hotel" do
+      hotel.onboarding_sections.find_by!(section_key: "taxes_fees").update!(state: "complete")
+      foreign_tax = create(:hotel_tax, hotel: create(:hotel))
+
+      patch hotel_onboarding_section_path(hotel, section_key: "room_revenue"),
+            params: {
+              navigation_action: "save_continue",
+              transaction_code: { tax_rule_keys: [ "hotel_tax:#{foreign_tax.id}" ] }
+            }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("unavailable for this hotel")
+    end
+
+    it "explains why room revenue needs attention after a tax change" do
+      patch hotel_onboarding_section_path(hotel, section_key: "taxes_fees"),
+            params: { navigation_action: "save_continue", confirm_taxes: "1", hotel: { sst_enabled: "1", tourism_tax_enabled: "0" } }
+      patch hotel_onboarding_section_path(hotel, section_key: "room_revenue"),
+            params: { navigation_action: "save_continue", transaction_code: { tax_rule_keys: [ "primary:sst_tax" ] } }
+
+      patch hotel_onboarding_section_path(hotel, section_key: "taxes_fees"),
+            params: { navigation_action: "save_continue", confirm_taxes: "1", hotel: { sst_enabled: "0", tourism_tax_enabled: "0" } }
+
+      expect(hotel.onboarding_sections.find_by!(section_key: "room_revenue").state).to eq("needs_attention")
+
+      get hotel_onboarding_section_path(hotel, section_key: "room_revenue")
+      expect(response.body).to include("The taxes assigned to room revenue changed.")
+    end
+  end
+
   it "does not expose another hotel's onboarding" do
     other_hotel = create(:hotel, status: "setup")
 

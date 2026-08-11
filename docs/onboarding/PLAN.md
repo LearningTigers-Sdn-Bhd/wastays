@@ -121,7 +121,7 @@ Requirements:
 
 Deliverable: the Property and Team phases are production-ready and independently testable.
 
-## Phase 5: Financial foundation slice
+## Phase 5: Financial foundation slice — Complete (2026-08-12)
 
 Deliver:
 

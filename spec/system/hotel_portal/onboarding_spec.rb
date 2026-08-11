@@ -61,5 +61,19 @@ RSpec.describe "Hotel onboarding shell", type: :system do
 
     expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "taxes_fees"))
     expect(page).to have_text("No additional staff will be invited for now")
+
+    expect(page).to have_css("h1", text: "Taxes and fees")
+    check "I confirm these are the taxes and fees this property charges"
+    click_button "Save & continue"
+
+    expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "room_revenue"))
+    expect(page).to have_css("h1", text: "Room revenue")
+    expect(page).to have_text("Posting preview")
+
+    click_button "Save & continue"
+
+    expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "rooms"))
+    expect(hotel.onboarding_sections.find_by!(section_key: "room_revenue").state).to eq("complete")
+    expect(hotel.hotel_reservation_policies.count).to eq(4)
   end
 end

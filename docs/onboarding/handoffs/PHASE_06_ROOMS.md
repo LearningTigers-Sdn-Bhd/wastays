@@ -92,7 +92,7 @@ it with a service spec that drives the section state directly — do not defer i
 
 ## Tests
 
-- Service spec: `spec/services/onboarding/phase_six_spec.rb` — save, completion contract,
+- Service spec: `spec/services/onboarding/rooms_spec.rb` — save, completion contract,
   invalidation of `rates_availability`
 - Request spec: extend `spec/requests/hotel_portal/onboarding_spec.rb` — locked section
   before Phase 5 completion, save draft, save & continue, room add/remove authorization

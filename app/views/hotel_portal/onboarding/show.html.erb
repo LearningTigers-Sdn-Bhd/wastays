@@ -31,7 +31,7 @@
     <p class="max-w-3xl text-sm text-muted-foreground"><%= @presenter.description %></p>
   </header>
 
-  <% if @presenter.current_entry.definition.key.in?(%w[property_profile roles_permissions staff_setup]) %>
+  <% if @presenter.current_entry.definition.key.in?(HotelPortal::OnboardingController::IMPLEMENTED_SECTIONS) %>
     <%= render @presenter.current_entry.definition.key, presenter: @presenter %>
   <% else %>
     <section aria-labelledby="section-preview-title" class="space-y-3 border-t border-border pt-5">

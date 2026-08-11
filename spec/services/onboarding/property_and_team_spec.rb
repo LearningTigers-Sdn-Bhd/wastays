@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Onboarding Phase 4 services" do
+RSpec.describe "Onboarding property and team services" do
   let(:hotel) { create(:hotel, status: "setup") }
   let(:actor) { create(:user, account: hotel.account) }
 

@@ -76,8 +76,11 @@ module HotelPortal
     def changes_requested_message
       return unless current_entry.record.state == "needs_attention"
 
+      # A section reaches needs_attention either because an admin asked for
+      # changes or because something upstream invalidated it — both carry their
+      # reason in the audit event, so both are worth showing.
       event = hotel.onboarding_audit_events
-                   .where(event_type: "changes_requested", section_key: [ nil, current_entry.definition.key ])
+                   .where(event_type: %w[changes_requested invalidated], section_key: [ nil, current_entry.definition.key ])
                    .order(occurred_at: :desc)
                    .first
       event&.metadata&.slice("explanation", "reason")&.values&.compact&.first ||

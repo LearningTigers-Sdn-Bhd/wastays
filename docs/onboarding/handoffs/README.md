@@ -16,13 +16,13 @@ verb-named class per file; reuse before adding; align on approach before writing
 
 ## Status as of 2026-08-12
 
-Phases 0–4 are complete. Phase 5 (taxes/fees, room revenue) is the next slice and is being
-handled separately — do not start a phase whose prerequisite section is still a placeholder.
+Phases 0–5 are complete. Phase 6 is the next slice — do not start a phase whose
+prerequisite section is still a placeholder.
 
 | Phase | Sections | State |
 |---|---|---|
 | 4 | `property_profile`, `roles_permissions`, `staff_setup` | Complete |
-| 5 | `taxes_fees`, `room_revenue` | In progress elsewhere |
+| 5 | `taxes_fees`, `room_revenue` | Complete |
 | 6 | `rooms` | Handoff: `PHASE_06_ROOMS.md` |
 | 7 | `rates_availability` | Handoff: `PHASE_07_PRICING_AVAILABILITY.md` |
 | 8 | `extra_charges`, `discounts`, `payment_methods`, `corporate_accounts` | Handoff: `PHASE_08_COMMERCIAL.md` |
@@ -72,12 +72,13 @@ current shape:
 - `before_action :build_navigation` → `Onboarding::NavigationState`
 - `before_action :redirect_locked_section` → bounces unavailable sections to the resume page
 - `#prepare_section` → a `case` on `@current_entry.definition.key` building per-section ivars
-- `#update` → `pending_review?` guard, then `phase_four_section?` branch or the placeholder path
+- `#update` → `pending_review?` guard, then `implemented_section?` branch or the placeholder path
+- `IMPLEMENTED_SECTIONS` → the constant both `implemented_section?` and `show.html.erb` read,
+  so the controller and the view cannot disagree about which sections are real
 
-**Your phase's work here:** extend the `case` in `prepare_section`, add your section keys
-to the real-implementation branch, and route each to its own `Onboarding::*` service.
-The `phase_four_section?` predicate is now a misnomer — rename it to something like
-`implemented_section?` backed by a constant listing implemented keys, and add your keys.
+**Your phase's work here:** add your section keys to `IMPLEMENTED_SECTIONS`, extend the
+`case` in `prepare_section` and the one in `update_implemented_section`, and route each key
+to its own `Onboarding::*` service.
 
 The controller is already long. If your phase adds substantial per-section branching,
 extract per-section handling rather than growing the `case` indefinitely — but do not
@@ -147,7 +148,9 @@ exposes `read_only?` and `changes_requested_message`. Any new form partial must 
 Existing coverage to extend:
 
 - `spec/services/onboarding/foundation_spec.rb` — catalog, navigation, readiness, lifecycle
-- `spec/services/onboarding/phase_four_spec.rb` — per-phase service specs (add a sibling per phase)
+- `spec/services/onboarding/property_and_team_spec.rb`, `taxes_and_room_revenue_spec.rb` —
+  service specs per slice. Add a sibling named for the sections it covers, not for the
+  delivery phase: the phase number is scheduling, and means nothing to a later reader.
 - `spec/requests/hotel_portal/onboarding_spec.rb` — auth, navigation, save, skip, locking
 - `spec/system/hotel_portal/onboarding_spec.rb` — critical owner path
 
