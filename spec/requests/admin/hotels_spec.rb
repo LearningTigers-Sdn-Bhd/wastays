@@ -43,72 +43,71 @@ RSpec.describe 'Admin::Hotels', type: :request do
   end
 
   describe 'GET /admin/hotels/new' do
-    it 'shows the redesigned hotel creation workspace' do
-      get new_admin_hotel_path
+    it 'renders the focused creation form as a PanelsUI sheet' do
+      get new_admin_hotel_path, headers: { "Turbo-Frame" => "admin_hotel_action_sheet" }
+
+      document = Nokogiri::HTML(response.body)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Create Hotel')
-      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Create Hotel")
-      expect(Nokogiri::HTML(response.body).at_css(".panel-page-header__description").text).to eq("Set up the hotel profile and partner account before the property starts receiving bookings.")
-      expect(response.body).to include('Set up the hotel profile and partner account before the property starts receiving bookings.')
-      expect(response.body).to include('Property Profile')
-      expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Property Profile')
-      expect(response.body).to include('Account Credentials')
-      expect(response.body).to include('A dedicated account will be created for this hotel.')
-      expect(response.body).to include('Company / Group Name')
-      expect(response.body).to include('Owner Full Name')
-      expect(response.body).to include('Account Email')
-      expect(response.body).to include('Default Password')
-      expect(response.body).to include('How does the property charge?', 'Per room', 'Per guest')
-      expect(response.body).to include('cannot be changed after the hotel is created')
-      expect(response.body).not_to include('Status')
-      expect(response.body).not_to include('Assign to Account')
+      expect(document.at_css("turbo-frame#admin_hotel_action_sheet dialog#create-hotel-sheet")).to be_present
+      expect(document.css(".panel-form-field").size).to eq(7)
+      expect(document.at_css(".panel-radio-group")).to be_present
+      expect(document.css(".panel-select-menu").size).to eq(3)
+      expect(response.body).to include("Create only", "Create & onboard")
+      expect(response.body).not_to include("Default Password", "Property amenities", "Star rating")
     end
   end
 
   describe 'POST /admin/hotels' do
+    let!(:plan) { create(:plan, name: "Growth #{token}") }
     let(:hotel_params) do
       {
-        account: {
-          name: 'Luma Hospitality Group'
-        },
-        hotel: {
-          name: 'Luma Stay',
-          address: '1 Jalan Ampang',
-          city: 'Kuala Lumpur',
-          country: 'Malaysia',
-          star_rating: 4,
-          sell_mode: 'per_person'
-        },
-        user: {
-          name: 'Hotel Owner',
-          email: 'owner@lumastay.test'
+        admin_hotels_create_form: {
+          account_name: 'Luma Hospitality Group',
+          owner_name: 'Hotel Owner',
+          owner_email: "owner-#{token}@lumastay.test",
+          hotel_name: 'Luma Stay',
+          sell_mode: 'per_person',
+          plan_id: plan.id,
+          preferred_channel_manager: 'undecided',
+          creation_action: 'create_only'
         }
       }
     end
 
-    it 'creates a dedicated account and user for the hotel' do
+    it 'creates a setup hotel and secure pending owner invitation without a user' do
       expect {
         post admin_hotels_path, params: hotel_params
       }.to change(Account, :count).by(1)
-        .and change(User, :count).by(1)
+        .and change(User, :count).by(0)
         .and change(Hotel, :count).by(1)
+        .and change(StaffInvitation, :count).by(1)
+        .and change(HotelOnboardingSection, :count).by(13)
 
       hotel = Hotel.order(:created_at).last
-      user = User.find_by!(email: 'owner@lumastay.test')
+      invitation = hotel.staff_invitations.last
 
       expect(response).to redirect_to(admin_hotel_path(hotel))
-      expect(hotel.account).to eq(user.account)
       expect(hotel.account.name).to eq('Luma Hospitality Group')
-      expect(hotel.name).to eq('Luma Stay')
-      expect(hotel.status).to eq('approved')
+      expect(hotel.status).to eq('setup')
+      expect(hotel.plan).to eq(plan)
       expect(hotel.sell_mode).to eq('per_person')
-      expect(user.authenticate(HotelOps::CreateHotel::DEFAULT_PASSWORD)).to eq(user)
+      expect(invitation.email).to eq("owner-#{token}@lumastay.test")
+      expect(invitation.role.slug).to eq('hotel_owner')
     end
 
-    it 'requires the charging model without creating partial records' do
+    it 'queues the secure owner invitation for Create & onboard' do
+      onboard_params = hotel_params.deep_dup
+      onboard_params[:admin_hotels_create_form][:creation_action] = 'create_and_onboard'
+
+      expect {
+        post admin_hotels_path, params: onboard_params
+      }.to have_enqueued_mail(OwnerActivationMailer, :activate)
+    end
+
+    it 'requires the immutable charging model without creating partial records' do
       params_without_sell_mode = hotel_params.deep_dup
-      params_without_sell_mode[:hotel].delete(:sell_mode)
+      params_without_sell_mode[:admin_hotels_create_form].delete(:sell_mode)
 
       expect {
         post admin_hotels_path, params: params_without_sell_mode

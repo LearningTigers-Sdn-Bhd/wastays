@@ -44,15 +44,15 @@ RSpec.describe HotelOps::CreateHotel do
         expect(user.user_hotel_accesses.first.role.slug).to eq('hotel_owner')
       end
 
-      it 'uses the default password when one is not provided' do
+      it 'rejects owner provisioning without a password' do
         result = described_class.new(
           account_params: account_params,
           user_params: { name: 'Sarah Lim', email: 'sarah@example.com' },
           hotel_params: hotel_params
         ).call
 
-        expect(result[:success]).to be true
-        expect(result[:user].authenticate(described_class::DEFAULT_PASSWORD)).to eq(result[:user])
+        expect(result[:success]).to be false
+        expect(result[:error]).to include("Password")
       end
 
       it 'keeps an explicitly provided hotel status' do
