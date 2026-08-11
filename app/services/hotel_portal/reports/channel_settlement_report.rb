@@ -6,7 +6,7 @@ module HotelPortal
     # to those expectations.  Amounts are never combined across currencies.
     class ChannelSettlementReport
       Result = Struct.new(
-        :start_date, :end_date, :rows, :summary_rows, :currency_totals, :totals_by_currency, :totals, :grand_total,
+        :start_date, :end_date, :rows, :summary_rows, :attention_rows, :currency_totals, :totals_by_currency, :totals, :grand_total,
         keyword_init: true
       ) do
         # `summary_rows` is the descriptive name used by settlement consumers;
@@ -35,6 +35,7 @@ module HotelPortal
           end_date: @end_date,
           rows: rows,
           summary_rows: rows,
+          attention_rows: attention_rows,
           currency_totals: currency_totals,
           totals_by_currency: totals_by_currency,
           # A numeric grand total would be misleading when currencies differ.
@@ -48,11 +49,26 @@ module HotelPortal
       def settlements
         scope = @hotel.channel_settlements
           .where(collection_by: "ota")
-          .includes(channel_settlement_allocations: [ :channel_settlement_receipt_allocations ])
+          .includes(:booking_source, channel_settlement_allocations: [ :channel_settlement_receipt_allocations ])
 
-        return scope unless @start_date && @end_date
+        scope = scope.where(created_at: @start_date.beginning_of_day..@end_date.end_of_day) if @start_date && @end_date
+        @settlements ||= scope.to_a
+      end
 
-        scope.where(created_at: @start_date.beginning_of_day..@end_date.end_of_day)
+      def attention_rows
+        settlements.filter_map do |settlement|
+          message = settlement.metadata.to_h["reconciliation_error"]
+          next unless settlement.needs_attention? || message.present?
+
+          {
+            provider: settlement.provider,
+            booking_source: settlement.booking_source.label,
+            reference: settlement.channel_manager_reference,
+            currency: settlement.currency,
+            message: message.presence || "Settlement needs operator review",
+            failed_at: settlement.metadata.to_h["reconciliation_failed_at"]
+          }
+        end
       end
 
       def grouped_rows

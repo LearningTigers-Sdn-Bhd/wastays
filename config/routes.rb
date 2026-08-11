@@ -478,6 +478,7 @@ Rails.application.routes.draw do
     resources :notification_logs, only: [ :index ] do
       post :resend, on: :member
     end
+    resources :channel_settlement_receipts, only: %i[new create], path: "ota-settlement-receipts"
     resources :reports, only: [ :index ] do
       collection do
         get :payouts
@@ -497,6 +498,7 @@ Rails.application.routes.draw do
           request.query_string.present? ? "#{destination}?#{request.query_string}" : destination
         }
         get :outstanding_balance
+        get :channel_settlements
         get :deposit_liability
         get :folio_ledger
         get :journal_batches

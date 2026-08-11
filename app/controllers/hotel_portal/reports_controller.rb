@@ -17,7 +17,7 @@ module HotelPortal
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
     DAILY_REVENUE_FILTER_KEYS = %i[q transaction_type category transaction_code_id posting_source reversal_status].freeze
 
-    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_report daily_revenue_cell daily_revenue_source_bookings outstanding_balance deposit_liability guest_reports folio_ledger journal_batches tax_compliance refund_report extra_charge]
+    before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_report daily_revenue_cell daily_revenue_source_bookings outstanding_balance deposit_liability guest_reports folio_ledger journal_batches tax_compliance refund_report extra_charge channel_settlements]
     before_action :authorize_view_payouts!, only: %i[payouts]
     before_action -> { require_feature!("daily_occupancy_revenue") }, only: %i[daily_occupancy]
     before_action -> { require_feature!("arrivals_departures_list") }, only: %i[guest_reports]
@@ -334,6 +334,32 @@ module HotelPortal
           send_data pdf,
             filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
+            disposition: "attachment"
+        end
+      end
+    end
+
+    def channel_settlements
+      @report_start_date, @report_end_date = parse_report_date_range
+      @report = HotelPortal::Reports::ChannelSettlementReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date
+      ).call
+
+      respond_to do |format|
+        format.html
+        format.csv do
+          csv = HotelPortal::Reports::ChannelSettlementCsvExportService.new(report: @report).generate
+          send_data csv,
+            filename: "ota-settlements-#{@report.start_date}-#{@report.end_date}.csv",
+            type: "text/csv; charset=utf-8"
+        end
+        format.xlsx do
+          workbook = HotelPortal::Reports::ChannelSettlementExcelExportService.new(hotel: current_hotel, report: @report).generate
+          send_data workbook,
+            filename: "ota-settlements-#{@report.start_date}-#{@report.end_date}.xlsx",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
       end

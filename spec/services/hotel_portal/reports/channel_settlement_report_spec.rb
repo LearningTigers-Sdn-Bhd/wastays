@@ -128,6 +128,25 @@ RSpec.describe HotelPortal::Reports::ChannelSettlementReport, type: :service do
     expect(result.totals_by_currency.keys).to contain_exactly("MYR", "USD")
   end
 
+  it "exposes settlement application failures for operator review" do
+    settlement = create(
+      :channel_settlement,
+      hotel: hotel,
+      booking_source: source,
+      status: "needs_attention",
+      channel_manager_reference: "channel-report-attention",
+      metadata: { "reconciliation_error" => "OTA folio is closed" }
+    )
+
+    result = described_class.new(hotel: hotel).call
+
+    expect(result.attention_rows).to contain_exactly(include(
+      booking_source: source.label,
+      reference: settlement.channel_manager_reference,
+      message: "OTA folio is closed"
+    ))
+  end
+
   it "uses the settlement expected net when no booking allocation exists" do
     settlement = create(
       :channel_settlement,

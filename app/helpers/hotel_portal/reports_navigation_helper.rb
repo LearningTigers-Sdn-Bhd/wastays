@@ -23,6 +23,7 @@ module HotelPortal
         NavItem.new(label: "Extra Charge", path: extra_charge_hotel_reports_path(current_hotel), icon: "receipt", active: reports_action?("extra_charge"), permission: "view_reports"),
         NavItem.new(label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), icon: "percent", active: reports_action?("daily_occupancy"), permission: "view_reports", plan_feature: "daily_occupancy_revenue"),
         NavItem.new(label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), icon: "wallet", active: reports_action?("outstanding_balance"), permission: "view_reports", plan_feature: "outstanding_balance_noshow"),
+        NavItem.new(label: "OTA Settlements", path: channel_settlements_hotel_reports_path(current_hotel), search_text: "OTA Channel Settlements Reconciliation Expected Received Variance", icon: "banknote", active: reports_action?("channel_settlements") || controller_name == "channel_settlement_receipts", permission: "view_reports"),
         NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "landmark", active: reports_action?("deposit_liability"), permission: "view_reports"),
         NavItem.new(label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements Weekly Reports", icon: "banknote", active: reports_action?("payouts"), permission: "view_reports")
       ]
