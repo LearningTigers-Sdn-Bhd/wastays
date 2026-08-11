@@ -28,6 +28,8 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response.body).to include('Owner Full Name')
       expect(response.body).to include('Account Email')
       expect(response.body).to include('Default Password')
+      expect(response.body).to include('How does the property charge?', 'Per room', 'Per guest')
+      expect(response.body).to include('cannot be changed after the hotel is created')
       expect(response.body).not_to include('Status')
       expect(response.body).not_to include('Assign to Account')
     end
@@ -44,7 +46,8 @@ RSpec.describe 'Admin::Hotels', type: :request do
           address: '1 Jalan Ampang',
           city: 'Kuala Lumpur',
           country: 'Malaysia',
-          star_rating: 4
+          star_rating: 4,
+          sell_mode: 'per_person'
         },
         user: {
           name: 'Hotel Owner',
@@ -68,7 +71,20 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(hotel.account.name).to eq('Luma Hospitality Group')
       expect(hotel.name).to eq('Luma Stay')
       expect(hotel.status).to eq('approved')
+      expect(hotel.sell_mode).to eq('per_person')
       expect(user.authenticate(HotelOps::CreateHotel::DEFAULT_PASSWORD)).to eq(user)
+    end
+
+    it 'requires the charging model without creating partial records' do
+      params_without_sell_mode = hotel_params.deep_dup
+      params_without_sell_mode[:hotel].delete(:sell_mode)
+
+      expect {
+        post admin_hotels_path, params: params_without_sell_mode
+      }.not_to change(Account, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Sell mode can&#39;t be blank")
     end
   end
 
@@ -184,6 +200,9 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response.body).to include('Cancel')
       expect(response.body).not_to include('Status')
       expect(response.body).not_to include('hotel[status]')
+      expect(response.body).to include('Sells per room')
+      expect(response.body).to include('cannot be changed after the hotel is created')
+      expect(Nokogiri::HTML(response.body).at_css("[name='hotel[sell_mode]']")).to be_nil
     end
   end
 
@@ -217,21 +236,13 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
   describe 'PATCH /admin/hotels/:id' do
     let(:hotel_account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
-    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'approved', allow_pax_pricing: false, pax_pricing_only: false) }
+    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'inventory_incomplete', sell_mode: "per_room") }
 
-    it 'allows superadmin to update allow_pax_pricing' do
-      patch admin_hotel_path(hotel), params: { hotel: { allow_pax_pricing: '1' } }
-      expect(response).to redirect_to(admin_hotel_path(hotel))
-      expect(hotel.reload.allow_pax_pricing).to be true
-    end
+    it 'refuses a tampered charging-model change and rolls back other attributes' do
+      patch admin_hotel_path(hotel), params: { hotel: { name: 'Changed name', sell_mode: 'per_person' } }
 
-    it 'automatically resets pax_pricing_only to false if allow_pax_pricing is set to false' do
-      hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
-
-      patch admin_hotel_path(hotel), params: { hotel: { allow_pax_pricing: '0' } }
-      expect(response).to redirect_to(admin_hotel_path(hotel))
-      expect(hotel.reload.allow_pax_pricing).to be false
-      expect(hotel.reload.pax_pricing_only).to be false
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(hotel.reload).to have_attributes(name: "Luma Stay #{token}", sell_mode: 'per_room')
     end
   end
 end

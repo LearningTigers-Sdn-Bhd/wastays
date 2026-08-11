@@ -79,10 +79,10 @@ module BookingEngine
         quote_currency = nil
 
         grouped_allocations.each do |(room_type, r_adults, r_children, r_child_ages), quantity|
-          rate_plan = if @hotel.pax_pricing_only?
-            @rate_plan_id.present? ? room_type.rate_plans.active.where(sell_mode: "per_person").find_by(id: @rate_plan_id) : nil
-          else
-            @rate_plan_id.present? ? room_type.rate_plans.active.find_by(id: @rate_plan_id) : nil
+          audience = @corporate_rate ? :corporate : :public
+          rate_plan = @rate_plan_id.presence && room_type.rate_plans.for_audience(audience).find_by(id: @rate_plan_id)
+          if @rate_plan_id.present? && rate_plan.blank?
+            return OpenStruct.new(success?: false, message: "Selected rate is no longer available.")
           end
           pricing_summary = availability_service.pricing_summary_for(
             room_type,
@@ -165,14 +165,18 @@ module BookingEngine
                 adults: data[:adults],
                 children: data[:children],
                 child_ages: data[:child_ages] || [],
+                child_price_multiplier: data[:rate_plan]&.child_price_multiplier.to_s,
                 child_age_bands: (data[:child_ages] || []).map { |age|
                   band = data[:rate_plan]&.band_for_age(age)
+                  # "multiplier" always means whole percent here, so the
+                  # no-band fallback is scaled up from its fraction to match.
+                  fallback_percent = (data[:rate_plan]&.child_price_multiplier || 1.to_d) * 100
                   {
                     age: age,
                     band_id: band&.id,
                     band_label: band&.label,
                     pricing_mode: band&.pricing_mode || "multiplier",
-                    price_value: (band&.price_value || data[:rate_plan]&.child_price_multiplier).to_s
+                    price_value: (band&.price_value || fallback_percent).to_s
                   }
                 }
               }
@@ -205,7 +209,7 @@ module BookingEngine
     def normalize_child_ages(raw_ages, children_count)
       ages = Array(raw_ages).map(&:to_i)
       return [] if ages.size != children_count
-      ages
+      ages.map { |age| age.clamp(RatePlanAgeBand::AGE_RANGE.min, RatePlanAgeBand::AGE_RANGE.max) }
     end
 
     def parse_date(date_param)

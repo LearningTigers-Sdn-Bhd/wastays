@@ -4,12 +4,13 @@ require "ostruct"
 
 module Bookings
   class AssignRoom
-    def initialize(booking:, room_number:, user:, override: false, override_reason: nil)
+    def initialize(booking:, room_number:, user:, override: false, override_reason: nil, metadata: {})
       @booking = booking
       @room_number = room_number.to_s.strip
       @user = user
       @override = ActiveModel::Type::Boolean.new.cast(override)
       @override_reason = override_reason.to_s.strip
+      @metadata = (metadata || {}).deep_stringify_keys
     end
 
     def call
@@ -26,7 +27,7 @@ module Bookings
           old_value: { "room_number" => previous_room_number },
           new_value: { "room_number" => @room_number },
           reason: @override_reason.presence,
-          metadata: { "room_number" => @room_number, "override" => override_assignment? }
+          metadata: @metadata.merge("room_number" => @room_number, "override" => override_assignment?)
         )
         write_override_audit_log if override_assignment?
         RoomLock.where(hotel: @booking.hotel, user: @user, room_number: @room_number).destroy_all

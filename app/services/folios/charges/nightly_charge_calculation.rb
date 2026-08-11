@@ -7,6 +7,85 @@ module Folios
 
       private
 
+
+      def ota_financial_snapshot_for(booking)
+        OtaFinancialSnapshot.current
+          .where("booking_id = :booking_id OR group_booking_id = :group_booking_id", booking_id: booking.id, group_booking_id: booking.group_booking_id)
+          .order(created_at: :desc, id: :desc)
+          .first
+      end
+
+      def ota_financial_components_for(booking, business_date = nil)
+        snapshot = ota_financial_snapshot_for(booking)
+        return OtaFinancialComponent.none if snapshot.blank? || snapshot.reconciliation_status == "total_mismatch"
+
+        components = snapshot.ota_financial_components.where(booking_id: booking.id)
+        components = components.where(stay_date: business_date.to_date) if business_date.present?
+        posted = posted_ota_component_identities(booking)
+        components.order(:stay_date, :stable_key, :id).reject do |component|
+          posted.include?([ component.stable_key, component.stay_date, ota_charge_kind(component.component_kind) ])
+        end
+      end
+
+      def ota_financial_component_lines(booking, business_date = nil)
+        ota_financial_components_for(booking, business_date).filter_map do |component|
+          amount = component.posting_amount.to_d
+          next if amount.zero?
+
+          {
+            stay_date: component.stay_date,
+            charge_kind: ota_charge_kind(component.component_kind),
+            category: component.component_kind == "discount" ? "discount" : component.transaction_code.category,
+            transaction_type: component.component_kind == "discount" ? "adjustment" : "charge",
+            identity: component.stable_key,
+            amount: amount,
+            description: "OTA #{component.component_kind.humanize}: #{component.provider_name} - #{component.stay_date}",
+            transaction_code: component.transaction_code,
+            transaction_code_id: component.transaction_code_id,
+            metadata: {
+              ota_financial_snapshot_id: component.ota_financial_snapshot_id,
+              ota_financial_component_id: component.id,
+              ota_component_stable_key: component.stable_key,
+              ota_component_kind: component.component_kind,
+              category: component.component_kind == "discount" ? "discount" : component.transaction_code.category,
+              transaction_type: component.component_kind == "discount" ? "adjustment" : "charge",
+              transaction_code_id: component.transaction_code_id,
+              transaction_code_system_key: component.transaction_code.system_key,
+              transaction_code_code: component.transaction_code.code,
+              provider_name: component.provider_name,
+              provider_type: component.provider_type,
+              original_amount: component.original_amount.to_s("F"),
+              original_currency: component.original_currency,
+              converted_amount: component.amount.to_s("F"),
+              posting_amount: component.posting_amount.to_s("F"),
+              currency: component.currency,
+              gross_effect_amount: component.gross_effect_amount.to_s("F"),
+              is_inclusive: component.is_inclusive,
+              mapping_status: component.mapping_status
+            }.compact
+          }
+        end
+      end
+
+      def posted_ota_component_identities(booking)
+        FolioTransaction.joins(:booking_folio)
+          .where(booking_folios: { booking_id: booking.id }, voided_by_transaction_id: nil)
+          .where("folio_transactions.metadata->>'ota_component_stable_key' IS NOT NULL")
+          .pluck(
+            Arel.sql("folio_transactions.metadata->>'ota_component_stable_key'"),
+            Arel.sql("COALESCE(folio_transactions.metadata->>'stay_date', folio_transactions.posting_date::text)"),
+            Arel.sql("folio_transactions.metadata->>'charge_kind'")
+          ).map { |stable_key, stay_date, charge_kind| [ stable_key, stay_date.to_date, charge_kind ] }.to_set
+      end
+
+      def ota_financial_snapshot_available?(booking)
+        ota_financial_snapshot_for(booking).present?
+      end
+
+      def ota_charge_kind(component_kind)
+        { "fee" => "ota_fee", "service" => "ota_service", "discount" => "ota_discount" }.fetch(component_kind, component_kind)
+      end
+
       def nightly_amount(total_amount, booking, business_date)
         stay_dates = booking_stay_dates(booking)
         nights = stay_dates.length
@@ -37,7 +116,7 @@ module Folios
 
       def nightly_room_amount(booking_room, business_date)
         snapshot = nightly_rate_snapshot_for(booking_room, business_date)
-        return snapshot["price"].to_d if snapshot.present?
+        return (snapshot["posting_price"].presence || snapshot["price"]).to_d if snapshot.present?
 
         nightly_amount(booking_room.subtotal, booking_room.booking, business_date)
       end
@@ -68,7 +147,8 @@ module Folios
       end
 
       def tax_line_identity(tax_line, index)
-        identity = tax_line["type"].presence || tax_line[:type].presence || tax_line_name(tax_line).parameterize.presence || "tax"
+        identity = tax_line["posting_identity"].presence || tax_line[:posting_identity].presence ||
+          tax_line["type"].presence || tax_line[:type].presence || tax_line_name(tax_line).parameterize.presence || "tax"
         "#{identity}:#{index}"
       end
     end

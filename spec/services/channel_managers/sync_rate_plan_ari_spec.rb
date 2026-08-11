@@ -5,7 +5,13 @@ require "rails_helper"
 RSpec.describe ChannelManagers::SyncRatePlanAri do
   include ActiveJob::TestHelper
 
-  let(:hotel) { create(:hotel, preferred_channel_manager: "channex") }
+  let(:hotel) do
+    create(
+      :hotel,
+      preferred_channel_manager: "channex",
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
+    )
+  end
   let(:rate_plan) { create(:rate_plan, hotel: hotel, name: "Breakfast Rate", kind: "custom") }
 
   def link(room_type)
@@ -61,5 +67,16 @@ RSpec.describe ChannelManagers::SyncRatePlanAri do
     described_class.call(rate_plan: rate_plan, room_type_ids: [])
 
     expect(enqueued_jobs).to be_empty
+  end
+
+  it "queues one terminal reconciliation push but no structure sync for unsupported pricing", :per_person do
+    room_type = create(:room_type, hotel: hotel)
+    link(room_type)
+    clear_enqueued_jobs
+
+    described_class.call(rate_plan: rate_plan, room_type_ids: [ room_type.id ])
+
+    expect(enqueued_jobs.count { |job| job[:job] == ChannelManagers::SyncJob }).to eq(1)
+    expect(enqueued_jobs.none? { |job| job[:job] == ChannelManagers::SyncStructureJob }).to be(true)
   end
 end

@@ -5,7 +5,16 @@ RSpec.describe 'Hotel layout shell', type: :system do
   let(:user) { create(:user, account: account, role: 'admin', email: 'owner@example.com') }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, account: account, plan: plan, name: "O'Conner Hotel", status: 'approved') }
+  let(:hotel) do
+    create(
+      :hotel,
+      account: account,
+      plan: plan,
+      name: "O'Conner Hotel",
+      status: 'approved',
+      sell_mode: RSpec.current_example.metadata[:per_person] ? 'per_person' : 'per_room'
+    )
+  end
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -46,7 +55,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_link('Rates & Inventory', href: hotel_inventory_index_path(hotel), visible: :all)
     expect(page).to have_link('Guest Records', href: hotel_guests_path(hotel), visible: :all)
     expect(page).to have_no_link('Hotel Details', href: edit_hotel_profile_path(hotel), visible: :all)
-    expect(page).to have_no_link('Room Categories', href: hotel_room_types_path(hotel), visible: :all)
+    expect(page).to have_no_link('Room Inventory', href: hotel_room_types_path(hotel), visible: :all)
     expect(page).to have_no_link('Nearby Attractions', href: hotel_nearby_attractions_path(hotel), visible: :all)
     # Reports is a layer of its own now: operations carries the door, not the
     # individual report pages.
@@ -61,6 +70,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     within(".panel-navbar__brand") do
       identity = find_link(hotel.name, href: hotel_dashboard_path(hotel))
       expect(identity).to have_css(".panel-navbar__identity-meta", text: "##{hotel.id}")
+      expect(page).to have_css("[data-testid='hotel-sell-mode-badge']", text: "Sells per room")
     end
     expect(page).to have_css("#hotel-profile a[href='#{help_center_path}']", text: "Help")
     expect(page).to have_css(".panel-navbar__actions button[aria-label='Announcements'][aria-expanded='false']")
@@ -73,6 +83,14 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_css("#hotel-sidebar a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
     # Operations is flat, so it has no group triggers left to style.
     expect(page).to have_no_css("#hotel-sidebar button.panel-sidebar__group-trigger", visible: :all)
+  end
+
+  it "names the per-person sell mode in the Navbar badge", :per_person do
+    visit hotel_dashboard_path(hotel)
+
+    within(".panel-navbar__brand") do
+      expect(page).to have_css("[data-testid='hotel-sell-mode-badge']", text: "Sells per person")
+    end
   end
 
   it "renders the reduced Navbar while the hotel shell is locked" do

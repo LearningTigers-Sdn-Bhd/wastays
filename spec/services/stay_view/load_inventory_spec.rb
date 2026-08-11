@@ -49,10 +49,13 @@ RSpec.describe StayView::LoadInventory do
       date: start_date, rate_plan_id: master_plan.id, currency: included.currency
     )
     expect(@inventory.standard_rates).to be_frozen
-    expect(@inventory.rate_plan_options.sole).to have_attributes(
+    expect(@inventory.rate_plan_options.find { |option| option.id == master_plan.id }).to have_attributes(
       id: master_plan.id,
       label: "#{master_plan.name} — #{room_type.name}",
       room_type_ids: [ room_type.id ]
+    )
+    expect(@inventory.rate_plan_options.map(&:id)).to match_array(
+      [ room_type.standard_rate_plan, room_type.walk_in_rate_plan, room_type.corporate_rate_plan ].map(&:id)
     )
     expect(pricing_queries.size).to eq(2)
   end

@@ -1,0 +1,249 @@
+<div class="space-y-8" data-slot="report-page" data-report="channel-settlements">
+  <%= render PanelsUI::PageHeader.new(title: "OTA settlement report", description: "Reconcile expected OTA remittances with received settlement amounts by OTA and currency.") do |header| %>
+    <% header.with_caption do %>
+      <p class="text-sm font-medium text-muted-foreground">
+        <%= current_hotel.name %> ·
+        <% if @report.start_date == @report.end_date %>
+          <%= l(@report.start_date, format: :long) %>
+        <% else %>
+          <%= l(@report.start_date, format: :long) %> – <%= l(@report.end_date, format: :long) %>
+        <% end %>
+      </p>
+    <% end %>
+    <% header.with_actions do %>
+      <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
+        <div class="sm:self-end">
+          <%= render PanelsUI::Button.new(
+                as: :a,
+                href: new_hotel_channel_settlement_receipt_path(current_hotel),
+                variant: :primary) do %>
+            <%= app_icon "receipt", class: "size-4", aria: { hidden: "true" } %>
+            <span>Record receipt</span>
+          <% end %>
+        </div>
+      <% end %>
+      <% export_params = {
+           start_date: @report.start_date,
+           end_date: @report.end_date,
+           date_preset: @date_preset,
+           q: params[:q],
+           source: params[:source],
+           currency: params[:currency],
+           status: (@settlement_status unless @settlement_status == "all")
+         }.compact %>
+      <%= render "preset_report_actions",
+        form_url: channel_settlements_hotel_reports_path(current_hotel),
+        form_id: "channel-settlements-range-form",
+        hidden_params: params.permit(:q, :source, :currency, :status),
+        date_preset: @date_preset,
+        start_date: @report.start_date,
+        end_date: @report.end_date,
+        show_export: feature_enabled_for_hotel?("excel_pdf_export"),
+        export_menu_id: "channel-settlements-export",
+        export_items: [
+          ["Export Excel", channel_settlements_hotel_reports_path(current_hotel, export_params.merge(format: :xlsx))],
+          ["Export CSV", channel_settlements_hotel_reports_path(current_hotel, export_params.merge(format: :csv))]
+        ] %>
+    <% end %>
+  <% end %>
+
+  <% tab_params = request.query_parameters.symbolize_keys.except(:status, :page, :format) %>
+  <%= render PanelsUI::Tabs.new(
+        id: "ota-settlement-status-tabs",
+        active: @settlement_status,
+        variant: :line,
+        aria_label: "OTA settlement statuses") do |tabs| %>
+    <% @settlement_statuses.each do |status| %>
+      <% href = channel_settlements_hotel_reports_path(current_hotel, tab_params.merge(status: (status unless status == "all")).compact) %>
+      <% tabs.with_tab(name: status, label: status.humanize.gsub(/\bota\b/i, "OTA"), href: href) %>
+    <% end %>
+  <% end %>
+
+  <section class="space-y-5" aria-labelledby="ota-settlement-filters-heading">
+    <h2 id="ota-settlement-filters-heading" class="sr-only">Settlement filters</h2>
+    <%= form_with url: channel_settlements_hotel_reports_path(current_hotel), method: :get,
+          class: "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(16rem,1fr)_14rem_10rem_auto]",
+          data: {
+            controller: "auto-submit",
+            action: "input->auto-submit#submit change->auto-submit#submitNow"
+          } do |form| %>
+      <%= form.hidden_field :start_date, value: @report.start_date %>
+      <%= form.hidden_field :end_date, value: @report.end_date %>
+      <%= form.hidden_field :date_preset, value: @date_preset %>
+      <%= form.hidden_field :status, value: @settlement_status unless @settlement_status == "all" %>
+      <%= render PanelsUI::Input.new(
+            form: form,
+            attribute: :q,
+            type: :search,
+            value: params[:q],
+            placeholder: "Search booking, guest, or reference…",
+            aria: { label: "Search OTA settlements" }) %>
+      <%= render PanelsUI::SelectMenu.new(
+            form: form,
+            attribute: :source,
+            choices: @settlement_sources.map { |source| { label: source.label, value: source.id } }.presence || [{ label: "No OTAs available", value: "", disabled: true }],
+            include_blank: true,
+            prompt: "All OTAs",
+            selected: params[:source],
+            aria: { label: "Filter by OTA" }) %>
+      <%= render PanelsUI::SelectMenu.new(
+            form: form,
+            attribute: :currency,
+            choices: @settlement_currencies.map { |currency| { label: currency, value: currency } }.presence || [{ label: "No currencies available", value: "", disabled: true }],
+            include_blank: true,
+            prompt: "All currencies",
+            selected: params[:currency],
+            aria: { label: "Filter by currency" }) %>
+      <div class="flex items-center">
+        <%= render PanelsUI::Button.new(
+              label: "Clear",
+              as: :a,
+              href: channel_settlements_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset),
+              variant: :ghost) %>
+      </div>
+    <% end %>
+  </section>
+
+  <% if @report.attention_rows.any? %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Settlement review needed", role: :status) do |alert| %>
+      <% alert.with_description do %>
+        <ul class="space-y-2 text-sm">
+          <% @report.attention_rows.first(5).each do |row| %>
+            <li class="break-words">
+              <span class="font-medium"><%= row[:ota] %> · <%= row[:reference] %></span>
+              <span class="text-muted-foreground">— <%= row[:message] %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+      <% if @report.attention_rows.size > 5 %>
+        <% alert.with_actions do %>
+          <%= link_to "Review all #{@report.attention_rows.size} settlements",
+                channel_settlements_hotel_reports_path(current_hotel, request.query_parameters.merge(status: "needs_attention", page: nil)),
+                class: "text-sm font-medium text-primary underline underline-offset-2" %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% @report.currency_totals.each do |total| %>
+    <% currency = total.fetch(:currency) %>
+    <section class="space-y-5" aria-labelledby="ota-settlements-<%= currency.parameterize %>-heading">
+      <h2 id="ota-settlements-<%= currency.parameterize %>-heading" class="text-base font-semibold text-foreground"><%= currency %> reconciliation</h2>
+
+      <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
+        { label: "Expected net", value: "#{currency} #{format_number(total[:expected_net_amount], precision: 2)}", detail: "OTA remittance due" },
+        { label: "Received", value: "#{currency} #{format_number(total[:received_amount], precision: 2)}", detail: "Receipts allocated" },
+        { label: "Outstanding", value: "#{currency} #{format_number(total[:outstanding_amount], precision: 2)}", detail: "Still to be received", detail_variant: total[:outstanding_amount].positive? ? :destructive : :default },
+        { label: "Variance", value: "#{currency} #{format_number(total[:variance_amount], precision: 2)}", detail: "Received less expected", detail_variant: total[:variance_amount].negative? ? :destructive : :default }
+      ], aria_label: "#{currency} settlement summary") %>
+
+      <%= render PanelsUI::Table.new(
+            caption: "#{currency} reconciliation by OTA",
+            density: :compact,
+            header_style: :sentence,
+            hoverable: true,
+            wrapper_class: "rounded-lg border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">OTA</th>
+            <th scope="col" class="text-right">Expected net</th>
+            <th scope="col" class="text-right">Received</th>
+            <th scope="col" class="text-right">Outstanding</th>
+            <th scope="col" class="text-right">Variance</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @report.summary_rows.select { |row| row[:currency] == currency }.each do |row| %>
+            <tr>
+              <th scope="row" class="font-semibold text-foreground"><%= row[:ota] %></th>
+              <td class="whitespace-nowrap text-right tabular-nums"><%= currency %> <%= format_number(row[:expected_net_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums"><%= currency %> <%= format_number(row[:received_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums"><%= currency %> <%= format_number(row[:outstanding_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums"><%= currency %> <%= format_number(row[:variance_amount], precision: 2) %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section class="space-y-5" aria-labelledby="ota-settlement-details-heading">
+    <div>
+      <h2 id="ota-settlement-details-heading" class="text-base font-semibold text-foreground">Settlement details</h2>
+      <p class="text-sm text-muted-foreground">Individual OTA settlement references and their allocated receipts.</p>
+    </div>
+    <%= render PanelsUI::Table.new(
+          caption: "OTA settlement details",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">OTA</th>
+          <th scope="col">Booking</th>
+          <th scope="col">Reference</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="text-right">Expected</th>
+          <th scope="col" class="text-right">Received</th>
+          <th scope="col" class="text-right">Outstanding</th>
+          <th scope="col"><span class="sr-only">Actions</span></th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% if @settlement_rows.any? %>
+          <% @settlement_rows.each do |row| %>
+            <% status_variant = case row[:status]
+                 when "received" then :success
+                 when "partially_received", "underpaid", "needs_attention" then :warning
+                 when "failed", "cancelled" then :destructive
+                 else :neutral
+               end %>
+            <tr>
+              <td class="font-medium text-foreground"><%= row[:ota] %></td>
+              <td>
+                <% if row[:bookings].any? %>
+                  <div class="flex flex-wrap gap-2">
+                    <% row[:bookings].each do |booking| %>
+                      <%= link_to booking.confirmation_token,
+                            hotel_booking_path(current_hotel, booking),
+                            class: "text-primary underline decoration-dotted underline-offset-2 hover:decoration-border-interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive" %>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <span class="text-muted-foreground">Unallocated</span>
+                <% end %>
+              </td>
+              <td class="max-w-56 break-words text-muted-foreground"><%= row[:reference] %></td>
+              <td><%= render PanelsUI::Badge.new(label: row[:status].humanize.gsub(/\bota\b/i, "OTA"), variant: status_variant, size: :sm) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums"><%= row[:currency] %> <%= format_number(row[:expected_net_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums"><%= row[:currency] %> <%= format_number(row[:received_amount], precision: 2) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums"><%= row[:currency] %> <%= format_number(row[:outstanding_amount], precision: 2) %></td>
+              <td class="text-right">
+                <% if row[:outstanding_amount].positive? && row[:settlement].channel_settlement_allocations.any? %>
+                  <%= render PanelsUI::Button.new(
+                        as: :a,
+                        href: new_hotel_channel_settlement_receipt_path(
+                          current_hotel,
+                          booking_source_id: row[:booking_source_id],
+                          currency: row[:currency],
+                          allocation_search: row[:reference]
+                        ),
+                        variant: :secondary,
+                        size: :xs) do %>
+                    <%= app_icon "receipt", class: "size-3.5", aria: { hidden: "true" } %>
+                    <span>Allocate</span>
+                  <% end %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <%= render "table_empty_state", colspan: 8, message: "No OTA settlements match these filters." %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <%= render "table_pagination", collection: @settlement_rows %>
+  </section>
+</div>

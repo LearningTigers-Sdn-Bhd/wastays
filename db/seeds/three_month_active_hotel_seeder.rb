@@ -34,6 +34,7 @@ hotel.address = "88 Jalan Pantai, 88000 Kota Kinabalu, Sabah"
 hotel.star_rating = 4
 hotel.default_currency = "MYR"
 hotel.usd_conversion_rate = 4.65
+hotel.sell_mode = "per_room"
 hotel.tourism_tax_enabled = true
 hotel.tourism_tax_amount = 10.0
 hotel.sst_enabled = true

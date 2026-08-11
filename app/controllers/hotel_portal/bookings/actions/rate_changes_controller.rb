@@ -38,10 +38,14 @@ module HotelPortal
           room_type = @room&.room_type
           return [ { label: "No rates available", value: "", disabled: true } ] unless room_type
 
+          # Quote for the party already on the booking — UpdateStayService
+          # re-prices with the same numbers, so the label and the charge agree.
           options = ::Bookings::RateOptions.new(
             room_type:,
             check_in: Date.parse(@check_in_value),
-            check_out: Date.parse(@check_out_value)
+            check_out: Date.parse(@check_out_value),
+            adults: @booking.adults,
+            children: @booking.children
           ).call
           options.map do |option|
             label = "#{option[:name]} · #{option[:currency]} #{format('%.2f', option[:total_amount].to_d)}"

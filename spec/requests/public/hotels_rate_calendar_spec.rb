@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Public::Hotels rate_calendar", type: :request do
   let!(:account)   { Account.create!(name: "RC Req", slug: "rc-req", status: "active") }
-  let!(:hotel)     { Hotel.create!(name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel)     { Hotel.create!(sell_mode: "per_room", name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "approved") }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Standard", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
   let!(:easy_plan) { create(:plan, slug: "easy", name: "Easy") }
 
@@ -10,7 +10,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
   let(:base_params) { { start_date: today.to_s, end_date: (today + 6).to_s } }
 
   def seed_day(date, price: 200.0, quantity: 5, status: "open")
-    RoomRate.create!(room_type: room_type, date: date, price: price, currency: "MYR")
+    RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: date, price: price, currency: "MYR")
     RoomInventory.create!(room_type: room_type, date: date, quantity: quantity, status: status)
   end
 
@@ -69,7 +69,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
     end
 
     it "marks sold-out day as unavailable (quantity 0)" do
-      RoomRate.create!(room_type: room_type, date: today, price: 200, currency: "MYR")
+      RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 200, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 0, status: "open")
       get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s }
       day = json["days"].first
@@ -85,8 +85,8 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
 
     it "returns MIN price across multiple room types" do
       room_type2 = RoomType.create!(hotel: hotel, name: "Suite", quantity: 2, max_adults: 2, base_price: 500, room_number_mode: "range")
-      RoomRate.create!(room_type: room_type, date: today, price: 300, currency: "MYR")
-      RoomRate.create!(room_type: room_type2, date: today, price: 150, currency: "MYR")
+      RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 300, currency: "MYR")
+      RoomRate.create!(room_type: room_type2, rate_plan: room_type2.standard_rate_plan, date: today, price: 150, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 5, status: "open")
       RoomInventory.create!(room_type: room_type2, date: today, quantity: 2, status: "open")
       get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s }
@@ -94,7 +94,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
     end
 
     it "excludes nights where inventory < room_count" do
-      RoomRate.create!(room_type: room_type, date: today, price: 200, currency: "MYR")
+      RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 200, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 2, status: "open")
       get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s, room_count: 3 }
       expect(json["days"].first["available"]).to be false

@@ -8,8 +8,8 @@ import { Controller } from "@hotwired/stimulus"
 // of truth and re-dispatches input/change from it, so the row is read through
 // that native element rather than a Stimulus target on the styled wrapper.
 export default class extends Controller {
-  static targets = [ "value", "preview" ]
-  static values = { anchorPrice: Number, currency: String }
+  static targets = [ "value", "occupancy", "preview" ]
+  static values = { anchorPrice: Number, currency: String, perPerson: Boolean }
 
   connect() {
     this.update()
@@ -23,16 +23,30 @@ export default class extends Controller {
     const mode = this.modeSelect?.value
     if (!mode) return
 
-    this.valueTarget.classList.toggle("hidden", mode === "fixed")
-
     if (!this.hasPreviewTarget) return
 
+    const value = parseFloat(this.valueInput?.value)
+
+    if (this.perPersonValue) {
+      this.valueTarget.classList.toggle("hidden", mode === "fixed")
+      if (this.hasOccupancyTarget) this.occupancyTarget.classList.toggle("hidden", mode !== "fixed")
+    }
+
     if (mode === "fixed") {
-      this.previewTarget.textContent = ""
+      if (this.perPersonValue) {
+        this.previewTarget.textContent = "These are the normal nightly prices; override individual dates under Rates & Availability"
+        return
+      }
+      this.valueInput.min = "0"
+      this.valueInput.placeholder = this.anchorPriceValue.toFixed(2)
+      this.previewTarget.textContent = Number.isNaN(value)
+        ? "Enter the starting nightly price"
+        : `Starts at ${this.currencyValue} ${value.toFixed(2)}/night; change individual dates under Rates & Availability`
       return
     }
 
-    const value = parseFloat(this.valueInput?.value)
+    this.valueInput.removeAttribute("min")
+    this.valueInput.placeholder = mode === "offset" ? "-10.00" : "-10"
     if (Number.isNaN(value)) {
       this.previewTarget.textContent = ""
       return

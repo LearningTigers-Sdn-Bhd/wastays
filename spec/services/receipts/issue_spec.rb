@@ -52,6 +52,18 @@ RSpec.describe Receipts::Issue do
     expect(transaction.receipt.payment_method).to eq("gateway_payment")
   end
 
+  it "suppresses a receipt when the posting policy is none" do
+    transaction = create(
+      :folio_transaction,
+      transaction_type: "payment",
+      category: "booking_payment",
+      amount: 45,
+      metadata: { receipt_policy: "none" }
+    )
+
+    expect(transaction.receipt).to be_nil
+  end
+
   it "does not issue another receipt for a deposit application" do
     transaction = create(
       :folio_transaction,

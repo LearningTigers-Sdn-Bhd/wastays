@@ -26,6 +26,121 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     expect(report.advance_scope).not_to include(charge)
   end
 
+
+  it "separates canonical OTA credits from cash totals while retaining ordinary advances" do
+    source = create(:booking_source, key: "ota_cashier_test", label: "OTA Cashier Test")
+    party = create(
+      :booking_billing_party,
+      booking: booking,
+      hotel: hotel,
+      party_kind: "ota",
+      booking_source: source,
+      booking_guest: nil,
+      hotel_corporate_account: nil
+    )
+    ota_folio = create(
+      :booking_folio,
+      booking: booking,
+      hotel: hotel,
+      folio_type: "external",
+      payer_type: "ota",
+      is_primary: false,
+      booking_billing_party: party,
+      hotel_corporate_account: nil
+    )
+    ota_code = hotel.transaction_codes.find_by!(system_key: "ota_collected_payment")
+    ota_credit = create(
+      :folio_transaction,
+      booking_folio: ota_folio,
+      transaction_type: "payment",
+      category: "booking_payment",
+      amount: 90,
+      currency: "MYR",
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: ota_code,
+      metadata: { posting_source: "ota_credit", receipt_policy: "none" }
+    )
+    bank_code = hotel.transaction_codes.find_by!(system_key: "bank_payment")
+    bank_advance = payment(
+      category: "booking_payment",
+      amount: 25,
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: bank_code
+    )
+    cash = payment(category: "cash", amount: 10, posting_date: Date.new(2026, 6, 17))
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(ota_credit).to be_ota_collected_credit
+    expect(report.ota_credit_scope).to contain_exactly(ota_credit)
+    expect(report.ota_credit_totals).to eq(
+      movement_count: 1,
+      total_collected: 90.to_d,
+      total_refunded: 0.to_d,
+      net_cash: 90.to_d
+    )
+    expect(report.advance_scope).to contain_exactly(bank_advance)
+    expect(report.settlement_scope).to contain_exactly(cash)
+    expect(report.totals).to eq(
+      movement_count: 2,
+      total_collected: 35.to_d,
+      total_refunded: 0.to_d,
+      net_cash: 35.to_d
+    )
+    expect(report.mode_totals.map { |row| row[:mode] }).not_to include("OTA Collected Payment")
+    expect(report.grand_total[:balance]).to eq(35.to_d)
+  end
+
+
+  it "keeps refunds of canonical OTA credits out of cash amount-out totals" do
+    source = create(:booking_source, key: "ota_refund_test", label: "OTA Refund Test")
+    party = create(
+      :booking_billing_party,
+      booking: booking,
+      hotel: hotel,
+      party_kind: "ota",
+      booking_source: source,
+      booking_guest: nil,
+      hotel_corporate_account: nil
+    )
+    ota_folio = create(
+      :booking_folio,
+      booking: booking,
+      hotel: hotel,
+      folio_type: "external",
+      payer_type: "ota",
+      is_primary: false,
+      booking_billing_party: party,
+      hotel_corporate_account: nil
+    )
+    ota_credit = create(
+      :folio_transaction,
+      booking_folio: ota_folio,
+      transaction_type: "payment",
+      category: "booking_payment",
+      amount: 100,
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: hotel.transaction_codes.find_by!(system_key: "ota_collected_payment"),
+      metadata: { posting_source: "ota_credit", receipt_policy: "none" }
+    )
+    ota_refund = create(
+      :folio_transaction,
+      booking_folio: ota_folio,
+      transaction_type: "payment",
+      category: "refund",
+      amount: -25,
+      posting_date: Date.new(2026, 6, 18),
+      reversal_of_transaction: ota_credit
+    )
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.ota_credit_scope).to contain_exactly(ota_credit, ota_refund)
+    expect(report.totals[:movement_count]).to eq(0)
+    expect(report.grand_total).to eq(amount_in: 0.to_d, amount_out: 0.to_d, balance: 0.to_d)
+    expect(report.ota_credit_totals).to include(total_collected: 100.to_d, total_refunded: 25.to_d, net_cash: 75.to_d)
+  end
+
   it "excludes Razorpay movements from lists, totals, and summaries" do
     razorpay_advance = create(:payment_transaction, booking: booking, gateway: "razorpay")
     razorpay_settlement = create(:payment_transaction, booking: booking, gateway: "razorpay")

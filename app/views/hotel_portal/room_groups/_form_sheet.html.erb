@@ -1,0 +1,39 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% persisted = room_group.persisted? %>
+<% form_id = persisted ? "edit-room-group-#{room_group.id}-form" : "new-room-group-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: persisted ? "edit-room-group-sheet" : "new-room-group-sheet",
+          side: :right,
+          size: :sm,
+          title: title,
+          description: "Use a clear property-area name such as Main Tower or Left Wing.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: [ @hotel, room_group ], id: form_id, class: "space-y-5 py-2" do |form| %>
+          <% if room_group.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Room group could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { room_group.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Group name", required: true) do |field| %>
+            <% field.with_input(placeholder: "e.g. Main Tower", autocomplete: "off") %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: persisted ? "Saving…" : "Creating…" }) do %>
+          <%= submit_label %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

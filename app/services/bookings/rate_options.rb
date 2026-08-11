@@ -2,82 +2,41 @@
 
 module Bookings
   class RateOptions
-    def initialize(room_type:, check_in:, check_out:, apply_stop_sell: false, apply_arrival_departure: false, apply_stay_length: false, corporate_rate: false)
+    def initialize(room_type:, check_in:, check_out:, apply_stop_sell: false, apply_arrival_departure: false, apply_stay_length: false, audience: :staff, adults: nil, children: nil, child_ages: [])
       @room_type = room_type
       @check_in = check_in.to_date
       @check_out = check_out.to_date
       @apply_stop_sell = ActiveModel::Type::Boolean.new.cast(apply_stop_sell)
       @apply_arrival_departure = ActiveModel::Type::Boolean.new.cast(apply_arrival_departure)
       @apply_stay_length = ActiveModel::Type::Boolean.new.cast(apply_stay_length)
-      @corporate_rate = ActiveModel::Type::Boolean.new.cast(corporate_rate)
+      @audience = audience.to_sym
+      # Per-person plans price off the party staying, so every option has to be
+      # quoted for the same party the booking will be charged for. Omitting
+      # these used to leave CalculateStayPrice on its 2-adult default while
+      # BuildFinancialSnapshot charged for the real party.
+      @adults = adults
+      @children = children
+      @child_ages = child_ages
     end
 
     def call
-      all_plans = @room_type.rate_plans.active.order(:name, :id).to_a
-      return [ base_rate_option ] if all_plans.empty?
-
-      # Filter out plans that are actually special tiers
-      standard_plans = all_plans.reject(&:special_tier?)
-
-      options = standard_plans.filter_map do |rate_plan|
+      eligible_plans.filter_map do |rate_plan|
         next if restricted?(rate_plan)
         rate_plan_option(rate_plan)
       end
-
-      # Add virtual tiers if they exist on the standard plan (usually the first one)
-      standard_plan = all_plans.first
-      if standard_plan
-        options << tier_option(standard_plan, :walk_in, "Walk-in Rate") if has_tier_price?(standard_plan, :walk_in)
-      end
-
-      options
     end
 
     def allowed?(rate_plan)
-      return true if rate_plan.blank?
-      return false if rate_plan.archived?
-      return true if rate_plan.special_tier? # Tiers are handled via standard plan restrictions
+      return false if rate_plan.blank?
+      return false unless rate_plan.bookable_by?(@audience)
 
       !restricted?(rate_plan)
     end
 
     private
 
-    def tier_option(rate_plan, tier, label)
-      total = CalculateStayPrice.new(
-        room_type: @room_type,
-        rate_plan: rate_plan,
-        check_in: @check_in,
-        check_out: @check_out,
-        rate_tier: tier,
-        corporate_rate: @corporate_rate
-      ).call
-
-      {
-        id: RateSelection.tier_token(tier, rate_plan.id),
-        name: label,
-        currency: rate_plan.currency,
-        total_amount: total.to_d.to_s("F"),
-        is_tier: true,
-        tier_kind: tier,
-        base_rate_plan_id: rate_plan.id
-      }
-    end
-
-    def has_tier_price?(rate_plan, tier)
-      # Check if any date in the window has an override for this tier
-      column = case tier.to_sym
-      when :walk_in then "walk_in_price"
-      when :corporate then "corporate_price"
-      end
-
-      return false if column.blank?
-
-      # Scoped to the room type: a plan shared across categories holds a row per
-      # category, so without this a walk-in price set on one category offered a
-      # Walk-in option on all of them — and CalculateStayPrice then quoted the
-      # standard price, having no tier price of its own to find.
-      rate_plan.room_rates.where(room_type: @room_type, date: stay_dates).where.not(column => nil).exists?
+    def occupancy
+      { adults: @adults, children: @children, child_ages: @child_ages }
     end
 
     def rate_plan_option(rate_plan)
@@ -86,9 +45,10 @@ module Bookings
         rate_plan: rate_plan,
         check_in: @check_in,
         check_out: @check_out,
-        rate_tier: rate_plan.special_tier_kind || :standard,
-        corporate_rate: @corporate_rate
+        **occupancy
       ).call
+
+      return if total.nil?
 
       {
         id: rate_plan.id,
@@ -98,26 +58,15 @@ module Bookings
       }
     end
 
-    def base_rate_option
-      total = CalculateStayPrice.new(
-        room_type: @room_type,
-        check_in: @check_in,
-        check_out: @check_out,
-        corporate_rate: @corporate_rate
-      ).call
-
-      {
-        id: nil,
-        name: "Base Rate",
-        currency: @room_type.hotel.default_currency.presence || "MYR",
-        total_amount: total.to_d.to_s("F")
-      }
+    def eligible_plans
+      @room_type.rate_plans.for_audience(@audience).order(:name, :id).to_a
     end
 
     def restricted?(rate_plan)
-      rates = rates_for(rate_plan)
+      restriction_plan = @room_type.restriction_plan_for(rate_plan)
+      rates = rates_for(restriction_plan)
       return true if @apply_stop_sell && rates.any?(&:stop_sell?)
-      return true if @apply_arrival_departure && arrival_departure_restricted?(rates, rate_plan)
+      return true if @apply_arrival_departure && arrival_departure_restricted?(rates, restriction_plan)
       return true if @apply_stay_length && stay_length_restricted?(rates)
 
       false

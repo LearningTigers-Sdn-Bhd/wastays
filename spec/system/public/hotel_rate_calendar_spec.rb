@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel rate calendar", type: :system do
   let!(:account)   { Account.create!(name: "Sys RC", slug: "sys-rc", status: "active") }
-  let!(:hotel)     { Hotel.create!(name: "Sys Hotel", city: "KL", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel)     { Hotel.create!(sell_mode: "per_room", name: "Sys Hotel", city: "KL", country: "Malaysia", account: account, status: "approved") }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Standard", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
   let(:today)      { Date.current }
 

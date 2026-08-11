@@ -11,37 +11,33 @@ RSpec.describe Bookings::RateSelection do
     it "returns a standard selection for a blank value" do
       selection = described_class.resolve(room_type: room_type, value: "")
 
-      expect(selection).to have_attributes(rate_plan: nil, tier: :standard, token: "")
+      expect(selection).to have_attributes(rate_plan: nil, token: "")
     end
 
     it "resolves a plain rate-plan id to a standard-tier selection" do
       selection = described_class.resolve(room_type: room_type, value: rate_plan.id.to_s)
 
-      expect(selection).to have_attributes(rate_plan: rate_plan, tier: :standard, token: rate_plan.id.to_s)
+      expect(selection).to have_attributes(rate_plan: rate_plan, token: rate_plan.id.to_s)
     end
 
     it "returns a standard selection when the rate-plan id is unknown" do
       selection = described_class.resolve(room_type: room_type, value: "0")
 
-      expect(selection).to have_attributes(rate_plan: nil, tier: :standard, token: "")
+      expect(selection).to have_attributes(rate_plan: nil, token: "")
     end
 
-    it "resolves a tier token to the matching plan and tier" do
-      selection = described_class.resolve(room_type: room_type, value: "tier_walk_in_#{rate_plan.id}")
+    it "rejects a non-plan token" do
+      selection = described_class.resolve(room_type: room_type, value: "not-a-plan")
 
-      expect(selection).to have_attributes(
-        rate_plan: rate_plan,
-        tier: :walk_in,
-        token: "tier_walk_in_#{rate_plan.id}"
-      )
+      expect(selection).to have_attributes(rate_plan: nil, token: "")
     end
 
-    it "raises when a tier token has no eligible plan" do
-      room_type.rate_plans.destroy_all
+    it "rejects an archived rate plan" do
+      rate_plan.archive!
 
-      expect do
-        described_class.resolve(room_type: room_type, value: "tier_corporate_#{rate_plan.id}")
-      end.to raise_error(ActiveRecord::RecordNotFound)
+      selection = described_class.resolve(room_type: room_type, value: rate_plan.id)
+
+      expect(selection).to have_attributes(rate_plan: nil, token: "")
     end
   end
 
@@ -52,7 +48,7 @@ RSpec.describe Bookings::RateSelection do
 
       selection = described_class.current(booking_room)
 
-      expect(selection).to have_attributes(rate_plan: rate_plan, tier: :standard, token: rate_plan.id.to_s)
+      expect(selection).to have_attributes(rate_plan: rate_plan, token: rate_plan.id.to_s)
     end
   end
 end

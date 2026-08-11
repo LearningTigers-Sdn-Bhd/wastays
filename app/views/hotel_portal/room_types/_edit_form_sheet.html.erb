@@ -1,0 +1,45 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = "edit-room-category-#{room_type.id}-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%# Editing includes photo management and intentionally keeps the broad,
+        two-column workspace used by the existing room-category workflow. %>
+    <%= render PanelsUI::Sheet.new(
+          id: "edit-room-category-sheet",
+          side: :bottom,
+          size: :full,
+          dismissible: false,
+          title: "Edit Room Category",
+          description: "Update this category's configuration, occupancy limits, inventory, and base price.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="mx-auto w-full max-w-7xl py-2">
+          <%= render "form",
+                     room_type: room_type,
+                     form_id: form_id,
+                     single_column: false,
+                     show_photos: true %>
+        </div>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: form_id,
+              size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>
+          Save Changes
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

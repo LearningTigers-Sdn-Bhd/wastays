@@ -14,6 +14,7 @@ RSpec.describe 'Hotel Registration', type: :system do
     fill_in 'Company / Group Name', with: 'Green Hotel Group'
     fill_in 'Hotel Name', with: 'Green Hotel KL'
     fill_in 'City', with: 'Kuala Lumpur'
+    choose 'Per guest'
     fill_in 'Full Name', with: 'Sarah Lim'
     fill_in 'Work Email', with: 'sarah@example.com'
     fill_in 'Password', with: 'password123'
@@ -21,13 +22,14 @@ RSpec.describe 'Hotel Registration', type: :system do
     click_button 'Register Your Hotel'
 
     expect(page).to have_content('Welcome! Your hotel account has been created.')
-    expect(page).to have_content('Hotel Dashboard')
+    expect(page).to have_content('Welcome to WAStays!')
 
     user = User.find_by(email: 'sarah@example.com')
      expect(page).to have_current_path(hotel_dashboard_path(user.hotels.first))
     expect(user).to be_present
     expect(user.account.name).to eq('Green Hotel Group')
     expect(user.hotels.first.name).to eq('Green Hotel KL')
+    expect(user.hotels.first.sell_mode).to eq('per_person')
     expect(user.roles.pluck(:slug)).to include('hotel_owner')
   end
 
@@ -38,5 +40,20 @@ RSpec.describe 'Hotel Registration', type: :system do
     click_button 'Register Your Hotel'
 
     expect(page).to have_content("Name can't be blank")
+  end
+
+  it 'requires a permanent charging model' do
+    visit register_path
+
+    fill_in 'Company / Group Name', with: 'Green Hotel Group'
+    fill_in 'Hotel Name', with: 'Green Hotel KL'
+    fill_in 'City', with: 'Kuala Lumpur'
+    fill_in 'Full Name', with: 'Sarah Lim'
+    fill_in 'Work Email', with: 'sarah@example.com'
+    fill_in 'Password', with: 'password123'
+    click_button 'Register Your Hotel'
+
+    expect(page).to have_content("Sell mode can't be blank")
+    expect(Hotel).not_to exist
   end
 end

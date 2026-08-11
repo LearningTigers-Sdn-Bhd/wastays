@@ -206,76 +206,46 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
-  describe 'pax pricing settings' do
-    let(:hotel) { create(:hotel, allow_pax_pricing: false, pax_pricing_only: false) }
+  describe 'sell mode' do
+    let(:hotel) { create(:hotel) }
 
-    it 'defaults allow_pax_pricing to false' do
-      expect(hotel.allow_pax_pricing).to be false
+    it 'requires an explicit value on creation' do
+      account = create(:account)
+
+      expect(build(:hotel, account: account, sell_mode: nil)).not_to be_valid
+      expect(build(:hotel, account: account, sell_mode: 'per_room')).to be_valid
+      expect(build(:hotel, account: account, sell_mode: 'per_person')).to be_valid
     end
 
-    it 'defaults pax_pricing_only to false' do
-      expect(hotel.pax_pricing_only).to be false
+    it 'rejects a value outside the rate plan vocabulary' do
+      hotel.sell_mode = 'per_night'
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:sell_mode]).to be_present
     end
 
-    context 'when allow_pax_pricing is false' do
-      it 'resets pax_pricing_only to false before validation' do
-        hotel.pax_pricing_only = true
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be false
+    describe '#sells_per_person?' do
+      it 'is true only for per_person' do
+        expect(hotel.sells_per_person?).to be false
+        expect(create(:hotel, :per_person).sells_per_person?).to be true
       end
     end
 
-    context 'when allow_pax_pricing is true' do
-      before do
-        hotel.allow_pax_pricing = true
+    describe 'locking after creation' do
+      it 'refuses a per-room to per-guest change before the hotel is bookable' do
+        expect(hotel.update(sell_mode: 'per_person')).to be false
+        expect(hotel.errors[:sell_mode]).to include('cannot be changed after the hotel is created')
+        expect(hotel.reload.sell_mode).to eq('per_room')
       end
 
-      it 'allows pax_pricing_only to be true' do
-        hotel.pax_pricing_only = true
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be true
+      it 'refuses a per-guest to per-room change' do
+        hotel = create(:hotel, :per_person)
+
+        expect(hotel.update(sell_mode: 'per_room')).to be false
+        expect(hotel.reload.sell_mode).to eq('per_person')
       end
 
-      it 'resets pax_pricing_only to false when allow_pax_pricing is disabled' do
-        hotel.pax_pricing_only = true
-        hotel.save!
-
-        hotel.allow_pax_pricing = false
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be false
-      end
-
-      it 'resets rate plans to per_room when allow_pax_pricing is disabled' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-        rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
-
-        hotel.allow_pax_pricing = false
-        expect(hotel).to be_valid
-        expect(rate_plan.reload.sell_mode).to eq('per_room')
-      end
-
-      it 'logs a warning when disabling allow_pax_pricing force-flips existing per_person rate plans' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-        rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
-
-        expect(Rails.logger).to receive(:warn).with(
-          a_string_matching(/Hotel##{hotel.id}.*force-flipped 1 rate plan.*rate_plan_ids=\[#{rate_plan.id}\]/)
-        )
-
-        hotel.allow_pax_pricing = false
-        hotel.save!
-      end
-
-      it 'does not log anything when there are no per_person rate plans to flip' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-
-        expect(Rails.logger).not_to receive(:warn)
-
-        hotel.allow_pax_pricing = false
-        hotel.save!
+      it 'leaves the hotel’s other attributes editable while locked' do
+        expect(hotel.update(name: "#{hotel.name} Resort")).to be true
       end
     end
   end

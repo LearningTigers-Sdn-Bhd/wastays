@@ -17,7 +17,7 @@ module HotelOps
 
     def call
       RoomRate.reset_column_information
-      room_types = @hotel.room_types
+      room_types = @hotel.room_types.includes(:rate_plans)
       room_types = room_types.where(id: @room_type_ids) if @room_type_ids.present?
 
       ActiveRecord::Base.transaction do
@@ -34,73 +34,43 @@ module HotelOps
     private
 
     def apply_for_room_type(room_type)
-      standard_plan = room_type.standard_rate_plan
-      target_currency = standard_plan&.currency || @hotel.default_currency || "MYR"
+      plans = %w[standard walk_in corporate].index_with { |kind| room_type.system_rate_plan(kind) }
+      target_currency = plans.fetch("standard")&.currency || @hotel.default_currency || "MYR"
 
       (@start_date..@end_date).each do |date|
-        online_winner = winning_rule_for(date, category: :online)
-        walk_in_winner = winning_rule_for(date, category: :walk_in)
-        corporate_winner = winning_rule_for(date, category: :corporate)
-
-        rate = anchor_rate_for(room_type, standard_plan, date, target_currency)
-        if online_winner.blank? && walk_in_winner.blank? && corporate_winner.blank?
-          rate.destroy! if rate.persisted?
-          next
-        end
-
-        old_price = rate.price
-        old_wi_price = rate.walk_in_price
-        old_cr_price = rate.corporate_price
-        old_rule_type = rate.applied_rule_type
-        old_currency = rate.currency
-
-        # Fallback to base_price if no online rule applies but we are saving a rate record
-        rate.price = online_winner&.dig(:price) || room_type.base_price
-        rate.applied_rule_type = online_winner&.dig(:tier)&.to_s || "base"
-        rate.walk_in_price = walk_in_winner&.dig(:price)
-        rate.corporate_price = corporate_winner&.dig(:price)
-        rate.currency = target_currency
-        rate.rate_plan = standard_plan if standard_plan
-        rate.save!
-
-        next if old_price == rate.price && old_wi_price == rate.walk_in_price && old_cr_price == rate.corporate_price && old_currency == rate.currency && old_rule_type == rate.applied_rule_type
-
-        @hotel.inventory_audit_logs.create!(
-          room_type: room_type,
-          user: @user,
-          action_type: "rate_update",
-          old_value: { date: date, price: old_price.to_f, walk_in_price: old_wi_price&.to_f, corporate_price: old_cr_price&.to_f, rule_type: old_rule_type },
-          new_value: { date: date, price: rate.price&.to_f, walk_in_price: rate.walk_in_price&.to_f, corporate_price: rate.corporate_price&.to_f, rule_type: rate.applied_rule_type },
-          metadata: {
-            source: "pricing_rules",
-            online_tier: online_winner&.dig(:tier)&.to_s,
-            walk_in_tier: walk_in_winner&.dig(:tier)&.to_s,
-            corporate_tier: corporate_winner&.dig(:tier)&.to_s
-          }
-        )
+        apply_winner(room_type, plans.fetch("standard"), date, target_currency, winning_rule_for(date, category: :online))
+        apply_winner(room_type, plans.fetch("walk_in"), date, target_currency, winning_rule_for(date, category: :walk_in))
+        apply_winner(room_type, plans.fetch("corporate"), date, target_currency, winning_rule_for(date, category: :corporate))
       end
     end
 
-    # The row these rules own: the anchor plan's row for the date.
-    #
-    # The lookup used to carry no rate_plan at all, so it took whichever row the
-    # category returned for the date. On a category carrying a second plan that
-    # is often the second plan's row, which was then overwritten with the rule
-    # price and re-pointed at the anchor: either a unique-index violation
-    # against the anchor's own row, or — when the anchor had no row yet — the
-    # second plan silently losing its price for that date. destroy! could take
-    # it the same way.
-    #
-    # An unattributed row is still adopted rather than left behind: rows predating
-    # rate_plan_id are the anchor row in legacy data, and CalculateStayPrice
-    # reads them through its nil fallback. Only the anchor's own row outranks
-    # them, so nothing that belongs to another plan is ever claimed.
-    def anchor_rate_for(room_type, standard_plan, date, currency)
-      scope = room_type.room_rates.where(date: date, currency: currency)
+    def apply_winner(room_type, rate_plan, date, currency, winner)
+      return unless rate_plan
 
-      scope.find_by(rate_plan: standard_plan) ||
-        scope.find_by(rate_plan: nil) ||
-        room_type.room_rates.build(rate_plan: standard_plan, date: date, currency: currency)
+      rate = room_type.room_rates.find_or_initialize_by(rate_plan: rate_plan, date: date, currency: currency)
+      old_value = rate.persisted? ? { date: date, price: rate.price&.to_f, rule_type: rate.applied_rule_type } : {}
+
+      if winner.blank?
+        return unless rate.persisted?
+
+        rate.destroy!
+        new_value = {}
+      else
+        rate.assign_attributes(price: winner.fetch(:price), applied_rule_type: winner.fetch(:tier).to_s)
+        return unless rate.changed?
+
+        rate.save!
+        new_value = { date: date, price: rate.price.to_f, rule_type: rate.applied_rule_type }
+      end
+
+      @hotel.inventory_audit_logs.create!(
+        room_type: room_type,
+        user: @user,
+        action_type: "rate_update",
+        old_value: old_value,
+        new_value: new_value,
+        metadata: { source: "pricing_rules", rate_plan_id: rate_plan.id, rate_kind: rate_plan.kind }
+      )
     end
 
     def winning_rule_for(date, category: :online)

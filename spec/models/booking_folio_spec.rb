@@ -93,6 +93,21 @@ RSpec.describe BookingFolio, type: :model do
       expect(build(:booking_folio, status: "reopened")).not_to be_valid
     end
 
+    it "accepts OTA payer folios" do
+      booking_source = create(:booking_source, kind: "ota")
+      party = create(:booking_billing_party, booking: booking, hotel: booking.hotel, party_kind: "ota", booking_source: booking_source, hotel_corporate_account: nil)
+      folio = build(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, payer_type: "ota", booking_billing_party: party)
+
+      expect(folio).to be_valid
+    end
+
+    it "requires an OTA billing party for OTA payer folios" do
+      folio = build(:booking_folio, :secondary, booking: booking, hotel: booking.hotel, payer_type: "ota", booking_billing_party: nil)
+
+      expect(folio).not_to be_valid
+      expect(folio.errors[:booking_billing_party]).to include("must be an OTA billing party")
+    end
+
     it "accepts the supported folio window and payer types" do
       expect(build(:booking_folio, folio_type: "guest", payer_type: "guest")).to be_valid
       expect(build(:booking_folio, folio_type: "external", payer_type: "company", hotel_corporate_account: hotel_corporate_account, hotel: booking.hotel, booking: booking)).to be_valid

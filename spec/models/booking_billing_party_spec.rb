@@ -37,6 +37,21 @@ RSpec.describe BookingBillingParty, type: :model do
     expect(party).to be_valid
   end
 
+  it "allows an OTA party only for an OTA BookingSource" do
+    source = create(:booking_source, kind: "ota")
+    party = described_class.new(hotel: hotel, booking: booking, party_kind: "ota", booking_source: source)
+
+    expect(party).to be_valid
+  end
+
+  it "rejects a non-OTA source for an OTA party" do
+    source = create(:booking_source, kind: "manual")
+    party = described_class.new(hotel: hotel, booking: booking, party_kind: "ota", booking_source: source)
+
+    expect(party).not_to be_valid
+    expect(party.errors[:booking_source]).to include("must be an OTA booking source")
+  end
+
   it "persists an airline account_type (regression: DB check constraint used to reject it)" do
     account = create(:hotel_corporate_account, hotel: hotel, account_type: "airline")
 

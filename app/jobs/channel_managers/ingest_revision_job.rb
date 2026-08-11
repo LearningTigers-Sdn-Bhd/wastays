@@ -23,9 +23,39 @@ module ChannelManagers
       return unless response["data"]
 
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
-      booking_data = adapter.ingest_booking(payload: response)
+      booking_data = adapter.ingest_booking(payload: response, require_property_binding: true)
 
       result = ChannelManagers::IngestBookingService.new(booking_data: booking_data).call
+
+      # Settlement persistence is intentionally separate from booking/folio
+      # ingestion. An unresolved source is operator attention, not a reason to
+      # mark a booking paid or to block the booking revision acknowledgement.
+      if result.success? && booking_data[:settlement].present?
+        settlement_result = ChannelManagers::PersistSettlement.new(
+          hotel: hotel,
+          settlement_data: booking_data[:settlement]
+        ).call
+        retry_required = !settlement_result.success?
+        if retry_required
+          Rails.logger.warn(
+            "Channel Manager settlement not persisted for revision #{revision_id}: #{settlement_result.message}"
+          )
+        end
+
+        if settlement_result.success? && settlement_result.settlement.present?
+          application_result = apply_settlement(result, settlement_result.settlement)
+          retry_required = !application_result.success?
+          if retry_required
+            Rails.logger.warn(
+              "Channel Manager settlement not applied for revision #{revision_id}: #{application_result.error}"
+            )
+          end
+        end
+
+        if retry_required
+          ChannelManagers::ReconcileSettlementJob.perform_later(hotel.id, booking_data[:settlement].to_h)
+        end
+      end
 
       if result.success?
         Rails.logger.info("Channel Manager: Successfully ingested revision #{revision_id}. Acknowledging...")
@@ -42,6 +72,29 @@ module ChannelManagers
         end
       else
         Rails.logger.error "Channel Manager Ingestion Failed for ID #{revision_id}: #{result.message}"
+
+        # Blocked on hotel configuration (e.g. a missing exchange rate): the revision
+        # stays unacknowledged, so fail loudly instead of dropping it into the log.
+        if result.failure_code.present?
+          raise ChannelManagers::IngestBookingService::UnprocessableBooking,
+            "Revision #{revision_id} for hotel #{hotel.id}: #{result.message}"
+        end
+      end
+    end
+
+    private
+
+    def apply_settlement(result, settlement)
+      if result.respond_to?(:bookings) && result.bookings.present?
+        ChannelManagers::ApplyOtaSettlement.call_many(
+          bookings: result.bookings,
+          settlement: settlement
+        )
+      else
+        ChannelManagers::ApplyOtaSettlement.call(
+          booking: result.booking,
+          settlement: settlement
+        )
       end
     end
   end

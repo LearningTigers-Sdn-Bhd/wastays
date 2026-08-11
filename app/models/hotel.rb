@@ -51,6 +51,12 @@ class Hotel < ApplicationRecord
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :channel_settlements, dependent: :restrict_with_error
+  has_many :channel_settlement_receipts, dependent: :restrict_with_error
+  has_many :channel_settlement_allocations, through: :channel_settlements
+  has_many :ota_financial_snapshots, dependent: :restrict_with_error
+  has_many :ota_financial_component_mappings, dependent: :restrict_with_error
+  has_one :ota_rate_variance_policy, dependent: :restrict_with_error
   has_many :guest_registration_cards, dependent: :restrict_with_error
   has_many :guest_registration_note_templates, dependent: :destroy
   has_many :group_bookings, dependent: :restrict_with_error
@@ -105,7 +111,6 @@ class Hotel < ApplicationRecord
   validate :hotel_prefix_has_not_been_used_by_another_hotel
 
   before_validation :normalize_default_currency
-  before_validation :reset_pax_pricing_only_if_not_allowed
   before_validation :normalize_hotel_prefix
   before_validation :assign_hotel_prefix, on: :create
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
@@ -116,10 +121,32 @@ class Hotel < ApplicationRecord
   validates :business_starts_at, :business_ends_at, presence: true
   validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
+  validates :sell_mode, presence: true
+  validates :sell_mode, inclusion: { in: ->(_) { RatePlan.sell_modes } }, allow_blank: true
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
   validate :account_must_be_hotel_kind
+  validate :sell_mode_is_immutable, on: :update, if: :will_save_change_to_sell_mode?
+
+  # Operator-facing wording for the property's sell mode. The stored values
+  # match rate_plans.sell_mode, but "per room"/"per person" is engine
+  # vocabulary — staff and admins think in terms of what the property sells.
+  def self.sell_mode_options
+    [ [ "Room — one price per room, extra guest charges on top", "per_room" ],
+      [ "Guest — one price per guest", "per_person" ] ]
+  end
+
+  def sells_per_person?
+    sell_mode == "per_person"
+  end
+
+  # Navbar badge wording. Short enough to sit beside the property name, and
+  # phrased as a statement about the property rather than as the choice itself
+  # — sell_mode_options spells out the trade-off for whoever is picking it.
+  def sell_mode_label
+    sells_per_person? ? "Sells per person" : "Sells per room"
+  end
 
   def self.const_missing(const_name)
     case const_name
@@ -731,21 +758,12 @@ class Hotel < ApplicationRecord
     google_map_link[fallback_regex, 1]&.to_f
   end
 
-  def reset_pax_pricing_only_if_not_allowed
-    unless allow_pax_pricing?
-      self.pax_pricing_only = false
-
-      if persisted?
-        affected_ids = rate_plans.where(sell_mode: "per_person").pluck(:id)
-        if affected_ids.any?
-          rate_plans.where(id: affected_ids).update_all(sell_mode: "per_room")
-          Rails.logger.warn(
-            "[Hotel##{id}] allow_pax_pricing disabled: force-flipped #{affected_ids.size} rate plan(s) " \
-            "from per_person to per_room (rate_plan_ids=#{affected_ids})"
-          )
-        end
-      end
-    end
+  # The charging model determines the shape and meaning of every price stored
+  # for the property, so it is chosen once at creation and never transitioned in
+  # place — regardless of status, bookings, or channel connections. Correcting a
+  # mistaken choice is a data-recovery operation, not a settings change.
+  def sell_mode_is_immutable
+    errors.add(:sell_mode, "cannot be changed after the hotel is created")
   end
 
   def ensure_current_business_date

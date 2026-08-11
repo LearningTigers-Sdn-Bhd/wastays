@@ -7,6 +7,7 @@ FactoryBot.define do
     country { "Malaysia" }
     star_rating { 4 }
     status { "registered" }
+    sell_mode { "per_room" }
 
     transient do
       initialize_current_business_date { true }
@@ -23,6 +24,12 @@ FactoryBot.define do
       else
         hotel.hotel_business_dates.delete_all
       end
+    end
+
+    # Sells by the guest rather than the room. Rate plans inherit this, so set
+    # it on the hotel and never on the plan.
+    trait :per_person do
+      sell_mode { "per_person" }
     end
 
     trait :without_current_business_date do

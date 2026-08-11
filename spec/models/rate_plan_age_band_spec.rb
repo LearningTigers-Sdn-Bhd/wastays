@@ -24,8 +24,8 @@ RSpec.describe RatePlanAgeBand, type: :model do
     end
 
     it 'rejects a band that overlaps an existing sibling band on the same rate plan' do
-      hotel = create(:hotel, allow_pax_pricing: true)
-      rate_plan = create(:rate_plan, sell_mode: "per_person", hotel: hotel)
+      hotel = create(:hotel, :per_person)
+      rate_plan = create(:rate_plan, hotel: hotel)
       create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11)
       overlapping = build(:rate_plan_age_band, rate_plan: rate_plan, min_age: 10, max_age: 15)
 
@@ -34,8 +34,8 @@ RSpec.describe RatePlanAgeBand, type: :model do
     end
 
     it 'allows adjacent, non-overlapping bands with a gap between them' do
-      hotel = create(:hotel, allow_pax_pricing: true)
-      rate_plan = create(:rate_plan, sell_mode: "per_person", hotel: hotel)
+      hotel = create(:hotel, :per_person)
+      rate_plan = create(:rate_plan, hotel: hotel)
       create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11)
       gap_band = build(:rate_plan_age_band, rate_plan: rate_plan, min_age: 13, max_age: 17)
 
@@ -57,8 +57,8 @@ RSpec.describe RatePlanAgeBand, type: :model do
 
   describe 'default_scope' do
     it 'orders bands by position then min_age' do
-      hotel = create(:hotel, allow_pax_pricing: true)
-      rate_plan = create(:rate_plan, sell_mode: "per_person", hotel: hotel)
+      hotel = create(:hotel, :per_person)
+      rate_plan = create(:rate_plan, hotel: hotel)
       second = create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 12, max_age: 17, position: 1)
       first = create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, position: 0)
 

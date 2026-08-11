@@ -324,7 +324,7 @@ Rails.application.routes.draw do
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
     end
-    resources :room_groups, only: %i[index create update destroy]
+    get "room_groups", to: redirect("/hotel/%{hotel_id}/settings/property/room-groups"), as: :legacy_room_groups
     get "stay-view", to: "stay_view/board#index", as: :stay_view
     scope "stay-view", module: :stay_view, as: :stay_view do
       get "rooms/:room_type_id/:room_number/status", to: "room_operations#edit", as: :room_status
@@ -478,6 +478,7 @@ Rails.application.routes.draw do
     resources :notification_logs, only: [ :index ] do
       post :resend, on: :member
     end
+    resources :channel_settlement_receipts, only: %i[new create], path: "ota-settlement-receipts"
     resources :reports, only: [ :index ] do
       collection do
         get :payouts
@@ -497,6 +498,7 @@ Rails.application.routes.draw do
           request.query_string.present? ? "#{destination}?#{request.query_string}" : destination
         }
         get :outstanding_balance
+        get :channel_settlements
         get :deposit_liability
         get :folio_ledger
         get :journal_batches
@@ -543,6 +545,7 @@ Rails.application.routes.draw do
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         get :occupancy_details
+        get :edit_selection
         post :apply_pricing_rules
         post :apply_availability_override
         post :bulk_save_ari
@@ -577,7 +580,7 @@ Rails.application.routes.draw do
       patch "general/boat/slots/:id", to: "boat_schedules#update", as: :boat_schedule_slot
       delete "general/boat/slots/:id", to: "boat_schedules#destroy"
       patch "general/boat/slots/:id/restore", to: "boat_schedules#restore", as: :boat_schedule_slot_restore
-      get "general/rates", to: "settings#index", as: :rates_settings, defaults: { settings_page: "rates" }
+      get "general/rates", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory"), as: :rates_settings
       get "general/notifications", to: "settings#index", as: :notification_settings, defaults: { settings_page: "notifications" }
       patch "general/notifications", to: "settings#update", defaults: { settings_page: "notifications" }
       get "general/plan-and-billing", to: "plans#show", as: :plan
@@ -592,11 +595,22 @@ Rails.application.routes.draw do
         delete "hotel-details/photo-queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
         post "hotel-details/photo-queue/commit", to: "profiles#commit_photo_queue", as: :commit_profile_photo_queue
 
-        resources :room_types, path: "room-categories", except: [ :show ] do
+        get "room-categories", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory")
+        get "room-categories/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory")
+        get "room-categories/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory")
+
+        resources :room_groups, path: "room-groups", except: :show
+        resources :room_types, path: "room-inventory", except: [ :show ] do
           member do
             delete :destroy_photo
             delete :bulk_destroy_photos
           end
+        end
+        resource :room_group_assignment,
+                 path: "room-inventory/room-group-assignment",
+                 only: %i[new create]
+        resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do
+          get :autocomplete, on: :collection
         end
         resources :nearby_attractions, path: "nearby-attractions", except: [ :show ]
       end
@@ -609,6 +623,9 @@ Rails.application.routes.draw do
         patch "taxes-and-fees/system/:tax_key", to: "taxes_fees#update_system", as: :system_tax
         resources :hotel_taxes, path: "taxes-and-fees/fees", only: %i[index new create edit update destroy]
         get "transaction-code-reference", to: "transaction_code_references#index", as: :transaction_code_references
+        resource :ota_financial_settings, path: "ota-financials", only: %i[show update] do
+          post :approve_adjustment, on: :member
+        end
         resources :general_ledger_maps, path: "general-ledger-mappings", only: [ :index, :edit, :update ]
       end
 
@@ -666,10 +683,10 @@ Rails.application.routes.draw do
     get "settings/guest-content/notifications", to: redirect("/hotel/%{hotel_id}/settings/general/notifications")
     get "plan", to: redirect("/hotel/%{hotel_id}/settings/general/plan-and-billing")
     get "profile/edit", to: redirect("/hotel/%{hotel_id}/settings/property/hotel-details")
-    get "room_types", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
+    get "room_types", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory")
     # New/edit are Sheets over the list now, so old deep links land on the list.
-    get "room_types/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
-    get "room_types/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-categories")
+    get "room_types/new", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory")
+    get "room_types/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory")
     get "nearby_attractions", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions")
     get "nearby_attractions/new", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/new")
     get "nearby_attractions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/property/nearby-attractions/%{id}/edit")
@@ -702,7 +719,15 @@ Rails.application.routes.draw do
     get "roles-and-permissions/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/team/roles-and-permissions")
 
     resource :concierge_qr, only: [ :show ], controller: "concierge_qr"
+    # Wizard bookmarks now land on the single-room rate-plan sheet.
+    get "rate_plans/wizard", to: redirect("/hotel/%{hotel_id}/rate_plans/new")
+    get "rate_plans/wizard/:step", to: redirect("/hotel/%{hotel_id}/rate_plans/new")
+
     resources :rate_plans, only: %i[new create edit update destroy] do
+      resources :room_pricings,
+        only: %i[edit update destroy],
+        param: :room_type_id,
+        controller: "rate_plan_room_pricings"
       member do
         patch :archive
         patch :unarchive

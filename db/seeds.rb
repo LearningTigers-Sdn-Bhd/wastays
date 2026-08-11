@@ -198,6 +198,7 @@ if Rails.env.development?
           city: 'Kuala Lumpur',
           country: 'Malaysia',
           status: 'approved',
+          sell_mode: 'per_room',
           tourism_tax_enabled: true,
           tourism_tax_amount: 10.0,
           policy: { check_in_time: '15:00', check_out_time: '12:00' },
@@ -211,6 +212,7 @@ if Rails.env.development?
           city: 'Kota Kinabalu',
           country: 'Malaysia',
           status: 'approved',
+          sell_mode: 'per_room',
           tourism_tax_enabled: true,
           tourism_tax_amount: 10.0,
           policy: { check_in_time: '14:00', check_out_time: '12:00' },
@@ -233,6 +235,7 @@ if Rails.env.development?
           city: 'George Town',
           country: 'Malaysia',
           status: 'approved',
+          sell_mode: 'per_room',
           tourism_tax_enabled: true,
           tourism_tax_amount: 10.0,
           policy: { check_in_time: '14:00', check_out_time: '12:00' },
@@ -246,6 +249,7 @@ if Rails.env.development?
           city: 'Ranau',
           country: 'Malaysia',
           status: 'pending_review',
+          sell_mode: 'per_room',
           tourism_tax_enabled: true,
           tourism_tax_amount: 10.0,
           policy: { check_in_time: '15:00', check_out_time: '11:00' },
@@ -295,6 +299,9 @@ if Rails.env.development?
         record.city = hotel_attrs[:city]
         record.country = hotel_attrs[:country]
         record.status = hotel_attrs[:status]
+        # Permanent and create-only: Hotel rejects any later change, so it is set
+        # here and deliberately left out of the update! below.
+        record.sell_mode = hotel_attrs[:sell_mode]
         record.tourism_tax_enabled = hotel_attrs[:tourism_tax_enabled]
         record.tourism_tax_amount = hotel_attrs[:tourism_tax_amount]
       end

@@ -173,13 +173,13 @@
                       <p class="text-xs text-muted-foreground font-bold">1x Room Unit</p>
                     </div>
                     <div class="text-right">
-                      <% if @hotel.pax_pricing_only? %>
+                      <% if @hotel.sells_per_person? %>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase tracking-wider mb-1.5">Per Pax Billing</span>
                       <% end %>
                       <p class="text-sm font-bold text-foreground"><%= display_amount(room.subtotal, quote_currency: @booking.currency, display_currency: @display_currency, hotel: @hotel) %></p>
                     </div>
                   </div>
-                  <% if @hotel.pax_pricing_only? %>
+                  <% if @hotel.sells_per_person? %>
                     <div class="mt-4 pt-3 border-t border-muted pl-4 space-y-1.5 text-xs text-muted-foreground border-l-2 border-primary/20">
                       <% pax_pricing_breakdown_items(room, @hotel, @display_currency).each do |line| %>
                         <div class="flex justify-between items-center">

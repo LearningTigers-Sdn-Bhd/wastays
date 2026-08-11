@@ -3,6 +3,7 @@
 module ChannelManagers
   class SyncStructureJob < ApplicationJob
     queue_as :default
+    retry_on Channex::Client::RetryableRequestError, wait: :exponentially_longer, attempts: 8
 
     def perform(mappable_type, mappable_id, action = "sync", options = {})
       if action == "delete"

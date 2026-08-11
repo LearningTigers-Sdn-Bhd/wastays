@@ -37,6 +37,5 @@ export default class extends Controller {
 
     const hasVisibleRows = this.rowTargets.some((row) => !row.classList.contains("hidden"))
     this.emptyStateTarget.classList.toggle("hidden", hasVisibleRows)
-    if (this.hasAddButtonTarget) this.addButtonTarget.classList.toggle("hidden", !hasVisibleRows)
   }
 }

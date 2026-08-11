@@ -38,9 +38,15 @@ module ChannelManagers
     # One per mapping: the channel manager needs each room type / rate plan
     # pair to exist before rates for it can be pushed.
     def enqueue_structure_syncs
-      rate_plan.room_type_rate_plans.where(room_type_id: room_type_ids).find_each do |rtrp|
+      scoped_assignments.find_each do |rtrp|
+        next unless rate_plan.channex_syncable?(room_type: rtrp.room_type)
+
         ChannelManagers::SyncStructureJob.perform_later("RoomTypeRatePlan", rtrp.id, "sync")
       end
+    end
+
+    def scoped_assignments
+      rate_plan.room_type_rate_plans.includes(:room_type, :occupancy_prices).where(room_type_id: room_type_ids)
     end
 
     def enqueue_rate_sync

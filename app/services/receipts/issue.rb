@@ -27,7 +27,11 @@ module Receipts
       return @source.status.in?(%w[held available settled]) if @source.is_a?(Deposit)
       return true unless @source.is_a?(FolioTransaction)
 
-      @source.payment? && @source.amount.positive? && @source.category != "refund" && @source.metadata.to_h["deposit_id"].blank?
+      metadata = @source.metadata.to_h
+      return false if metadata["receipt_policy"].to_s == "none" || metadata[:receipt_policy].to_s == "none"
+      return false if metadata["posting_source"].to_s == "ota_credit" || metadata[:posting_source].to_s == "ota_credit"
+
+      @source.payment? && @source.amount.positive? && @source.category != "refund" && metadata["deposit_id"].blank? && metadata[:deposit_id].blank?
     end
 
     def attributes(allocation)

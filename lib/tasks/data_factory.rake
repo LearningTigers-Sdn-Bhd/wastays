@@ -169,6 +169,7 @@ namespace :data_factory do
       h.city = data[:city]
       h.country = "Malaysia"
       h.status = "live"
+      h.sell_mode = "per_room"
       h.tourism_tax_enabled = true
       h.tourism_tax_amount = 10.0
       h.created_at = onboarded_at

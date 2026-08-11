@@ -113,9 +113,6 @@ module HotelPortal
           )
         end
 
-        walk_in_row = Row.new(key: "room-#{room_type.id}-walk-in", kind: :walk_in, room_type: room_type)
-        corporate_row = Row.new(key: "room-#{room_type.id}-corporate", kind: :corporate, room_type: room_type)
-
         rate_and_sub_rows = rate_plans_for(room_type).flat_map do |rate_plan|
           parent_row = Row.new(key: "room-#{room_type.id}-rate-#{rate_plan.id}", kind: :rate, room_type: room_type, rate_plan: rate_plan)
 
@@ -144,7 +141,7 @@ module HotelPortal
           [ parent_row ] + sub_rows
         end
 
-        [ inventory_row ] + summary_rows + inventory_sub_rows + rate_and_sub_rows + [ walk_in_row, corporate_row ]
+        [ inventory_row ] + summary_rows + inventory_sub_rows + rate_and_sub_rows
       end
     end
 
@@ -154,17 +151,9 @@ module HotelPortal
 
     def rate_plan_options_struct
       @rate_plan_options_struct ||= visible_room_types.flat_map do |room_type|
-        plans = rate_plans_for(room_type).map do |rate_plan|
-          OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id, kind: :standard)
+        rate_plans_for(room_type).map do |rate_plan|
+          OpenStruct.new(label: "#{room_type.name} - #{rate_plan.name}", id: rate_plan.id, room_type_id: room_type.id, kind: :rate)
         end
-
-        # Virtual Pricing Tiers, written onto the anchor plan's rate rows.
-        tiers = [
-          OpenStruct.new(label: "#{room_type.name} - Walk-in Rate", id: "tier_walk_in_#{room_type.id}", room_type_id: room_type.id, kind: :tier),
-          OpenStruct.new(label: "#{room_type.name} - Corporate Rate", id: "tier_corporate_#{room_type.id}", room_type_id: room_type.id, kind: :tier)
-        ]
-
-        plans + tiers
       end
     end
 
@@ -191,10 +180,6 @@ module HotelPortal
         channel_summary_cell(row.room_type, date)
       elsif row.channel_availability_row?
         channel_availability_cell(row.room_type, row.channel, date)
-      elsif row.walk_in_row?
-        tier_cell(row.room_type, date, :walk_in)
-      elsif row.corporate_row?
-        tier_cell(row.room_type, date, :corporate)
       elsif row.channel_rate_row?
         channel_rate_cell(row.room_type, row.rate_plan, row.channel_rate_plan_id, row.channel, date)
       else
@@ -272,45 +257,6 @@ module HotelPortal
       rooms.values.include?(ext_rt_id)
     end
 
-    def tier_cell(room_type, date, tier_type)
-      # walk_in_price/corporate_price live on the anchor plan's rate rows, which
-      # is where ApplyInventoryDashboardSelection writes them.
-      rate_plan = room_type.standard_rate_plan
-      return { date: date } if rate_plan.blank?
-
-      rate = rate_for(room_type, rate_plan, date)
-
-      actual_price = case tier_type
-      when :walk_in then rate&.walk_in_price
-      when :corporate then rate&.corporate_price
-      end
-
-      price = actual_price.presence || rate&.price || room_type.base_price
-      native_currency = default_currency
-
-      display_conversion = display_conversion_for(price, from: native_currency)
-      conversion_missing = price.present? && display_currency != native_currency && display_conversion.nil?
-
-      display_price = display_conversion&.amount || price
-      formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
-
-      {
-        date: date,
-        price: actual_price, # Original set price
-        rate_plan_id: rate_plan.id,
-        rate_tier: tier_type,
-        formatted_price: format_price(display_price, formatted_currency),
-        currency: native_currency,
-        display_currency: formatted_currency,
-        estimated: display_conversion.present? && native_currency != formatted_currency,
-        conversion_missing: conversion_missing,
-        is_modified: actual_price.present?,
-        sell_mode: rate_plan&.sell_mode || "per_room",
-        restriction_badges: [],
-        restriction_compact: nil
-      }
-    end
-
     def sold_counts_by_room_type
       @sold_counts_by_room_type ||= begin
         counts = hotel.bookings.revenue_generating
@@ -336,26 +282,24 @@ module HotelPortal
       hotel.default_currency.presence || "MYR"
     end
 
+    # room_type_rate_plans and their occupancy prices are preloaded because
+    # ResolveEffectiveNightlyPrice reads the category's standard assignment on
+    # every per-person cell, and falls back to find_by whenever that association
+    # is not already loaded — a query per cell per occupancy.
     def visible_room_types
       @visible_room_types ||= begin
-        scope = hotel.room_types.includes(:rate_plans).order(:id)
+        scope = hotel.room_types.includes(:rate_plans, room_type_rate_plans: :occupancy_prices).order(:id)
         scope = scope.where(id: selected_room_type_id) if selected_room_type_id.present?
         scope.to_a
       end
     end
 
-    # Special tiers get their own rows and are written through the anchor plan,
-    # so they never appear as ordinary rate rows. Identified by kind rather than
-    # by name: renaming "Walk-in Rate" used to turn it into an ordinary row that
-    # the walk-in row still read from, and naming an ordinary plan "Corporate"
-    # used to hide it from the grid while it stayed bookable.
-    #
     # Archived plans are excluded to match the booking side, which offers only
     # RatePlan.active — showing rows the operator can edit and push to channels
     # for a plan no guest can book is worse than not showing them.
     def rate_plans_for(room_type)
       plans = room_type.rate_plans.sort_by(&:id)
-      plans = plans.reject { |rate_plan| rate_plan.special_tier? || rate_plan.archived? }
+      plans = plans.reject(&:archived?)
       plans = plans.select { |rate_plan| rate_plan.id == selected_rate_plan_id } if selected_rate_plan_id.present?
       plans
     end
@@ -377,11 +321,34 @@ module HotelPortal
     # Loads every plan for the visible categories, not just the filtered ones,
     # so tier rows (walk-in/corporate) still resolve when the grid is filtered
     # to a single plan.
-    def rates_by_room_type_and_plan
-      @rates_by_room_type_and_plan ||= RoomRate
+    def all_visible_rates
+      @all_visible_rates ||= RoomRate
         .where(room_type_id: visible_room_type_ids, date: start_date..end_date, currency: default_currency)
+        .to_a
+    end
+
+    def rates_by_room_type_and_plan
+      @rates_by_room_type_and_plan ||= all_visible_rates
         .group_by { |rate| [ rate.room_type_id, rate.rate_plan_id ] }
         .transform_values { |rates| rates.index_by(&:date) }
+    end
+
+    # Reads the association preloaded on visible_room_types rather than issuing
+    # its own query, so the assignments and the ones the resolver finds through
+    # room_type.room_type_rate_plans are the same objects.
+    def room_type_rate_plans_by_pair
+      @room_type_rate_plans_by_pair ||= visible_room_types
+        .flat_map(&:room_type_rate_plans)
+        .index_by { |assignment| [ assignment.room_type_id, assignment.rate_plan_id ] }
+    end
+
+    # The resolver scans whatever collection it is handed, looking for this
+    # category's row on the requested plan and its standard-plan anchor row for
+    # the same date. Handing it every row on screen made that scan proportional
+    # to the whole grid on every cell, and again on every occupancy within it.
+    def rates_for_cell(room_type_id, date)
+      @rates_by_room_type_and_date ||= all_visible_rates.group_by { |rate| [ rate.room_type_id, rate.date ] }
+      @rates_by_room_type_and_date[[ room_type_id, date ]] || []
     end
 
     def rate_for(room_type, rate_plan, date)
@@ -424,8 +391,19 @@ module HotelPortal
 
     def rate_cell(room_type, rate_plan, date)
       rate = rate_for(room_type, rate_plan, date)
+      restriction_rate = rate_plan.anchored? ? rate_for(room_type, room_type.standard_rate_plan, date) : rate
       native_currency = default_currency
-      price = rate&.price || (native_currency == default_currency ? room_type.base_price : nil)
+      display_adults = rate_plan.sell_mode == "per_person" ? room_type.max_adults : 2
+      resolved = Rates::ResolveEffectiveNightlyPrice.call(
+        room_type: room_type,
+        rate_plan: rate_plan,
+        date: date,
+        currency: native_currency,
+        adults: display_adults,
+        room_rates: rates_for_cell(room_type.id, date),
+        room_type_rate_plan: room_type_rate_plans_by_pair[[ room_type.id, rate_plan.id ]]
+      )
+      price = occupancy_total_for(resolved, display_adults, rate_plan)
 
       display_conversion = display_conversion_for(price, from: native_currency)
 
@@ -435,13 +413,8 @@ module HotelPortal
       display_price = display_conversion&.amount || price
       formatted_currency = (display_conversion.present? || conversion_missing) ? display_currency : native_currency
 
-      # Determine if price is modified compared to base
-      is_modified = false
-      if native_currency == default_currency && price.present?
-        is_modified = (price.to_f != room_type.base_price.to_f)
-      elsif price.present? && rate.present?
-        is_modified = true
-      end
+      is_modified = resolved.source.in?([ :daily_override, :starting_price ]) ||
+        (price.present? && price.to_d != default_occupancy_total(room_type, display_adults, rate_plan))
 
       {
         date: date,
@@ -452,19 +425,62 @@ module HotelPortal
         estimated: display_conversion.present? && native_currency != formatted_currency,
         conversion_missing: conversion_missing,
         is_modified: is_modified,
-        min_stay: rate&.min_stay,
-        max_stay: rate&.max_stay,
-        closed_to_arrival: rate&.closed_to_arrival? || false,
-        closed_to_departure: rate&.closed_to_departure? || false,
-        stop_sell: rate&.stop_sell? || false,
+        price_source: resolved.source,
+        min_stay: restriction_rate&.min_stay,
+        max_stay: restriction_rate&.max_stay,
+        closed_to_arrival: restriction_rate&.closed_to_arrival? || false,
+        closed_to_departure: restriction_rate&.closed_to_departure? || false,
+        stop_sell: restriction_rate&.stop_sell? || false,
         applied_rule_type: rate&.applied_rule_type,
         single_supplement: rate&.single_supplement || rate_plan.single_supplement,
         base_occupancy: rate&.base_occupancy || rate_plan.base_occupancy,
         extra_pax_charge: rate&.extra_pax_charge || rate_plan.extra_pax_charge,
         sell_mode: rate_plan.sell_mode,
-        restriction_badges: restriction_badges(rate),
-        restriction_compact: restriction_compact(rate)
+        max_adults: room_type.max_adults,
+        display_adults: display_adults,
+        occupancy_prices: occupancy_prices_for(room_type, rate_plan, date),
+        restriction_badges: restriction_badges(restriction_rate),
+        restriction_compact: restriction_compact(restriction_rate)
       }
+    end
+
+    # Occupancy prices are room totals, so a cell showing "1,500.00 / 4 adults"
+    # is claiming 1,500 covers four adults. Without a matrix the resolver hands
+    # back the per-adult figure instead, and rendering that under the same label
+    # advertised a quarter of what the booking engine actually charges. Multiply
+    # it up so the label is true either way.
+    def occupancy_total_for(resolved, adults, rate_plan)
+      amount = resolved.base_amount
+      return amount if amount.nil? || resolved.occupancy_priced
+      return amount unless rate_plan.sell_mode == "per_person"
+
+      amount * adults
+    end
+
+    def default_occupancy_total(room_type, adults, rate_plan)
+      multiplier = rate_plan.sell_mode == "per_person" ? adults : 1
+      room_type.base_price.to_d * multiplier
+    end
+
+    def occupancy_prices_for(room_type, rate_plan, date)
+      return {} unless rate_plan.sell_mode == "per_person"
+
+      assignment = room_type_rate_plans_by_pair[[ room_type.id, rate_plan.id ]]
+      cell_rates = rates_for_cell(room_type.id, date)
+
+      (1..room_type.max_adults).to_h do |adults|
+        resolved = Rates::ResolveEffectiveNightlyPrice.call(
+          room_type: room_type,
+          rate_plan: rate_plan,
+          date: date,
+          currency: default_currency,
+          adults: adults,
+          room_rates: cell_rates,
+          room_type_rate_plan: assignment
+        )
+
+        [ adults.to_s, occupancy_total_for(resolved, adults, rate_plan) ]
+      end
     end
 
     def restriction_badges(rate)

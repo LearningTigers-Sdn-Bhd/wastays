@@ -278,36 +278,46 @@ module ApplicationHelper
       first_rate_data = item.nightly_rate_snapshot.values.first
       rate_plan_id = first_rate_data["rate_plan_id"] if first_rate_data.is_a?(Hash)
     end
-    rate_plan = RatePlan.find_by(id: rate_plan_id)
-    return [] unless rate_plan
-
-    child_multiplier = rate_plan.child_price_multiplier || 1.to_d
     child_age_bands = occ["child_age_bands"] || occ[:child_age_bands] || []
 
-    # Sum up for the stay
-    dates = item.nightly_rate_snapshot.keys.map { |d| Date.parse(d) }
-    nights_count = dates.size
+    nights_count = item.nightly_rate_snapshot.size
     return [] if nights_count.zero?
 
-    total_adults_cost = 0.to_d
-    total_children_cost = 0.to_d
-    total_supplement = 0.to_d
+    # Prefer the components frozen at quote time: they reconcile to the price
+    # actually charged and cannot drift when the rate plan is edited later.
+    frozen = frozen_pax_totals(item.nightly_rate_snapshot)
 
-    item.nightly_rate_snapshot.each do |date_str, snapshot|
-      date = Date.parse(date_str)
-      room_rate = RoomRate.find_by(room_type_id: item.room_type_id, rate_plan_id: rate_plan_id, date: date)
-      base_price = room_rate&.price || item.room_type.base_price || 0.to_d
+    if frozen
+      total_adults_cost = frozen[:adults]
+      total_children_cost = frozen[:children]
+      total_supplement = frozen[:supplement]
+      child_multiplier = (occ["child_price_multiplier"] || occ[:child_price_multiplier])&.to_d
+    else
+      # Quotes taken before components were frozen: fall back to re-deriving
+      # from the rate plan, which is what they have always displayed.
+      rate_plan = RatePlan.find_by(id: rate_plan_id)
+      return [] unless rate_plan
 
-      total_adults_cost += adults * base_price
-      total_children_cost += if child_age_bands.any?
-        child_age_bands.sum { |band| age_band_child_price(band, base_price) }
-      else
-        children * base_price * child_multiplier
-      end
+      child_multiplier = rate_plan.child_price_multiplier || 1.to_d
+      total_adults_cost = 0.to_d
+      total_children_cost = 0.to_d
+      total_supplement = 0.to_d
 
-      if total_pax == 1
-        supplement = room_rate&.single_supplement || rate_plan.single_supplement || 0.to_d
-        total_supplement += supplement
+      item.nightly_rate_snapshot.each_key do |date_str|
+        date = Date.parse(date_str)
+        room_rate = RoomRate.find_by(room_type_id: item.room_type_id, rate_plan_id: rate_plan_id, date: date)
+        base_price = room_rate&.price || item.room_type.base_price || 0.to_d
+
+        total_adults_cost += adults * base_price
+        total_children_cost += if child_age_bands.any?
+          child_age_bands.sum { |band| age_band_child_price(band, base_price) }
+        else
+          children * base_price * child_multiplier
+        end
+
+        if total_pax == 1
+          total_supplement += room_rate&.single_supplement || rate_plan.single_supplement || 0.to_d
+        end
       end
     end
 
@@ -333,8 +343,10 @@ module ApplicationHelper
       formatted_total = display_amount(total_children_cost * quantity, quote_currency: quote_curr, display_currency: display_currency, hotel: hotel)
       child_detail = if child_age_bands.any?
         "#{nights_count} night(s) @ #{formatted_rate} (age-banded pricing)"
-      else
+      elsif child_multiplier
         "#{nights_count} night(s) @ #{formatted_rate} (#{(child_multiplier * 100).to_i}%)"
+      else
+        "#{nights_count} night(s) @ #{formatted_rate}"
       end
       lines << {
         label: "#{children * quantity} Child(ren)",
@@ -354,6 +366,21 @@ module ApplicationHelper
 
     lines
   end
+
+  # Stay totals for adults, children and single supplement, taken from the
+  # per-night components frozen on the quote. Returns nil unless every night
+  # carries them, so mixed/legacy snapshots fall back rather than under-report.
+  def frozen_pax_totals(nightly_rate_snapshot)
+    breakdowns = nightly_rate_snapshot.values.map { |night| night.is_a?(Hash) ? night["pax_breakdown"] : nil }
+    return nil if breakdowns.any?(&:blank?)
+
+    {
+      adults: breakdowns.sum { |b| b["adults_cost"].to_d },
+      children: breakdowns.sum { |b| b["children_cost"].to_d },
+      supplement: breakdowns.sum { |b| b["supplement"].to_d }
+    }
+  end
+  private :frozen_pax_totals
 
   # Mirrors RatePlanAgeBand#price_for, but reads the frozen per-child snapshot
   # taken at quote time instead of the (possibly since-edited) age band record.

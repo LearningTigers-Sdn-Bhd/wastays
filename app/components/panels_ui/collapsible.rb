@@ -16,12 +16,13 @@ module PanelsUI
   class Collapsible < PanelsUI::BaseComponent
     renders_one :trigger
     renders_one :body
+    renders_one :header_content
 
     style base: "panel-collapsible"
 
     def initialize(id: nil, open: false, disabled: false, heading_level: nil,
                    region: false, class: nil, trigger_class: nil, content_class: nil,
-                   trigger_attributes: {}, content_attributes: {}, **attributes)
+                   header_class: nil, trigger_attributes: {}, content_attributes: {}, **attributes)
       @id = id.presence || "collapsible-#{object_id}"
       @open = ActiveModel::Type::Boolean.new.cast(open)
       @disabled = ActiveModel::Type::Boolean.new.cast(disabled)
@@ -30,6 +31,7 @@ module PanelsUI
       @class = binding.local_variable_get(:class)
       @trigger_class = trigger_class
       @content_class = content_class
+      @header_class = header_class
       @trigger_attributes = trigger_attributes
       @content_attributes = content_attributes
       @attributes = attributes
@@ -53,6 +55,8 @@ module PanelsUI
     def heading_tag
       "h#{@heading_level}" if @heading_level
     end
+
+    def header_classes = tw_merge("panel-collapsible__header", @header_class)
 
     def root_attributes
       attributes = @attributes.deep_dup

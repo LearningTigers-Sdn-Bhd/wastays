@@ -36,6 +36,7 @@ class ApplicationController < ActionController::Base
     respond_to do |format|
       format.html { render file: Rails.public_path.join("404.html"), status: :not_found, layout: false }
       format.json { render json: { error: "Resource not found" }, status: :not_found }
+      format.turbo_stream { head :not_found }
     end
   end
 

@@ -7,6 +7,7 @@ class HotelPaymentMethod < ApplicationRecord
   belongs_to :hotel
   belongs_to :transaction_code
   belongs_to :surcharge_extra_charge, class_name: "HotelExtraCharge", optional: true
+  has_many :channel_settlement_receipts, dependent: :restrict_with_error
 
   delegate :name, :name=, :code, :code=, :active, :active=, to: :transaction_code
 

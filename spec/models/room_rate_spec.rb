@@ -14,4 +14,12 @@ RSpec.describe RoomRate, type: :model do
     it { is_expected.to validate_presence_of(:currency) }
     it { is_expected.to validate_uniqueness_of(:date).scoped_to(:room_type_id, :rate_plan_id, :currency).case_insensitive }
   end
+
+
+  it "rejects adult occupancy prices above the room category capacity" do
+    rate = build(:room_rate, room_type: create(:room_type, max_adults: 2), occupancy_prices: { "3" => 500 })
+
+    expect(rate).not_to be_valid
+    expect(rate.errors[:occupancy_prices]).to include("contains an adult occupancy outside the room category capacity")
+  end
 end

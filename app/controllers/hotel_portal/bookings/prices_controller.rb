@@ -9,17 +9,17 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
     end
 
     room_type = current_hotel.room_types.find(params[:room_type_id])
-    rate_plan, rate_tier = parse_rate_selection(room_type, params[:rate_plan_id])
+    rate_plan = parse_rate_selection(room_type, params[:rate_plan_id])
 
     snapshot = Bookings::BuildFinancialSnapshot.new(
       hotel: current_hotel,
       room_type: room_type,
       rate_plan: rate_plan,
-      rate_tier: rate_tier,
       check_in: Date.parse(params[:check_in]),
       check_out: Date.parse(params[:check_out]),
       guest_country: params[:guest_country].presence || current_hotel.country,
-      corporate_rate: params[:corporate_rate] == "true"
+      adults: params[:adults].presence,
+      children: params[:children].presence
     ).call
     tourism_tax_total = Booking.tourism_tax_total_for(snapshot.tax_lines)
     payable_tax_total = Booking.non_tourism_tax_total_for(snapshot.tax_lines)
@@ -59,8 +59,10 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
   private
 
   def parse_rate_selection(room_type, rate_plan_id)
+    return room_type.standard_rate_plan if rate_plan_id.blank?
+
     selection = Bookings::RateSelection.resolve(room_type:, value: rate_plan_id)
-    [ selection.rate_plan, selection.tier ]
+    selection.rate_plan || raise(ArgumentError, "Selected rate is no longer available.")
   end
 
   def authorize_view_bookings!

@@ -30,6 +30,7 @@ namespace :hotel_generator do
         city: "Kundasang",
         country: "Malaysia",
         status: "live",
+        sell_mode: "per_room",
         star_rating: 4,
         default_currency: "MYR",
         preferred_channel_manager: "channex",
@@ -125,13 +126,11 @@ namespace :hotel_generator do
 
       walk_in_plan = hotel.rate_plans.create!(
         name: "Walk-in Rate",
-        sell_mode: "per_room",
         currency: "MYR"
       )
 
       corporate_plan = hotel.rate_plans.create!(
         name: "Corporate Rate",
-        sell_mode: "per_room",
         currency: "MYR"
       )
 
@@ -166,10 +165,9 @@ namespace :hotel_generator do
               is_weekend = date.friday? || date.saturday?
               multiplier = is_weekend ? 1.2 : 1.0
 
-              if rp.name == "Walk-in Rate"
-                multiplier *= 1.1
-              elsif rp.name == "Corporate Rate"
-                multiplier *= 0.85
+              case rp.kind
+              when "walk_in" then multiplier *= 1.1
+              when "corporate" then multiplier *= 0.85
               end
 
               price = (rt.base_price * multiplier).round(2)
@@ -179,9 +177,7 @@ namespace :hotel_generator do
                 rate_plan: rp,
                 date: date,
                 price: price,
-                currency: "MYR",
-                walk_in_price: (price * 1.1).round(2),
-                corporate_price: (price * 0.85).round(2)
+                currency: "MYR"
               )
             end
           end

@@ -11,16 +11,24 @@ RSpec.describe Financials::EnsureDefaultTransactionCodes, type: :service do
 
       expect {
         described_class.call(hotel)
-      }.to change { hotel.transaction_codes.count }.from(0).to(21)
+      }.to change { hotel.transaction_codes.count }.from(0).to(23)
 
       expect(hotel.transaction_codes.system_required.pluck(:code)).to contain_exactly(
-        "ROOM", "NO_SHOW", "CANCEL", "LATE_CO", "EARLY_DEP", "SECDEP", "TAX_SST", "TAX_TTX", "FNB", "PARK", "DAMAGE", "CLEANING", "MISC", "CASH", "CARD", "BANK", "GATEWAY", "OTA", "REFUND", "ADJUSTMENT", "REBATE"
+        "ROOM", "NO_SHOW", "CANCEL", "LATE_CO", "EARLY_DEP", "SECDEP", "TAX_SST", "TAX_TTX", "FNB", "PARK", "DAMAGE", "CLEANING", "OTA_FEE", "OTA_TAX", "MISC", "CASH", "CARD", "BANK", "GATEWAY", "OTA", "REFUND", "ADJUSTMENT", "REBATE"
       )
       expect(hotel.transaction_codes.find_by!(system_key: "gateway_manual_recovery_payment")).to have_attributes(code: "GATEWAY", category: "gateway_payment", gl_account_code: "1010")
       expect(hotel.transaction_codes.find_by!(system_key: "ota_collected_payment")).to have_attributes(code: "OTA", category: "booking_payment", gl_account_code: "2020")
       expect(hotel.transaction_codes.find_by!(system_key: "security_deposit")).to have_attributes(code: "SECDEP", category: "security_deposit", gl_account_code: "2030")
       expect(hotel.transaction_codes.find_by!(system_key: "damage_revenue")).to have_attributes(code: "DAMAGE", category: "other", gl_account_code: "4090", is_taxable: false)
       expect(hotel.transaction_codes.find_by!(system_key: "cleaning_revenue")).to have_attributes(code: "CLEANING", category: "other", gl_account_code: "4090", is_taxable: false)
+      expect(hotel.transaction_codes.find_by!(system_key: "ota_unmapped_fee")).to have_attributes(
+        code: "OTA_FEE", name: "OTA Unmapped Fee", kind: "charge", category: "other",
+        gl_account_code: "4090", system_required: true, active: true
+      )
+      expect(hotel.transaction_codes.find_by!(system_key: "ota_unmapped_tax")).to have_attributes(
+        code: "OTA_TAX", name: "OTA Unmapped Tax", kind: "tax", category: "tax",
+        gl_account_code: "2010", system_required: true, active: true
+      )
     end
 
     it "is idempotent" do

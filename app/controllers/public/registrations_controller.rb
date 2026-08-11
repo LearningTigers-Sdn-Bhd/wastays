@@ -36,6 +36,6 @@ class Public::RegistrationsController < ApplicationController
   end
 
   def hotel_params
-    params.require(:hotel).permit(:name, :city, :country)
+    params.require(:hotel).permit(:name, :city, :country, :sell_mode)
   end
 end
