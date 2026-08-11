@@ -2,7 +2,7 @@
 
 class HotelsQuery
   STATUS_FILTERS = {
-    "setup" => %w[registered email_verified profile_incomplete rooms_incomplete inventory_incomplete],
+    "setup" => %w[setup registered email_verified profile_incomplete rooms_incomplete inventory_incomplete],
     "pending_review" => %w[pending_review],
     "active" => %w[approved live],
     "suspended" => %w[suspended]

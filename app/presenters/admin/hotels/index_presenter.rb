@@ -6,6 +6,7 @@ module Admin
       Row = Data.define(:hotel, :name, :city, :status_label, :status_variant, :status_detail, :registered_on)
 
       STATUS_PRESENTATION = {
+        "setup" => [ "Setup", :neutral, "Waiting for the owner to complete onboarding." ],
         "registered" => [ "Setup", :neutral, "Complete the hotel profile." ],
         "email_verified" => [ "Setup", :neutral, "Complete the hotel profile." ],
         "profile_incomplete" => [ "Setup", :neutral, "Complete the property policies." ],

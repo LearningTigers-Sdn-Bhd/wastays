@@ -3,7 +3,10 @@
         title: "Manage Hotels",
         description: "Review hotel registrations, approvals, and account status across the platform.") do |header| %>
     <% header.with_actions do %>
-      <%= render PanelsUI::Button.new(as: :a, href: new_admin_hotel_path) do %>
+      <%= render PanelsUI::Button.new(
+            as: :a,
+            href: new_admin_hotel_path,
+            data: { turbo_frame: "admin_hotel_action_sheet" }) do %>
         <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
         Add New Hotel
       <% end %>
@@ -14,3 +17,6 @@
     <%= render "registry", presenter: @presenter %>
   <% end %>
 </div>
+
+
+<%= turbo_frame_tag "admin_hotel_action_sheet" %>
