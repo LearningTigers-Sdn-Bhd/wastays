@@ -30,6 +30,22 @@ RSpec.describe Folios::Routing::RefreshBookingForecasts do
     expect(Folios::Forecasts::SyncForecastedCharges).to have_received(:call).with(booking_folio: folio)
   end
 
+  it "reprojects a current OTA snapshot without invoking PMS financial calculation" do
+    booking = create(:booking)
+    create(:booking_room, booking: booking)
+    ota_snapshot = create(:ota_financial_snapshot, hotel: booking.hotel, booking: booking)
+    folio = create(:booking_folio, booking: booking, hotel: booking.hotel)
+    allow(Bookings::BuildFinancialSnapshot).to receive(:new)
+    allow(ChannelManagers::Financials::ProjectBookingSnapshots).to receive(:call!).and_return(ota_snapshot)
+    allow(Folios::Forecasts::SyncForecastedCharges).to receive(:call)
+
+    described_class.call(booking: booking)
+
+    expect(Bookings::BuildFinancialSnapshot).not_to have_received(:new)
+    expect(ChannelManagers::Financials::ProjectBookingSnapshots).to have_received(:call!).with(snapshot: ota_snapshot)
+    expect(Folios::Forecasts::SyncForecastedCharges).to have_received(:call).with(booking_folio: folio)
+  end
+
   it "updates snapshots without syncing when no folio exists" do
     booking = create(:booking)
     create(:booking_room, booking: booking, nightly_rate_snapshot: { "2026-07-09" => 100 })

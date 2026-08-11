@@ -15,9 +15,11 @@ module ChannelManagers
       # Keep persisted domain records (hotel, room types and rate plans) intact.
       # Only the top-level payload and mutable room hashes need copying.
       converted_data = @data.dup
+      return failure("OTA financial breakdown requires a valid currency and room amounts") if invalid_financials?
 
       if source_currency == target_currency
         converted_data[:currency] = target_currency
+        converted_data[:financials] = converted_financials(target_currency) if complete_financials?
         return success(converted_data)
       end
 
@@ -33,6 +35,7 @@ module ChannelManagers
       converted_data[:currency] = target_currency
       converted_data[:total_amount] = converted_total
       converted_data[:rooms] = reconcile_rooms(converted_rooms, source_total, converted_total, target_currency)
+      converted_data[:financials] = converted_financials(target_currency) if complete_financials?
       converted_data[:currency_conversion] = {
         "source_currency" => source_currency,
         "target_currency" => target_currency,
@@ -43,9 +46,25 @@ module ChannelManagers
       }
 
       success(converted_data)
+    rescue ArgumentError => e
+      failure(e.message)
     end
 
     private
+
+    def complete_financials?
+      @data.dig(:financials, :breakdown_complete) == true
+    end
+
+    def invalid_financials?
+      @data[:status] != "cancelled" && @data.dig(:financials, :breakdown_present) == true && !complete_financials?
+    end
+
+    def converted_financials(target_currency)
+      ChannelManagers::Financials::ConvertSnapshot.call(
+        financials: @data[:financials], target_currency: target_currency, hotel: @hotel
+      ).payload
+    end
 
     # Rounding each room independently can drift a cent or two away from the
     # converted total. When the source rooms added up to the source total, absorb

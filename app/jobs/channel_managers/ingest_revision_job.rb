@@ -23,7 +23,7 @@ module ChannelManagers
       return unless response["data"]
 
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
-      booking_data = adapter.ingest_booking(payload: response)
+      booking_data = adapter.ingest_booking(payload: response, require_property_binding: true)
 
       result = ChannelManagers::IngestBookingService.new(booking_data: booking_data).call
 

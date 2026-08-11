@@ -15,8 +15,12 @@ module Folios
       end
 
       def call
-        stay_dates.flat_map do |date|
-          accommodation_lines(date) + tax_lines(date)
+        if ota_financial_snapshot_available?(@booking)
+          ota_financial_component_lines(@booking).select { |line| stay_dates.include?(line[:stay_date]) }
+        else
+          stay_dates.flat_map do |date|
+            accommodation_lines(date) + tax_lines(date)
+          end
         end
       end
 
@@ -31,6 +35,7 @@ module Folios
             stay_date: date,
             charge_kind: "accommodation",
             category: "accommodation",
+            transaction_type: "charge",
             identity: room.id.to_s,
             amount: amount,
             description: "Room Charge - #{date}",
@@ -51,6 +56,7 @@ module Folios
             stay_date: date,
             charge_kind: "tax",
             category: "tax",
+            transaction_type: "charge",
             identity: tax_line_identity(tax_line, index),
             amount: amount,
             description: "Tax: #{tax_line_name(tax_line)} - #{date}",

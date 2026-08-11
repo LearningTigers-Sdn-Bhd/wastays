@@ -8,6 +8,7 @@ module ChannelManagers
   class ApplyOtaSettlement
     Result = ApplicationResult.define(:allocation, :folio, :transaction)
     ManyResult = ApplicationResult.define(:results, :allocations, :folios, :transactions)
+    GroupConversionResult = ApplicationResult.define(:conversions)
 
     def self.call(booking:, settlement:)
       new(booking:, settlement:).call
@@ -30,11 +31,17 @@ module ChannelManagers
       alias call_for_bookings call_many
     end
 
-    def initialize(booking:, settlement:, gross_amount: nil, commission_amount: nil)
+    PostingConversion = Data.define(:amount, :rate, :source, :source_currency, :target_currency, :rounding_amount) do
+      def success? = true
+      def error = nil
+    end
+
+    def initialize(booking:, settlement:, gross_amount: nil, commission_amount: nil, posting_conversion: nil)
       @booking = booking
       @settlement = settlement
       @gross_amount = gross_amount&.to_d
       @commission_amount = commission_amount&.to_d
+      @posting_conversion = posting_conversion
     end
 
     def call!
@@ -49,16 +56,25 @@ module ChannelManagers
 
       bookings = normalized_bookings(bookings)
       amounts = allocation_amounts(bookings)
-      results = bookings.zip(amounts).map do |booking, (gross_amount, commission_amount)|
-        self.class.new(
-          booking: booking,
-          settlement: @settlement,
-          gross_amount: gross_amount,
-          commission_amount: commission_amount
-        ).call
+      conversions = group_posting_conversions(bookings, amounts)
+      return ManyResult.failure(conversions.error, results: [], allocations: [], folios: [], transactions: []) unless conversions.success?
+
+      results = []
+      failed = nil
+      ActiveRecord::Base.transaction do
+        results = bookings.zip(amounts, conversions.conversions).map do |booking, (gross_amount, commission_amount), posting_conversion|
+          self.class.new(
+            booking: booking,
+            settlement: @settlement,
+            gross_amount: gross_amount,
+            commission_amount: commission_amount,
+            posting_conversion: posting_conversion
+          ).call
+        end
+        failed = results.find { |result| !result.success? }
+        raise ActiveRecord::Rollback if failed
       end
 
-      failed = results.find { |result| !result.success? }
       attributes = {
         results: results,
         allocations: results.filter_map(&:allocation),
@@ -98,7 +114,14 @@ module ChannelManagers
           operation_key = operation_key_for(allocation)
           transaction = existing_credit(folio, allocation, operation_key)
           if transaction.blank? && !@settlement.cancelled? && @booking.status != "cancelled" && gross_amount.positive?
-            transaction = post_credit!(folio, allocation, operation_key)
+            conversion = @posting_conversion || ConvertSettlementCurrency.call(
+              amount: gross_amount,
+              settlement: @settlement,
+              target_currency: folio.currency
+            )
+            raise ArgumentError, conversion.error unless conversion.success?
+
+            transaction = post_credit!(folio, allocation, operation_key, conversion)
           end
         end
       end
@@ -118,9 +141,40 @@ module ChannelManagers
 
     def normalized_bookings(bookings)
       Array(bookings).compact
-        .select { |booking| booking.is_a?(Booking) && booking.persisted? }
+        .select { |booking| booking.is_a?(Booking) && booking.persisted? && booking.status != "cancelled" }
         .uniq { |booking| booking.id }
         .sort_by { |booking| [ booking.group_position || Float::INFINITY, booking.id ] }
+    end
+
+    def group_posting_conversions(bookings, amounts)
+      return GroupConversionResult.success(conversions: []) if bookings.empty?
+
+      target_currency = bookings.first.hotel.default_currency.presence || bookings.first.currency
+      unless bookings.all? { |booking| (booking.hotel.default_currency.presence || booking.currency) == target_currency }
+        return GroupConversionResult.failure("Group folios must share one currency", conversions: [])
+      end
+
+      total_conversion = ConvertSettlementCurrency.call(
+        amount: gross_amount,
+        settlement: @settlement,
+        target_currency: target_currency
+      )
+      return GroupConversionResult.failure(total_conversion.error, conversions: []) unless total_conversion.success?
+
+      source_weights = amounts.map { |gross, _commission| gross.to_d }
+      source_weights = Array.new(bookings.length, 1.to_d) if source_weights.sum.zero?
+      converted_amounts = allocate_money(total_conversion.amount, source_weights)
+      conversions = converted_amounts.each_with_index.map do |amount, index|
+        PostingConversion.new(
+          amount: amount,
+          rate: total_conversion.rate,
+          source: total_conversion.source,
+          source_currency: total_conversion.source_currency,
+          target_currency: total_conversion.target_currency,
+          rounding_amount: amount - amounts[index].first.to_d * total_conversion.rate.to_d
+        )
+      end
+      GroupConversionResult.success(conversions: conversions)
     end
 
     def allocation_amounts(bookings)
@@ -213,13 +267,13 @@ module ChannelManagers
           .find_by("metadata->>'channel_settlement_allocation_id' = ?", allocation.id.to_s)
     end
 
-    def post_credit!(folio, allocation, operation_key)
+    def post_credit!(folio, allocation, operation_key, conversion)
       result = Folios::Transactions::PostStaffTransaction.call(
         folio: folio,
         user: nil,
         transaction_type: "payment",
         category: "booking_payment",
-        amount: gross_amount,
+        amount: conversion.amount,
         description: "OTA settlement credit (#{stable_reference})",
         posting_date: @booking.hotel.current_business_date,
         options: {
@@ -238,6 +292,13 @@ module ChannelManagers
             receipt_policy: "none",
             collection_by: "ota",
             settlement_status: @settlement.status,
+            settlement_source_amount: gross_amount.to_s("F"),
+            settlement_source_currency: conversion.source_currency,
+            folio_posting_amount: conversion.amount.to_s("F"),
+            folio_posting_currency: conversion.target_currency,
+            settlement_exchange_rate: conversion.rate.to_d.to_s("F"),
+            settlement_exchange_rate_source: conversion.source,
+            settlement_conversion_rounding_amount: conversion.rounding_amount.to_d.to_s("F"),
             operation_key: operation_key
           }
         }

@@ -384,7 +384,7 @@ module ChannelManagers
       end
     end
 
-    def ingest_booking(payload:)
+    def ingest_booking(payload:, require_property_binding: true)
       # Channex can return data in two formats:
       # 1. Single revision: { "data": { "arrival_date": "...", ... } }
       # 2. List item: { "attributes": { "arrival_date": "...", ... }, "id": "..." }
@@ -392,6 +392,7 @@ module ChannelManagers
       payload = payload.to_h.with_indifferent_access
       raw_data = payload["data"] || payload
       attributes = raw_data["attributes"] || raw_data
+      verify_property_binding!(raw_data, attributes, required: require_property_binding)
 
       wa_status = case attributes["status"]
       when "cancelled" then "cancelled"
@@ -414,8 +415,39 @@ module ChannelManagers
       # make settlement idempotency and audit trails impossible.
       revision_id = fetch_attribute(attributes, raw_data, "revision_id").presence ||
         fetch_attribute(attributes, raw_data, "id").presence
-      external_reference = attributes["ota_reservation_id"].presence || attributes["unique_id"].presence || attributes["id"].presence
+      external_reference = attributes["ota_reservation_id"].presence || attributes["ota_reservation_code"].presence ||
+        attributes["unique_id"].presence || attributes["id"].presence
       channel_manager_reference = attributes["booking_id"].presence || attributes["id"].presence
+      financials = ChannelManagers::ChannexFinancialPayloadNormalizer.call(payload)
+      parsed_rooms = if wa_status == "cancelled" && !financials[:breakdown_complete]
+        []
+      else
+        parse_booking_rooms(attributes["rooms"] || [])
+      end
+      financials[:rooms].each_with_index do |financial_room, index|
+        core_room = parsed_rooms[index]
+        next unless core_room
+
+        financial_room[:room_type] = core_room[:room_type]
+        financial_room[:rate_plan] = core_room[:rate_plan]
+        if financials[:breakdown_complete]
+          core_room[:amount] = financial_room[:amount]
+          core_room[:days] = financial_room[:days]
+        end
+        core_room[:occupancy] = financial_room[:occupancy]
+      end
+      settlement = settlement_for(
+        attributes: attributes,
+        channel_manager_reference: channel_manager_reference,
+        external_reference: external_reference,
+        revision_id: revision_id
+      )
+      financials.merge!(
+        provider: provider_name,
+        channel_manager_reference: channel_manager_reference,
+        provider_revision_id: revision_id,
+        booking_source_key: settlement[:booking_source_key]
+      )
 
       {
         hotel: @hotel,
@@ -432,16 +464,15 @@ module ChannelManagers
           phone: attributes.dig("customer", "phone") || attributes.dig("customer", "Telephone", "@PhoneNumber"),
           country: attributes.dig("customer", "country")
         },
-        rooms: parse_booking_rooms(attributes["rooms"] || []),
-        total_amount: attributes["amount"].to_f,
-        currency: attributes["currency"] || "MYR",
+        rooms: parsed_rooms,
+        adults: financials.dig(:occupancy, :adults),
+        children: financials.dig(:occupancy, :children),
+        infants: financials.dig(:occupancy, :infants),
+        total_amount: financials[:breakdown_complete] ? financials[:gross_amount] : nil,
+        currency: financials[:currency] || valid_currency(attributes["currency"]),
         source: attributes["ota_name"] || "channex",
-        settlement: settlement_for(
-          attributes: attributes,
-          channel_manager_reference: channel_manager_reference,
-          external_reference: external_reference,
-          revision_id: revision_id
-        )
+        settlement: settlement,
+        financials: financials
       }
     end
 
@@ -451,11 +482,14 @@ module ChannelManagers
       source_value = first_present(attributes["ota_name"], attributes["source"])
       source = booking_source_for(source_value)
       source_resolution = source_resolution_for(source, source_value)
-      currency = valid_currency(attributes["currency"])
+      currency = explicit_currency(attributes["currency"])
       gross_amount = decimal_amount(attributes["amount"])
-      commission_amount = [ decimal_amount(
-        first_present(attributes["commission_amount"], attributes["commission"], attributes.dig("fees", "commission"))
-      ), gross_amount ].min
+      commission_amount = decimal_amount(
+        first_present(
+          attributes["ota_commission"], attributes["commission_amount"], attributes["commission"],
+          attributes.dig("fees", "commission")
+        )
+      ).clamp(0.to_d, gross_amount)
       virtual_card = virtual_card_metadata(
         attributes: attributes,
         currency: currency,
@@ -651,23 +685,55 @@ module ChannelManagers
       decimal_amount(value)
     end
 
+    def explicit_currency(value)
+      normalized = CurrencyCatalog.normalize(value, fallback: nil)
+      normalized if CurrencyCatalog.valid?(normalized)
+    end
+
     def valid_currency(value)
-      normalized = CurrencyCatalog.normalize(value, fallback: @hotel.default_currency || "MYR")
-      CurrencyCatalog.valid?(normalized) ? normalized : (@hotel.default_currency || "MYR")
+      explicit_currency(value) || @hotel.default_currency || "MYR"
+    end
+
+    def verify_property_binding!(raw_data, attributes, required:)
+      property_id = attributes["property_id"].presence || raw_data["property_id"].presence ||
+        raw_data.dig("relationships", "property", "data", "id").presence ||
+        attributes.dig("relationships", "property", "data", "id").presence
+      if property_id.blank?
+        raise ArgumentError, "Channex booking revision is missing property identity" if required
+        return
+      end
+
+      expected_property_id = @hotel.channel_mapping&.external_id
+      return if expected_property_id.present? && property_id.to_s == expected_property_id.to_s
+
+      raise ArgumentError, "Channex booking revision does not belong to the target hotel"
     end
 
     def parse_booking_rooms(rooms_data)
       rooms_data.map do |room|
-        room_type = ChannelMapping.find_by(provider: provider_name, external_id: room["room_type_id"], mappable_type: "RoomType")&.mappable
-        rtrp_mapping = ChannelMapping.find_by(provider: provider_name, external_id: room["rate_plan_id"], mappable_type: "RoomTypeRatePlan")
-        rate_plan = rtrp_mapping&.mappable&.rate_plan
+        room_type_mapping = ChannelMapping.find_by(
+          provider: provider_name, external_id: room["room_type_id"], mappable_type: "RoomType"
+        )
+        rate_mapping = ChannelMapping.find_by(
+          provider: provider_name, external_id: room["rate_plan_id"],
+          mappable_type: %w[RoomTypeRatePlan RatePlan]
+        )
+        room_type = room_type_mapping&.mappable
+        mapped_rate = rate_mapping&.mappable
+        rate_plan = mapped_rate.is_a?(RoomTypeRatePlan) ? mapped_rate.rate_plan : mapped_rate
+        mapped_rate_hotel_id = mapped_rate.is_a?(RoomTypeRatePlan) ? mapped_rate.room_type.hotel_id : rate_plan&.hotel_id
+        room_mapping_valid = room_type&.hotel_id == @hotel.id
+        rate_mapping_valid = room["rate_plan_id"].blank? || mapped_rate_hotel_id == @hotel.id
+        unless room_mapping_valid && rate_mapping_valid
+          raise ArgumentError, "Channex room and rate plan mappings must belong to the target hotel"
+        end
 
         {
           room_type: room_type,
           rate_plan: rate_plan,
           rate_plan_id: rate_plan&.id,
           quantity: room["count"] || 1,
-          amount: room["amount"].to_f
+          amount: decimal_or_nil(room["amount"])
         }
       end.compact
     end

@@ -27,6 +27,8 @@ class TransactionCode < ApplicationRecord
   has_many :folio_transactions, dependent: :nullify
   has_many :deposits, dependent: :restrict_with_error
   has_many :folio_routing_rules, dependent: :restrict_with_error
+  has_many :ota_financial_components, dependent: :restrict_with_error
+  has_many :ota_financial_component_mappings, dependent: :restrict_with_error
   has_many :hotel_taxes, dependent: :nullify
   has_many :transaction_code_taxes, dependent: :destroy
   has_many :taxes, through: :transaction_code_taxes, source: :hotel_tax

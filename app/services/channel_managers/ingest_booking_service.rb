@@ -50,7 +50,7 @@ module ChannelManagers
         previous_status = booking.status
 
         # 1. Revision Check: Ignore older or duplicate revisions
-        if is_existing_booking && booking.revision_number.to_i >= @data[:revision_number].to_i
+        if is_existing_booking && duplicate_or_older_revision?(booking)
           return OpenStruct.new(success?: true, booking: booking, message: "Duplicate or older revision ignored")
         end
 
@@ -78,8 +78,9 @@ module ChannelManagers
           check_in: Bookings::ScheduledStay.at_hotel_time(hotel: @hotel, value: effective_check_in, kind: :check_in),
           check_out: Bookings::ScheduledStay.at_hotel_time(hotel: @hotel, value: effective_check_out, kind: :check_out),
           status: incoming_status,
-          adults: @data[:adults] || 1,
-          total_amount: @data[:total_amount],
+          adults: @data[:adults].presence || 1,
+          children: @data[:children] || 0,
+          total_amount: @data[:total_amount].nil? ? booking.total_amount : @data[:total_amount],
           currency: @data[:currency],
           source: @data[:source],
           external_reference: @data[:external_reference],
@@ -89,8 +90,12 @@ module ChannelManagers
         )
 
         if booking.save
-          sync_guest(booking)
-          sync_rooms(booking)
+          sync_rooms(booking) unless preserve_incomplete_cancellation_projection?
+          persist_financial_snapshot!(booking)
+          ChannelManagers::InitializeBookingConnections.call!(
+            booking: booking,
+            guest_details: @data[:guest_details]
+          )
           release_detected_no_show_rooms(booking) if previous_status == "no_show_detected" && booking.status == "cancelled"
 
           # 5. Deduct New Inventory: If the new state is active, deduct the rooms
@@ -143,6 +148,22 @@ module ChannelManagers
       metadata
     end
 
+    def duplicate_or_older_revision?(booking)
+      revision_id = @data[:revision_id].to_s
+      if revision_id.present? && !revision_id.match?(/\A\d+\z/)
+        return true if OtaFinancialSnapshot.exists?(booking: booking, provider_revision_id: revision_id)
+
+        snapshot = OtaFinancialSnapshot.current.find_by(booking: booking)
+        if snapshot
+          return true if snapshot.provider_revision_id == revision_id
+          return true if @data[:revision_number].to_i < booking.revision_number.to_i
+        end
+        return false
+      end
+
+      booking.revision_number.to_i >= @data[:revision_number].to_i
+    end
+
     def group_ingestion?
       total_room_quantity > 1 || GroupBooking.exists?(
         hotel: @hotel,
@@ -155,8 +176,8 @@ module ChannelManagers
     end
 
     def find_or_initialize_booking
-      Booking.find_by(channel_manager_reference: @data[:channel_manager_reference]) ||
-        Booking.new(hotel: @hotel, channel_manager_reference: @data[:channel_manager_reference])
+      @hotel.bookings.find_by(channel_manager_reference: @data[:channel_manager_reference]) ||
+        @hotel.bookings.new(channel_manager_reference: @data[:channel_manager_reference])
     end
 
     def inventory_insufficient?(check_in, check_out)
@@ -222,8 +243,6 @@ module ChannelManagers
     def payment_status_for(booking)
       status = @data[:payment_status].presence || @data.dig(:payment, :status).presence
       return status if Booking::PAYMENT_STATUSES.include?(status.to_s)
-      return "refunded" if @data[:status] == "cancelled" && booking.payment_status == "captured"
-
       booking.payment_status.presence || "pending"
     end
 
@@ -244,59 +263,77 @@ module ChannelManagers
       nil
     end
 
-    def sync_guest(booking)
-      attrs = guest_sync_attributes
-      guest = find_existing_guest_for_sync(attrs)
-
-      if guest.blank? && Guest.new(attrs).valid?
-        guest_result = GuestArrival::CreateOrMatchGuest.new(attrs).call
-        guest = guest_result.guest if guest_result.success?
-      end
-
-      if guest.present? && !booking.booking_guests.exists?(guest: guest)
-        booking.booking_guests.create!(guest: guest, is_primary: true)
-      end
-    end
-
-    def guest_sync_attributes
-      {
-        name: @data[:guest_details][:name],
-        email: @data[:guest_details][:email],
-        phone: @data[:guest_details][:phone],
-        government_id: @data[:guest_details][:government_id],
-        gender: @data[:guest_details][:gender],
-        country: @data[:guest_details][:country],
-        document_type: @data[:guest_details][:document_type],
-        date_of_birth: @data[:guest_details][:date_of_birth]
-      }
-    end
-
-    def find_existing_guest_for_sync(attrs)
-      return Guest.find_by(government_id: attrs[:government_id].to_s.downcase.strip) if attrs[:government_id].present?
-      return Guest.find_by(email: attrs[:email].to_s.downcase.strip) if attrs[:email].present?
-      return Guest.find_by(phone: attrs[:phone].to_s.strip) if attrs[:phone].present?
-
-      nil
+    def preserve_incomplete_cancellation_projection?
+      @data[:status] == "cancelled" && @data[:financials].present? && !complete_financials?
     end
 
     def sync_rooms(booking)
       # For modifications, we'll just recreate room items for now. Physical room
       # assignments are carried over so an unrelated revision never moves a guest.
       assigned_room_numbers = assigned_room_numbers_by_room_type(booking)
-      booking.booking_rooms.destroy_all
+      existing_rooms = booking.booking_rooms.to_a
 
-      @data[:rooms].each do |room_item|
+      @data[:rooms].each_with_index do |room_item, room_index|
         qty = [ room_item[:quantity].to_i, 1 ].max
-        qty.times do
-          booking.booking_rooms.create!(
-            room_type: room_item[:room_type],
-            rate_plan: room_item[:rate_plan],
+        qty.times do |unit_index|
+          financial_room = Array(@data.dig(:financials, :rooms))[room_index]
+          room = existing_rooms.find { |candidate| candidate.room_type_id == room_item[:room_type]&.id } || existing_rooms.first
+          room ||= booking.booking_rooms.build
+          existing_rooms.delete(room)
+          room.update!(
+            room_type: posted_nightly_history?(booking) && room.persisted? ? room.room_type : room_item[:room_type],
+            rate_plan: posted_nightly_history?(booking) && room.persisted? ? room.rate_plan : room_item[:rate_plan],
             subtotal: (room_item[:amount].to_d / qty).round(2),
-            room_number: assigned_room_numbers[room_item[:room_type]&.id].shift
-            # snapshots to be added if needed
+            occupancy_snapshot: financial_room&.dig(:occupancy) || room_item[:occupancy] || {},
+            nightly_rate_snapshot: nightly_snapshot_for(financial_room, qty, unit_index, booking, room.nightly_rate_snapshot),
+            room_number: room.room_number.presence || assigned_room_numbers[room_item[:room_type]&.id].shift
           )
         end
       end
+      existing_rooms.each do |room|
+        room.destroy! unless OtaFinancialComponent.exists?(booking_room: room)
+      end
+    end
+
+    def nightly_snapshot_for(financial_room, quantity, unit_index, booking, existing_snapshot)
+      incoming = Array(financial_room&.dig(:days)).to_h do |day|
+        amount = allocate_unit_amount(day[:converted_amount] || day[:amount], quantity, unit_index)
+        [ day[:date].to_s, { "date" => day[:date].to_s, "price" => amount.to_d.to_s("F"),
+          "currency" => @data[:currency], "source" => "ota_supplied" } ]
+      end
+      preserve_posted_nights(booking, existing_snapshot, incoming)
+    end
+
+    def preserve_posted_nights(booking, existing_snapshot, incoming)
+      existing = existing_snapshot.to_h
+      incoming.merge(existing.slice(*posted_nightly_dates(booking)))
+    end
+
+    def posted_nightly_history?(booking)
+      posted_nightly_dates(booking).any?
+    end
+
+    def posted_nightly_dates(booking)
+      @posted_nightly_dates ||= {}
+      @posted_nightly_dates[booking.id] ||= FolioTransaction.joins(:booking_folio)
+        .where(booking_folios: { booking_id: booking.id }, voided_by_transaction_id: nil)
+        .where("folio_transactions.metadata->>'nightly_charge_key' IS NOT NULL")
+        .distinct.pluck(Arel.sql("COALESCE(folio_transactions.metadata->>'stay_date', folio_transactions.posting_date::text)"))
+    end
+
+    def allocate_unit_amount(amount, quantity, unit_index)
+      unit = (amount.to_d / quantity).round(CurrencyCatalog.precision_for(@data[:currency]))
+      unit_index == quantity - 1 ? amount.to_d - unit * (quantity - 1) : unit
+    end
+
+    def persist_financial_snapshot!(booking)
+      return unless complete_financials?
+
+      ChannelManagers::Financials::PersistSnapshot.call!(financials: @data[:financials], booking: booking)
+    end
+
+    def complete_financials?
+      @data.dig(:financials, :breakdown_complete) == true
     end
 
     def assigned_room_numbers_by_room_type(booking)

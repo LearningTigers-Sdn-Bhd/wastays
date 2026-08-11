@@ -78,4 +78,46 @@ RSpec.describe ChannelManagers::ApplyOtaSettlement do
       described_class.call_many(bookings: [ child ], settlement: group_settlement)
     }.not_to change(FolioTransaction, :count)
   end
+
+  it "converts a foreign group total once and allocates the target-currency remainder to active children" do
+    group = create(:group_booking, hotel: booking.hotel)
+    first = create(:booking, hotel: booking.hotel, group_booking: group, group_position: 1, total_amount: 1)
+    last = create(:booking, hotel: booking.hotel, group_booking: group, group_position: 2, total_amount: 2)
+    cancelled = create(:booking, hotel: booking.hotel, group_booking: group, group_position: 3,
+      total_amount: 100, status: "cancelled")
+    foreign = create(:channel_settlement, hotel: booking.hotel, booking_source: source,
+      currency: "USD", gross_amount: 0.05, commission_amount: 0, expected_net_amount: 0.05,
+      collection_by: "ota", channel_manager_reference: "ota-group-fx")
+    create(:exchange_rate, base_currency: "USD", currency_code: "MYR", rate: 4.1)
+
+    result = described_class.call_many(bookings: [ cancelled, last, first ], settlement: foreign)
+
+    expect(result).to be_success
+    expect(foreign.channel_settlement_allocations.pluck(:booking_id)).to contain_exactly(first.id, last.id)
+    expect(foreign.channel_settlement_allocations.sum(:gross_amount)).to eq(0.05.to_d)
+    expect(result.transactions.sum(&:amount)).to eq(0.21.to_d)
+    expect(result.transactions.map { |transaction| transaction.metadata["settlement_exchange_rate"] }.uniq).to eq([ "4.1" ])
+  end
+
+  it "converts a foreign settlement before folio posting without changing source amounts" do
+    booking.update!(currency: "MYR")
+    settlement.update!(currency: "USD", gross_amount: 100, commission_amount: 10, expected_net_amount: 90)
+    create(:exchange_rate, base_currency: "USD", currency_code: "MYR", rate: 4.1)
+
+    first = described_class.call!(booking: booking, settlement: settlement)
+    allocation = first.allocation
+    transaction = first.transaction
+
+    expect(settlement.reload).to have_attributes(currency: "USD", gross_amount: 100.to_d)
+    expect(allocation).to have_attributes(currency: "USD", gross_amount: 100.to_d)
+    expect(transaction).to have_attributes(currency: "MYR", amount: 410.to_d)
+    expect(transaction.metadata).to include(
+      "settlement_source_amount" => "100.0",
+      "settlement_source_currency" => "USD",
+      "folio_posting_amount" => "410.0",
+      "folio_posting_currency" => "MYR",
+      "settlement_exchange_rate" => "4.1"
+    )
+    expect { described_class.call!(booking: booking, settlement: settlement) }.not_to change(FolioTransaction, :count)
+  end
 end

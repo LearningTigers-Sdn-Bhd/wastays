@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe ChannelManagers::IngestRevisionJob, type: :job do
   let(:hotel) { create(:hotel, preferred_channel_manager: 'channex') }
   let(:room_type) { create(:room_type, hotel: hotel) }
-  let(:rate_plan) { create(:rate_plan, room_type: room_type) }
+  let(:rate_plan) { create(:rate_plan, hotel: hotel, room_type: room_type) }
   let(:client_double) { instance_double(Channex::Client) }
 
   before do
@@ -24,6 +24,7 @@ RSpec.describe ChannelManagers::IngestRevisionJob, type: :job do
       {
         'data' => {
           'id' => 'ch_booking_1',
+          'property_id' => 'prop_1',
           'status' => 'new',
           'revision_id' => 1,
           'ota_reservation_id' => 'OTA-555',
@@ -63,6 +64,7 @@ RSpec.describe ChannelManagers::IngestRevisionJob, type: :job do
       {
         'data' => {
           'id' => 'ch_booking_2',
+          'property_id' => 'prop_1',
           'status' => 'new',
           'revision_id' => 1,
           'ota_reservation_id' => 'OTA-556',
@@ -89,6 +91,7 @@ RSpec.describe ChannelManagers::IngestRevisionJob, type: :job do
       {
         'data' => {
           'id' => 'ch_group_1',
+          'property_id' => 'prop_1',
           'status' => 'new',
           'revision_id' => 1,
           'ota_reservation_id' => 'OTA-GROUP-555',

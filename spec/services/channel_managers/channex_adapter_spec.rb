@@ -261,6 +261,37 @@ RSpec.describe ChannelManagers::ChannexAdapter do
   end
 
   describe '#ingest_booking' do
+    it "requires property identity at the revision-job trust boundary" do
+      payload = {
+        "data" => {
+          "booking_id" => "missing-property",
+          "status" => "new", "amount" => "10", "currency" => "MYR", "rooms" => []
+        }
+      }
+
+      expect { adapter.ingest_booking(payload: payload) }
+        .to raise_error(ArgumentError, "Channex booking revision is missing property identity")
+    end
+
+    it "rejects a revision bound to another Channex property" do
+      hotel.create_channel_mapping!(provider: "channex", external_id: "property-for-this-hotel")
+      payload = {
+        "data" => {
+          "property_id" => "property-for-another-hotel",
+          "booking_id" => "cross-tenant-booking",
+          "status" => "new",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "amount" => "100.00",
+          "currency" => "MYR",
+          "rooms" => []
+        }
+      }
+
+      expect { adapter.ingest_booking(payload: payload) }
+        .to raise_error(ArgumentError, "Channex booking revision does not belong to the target hotel")
+    end
+
     it 'builds full guest name from PersonName fields when available' do
       payload = {
         "data" => {
@@ -282,7 +313,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
         }
       }
 
-      result = adapter.ingest_booking(payload: payload)
+      result = adapter.ingest_booking(payload: payload, require_property_binding: false)
 
       expect(result[:guest_details][:name]).to eq("John Doe")
     end
@@ -324,7 +355,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
         }
       }
 
-      settlement = adapter.ingest_booking(payload: payload).fetch(:settlement)
+      settlement = adapter.ingest_booking(payload: payload, require_property_binding: false).fetch(:settlement)
 
       expect(settlement).to include(
         provider: "channex",
@@ -350,6 +381,21 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(settlement.to_json).not_to include("4111111111111111", "123", "secret-token", "card_number", "cvv")
     end
 
+    it "does not invent a source currency for settlement money" do
+      payload = {
+        "data" => {
+          "id" => "revision-no-currency", "booking_id" => "cm-no-currency", "revision_id" => 1,
+          "ota_name" => "Booking.com", "amount" => "50.00", "payment_collect" => "ota",
+          "payment_type" => "credit_card", "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s, "customer" => { "name" => "Guest" }, "rooms" => []
+        }
+      }
+
+      settlement = adapter.ingest_booking(payload: payload, require_property_binding: false).fetch(:settlement)
+
+      expect(settlement[:currency]).to be_nil
+    end
+
     it "marks property collection as requiring collection without treating it as paid" do
       payload = {
         "data" => {
@@ -368,7 +414,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
         }
       }
 
-      settlement = adapter.ingest_booking(payload: payload).fetch(:settlement)
+      settlement = adapter.ingest_booking(payload: payload, require_property_binding: false).fetch(:settlement)
 
       expect(settlement).to include(
         collection_by: "property",
@@ -395,7 +441,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
         }
       }
 
-      settlement = adapter.ingest_booking(payload: payload).fetch(:settlement)
+      settlement = adapter.ingest_booking(payload: payload, require_property_binding: false).fetch(:settlement)
 
       expect(settlement).to include(
         booking_source_key: nil,

@@ -623,6 +623,9 @@ Rails.application.routes.draw do
         patch "taxes-and-fees/system/:tax_key", to: "taxes_fees#update_system", as: :system_tax
         resources :hotel_taxes, path: "taxes-and-fees/fees", only: %i[index new create edit update destroy]
         get "transaction-code-reference", to: "transaction_code_references#index", as: :transaction_code_references
+        resource :ota_financial_settings, path: "ota-financials", only: %i[show update] do
+          post :approve_adjustment, on: :member
+        end
         resources :general_ledger_maps, path: "general-ledger-mappings", only: [ :index, :edit, :update ]
       end
 

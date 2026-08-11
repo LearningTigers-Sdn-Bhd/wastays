@@ -54,6 +54,9 @@ class Hotel < ApplicationRecord
   has_many :channel_settlements, dependent: :restrict_with_error
   has_many :channel_settlement_receipts, dependent: :restrict_with_error
   has_many :channel_settlement_allocations, through: :channel_settlements
+  has_many :ota_financial_snapshots, dependent: :restrict_with_error
+  has_many :ota_financial_component_mappings, dependent: :restrict_with_error
+  has_one :ota_rate_variance_policy, dependent: :restrict_with_error
   has_many :guest_registration_cards, dependent: :restrict_with_error
   has_many :guest_registration_note_templates, dependent: :destroy
   has_many :group_bookings, dependent: :restrict_with_error

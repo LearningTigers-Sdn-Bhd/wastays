@@ -1,0 +1,198 @@
+<div class="w-full space-y-8" data-controller="ota-financial-settings"
+     data-ota-financial-settings-ota-amount-value="<%= @presenter.preview[:ota_amount] %>"
+     data-ota-financial-settings-expected-amount-value="<%= @presenter.preview[:expected_amount] %>"
+     data-ota-financial-settings-room-nights-value="<%= @presenter.preview[:room_nights] %>"
+     data-ota-financial-settings-currency-value="<%= @presenter.preview[:currency] %>">
+  <%= render PanelsUI::PageHeader.new(
+        title: "OTA Financials",
+        description: "Review how channel financial components post and when rate differences need attention.") %>
+
+  <%= render "hotel_portal/settings/group_tabs" %>
+
+  <% if @form.errors.any? %>
+    <%= render PanelsUI::Alert.new(tone: :destructive, title: "We could not save these settings", role: :alert) do |alert| %>
+      <% alert.with_description { @form.errors.full_messages.to_sentence } %>
+    <% end %>
+  <% end %>
+
+  <% if @presenter.financial_review_items.any? %>
+    <section class="space-y-3" aria-labelledby="financial-review-heading">
+      <h2 id="financial-review-heading" class="text-base font-semibold">Financial review</h2>
+      <% @presenter.financial_review_items.each do |item| %>
+        <% snapshot = item[:snapshot] %>
+        <article class="rounded-lg border border-border bg-card p-5">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p class="font-medium"><%= snapshot.channel_manager_reference %></p>
+              <p class="mt-1 text-sm text-muted-foreground"><%= snapshot.reconciliation_status.humanize %> · <%= snapshot.currency %> <%= format("%.2f", snapshot.gross_amount) %></p>
+              <% if item[:proposal].present? %>
+                <p class="mt-2 text-sm">Adjustment proposal: <span class="font-semibold tabular-nums"><%= item[:proposal]["currency"] %> <%= item[:proposal]["amount"] %></span> · <%= item[:proposal_status].to_s.humanize %></p>
+              <% end %>
+            </div>
+            <% if item[:proposal].present? && item[:proposal_status] == "pending" && @presenter.can_approve_adjustments? %>
+              <%= button_to "Approve and post adjustment",
+                    approve_adjustment_hotel_ota_financial_settings_path(current_hotel),
+                    method: :post, params: { snapshot_id: snapshot.id },
+                    class: "inline-flex min-h-10 items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground" %>
+            <% end %>
+          </div>
+        </article>
+      <% end %>
+    </section>
+  <% end %>
+
+  <%= form_with model: @form, scope: :ota_financial_settings,
+        url: hotel_ota_financial_settings_path(current_hotel), method: :patch,
+        class: "space-y-10" do |form| %>
+    <section class="grid gap-6 lg:grid-cols-2" aria-labelledby="rate-policy-heading">
+      <div class="space-y-5">
+        <div class="space-y-1">
+          <h2 id="rate-policy-heading" class="text-base font-semibold">Rate variance policy</h2>
+          <p class="text-sm text-muted-foreground">Choose when an OTA accommodation rate difference is added to staff review.</p>
+        </div>
+
+        <%= render PanelsUI::RadioGroup.new(
+              form: form,
+              attribute: :mode,
+              label: "Review sensitivity",
+              description: "This policy never rejects or blocks a booking.",
+              selected: @form.mode,
+              variant: :card,
+              options: [
+                { label: "Recommended", value: "recommended", description: "Allow small channel rounding differences: up to 1% and #{@presenter.money(10)} per room-night." },
+                { label: "Strict", value: "strict", description: "Add every non-zero difference to rate review." },
+                { label: "Custom", value: "custom", description: "Set limits that match your reconciliation process." }
+              ],
+              data: { action: "change->ota-financial-settings#policyChanged" }) %>
+
+        <div class="<%= 'hidden' unless @form.mode == 'custom' %> space-y-4 rounded-lg border border-border bg-muted p-4"
+             data-ota-financial-settings-target="customFields"
+             aria-hidden="<%= @form.mode == 'custom' ? 'false' : 'true' %>">
+          <h3 class="text-sm font-medium">Custom review limits</h3>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <%= render PanelsUI::FormField.new(
+                  form: form, attribute: :maximum_percentage, label: "Maximum difference (%)",
+                  hint: "Enter 0 to review every percentage difference.") do |field| %>
+              <% field.with_input(type: :number, min: 0, step: 0.01,
+                    data: { ota_financial_settings_target: "percentage", action: "input->ota-financial-settings#refreshPreview" }) %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(
+                  form: form, attribute: :maximum_amount_per_room_night,
+                  label: "Maximum per room-night (#{@policy.currency})",
+                  hint: "Applied alongside the percentage limit.") do |field| %>
+              <% field.with_input(type: :number, min: 0, step: 0.01,
+                    data: { ota_financial_settings_target: "amount", action: "input->ota-financial-settings#refreshPreview" }) %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-5">
+        <%= render PanelsUI::Alert.new(tone: :info, title: "Effective policy", role: :status) do |alert| %>
+          <% alert.with_description do %>
+            <span data-ota-financial-settings-target="summary"><%= @presenter.effective_summary %></span>
+            <span class="mt-1 block">Bookings are always ingested. A difference can only change whether staff are asked to review the rate.</span>
+          <% end %>
+        <% end %>
+
+        <article class="rounded-lg border border-border bg-card p-5 shadow-sm" aria-labelledby="preview-heading" data-testid="aurora-rate-preview">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 id="preview-heading" class="text-base font-semibold">What would happen</h3>
+              <p class="mt-1 text-xs text-muted-foreground">Aurora preview · <%= @presenter.preview[:reference] %></p>
+            </div>
+            <%= render PanelsUI::Badge.new(label: "Live preview", variant: :info, size: :sm) %>
+          </div>
+
+          <dl class="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <dt class="text-xs text-muted-foreground">OTA accommodation</dt>
+              <dd class="mt-1 text-sm font-semibold tabular-nums"><%= @presenter.preview[:currency] %> <%= format("%.2f", @presenter.preview[:ota_amount]) %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-foreground">PMS expected rate</dt>
+              <dd class="mt-1 text-sm font-semibold tabular-nums"><%= @presenter.preview[:currency] %> <%= format("%.2f", @presenter.preview[:expected_amount]) %></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-foreground">Difference</dt>
+              <dd class="mt-1 text-sm font-semibold tabular-nums" data-ota-financial-settings-target="variance"></dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-foreground">Result</dt>
+              <dd class="mt-1 text-sm font-medium" data-ota-financial-settings-target="outcome" aria-live="polite">Booking ingested · policy determines rate review</dd>
+            </div>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="space-y-5" aria-labelledby="component-mappings-heading">
+      <div class="space-y-1">
+        <h2 id="component-mappings-heading" class="text-base font-semibold">Component mapping review</h2>
+        <p class="text-sm text-muted-foreground">Map provider fees, taxes, discounts, and accommodation labels to compatible folio transaction codes.</p>
+      </div>
+
+      <% if @presenter.mapping_candidates.any? %>
+        <%= form.fields_for :mapping_transaction_code_ids, @form.mapping_fields do |mapping_form| %>
+          <%= render PanelsUI::Table.new(
+                caption: "OTA financial component mappings",
+                density: :compact,
+                header_style: :sentence,
+                hoverable: true,
+                wrapper_class: "overflow-x-auto rounded-lg border border-border bg-card") do |table| %>
+            <% table.with_header do %>
+              <tr>
+                <th scope="col">Channel component</th>
+                <th scope="col">Kind</th>
+                <th scope="col">Status</th>
+                <th scope="col">Transaction code</th>
+              </tr>
+            <% end %>
+            <% table.with_body do %>
+              <% @presenter.mapping_candidates.each do |candidate| %>
+                <tr>
+                  <th scope="row">
+                    <span class="block text-sm font-medium text-foreground"><%= candidate.provider_name.humanize %></span>
+                    <span class="block text-xs font-normal text-muted-foreground"><%= candidate.source_label %> · <%= candidate.provider_type.humanize %></span>
+                  </th>
+                  <td><span class="text-sm"><%= candidate.component_kind.humanize %></span></td>
+                  <td>
+                    <%= render PanelsUI::Badge.new(
+                          label: candidate.mapped? ? "Mapped" : "Unmapped",
+                          variant: candidate.mapped? ? :success : :warning,
+                          size: :sm) %>
+                    <% if candidate.occurrences.positive? %>
+                      <span class="mt-1 block text-xs text-muted-foreground"><%= pluralize(candidate.occurrences, "recent item") %></span>
+                    <% end %>
+                  </td>
+                  <td class="min-w-64">
+                    <%= render PanelsUI::FormField.new(
+                          form: mapping_form,
+                          attribute: candidate.key.to_sym,
+                          label: "Transaction code for #{candidate.provider_name.humanize}",
+                          label_hidden: true,
+                          error: nil) do |field| %>
+                      <% field.with_select_menu(
+                           @presenter.transaction_code_choices(candidate),
+                           prompt: "Leave unmapped",
+                           selected: @form.mapping_transaction_code_ids.to_h[candidate.key]) %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <div class="rounded-lg border border-border bg-muted p-5">
+          <p class="text-sm font-medium">No provider components to review</p>
+          <p class="mt-1 text-sm text-muted-foreground">Mappings will appear after OTA financial details are received.</p>
+        </div>
+      <% end %>
+    </section>
+
+    <div class="flex justify-end border-t border-border pt-5">
+      <%= render PanelsUI::Button.new(label: "Save OTA financial settings", variant: :primary, type: :submit) %>
+    </div>
+  <% end %>
+</div>

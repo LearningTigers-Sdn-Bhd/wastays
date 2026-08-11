@@ -220,6 +220,7 @@ class Guest < ApplicationRecord
 
   def date_of_birth_required_for_passport_guests
     return unless date_of_birth.blank?
+    return if incomplete_channel_manager_profile?
     return unless passport_guest?
 
     errors.add(:date_of_birth, "is required for passport guests")
@@ -227,9 +228,16 @@ class Guest < ApplicationRecord
 
   def date_of_birth_required_for_reporting_guests
     return unless date_of_birth.blank?
+    return if incomplete_channel_manager_profile?
     return unless non_malaysian_guest?
 
     errors.add(:date_of_birth, date_of_birth_required_message)
+  end
+
+  def incomplete_channel_manager_profile?
+    metadata.is_a?(Hash) &&
+      metadata["profile_source"] == "channel_manager" &&
+      metadata["profile_incomplete"] == true
   end
 
   def malaysian_ic_guest?

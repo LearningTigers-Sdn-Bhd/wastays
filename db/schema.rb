@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_11_091000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1925,6 +1925,131 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_091000) do
     t.index ["status"], name: "index_payment_transactions_on_status"
   end
 
+  create_table "ota_financial_component_mappings", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.bigint "booking_source_id"
+    t.string "component_kind", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.bigint "hotel_id", null: false
+    t.string "normalized_provider_name", null: false
+    t.string "normalized_provider_type", default: "", null: false
+    t.string "provider", null: false
+    t.bigint "transaction_code_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_source_id"], name: "index_ota_financial_component_mappings_on_booking_source_id"
+    t.index ["created_by_id"], name: "index_ota_financial_component_mappings_on_created_by_id"
+    t.index ["hotel_id", "active"], name: "index_ota_financial_component_mappings_on_hotel_id_and_active"
+    t.index ["hotel_id", "provider", "booking_source_id", "component_kind", "normalized_provider_type", "normalized_provider_name"], name: "idx_ota_component_mappings_source_override", unique: true, where: "(booking_source_id IS NOT NULL)"
+    t.index ["hotel_id", "provider", "component_kind", "normalized_provider_type", "normalized_provider_name"], name: "idx_ota_component_mappings_provider_default", unique: true, where: "(booking_source_id IS NULL)"
+    t.index ["hotel_id"], name: "index_ota_financial_component_mappings_on_hotel_id"
+    t.index ["transaction_code_id"], name: "index_ota_financial_component_mappings_on_transaction_code_id"
+    t.check_constraint "component_kind::text = ANY (ARRAY['fee'::character varying, 'service'::character varying, 'tax'::character varying, 'discount'::character varying]::text[])", name: "ota_component_mappings_kind_allowed"
+  end
+
+  create_table "ota_financial_components", force: :cascade do |t|
+    t.decimal "allocation_rounding_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "amount", precision: 15, scale: 2, null: false
+    t.string "basis"
+    t.decimal "basis_amount", precision: 15, scale: 4
+    t.bigint "booking_id", null: false
+    t.bigint "booking_room_id"
+    t.string "component_kind", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "gross_effect_amount", precision: 15, scale: 2, null: false
+    t.boolean "is_inclusive", default: false, null: false
+    t.string "mapping_status", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.string "normalized_provider_name", null: false
+    t.string "normalized_provider_type", default: "", null: false
+    t.decimal "original_amount", precision: 15, scale: 4, null: false
+    t.string "original_currency", null: false
+    t.bigint "ota_financial_snapshot_id", null: false
+    t.decimal "posting_amount", precision: 15, scale: 2, null: false
+    t.string "provider_name", null: false
+    t.string "provider_type"
+    t.decimal "rate", precision: 15, scale: 6
+    t.string "rate_type"
+    t.string "stable_key", null: false
+    t.date "stay_date", null: false
+    t.bigint "transaction_code_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id", "stay_date"], name: "idx_ota_components_booking_stay_date"
+    t.index ["booking_id"], name: "index_ota_financial_components_on_booking_id"
+    t.index ["booking_room_id"], name: "index_ota_financial_components_on_booking_room_id"
+    t.index ["mapping_status", "component_kind"], name: "idx_ota_components_mapping_kind"
+    t.index ["ota_financial_snapshot_id", "booking_id", "stable_key"], name: "idx_ota_components_snapshot_booking_stable_key", unique: true
+    t.index ["ota_financial_snapshot_id"], name: "index_ota_financial_components_on_ota_financial_snapshot_id"
+    t.index ["transaction_code_id"], name: "index_ota_financial_components_on_transaction_code_id"
+    t.check_constraint "component_kind::text <> 'accommodation'::text OR booking_room_id IS NOT NULL", name: "ota_components_accommodation_has_room"
+    t.check_constraint "component_kind::text = ANY (ARRAY['accommodation'::character varying, 'fee'::character varying, 'service'::character varying, 'tax'::character varying, 'discount'::character varying]::text[])", name: "ota_components_kind_allowed"
+    t.check_constraint "mapping_status::text = ANY (ARRAY['mapped'::character varying, 'canonical'::character varying, 'unmapped'::character varying]::text[])", name: "ota_components_mapping_status_allowed"
+    t.check_constraint "original_amount >= 0::numeric AND amount >= 0::numeric", name: "ota_components_amounts_nonnegative"
+    t.check_constraint "rate_type IS NULL OR (rate_type::text = ANY (ARRAY['percentage'::character varying, 'flat'::character varying]::text[]))", name: "ota_components_rate_type_allowed"
+  end
+
+  create_table "ota_financial_snapshots", force: :cascade do |t|
+    t.decimal "accommodation_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.bigint "booking_id"
+    t.bigint "booking_source_id"
+    t.string "channel_manager_reference", null: false
+    t.decimal "conversion_rounding_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.boolean "current", default: true, null: false
+    t.decimal "exchange_rate", precision: 20, scale: 10, default: "1.0", null: false
+    t.string "exchange_rate_source", null: false
+    t.decimal "expected_pms_accommodation_amount", precision: 15, scale: 2
+    t.decimal "gross_amount", precision: 15, scale: 2, null: false
+    t.bigint "group_booking_id"
+    t.bigint "hotel_id", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.decimal "mismatch_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "original_accommodation_amount", precision: 15, scale: 4, default: "0.0", null: false
+    t.string "original_currency", null: false
+    t.decimal "original_gross_amount", precision: 15, scale: 4, null: false
+    t.jsonb "policy_snapshot", default: {}, null: false
+    t.string "provider", null: false
+    t.string "provider_revision_id", null: false
+    t.bigint "provider_revision_number"
+    t.string "reconciliation_status", null: false
+    t.datetime "superseded_at"
+    t.datetime "updated_at", null: false
+    t.decimal "variance_amount", precision: 15, scale: 2
+    t.decimal "variance_percentage", precision: 12, scale: 6
+    t.string "variance_reason"
+    t.index ["booking_id"], name: "idx_ota_snapshots_current_booking", unique: true, where: "((booking_id IS NOT NULL) AND (current = true))"
+    t.index ["booking_id"], name: "index_ota_financial_snapshots_on_booking_id"
+    t.index ["booking_source_id"], name: "index_ota_financial_snapshots_on_booking_source_id"
+    t.index ["group_booking_id"], name: "idx_ota_snapshots_current_group_booking", unique: true, where: "((group_booking_id IS NOT NULL) AND (current = true))"
+    t.index ["group_booking_id"], name: "index_ota_financial_snapshots_on_group_booking_id"
+    t.index ["hotel_id", "provider", "channel_manager_reference", "provider_revision_id"], name: "idx_ota_snapshots_provider_revision", unique: true
+    t.index ["hotel_id", "reconciliation_status", "current"], name: "idx_ota_snapshots_hotel_reconciliation"
+    t.index ["hotel_id"], name: "index_ota_financial_snapshots_on_hotel_id"
+    t.check_constraint "(booking_id IS NOT NULL) <> (group_booking_id IS NOT NULL)", name: "ota_snapshots_exactly_one_target"
+    t.check_constraint "exchange_rate > 0::numeric", name: "ota_snapshots_exchange_rate_positive"
+    t.check_constraint "original_gross_amount >= 0::numeric AND gross_amount >= 0::numeric AND original_accommodation_amount >= 0::numeric AND accommodation_amount >= 0::numeric AND (expected_pms_accommodation_amount IS NULL OR expected_pms_accommodation_amount >= 0::numeric)", name: "ota_snapshots_totals_nonnegative"
+    t.check_constraint "provider::text = lower(provider::text)", name: "ota_snapshots_provider_normalized"
+    t.check_constraint "reconciliation_status::text = ANY (ARRAY['balanced'::character varying, 'balanced_with_rounding'::character varying, 'accepted_fx_variance'::character varying, 'unmapped_components'::character varying, 'total_mismatch'::character varying, 'rate_review_required'::character varying]::text[])", name: "ota_snapshots_reconciliation_allowed"
+    t.check_constraint "variance_reason IS NULL OR (variance_reason::text = ANY (ARRAY['fx_round_trip'::character varying, 'occupancy_difference'::character varying, 'channel_adjustment'::character varying, 'promotion'::character varying, 'unexplained'::character varying]::text[]))", name: "ota_snapshots_variance_reason_allowed"
+  end
+
+  create_table "ota_rate_variance_policies", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.bigint "hotel_id", null: false
+    t.decimal "maximum_amount_per_room_night", precision: 15, scale: 2, default: "10.0", null: false
+    t.decimal "maximum_percentage", precision: 8, scale: 4, default: "1.0", null: false
+    t.string "mode", default: "recommended", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_ota_rate_variance_policies_on_hotel_id", unique: true
+    t.check_constraint "maximum_amount_per_room_night IS NULL OR maximum_amount_per_room_night >= 0::numeric", name: "ota_rate_variance_policies_amount_nonnegative"
+    t.check_constraint "maximum_percentage IS NOT NULL AND maximum_amount_per_room_night IS NOT NULL", name: "ota_rate_variance_policies_thresholds_present"
+    t.check_constraint "maximum_percentage IS NULL OR maximum_percentage >= 0::numeric", name: "ota_rate_variance_policies_percentage_nonnegative"
+    t.check_constraint "mode::text = ANY (ARRAY['recommended'::character varying, 'strict'::character varying, 'custom'::character varying]::text[])", name: "ota_rate_variance_policies_mode_allowed"
+  end
+
   create_table "payout_batches", force: :cascade do |t|
     t.decimal "amount"
     t.datetime "created_at", null: false
@@ -2631,6 +2756,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_091000) do
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"
   add_foreign_key "payment_transactions", "corporate_ar_payment_intents"
+  add_foreign_key "ota_financial_component_mappings", "booking_sources"
+  add_foreign_key "ota_financial_component_mappings", "hotels"
+  add_foreign_key "ota_financial_component_mappings", "transaction_codes"
+  add_foreign_key "ota_financial_component_mappings", "users", column: "created_by_id"
+  add_foreign_key "ota_financial_components", "booking_rooms"
+  add_foreign_key "ota_financial_components", "bookings"
+  add_foreign_key "ota_financial_components", "ota_financial_snapshots"
+  add_foreign_key "ota_financial_components", "transaction_codes"
+  add_foreign_key "ota_financial_snapshots", "booking_sources"
+  add_foreign_key "ota_financial_snapshots", "bookings"
+  add_foreign_key "ota_financial_snapshots", "group_bookings"
+  add_foreign_key "ota_financial_snapshots", "hotels"
+  add_foreign_key "ota_rate_variance_policies", "hotels"
   add_foreign_key "payout_batches", "hotels"
   add_foreign_key "plan_features", "features"
   add_foreign_key "plan_features", "plans"
