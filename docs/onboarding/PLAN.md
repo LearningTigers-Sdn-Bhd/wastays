@@ -12,6 +12,8 @@ The authoritative product and presentation decisions are:
 
 Existing hotel, tax, room, rate, financial, staff, corporate account, and channel-manager services remain the source of domain behaviour. The onboarding domain orchestrates and presents those capabilities; it must not fork their business rules.
 
+Per-phase handoff briefs for phases 6-10 live in `docs/onboarding/handoffs/`, starting with `docs/onboarding/handoffs/README.md`. They exist so a session with no prior context can pick up a single phase.
+
 ## Delivery principles
 
 1. Ship narrow vertical slices.
