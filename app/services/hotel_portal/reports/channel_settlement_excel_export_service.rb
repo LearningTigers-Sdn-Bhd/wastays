@@ -3,7 +3,10 @@
 module HotelPortal
   module Reports
     class ChannelSettlementExcelExportService
-      HEADERS = [ "Provider", "Expected Net", "Received", "Outstanding", "Variance" ].freeze
+      HEADERS = [
+        "OTA", "Booking", "Settlement Reference", "Status", "Expected Net",
+        "Received", "Outstanding", "Variance"
+      ].freeze
 
       def initialize(hotel:, report:)
         @hotel = hotel
@@ -11,7 +14,11 @@ module HotelPortal
       end
 
       def generate
-        Exports::ExcelReportBuilder.new(hotel: @hotel, title: "OTA Settlement Report", period_label: period_label).generate do |builder|
+        Exports::ExcelReportBuilder.new(
+          hotel: @hotel,
+          title: "OTA Settlement Report",
+          period_label: period_label
+        ).generate do |builder|
           if @report.currency_totals.any?
             @report.currency_totals.each { |total| add_currency_sheet(builder, total) }
           else
@@ -24,30 +31,56 @@ module HotelPortal
 
       def add_currency_sheet(builder, total)
         currency = total.fetch(:currency)
-        rows = @report.rows.select { |row| row[:currency] == currency }
-        sheet = builder.add_sheet(name: "#{currency} Settlements", widths: [ 24, 18, 18, 18, 18 ])
+        rows = @report.detail_rows.select { |row| row[:currency] == currency }
+        sheet = builder.add_sheet(
+          name: "#{currency} OTA Settlements",
+          widths: [ 24, 20, 24, 20, 18, 18, 18, 18 ]
+        )
         builder.add_header(sheet: sheet, subtitle: currency)
         builder.add_summary(sheet: sheet, metrics: summary_metrics(total, currency))
         builder.add_table(
           sheet: sheet,
-          section_title: "Provider reconciliation",
+          section_title: "OTA settlement details",
           headers: HEADERS,
-          rows: rows.map { |row| [ row[:provider].to_s.titleize, row[:expected_net_amount], row[:received_amount], row[:outstanding_amount], row[:variance_amount] ] },
-          column_types: %i[text money money money money],
-          total_row: [ "TOTAL", total[:expected_net_amount], total[:received_amount], total[:outstanding_amount], total[:variance_amount] ],
+          rows: rows.map { |row| detail_values(row) },
+          column_types: %i[text text text text money money money money],
+          total_row: [
+            "TOTAL", "", "", "", total[:expected_net_amount],
+            total[:received_amount], total[:outstanding_amount], total[:variance_amount]
+          ],
           empty_message: "No OTA settlements for this currency in the selected period."
         )
       end
 
+      def status_label(status)
+        status.humanize.gsub(/\bota\b/i, "OTA")
+      end
+
+      def detail_values(row)
+        [
+          row[:ota],
+          row[:booking_references].to_sentence,
+          row[:reference],
+          status_label(row[:status]),
+          row[:expected_net_amount],
+          row[:received_amount],
+          row[:outstanding_amount],
+          row[:variance_amount]
+        ]
+      end
+
       def add_empty_sheet(builder)
-        sheet = builder.add_sheet(name: "OTA Settlements", widths: [ 24, 18, 18, 18, 18 ])
+        sheet = builder.add_sheet(
+          name: "OTA Settlements",
+          widths: [ 24, 20, 24, 20, 18, 18, 18, 18 ]
+        )
         builder.add_header(sheet: sheet)
         builder.add_table(
           sheet: sheet,
-          section_title: "Provider reconciliation",
+          section_title: "OTA settlement details",
           headers: HEADERS,
           rows: [],
-          column_types: %i[text money money money money],
+          column_types: %i[text text text text money money money money],
           total_row: nil,
           empty_message: "No OTA settlements for the selected period."
         )
@@ -63,9 +96,9 @@ module HotelPortal
       end
 
       def period_label
-        return @report.start_date.strftime("%d %b %Y") if @report.start_date == @report.end_date
+        return I18n.l(@report.start_date, format: :long) if @report.start_date == @report.end_date
 
-        "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
+        "#{I18n.l(@report.start_date, format: :long)} - #{I18n.l(@report.end_date, format: :long)}"
       end
     end
   end

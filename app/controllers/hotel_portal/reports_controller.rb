@@ -15,6 +15,14 @@ module HotelPortal
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
     DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
+    OTA_SETTLEMENT_STATUS_FILTERS = {
+      "all" => nil,
+      "outstanding" => %w[awaiting_ota_settlement virtual_card_not_ready ready_to_charge partially_received underpaid unknown],
+      "received" => %w[received],
+      "overpaid" => %w[overpaid],
+      "needs_attention" => %w[needs_attention failed],
+      "cancelled" => %w[cancelled]
+    }.freeze
     DAILY_REVENUE_FILTER_KEYS = %i[q transaction_type category transaction_code_id posting_source reversal_status].freeze
 
     before_action :authorize_view_reports!, only: %i[index breakdown daily_occupancy daily_report daily_revenue_cell daily_revenue_source_bookings outstanding_balance deposit_liability guest_reports folio_ledger journal_batches tax_compliance refund_report extra_charge channel_settlements]
@@ -341,11 +349,29 @@ module HotelPortal
 
     def channel_settlements
       @report_start_date, @report_end_date = parse_report_date_range
+      @settlement_statuses = OTA_SETTLEMENT_STATUS_FILTERS.keys
+      @settlement_status = params[:status].presence_in(@settlement_statuses) || "all"
+      @settlement_sources = current_hotel.channel_settlements
+        .where(collection_by: "ota")
+        .includes(:booking_source)
+        .map(&:booking_source)
+        .uniq(&:id)
+        .sort_by { |source| source.label.downcase }
+      @settlement_currencies = current_hotel.channel_settlements
+        .where(collection_by: "ota")
+        .distinct
+        .order(:currency)
+        .pluck(:currency)
       @report = HotelPortal::Reports::ChannelSettlementReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
-        end_date: @report_end_date
+        end_date: @report_end_date,
+        query: params[:q],
+        source: params[:source],
+        currency: params[:currency],
+        statuses: OTA_SETTLEMENT_STATUS_FILTERS.fetch(@settlement_status)
       ).call
+      @settlement_rows = Kaminari.paginate_array(@report.detail_rows).page(params[:page]).per(25)
 
       respond_to do |format|
         format.html

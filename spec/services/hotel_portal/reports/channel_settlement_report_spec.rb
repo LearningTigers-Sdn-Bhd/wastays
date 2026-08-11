@@ -16,7 +16,7 @@ RSpec.describe HotelPortal::Reports::ChannelSettlementReport, type: :service do
     )
   end
 
-  it "groups expected and allocated receipts by provider and currency without a grand total" do
+  it "groups expected and allocated receipts by OTA source and currency without a grand total" do
     myr_settlement = create(
       :channel_settlement,
       hotel: hotel,
@@ -100,7 +100,7 @@ RSpec.describe HotelPortal::Reports::ChannelSettlementReport, type: :service do
     expect(property_settlement.collection_by).to eq("property")
     expect(result.rows).to contain_exactly(
       include(
-        provider: "channex",
+        ota: source.label,
         currency: "MYR",
         expected_net_amount: 135.to_d,
         received_amount: 40.to_d,
@@ -112,7 +112,7 @@ RSpec.describe HotelPortal::Reports::ChannelSettlementReport, type: :service do
         variance: -95.to_d
       ),
       include(
-        provider: "agoda",
+        ota: source.label,
         currency: "USD",
         expected_net_amount: 90.to_d,
         received_amount: 90.to_d,
@@ -141,7 +141,7 @@ RSpec.describe HotelPortal::Reports::ChannelSettlementReport, type: :service do
     result = described_class.new(hotel: hotel).call
 
     expect(result.attention_rows).to contain_exactly(include(
-      booking_source: source.label,
+      ota: source.label,
       reference: settlement.channel_manager_reference,
       message: "OTA folio is closed"
     ))
@@ -161,6 +161,41 @@ RSpec.describe HotelPortal::Reports::ChannelSettlementReport, type: :service do
 
     result = described_class.new(hotel: hotel).call
 
-    expect(result.rows).to contain_exactly(include(provider: "channex", currency: "MYR", expected: 100.to_d, received: 0.to_d, outstanding: 100.to_d))
+    expect(result.rows).to contain_exactly(include(ota: source.label, currency: "MYR", expected: 100.to_d, received: 0.to_d, outstanding: 100.to_d))
+  end
+
+  it "returns settlement details and applies URL filter inputs" do
+    booking = create(:booking, hotel: hotel, confirmation_token: "OTA-FILTER-1", guest_name: "Filter Guest")
+    settlement = create(
+      :channel_settlement,
+      hotel: hotel,
+      booking_source: source,
+      status: "partially_received",
+      channel_manager_reference: "ota-filter-reference",
+      expected_net_amount: 90,
+      gross_amount: 100,
+      commission_amount: 10
+    )
+    allocation = create(:channel_settlement_allocation, channel_settlement: settlement, booking: booking)
+    other_source = create(:booking_source, key: "other_ota_filter", label: "Other OTA")
+    create(:channel_settlement, hotel: hotel, booking_source: other_source, channel_manager_reference: "excluded-reference")
+
+    result = described_class.new(
+      hotel: hotel,
+      query: "OTA-FILTER",
+      source: source.id,
+      currency: "myr",
+      statuses: %w[partially_received underpaid]
+    ).call
+
+    expect(result.detail_rows).to contain_exactly(include(
+      ota: source.label,
+      reference: settlement.channel_manager_reference,
+      status: "partially_received",
+      bookings: [ booking ],
+      booking_references: [ "OTA-FILTER-1" ],
+      expected_net_amount: allocation.expected_net_amount,
+      outstanding_amount: allocation.expected_net_amount
+    ))
   end
 end
