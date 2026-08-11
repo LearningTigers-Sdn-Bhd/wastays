@@ -15,6 +15,11 @@
     @apply text-foreground;
   }
 
+  .tabs-tab[aria-disabled="true"],
+  .tabs-tab[aria-disabled="true"]:hover {
+    @apply cursor-not-allowed text-muted-foreground opacity-60;
+  }
+
   .tabs-tab:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2;
     --tw-ring-offset-color: var(--background);
@@ -35,6 +40,10 @@
 
   .tabs-tab--line:hover {
     @apply border-border-interactive;
+  }
+
+  .tabs-tab--line[aria-disabled="true"]:hover {
+    @apply border-transparent;
   }
 
   .tabs-tab--line[aria-selected="true"],
