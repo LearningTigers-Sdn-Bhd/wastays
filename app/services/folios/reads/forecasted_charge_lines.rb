@@ -16,7 +16,10 @@ module Folios
 
       def call
         if ota_financial_snapshot_available?(@booking)
-          ota_financial_component_lines(@booking).select { |line| stay_dates.include?(line[:stay_date]) }
+          return [] if ota_financial_snapshot_for(@booking).reconciliation_status == "total_mismatch"
+
+          ota_lines = ota_financial_component_lines(@booking).select { |line| stay_dates.include?(line[:stay_date]) }
+          ota_lines + stay_dates.flat_map { |date| supplemental_pms_tax_lines(date) }
         else
           stay_dates.flat_map do |date|
             accommodation_lines(date) + tax_lines(date)
@@ -45,8 +48,13 @@ module Folios
         end
       end
 
-      def tax_lines(date)
-        tax_postings_for(@booking, date).each_with_index.filter_map do |tax_line, index|
+      def supplemental_pms_tax_lines(date)
+        postings = tax_postings_for(@booking, date).reject { |posting| posting["source"] == "ota_supplied" }
+        tax_lines(date, postings: postings)
+      end
+
+      def tax_lines(date, postings: tax_postings_for(@booking, date))
+        postings.each_with_index.filter_map do |tax_line, index|
           amount = tax_line_amount(tax_line)
           next if amount.zero?
 

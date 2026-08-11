@@ -46,6 +46,7 @@ module ChannelManagers
         snapshot = taxes.group_by(&:stay_date).transform_keys(&:iso8601).transform_values do |rows|
           rows.sort_by(&:stable_key).map { |component| tax_posting(component) }
         end
+        merge_locally_managed_tourism_tax!(snapshot, booking, taxes)
         snapshot.merge!(booking.tax_posting_snapshot.to_h.slice(*posted_stay_dates(booking)))
         booking.update_columns(
           tax_posting_snapshot: snapshot,
@@ -54,15 +55,48 @@ module ChannelManagers
         )
       end
 
+      def merge_locally_managed_tourism_tax!(snapshot, booking, ota_taxes)
+        return if ota_taxes.any? { |component| ota_tourism_tax?(component) }
+
+        local_snapshot = Bookings::BuildFinancialSnapshot.new(
+          hotel: booking.hotel,
+          booking: booking,
+          check_in: booking.check_in,
+          check_out: booking.check_out,
+          guest_country: booking.guest_country,
+          room_items: booking.booking_rooms.map do |room|
+            { quantity: room.quantity.to_i.positive? ? room.quantity : 1, nightly_rate_snapshot: room.nightly_rate_snapshot }
+          end
+        ).call.tax_posting_snapshot
+
+        local_snapshot.each do |date, postings|
+          tourism_tax = Array(postings).select { |posting| posting["transaction_code_system_key"] == "tourism_tax" }
+          snapshot[date] = Array(snapshot[date]) + tourism_tax if tourism_tax.any?
+        end
+      end
+
+      def ota_tourism_tax?(component)
+        return true if component.transaction_code.system_key == "tourism_tax"
+
+        names = [ component.provider_name, component.provider_type ].compact.map do |value|
+          value.downcase.gsub(/[^a-z0-9]+/, " ").strip
+        end
+        (names & [ "tourism tax", "tourist tax", "ttx", "malaysia tourism tax" ]).any?
+      end
+
       def summarize_tax_snapshot(snapshot)
         snapshot.values.flatten.group_by do |row|
-          [ row["name"], row["type"], row["is_inclusive"], row["currency"] ]
-        end.map do |(name, type, inclusive, currency), rows|
+          [ row["name"], row["type"], row["is_inclusive"], row["currency"], row["source"], row["transaction_code_id"] ]
+        end.map do |(name, type, inclusive, currency, source, transaction_code_id), rows|
+          first = rows.first
           {
             "name" => name, "type" => type.presence || "ota_tax", "is_inclusive" => inclusive,
             "amount" => decimal(rows.sum(0.to_d) { |row| row["amount"].to_d }),
-            "currency" => currency, "source" => "ota_supplied"
-          }
+            "currency" => currency, "source" => source.presence || "ota_supplied",
+            "transaction_code_id" => transaction_code_id,
+            "transaction_code_system_key" => first["transaction_code_system_key"],
+            "transaction_code_code" => first["transaction_code_code"]
+          }.compact
         end
       end
 

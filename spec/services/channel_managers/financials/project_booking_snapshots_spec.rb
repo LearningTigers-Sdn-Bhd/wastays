@@ -55,4 +55,58 @@ RSpec.describe ChannelManagers::Financials::ProjectBookingSnapshots do
       include("name" => "Tourism tax", "amount" => "12.0")
     )
   end
+
+  it "adds hotel-managed tourism tax to a foreign guest's OTA projection" do
+    hotel = create(:hotel, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    room_code.update!(is_taxable: true)
+    room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    booking = create(:booking, hotel:, guest_country: "Singapore",
+      check_in: Date.new(2026, 9, 1), check_out: Date.new(2026, 9, 3))
+    room = create(:booking_room, booking:, subtotal: 200)
+    snapshot = create(:ota_financial_snapshot, hotel:, booking:, gross_amount: 200, accommodation_amount: 200)
+
+    [ Date.new(2026, 9, 1), Date.new(2026, 9, 2) ].each_with_index do |date, index|
+      create(:ota_financial_component, ota_financial_snapshot: snapshot, booking:, booking_room: room,
+        transaction_code: room_code, stable_key: "room/#{index}", stay_date: date,
+        amount: 100, posting_amount: 100, gross_effect_amount: 100)
+    end
+
+    described_class.call!(snapshot:)
+
+    expect(booking.reload.tax_posting_snapshot.values.flatten).to contain_exactly(
+      include("type" => "tourism_tax", "amount" => "10.0", "source" => "transaction_code_tax_rule"),
+      include("type" => "tourism_tax", "amount" => "10.0", "source" => "transaction_code_tax_rule")
+    )
+    expect(Folios::Reads::ForecastedChargeLines.call(booking:).map { |line| [ line[:charge_kind], line[:amount] ] })
+      .to contain_exactly(
+        [ "accommodation", 100.to_d ], [ "accommodation", 100.to_d ],
+        [ "tax", 10.to_d ], [ "tax", 10.to_d ]
+      )
+    expect(snapshot.ota_financial_components.sum(:gross_effect_amount)).to eq(200.to_d)
+  end
+
+  it "does not duplicate tourism tax already supplied by the OTA" do
+    hotel = create(:hotel, tourism_tax_enabled: true, tourism_tax_amount: 10)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    room_code.update!(is_taxable: true)
+    room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
+    booking = create(:booking, hotel:, guest_country: "Singapore",
+      check_in: Date.new(2026, 9, 1), check_out: Date.new(2026, 9, 2))
+    room = create(:booking_room, booking:)
+    snapshot = create(:ota_financial_snapshot, hotel:, booking:)
+    create(:ota_financial_component, ota_financial_snapshot: snapshot, booking:, booking_room: room,
+      transaction_code: room_code, stable_key: "room/0", stay_date: booking.check_in.to_date,
+      amount: 100, posting_amount: 100, gross_effect_amount: 100)
+    create(:ota_financial_component, ota_financial_snapshot: snapshot, booking:,
+      transaction_code: hotel.transaction_codes.find_by!(system_key: "ota_unmapped_tax"),
+      component_kind: "tax", stable_key: "tax/ttx", stay_date: booking.check_in.to_date,
+      provider_name: "Tourism Tax", amount: 10, posting_amount: 10, gross_effect_amount: 10)
+
+    described_class.call!(snapshot:)
+
+    expect(booking.reload.tax_posting_snapshot.values.flatten).to contain_exactly(
+      include("name" => "Tourism Tax", "amount" => "10.0", "source" => "ota_supplied")
+    )
+  end
 end
