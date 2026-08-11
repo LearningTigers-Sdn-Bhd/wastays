@@ -40,6 +40,98 @@ RSpec.describe "HotelPortal::ChannelSettlementReceipts", type: :request do
     expect(document.at_css("button.panel-button svg")).to be_present
   end
 
+  it "defaults to an available pair and renders accessible application behavior" do
+    payment_method
+
+    get new_hotel_channel_settlement_receipt_path(hotel), params: {
+      booking_source_id: "999999",
+      currency: "USD"
+    }
+
+    document = Nokogiri::HTML(response.body)
+    root = document.at_css('[data-controller="ota-receipt-form"]')
+    source_select = document.at_css("#channel_settlement_receipt_booking_source_id")
+    currency_select = document.at_css("#channel_settlement_receipt_currency")
+    allocation_input = document.at_css("#allocation-#{allocation.id}")
+
+    expect(root).to be_present
+    expect(root["class"].split).not_to include("w-full")
+    expect(source_select.at_css("option[selected]")["value"]).to eq(source.id.to_s)
+    expect(currency_select.at_css("option[selected]")["value"]).to eq(allocation.currency)
+    expect(allocation_input["name"]).to eq("allocations[#{allocation.id}]")
+    expect(allocation_input["class"]).to include("panel-input")
+    expect(allocation_input["aria-describedby"]).to be_nil
+    expect(document.at_css('[aria-live="polite"]')).to be_present
+    expect(document.at_css('[data-controller="panels-ui--date-time-picker"]')).to be_present
+    expect(response.body).to include("Overpayment entered")
+  end
+
+  it "scopes allocation rows by OTA, currency, and server-side search" do
+    payment_method
+    usd_settlement = create(:channel_settlement,
+      hotel:, booking_source: source, currency: "USD", channel_manager_reference: "USD-ONLY")
+    usd_allocation = create(:channel_settlement_allocation,
+      channel_settlement: usd_settlement, currency: "USD")
+    other_source = create(:booking_source, kind: "ota", label: "Other OTA")
+    other_settlement = create(:channel_settlement,
+      hotel:, booking_source: other_source, currency: "MYR", channel_manager_reference: "OTHER-SOURCE")
+    create(:channel_settlement_allocation, channel_settlement: other_settlement, currency: "MYR")
+
+    get new_hotel_channel_settlement_receipt_path(hotel), params: {
+      booking_source_id: source.id,
+      currency: "USD",
+      allocation_search: usd_allocation.booking.confirmation_token
+    }
+
+    expect(response.body).to include("USD-ONLY")
+    expect(response.body).not_to include(settlement.channel_manager_reference)
+    expect(response.body).not_to include("OTHER-SOURCE")
+  end
+
+  it "only offers receipt settlement methods and connects validation errors to controls" do
+    payment_method
+
+    post hotel_channel_settlement_receipts_path(hotel), params: {
+      channel_settlement_receipt: {
+        booking_source_id: source.id,
+        hotel_payment_method_id: payment_method.id,
+        settlement_method: "guest_card",
+        amount: "",
+        currency: "MYR",
+        received_at: ""
+      },
+      allocations: {}
+    }
+
+    document = Nokogiri::HTML(response.body)
+    method_values = document.css("#channel_settlement_receipt_settlement_method option").map { |option| option["value"] }
+    summary = document.at_css("#receipt-error-summary")
+    amount_input = document.at_css("#channel_settlement_receipt_amount")
+    allocation_input = document.at_css("#allocation-#{allocation.id}")
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(method_values.reject(&:blank?)).to contain_exactly("bank_transfer", "virtual_card")
+    expect(summary["tabindex"]).to eq("-1")
+    expect(summary["data-ota-receipt-form-target"]).to eq("errorSummary")
+    expect(amount_input["aria-invalid"]).to eq("true")
+    expect(amount_input["aria-describedby"]).to include("channel_settlement_receipt_amount-error")
+
+    post hotel_channel_settlement_receipts_path(hotel), params: {
+      channel_settlement_receipt: {
+        booking_source_id: source.id,
+        hotel_payment_method_id: payment_method.id,
+        settlement_method: "bank_transfer",
+        amount: "10.00",
+        currency: "MYR",
+        received_at: Time.current.iso8601
+      },
+      allocations: {}
+    }
+    allocation_input = Nokogiri::HTML(response.body).at_css("#allocation-#{allocation.id}")
+    expect(allocation_input["aria-invalid"]).to eq("true")
+    expect(allocation_input["aria-describedby"]).to include("allocation-#{allocation.id}-error")
+  end
+
   it "records and allocates a receipt, then returns to reconciliation" do
     expect {
       post hotel_channel_settlement_receipts_path(hotel), params: {

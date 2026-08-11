@@ -90,6 +90,17 @@ RSpec.describe ChannelSettlements::RecordReceipt, type: :service do
     expect(result.form.errors[:allocations]).to include("total must equal the receipt amount")
   end
 
+
+  it "rejects settlement methods that cannot represent an OTA receipt" do
+    result = described_class.call(
+      hotel:, user:, attributes: attributes.merge(settlement_method: "guest_card"),
+      allocations: { allocation.id.to_s => "90.00" }
+    )
+
+    expect(result).not_to be_success
+    expect(result.form.errors[:settlement_method]).to include("is not included in the list")
+  end
+
   it "normalizes a blank external reference to nil" do
     result = described_class.call(
       hotel:, user:, attributes: attributes.merge(amount: "10.00", external_reference: " "),

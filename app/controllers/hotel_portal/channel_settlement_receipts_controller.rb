@@ -2,17 +2,19 @@
 
 module HotelPortal
   class ChannelSettlementReceiptsController < ReportsBaseController
+    ALLOCATION_LIMIT = 200
+
     before_action :authorize_manage_ar_payments!
     before_action :set_breadcrumbs
 
     def new
-      @form = HotelPortal::ChannelSettlementReceiptForm.new(
-        booking_source_id: params[:booking_source_id],
-        currency: params[:currency].presence || current_hotel.default_currency,
-        settlement_method: "bank_transfer",
-        received_at: Time.current
-      )
       set_context
+      @form = HotelPortal::ChannelSettlementReceiptForm.new(
+        booking_source_id: @context_source_id,
+        currency: @context_currency,
+        settlement_method: "bank_transfer",
+        received_at: Time.current.in_time_zone(current_hotel.hotel_time_zone)
+      )
     end
 
     def create
@@ -51,20 +53,64 @@ module HotelPortal
     end
 
     def set_context
-      @booking_sources = BookingSource.where(
-        id: current_hotel.channel_settlements.where(collection_by: "ota").select(:booking_source_id)
-      ).order(:position, :label)
+      pairs = outstanding_scope
+        .where("channel_settlements.currency = channel_settlement_allocations.currency")
+        .distinct.pluck("channel_settlements.booking_source_id", "channel_settlement_allocations.currency")
+      source_ids = pairs.map(&:first).uniq
+      @booking_sources = BookingSource.where(id: source_ids).order(:position, :label)
+      @context_source_id = valid_source_id(source_ids)
+      @currencies = pairs.filter_map { |source_id, currency| currency if source_id == @context_source_id }.uniq.sort
+      @context_currency = valid_currency
       @payment_methods = current_hotel.hotel_payment_methods.active.ordered.includes(:transaction_code)
-      @allocations = outstanding_allocations
+      @allocation_search = params[:allocation_search].to_s.strip
+      @allocations = scoped_allocations.limit(ALLOCATION_LIMIT + 1).to_a
+      @allocation_limit_reached = @allocations.length > ALLOCATION_LIMIT
+      @allocations = @allocations.first(ALLOCATION_LIMIT)
     end
 
-    def outstanding_allocations
+    def valid_source_id(source_ids)
+      requested = params[:booking_source_id].presence || @form&.booking_source_id
+      requested = requested.to_i if requested.present?
+      source_ids.include?(requested) ? requested : @booking_sources.first&.id
+    end
+
+    def valid_currency
+      requested = params[:currency].presence || @form&.currency
+      return requested if @currencies.include?(requested)
+      return current_hotel.default_currency if @currencies.include?(current_hotel.default_currency)
+
+      @currencies.first
+    end
+
+    def scoped_allocations
+      scope = outstanding_scope
+        .joins(:channel_settlement, :booking)
+        .where(
+          channel_settlements: { booking_source_id: @context_source_id, currency: @context_currency },
+          channel_settlement_allocations: { currency: @context_currency }
+        )
+      if @allocation_search.present?
+        pattern = "%#{ActiveRecord::Base.sanitize_sql_like(@allocation_search)}%"
+        scope = scope.where(
+          "channel_settlements.channel_manager_reference ILIKE :pattern OR bookings.confirmation_token ILIKE :pattern",
+          pattern:
+        )
+      end
+      scope.includes(:channel_settlement_receipt_allocations, :booking, channel_settlement: :booking_source)
+        .order("channel_settlements.created_at ASC", :id)
+    end
+
+    def outstanding_scope
       current_hotel.channel_settlement_allocations
         .joins(:channel_settlement)
         .where(channel_settlements: { collection_by: "ota" })
-        .includes(:channel_settlement_receipt_allocations, :booking, channel_settlement: :booking_source)
-        .order("channel_settlements.created_at ASC", :id)
-        .select { |allocation| remaining_amount(allocation).positive? }
+        .where(<<~SQL.squish)
+          channel_settlement_allocations.expected_net_amount > COALESCE(
+            (SELECT SUM(receipt_allocations.amount)
+             FROM channel_settlement_receipt_allocations receipt_allocations
+             WHERE receipt_allocations.channel_settlement_allocation_id = channel_settlement_allocations.id), 0
+          )
+        SQL
     end
 
     def remaining_amount(allocation)
