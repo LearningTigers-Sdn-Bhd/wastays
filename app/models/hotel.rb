@@ -90,6 +90,8 @@ class Hotel < ApplicationRecord
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
+  has_many :onboarding_sections, class_name: "HotelOnboardingSection", dependent: :destroy
+  has_many :onboarding_audit_events, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many :room_rates, through: :room_types
   has_many :room_locks, dependent: :destroy
@@ -116,8 +118,8 @@ class Hotel < ApplicationRecord
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
-  validates :city, presence: true
-  validates :country, presence: true
+  validates :city, presence: true, unless: :setup?
+  validates :country, presence: true, unless: :setup?
   validates :business_starts_at, :business_ends_at, presence: true
   validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
@@ -186,6 +188,7 @@ class Hotel < ApplicationRecord
   }
 
   STATUSES = %w[
+    setup
     registered
     email_verified
     profile_incomplete
@@ -219,6 +222,10 @@ class Hotel < ApplicationRecord
   def onboarding_sort_key
     duration = onboarding_duration_days
     [ duration.present? ? duration.to_f : Float::INFINITY, created_at ]
+  end
+
+  def setup?
+    status == "setup"
   end
 
   def active?
@@ -442,19 +449,19 @@ class Hotel < ApplicationRecord
   end
 
   def onboarding?
-    %w[registered email_verified profile_incomplete rooms_incomplete inventory_incomplete].include?(status)
+    %w[setup registered email_verified profile_incomplete rooms_incomplete inventory_incomplete].include?(status)
   end
 
   def profile_completed?
-    !status.in?([ "registered", "email_verified" ])
+    !status.in?([ "setup", "registered", "email_verified" ])
   end
 
   def policies_completed?
-    !status.in?([ "registered", "email_verified", "profile_incomplete" ])
+    !status.in?([ "setup", "registered", "email_verified", "profile_incomplete" ])
   end
 
   def rooms_completed?
-    !status.in?([ "registered", "email_verified", "profile_incomplete", "rooms_incomplete" ])
+    !status.in?([ "setup", "registered", "email_verified", "profile_incomplete", "rooms_incomplete" ])
   end
 
   def ready_for_review?

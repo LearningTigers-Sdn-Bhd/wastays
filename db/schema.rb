@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_12_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1409,6 +1409,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
     t.index ["hotel_id"], name: "index_hotel_knowledge_documents_on_hotel_id"
   end
 
+  create_table "hotel_onboarding_sections", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.jsonb "decision_metadata", default: {}, null: false
+    t.bigint "hotel_id", null: false
+    t.string "section_key", null: false
+    t.datetime "skipped_at"
+    t.string "state", default: "not_started", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "section_key"], name: "index_hotel_onboarding_sections_on_hotel_id_and_section_key", unique: true
+    t.index ["hotel_id", "state"], name: "index_hotel_onboarding_sections_on_hotel_id_and_state"
+    t.index ["hotel_id"], name: "index_hotel_onboarding_sections_on_hotel_id"
+    t.check_constraint "state::text = ANY (ARRAY['not_started'::character varying, 'in_progress'::character varying, 'complete'::character varying, 'skipped'::character varying, 'needs_attention'::character varying]::text[])", name: "hotel_onboarding_sections_state_allowed"
+  end
+
   create_table "hotel_payment_methods", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "default_cash", default: false, null: false
@@ -1869,6 +1884,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
     t.index ["tags"], name: "index_observation_entries_on_tags", using: :gin
   end
 
+  create_table "onboarding_audit_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.bigint "hotel_id", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "occurred_at", null: false
+    t.string "section_key"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["hotel_id", "occurred_at"], name: "index_onboarding_audit_events_on_hotel_id_and_occurred_at"
+    t.index ["hotel_id", "section_key", "occurred_at"], name: "idx_onboarding_events_section_time"
+    t.index ["hotel_id"], name: "index_onboarding_audit_events_on_hotel_id"
+    t.index ["user_id"], name: "index_onboarding_audit_events_on_user_id"
+  end
+
   create_table "onboarding_sessions", force: :cascade do |t|
     t.datetime "completed_at"
     t.datetime "created_at", null: false
@@ -1880,49 +1910,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
     t.string "trainer_name", default: "", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
-  end
-
-  create_table "payment_settings", force: :cascade do |t|
-    t.string "api_key"
-    t.datetime "created_at", null: false
-    t.string "gateway"
-    t.string "secret_key"
-    t.bigint "settable_id"
-    t.string "settable_type"
-    t.string "status"
-    t.datetime "updated_at", null: false
-    t.string "webhook_secret"
-    t.index ["settable_type", "settable_id"], name: "index_payment_settings_on_settable"
-  end
-
-  create_table "payment_transactions", force: :cascade do |t|
-    t.integer "amount_subunits"
-    t.bigint "ar_payment_id"
-    t.bigint "booking_id"
-    t.bigint "booking_quote_id"
-    t.datetime "captured_at"
-    t.bigint "corporate_ar_payment_intent_id"
-    t.datetime "created_at", null: false
-    t.string "currency"
-    t.text "error_message"
-    t.string "event_source"
-    t.string "external_reference"
-    t.string "gateway", null: false
-    t.string "gateway_order_id"
-    t.jsonb "gateway_payload", default: {}, null: false
-    t.jsonb "metadata", default: {}, null: false
-    t.string "payment_method"
-    t.string "signature"
-    t.string "status", default: "pending", null: false
-    t.datetime "updated_at", null: false
-    t.datetime "verified_at"
-    t.index ["ar_payment_id"], name: "index_payment_transactions_on_ar_payment_id"
-    t.index ["booking_id"], name: "index_payment_transactions_on_booking_id"
-    t.index ["booking_quote_id"], name: "index_payment_transactions_on_booking_quote_id"
-    t.index ["corporate_ar_payment_intent_id"], name: "idx_payment_transactions_on_corp_ar_intent_id"
-    t.index ["gateway", "external_reference"], name: "idx_payment_transactions_on_gateway_and_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
-    t.index ["gateway", "gateway_order_id"], name: "idx_payment_transactions_on_gateway_and_order_id", unique: true, where: "(gateway_order_id IS NOT NULL)"
-    t.index ["status"], name: "index_payment_transactions_on_status"
   end
 
   create_table "ota_financial_component_mappings", force: :cascade do |t|
@@ -2039,8 +2026,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.bigint "hotel_id", null: false
-    t.decimal "maximum_amount_per_room_night", precision: 15, scale: 2, default: "10.0", null: false
-    t.decimal "maximum_percentage", precision: 8, scale: 4, default: "1.0", null: false
+    t.decimal "maximum_amount_per_room_night", precision: 12, scale: 2, default: "10.0", null: false
+    t.decimal "maximum_percentage", precision: 7, scale: 4, default: "1.0", null: false
     t.string "mode", default: "recommended", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_ota_rate_variance_policies_on_hotel_id", unique: true
@@ -2048,6 +2035,49 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
     t.check_constraint "maximum_percentage IS NOT NULL AND maximum_amount_per_room_night IS NOT NULL", name: "ota_rate_variance_policies_thresholds_present"
     t.check_constraint "maximum_percentage IS NULL OR maximum_percentage >= 0::numeric", name: "ota_rate_variance_policies_percentage_nonnegative"
     t.check_constraint "mode::text = ANY (ARRAY['recommended'::character varying, 'strict'::character varying, 'custom'::character varying]::text[])", name: "ota_rate_variance_policies_mode_allowed"
+  end
+
+  create_table "payment_settings", force: :cascade do |t|
+    t.string "api_key"
+    t.datetime "created_at", null: false
+    t.string "gateway"
+    t.string "secret_key"
+    t.bigint "settable_id"
+    t.string "settable_type"
+    t.string "status"
+    t.datetime "updated_at", null: false
+    t.string "webhook_secret"
+    t.index ["settable_type", "settable_id"], name: "index_payment_settings_on_settable"
+  end
+
+  create_table "payment_transactions", force: :cascade do |t|
+    t.integer "amount_subunits"
+    t.bigint "ar_payment_id"
+    t.bigint "booking_id"
+    t.bigint "booking_quote_id"
+    t.datetime "captured_at"
+    t.bigint "corporate_ar_payment_intent_id"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.text "error_message"
+    t.string "event_source"
+    t.string "external_reference"
+    t.string "gateway", null: false
+    t.string "gateway_order_id"
+    t.jsonb "gateway_payload", default: {}, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.string "payment_method"
+    t.string "signature"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "verified_at"
+    t.index ["ar_payment_id"], name: "index_payment_transactions_on_ar_payment_id"
+    t.index ["booking_id"], name: "index_payment_transactions_on_booking_id"
+    t.index ["booking_quote_id"], name: "index_payment_transactions_on_booking_quote_id"
+    t.index ["corporate_ar_payment_intent_id"], name: "idx_payment_transactions_on_corp_ar_intent_id"
+    t.index ["gateway", "external_reference"], name: "idx_payment_transactions_on_gateway_and_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
+    t.index ["gateway", "gateway_order_id"], name: "idx_payment_transactions_on_gateway_and_order_id", unique: true, where: "(gateway_order_id IS NOT NULL)"
+    t.index ["status"], name: "index_payment_transactions_on_status"
   end
 
   create_table "payout_batches", force: :cascade do |t|
@@ -2705,6 +2735,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
   add_foreign_key "hotel_knowledge_diagnostics", "prospect_messages"
   add_foreign_key "hotel_knowledge_diagnostics", "prospects"
   add_foreign_key "hotel_knowledge_documents", "hotels"
+  add_foreign_key "hotel_onboarding_sections", "hotels"
   add_foreign_key "hotel_payment_methods", "hotel_extra_charges", column: "surcharge_extra_charge_id"
   add_foreign_key "hotel_payment_methods", "hotels"
   add_foreign_key "hotel_payment_methods", "transaction_codes"
@@ -2751,11 +2782,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
   add_foreign_key "notification_configs", "hotels"
   add_foreign_key "notification_deliveries", "bookings"
   add_foreign_key "notification_deliveries", "hotels"
+  add_foreign_key "onboarding_audit_events", "hotels"
+  add_foreign_key "onboarding_audit_events", "users"
   add_foreign_key "onboarding_sessions", "hotels"
-  add_foreign_key "payment_transactions", "ar_payments"
-  add_foreign_key "payment_transactions", "booking_quotes"
-  add_foreign_key "payment_transactions", "bookings"
-  add_foreign_key "payment_transactions", "corporate_ar_payment_intents"
   add_foreign_key "ota_financial_component_mappings", "booking_sources"
   add_foreign_key "ota_financial_component_mappings", "hotels"
   add_foreign_key "ota_financial_component_mappings", "transaction_codes"
@@ -2769,6 +2798,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_100100) do
   add_foreign_key "ota_financial_snapshots", "group_bookings"
   add_foreign_key "ota_financial_snapshots", "hotels"
   add_foreign_key "ota_rate_variance_policies", "hotels"
+  add_foreign_key "payment_transactions", "ar_payments"
+  add_foreign_key "payment_transactions", "booking_quotes"
+  add_foreign_key "payment_transactions", "bookings"
+  add_foreign_key "payment_transactions", "corporate_ar_payment_intents"
   add_foreign_key "payout_batches", "hotels"
   add_foreign_key "plan_features", "features"
   add_foreign_key "plan_features", "plans"
