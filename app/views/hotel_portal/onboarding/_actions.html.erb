@@ -1,45 +1,44 @@
-<div class="sticky bottom-0 mt-auto border-t border-border bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <% if presenter.previous_entry %>
-        <%= render PanelsUI::Button.new(label: "Back", variant: :ghost, href: onboarding_section_path_for(presenter.previous_entry)) do %>
-          <%= app_icon "arrow-left", aria: { hidden: "true" } %>
-          <span>Back</span>
-        <% end %>
+<%# The shell footer owns placement and its rule; this partial owns only the controls. %>
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <% if presenter.previous_entry %>
+      <%= render PanelsUI::Button.new(label: "Back", variant: :ghost, href: onboarding_section_path_for(presenter.previous_entry)) do %>
+        <%= app_icon "arrow-left", aria: { hidden: "true" } %>
+        <span>Back</span>
       <% end %>
-    </div>
+    <% end %>
+  </div>
 
-    <div class="flex flex-wrap items-center justify-end gap-2">
-      <% unless presenter.read_only? %>
-        <% unless presenter.required? %>
-          <%= button_to hotel_onboarding_section_path(current_hotel, section_key: presenter.current_entry.definition.route_name),
-                        method: :patch,
-                        params: { navigation_action: "skip" },
-                        class: "panel-button",
-                        data: { variant: "ghost", size: "md" } do %>
-            Skip for now
-          <% end %>
-        <% end %>
-
+  <div class="flex flex-wrap items-center justify-end gap-2">
+    <% unless presenter.read_only? %>
+      <% unless presenter.required? %>
         <%= button_to hotel_onboarding_section_path(current_hotel, section_key: presenter.current_entry.definition.route_name),
                       method: :patch,
-                      params: { navigation_action: "save_draft" },
+                      params: { navigation_action: "skip" },
                       class: "panel-button",
-                      data: { variant: "neutral", size: "md" } do %>
-          Save draft
-        <% end %>
-
-        <% unless presenter.current_entry.definition.key == "review" %>
-          <%= button_to hotel_onboarding_section_path(current_hotel, section_key: presenter.current_entry.definition.route_name),
-                        method: :patch,
-                        params: { navigation_action: "save_continue" },
-                        class: "panel-button",
-                        data: { variant: "primary", size: "md" } do %>
-            Save & continue
-            <%= app_icon "arrow-right", aria: { hidden: "true" } %>
-          <% end %>
+                      data: { variant: "ghost", size: "md" } do %>
+          Skip for now
         <% end %>
       <% end %>
-    </div>
+
+      <%= button_to hotel_onboarding_section_path(current_hotel, section_key: presenter.current_entry.definition.route_name),
+                    method: :patch,
+                    params: { navigation_action: "save_draft" },
+                    class: "panel-button",
+                    data: { variant: "neutral", size: "md" } do %>
+        Save draft
+      <% end %>
+
+      <% unless presenter.current_entry.definition.key == "review" %>
+        <%= button_to hotel_onboarding_section_path(current_hotel, section_key: presenter.current_entry.definition.route_name),
+                      method: :patch,
+                      params: { navigation_action: "save_continue" },
+                      class: "panel-button",
+                      data: { variant: "primary", size: "md" } do %>
+          Save & continue
+          <%= app_icon "arrow-right", aria: { hidden: "true" } %>
+        <% end %>
+      <% end %>
+    <% end %>
   </div>
 </div>

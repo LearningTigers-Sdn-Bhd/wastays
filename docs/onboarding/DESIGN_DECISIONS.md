@@ -209,13 +209,29 @@ Use standard forms, detail pages, or contextual sheets for:
 ### Editable table pattern
 
 ```text
-Actions | Name      | Type       | Amount | Tax
-Remove  | Breakfast | Per person | 25.00  | SST
-Remove  | Late out  | Fixed      | 50.00  | SST
-        | + Add extra charge
+Remove | Name      | Type       | Amount | Tax        | Actions
+   x   | Breakfast | Per person | 25.00  | SST        |   ...
+   x   | Late out  | Fixed      | 50.00  | SST        |   ...
+       | + Add extra charge
 ```
 
-The first column has an accessible name such as `Actions`; it is not visually or semantically empty. Every remove action includes the row's name in its accessible label.
+Editable tables use two control columns, and each owns one responsibility:
+
+- `Remove` (leading): discards the row. One click, no menu. Present from the
+  first implementation.
+- `Actions` (trailing): opens the row action sheet for edit, duplicate, and
+  other row-scoped operations. Added when a row needs operations beyond inline
+  editing; it does not absorb `Remove`.
+
+Do not name the leading column `Actions`. That name belongs to the trailing
+sheet trigger, and a header that says `Actions` above a control that only ever
+removes misdescribes it.
+
+Both control columns have visible, accessible names; neither is visually or
+semantically empty. Every remove action includes the row's name in its
+accessible label, such as `Remove Breakfast`. Because the destructive control
+sits at the leading edge, it uses an icon-only control with a generous target
+and the destructive confirmation below where data dependencies exist.
 
 Table requirements:
 

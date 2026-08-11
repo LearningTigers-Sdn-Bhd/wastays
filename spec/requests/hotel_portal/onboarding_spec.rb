@@ -44,6 +44,17 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(response.body).not_to include("Open navigation")
   end
 
+  it "keeps the section actions in the shell footer, outside the scrolling body" do
+    get hotel_onboarding_section_path(hotel, section_key: "property_profile")
+
+    document = Nokogiri::HTML(response.body)
+    footer = document.at_css("footer[data-slot='setup-actions']")
+
+    expect(footer.text).to include("Save draft", "Save & continue")
+    expect(document.at_css("div.overflow-y-auto footer[data-slot='setup-actions']")).to be_nil
+    expect(document.at_css("div.overflow-y-auto").text).not_to include("Save draft")
+  end
+
   it "redirects a locked deep link to the earliest unmet prerequisite" do
     get hotel_onboarding_section_path(hotel, section_key: "taxes_fees")
 

@@ -1,4 +1,4 @@
-<section aria-labelledby="onboarding-taxes-heading" class="space-y-5 border-t border-border pt-5">
+<section aria-labelledby="onboarding-taxes-heading" class="space-y-5">
   <div>
     <h2 id="onboarding-taxes-heading" class="text-base font-semibold">Statutory taxes</h2>
     <p class="mt-1 text-sm text-muted-foreground">These apply to every room night once enabled. You assign them to room revenue on the next step.</p>
@@ -94,7 +94,7 @@
         <% end %>
       </div>
 
-      <div class="mt-6 border-t border-border pt-4">
+      <div class="mt-6">
         <%= render PanelsUI::Checkbox.new(
               name: "confirm_taxes",
               id: "confirm-taxes",
@@ -105,6 +105,5 @@
       </div>
     <% end %>
 
-    <%= render "form_actions", presenter: presenter, form_id: form_id %>
   <% end %>
 </section>

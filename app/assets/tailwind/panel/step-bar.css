@@ -1,0 +1,126 @@
+@layer components {
+  /* Chevron progress bar: one continuous run of segments that point forward.
+     Each segment carries its own notch on the left and point on the right, and
+     a negative margin tucks the next segment's notch into the previous point so
+     the run reads as a single bar rather than separated tiles.
+
+     A clip-path crops any border, so the stroke is painted by the item behind
+     the step: same clip, one pixel of padding, stroke colour as its background. */
+  .panel-step-bar {
+    --panel-step-bar-point: 0.75rem;
+
+    @apply flex w-full min-w-0 items-stretch;
+  }
+
+  .panel-step-bar__item {
+    --panel-step-bar-clip: polygon(
+      0 0,
+      calc(100% - var(--panel-step-bar-point)) 0,
+      100% 50%,
+      calc(100% - var(--panel-step-bar-point)) 100%,
+      0 100%,
+      var(--panel-step-bar-point) 50%
+    );
+    --panel-step-bar-stroke: var(--border);
+
+    @apply flex min-w-0 flex-1;
+
+    padding: 1px;
+    background: var(--panel-step-bar-stroke);
+    clip-path: var(--panel-step-bar-clip);
+  }
+
+  .panel-step-bar__item + .panel-step-bar__item {
+    margin-left: calc(var(--panel-step-bar-point) * -1);
+  }
+
+  /* The run's leading edge is flat — there is nothing behind it to point out of. */
+  .panel-step-bar__item:first-child {
+    --panel-step-bar-clip: polygon(
+      0 0,
+      calc(100% - var(--panel-step-bar-point)) 0,
+      100% 50%,
+      calc(100% - var(--panel-step-bar-point)) 100%,
+      0 100%
+    );
+  }
+
+  /* Segments overlap, so later ones must not paint over earlier ones. */
+  .panel-step-bar__item:nth-child(1) { z-index: 6; }
+  .panel-step-bar__item:nth-child(2) { z-index: 5; }
+  .panel-step-bar__item:nth-child(3) { z-index: 4; }
+  .panel-step-bar__item:nth-child(4) { z-index: 3; }
+  .panel-step-bar__item:nth-child(5) { z-index: 2; }
+  .panel-step-bar__item:nth-child(6) { z-index: 1; }
+
+  .panel-step-bar__step {
+    --panel-step-bar-background: var(--card);
+    --panel-step-bar-foreground: var(--foreground);
+
+    @apply flex min-h-8 w-full min-w-0 items-center justify-center gap-1.5 px-3 text-xs font-semibold transition-colors;
+
+    background: var(--panel-step-bar-background);
+    color: var(--panel-step-bar-foreground);
+    padding-left: calc(var(--panel-step-bar-point) + 0.5rem);
+    clip-path: var(--panel-step-bar-clip);
+  }
+
+  .panel-step-bar__item:first-child .panel-step-bar__step {
+    padding-left: 0.75rem;
+  }
+
+  .panel-step-bar__item:has([data-state="complete"]) {
+    --panel-step-bar-stroke: var(--status-primary-border);
+  }
+
+  .panel-step-bar__step[data-state="complete"] {
+    --panel-step-bar-background: var(--status-primary-background);
+    --panel-step-bar-foreground: var(--status-primary-foreground);
+  }
+
+  .panel-step-bar__item:has([data-state="current"]) {
+    --panel-step-bar-stroke: var(--primary);
+  }
+
+  .panel-step-bar__step[data-state="current"] {
+    --panel-step-bar-background: var(--primary);
+    --panel-step-bar-foreground: var(--primary-foreground);
+  }
+
+  .panel-step-bar__item:has([data-state="attention"]) {
+    --panel-step-bar-stroke: var(--status-destructive-border);
+  }
+
+  .panel-step-bar__step[data-state="attention"] {
+    --panel-step-bar-background: var(--status-destructive-background);
+    --panel-step-bar-foreground: var(--status-destructive-foreground);
+  }
+
+  .panel-step-bar__step[data-state="locked"] {
+    --panel-step-bar-background: var(--muted);
+    --panel-step-bar-foreground: var(--muted-foreground);
+
+    cursor: not-allowed;
+  }
+
+  a.panel-step-bar__step:hover { --panel-step-bar-background: var(--muted); }
+  a.panel-step-bar__step[data-state="current"]:hover { --panel-step-bar-background: var(--primary-hover); }
+  a.panel-step-bar__step[data-state="complete"]:hover { --panel-step-bar-background: var(--status-primary-border); }
+
+  /* The clip crops an outline, so focus is shown on the item that wraps the step. */
+  .panel-step-bar__item:has(.panel-step-bar__step:focus-visible) {
+    --panel-step-bar-stroke: var(--ring);
+
+    padding: 2px;
+  }
+
+  .panel-step-bar__step:focus-visible { outline: none; }
+
+  .panel-step-bar__label { @apply min-w-0 truncate; }
+
+  .panel-step-bar__step > svg { @apply size-3.5 shrink-0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-step-bar__step { transition-duration: 0.01ms; }
+  }
+}

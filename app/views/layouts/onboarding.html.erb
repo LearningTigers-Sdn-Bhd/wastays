@@ -16,8 +16,8 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="h-full" data-theme="panel-light">
-    <div class="flex min-h-screen flex-col bg-background text-foreground">
+  <body class="h-full overflow-hidden" data-theme="panel-light">
+    <div class="flex h-screen h-dvh min-h-screen min-h-dvh flex-col bg-background text-foreground">
       <%= render PanelsUI::Navbar.new(key: "onboarding", navigation: false) do |navbar| %>
         <% navbar.with_brand do %>
           <div class="flex min-w-0 items-center gap-3">
@@ -34,6 +34,9 @@
             <span>Help</span>
           <% end %>
         <% end %>
+        <% if content_for?(:navbar_secondary) %>
+          <% navbar.with_secondary { content_for(:navbar_secondary) } %>
+        <% end %>
         <% navbar.with_profile do %>
           <%= render PanelsUI::ProfileMenu.new(
                 id: "onboarding-profile",
@@ -48,8 +51,8 @@
         <% end %>
       <% end %>
 
-      <main class="flex min-h-0 flex-1 flex-col">
-        <div class="panel-page flex flex-1 flex-col">
+      <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div class="panel-page panel-page--workspace">
           <%= yield %>
         </div>
       </main>

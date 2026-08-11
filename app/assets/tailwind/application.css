@@ -52,6 +52,7 @@
 @import "./panel/scroll-area.css";
 @import "./panel/sidebar.css";
 @import "./panel/navbar.css";
+@import "./panel/step-bar.css";
 @import "./observation_deck.css";
 
 /* ─── Role tokens (shadcn-style naming) ───

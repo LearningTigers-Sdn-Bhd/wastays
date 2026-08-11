@@ -1,51 +1,61 @@
 <% content_for :title, "#{@presenter.title} | Property setup" %>
 
-<div class="flex min-h-full flex-1 flex-col gap-5">
-  <%= render "progress_navigation", presenter: @presenter %>
+<% content_for :navbar_secondary do %>
+  <%= render HotelPortal::Setup::PhaseNav.new(presenter: @presenter) %>
+<% end %>
 
-  <% if @presenter.read_only? %>
-    <%= render PanelsUI::Alert.new(tone: :info, title: "Setup submitted for review") do |alert| %>
-      <% alert.with_description { "Your onboarding details are read-only while the WAStays team reviews this property." } %>
-    <% end %>
-  <% elsif @presenter.changes_requested_message.present? %>
-    <%= render PanelsUI::Alert.new(tone: :warning, title: "Changes requested") do |alert| %>
-      <% alert.with_description { @presenter.changes_requested_message } %>
-    <% end %>
-  <% end %>
+<%= render HotelPortal::Setup::Shell.new(presenter: @presenter) do |shell| %>
+  <% shell.with_body do %>
+    <div class="space-y-6">
+      <% if @presenter.read_only? %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "Setup submitted for review") do |alert| %>
+          <% alert.with_description { "Your onboarding details are read-only while the WAStays team reviews this property." } %>
+        <% end %>
+      <% elsif @presenter.changes_requested_message.present? %>
+        <%= render PanelsUI::Alert.new(tone: :warning, title: "Changes requested") do |alert| %>
+          <% alert.with_description { @presenter.changes_requested_message } %>
+        <% end %>
+      <% end %>
 
-  <header class="space-y-2">
-    <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-      <span><%= @presenter.phase_label %></span>
-      <span aria-hidden="true">/</span>
-      <span>Step <%= @presenter.current_position %> of <%= @presenter.total_sections %></span>
-      <%= render PanelsUI::Badge.new(
-            label: (@presenter.required? ? "Required" : "Optional"),
-            variant: (@presenter.required? ? :primary : :outline),
-            size: :sm) %>
-      <%= render PanelsUI::Badge.new(
-            label: onboarding_state_label(@presenter.current_entry.record.state),
-            variant: onboarding_state_variant(@presenter.current_entry.record.state),
-            size: :sm) %>
-    </div>
-    <h1 class="text-base font-semibold tracking-tight"><%= @presenter.title %></h1>
-    <p class="max-w-3xl text-sm text-muted-foreground"><%= @presenter.description %></p>
-  </header>
-
-  <% if @presenter.current_entry.definition.key.in?(HotelPortal::OnboardingController::IMPLEMENTED_SECTIONS) %>
-    <%= render @presenter.current_entry.definition.key, presenter: @presenter %>
-  <% else %>
-    <section aria-labelledby="section-preview-title" class="space-y-3 border-t border-border pt-5">
-      <div class="flex items-start gap-3">
-        <span class="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground" aria-hidden="true">
-          <%= app_icon "clipboard-list", class: "size-4" %>
-        </span>
-        <div class="space-y-1">
-          <h2 id="section-preview-title" class="text-base font-semibold">Setup workspace ready</h2>
-          <p class="text-sm text-muted-foreground">This phase establishes the onboarding route, progress, resume, and save contracts. The domain-specific fields are delivered in their dedicated implementation phase.</p>
+      <header class="space-y-1">
+        <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>Step <%= @presenter.current_position %> of <%= @presenter.total_sections %></span>
+          <%= render PanelsUI::Badge.new(
+                label: (@presenter.required? ? "Required" : "Optional"),
+                variant: (@presenter.required? ? :primary : :outline),
+                size: :sm) %>
+          <%= render PanelsUI::Badge.new(
+                label: onboarding_state_label(@presenter.current_entry.record.state),
+                variant: onboarding_state_variant(@presenter.current_entry.record.state),
+                size: :sm) %>
         </div>
-      </div>
-    </section>
+        <h1 class="text-base font-semibold tracking-tight"><%= @presenter.title %></h1>
+        <p class="max-w-3xl text-sm text-muted-foreground"><%= @presenter.description %></p>
+      </header>
 
-    <%= render "actions", presenter: @presenter %>
+      <% if @presenter.current_entry.definition.key.in?(HotelPortal::OnboardingController::IMPLEMENTED_SECTIONS) %>
+        <%= render @presenter.current_entry.definition.key, presenter: @presenter %>
+      <% else %>
+        <section aria-labelledby="section-preview-title" class="flex items-start gap-3">
+          <span class="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground" aria-hidden="true">
+            <%= app_icon "clipboard-list", class: "size-4" %>
+          </span>
+          <div class="space-y-1">
+            <h2 id="section-preview-title" class="text-base font-semibold">Setup workspace ready</h2>
+            <p class="text-sm text-muted-foreground">This phase establishes the onboarding route, progress, resume, and save contracts. The domain-specific fields are delivered in their dedicated implementation phase.</p>
+          </div>
+        </section>
+      <% end %>
+    </div>
   <% end %>
-</div>
+
+  <% if @presenter.actions? %>
+    <% shell.with_footer do %>
+      <% if @presenter.form_id %>
+        <%= render "form_actions", presenter: @presenter, form_id: @presenter.form_id, skip_label: @presenter.skip_label %>
+      <% else %>
+        <%= render "actions", presenter: @presenter %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -29,6 +29,17 @@ module HotelPortal
       "review" => [ "Review and submit", "Resolve blocking issues, review your choices, and submit the property for approval." ]
     }.freeze
 
+    # The shell renders the action footer outside the section body, so it needs
+    # to know which form each section's buttons submit. Sections absent here have
+    # no form of their own and fall back to the standalone action buttons.
+    SECTION_FORMS = {
+      "property_profile" => { form_id: "onboarding-property-profile-form" },
+      "roles_permissions" => { form_id: "onboarding-role-presets-form" },
+      "staff_setup" => { form_id: "onboarding-staff-drafts-form", skip_label: "No additional staff for now" },
+      "taxes_fees" => { form_id: "onboarding-taxes-fees-form" },
+      "room_revenue" => { form_id: "onboarding-room-revenue-form" }
+    }.freeze
+
     def initialize(hotel:, navigation:, current_entry:)
       @hotel = hotel
       @navigation = navigation
@@ -65,6 +76,13 @@ module HotelPortal
     def phase_position
       phases.index { |phase| phase.current } + 1
     end
+
+    def form_id = read_only? ? nil : SECTION_FORMS.dig(current_entry.definition.key, :form_id)
+    def skip_label = SECTION_FORMS.dig(current_entry.definition.key, :skip_label)
+
+    # A read-only first page has neither save actions nor a Back target, so the
+    # shell should skip the footer rather than draw an empty bordered strip.
+    def actions? = !read_only? || previous_entry.present?
 
     def previous_entry = navigation.previous_entry(current_entry.definition.key)
     def next_entry = navigation.next_entry(current_entry.definition.key)
