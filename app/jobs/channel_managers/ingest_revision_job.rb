@@ -35,7 +35,8 @@ module ChannelManagers
           hotel: hotel,
           settlement_data: booking_data[:settlement]
         ).call
-        unless settlement_result.success?
+        retry_required = !settlement_result.success?
+        if retry_required
           Rails.logger.warn(
             "Channel Manager settlement not persisted for revision #{revision_id}: #{settlement_result.message}"
           )
@@ -43,11 +44,16 @@ module ChannelManagers
 
         if settlement_result.success? && settlement_result.settlement.present?
           application_result = apply_settlement(result, settlement_result.settlement)
-          unless application_result.success?
+          retry_required = !application_result.success?
+          if retry_required
             Rails.logger.warn(
               "Channel Manager settlement not applied for revision #{revision_id}: #{application_result.error}"
             )
           end
+        end
+
+        if retry_required
+          ChannelManagers::ReconcileSettlementJob.perform_later(hotel.id, booking_data[:settlement].to_h)
         end
       end
 
