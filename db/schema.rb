@@ -649,6 +649,102 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_091000) do
     t.index ["room_type_id"], name: "index_channel_room_rates_on_room_type_id"
   end
 
+  create_table "channel_settlement_allocations", force: :cascade do |t|
+    t.bigint "booking_folio_id", null: false
+    t.bigint "booking_id", null: false
+    t.bigint "channel_settlement_id", null: false
+    t.decimal "commission_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "expected_net_amount", precision: 12, scale: 2, null: false
+    t.decimal "gross_amount", precision: 12, scale: 2, null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_folio_id"], name: "index_channel_settlement_allocations_on_booking_folio_id"
+    t.index ["booking_id", "booking_folio_id"], name: "idx_on_booking_id_booking_folio_id_f441486488"
+    t.index ["booking_id"], name: "index_channel_settlement_allocations_on_booking_id"
+    t.index ["channel_settlement_id", "booking_id"], name: "idx_channel_settlement_allocations_settlement_booking", unique: true
+    t.index ["channel_settlement_id"], name: "index_channel_settlement_allocations_on_channel_settlement_id"
+    t.check_constraint "commission_amount <= gross_amount", name: "channel_settlement_allocations_commission_not_over_gross"
+    t.check_constraint "commission_amount >= 0::numeric", name: "channel_settlement_allocations_commission_amount_nonnegative"
+    t.check_constraint "expected_net_amount = (gross_amount - commission_amount)", name: "channel_settlement_allocations_expected_net_amount_matches"
+    t.check_constraint "expected_net_amount >= 0::numeric", name: "channel_settlement_allocations_expected_net_amount_nonnegative"
+    t.check_constraint "gross_amount >= 0::numeric", name: "channel_settlement_allocations_gross_amount_nonnegative"
+  end
+
+  create_table "channel_settlement_receipt_allocations", force: :cascade do |t|
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.bigint "channel_settlement_allocation_id", null: false
+    t.bigint "channel_settlement_receipt_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.datetime "updated_at", null: false
+    t.index ["channel_settlement_allocation_id"], name: "idx_on_channel_settlement_allocation_id_0bfa771cd4"
+    t.index ["channel_settlement_receipt_id", "channel_settlement_allocation_id"], name: "idx_channel_settlement_receipt_allocations_unique", unique: true
+    t.index ["channel_settlement_receipt_id"], name: "idx_on_channel_settlement_receipt_id_dad3de4cb5"
+    t.check_constraint "amount > 0::numeric", name: "channel_settlement_receipt_allocations_amount_positive"
+  end
+
+  create_table "channel_settlement_receipts", force: :cascade do |t|
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.bigint "booking_source_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.string "external_reference"
+    t.bigint "hotel_id", null: false
+    t.bigint "hotel_payment_method_id", null: false
+    t.text "notes"
+    t.datetime "received_at", null: false
+    t.bigint "recorded_by_id", null: false
+    t.string "settlement_method", default: "unknown", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_source_id", "received_at"], name: "idx_on_booking_source_id_received_at_3990b6118d"
+    t.index ["booking_source_id"], name: "index_channel_settlement_receipts_on_booking_source_id"
+    t.index ["hotel_id", "external_reference"], name: "idx_channel_settlement_receipts_external_reference", unique: true, where: "(external_reference IS NOT NULL)"
+    t.index ["hotel_id", "received_at"], name: "index_channel_settlement_receipts_on_hotel_id_and_received_at"
+    t.index ["hotel_id"], name: "index_channel_settlement_receipts_on_hotel_id"
+    t.index ["hotel_payment_method_id"], name: "index_channel_settlement_receipts_on_hotel_payment_method_id"
+    t.index ["recorded_by_id"], name: "index_channel_settlement_receipts_on_recorded_by_id"
+    t.check_constraint "amount > 0::numeric", name: "channel_settlement_receipts_amount_positive"
+    t.check_constraint "settlement_method::text = ANY (ARRAY['guest_card'::character varying, 'virtual_card'::character varying, 'bank_transfer'::character varying, 'unknown'::character varying]::text[])", name: "channel_settlement_receipts_method_allowed"
+  end
+
+  create_table "channel_settlements", force: :cascade do |t|
+    t.bigint "booking_source_id", null: false
+    t.string "channel_manager_reference", null: false
+    t.string "collection_by", default: "unknown", null: false
+    t.decimal "commission_amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "expected_net_amount", precision: 12, scale: 2, null: false
+    t.decimal "gross_amount", precision: 12, scale: 2, null: false
+    t.bigint "hotel_id", null: false
+    t.string "latest_revision_id"
+    t.jsonb "metadata", default: {}, null: false
+    t.string "provider", null: false
+    t.string "settlement_method", default: "unknown", null: false
+    t.string "status", default: "unknown", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "virtual_card_available_balance", precision: 12, scale: 2
+    t.string "virtual_card_currency"
+    t.date "virtual_card_effective_date"
+    t.date "virtual_card_expiration_date"
+    t.boolean "virtual_card_is_virtual"
+    t.index ["booking_source_id", "status"], name: "index_channel_settlements_on_booking_source_id_and_status"
+    t.index ["booking_source_id"], name: "index_channel_settlements_on_booking_source_id"
+    t.index ["hotel_id", "provider", "channel_manager_reference"], name: "idx_channel_settlements_identity", unique: true
+    t.index ["hotel_id", "status"], name: "index_channel_settlements_on_hotel_id_and_status"
+    t.index ["hotel_id"], name: "index_channel_settlements_on_hotel_id"
+    t.check_constraint "collection_by::text = ANY (ARRAY['property'::character varying, 'ota'::character varying, 'unknown'::character varying]::text[])", name: "channel_settlements_collection_by_allowed"
+    t.check_constraint "commission_amount <= gross_amount", name: "channel_settlements_commission_not_over_gross"
+    t.check_constraint "commission_amount >= 0::numeric", name: "channel_settlements_commission_amount_nonnegative"
+    t.check_constraint "expected_net_amount = (gross_amount - commission_amount)", name: "channel_settlements_expected_net_amount_matches"
+    t.check_constraint "expected_net_amount >= 0::numeric", name: "channel_settlements_expected_net_amount_nonnegative"
+    t.check_constraint "gross_amount >= 0::numeric", name: "channel_settlements_gross_amount_nonnegative"
+    t.check_constraint "settlement_method::text = ANY (ARRAY['guest_card'::character varying, 'virtual_card'::character varying, 'bank_transfer'::character varying, 'unknown'::character varying]::text[])", name: "channel_settlements_method_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['property_collection_required'::character varying, 'awaiting_ota_settlement'::character varying, 'virtual_card_not_ready'::character varying, 'ready_to_charge'::character varying, 'partially_received'::character varying, 'received'::character varying, 'underpaid'::character varying, 'overpaid'::character varying, 'failed'::character varying, 'cancelled'::character varying, 'needs_attention'::character varying, 'unknown'::character varying]::text[])", name: "channel_settlements_status_allowed"
+    t.check_constraint "virtual_card_available_balance IS NULL OR virtual_card_available_balance >= 0::numeric", name: "channel_settlements_virtual_card_balance_nonnegative"
+  end
+
   create_table "check_out_requests", force: :cascade do |t|
     t.datetime "acknowledged_at"
     t.bigint "acknowledged_by_user_id"
