@@ -1,0 +1,47 @@
+<% content_for :title, "#{@presenter.title} | Property setup" %>
+
+<div class="flex min-h-full flex-1 flex-col gap-5">
+  <%= render "progress_navigation", presenter: @presenter %>
+
+  <% if @presenter.read_only? %>
+    <%= render PanelsUI::Alert.new(tone: :info, title: "Setup submitted for review") do |alert| %>
+      <% alert.with_description { "Your onboarding details are read-only while the WAStays team reviews this property." } %>
+    <% end %>
+  <% elsif @presenter.changes_requested_message.present? %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Changes requested") do |alert| %>
+      <% alert.with_description { @presenter.changes_requested_message } %>
+    <% end %>
+  <% end %>
+
+  <header class="space-y-2">
+    <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span><%= @presenter.phase_label %></span>
+      <span aria-hidden="true">/</span>
+      <span>Step <%= @presenter.current_position %> of <%= @presenter.total_sections %></span>
+      <%= render PanelsUI::Badge.new(
+            label: (@presenter.required? ? "Required" : "Optional"),
+            variant: (@presenter.required? ? :primary : :outline),
+            size: :sm) %>
+      <%= render PanelsUI::Badge.new(
+            label: onboarding_state_label(@presenter.current_entry.record.state),
+            variant: onboarding_state_variant(@presenter.current_entry.record.state),
+            size: :sm) %>
+    </div>
+    <h1 class="text-base font-semibold tracking-tight"><%= @presenter.title %></h1>
+    <p class="max-w-3xl text-sm text-muted-foreground"><%= @presenter.description %></p>
+  </header>
+
+  <section aria-labelledby="section-preview-title" class="space-y-3 border-t border-border pt-5">
+    <div class="flex items-start gap-3">
+      <span class="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground" aria-hidden="true">
+        <%= app_icon "clipboard-list", class: "size-4" %>
+      </span>
+      <div class="space-y-1">
+        <h2 id="section-preview-title" class="text-base font-semibold">Setup workspace ready</h2>
+        <p class="text-sm text-muted-foreground">This phase establishes the onboarding route, progress, resume, and save contracts. The domain-specific fields are delivered in their dedicated implementation phase.</p>
+      </div>
+    </div>
+  </section>
+
+  <%= render "actions", presenter: @presenter %>
+</div>

@@ -78,7 +78,7 @@ Update admin hotel creation as a self-contained slice:
 
 Deliverable: admins can create a setup hotel safely; existing portal users are not yet globally redirected.
 
-## Phase 3: Onboarding shell and navigation
+## Phase 3: Onboarding shell and navigation — Complete (2026-08-12)
 
 Build the dedicated experience before adding all forms:
 

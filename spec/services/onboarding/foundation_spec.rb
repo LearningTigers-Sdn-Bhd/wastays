@@ -66,6 +66,20 @@ RSpec.describe "Onboarding foundation" do
     expect(Onboarding::LifecycleCompatibility.canonical_status("approved")).to eq("live")
   end
 
+  it "does not count shell placeholder completion as launch-ready" do
+    Onboarding::InitializeProgress.new(hotel: hotel).call
+    hotel.onboarding_sections.update_all(
+      state: "complete",
+      completed_at: Time.current,
+      decision_metadata: { placeholder: true }
+    )
+
+    readiness = Onboarding::Readiness.new(hotel: hotel).call
+
+    expect(readiness.ready).to be(false)
+    expect(readiness.blocking_issues.map(&:section_key)).to include("property_profile", "review")
+  end
+
   it "rejects lifecycle submission until onboarding is ready" do
     result = Onboarding::TransitionLifecycle.new(hotel: hotel, to: "pending_review").call
 

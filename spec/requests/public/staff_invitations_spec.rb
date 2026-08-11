@@ -43,6 +43,30 @@ RSpec.describe "Public::StaffInvitations", type: :request do
       expect(response).to redirect_to(hotel_dashboard_path(invitation.hotel))
     end
 
+    it "takes an activated setup-hotel owner into onboarding" do
+      hotel = create(:hotel, status: "setup")
+      owner_role = create(:role, account: hotel.account, slug: "hotel_owner")
+      owner_invitation = create(
+        :staff_invitation,
+        hotel: hotel,
+        account: hotel.account,
+        role: owner_role,
+        email: "owner@example.com",
+        token_digest: StaffInvitation.digest("owner-token")
+      )
+
+      patch staff_invitation_path("owner-token"), params: {
+        user: {
+          name: "Hotel Owner",
+          password: "password123",
+          password_confirmation: "password123"
+        }
+      }
+
+      expect(owner_invitation.reload).to be_accepted
+      expect(response).to redirect_to(hotel_onboarding_path(hotel))
+    end
+
     it "grants access to an existing user without changing their password" do
       user = create(:user, email: invitation.email, account: invitation.account, password: "oldpassword")
 

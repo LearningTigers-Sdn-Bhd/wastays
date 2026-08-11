@@ -19,6 +19,8 @@ module Onboarding
         record = states.fetch(section.key)
         if record.state == "needs_attention"
           blocking << Finding.new(section_key: section.key, severity: :blocking, message: "This section needs attention.")
+        elsif record.decision_metadata["placeholder"]
+          blocking << Finding.new(section_key: section.key, severity: :blocking, message: "Complete this section when its setup form is available.")
         elsif section.required && record.state != "complete"
           blocking << Finding.new(section_key: section.key, severity: :blocking, message: "Complete this required section.")
         elsif !section.required && !record.resolved?
