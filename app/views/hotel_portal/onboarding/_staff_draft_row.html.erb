@@ -1,0 +1,17 @@
+<% object = OnboardingStaffDraft.new(entry.slice("name", "email", "role_id")) %>
+<%= fields_for "staff_entries[#{index}]", object do |staff_form| %>
+  <div class="grid gap-3 border-t border-border pt-4 sm:grid-cols-[1fr_1.2fr_1fr_auto] sm:items-end" data-onboarding-staff-drafts-target="row">
+    <%= render PanelsUI::FormField.new(form: staff_form, attribute: :name, label: "Name", hint: "Optional") do |field| %>
+      <% field.with_input(autocomplete: "name") %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: staff_form, attribute: :email, label: "Email", required: true) do |field| %>
+      <% field.with_input(type: :email, autocomplete: "email") %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: staff_form, attribute: :role_id, label: "Preset role", required: true) do |field| %>
+      <% field.with_select_menu(staff_roles.map { |role| [role.name, role.id] }, prompt: "Select role", selected: entry["role_id"]) %>
+    <% end %>
+    <%= render PanelsUI::Button.new(as: :button, variant: :ghost, size: :icon_sm, icon_only: true, aria_label: "Remove staff member", data: { action: "onboarding-staff-drafts#remove" }) do %>
+      <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+    <% end %>
+  </div>
+<% end %>

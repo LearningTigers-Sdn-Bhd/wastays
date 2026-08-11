@@ -100,7 +100,7 @@ Use placeholder section summaries only where required to validate navigation; do
 
 Deliverable: an owner can activate, enter the onboarding shell, navigate allowed steps, and resume reliably.
 
-## Phase 4: Property and team slice
+## Phase 4: Property and team slice — Complete (2026-08-12)
 
 Deliver complete pages for:
 

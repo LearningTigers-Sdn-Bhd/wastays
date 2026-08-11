@@ -1,0 +1,38 @@
+<section aria-labelledby="role-presets-heading" class="space-y-4 border-t border-border pt-5">
+  <div>
+    <h2 id="role-presets-heading" class="text-base font-semibold">Seeded role presets</h2>
+    <p class="mt-1 text-sm text-muted-foreground">These permissions are read-only during onboarding. Custom role management remains available after launch when included in the property’s plan.</p>
+  </div>
+
+  <% if @preset_roles.size != Onboarding::ConfirmRolePresets::PRESET_SLUGS.size %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Preset roles need initialization") do |alert| %>
+      <% alert.with_description { "Save and continue to initialize and confirm the standard roles for this account." } %>
+    <% end %>
+  <% end %>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <% @preset_roles.each do |role| %>
+      <section class="space-y-3 border-t border-border pt-4" aria-labelledby="preset-role-<%= role.id %>">
+        <div class="flex items-center justify-between gap-3">
+          <h3 id="preset-role-<%= role.id %>" class="text-sm font-medium"><%= role.name %></h3>
+          <%= render PanelsUI::Badge.new(label: pluralize(role.permissions.size, "permission"), variant: :outline, size: :sm) %>
+        </div>
+        <p class="text-sm text-muted-foreground"><%= role.permissions.order(:name).limit(8).pluck(:name).to_sentence %><%= " and more" if role.permissions.size > 8 %></p>
+      </section>
+    <% end %>
+  </div>
+</section>
+
+<% unless presenter.read_only? %>
+  <% form_id = "onboarding-role-presets-form" %>
+  <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "roles_permissions"), method: :patch, id: form_id do %>
+    <%= render PanelsUI::Checkbox.new(
+          name: "confirm_presets",
+          id: "confirm-presets",
+          value: "1",
+          checked: presenter.current_entry.record.state == "complete",
+          label: "I reviewed the Hotel Owner, General Manager, Front Desk, and Housekeeper presets",
+          description: "You can assign these presets to draft staff on the next step.") %>
+  <% end %>
+  <%= render "form_actions", presenter: presenter, form_id: form_id %>
+<% end %>

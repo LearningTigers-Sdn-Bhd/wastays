@@ -1,0 +1,23 @@
+<div class="sticky bottom-0 mt-auto border-t border-border bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <% if presenter.previous_entry %>
+        <%= render PanelsUI::Button.new(label: "Back", variant: :ghost, href: onboarding_section_path_for(presenter.previous_entry)) do %>
+          <%= app_icon "arrow-left", aria: { hidden: "true" } %>
+          <span>Back</span>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <% if local_assigns[:skip_label] %>
+        <button type="submit" form="<%= form_id %>" name="navigation_action" value="skip" formnovalidate class="panel-button" data-variant="ghost" data-size="md"><%= skip_label %></button>
+      <% end %>
+      <button type="submit" form="<%= form_id %>" name="navigation_action" value="save_draft" formnovalidate class="panel-button" data-variant="neutral" data-size="md">Save draft</button>
+      <button type="submit" form="<%= form_id %>" name="navigation_action" value="save_continue" class="panel-button" data-variant="primary" data-size="md">
+        Save &amp; continue
+        <%= app_icon "arrow-right", aria: { hidden: "true" } %>
+      </button>
+    </div>
+  </div>
+</div>

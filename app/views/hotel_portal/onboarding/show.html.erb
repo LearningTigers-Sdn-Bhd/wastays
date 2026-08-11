@@ -31,17 +31,21 @@
     <p class="max-w-3xl text-sm text-muted-foreground"><%= @presenter.description %></p>
   </header>
 
-  <section aria-labelledby="section-preview-title" class="space-y-3 border-t border-border pt-5">
-    <div class="flex items-start gap-3">
-      <span class="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground" aria-hidden="true">
-        <%= app_icon "clipboard-list", class: "size-4" %>
-      </span>
-      <div class="space-y-1">
-        <h2 id="section-preview-title" class="text-base font-semibold">Setup workspace ready</h2>
-        <p class="text-sm text-muted-foreground">This phase establishes the onboarding route, progress, resume, and save contracts. The domain-specific fields are delivered in their dedicated implementation phase.</p>
+  <% if @presenter.current_entry.definition.key.in?(%w[property_profile roles_permissions staff_setup]) %>
+    <%= render @presenter.current_entry.definition.key, presenter: @presenter %>
+  <% else %>
+    <section aria-labelledby="section-preview-title" class="space-y-3 border-t border-border pt-5">
+      <div class="flex items-start gap-3">
+        <span class="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground" aria-hidden="true">
+          <%= app_icon "clipboard-list", class: "size-4" %>
+        </span>
+        <div class="space-y-1">
+          <h2 id="section-preview-title" class="text-base font-semibold">Setup workspace ready</h2>
+          <p class="text-sm text-muted-foreground">This phase establishes the onboarding route, progress, resume, and save contracts. The domain-specific fields are delivered in their dedicated implementation phase.</p>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <%= render "actions", presenter: @presenter %>
+    <%= render "actions", presenter: @presenter %>
+  <% end %>
 </div>

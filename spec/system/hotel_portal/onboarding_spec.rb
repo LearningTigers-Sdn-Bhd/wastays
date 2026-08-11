@@ -26,7 +26,20 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(page).to have_css("details[open]", text: "Locked")
   end
 
-  it "resumes setup and advances through an available step" do
+  it "resumes setup and advances through a completed property profile" do
+    hotel.update!(
+      contact_email: "stay@example.com",
+      contact_phone: "+60312345678",
+      time_zone: "Kuala Lumpur"
+    )
+    hotel.create_property_policy!(check_in_time: "15:00", check_out_time: "11:00")
+    hotel.photos.attach(
+      io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")),
+      filename: "property.jpg",
+      content_type: "image/jpeg"
+    )
+    hotel.update!(featured_photo_attachment_id: hotel.photos.attachments.last.id)
+
     visit hotel_onboarding_path(hotel)
 
     expect(page).to have_css("h1", text: "Property profile")
@@ -38,5 +51,15 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "roles_permissions"))
     expect(page).to have_css("h1", text: "Roles and permissions")
     expect(page).to have_link("Back", href: hotel_onboarding_section_path(hotel, section_key: "property_profile"))
+
+    check "I reviewed the Hotel Owner, General Manager, Front Desk, and Housekeeper presets"
+    click_button "Save & continue"
+
+    expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "staff_setup"))
+    expect(page).to have_text("Nothing is sent now")
+    click_button "No additional staff for now"
+
+    expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "taxes_fees"))
+    expect(page).to have_text("No additional staff will be invited for now")
   end
 end

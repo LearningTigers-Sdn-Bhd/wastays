@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_12_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_12_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1912,6 +1912,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_090000) do
     t.index ["hotel_id"], name: "index_onboarding_sessions_on_hotel_id"
   end
 
+  create_table "onboarding_staff_drafts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.bigint "hotel_id", null: false
+    t.string "name"
+    t.bigint "role_id", null: false
+    t.datetime "updated_at", null: false
+    t.index "hotel_id, lower((email)::text)", name: "index_onboarding_staff_drafts_on_hotel_and_lower_email", unique: true
+    t.index ["hotel_id"], name: "index_onboarding_staff_drafts_on_hotel_id"
+    t.index ["role_id"], name: "index_onboarding_staff_drafts_on_role_id"
+  end
+
   create_table "ota_financial_component_mappings", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.bigint "booking_source_id"
@@ -2785,6 +2797,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_090000) do
   add_foreign_key "onboarding_audit_events", "hotels"
   add_foreign_key "onboarding_audit_events", "users"
   add_foreign_key "onboarding_sessions", "hotels"
+  add_foreign_key "onboarding_staff_drafts", "hotels"
+  add_foreign_key "onboarding_staff_drafts", "roles"
   add_foreign_key "ota_financial_component_mappings", "booking_sources"
   add_foreign_key "ota_financial_component_mappings", "hotels"
   add_foreign_key "ota_financial_component_mappings", "transaction_codes"

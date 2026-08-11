@@ -146,5 +146,5 @@ Migration must update all compatibility readers/writers listed above, plus facto
 8. One-year local coverage policy: one-time population or maintained rolling horizon. Channex currently synchronizes 500 days, so define coverage calculation and extension behavior independently from external sync.
 9. Whether the Easy plan should remain non-publicly-bookable and how this hard-coded rule relates to target launch/readiness.
 10. Whether live hotels retain a read-only onboarding summary or only section/audit history.
-11. Staff and corporate invitation queue representation and idempotency at submission; existing services deliver immediately.
+11. Corporate invitation queue representation and submission idempotency remain unresolved. Staff drafts are now stored in `onboarding_staff_drafts` without delivery; Phase 10 must define an idempotent draft-to-invitation delivery marker before sending them.
 12. Target `setup` validation strategy for city/country and other owner-owned profile fields currently required at Hotel creation.

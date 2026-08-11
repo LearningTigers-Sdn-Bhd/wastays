@@ -39,19 +39,19 @@ module HotelPortal
             turbo_stream.replace(
               "hotel-published-photos",
               partial: "hotel_portal/profiles/published_photos",
-              locals: { hotel: @hotel }
+              locals: { hotel: @hotel, return_to: params[:return_to] }
             ),
             toast_stream("Hotel photo removed successfully.", type: :success)
           ]
         end
-        format.html { redirect_to edit_hotel_profile_path(@hotel), notice: "Hotel photo removed successfully." }
+        format.html { redirect_to photo_return_path, notice: "Hotel photo removed successfully." }
       end
     rescue ActiveRecord::RecordNotFound
       respond_to do |format|
         format.turbo_stream do
           render turbo_stream: toast_stream("Hotel photo could not be found.", type: :error), status: :not_found
         end
-        format.html { redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found." }
+        format.html { redirect_to photo_return_path, alert: "Hotel photo could not be found." }
       end
     end
 
@@ -68,7 +68,7 @@ module HotelPortal
       photos = @hotel.photos.attachments.where(id: photo_ids)
 
       if photos.empty?
-        redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found."
+        redirect_to photo_return_path, alert: "Hotel photo could not be found."
         return
       end
 
@@ -90,12 +90,12 @@ module HotelPortal
               turbo_stream.replace(
                 "hotel-published-photos",
                 partial: "hotel_portal/profiles/published_photos",
-                locals: { hotel: @hotel }
+                locals: { hotel: @hotel, return_to: params[:return_to] }
               ),
               toast_stream("Featured photo updated successfully.", type: :success)
             ]
           end
-          format.html { redirect_to edit_hotel_profile_path(@hotel), notice: "Featured photo updated successfully." }
+          format.html { redirect_to photo_return_path, notice: "Featured photo updated successfully." }
         end
       else
         message = @hotel.errors.full_messages.to_sentence
@@ -111,7 +111,7 @@ module HotelPortal
         format.turbo_stream do
           render turbo_stream: toast_stream("Hotel photo could not be found.", type: :error), status: :not_found
         end
-        format.html { redirect_to edit_hotel_profile_path(@hotel), alert: "Hotel photo could not be found." }
+        format.html { redirect_to photo_return_path, alert: "Hotel photo could not be found." }
       end
     end
 
@@ -173,6 +173,14 @@ module HotelPortal
 
     def prepare_profile_page
       @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, view_context)
+    end
+
+    def photo_return_path
+      if params[:return_to] == "onboarding"
+        hotel_onboarding_section_path(@hotel, section_key: "property_profile")
+      else
+        edit_hotel_profile_path(@hotel)
+      end
     end
 
     def clear_featured_photo_if_needed(photo_ids)
