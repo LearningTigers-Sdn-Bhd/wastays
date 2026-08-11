@@ -160,7 +160,7 @@ RSpec.describe "Hotel portal OTA financial settings", type: :request do
         }
       }
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body.at_css("[role='alert']").text).to include("could not save")
       expect(OtaRateVariancePolicy.where(hotel: hotel)).not_to exist
     end

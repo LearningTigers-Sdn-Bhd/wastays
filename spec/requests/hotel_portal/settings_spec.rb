@@ -220,7 +220,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[1].at_css("a, button")).to be_nil
       expect(breadcrumb_items[2].at_css("button[aria-label='Open Banking Details navigation']")).to be_present
       expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "Banking Details", "Transaction Code Reference" ]
+        [ "Banking Details", "Transaction Code Reference", "OTA Financials" ]
       )
     end
 
