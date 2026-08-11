@@ -7,13 +7,14 @@ class Admin::HotelsController < Admin::BaseController
   before_action :set_breadcrumbs, only: [ :show, :new, :edit, :create, :update ]
 
   def index
-    @all_hotels = HotelsQuery.new.call(params)
-    @hotels = @all_hotels.page(params[:page]).per(25)
-
-    respond_to do |format|
-      format.html
-      format.turbo_stream
-    end
+    page_size = Admin::Hotels::IndexPresenter.normalize_page_size(params[:per_page])
+    hotels = HotelsQuery.new.call(params).page(params[:page]).per(page_size)
+    @presenter = Admin::Hotels::IndexPresenter.new(
+      hotels: hotels,
+      summary: HotelsSummaryQuery.new.call,
+      status: params[:status],
+      page_size: page_size
+    )
   end
 
   def show

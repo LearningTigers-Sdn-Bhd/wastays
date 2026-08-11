@@ -11,6 +11,37 @@ RSpec.describe 'Admin::Hotels', type: :request do
     Permission.find_or_create_by!(slug: 'manage_account') { |permission| permission.name = 'Manage Account' }
   end
 
+  describe 'GET /admin/hotels' do
+    let!(:pending_hotel) { create(:hotel, name: "Pending Stay #{token}", status: "pending_review") }
+    let!(:live_hotel) { create(:hotel, name: "Live Stay #{token}", status: "live") }
+
+    it 'renders the registry with PanelsUI components' do
+      get admin_hotels_path
+
+      document = Nokogiri::HTML(response.body)
+
+      expect(response).to have_http_status(:ok)
+      expect(document.css('.panel-metric-card')).to be_empty
+      expect(document.at_css('table.panel-table')).to be_present
+      expect(document.css('#hotel-status-tabs .tabs-tab').size).to eq(5)
+      expect(document.css('.panel-select-menu').size).to eq(1)
+      expect(document.at_css("select[name='per_page'] option[selected]").text).to eq('15')
+      expect(document.css('turbo-frame#hotels_list .panel-badge').size).to eq(2)
+      expect(document.at_css("turbo-frame#hotels_list")).to be_present
+    end
+
+    it 'filters the shared registry without changing the platform summary' do
+      get admin_hotels_path, params: { status: 'pending_review' }
+
+      document = Nokogiri::HTML(response.body)
+
+      expect(document.at_css('table.panel-table').text).to include(pending_hotel.name)
+      expect(document.at_css('table.panel-table').text).not_to include(live_hotel.name)
+      expect(document.at_css('#hotel-status-tabs-tab-all .tabs-tab__count').text).to eq('2')
+      expect(document.at_css('#hotel-status-tabs-tab-pending_review')['aria-current']).to eq('page')
+    end
+  end
+
   describe 'GET /admin/hotels/new' do
     it 'shows the redesigned hotel creation workspace' do
       get new_admin_hotel_path

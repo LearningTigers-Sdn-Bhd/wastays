@@ -1,0 +1,116 @@
+<section class="space-y-4" aria-label="Hotels">
+  <%= render PanelsUI::Tabs.new(
+        id: "hotel-status-tabs",
+        active: presenter.active_status,
+        variant: :line,
+        aria_label: "Filter hotels by status") do |tabs| %>
+    <% presenter.status_tabs.each do |tab| %>
+      <% tabs.with_tab(
+           name: tab.fetch(:name),
+           label: tab.fetch(:label),
+           icon: tab.fetch(:icon),
+           count: tab.fetch(:count),
+           href: admin_hotels_path(
+             status: (tab.fetch(:name) unless tab.fetch(:name) == "all"),
+             q: params[:q].presence,
+             per_page: (presenter.page_size unless presenter.default_page_size?)),
+           data: { turbo_action: "advance" }) %>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: admin_hotels_path, method: :get,
+        data: { controller: "auto-submit", turbo_frame: "hotels_list", turbo_action: "advance" } do |form| %>
+    <%= form.hidden_field :status, value: presenter.active_status unless presenter.active_status == "all" %>
+    <%= form.hidden_field :per_page, value: presenter.page_size unless presenter.default_page_size? %>
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: :q,
+          label: "Search hotels",
+          label_hidden: true) do |field| %>
+      <% field.with_input(
+           type: :search,
+           value: params[:q],
+           placeholder: "Search by hotel or city",
+           data: { action: "input->auto-submit#submit" }) %>
+    <% end %>
+  <% end %>
+
+  <% if presenter.any_rows? %>
+    <%= render PanelsUI::Table.new(
+          caption: "Hotels matching the current filters",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          sticky_column: true,
+          wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Hotel</th>
+          <th scope="col" class="hidden sm:table-cell">City</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="hidden md:table-cell">Registered</th>
+          <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+        </tr>
+      <% end %>
+
+      <% table.with_body do %>
+        <% presenter.rows.each do |row| %>
+          <tr>
+            <td class="font-medium">
+              <%= link_to row.name, admin_hotel_path(row.hotel), class: "text-foreground underline decoration-border-interactive underline-offset-2 hover:text-primary", data: { turbo_frame: "_top" } %>
+              <span class="mt-0.5 block text-xs font-normal text-muted-foreground sm:hidden"><%= row.city %></span>
+            </td>
+            <td class="hidden text-muted-foreground sm:table-cell"><%= row.city %></td>
+            <td>
+              <%= render PanelsUI::Tooltip.new(text: row.status_detail, placement: :top_start) do %>
+                <button type="button" class="cursor-help rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" aria-label="<%= row.status_label %>: <%= row.status_detail %>">
+                  <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm, indicator: true) %>
+                </button>
+              <% end %>
+            </td>
+            <td class="hidden text-muted-foreground md:table-cell"><%= row.registered_on %></td>
+            <td class="text-right">
+              <%= render PanelsUI::Button.new(
+                    as: :a,
+                    href: hotel_dashboard_path(row.hotel),
+                    variant: :secondary,
+                    size: :sm,
+                    target: "_blank",
+                    rel: "noopener") do %>
+                <%= app_icon "external-link", class: "size-3.5", aria: { hidden: true } %>
+                <span class="hidden lg:inline">Open dashboard</span>
+                <span class="sr-only lg:hidden">Open <%= row.name %> dashboard</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <%= form_with url: admin_hotels_path, method: :get,
+            class: "w-32",
+            data: { controller: "auto-submit", turbo_frame: "hotels_list", turbo_action: "advance" } do |form| %>
+        <%= form.hidden_field :q, value: params[:q] if params[:q].present? %>
+        <%= form.hidden_field :status, value: presenter.active_status unless presenter.active_status == "all" %>
+        <%= render PanelsUI::FormField.new(form: form, attribute: :per_page, label: "Rows per page", size: :sm) do |field| %>
+          <% field.with_select_menu(
+               presenter.page_size_choices,
+               selected: presenter.page_size,
+               data: { action: "change->auto-submit#submitNow" }) %>
+        <% end %>
+      <% end %>
+
+      <% if presenter.hotels.total_pages > 1 %>
+        <div class="flex justify-center sm:justify-end">
+          <%= paginate presenter.hotels, data: { turbo_action: "advance" } %>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="rounded-lg border border-border bg-card p-6 text-center">
+      <h3 class="text-base font-semibold">No hotels found</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Try changing the search term or status filter.</p>
+    </div>
+  <% end %>
+</section>
