@@ -36,7 +36,7 @@ RSpec.describe "HotelPortal::ChannelSettlementReceipts", type: :request do
     expect(response.body).to include('data-controller="panels-ui--select-menu"')
     page = Capybara.string(response.body)
     document = Nokogiri::HTML(response.body)
-    expect(document.at_css("#hotel-breadcrumb").text.squish).to eq("Financial Reports OTA Settlements Record Receipt")
+    expect(document.at_css("#hotel-breadcrumb").text.squish).to eq("Financial OTA Settlements Record Receipt")
     expect(document.at_css("button.panel-button svg")).to be_present
     footer = document.at_css("form footer")
     expect(footer).to be_present

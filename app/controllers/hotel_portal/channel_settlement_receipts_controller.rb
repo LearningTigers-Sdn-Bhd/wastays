@@ -39,7 +39,7 @@ module HotelPortal
 
     def set_breadcrumbs
       override_breadcrumbs(
-        { label: "Financial Reports", path: hotel_reports_path(current_hotel) },
+        { label: "Financial", path: hotel_reports_path(current_hotel) },
         { label: "OTA Settlements", path: channel_settlements_hotel_reports_path(current_hotel) },
         { label: "Record Receipt" }
       )
