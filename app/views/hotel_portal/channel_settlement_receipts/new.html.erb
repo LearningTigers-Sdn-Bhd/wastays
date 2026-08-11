@@ -15,26 +15,55 @@
 
   <% if @form.errors.any? %>
     <div id="receipt-error-summary" tabindex="-1" data-ota-receipt-form-target="errorSummary">
-      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Receipt could not be recorded", role: :alert) do %>
-        <ul class="list-disc space-y-1 pl-5 text-sm">
-          <% @form.errors.each do |error| %>
-            <% target = error.attribute == :allocations ? "receipt-allocations-heading" : "channel_settlement_receipt_#{error.attribute}" %>
-            <li><a class="underline" href="#<%= target %>"><%= error.full_message %></a></li>
-          <% end %>
-        </ul>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Receipt could not be recorded", role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 pl-5 text-sm">
+            <% @form.errors.each do |error| %>
+              <% target = error.attribute == :allocations ? "receipt-allocations-heading" : "channel_settlement_receipt_#{error.attribute}" %>
+              <li><a class="underline" href="#<%= target %>"><%= error.full_message %></a></li>
+            <% end %>
+          </ul>
+        <% end %>
       <% end %>
     </div>
   <% end %>
 
-  <% if @booking_sources.empty? || @payment_methods.empty? %>
-    <%= render PanelsUI::Alert.new(tone: :warning, title: "Receipt setup is incomplete", role: :status) do %>
-      <p class="text-sm">
-        <% if @booking_sources.empty? %>
-          No outstanding OTA settlements are available for this hotel.
-        <% else %>
-          Add an active payment method before recording an OTA receipt.
+  <% if @booking_sources.empty? %>
+    <%= render PanelsUI::Alert.new(tone: :info, title: "No outstanding OTA settlements", role: :status) do |alert| %>
+      <% alert.with_description { "There is nothing to allocate right now. A receipt can be recorded after an OTA booking creates an expected settlement balance." } %>
+      <% alert.with_actions do %>
+        <%= render PanelsUI::Button.new(
+              label: "View OTA reconciliation",
+              as: :a,
+              href: channel_settlements_hotel_reports_path(current_hotel),
+              variant: :secondary,
+              size: :sm) %>
+      <% end %>
+    <% end %>
+  <% elsif @payment_methods.empty? %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Add a receiving payment method", role: :status) do |alert| %>
+      <% alert.with_description do %>
+        <p>
+          OTA receipts need an active Bank / Gateway payment method.
+          <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
+            Open <span class="font-medium">Hotel Settings → Payment Methods</span>, then add or activate the account that receives OTA payouts.
+          <% else %>
+            Ask a hotel administrator to add or activate one in <span class="font-medium">Hotel Settings → Payment Methods</span>.
+          <% end %>
+        </p>
+      <% end %>
+      <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
+        <% alert.with_actions do %>
+          <%= render PanelsUI::Button.new(
+                as: :a,
+                href: hotel_payment_methods_path(current_hotel),
+                variant: :secondary,
+                size: :sm) do %>
+            <%= app_icon "settings", class: "size-4", aria: { hidden: "true" } %>
+            <span>Open Payment Methods</span>
+          <% end %>
         <% end %>
-      </p>
+      <% end %>
     <% end %>
   <% else %>
     <%= form_with model: @form,
@@ -133,8 +162,8 @@
         </div>
 
         <div hidden data-ota-receipt-form-target="warning">
-          <%= render PanelsUI::Alert.new(tone: :warning, title: "Overpayment entered", role: :status) do %>
-            <p class="text-sm">One or more allocation amounts exceed the outstanding balance. Continue only when the OTA actually overpaid that settlement.</p>
+          <%= render PanelsUI::Alert.new(tone: :warning, title: "Overpayment entered", role: :status) do |alert| %>
+            <% alert.with_description { "One or more allocation amounts exceed the outstanding balance. Continue only when the OTA actually overpaid that settlement." } %>
           <% end %>
         </div>
 
@@ -200,13 +229,21 @@
         <% end %>
       </section>
 
-      <div class="flex flex-wrap justify-end gap-3">
-        <%= render PanelsUI::Button.new(label: "Cancel", as: :a, href: channel_settlements_hotel_reports_path(current_hotel), variant: :secondary) %>
-        <%= render PanelsUI::Button.new(as: :button, type: :submit, disabled: @allocations.empty?) do %>
-          <%= app_icon "receipt", class: "size-4", aria: { hidden: "true" } %>
-          <span>Record receipt</span>
-        <% end %>
-      </div>
+      <footer class="flex flex-col gap-3 border-t border-border py-4 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-sm text-muted-foreground">The receipt is posted only after its full amount is allocated.</p>
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <%= render PanelsUI::Button.new(
+                label: "Cancel",
+                as: :a,
+                href: channel_settlements_hotel_reports_path(current_hotel),
+                variant: :secondary,
+                class: "w-full sm:w-auto") %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, disabled: @allocations.empty?, class: "w-full sm:w-auto") do %>
+            <%= app_icon "receipt", class: "size-4", aria: { hidden: "true" } %>
+            <span>Record receipt</span>
+          <% end %>
+        </div>
+      </footer>
     <% end %>
   <% end %>
 </div>

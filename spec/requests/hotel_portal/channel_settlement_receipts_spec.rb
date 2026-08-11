@@ -38,6 +38,35 @@ RSpec.describe "HotelPortal::ChannelSettlementReceipts", type: :request do
     document = Nokogiri::HTML(response.body)
     expect(document.at_css("#hotel-breadcrumb").text.squish).to eq("Financial Reports OTA Settlements Record Receipt")
     expect(document.at_css("button.panel-button svg")).to be_present
+    footer = document.at_css("form footer")
+    expect(footer).to be_present
+    expect(footer["class"]).to include("border-t")
+    expect(footer.text.squish).to include("The receipt is posted only after its full amount is allocated.")
+  end
+
+  it "links hotel profile managers to Payment Methods when receipt setup is incomplete" do
+    profile_permission = Permission.find_or_create_by!(slug: "manage_hotel_profile") do |record|
+      record.name = "Manage Hotel Profile"
+    end
+    role.permissions << profile_permission
+
+    get new_hotel_channel_settlement_receipt_path(hotel)
+
+    page = Capybara.string(response.body)
+    expect(page).to have_text("Add a receiving payment method")
+    expect(page).to have_text("Hotel Settings → Payment Methods")
+    expect(page).to have_link("Open Payment Methods", href: hotel_payment_methods_path(hotel))
+  end
+
+  it "explains when there are no outstanding settlements" do
+    allocation.destroy!
+
+    get new_hotel_channel_settlement_receipt_path(hotel)
+
+    page = Capybara.string(response.body)
+    expect(page).to have_text("No outstanding OTA settlements")
+    expect(page).to have_text("A receipt can be recorded after an OTA booking creates an expected settlement balance.")
+    expect(page).to have_link("View OTA reconciliation", href: channel_settlements_hotel_reports_path(hotel))
   end
 
   it "defaults to an available pair and renders accessible application behavior" do

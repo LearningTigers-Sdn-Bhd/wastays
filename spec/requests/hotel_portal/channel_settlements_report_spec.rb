@@ -14,6 +14,8 @@ RSpec.describe "Hotel portal OTA settlement report", type: :request do
   before do
     permission = Permission.find_by(slug: "view_reports") || create(:permission, name: "View Reports", slug: "view_reports")
     role.permissions << permission
+    manage_receipts = Permission.find_by(slug: "manage_ar_payments") || create(:permission, name: "Manage AR Payments", slug: "manage_ar_payments")
+    role.permissions << manage_receipts
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     feature = create(:feature, feature_group: feature_group, slug: "excel_pdf_export")
     create(:plan_feature, plan: plan, feature: feature, enabled: true)
@@ -49,6 +51,8 @@ RSpec.describe "Hotel portal OTA settlement report", type: :request do
     expect(page).to have_text("MYR 90.00")
     expect(page).to have_text("USD 75.00")
     expect(page).to have_link("OTA Settlements", href: channel_settlements_hotel_reports_path(hotel))
+    record_receipt = page.find_link("Record receipt")
+    expect(record_receipt.find(:xpath, "..")[:class].split).to include("sm:self-end")
     expect(page).to have_link("Export CSV")
     expect(page).to have_link("Export Excel")
     expect(page).to have_no_link("Export PDF")

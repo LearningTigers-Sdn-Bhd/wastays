@@ -12,13 +12,15 @@
     <% end %>
     <% header.with_actions do %>
       <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
-        <%= render PanelsUI::Button.new(
-              as: :a,
-              href: new_hotel_channel_settlement_receipt_path(current_hotel),
-              variant: :primary) do %>
-          <%= app_icon "receipt", class: "size-4", aria: { hidden: "true" } %>
-          <span>Record receipt</span>
-        <% end %>
+        <div class="sm:self-end">
+          <%= render PanelsUI::Button.new(
+                as: :a,
+                href: new_hotel_channel_settlement_receipt_path(current_hotel),
+                variant: :primary) do %>
+            <%= app_icon "receipt", class: "size-4", aria: { hidden: "true" } %>
+            <span>Record receipt</span>
+          <% end %>
+        </div>
       <% end %>
       <% export_params = {
            start_date: @report.start_date,
@@ -99,19 +101,23 @@
   </section>
 
   <% if @report.attention_rows.any? %>
-    <%= render PanelsUI::Alert.new(tone: :warning, title: "Settlement review needed", role: :status) do %>
-      <ul class="space-y-2 text-sm">
-        <% @report.attention_rows.first(5).each do |row| %>
-          <li class="break-words">
-            <span class="font-medium"><%= row[:ota] %> · <%= row[:reference] %></span>
-            <span class="text-muted-foreground">— <%= row[:message] %></span>
-          </li>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Settlement review needed", role: :status) do |alert| %>
+      <% alert.with_description do %>
+        <ul class="space-y-2 text-sm">
+          <% @report.attention_rows.first(5).each do |row| %>
+            <li class="break-words">
+              <span class="font-medium"><%= row[:ota] %> · <%= row[:reference] %></span>
+              <span class="text-muted-foreground">— <%= row[:message] %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+      <% if @report.attention_rows.size > 5 %>
+        <% alert.with_actions do %>
+          <%= link_to "Review all #{@report.attention_rows.size} settlements",
+                channel_settlements_hotel_reports_path(current_hotel, request.query_parameters.merge(status: "needs_attention", page: nil)),
+                class: "text-sm font-medium text-primary underline underline-offset-2" %>
         <% end %>
-      </ul>
-      <% if @report.attention_rows.many? && @report.attention_rows.size > 5 %>
-        <%= link_to "Review all #{@report.attention_rows.size} settlements",
-              channel_settlements_hotel_reports_path(current_hotel, request.query_parameters.merge(status: "needs_attention", page: nil)),
-              class: "text-sm font-medium text-primary underline underline-offset-2" %>
       <% end %>
     <% end %>
   <% end %>
