@@ -133,20 +133,38 @@ module HotelPortal
           return tag.td(class: "panel-record-table__control") unless @removable || @remove_disabled_reason.present?
 
           tag.td(class: "panel-record-table__control") do
-            render PanelsUI::Button.new(
-              as: :button,
-              variant: :ghost,
-              size: :icon_sm,
-              icon_only: true,
-              aria_label: @remove_label,
-              disabled: !@removable,
-              title: @remove_disabled_reason,
-              data: {
-                action: "#{CONTROLLER}#remove",
-                record_table_confirm: @confirm
-              }.compact
-            ).with_content(helpers.app_icon("trash-2", class: "size-4", aria: { hidden: "true" }))
+            @removable ? remove_button : reason_hint
           end
+        end
+
+        def remove_button
+          render PanelsUI::Button.new(
+            as: :button,
+            variant: :ghost,
+            size: :icon_sm,
+            icon_only: true,
+            aria_label: @remove_label,
+            title: @remove_disabled_reason,
+            data: {
+              action: "#{CONTROLLER}#remove",
+              record_table_confirm: @confirm
+            }.compact
+          ).with_content(helpers.app_icon("trash-2", class: "size-4", aria: { hidden: "true" }))
+        end
+
+        # A row that cannot be discarded says why, where the remove control would
+        # have been. A greyed-out bin says only that discarding is off; the hint
+        # says what makes it so — and unlike a disabled control it can be reached
+        # by keyboard, which is the same trade the column hints make.
+        def reason_hint
+          trigger = tag.button(
+            helpers.app_icon("info", class: "size-4", aria: { hidden: "true" }),
+            type: "button",
+            class: "panel-record-table__hint",
+            aria: { label: @remove_disabled_reason }
+          )
+
+          render PanelsUI::Tooltip.new(text: @remove_disabled_reason, class: "max-w-64").with_content(trigger)
         end
       end
 

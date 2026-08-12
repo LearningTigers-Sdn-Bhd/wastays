@@ -16,6 +16,14 @@
     white-space: nowrap;
   }
 
+  /* The cell holds its control on one line. The hint that stands in for the
+     control when a row cannot be discarded is a sentence, and inherited that
+     rule through the bubble — which then ran off the page instead of wrapping
+     inside the width the tooltip sets for itself. */
+  .panel-record-table__control .tooltip {
+    white-space: normal;
+  }
+
   /* The region owns the frame, not the table wrapper inside it. Two rounded boxes
      meant two radii to keep in step — and they were not in step, so the outer box
      clipped the inner one's corners. Rounding here also clips the header's own
