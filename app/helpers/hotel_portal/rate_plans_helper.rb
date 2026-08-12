@@ -122,7 +122,7 @@ module HotelPortal
             label: "Use percentage of the one-adult price for #{label}",
             label_hidden: true,
             variant: :icon,
-            size: :lg,
+            size: :md,
             off_icon: "dollar-sign",
             on_icon: "percent"
           ))

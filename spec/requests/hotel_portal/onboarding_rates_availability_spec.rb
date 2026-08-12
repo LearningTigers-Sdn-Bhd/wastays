@@ -91,7 +91,7 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     expect(bands_section.css("input[name*='[label]']")).not_to be_empty
     expect(bands_section.css("input[name*='price']")).to be_empty
     expect(response.parsed_body.css("input[name*='[age_band_prices]']")).not_to be_empty
-    mode_switches = response.parsed_body.css("th .panel-switch[data-variant='icon'][data-size='lg'] input[role='switch']")
+    mode_switches = response.parsed_body.css("th .panel-switch[data-variant='icon'][data-size='md'] input[role='switch']")
     expect(mode_switches.size).to eq(2)
     expect(mode_switches.map { |input| input["name"] }).to eq(
       %w[child_bands[0][pricing_mode] child_bands[1][pricing_mode]]
