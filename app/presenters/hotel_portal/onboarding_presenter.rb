@@ -40,7 +40,8 @@ module HotelPortal
       "room_revenue" => { form_id: "onboarding-room-revenue-form" },
       "rooms" => { form_id: "onboarding-rooms-form" },
       "rates_availability" => { form_id: "onboarding-rates-availability-form" },
-      "extra_charges" => { form_id: "onboarding-extra-charges-form", skip_label: "No extra charges for now" }
+      "extra_charges" => { form_id: "onboarding-extra-charges-form", skip_label: "No extra charges for now" },
+      "discounts" => { form_id: "onboarding-discounts-form", skip_label: "No discounts for now" }
     }.freeze
 
     def initialize(hotel:, navigation:, current_entry:)

@@ -94,4 +94,53 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
       end
     end
   end
+
+  describe "discounts" do
+    it "stays locked until extra charges resolve" do
+      resolve_through!("rates_availability")
+
+      get hotel_onboarding_section_path(hotel, section_key: "discounts")
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "extra_charges"))
+    end
+
+    context "once reachable" do
+      before { resolve_through!("extra_charges") }
+
+      it "offers eligible charges even when extra charges were skipped" do
+        hotel.onboarding_sections.find_by!(section_key: "extra_charges").update!(state: "skipped")
+
+        get hotel_onboarding_section_path(hotel, section_key: "discounts")
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("Extra charges were skipped")
+        expect(response.body).to include("Room Revenue (ROOM)")
+      end
+
+      it "saves and advances to payment methods" do
+        patch hotel_onboarding_section_path(hotel, section_key: "discounts"),
+              params: {
+                navigation_action: "save_continue",
+                discount_entries: { "0" => {
+                  "name" => "Early bird", "code" => "EARLYBIRD", "pricing_type" => "percentage",
+                  "rate_value" => "10", "application_scope" => "all_eligible_charges",
+                  "allow_amount_override" => "false", "active" => "true", "_destroy" => "false"
+                } }
+              }
+
+        expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "payment_methods"))
+        expect(hotel.hotel_discounts.sole.name).to eq("Early bird")
+      end
+
+      it "records an explicit skip decision" do
+        patch hotel_onboarding_section_path(hotel, section_key: "discounts"),
+              params: { navigation_action: "skip" }
+
+        expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "payment_methods"))
+        section = hotel.onboarding_sections.find_by(section_key: "discounts")
+        expect(section.state).to eq("skipped")
+        expect(section.decision_metadata).to include("decision" => "no_discounts")
+      end
+    end
+  end
 end

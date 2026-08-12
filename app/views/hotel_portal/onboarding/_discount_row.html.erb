@@ -1,0 +1,86 @@
+<%# The record table owns the row and its remove control; this partial supplies
+    only the field cells. Name and code live on the transaction code, so the
+    object is built as the pair the save path writes. %>
+<% object = HotelDiscount.new(transaction_code: TransactionCode.new) %>
+<% object.assign_attributes(
+     name: entry["name"],
+     code: entry["code"],
+     pricing_type: entry["pricing_type"].presence || "manual",
+     rate_value: entry["rate_value"],
+     application_scope: entry["application_scope"].presence || "all_eligible_charges"
+   ) %>
+<%= fields_for "discount_entries[#{index}]", object do |row_form| %>
+  <td>
+    <%= row_form.hidden_field :id, value: entry["id"] %>
+    <%= hidden_field_tag "discount_entries[#{index}][transaction_code_id]", entry["transaction_code_id"] %>
+    <%= hidden_field_tag "discount_entries[#{index}][_destroy]", "false", data: { record_table_destroy: true } %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :name, label: "Name", size: :sm, required: true) do |field| %>
+      <% field.with_input(placeholder: "Early bird") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :code, label: "Code", size: :sm, required: true,
+                                       hint: "Up to 10 characters.") do |field| %>
+      <% field.with_input(placeholder: "EARLYBIRD", maxlength: 10, class: "uppercase") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :pricing_type, label: "Pricing", size: :sm) do |field| %>
+      <% field.with_select_menu(
+           [ { label: "Staff enters the amount", value: "manual" },
+             { label: "Fixed amount", value: "fixed" },
+             { label: "Percentage", value: "percentage" } ],
+           selected: entry["pricing_type"].presence || "manual") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :rate_value, label: "Amount", size: :sm,
+                                       hint: "Leave blank when staff enter the amount.") do |field| %>
+      <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :application_scope, label: "Applies to", size: :sm) do |field| %>
+      <% field.with_select_menu(
+           [ { label: "Room charges", value: "room_charges" },
+             { label: "All eligible charges", value: "all_eligible_charges" },
+             { label: "Only the charges I choose", value: "selected_charges" } ],
+           selected: entry["application_scope"].presence || "all_eligible_charges") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%# Only read when the scope above is "Only the charges I choose"; the save
+        path clears it otherwise. %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :applicable_transaction_code_ids,
+                                       label: "Eligible charges", size: :sm) do |field| %>
+      <% field.with_multi_select(
+           charge_code_choices,
+           selected: Array(entry["applicable_transaction_code_ids"]).map(&:to_s),
+           prompt: "All eligible charges",
+           max_visible_items: 2) %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::Switch.new(
+          form: row_form,
+          attribute: :allow_amount_override,
+          label: "Staff can change the amount",
+          size: :sm,
+          checked: entry.fetch("allow_amount_override", "true") != "false") %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::Switch.new(
+          form: row_form,
+          attribute: :active,
+          label: "Offer this",
+          size: :sm,
+          checked: entry.fetch("active", "true") != "false") %>
+  </td>
+<% end %>

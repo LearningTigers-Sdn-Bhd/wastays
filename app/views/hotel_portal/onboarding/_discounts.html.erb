@@ -1,0 +1,105 @@
+<section aria-labelledby="onboarding-discounts-heading" class="space-y-5">
+  <div>
+    <h2 id="onboarding-discounts-heading" class="text-base font-semibold">What can reduce a guest's bill?</h2>
+    <p class="mt-1 text-sm text-muted-foreground">
+      Offers staff apply to a folio — an early bird rate, a staff rate, a goodwill rebate.
+      Each one names the charges it is allowed to reduce.
+    </p>
+  </div>
+
+  <% if presenter.read_only? %>
+    <% if @discount_entries.any? %>
+      <%= render PanelsUI::Table.new(caption: "Discounts", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Code</th>
+            <th scope="col">Pricing</th>
+            <th scope="col">Applies to</th>
+            <th scope="col">Status</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @discount_entries.each do |entry| %>
+            <tr>
+              <td class="font-medium"><%= entry["name"] %></td>
+              <td class="text-muted-foreground"><%= entry["code"] %></td>
+              <td class="tabular-nums">
+                <% if entry["pricing_type"] == "manual" %>
+                  Staff enters the amount
+                <% elsif entry["pricing_type"] == "percentage" %>
+                  <%= entry["rate_value"] %>%
+                <% else %>
+                  <%= current_hotel.default_currency.presence || "MYR" %> <%= entry["rate_value"] %>
+                <% end %>
+              </td>
+              <td class="text-muted-foreground"><%= entry["application_scope"].to_s.humanize %></td>
+              <td class="text-muted-foreground"><%= entry["active"] == "false" ? "Not offered" : "Offered" %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No discounts were added.</p>
+    <% end %>
+
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "discounts"),
+                  method: :patch, id: "onboarding-discounts-form" do %>
+      <%# The eligible-charge list is drawn from every charge code this property
+          posts, so it has content whether or not extra charges were set up. Say
+          so rather than leaving an owner wondering what is missing. %>
+      <% if @extra_charges_skipped %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "Extra charges were skipped") do |alert| %>
+          <% alert.with_description do %>
+            Discounts can still target this property's standard charges.
+            <%= link_to "Go back and add extra charges",
+                        hotel_onboarding_section_path(current_hotel, section_key: "extra_charges"),
+                        class: "underline underline-offset-4" %>
+            if an offer should cover something you sell.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if @discount_entries.any? && @discount_entries.none? { |entry| entry["id"].present? } %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "This is a suggestion, not saved yet") do |alert| %>
+          <% alert.with_description do %>
+            Most properties keep a general rebate for goodwill adjustments. Edit it, remove it,
+            or add your own. Nothing is created until you save.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <div class="mt-4">
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Discounts",
+              add_label: "Add discount",
+              empty: "No discounts yet. If this property offers none, choose no discounts for now.",
+              spreadsheet: true) do |table| %>
+          <% table.with_column(label: "Name", required: true) %>
+          <% table.with_column(label: "Code", required: true) %>
+          <% table.with_column(label: "Pricing") %>
+          <% table.with_column(label: "Amount") %>
+          <% table.with_column(label: "Applies to") %>
+          <% table.with_column(label: "Eligible charges") %>
+          <% table.with_column(label: "Amount editable") %>
+          <% table.with_column(label: "Offer this") %>
+
+          <% @discount_entries.each_with_index do |entry, index| %>
+            <% table.with_row(
+                 remove_label: "Remove #{entry['name'].presence || 'this discount'}",
+                 persisted: entry["id"].present?,
+                 key: entry["client_key"]) do %>
+              <%= render "discount_row", entry: entry, index: index, charge_code_choices: @charge_code_choices %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this discount") do %>
+            <%= render "discount_row", entry: {}, index: "NEW_RECORD", charge_code_choices: @charge_code_choices %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

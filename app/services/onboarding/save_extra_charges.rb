@@ -14,14 +14,19 @@ module Onboarding
   # each save would resurrect the defaults an owner had just removed, and would
   # double up against the prefilled rows already in the submission.
   class SaveExtraCharges
+    include CommercialRows
+
     Result = ApplicationResult.define(:section, :entries)
 
     ENTRY_FIELDS = %w[
       id transaction_code_id client_key _destroy
       name code category description pricing_type rate_value
       charging_unit percentage_basis allow_amount_override active
+      tax_rule_keys
     ].freeze
 
+    RECORD_LABEL = "Extra charge"
+    FAILURE_MESSAGE = "Extra charges could not be saved."
     DOWNSTREAM_SECTIONS = %w[discounts payment_methods].freeze
 
     def self.call(...) = new(...).call
@@ -94,7 +99,7 @@ module Onboarding
         )
         next if result.success?
 
-        fail_transaction!("Extra charge #{index + 1}: #{result.extra_charge.errors.full_messages.to_sentence}")
+        fail_transaction!(row_error(index, result.extra_charge.errors.full_messages.to_sentence))
       end
     end
 
@@ -139,21 +144,6 @@ module Onboarding
         end
     end
 
-    # Two codes that normalize alike pass their own row's validation and then
-    # collide on the per-hotel unique index, which would surface as a 500 rather
-    # than something the owner can act on.
-    def duplicate_code_error
-      return @duplicate_code_error if defined?(@duplicate_code_error)
-
-      codes = retained_rows.map { |row| normalize_code(row["code"]) }.reject(&:blank?)
-      duplicate = codes.tally.find { |_code, count| count > 1 }&.first
-      @duplicate_code_error = ("Extra charge codes must be unique. #{duplicate} is used more than once." if duplicate)
-    end
-
-    def normalize_code(value)
-      value.to_s.strip.upcase.gsub(/[^A-Z0-9]+/, "_").gsub(/_+/, "_").delete_prefix("_").delete_suffix("_")
-    end
-
     # --- section transition -------------------------------------------------
 
     def transition_section
@@ -173,28 +163,6 @@ module Onboarding
     end
 
     # --- entries ------------------------------------------------------------
-
-    def rows
-      @rows ||= normalize_collection(@entries).map do |row|
-        row.slice(*ENTRY_FIELDS, "tax_rule_keys")
-      end
-    end
-
-    def retained_rows
-      @retained_rows ||= rows.reject { |row| discarded?(row) || blank_row?(row) }
-    end
-
-    def discarded_rows
-      @discarded_rows ||= rows.select { |row| discarded?(row) && row["id"].present? }
-    end
-
-    def discarded?(row) = ActiveModel::Type::Boolean.new.cast(row["_destroy"])
-    def blank_row?(row) = row["id"].blank? && row["name"].to_s.strip.blank? && row["code"].to_s.strip.blank?
-
-    def normalize_collection(value)
-      collection = value.respond_to?(:to_unsafe_h) ? value.to_unsafe_h.values : (value.is_a?(Hash) ? value.values : Array(value))
-      collection.map { |item| (item.respond_to?(:to_unsafe_h) ? item.to_unsafe_h : item.to_h).deep_stringify_keys }
-    end
 
     def existing_charges
       @existing_charges ||= hotel.hotel_extra_charges.includes(:transaction_code).index_by { |charge| charge.id.to_s }
@@ -231,13 +199,8 @@ module Onboarding
       end
     end
 
-    def fail_transaction!(message)
-      @error = message.presence || "Extra charges could not be saved."
-      raise ActiveRecord::Rollback
-    end
-
     def failure(message, section: nil)
-      Result.failure(message.presence || "Extra charges could not be saved.", section: section, entries: rows)
+      Result.failure(message.presence || FAILURE_MESSAGE, section: section, entries: rows)
     end
   end
 end

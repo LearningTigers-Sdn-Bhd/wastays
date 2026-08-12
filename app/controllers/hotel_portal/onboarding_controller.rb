@@ -17,6 +17,7 @@ module HotelPortal
       rooms
       rates_availability
       extra_charges
+      discounts
     ].freeze
 
     # Skipping an implemented section is a recorded decision, not a silent
@@ -24,7 +25,8 @@ module HotelPortal
     # to tell the owner afterwards. Sections absent here cannot be skipped.
     SECTION_SKIPS = {
       "staff_setup" => "No additional staff will be invited for now.",
-      "extra_charges" => "No extra charges will be offered for now."
+      "extra_charges" => "No extra charges will be offered for now.",
+      "discounts" => "No discounts will be offered for now."
     }.freeze
 
     before_action :authorize_onboarding!
@@ -116,6 +118,52 @@ module HotelPortal
       when "extra_charges"
         @extra_charge_entries = entries || persisted_extra_charge_entries
         @tax_rule_choices = TaxRuleOptionsQuery.new(current_hotel).choices
+      when "discounts"
+        @discount_entries = entries || persisted_discount_entries
+        @charge_code_choices = current_hotel.transaction_codes.active.discountable.order(:code)
+                                            .map { |code| { label: "#{code.name} (#{code.code})", value: code.id.to_s } }
+        @extra_charges_skipped = @navigation.fetch("extra_charges").record.state == "skipped"
+      end
+    end
+
+    def persisted_discount_entries
+      adopted = current_hotel.hotel_discounts.includes(:transaction_code, :applicable_transaction_codes).ordered.map do |discount|
+        {
+          "id" => discount.id.to_s,
+          "client_key" => "discount-#{discount.id}",
+          "name" => discount.name,
+          "code" => discount.code,
+          "description" => discount.description,
+          "pricing_type" => discount.pricing_type,
+          "rate_value" => discount.rate_value&.to_s,
+          "application_scope" => discount.application_scope,
+          "allow_amount_override" => discount.allow_amount_override.to_s,
+          "active" => discount.active?.to_s,
+          "applicable_transaction_code_ids" => discount.applicable_transaction_codes.map { |code| code.id.to_s }
+        }
+      end
+      return adopted if adopted.any? || @presenter.read_only?
+
+      suggested_discount_entries
+    end
+
+    def suggested_discount_entries
+      current_hotel.transaction_codes
+                   .where(kind: "adjustment", category: "discount")
+                   .where.missing(:hotel_discount)
+                   .order(:code)
+                   .map do |code|
+        {
+          "transaction_code_id" => code.id.to_s,
+          "client_key" => "suggested-#{code.system_key}",
+          "name" => code.name,
+          "code" => code.code,
+          "pricing_type" => "manual",
+          "application_scope" => "all_eligible_charges",
+          "allow_amount_override" => "true",
+          "active" => "true",
+          "applicable_transaction_code_ids" => []
+        }
       end
     end
 
@@ -241,6 +289,13 @@ module HotelPortal
             hotel: current_hotel,
             actor: current_user,
             entries: params[:extra_charge_entries] || {},
+            complete: complete
+          )
+        when "discounts"
+          Onboarding::SaveDiscounts.call(
+            hotel: current_hotel,
+            actor: current_user,
+            entries: params[:discount_entries] || {},
             complete: complete
           )
         end

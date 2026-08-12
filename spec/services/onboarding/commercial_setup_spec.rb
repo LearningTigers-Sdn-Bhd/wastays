@@ -161,6 +161,106 @@ RSpec.describe "Onboarding commercial setup" do
     end
   end
 
+  describe Onboarding::SaveDiscounts do
+    before do
+      seed_transaction_codes!
+      resolve_through!("extra_charges")
+    end
+
+    def discount_entry(overrides = {})
+      {
+        "client_key" => "draft-1",
+        "name" => "Early bird",
+        "code" => "EARLYBIRD",
+        "pricing_type" => "percentage",
+        "rate_value" => "10",
+        "application_scope" => "all_eligible_charges",
+        "allow_amount_override" => "false",
+        "active" => "true"
+      }.merge(overrides)
+    end
+
+    def save(entries:, complete: false)
+      described_class.call(hotel: hotel, actor: actor, entries: entries, complete: complete)
+    end
+
+    it "creates a real discount and resolves the section" do
+      result = save(entries: { "draft-1" => discount_entry }, complete: true)
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_discounts.sole).to have_attributes(
+        name: "Early bird", code: "EARLYBIRD", pricing_type: "percentage", rate_value: 10.to_d
+      )
+      expect(result.section).to have_attributes(state: "complete")
+      expect(result.section.decision_metadata).not_to have_key("placeholder")
+    end
+
+    it "adopts the seeded rebate code instead of minting a duplicate" do
+      code = hotel.transaction_codes.find_by!(system_key: "rebate")
+
+      result = save(entries: {
+        "suggested" => discount_entry(
+          "transaction_code_id" => code.id.to_s, "name" => "Rebate", "code" => "REBATE",
+          "pricing_type" => "manual", "rate_value" => ""
+        )
+      }, complete: true)
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_discounts.sole.transaction_code_id).to eq(code.id)
+      expect(hotel.transaction_codes.where(code: "REBATE").count).to eq(1)
+    end
+
+    it "targets only the charges chosen" do
+      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+
+      result = save(entries: {
+        "draft-1" => discount_entry(
+          "application_scope" => "selected_charges",
+          "applicable_transaction_code_ids" => [ code.id.to_s ]
+        )
+      }, complete: true)
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_discounts.sole.applicable_transaction_codes).to contain_exactly(code)
+    end
+
+    it "refuses a chosen-charges discount with nothing chosen" do
+      result = save(entries: {
+        "draft-1" => discount_entry("application_scope" => "selected_charges", "applicable_transaction_code_ids" => [])
+      })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to start_with("Discount 1:")
+      expect(hotel.hotel_discounts).to be_empty
+    end
+
+    # Discounts::Save writes join rows before validating and unwinds with its own
+    # Rollback, which is a no-op nested inside ours. The outer transaction is
+    # what has to leave the join table clean.
+    it "leaves no join rows behind when a later row fails" do
+      code = hotel.transaction_codes.find_by!(system_key: "fnb_revenue")
+
+      expect {
+        save(entries: {
+          "first" => discount_entry(
+            "client_key" => "first", "application_scope" => "selected_charges",
+            "applicable_transaction_code_ids" => [ code.id.to_s ]
+          ),
+          "second" => discount_entry("client_key" => "second", "name" => "", "code" => "STAFF")
+        })
+      }.not_to change(HotelDiscountTransactionCode, :count)
+
+      expect(hotel.hotel_discounts).to be_empty
+    end
+
+    it "will not complete with nothing offered" do
+      result = save(entries: {}, complete: true)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("no discounts for now")
+    end
+  end
+
   describe Onboarding::SkipOptionalSection do
     before { resolve_through!("rates_availability") }
 
