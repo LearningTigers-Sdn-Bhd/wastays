@@ -164,10 +164,10 @@ export default class extends Controller {
   // percent (40 means 40%), while the rate plan's flat child multiplier is
   // already a fraction. `anchor` is the per-adult nightly rate for this room's
   // occupancy — under a matrix that is the room total divided by its adults.
-  perChildPrice(anchor, ageBands, flatMultiplier, age) {
+  perChildPrice(anchor, percentageAnchor, ageBands, flatMultiplier, age) {
     const band = ageBands.find((b) => age >= b.minAge && age <= b.maxAge)
     if (band) {
-      return band.pricingMode === "amount" ? band.value : anchor * (band.value / 100)
+      return band.pricingMode === "amount" ? band.value : percentageAnchor * (band.value / 100)
     }
     return anchor * flatMultiplier
   }
@@ -183,10 +183,11 @@ export default class extends Controller {
     // already accounts for the single-occupancy case); without one it is the
     // per-person rate times heads, plus the single supplement.
     const anchor = matrixPriced && occ.adults > 0 ? occupancyTotal / occ.adults : room.paxPrice
+    const percentageAnchor = room.occupancyPrices[1] ?? room.paxPrice
     let price = matrixPriced ? occupancyTotal : occ.adults * room.paxPrice
 
     if (occ.childAges.length === occ.children && occ.children > 0) {
-      price += occ.childAges.reduce((sum, age) => sum + this.perChildPrice(anchor, room.ageBands, room.childMultiplier, age), 0)
+      price += occ.childAges.reduce((sum, age) => sum + this.perChildPrice(anchor, percentageAnchor, room.ageBands, room.childMultiplier, age), 0)
     } else {
       price += occ.children * anchor * room.childMultiplier
     }

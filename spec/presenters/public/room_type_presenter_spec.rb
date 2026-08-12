@@ -65,5 +65,16 @@ RSpec.describe Public::RoomTypePresenter do
         { minAge: 0, maxAge: 12, pricingMode: "amount", value: 35.0 }
       ])
     end
+
+    it "exposes a room-specific percentage mode to the browser preview" do
+      band = create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 0, max_age: 12,
+                                         pricing_mode: "multiplier", price_value: 0)
+      assignment = room_type.room_type_rate_plans.find_by!(rate_plan: rate_plan)
+      assignment.age_band_prices.create!(rate_plan_age_band: band, price: 50)
+
+      expect(presenter.rate_plan_age_bands).to eq([
+        { minAge: 0, maxAge: 12, pricingMode: "multiplier", value: 50.0 }
+      ])
+    end
   end
 end

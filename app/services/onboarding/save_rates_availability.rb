@@ -247,8 +247,9 @@ module Onboarding
             min_age: integer(band["min_age"]),
             max_age: integer(band["max_age"]),
             label: band["label"].to_s.strip.presence,
+            pricing_mode: (band["pricing_mode"] if band["pricing_mode"].in?(RatePlanAgeBand::PRICING_MODES)),
             position: index
-          }
+          }.compact
         end
       else
         []
@@ -287,7 +288,7 @@ module Onboarding
       plan.rate_plan_age_bands.destroy_all
       child_band_attributes.each_with_index do |attributes, index|
         fallback = legacy_prices[index] || { pricing_mode: "amount", price_value: 0 }
-        plan.rate_plan_age_bands.create!(attributes.merge(fallback))
+        plan.rate_plan_age_bands.create!(fallback.merge(attributes))
       end
     end
 

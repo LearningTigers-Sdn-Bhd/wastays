@@ -106,6 +106,30 @@ module HotelPortal
       end
     end
 
+    def child_band_column_header(band, index, read_only: false)
+      label = child_band_column_label(band, index)
+      mode = band["pricing_mode"].presence || "amount"
+
+      tag.div(class: "flex min-w-24 flex-col items-start gap-2") do
+        safe_join([
+          tag.span(label),
+          render(PanelsUI::Switch.new(
+            name: "child_bands[#{index}][pricing_mode]",
+            value: "multiplier",
+            unchecked_value: "amount",
+            checked: mode == "multiplier",
+            disabled: read_only,
+            label: "Use percentage of the one-adult price for #{label}",
+            label_hidden: true,
+            variant: :icon,
+            size: :lg,
+            off_icon: "dollar-sign",
+            on_icon: "percent"
+          ))
+        ])
+      end
+    end
+
     def age_band_pricing_choices
       [
         { label: "% of the adult rate", value: "multiplier" },

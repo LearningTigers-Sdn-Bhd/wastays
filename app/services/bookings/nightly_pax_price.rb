@@ -23,7 +23,7 @@ module Bookings
     end
 
     def initialize(base_nightly_rate:, rate:, rate_plan:, adults:, children:, child_ages: [],
-                   adult_occupancy_price: nil, assignment: nil)
+                   adult_occupancy_price: nil, child_percentage_base: nil, assignment: nil)
       @base_nightly_rate = base_nightly_rate
       @rate = rate
       @rate_plan = rate_plan
@@ -33,6 +33,7 @@ module Bookings
       ages = Array(child_ages).map(&:to_i)
       @child_ages = (ages.size == @children) ? ages : []
       @adult_occupancy_price = adult_occupancy_price
+      @child_percentage_base = child_percentage_base || base_nightly_rate
     end
 
     def call
@@ -104,7 +105,11 @@ module Bookings
       band = @rate_plan.age_banded? ? @rate_plan.band_for_age(age) : nil
       return @base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d) if band.nil?
 
-      @assignment&.effective_age_band_price_for(band) || band.price_for(@base_nightly_rate)
+      pricing = @assignment&.effective_age_band_pricing_for(band)
+      return band.price_for(@base_nightly_rate) if pricing.nil?
+      return pricing.value if pricing.mode == "amount"
+
+      @child_percentage_base.to_d * pricing.value / 100.to_d
     end
   end
 end

@@ -101,12 +101,12 @@ module Public
       assignment = @room_type.room_type_rate_plans.find { |item| item.rate_plan_id == rate_plan.id }
 
       rate_plan.rate_plan_age_bands.map do |band|
-        room_price = assignment&.effective_age_band_price_for(band)
+        room_pricing = assignment&.effective_age_band_pricing_for(band)
         {
           minAge: band.min_age,
           maxAge: band.max_age,
-          pricingMode: room_price ? "amount" : band.pricing_mode,
-          value: (room_price || band.price_value).to_f
+          pricingMode: room_pricing&.mode || band.pricing_mode,
+          value: (room_pricing&.value || band.price_value).to_f
         }
       end
     end

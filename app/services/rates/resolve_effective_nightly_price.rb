@@ -68,6 +68,7 @@ module Rates
         children: @children,
         child_ages: @child_ages,
         adult_occupancy_price: occupancy_amount,
+        child_percentage_base: one_adult_amount || child_anchor,
         assignment: room_type_rate_plan
       )
 
@@ -112,6 +113,22 @@ module Rates
       end
 
       [ nil, nil, selected_rate ]
+    end
+
+    def one_adult_amount
+      return if @children.zero? || @child_ages.empty?
+
+      daily_price = selected_rate&.occupancy_prices&.fetch("1", nil)
+      return daily_price.to_d if daily_price.present?
+
+      starting_price = room_type_rate_plan&.occupancy_price_for(1)
+      return starting_price if starting_price.present?
+
+      return unless room_type_rate_plan&.derives_price?
+
+      anchor = anchor_rate&.occupancy_prices&.fetch("1", nil)
+      anchor ||= standard_assignment&.occupancy_price_for(1)
+      room_type_rate_plan.derive_price(anchor) if anchor.present?
     end
 
     def matrix_configured?

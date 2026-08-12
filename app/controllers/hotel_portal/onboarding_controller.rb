@@ -305,13 +305,13 @@ module HotelPortal
       bands = anchor&.rate_plan_age_bands.to_a
       return default_child_band_entries if bands.empty?
 
-      bands.map { |band| band.attributes.slice("min_age", "max_age", "label") }
+      bands.map { |band| band.attributes.slice("min_age", "max_age", "label", "pricing_mode") }
     end
 
     def default_child_band_entries
       [
-        { "min_age" => RatePlanAgeBand::AGE_RANGE.min, "max_age" => 2, "label" => "Infant" },
-        { "min_age" => 3, "max_age" => RatePlanAgeBand::REQUIRED_AGE_RANGE.max, "label" => "Child" }
+        { "min_age" => RatePlanAgeBand::AGE_RANGE.min, "max_age" => 2, "label" => "Infant", "pricing_mode" => "amount" },
+        { "min_age" => 3, "max_age" => RatePlanAgeBand::REQUIRED_AGE_RANGE.max, "label" => "Child", "pricing_mode" => "amount" }
       ]
     end
 

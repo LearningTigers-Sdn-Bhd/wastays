@@ -1,4 +1,5 @@
 class RoomTypeRatePlan < ApplicationRecord
+  AgeBandPricing = Data.define(:mode, :value)
   belongs_to :room_type
   belongs_to :rate_plan
   has_one :channel_mapping, as: :mappable, dependent: :destroy
@@ -65,8 +66,12 @@ class RoomTypeRatePlan < ApplicationRecord
   # selected plan may still override it directly; old plans without room-level
   # amounts continue to fall back to their own band percentage or amount.
   def effective_age_band_price_for(band)
+    effective_age_band_pricing_for(band)&.value
+  end
+
+  def effective_age_band_pricing_for(band)
     direct_price = age_band_price_for(band)
-    return direct_price unless direct_price.nil?
+    return AgeBandPricing.new(mode: band.pricing_mode, value: direct_price) unless direct_price.nil?
     return nil unless derives_price? && band
 
     standard_plan = room_type.standard_rate_plan
@@ -76,7 +81,10 @@ class RoomTypeRatePlan < ApplicationRecord
     standard_assignment = room_type.room_type_rate_plans.find do |assignment|
       assignment.rate_plan_id == standard_plan.id
     end
-    standard_assignment&.age_band_price_for(standard_band)
+    standard_price = standard_assignment&.age_band_price_for(standard_band)
+    return nil if standard_price.nil?
+
+    AgeBandPricing.new(mode: standard_band.pricing_mode, value: standard_price)
   end
 
   private

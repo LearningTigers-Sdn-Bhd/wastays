@@ -322,6 +322,18 @@ RSpec.describe Onboarding::SaveRatesAvailability do
       expect(result).to be_success
     end
 
+    it "saves the amount or percentage mode selected for each band column" do
+      bands = required_bands.deep_dup
+      bands["0"]["pricing_mode"] = "amount"
+      bands["1"]["pricing_mode"] = "multiplier"
+
+      result = described_class.call(hotel: pax_hotel, actor: actor, params: pax_params(bands: bands), complete: true)
+
+      expect(result).to be_success
+      expect(pax_room.standard_rate_plan.rate_plan_age_bands.reload.map(&:pricing_mode))
+        .to eq(%w[amount multiplier])
+    end
+
     it "rejects bands that stop before age 12" do
       short = full_bands.except("2")
 

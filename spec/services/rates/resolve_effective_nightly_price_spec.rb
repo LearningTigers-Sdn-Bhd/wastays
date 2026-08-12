@@ -126,6 +126,24 @@ RSpec.describe Rates::ResolveEffectiveNightlyPrice do
       expect(double).to have_attributes(amount: 300.to_d, base_amount: 300.to_d)
     end
 
+    it "prices a room child percentage from the one-adult rung" do
+      room_type.update!(max_adults: 2, max_children: 1)
+      assignment = create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: "fixed")
+      assignment.occupancy_prices.create!(adults: 1, price: 100)
+      assignment.occupancy_prices.create!(adults: 2, price: 300)
+      band = create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 0, max_age: 12,
+                                         pricing_mode: "multiplier", price_value: 0)
+      assignment.age_band_prices.create!(rate_plan_age_band: band, price: 50)
+
+      family = described_class.call(
+        room_type: room_type, rate_plan: rate_plan, date: date,
+        adults: 2, children: 1, child_ages: [ 8 ]
+      )
+
+      # Adult room total 300 + 50% of the one-adult rung (100).
+      expect(family.amount).to eq(350.to_d)
+    end
+
     it "lets a date-specific occupancy price override only that occupancy" do
       room_type.update!(max_adults: 2)
       assignment = create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan, pricing_mode: "fixed")

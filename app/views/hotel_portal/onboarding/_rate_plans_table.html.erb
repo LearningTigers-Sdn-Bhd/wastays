@@ -19,7 +19,7 @@
   <% if current_hotel.sells_per_person? %>
     <% (1..max_adults).each { |adults| table.with_column(label: pluralize(adults, "adult")) } %>
     <% bands.each_with_index do |band, index| %>
-      <% table.with_column(label: child_band_column_label(band, index)) %>
+      <% table.with_column(label: child_band_column_header(band, index, read_only: presenter.read_only?)) %>
     <% end %>
   <% else %>
     <% table.with_column(label: "Base occupancy") %>

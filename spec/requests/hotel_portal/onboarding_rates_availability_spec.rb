@@ -91,6 +91,11 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     expect(bands_section.css("input[name*='[label]']")).not_to be_empty
     expect(bands_section.css("input[name*='price']")).to be_empty
     expect(response.parsed_body.css("input[name*='[age_band_prices]']")).not_to be_empty
+    mode_switches = response.parsed_body.css("th .panel-switch[data-variant='icon'][data-size='lg'] input[role='switch']")
+    expect(mode_switches.size).to eq(2)
+    expect(mode_switches.map { |input| input["name"] }).to eq(
+      %w[child_bands[0][pricing_mode] child_bands[1][pricing_mode]]
+    )
 
     # The adult columns already price a lone guest, so a supplement on top of
     # them could only ever be ignored — NightlyPaxPrice skips it whenever an
@@ -186,8 +191,9 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     header_count = table.css("thead th").size
     # remove + room category + 4 occupancy columns + 2 required child bands
     expect(header_count).to eq(8)
-    expect(table.css("thead th").map(&:text)).to include("Infant", "Child")
-    expect(table.css("thead th").map(&:text)).not_to include("Teen")
+    header_text = table.css("thead th").map { |header| header.text.squish }
+    expect(header_text).to include(a_string_starting_with("Infant"), a_string_starting_with("Child"))
+    expect(header_text).not_to include(a_string_starting_with("Teen"))
 
     table.css("tr.panel-record-table__row").each do |row|
       expect(row.css("> td").size).to eq(header_count)
