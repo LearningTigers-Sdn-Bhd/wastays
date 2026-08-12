@@ -11,10 +11,14 @@ module Onboarding
 
     Result = ApplicationResult.define(:section, :entries)
 
+    # Onboarding asks for three things: what the offer is called, how much it
+    # takes off, and what it is allowed to reduce. Everything else the record
+    # holds is either derived from those or kept as it stands — the settings
+    # portal is where the full editor lives, and a table that does not show a
+    # field must not quietly rewrite it.
     ENTRY_FIELDS = %w[
       id transaction_code_id client_key _destroy
-      name code description pricing_type rate_value application_scope
-      allow_amount_override active applicable_transaction_code_ids
+      name code pricing_type rate_value application_scope applicable_transaction_code_ids
     ].freeze
 
     RECORD_LABEL = "Discount"
@@ -69,11 +73,36 @@ module Onboarding
         # Rollback only exits its own block, so the outer transaction is what
         # actually undoes those writes — which means the result has to be checked
         # and re-raised rather than trusted to have cleaned up after itself.
-        result = Discounts::Save.call(discount: discount, attributes: row)
+        result = Discounts::Save.call(discount: discount, attributes: discount_attributes(discount, row))
         next if result.success?
 
         fail_transaction!(row_error(index, result.error))
       end
+    end
+
+    def prepare_row(row) = derived_code_row(row, fallback: "DISCOUNT")
+
+    # The three submitted fields, plus what the record already says about
+    # everything the table leaves out. Description, whether the offer is active
+    # and whether staff may amend the calculated amount all come off the record,
+    # so a discount configured in the settings portal survives a pass through
+    # onboarding unchanged.
+    #
+    # `allow_amount_override` is passed rather than assumed: Discounts::Save
+    # only reads it for fixed pricing — manual always allows it, percentage
+    # never does, which is what the model's own validation requires.
+    def discount_attributes(discount, row)
+      {
+        "name" => row["name"],
+        "code" => row["code"].presence || discount.code,
+        "description" => discount.description,
+        "pricing_type" => row["pricing_type"].presence || "manual",
+        "rate_value" => row["rate_value"],
+        "application_scope" => row["application_scope"].presence || "all_eligible_charges",
+        "applicable_transaction_code_ids" => row["applicable_transaction_code_ids"],
+        "active" => discount.active?.to_s,
+        "allow_amount_override" => discount.allow_amount_override.to_s
+      }
     end
 
     def build_or_find_discount(row)
@@ -131,12 +160,9 @@ module Onboarding
           "client_key" => "discount-#{discount.id}",
           "name" => discount.name,
           "code" => discount.code,
-          "description" => discount.description,
           "pricing_type" => discount.pricing_type,
           "rate_value" => discount.rate_value&.to_s,
           "application_scope" => discount.application_scope,
-          "allow_amount_override" => discount.allow_amount_override.to_s,
-          "active" => discount.active?.to_s,
           "applicable_transaction_code_ids" => discount.applicable_transaction_codes.map { |code| code.id.to_s }
         }
       end

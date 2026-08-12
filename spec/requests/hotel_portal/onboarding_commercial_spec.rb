@@ -121,6 +121,33 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Extra charges were skipped")
+        expect(response.body).to include("Food &amp; Beverage (FNB)")
+      end
+
+      # The room and its own charges are what the scope above the picker already
+      # means, so naming them again inside it would be a worse way to say it.
+      it "keeps the room and its charges out of the charge picker" do
+        get hotel_onboarding_section_path(hotel, section_key: "discounts")
+
+        expect(response.body).not_to include("Room Revenue (ROOM)")
+        expect(response.body).not_to include("Cancellation Revenue (CANCEL)")
+      end
+
+      # The settings portal can pin anything the join row accepts. A picker that
+      # cannot show a selection would drop it on the next save.
+      it "keeps showing a room charge a discount already pins" do
+        discount = Discounts::Save.call(
+          discount: HotelDiscount.new(hotel: hotel, transaction_code: TransactionCode.new(hotel: hotel)),
+          attributes: {
+            name: "Manager courtesy", code: "MGRDISC", active: "true", pricing_type: "manual",
+            application_scope: "selected_charges",
+            applicable_transaction_code_ids: [ hotel.transaction_codes.find_by!(system_key: "room_revenue").id.to_s ]
+          }
+        )
+        expect(discount.success?).to be(true)
+
+        get hotel_onboarding_section_path(hotel, section_key: "discounts")
+
         expect(response.body).to include("Room Revenue (ROOM)")
       end
 
@@ -129,14 +156,31 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
               params: {
                 navigation_action: "save_continue",
                 discount_entries: { "0" => {
-                  "name" => "Early bird", "code" => "EARLYBIRD", "pricing_type" => "percentage",
+                  "name" => "Early bird", "pricing_type" => "percentage",
                   "rate_value" => "10", "application_scope" => "all_eligible_charges",
-                  "allow_amount_override" => "false", "active" => "true", "_destroy" => "false"
+                  "_destroy" => "false"
                 } }
               }
 
         expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "payment_methods"))
-        expect(hotel.hotel_discounts.sole.name).to eq("Early bird")
+        # The table asks for a name, not an accounting code.
+        expect(hotel.hotel_discounts.sole).to have_attributes(name: "Early bird", code: "EARLY_BIRD")
+      end
+
+      # An offer whose amount staff decide has no rate at all, so the table shows
+      # no amount field for it — and must not carry one over from a row that had.
+      it "drops the rate when the method is one staff price themselves" do
+        patch hotel_onboarding_section_path(hotel, section_key: "discounts"),
+              params: {
+                navigation_action: "save_continue",
+                discount_entries: { "0" => {
+                  "name" => "Goodwill rebate", "pricing_type" => "manual", "rate_value" => "25",
+                  "application_scope" => "all_eligible_charges", "_destroy" => "false"
+                } }
+              }
+
+        expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "payment_methods"))
+        expect(hotel.hotel_discounts.sole).to have_attributes(pricing_type: "manual", rate_value: nil)
       end
 
       it "records an explicit skip decision" do

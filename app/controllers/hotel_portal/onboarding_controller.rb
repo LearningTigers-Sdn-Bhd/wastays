@@ -133,10 +133,15 @@ module HotelPortal
                                                    .includes(:transaction_code).index_by { |charge| charge.id.to_s }
         end
       when "discounts"
-        @discount_entries = entries || persisted_discount_entries
-        @charge_code_choices = current_hotel.transaction_codes.active.discountable.order(:code)
-                                            .map { |code| { label: "#{code.name} (#{code.code})", value: code.id.to_s } }
-        @extra_charges_skipped = @navigation.fetch("extra_charges").record.state == "skipped"
+        # A review reads the saved discounts; only the editor works from entries,
+        # which may be a failed submission rather than what is stored.
+        if @presenter.read_only?
+          @discounts = current_hotel.hotel_discounts.includes(:transaction_code).ordered
+        else
+          @discount_entries = entries || persisted_discount_entries
+          @charge_code_choices = discount_charge_code_choices
+          @extra_charges_skipped = @navigation.fetch("extra_charges").record.state == "skipped"
+        end
       when "payment_methods"
         @payment_method_entries = entries || persisted_payment_method_entries
         @surcharge_charge_choices = current_hotel.hotel_extra_charges.active.includes(:transaction_code).ordered
@@ -210,6 +215,22 @@ module HotelPortal
       end
     end
 
+    # What "only the charges I choose" may name: the things the property sells,
+    # not the room and its own charges — those are what the scope above this
+    # picker already means.
+    #
+    # A code a discount already pins stays on the list even when it is one of
+    # those. The settings portal can target anything the join row accepts, and a
+    # picker that cannot show a selection would drop it on the next save.
+    def discount_charge_code_choices
+      pinned = @discount_entries.flat_map { |entry| Array(entry["applicable_transaction_code_ids"]) }
+                                .map(&:to_s).to_set
+
+      current_hotel.transaction_codes.active.discountable.order(:code)
+                   .reject { |code| code.category.in?(TransactionCode::ROOM_CATEGORIES) && pinned.exclude?(code.id.to_s) }
+                   .map { |code| { label: "#{code.name} (#{code.code})", value: code.id.to_s } }
+    end
+
     def persisted_discount_entries
       adopted = current_hotel.hotel_discounts.includes(:transaction_code, :applicable_transaction_codes).ordered.map do |discount|
         {
@@ -217,12 +238,9 @@ module HotelPortal
           "client_key" => "discount-#{discount.id}",
           "name" => discount.name,
           "code" => discount.code,
-          "description" => discount.description,
           "pricing_type" => discount.pricing_type,
           "rate_value" => discount.rate_value&.to_s,
           "application_scope" => discount.application_scope,
-          "allow_amount_override" => discount.allow_amount_override.to_s,
-          "active" => discount.active?.to_s,
           "applicable_transaction_code_ids" => discount.applicable_transaction_codes.map { |code| code.id.to_s }
         }
       end
@@ -244,8 +262,6 @@ module HotelPortal
           "code" => code.code,
           "pricing_type" => "manual",
           "application_scope" => "all_eligible_charges",
-          "allow_amount_override" => "true",
-          "active" => "true",
           "applicable_transaction_code_ids" => []
         }
       end

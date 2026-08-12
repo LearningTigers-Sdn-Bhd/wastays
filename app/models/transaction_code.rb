@@ -50,6 +50,17 @@ class TransactionCode < ApplicationRecord
   # HotelDiscountTransactionCode enforces on the join row, so the picker cannot
   # offer a code the join would then reject.
   scope :discountable, -> { charge.where.not(category: "tax") }
+  # The room and what the booking engine posts against it: the rate itself, and
+  # the charges a stay's own shape produces. A discount reaches these through
+  # its room-charges scope, which follows any accommodation code the property
+  # adds later, so naming them one at a time in a picker says the same thing
+  # worse. Extra charges holds the same codes out of reach for the matching
+  # reason — they are posted, not sold.
+  ROOM_CATEGORIES = %w[
+    accommodation no_show_charge cancellation_charge late_checkout_charge early_departure_charge
+  ].freeze
+
+  scope :room_related, -> { where(category: ROOM_CATEGORIES) }
 
   def hotel_tax_ids
     tax_ids

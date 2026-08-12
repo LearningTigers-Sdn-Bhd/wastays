@@ -21,6 +21,39 @@ module Onboarding
     # what the rows before it have already claimed.
     def prepare_row(row) = row
 
+    # An owner setting a property up is naming what they sell or what they take
+    # off a bill, not keeping the books, so those tables do not ask for an
+    # accounting code. A row typed from scratch gets one derived from its name
+    # here rather than at save time, so the duplicate check and the per-hotel
+    # unique index both see the value that will be stored. Rows that already
+    # have a code — an adopted seeded code, or a record saved earlier — carry it
+    # through untouched. Sections opt in from `prepare_row`; the ones whose
+    # table still asks for a code leave it alone.
+    def derived_code_row(row, fallback:)
+      return row if row["id"].present? || row["transaction_code_id"].present?
+      return row if row["code"].to_s.strip.present? || row["name"].to_s.strip.blank? || discarded?(row)
+
+      row.merge("code" => generated_code(row["name"], fallback: fallback))
+    end
+
+    def generated_code(name, fallback:)
+      base = normalize_code(name).first(10).delete_suffix("_").presence || fallback
+      candidate = base
+      suffix = 2
+
+      while claimed_codes.include?(candidate)
+        candidate = "#{base.first(9 - suffix.to_s.length).delete_suffix('_')}_#{suffix}"
+        suffix += 1
+      end
+
+      claimed_codes << candidate
+      candidate
+    end
+
+    def claimed_codes
+      @claimed_codes ||= @hotel.transaction_codes.pluck(:code).map { |code| normalize_code(code) }.to_set
+    end
+
     def retained_rows
       @retained_rows ||= rows.reject { |row| discarded?(row) || blank_row?(row) }
     end

@@ -173,36 +173,7 @@ module Onboarding
 
     # --- codes --------------------------------------------------------------
 
-    # An owner setting the property up is naming what they sell, not keeping the
-    # books, so the table does not ask for an accounting code. A row typed from
-    # scratch gets one derived from its name here rather than at save time, so
-    # the duplicate check and the unique index both see the value that will be
-    # stored. Rows that already have a code — an adopted revenue code, or a
-    # charge the property saved earlier — carry it through untouched.
-    def prepare_row(row)
-      return row if row["id"].present? || row["transaction_code_id"].present?
-      return row if row["code"].to_s.strip.present? || row["name"].to_s.strip.blank? || discarded?(row)
-
-      row.merge("code" => generated_code(row["name"]))
-    end
-
-    def generated_code(name)
-      base = normalize_code(name).first(10).delete_suffix("_").presence || "CHARGE"
-      candidate = base
-      suffix = 2
-
-      while claimed_codes.include?(candidate)
-        candidate = "#{base.first(9 - suffix.to_s.length).delete_suffix('_')}_#{suffix}"
-        suffix += 1
-      end
-
-      claimed_codes << candidate
-      candidate
-    end
-
-    def claimed_codes
-      @claimed_codes ||= hotel.transaction_codes.pluck(:code).map { |code| normalize_code(code) }.to_set
-    end
+    def prepare_row(row) = derived_code_row(row, fallback: "CHARGE")
 
     # --- validation ---------------------------------------------------------
 

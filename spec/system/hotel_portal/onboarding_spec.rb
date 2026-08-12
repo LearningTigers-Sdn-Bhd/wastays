@@ -271,6 +271,64 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(page).to have_text("For each room, every night")
   end
 
+  # An owner naming the offers a property makes should not have to answer for an
+  # accounting code, an override rule or a reporting status to do it.
+  it "adds a discount from a name alone" do
+    reach_commercial_phase!
+
+    visit hotel_onboarding_section_path(hotel, section_key: "extra_charges")
+    click_button "No extra charges for now"
+
+    expect(page).to have_css("h1", text: "Discounts")
+    click_button "Add discount"
+    all("input[placeholder='Early bird']").last.set("Early bird")
+    click_button "Save & continue"
+
+    expect(page).to have_css("h1", text: "Payment methods")
+    expect(hotel.hotel_discounts.find_by!(transaction_code: hotel.transaction_codes.find_by(name: "Early bird")))
+      .to have_attributes(code: "EARLY_BIRD", pricing_type: "manual", application_scope: "all_eligible_charges")
+  end
+
+  # Two pairs of controls share a cell, which is what keeps the table at three
+  # columns. In each pair the second control only means anything under one value
+  # of the first, so it appears with that value rather than sitting dead beside
+  # it — and the page is headed once, by the shell.
+  it "reveals a discount's amount and its charge picker only where they apply" do
+    reach_commercial_phase!
+
+    visit hotel_onboarding_section_path(hotel, section_key: "extra_charges")
+    click_button "No extra charges for now"
+
+    expect(page).to have_css("h1", text: "Discounts")
+    expect(page).to have_no_css("h2", text: "What can reduce a guest's bill?")
+
+    row = first("tr.panel-record-table__row")
+
+    # Staff-priced by default: there is no amount to type at all.
+    expect(row).to have_no_css("[data-discount-row-target='rateField']")
+    expect(row).to have_no_css("[data-discount-row-target='codesField']")
+
+    within(row) do
+      find("[data-discount-row-target='typeField'] .panel-select-menu__trigger").click
+      find("[role='option']", text: "Percentage").click
+    end
+
+    # The percent sign trails the rate; the currency mark that would lead a fixed
+    # amount stays out of the way.
+    expect(row).to have_css("[data-discount-row-target='percentAddon']", text: "%")
+    expect(row).to have_no_css("[data-discount-row-target='currencyAddon']")
+
+    within(row) do
+      find("[data-discount-row-target='scope'] .panel-select-menu__trigger").click
+      find("[role='option']", text: "Only the charges I choose").click
+    end
+
+    expect(row).to have_css("[data-discount-row-target='codesField']")
+    expect(row).to have_css("[data-discount-row-target='codesField'] select:not(:disabled)", visible: :all)
+    expect(row).to have_css("[data-discount-row-target='codesField'] .ts-control")
+    expect(row).to have_no_css("[data-discount-row-target='codesField'] .ts-wrapper.disabled")
+  end
+
   # The commercial phase's owner path: one way to take money is required, the
   # other three sections are answered rather than left silent.
   it "takes an owner through the commercial phase" do

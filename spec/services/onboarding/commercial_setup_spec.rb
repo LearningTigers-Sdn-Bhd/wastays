@@ -229,12 +229,9 @@ RSpec.describe "Onboarding commercial setup" do
       {
         "client_key" => "draft-1",
         "name" => "Early bird",
-        "code" => "EARLYBIRD",
         "pricing_type" => "percentage",
         "rate_value" => "10",
-        "application_scope" => "all_eligible_charges",
-        "allow_amount_override" => "false",
-        "active" => "true"
+        "application_scope" => "all_eligible_charges"
       }.merge(overrides)
     end
 
@@ -247,10 +244,41 @@ RSpec.describe "Onboarding commercial setup" do
 
       expect(result.success?).to be(true)
       expect(hotel.hotel_discounts.sole).to have_attributes(
-        name: "Early bird", code: "EARLYBIRD", pricing_type: "percentage", rate_value: 10.to_d
+        name: "Early bird", code: "EARLY_BIRD", pricing_type: "percentage", rate_value: 10.to_d
       )
       expect(result.section).to have_attributes(state: "complete")
       expect(result.section.decision_metadata).not_to have_key("placeholder")
+    end
+
+    # An owner naming the offers a property makes is not keeping the books, so
+    # the table does not ask for a code — but the record still needs a unique one.
+    it "derives a code from the name, sidestepping codes already taken" do
+      hotel.transaction_codes.find_by!(system_key: "rebate").update!(code: "EARLY_BIRD")
+
+      result = save(entries: { "draft-1" => discount_entry })
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_discounts.sole.code).to eq("EARLY_BI_2")
+    end
+
+    # Nothing in the table stands for the description, whether the offer is
+    # active, or whether staff may amend the calculated amount, so a discount the
+    # settings portal filled in has to come back out unchanged.
+    it "leaves the fields the table does not show as they stand" do
+      save(entries: { "draft-1" => discount_entry("pricing_type" => "fixed", "rate_value" => "20") }, complete: true)
+      discount = hotel.hotel_discounts.sole
+      discount.update!(description: "Ask the duty manager first", allow_amount_override: false)
+      discount.transaction_code.update!(active: false)
+
+      save(entries: {
+        "draft-1" => discount_entry("id" => discount.id.to_s, "code" => discount.code,
+                                    "pricing_type" => "fixed", "rate_value" => "20")
+      })
+
+      expect(discount.reload).to have_attributes(
+        description: "Ask the duty manager first", allow_amount_override: false
+      )
+      expect(discount.active?).to be(false)
     end
 
     it "adopts the seeded rebate code instead of minting a duplicate" do

@@ -22,7 +22,7 @@ module HotelPortal
       "rooms" => [ "Rooms", "Create the room categories, capacity, amenities, policies, and room numbering this property operates." ],
       "rates_availability" => [ "Rates and availability", "Set sell-mode pricing and establish one year of sellable inventory." ],
       "extra_charges" => [ "Extra charges", "Anything sold on top of the room — breakfast, parking, an airport transfer. Mandatory charges every guest pays belong in Taxes and fees instead." ],
-      "discounts" => [ "Discounts", "Configure the offers that can reduce eligible charges." ],
+      "discounts" => [ "Discounts", "Offers staff apply to a folio — an early bird rate, a staff rate, a goodwill rebate. Each one names the charges it is allowed to reduce." ],
       "payment_methods" => [ "Payment methods", "Choose at least one way guests can pay and configure any surcharges." ],
       "corporate_accounts" => [ "Corporate accounts", "Prepare company accounts and invitations for submission." ],
       "channel_manager" => [ "Channel manager", "Review the preferred provider and decide whether to connect now." ],
