@@ -301,6 +301,118 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     end
   end
 
+  describe "rooms phase" do
+    def resolve_finance_phase!
+      Onboarding::InitializeProgress.new(hotel: hotel).call
+      %w[property_profile roles_permissions staff_setup taxes_fees room_revenue].each do |key|
+        hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
+      end
+    end
+
+    def room_params(overrides = {})
+      {
+        name: "Deluxe Twin",
+        max_adults: "2",
+        max_children: "1",
+        quantity: "2",
+        no_smoking: "1",
+        no_pets: "1",
+        room_number_mode: "range",
+        room_numbers: [ "101", "102" ]
+      }.merge(overrides)
+    end
+
+    before { resolve_finance_phase! }
+
+    it "renders the rooms-only spreadsheet and staged action sheet" do
+      get hotel_onboarding_section_path(hotel, section_key: "rooms")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(
+        "Room category", "Max adults", "Max children", "Total rooms",
+        "No smoking", "No pets", "Amenities", "Manage room numbering"
+      )
+      expect(response.body).to include("onboarding_action_sheet", "data-controller=\"onboarding-room-grid\"")
+      expect(response.body).to include("panel-multi-select", "Search room amenities")
+      expect(response.body).not_to include("name=\"room_amenity_sheet[]\"")
+      expect(response.body).not_to include("Standard rate", "Room group", "Photos")
+      expect(response.parsed_body.at_css("[role='region'][aria-label='Room categories']")).to be_present
+      expect(response.parsed_body.at_css("table.panel-record-table--spreadsheet.panel-record-table--rooms")).to be_present
+      expect(response.parsed_body.css("tbody > tr[data-record-table-target='row']").size).to eq(1)
+      headers = response.parsed_body.css("thead th").map { |header| header.text.strip.delete_suffix("*") }
+      expect(headers.last(2)).to eq([ "Room numbering", "Actions" ])
+      centered_headers = response.parsed_body.css("thead th.text-center").map { |header| header.text.strip }
+      expect(centered_headers).to contain_exactly("No smoking", "No pets")
+      policy_checkboxes = response.parsed_body.css(
+        "tbody > tr[data-record-table-target='row'] td.align-middle .flex.justify-center > .panel-checkbox[data-size='lg']"
+      )
+      expect(policy_checkboxes.size).to eq(2)
+      action_cell = response.parsed_body.at_css("tbody > tr[data-record-table-target='row'] td:last-child")
+      expect(action_cell.css("button").size).to eq(1)
+      expect(action_cell.text.strip).to eq("Manage room numbering")
+    end
+
+    it "saves an inline room draft without exposing pricing" do
+      patch hotel_onboarding_section_path(hotel, section_key: "rooms"), params: {
+        navigation_action: "save_draft",
+        room_entries: { "draft-1" => room_params }
+      }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "rooms"))
+      expect(hotel.room_types.sole).to have_attributes(name: "Deluxe Twin", base_price: 0.to_d)
+      expect(hotel.onboarding_sections.find_by!(section_key: "rooms").state).to eq("in_progress")
+    end
+
+    it "completes rooms and advances to rates and availability" do
+      patch hotel_onboarding_section_path(hotel, section_key: "rooms"), params: {
+        navigation_action: "save_continue",
+        room_entries: { "draft-1" => room_params }
+      }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "rates_availability"))
+      expect(hotel.onboarding_sections.find_by!(section_key: "rooms")).to have_attributes(state: "complete")
+    end
+
+    it "rejects a room id belonging to another property" do
+      foreign_room = create(:room_type)
+
+      patch hotel_onboarding_section_path(hotel, section_key: "rooms"), params: {
+        navigation_action: "save_draft",
+        room_entries: { "forged" => room_params(id: foreign_room.id.to_s) }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("do not belong to this property")
+      expect(foreign_room.reload.name).not_to eq("Deluxe Twin")
+    end
+
+    it "rolls back a restricted room removal" do
+      room = create(:room_type, hotel: hotel)
+      booking = create(:booking, hotel: hotel)
+      create(:booking_room, booking: booking, room_type: room)
+
+      patch hotel_onboarding_section_path(hotel, section_key: "rooms"), params: {
+        navigation_action: "save_draft",
+        room_entries: { "room-#{room.id}" => room_params(id: room.id.to_s, _destroy: "1") }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(RoomType.exists?(room.id)).to be(true)
+      expect(response.body).to include(room.name)
+    end
+
+    it "renders persisted rooms read-only while pending review" do
+      create(:room_type, hotel: hotel, name: "Garden King", quantity: 3, room_numbers: [])
+      hotel.update!(status: "pending_review")
+
+      get hotel_onboarding_section_path(hotel, section_key: "rooms")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Garden King", "Quantity only")
+      expect(response.body).not_to include("Add room category", "Manage room numbering")
+    end
+  end
+
   it "does not expose another hotel's onboarding" do
     other_hotel = create(:hotel, status: "setup")
 

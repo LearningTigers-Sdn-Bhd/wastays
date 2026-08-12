@@ -185,6 +185,18 @@ For editable tables, rows may save individually, but the page still requires a c
 
 Use table-style editing only for repeatable structured records.
 
+On onboarding pages, implement this pattern through
+`HotelPortal::Setup::RecordTable`, not directly with `PanelsUI::Table` and page-local
+responsive markup. Extend `RecordTable` when a new slice needs persisted rows, a sheet
+based add action, or a trailing row-action slot; keep its existing inline draft-row mode
+backward compatible for Staff and Taxes.
+
+Rooms deliberately use the component's spreadsheet mode: discrete inline columns,
+horizontal overflow, sticky headers and identifying columns, and no mobile card reflow.
+This is an audience-specific exception for hotel owners who work more effectively in an
+Excel-like grid. Amenities and room numbering are the only sheet-based room editors;
+their changes remain staged in the table form until the page is saved.
+
 Good table candidates:
 
 - Draft staff invitations
@@ -245,6 +257,10 @@ Table requirements:
 - Mobile reflow into stacked record editors instead of mandatory spreadsheet scrolling
 
 Complex row details open in a sheet or dedicated editor instead of adding excessive columns.
+For Rooms, the footer adds an inline blank row, the leading Remove control defers confirmed
+deletion until the table save, Amenities opens the staged selection sheet, and the trailing
+Actions control opens staged room numbering. Descriptions, photos, room groups, and pricing
+are intentionally absent from the Phase 6 grid.
 
 ## Per-pax pricing presentation
 
@@ -314,6 +330,9 @@ Mobile:
 - Stacked record editors
 - One room at a time for wide per-pax pricing
 - Action area that remains reachable without covering content
+
+The Rooms spreadsheet is the documented exception: it remains a contained,
+keyboard-focusable horizontal scroll region instead of reflowing its columns.
 
 ## Accessibility
 

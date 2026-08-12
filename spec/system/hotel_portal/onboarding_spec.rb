@@ -101,4 +101,50 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(page).to have_no_css("tr[data-record-table-target='row']")
     expect(page).to have_css("tr.panel-record-table__empty", text: "No staff yet")
   end
+
+  it "configures rooms in the spreadsheet and stages amenities and numbering in one sheet" do
+    Onboarding::InitializeProgress.new(hotel: hotel).call
+    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue].each do |key|
+      hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
+    end
+    amenity = Hotel::CATEGORIZED_ROOM_AMENITIES.first[:items].first
+    amenity_label = "#{Hotel::CATEGORIZED_ROOM_AMENITIES.first[:category]} · #{amenity[:name]}"
+
+    visit hotel_onboarding_section_path(hotel, section_key: "rooms")
+
+    expect(page).to have_css("tr[data-record-table-target='row']", count: 1)
+    fill_in "Room category", with: "Deluxe Twin"
+    fill_in "Max adults for this room category", with: "2"
+    fill_in "Max children for this room category", with: "1"
+    fill_in "Total rooms for this room category", with: "2"
+    check "No smoking in this room category"
+    check "No pets in this room category"
+
+    find("button[aria-label='Manage amenities for this room category']").click
+    expect(page).to have_css("dialog#onboarding_action_sheet[open]")
+    amenity_picker = find("[data-onboarding-room-grid-target='amenityPicker']")
+    amenity_picker.find(".ts-control").click
+    amenity_picker.find(".ts-dropdown .option", text: amenity_label).click
+    click_button "Apply"
+    expect(page).to have_css("button[aria-label='Manage amenities for this room category']", text: "1 amenities")
+
+    find("button[aria-label='Manage room numbering for this room category']").click
+    choose "Sequential numbers"
+    fill_in "Starting number", with: "101"
+    expect(page).to have_css("[data-size='xs']", text: "101")
+    expect(page).to have_css("[data-size='xs']", text: "102")
+    click_button "Apply"
+    room_row = find("tr[data-record-table-target='row']")
+    expect(room_row).to have_css("[data-room-number-badges] [data-size='xs']", text: "101")
+    expect(room_row).to have_css("[data-room-number-badges] [data-size='xs']", text: "102")
+    expect(room_row.find("td:last-child").text).to eq("Manage room numbering")
+
+    click_button "Save & continue"
+
+    expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "rates_availability"))
+    room = hotel.room_types.sole
+    expect(room).to have_attributes(name: "Deluxe Twin", quantity: 2, base_price: 0.to_d)
+    expect(room.room_numbers).to eq([ "101", "102" ])
+    expect(room.amenities).to eq([ amenity[:id].to_s ])
+  end
 end

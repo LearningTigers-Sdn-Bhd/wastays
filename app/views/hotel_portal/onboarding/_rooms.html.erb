@@ -1,0 +1,78 @@
+<section aria-labelledby="onboarding-rooms-heading" class="space-y-4">
+  <div>
+    <h2 id="onboarding-rooms-heading" class="text-base font-semibold">Room categories</h2>
+    <p class="mt-1 text-sm text-muted-foreground">Enter the rooms this property operates. Pricing, photos, and descriptive details are configured later.</p>
+  </div>
+
+  <% if presenter.read_only? %>
+    <%= render PanelsUI::Table.new(
+          caption: "Room categories", header_style: :sentence,
+          sticky_header: true, wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Room category</th>
+          <th scope="col">Max adults</th>
+          <th scope="col">Max children</th>
+          <th scope="col">Total rooms</th>
+          <th scope="col" class="text-center">No smoking</th>
+          <th scope="col" class="text-center">No pets</th>
+          <th scope="col">Amenities</th>
+          <th scope="col">Room numbering</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% @room_entries.each do |entry| %>
+          <tr>
+            <td class="font-medium"><%= entry["name"] %></td>
+            <td><%= entry["max_adults"] %></td>
+            <td><%= entry["max_children"] %></td>
+            <td><%= entry["quantity"] %></td>
+            <td class="text-center"><%= ActiveModel::Type::Boolean.new.cast(entry["no_smoking"]) ? "Yes" : "No" %></td>
+            <td class="text-center"><%= ActiveModel::Type::Boolean.new.cast(entry["no_pets"]) ? "Yes" : "No" %></td>
+            <td><%= pluralize(Array(entry["amenities"]).size, "amenity") %></td>
+            <td><%= Array(entry["room_numbers"]).any? ? pluralize(Array(entry["room_numbers"]).size, "number") : "Quantity only" %></td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "rooms"),
+                  method: :patch,
+                  id: "onboarding-rooms-form",
+                  data: { controller: "onboarding-room-grid" } do %>
+      <%= render HotelPortal::Setup::RecordTable.new(
+            caption: "Room categories",
+            add_label: "Add room category",
+            empty: "No room categories yet. Add the first room this property operates.",
+            spreadsheet: true,
+            actions: true,
+            class: "panel-record-table--rooms") do |table| %>
+        <% table.with_column(label: "Room category", required: true) %>
+        <% table.with_column(label: "Max adults", required: true) %>
+        <% table.with_column(label: "Max children", required: true) %>
+        <% table.with_column(label: "Total rooms", required: true) %>
+        <% table.with_column(label: "No smoking", class: "text-center") %>
+        <% table.with_column(label: "No pets", class: "text-center") %>
+        <% table.with_column(label: "Amenities") %>
+        <% table.with_column(label: "Room numbering") %>
+
+        <% @room_entries.each_with_index do |entry, index| %>
+          <% key = entry["client_key"].presence || "room-#{entry['id'].presence || index}" %>
+          <% table.with_row(
+               remove_label: "Remove #{entry['name'].presence || 'this room category'}",
+               persisted: entry["id"].present?,
+               confirm: ("Remove #{entry['name']}? Its room-specific operational records will also be removed." if entry["id"].present?),
+               key: key) do %>
+            <%= render "room_row", entry: entry, index: key %>
+          <% end %>
+        <% end %>
+
+        <% table.with_blank_row(remove_label: "Remove this room category", key: "NEW_RECORD") do %>
+          <%= render "room_row", entry: {}, index: "NEW_RECORD" %>
+        <% end %>
+      <% end %>
+
+      <%= render "rooms_action_sheet", amenity_choices: @room_amenity_choices %>
+    <% end %>
+  <% end %>
+</section>

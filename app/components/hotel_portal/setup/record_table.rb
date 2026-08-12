@@ -43,12 +43,19 @@ module HotelPortal
         # `remove_label` names the record rather than the column: "Remove
         # Breakfast" tells an operator which row the button discards, which the
         # header alone cannot.
-        def initialize(remove_label:)
+        def initialize(remove_label:, persisted: false, confirm: nil, key: nil)
           @remove_label = remove_label
+          @persisted = persisted
+          @confirm = confirm
+          @key = key
         end
 
         def call
-          tag.tr(class: "panel-record-table__row", data: { "#{CONTROLLER}_target": "row" }) do
+          tag.tr(class: "panel-record-table__row", data: {
+            "#{CONTROLLER}_target": "row",
+            record_table_persisted: @persisted.to_s,
+            record_table_key: @key
+          }.compact) do
             safe_join([ remove_cell, content ])
           end
         end
@@ -65,7 +72,10 @@ module HotelPortal
               size: :icon_sm,
               icon_only: true,
               aria_label: @remove_label,
-              data: { action: "#{CONTROLLER}#remove" }
+              data: {
+                action: "#{CONTROLLER}#remove",
+                record_table_confirm: @confirm
+              }.compact
             ).with_content(helpers.app_icon("trash-2", class: "size-4", aria: { hidden: "true" }))
           end
         end
@@ -80,25 +90,29 @@ module HotelPortal
       # without it the add button has nothing to add.
       renders_one :blank_row, Row
 
-      def initialize(caption:, add_label:, empty:, class: nil)
+      def initialize(caption:, add_label:, empty:, spreadsheet: false, actions: false, class: nil)
         @caption = caption
         @add_label = add_label
         @empty = empty
+        @spreadsheet = spreadsheet
+        @actions = actions
         @class = binding.local_variable_get(:class)
       end
 
       attr_reader :caption, :add_label, :empty
+      def spreadsheet? = @spreadsheet
+      def actions? = @actions
 
       def before_render
         raise ArgumentError, "RecordTable requires at least one column" if columns.empty?
         raise ArgumentError, "RecordTable requires a blank_row to clone" unless blank_row?
       end
 
-      def table_classes = tw_merge("panel-record-table", @class)
+      def table_classes = tw_merge("panel-record-table", ("panel-record-table--spreadsheet" if spreadsheet?), @class)
 
       # The leading control column counts too — a spanning cell that stops short
       # of it leaves the empty state and the add row visibly inset.
-      def column_count = columns.size + 1
+      def column_count = columns.size + 1 + (actions? ? 1 : 0)
     end
   end
 end

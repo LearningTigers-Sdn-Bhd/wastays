@@ -130,6 +130,15 @@ two cannot drift.
 
 Follow `DESIGN.md`: PanelsUI components, semantic tokens, no native selects.
 
+Repeating onboarding records use `HotelPortal::Setup::RecordTable`; do not build a
+page-local `PanelsUI::Table` plus a separate mobile-card implementation. The component
+currently owns inline draft rows for Staff and Taxes. When a later phase needs persisted
+records or detail sheets, extend its semantic API while preserving those existing modes.
+The shared component remains responsible for the leading `Remove` control, optional
+trailing `Actions` control, add action, empty state, accessibility, and mobile reflow.
+The Phase 6 Rooms spreadsheet uses its documented horizontal-scroll mode instead of mobile
+reflow; Staff and Taxes retain the default stacked behavior.
+
 ### Navigation actions
 
 `update` dispatches on `params[:navigation_action]`: `save_draft`, `save_continue`, `skip`.

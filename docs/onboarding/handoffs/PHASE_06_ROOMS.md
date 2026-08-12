@@ -17,11 +17,13 @@ still a placeholder, stop and confirm with the user before proceeding.
 
 ## Deliverables
 
-- Room-type table (list of configured room types with edit/remove)
-- Add/edit detail experience
+- Room-type `HotelPortal::Setup::RecordTable` (list of configured room types with
+  leading remove and trailing room-numbering action)
+- Inline spreadsheet add/edit experience
 - Quantity and occupancy rules
 - Conditional room-number requirements
-- Amenities, photos, and policies
+- Staged Amenities and room-number action sheet
+- Smoking and pet policies
 - A completion contract
 - Dependency invalidation when rooms or capacities change
 
@@ -31,11 +33,33 @@ still a placeholder, stop and confirm with the user before proceeding.
 |---|---|
 | Save a room type | `HotelPortal::RoomTypes::SaveRoomType` (`app/services/hotel_portal/room_types/save_room_type.rb`) |
 | Remove a room type | `HotelPortal::RoomTypes::DestroyRoomType` |
-| Photo removal | `HotelPortal::RoomTypes::DestroyPhotos` |
 | Existing form/UI reference | `app/controllers/hotel_portal/room_types_controller.rb` and its views |
+| Onboarding record table | `HotelPortal::Setup::RecordTable` and its Staff/Taxes usages |
 
 `RoomType` records are saved directly — there is no form object layer. Do not create
 onboarding-only room records; these are the real operational rooms.
+
+## Record table and detail workflow — decided
+
+Use `HotelPortal::Setup::RecordTable` for the Rooms collection. Do **not** create a raw
+`PanelsUI::Table` with a second page-local mobile-card rendering.
+
+Extend `RecordTable` with a backward-compatible spreadsheet mode:
+
+- Keep the existing inline cloneable-row mode unchanged for Staff and Taxes.
+- Let the footer Add action clone an inline room row.
+- Let the leading `Remove` control discard new rows or stage persisted rows for confirmed
+  deletion on the next table save.
+- Add the optional trailing `Actions` column defined by `DESIGN_DECISIONS.md`; its direct
+  action opens room numbering.
+- Keep empty state, keyboard behaviour, focus handling, sticky identifying columns, and
+  horizontal overflow owned by the shared component.
+
+The table directly edits name, adult capacity, child capacity, total rooms, no-smoking,
+and no-pets. Amenities is a count button opening the shared client-staged action sheet.
+The trailing Actions cell opens room numbering, where numbers render as `xs` badges.
+Descriptions, photos, room groups, and pricing are intentionally deferred; new rooms use
+an internal zero base price until Phase 7 establishes valid pricing.
 
 ## Things to watch in `SaveRoomType`
 
@@ -55,23 +79,25 @@ behaviours matter:
 
 ## Suggested services
 
-- `Onboarding::SaveRoomType` — wraps `HotelPortal::RoomTypes::SaveRoomType`, translates the
-  result, and does **not** complete the section (adding one room ≠ finishing the step)
-- `Onboarding::CompleteRooms` — validates the completion contract across all room types and
-  calls `UpdateSection` with `complete`
+- `Onboarding::SaveRooms` — saves the full spreadsheet atomically through the existing
+  room save/destroy services and applies the page completion contract
 - `Onboarding::InvalidateDependentSections` — shared helper (see below); if Phase 5 already
   introduced one for tax changes, extend it rather than adding a second
 
-## Completion contract — decide before coding
+## Completion contract — decided
 
-The plan says "at least one operationally valid room type". Pin down what *valid* means and
-record the answer in the handoff doc or a comment. At minimum, confirm with the user:
+`Onboarding::CompleteRooms` validates every persisted room type, not merely the first:
 
-- Minimum one room type with quantity ≥ 1
-- Occupancy must be set (max adults, and children if the hotel supports them)
-- When room numbers are required (the "conditional room-number requirements" line) —
-  determine the existing trigger in `RoomType` rather than inventing one
-- Whether photos and policies are required for completion or only warnings
+- At least one room type exists.
+- Every room type has quantity ≥ 1, `max_adults` ≥ 1, `max_children` represented with
+  zero allowed.
+- Quantity-only inventory is valid. Room numbers are optional; when any are supplied,
+  they must be nonblank, unique, and total exactly the room quantity.
+- Amenities, smoking policy, and pet policy are optional and do not block completion.
+- Pricing is not part of this section's completion contract.
+
+Reject invalid numbering before persistence. A failed save or completion must leave the
+section state unchanged and return field/page-level errors.
 
 ## Dependency invalidation
 
@@ -83,12 +109,23 @@ do not delete rate or inventory records.
 Since Phase 7 does not exist yet when you start, build the invalidation hook now and cover
 it with a service spec that drives the section state directly — do not defer it.
 
+Structural mutations are add, remove, quantity, adult/child occupancy, numbering mode,
+and room-number changes. If Rooms was complete, a structural mutation moves it to
+`needs_attention` for reconfirmation; if `rates_availability` was complete, move that
+section to `needs_attention` too. Description, amenity, photo, smoking, and pet-policy
+changes preserve both completion states. Every invalidation carries an explanatory audit
+event, and none deletes or rewrites rates or inventory.
+
 ## Do not
 
 - Create onboarding-only room tables or duplicate `RoomType` validations
+- Add rate, rate-plan, pricing, availability, description, photo, or room-group UI
 - Initialize any defaults as a side effect of rendering the page
 - Add global portal redirects (Phase 12)
 - Restructure `RoomTypesController` for the settings portal — leave it working
+- Introduce a `HotelPortal::Onboarding` module. It shadows the top-level `Onboarding`
+  domain constant inside `HotelPortal::OnboardingController`. Use a flat portal
+  controller name such as `HotelPortal::OnboardingRoomTypesController` for sub-resources.
 
 ## Tests
 
@@ -99,6 +136,9 @@ it with a service spec that drives the section state directly — do not defer i
 - System spec: extend `spec/system/hotel_portal/onboarding_spec.rb` — owner adds a room
   type and continues
 - Responsive review of the room-type table on mobile (`DESIGN.md`)
+- Component specs for the backward-compatible spreadsheet `RecordTable` API, including
+  inline add, deferred confirmed removal, trailing action slot, sticky columns, and
+  contained horizontal overflow
 
 ```bash
 bin/test hotel_management
@@ -110,3 +150,11 @@ An owner in `setup` can open the Rooms step, add a valid room type, see it in th
 edit and remove it, complete the step, and land on `rates_availability`. The `rooms`
 section is `complete` with no `placeholder` metadata, and readiness no longer reports it
 as blocking.
+
+## Current implementation state
+
+Phase 6 is implemented as the rooms-only spreadsheet described above. The shared
+`RecordTable` extension remains backward compatible with Staff and Taxes, while Rooms
+uses the opt-in spreadsheet mode and the client-staged amenities and numbering sheet.
+Rates, pricing, rate plans, availability, descriptions, photos, and room groups remain
+outside this phase.

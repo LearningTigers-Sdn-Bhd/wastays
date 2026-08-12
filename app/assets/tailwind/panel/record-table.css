@@ -7,6 +7,70 @@
     white-space: nowrap;
   }
 
+  .panel-record-table__spreadsheet-region {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 0.375rem;
+  }
+
+  .panel-record-table__spreadsheet-region:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-record-table__spreadsheet-region .panel-table__wrapper {
+    overflow-x: visible;
+  }
+
+  .panel-record-table--spreadsheet {
+    min-width: 72rem;
+  }
+
+  /* Rooms is intentionally Excel-like: these widths establish its minimum
+     working grid, but the table remains fluid and fills wider containers. The
+     labelled region above owns horizontal scrolling below that minimum. */
+  .panel-record-table--rooms {
+    min-width: 90.75rem;
+    table-layout: fixed;
+  }
+
+  .panel-record-table--rooms tr > :nth-child(1) { width: 3.25rem; }
+  .panel-record-table--rooms tr > :nth-child(2) { width: 14rem; }
+  .panel-record-table--rooms tr > :nth-child(3),
+  .panel-record-table--rooms tr > :nth-child(4),
+  .panel-record-table--rooms tr > :nth-child(5) { width: 7.5rem; }
+  .panel-record-table--rooms tr > :nth-child(6) { width: 7rem; }
+  .panel-record-table--rooms tr > :nth-child(7) { width: 6rem; }
+  .panel-record-table--rooms tr > :nth-child(8) { width: 10rem; }
+  .panel-record-table--rooms tr > :nth-child(9) { width: 16rem; }
+  .panel-record-table--rooms tr > :nth-child(10) { width: 12rem; }
+
+  .panel-record-table--spreadsheet :is(thead, tbody) tr > :first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    width: 3.25rem;
+    background: var(--card);
+  }
+
+  .panel-record-table--spreadsheet :is(thead, tbody) tr > :nth-child(2) {
+    position: sticky;
+    inset-inline-start: 3.25rem;
+    z-index: 2;
+    min-width: 13rem;
+    background: var(--card);
+    border-inline-end: 1px solid var(--border);
+  }
+
+  .panel-record-table--spreadsheet thead tr > :is(:first-child, :nth-child(2)) {
+    z-index: 4;
+    background: var(--muted);
+  }
+
+  .panel-record-table--spreadsheet .panel-record-table__actions {
+    min-width: 10rem;
+  }
+
   .panel-record-table__required {
     margin-inline-start: 0.1875rem;
     color: var(--destructive-on-surface);
@@ -45,7 +109,7 @@
      would only repeat it. The label stays in the DOM — it is the control's
      accessible name — and is hidden the way sr-only hides it. */
   @media (width >= 48rem) {
-    .panel-record-table__row :is(.panel-form-field__label, .panel-switch__label, .panel-checkbox__label) {
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__row :is(.panel-form-field__label, .panel-switch__label, .panel-checkbox__label) {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -64,30 +128,30 @@
     /* `tr:not([hidden])` because an author `display: block` outranks the user
        agent's `[hidden] { display: none }` and would strand the empty state on
        screen next to the records it says are missing. */
-    .panel-record-table,
-    .panel-record-table > :is(thead, tbody, tfoot),
-    .panel-record-table > :is(tbody, tfoot) > tr:not([hidden]) {
+    .panel-record-table:not(.panel-record-table--spreadsheet),
+    .panel-record-table:not(.panel-record-table--spreadsheet) > :is(thead, tbody, tfoot),
+    .panel-record-table:not(.panel-record-table--spreadsheet) > :is(tbody, tfoot) > tr:not([hidden]) {
       display: block;
     }
 
-    .panel-record-table > thead {
+    .panel-record-table:not(.panel-record-table--spreadsheet) > thead {
       display: none;
     }
 
-    .panel-record-table__row {
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__row {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
       padding: 0.875rem 0.75rem;
     }
 
-    .panel-record-table__row > td {
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__row > td {
       display: block;
       padding: 0;
     }
 
     /* Remove sits at the row's trailing top edge, clear of the fields below it. */
-    .panel-record-table__row > .panel-record-table__control {
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__row > .panel-record-table__control {
       order: -1;
       align-self: flex-end;
       width: auto;
@@ -95,15 +159,15 @@
 
     /* Stacked cells are block-level, so a cell border would draw a line between
        every field. The separation moves to the row itself. */
-    .panel-record-table[data-bordered="true"] tbody > tr:not(:first-of-type) > * {
+    .panel-record-table:not(.panel-record-table--spreadsheet)[data-bordered="true"] tbody > tr:not(:first-of-type) > * {
       border-top: 0;
     }
 
-    .panel-record-table[data-bordered="true"] tbody > tr:not(:first-of-type) {
+    .panel-record-table:not(.panel-record-table--spreadsheet)[data-bordered="true"] tbody > tr:not(:first-of-type) {
       border-top: 1px solid var(--border);
     }
 
-    .panel-record-table :is(.panel-record-table__empty, tfoot) td {
+    .panel-record-table:not(.panel-record-table--spreadsheet) :is(.panel-record-table__empty, tfoot) td {
       display: block;
       padding: 0.75rem;
     }

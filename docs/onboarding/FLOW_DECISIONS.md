@@ -169,9 +169,11 @@ Configure:
 - Quantity
 - Maximum adults, children, and total occupancy
 - Room numbers when required by the room-number mode
-- Description, amenities, photos, and operating policies
+- Amenities and smoking/pet policies
 
 At least one valid room type with positive quantity is required.
+Descriptions, photos, room groups, and pricing are not collected on this onboarding page.
+Phase 7 owns pricing; optional descriptive room details remain available in regular Settings.
 
 #### 7. Rate plans and availability — required
 

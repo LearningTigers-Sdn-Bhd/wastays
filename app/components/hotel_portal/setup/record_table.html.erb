@@ -1,6 +1,9 @@
+<% table_markup = capture do %>
 <%= render PanelsUI::Table.new(
       caption: caption,
       header_style: :sentence,
+      density: (spreadsheet? ? :compact : :default),
+      sticky_header: spreadsheet?,
       wrapper_class: "rounded-md border border-border bg-card",
       class: table_classes,
       data: { controller: HotelPortal::Setup::RecordTable::CONTROLLER }) do |table| %>
@@ -8,6 +11,7 @@
     <tr>
       <th scope="col" class="panel-record-table__control">Remove</th>
       <%= safe_join(columns) %>
+      <% if actions? %><th scope="col" class="panel-record-table__actions">Actions</th><% end %>
     </tr>
   <% end %>
 
@@ -33,4 +37,15 @@
       </td>
     </tr>
   <% end %>
+<% end %>
+<% end %>
+
+<% if spreadsheet? %>
+  <%= tag.div(table_markup,
+              class: "panel-record-table__spreadsheet-region",
+              role: "region",
+              tabindex: 0,
+              aria: { label: caption }) %>
+<% else %>
+  <%= table_markup %>
 <% end %>

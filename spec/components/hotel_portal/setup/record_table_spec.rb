@@ -79,4 +79,39 @@ RSpec.describe HotelPortal::Setup::RecordTable, type: :component do
       end
     }.to raise_error(ArgumentError, /blank_row/)
   end
+
+  it "supports a horizontally scrollable spreadsheet with a trailing Actions column" do
+    render_table(spreadsheet: true, actions: true)
+
+    expect(page).to have_css("[role='region'][tabindex='0'][aria-label='Extra charges']")
+    expect(page).to have_css("table.panel-record-table--spreadsheet[data-sticky-header='true']")
+    expect(page.all("thead th").map(&:text)).to eq([ "Remove", "Name*", "Amount", "Actions" ])
+    expect(page).to have_css("tr.panel-record-table__empty td[colspan='4']", visible: :all)
+  end
+
+  it "preserves a caller class used to define a spreadsheet's fixed column widths" do
+    render_table(spreadsheet: true, actions: true, class: "panel-record-table--rooms")
+
+    expect(page).to have_css(
+      "[role='region'][aria-label='Extra charges'] > .panel-table__wrapper > table.panel-record-table--spreadsheet.panel-record-table--rooms"
+    )
+  end
+
+  it "marks persisted rows for confirmed deferred removal" do
+    render_inline(described_class.new(
+      caption: "Rooms", add_label: "Add room", empty: "No rooms", spreadsheet: true, actions: true
+    )) do |table|
+      table.with_column(label: "Name")
+      table.with_row(
+        remove_label: "Remove Deluxe",
+        persisted: true,
+        confirm: "Remove Deluxe?",
+        key: "room-1"
+      ) { "<td>Deluxe</td><td>Manage</td>".html_safe }
+      table.with_blank_row(remove_label: "Remove this room", key: "NEW_RECORD") { "<td></td><td></td>".html_safe }
+    end
+
+    expect(page).to have_css("tr[data-record-table-persisted='true'][data-record-table-key='room-1']")
+    expect(page).to have_css("button[data-record-table-confirm='Remove Deluxe?']")
+  end
 end

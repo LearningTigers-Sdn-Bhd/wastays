@@ -1,0 +1,94 @@
+<% entry_name = entry["name"].presence || "this room category" %>
+<% field_prefix = "room_entries[#{index}]" %>
+<% field_id_prefix = "room-entry-#{index.to_s.parameterize}" %>
+
+<%= fields_for field_prefix do |row_form| %>
+  <td>
+    <%= row_form.hidden_field :id, value: entry["id"] %>
+    <%= row_form.hidden_field :client_key, value: entry["client_key"].presence || index %>
+    <%= row_form.hidden_field :_destroy, value: entry["_destroy"].presence || "0", data: { record_table_destroy: true } %>
+    <%= render PanelsUI::FormField.new(
+          form: row_form, attribute: :name, label: "Room category", label_hidden: true,
+          required: true, id: "#{field_id_prefix}-name") do |field| %>
+      <% field.with_input(value: entry["name"], placeholder: "e.g. Deluxe Twin", autocomplete: "off", size: :sm) %>
+    <% end %>
+  </td>
+
+  <% [ [ "max_adults", "Max adults", 1 ], [ "max_children", "Max children", 0 ], [ "quantity", "Total rooms", 0 ] ].each do |attribute, label, minimum| %>
+    <td>
+      <%= render PanelsUI::FormField.new(
+            form: row_form, attribute: attribute, label: "#{label} for #{entry_name}", label_hidden: true,
+            required: true, id: "#{field_id_prefix}-#{attribute}") do |field| %>
+        <% field.with_input(
+             type: :number, value: entry[attribute], min: minimum, step: 1, size: :sm,
+             data: ({ onboarding_room_grid_field: "quantity", action: "input->onboarding-room-grid#quantityChanged" } if attribute == "quantity")) %>
+      <% end %>
+    </td>
+  <% end %>
+
+  <td class="align-middle text-center">
+    <div class="flex justify-center">
+      <%= render PanelsUI::Checkbox.new(
+            name: "#{field_prefix}[no_smoking]",
+            id: "#{field_id_prefix}-no-smoking",
+            label: "No smoking in #{entry_name}",
+            label_hidden: true,
+            checked: ActiveModel::Type::Boolean.new.cast(entry["no_smoking"]),
+            size: :lg) %>
+    </div>
+  </td>
+
+  <td class="align-middle text-center">
+    <div class="flex justify-center">
+      <%= render PanelsUI::Checkbox.new(
+            name: "#{field_prefix}[no_pets]",
+            id: "#{field_id_prefix}-no-pets",
+            label: "No pets in #{entry_name}",
+            label_hidden: true,
+            checked: ActiveModel::Type::Boolean.new.cast(entry["no_pets"]),
+            size: :lg) %>
+    </div>
+  </td>
+
+  <td>
+    <div data-onboarding-room-grid-target="amenityInputs">
+      <% Array(entry["amenities"]).each do |amenity| %>
+        <%= hidden_field_tag "#{field_prefix}[amenities][]", amenity, data: { room_amenity_value: amenity } %>
+      <% end %>
+    </div>
+    <%= render PanelsUI::Button.new(
+          as: :button, type: :button, variant: :secondary, size: :xs,
+          aria_label: "Manage amenities for #{entry_name}",
+          data: { action: "onboarding-room-grid#openAmenities" }) do %>
+      <span data-onboarding-room-grid-target="amenitySummary"><%= Array(entry["amenities"]).any? ? "#{Array(entry['amenities']).size} amenities" : "Add amenities" %></span>
+    <% end %>
+  </td>
+
+  <td>
+    <%= row_form.hidden_field :room_number_mode, value: entry["room_number_mode"].presence || "range", data: { onboarding_room_grid_target: "numberMode" } %>
+    <div data-onboarding-room-grid-target="numberInputs">
+      <% Array(entry["room_numbers"]).each do |number| %>
+        <%= hidden_field_tag "#{field_prefix}[room_numbers][]", number, data: { room_number_value: number } %>
+      <% end %>
+    </div>
+    <div class="flex flex-wrap gap-1.5" data-room-number-badges>
+      <% if Array(entry["room_numbers"]).any? %>
+        <% Array(entry["room_numbers"]).each do |number| %>
+          <%= render PanelsUI::Badge.new(label: number, size: :xs, variant: :outline) %>
+        <% end %>
+      <% else %>
+        <span class="text-xs text-muted-foreground">Quantity only</span>
+      <% end %>
+    </div>
+    <p class="mt-1 text-xs text-destructive" data-onboarding-room-grid-target="numberSummary" hidden></p>
+  </td>
+
+  <td>
+    <%= render PanelsUI::Button.new(
+          as: :button, type: :button, variant: :secondary, size: :xs,
+          aria_label: "Manage room numbering for #{entry_name}",
+          data: { action: "onboarding-room-grid#openNumbering" }) do %>
+      Manage room numbering
+    <% end %>
+  </td>
+<% end %>

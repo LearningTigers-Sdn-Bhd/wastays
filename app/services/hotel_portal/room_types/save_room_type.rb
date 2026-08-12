@@ -47,7 +47,7 @@ module HotelPortal
       end
 
       def sync_with_channel_manager
-        return if @hotel.preferred_channel_manager.blank?
+        return unless ChannelManagers::ConnectionState.provisioned?(@hotel)
 
         ChannelManagers::SyncStructureJob.perform_later(@room_type.class.name, @room_type.id, "sync")
       end

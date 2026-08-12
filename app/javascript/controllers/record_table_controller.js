@@ -22,14 +22,28 @@ export default class extends Controller {
     row?.querySelector("input:not([type='hidden']), select, textarea")?.focus()
   }
 
-  remove(event) {
-    event.currentTarget.closest("[data-record-table-target='row']")?.remove()
+  async remove(event) {
+    const row = event.currentTarget.closest("[data-record-table-target='row']")
+    if (!row) return
+
+    if (row.dataset.recordTablePersisted === "true") {
+      const message = event.currentTarget.dataset.recordTableConfirm
+      const confirmed = !message || await Turbo.config.forms.confirm(message, event.currentTarget)
+      if (!confirmed) return
+
+      const destroyInput = row.querySelector("input[data-record-table-destroy]")
+      if (destroyInput) destroyInput.value = "1"
+      row.hidden = true
+    } else {
+      row.remove()
+    }
+
     this.#syncEmptyState()
   }
 
   #syncEmptyState() {
     if (this.hasEmptyTarget) {
-      this.emptyTarget.hidden = this.rowTargets.length > 0
+      this.emptyTarget.hidden = this.rowTargets.some(row => !row.hidden)
     }
   }
 }

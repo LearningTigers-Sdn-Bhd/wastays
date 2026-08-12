@@ -24,6 +24,20 @@ RSpec.describe RoomType, type: :model do
     end
     it { is_expected.to validate_presence_of(:base_price) }
     it { is_expected.to validate_numericality_of(:base_price).is_greater_than_or_equal_to(0) }
+
+    it "allows quantity-only inventory without room numbers" do
+      expect(build(:room_type, hotel: create(:hotel), quantity: 3, room_numbers: [])).to be_valid
+    end
+
+    it "requires one unique room number per room when numbering is used" do
+      duplicate = build(:room_type, quantity: 2, room_numbers: [ "101", "101" ])
+      short = build(:room_type, quantity: 3, room_numbers: [ "101", "102" ])
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:room_numbers]).to include("must be unique")
+      expect(short).not_to be_valid
+      expect(short.errors[:room_numbers]).to include("must include exactly one number for each room")
+    end
   end
 
   describe '#standard_rate_plan' do

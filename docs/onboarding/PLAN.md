@@ -143,15 +143,17 @@ Deliverable: a hotel can establish its financial foundation before configuring p
 
 Deliver room setup:
 
-- Room-type table
-- Add/edit detail experience
+- Excel-like room-type table with inline add/edit/remove
 - Quantity and occupancy rules
 - Conditional room-number requirements
-- Amenities, photos, and policies
+- Amenities and room-number action sheets
+- Smoking and pet policies
 - Completion contract
 - Dependency invalidation when rooms or capacities change
 
-Reuse existing room save and photo services. Do not create onboarding-only room records.
+Reuse existing room save services. Do not create onboarding-only room records. Room
+descriptions, photos, room groups, and all pricing remain outside this slice; Phase 7 owns
+onboarding pricing, while optional descriptive details remain in regular Settings.
 
 Deliverable: at least one operationally valid room type can be completed through onboarding.
 

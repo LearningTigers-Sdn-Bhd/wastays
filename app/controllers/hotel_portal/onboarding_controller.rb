@@ -14,6 +14,7 @@ module HotelPortal
       staff_setup
       taxes_fees
       room_revenue
+      rooms
     ].freeze
 
     before_action :authorize_onboarding!
@@ -94,6 +95,12 @@ module HotelPortal
         @tax_entries = entries || persisted_tax_entries
       when "room_revenue"
         @room_revenue_presenter = HotelPortal::RoomRevenuePresenter.new(hotel: current_hotel, active_tab: "tax_rules")
+      when "rooms"
+        @room_entries = entries || persisted_room_entries
+        @room_entries = [ {} ] if @room_entries.empty? && !@presenter.read_only?
+        @room_amenity_choices = Hotel::CATEGORIZED_ROOM_AMENITIES.flat_map do |group|
+          group[:items].map { |amenity| { label: "#{group[:category]} · #{amenity[:name]}", value: amenity[:id].to_s } }
+        end
       end
     end
 
@@ -152,6 +159,13 @@ module HotelPortal
             params: params,
             complete: complete
           ).call
+        when "rooms"
+          Onboarding::SaveRooms.new(
+            hotel: current_hotel,
+            actor: current_user,
+            entries: params[:room_entries] || {},
+            complete: complete
+          ).call
         end
 
       return render_section_error(result) unless result.success?
@@ -191,6 +205,24 @@ module HotelPortal
         :google_map_link, :contact_email, :contact_phone, :whatsapp_number,
         :time_zone, :default_currency, amenities: []
       )
+    end
+
+    def persisted_room_entries
+      current_hotel.room_types.order(:created_at, :id).map do |room_type|
+        {
+          "id" => room_type.id.to_s,
+          "client_key" => "room-#{room_type.id}",
+          "name" => room_type.name,
+          "max_adults" => room_type.max_adults.to_s,
+          "max_children" => room_type.max_children.to_s,
+          "quantity" => room_type.quantity.to_s,
+          "no_smoking" => (!room_type.smoking_allowed?).to_s,
+          "no_pets" => (!room_type.pets_allowed?).to_s,
+          "amenities" => room_type.amenities,
+          "room_number_mode" => room_type.room_number_mode,
+          "room_numbers" => room_type.room_numbers
+        }
+      end
     end
 
     def skip_staff_setup

@@ -19,7 +19,7 @@ module HotelPortal
       "staff_setup" => [ "Staff setup", "Prepare team members and their roles without sending invitations yet." ],
       "taxes_fees" => [ "Taxes and fees", "Confirm statutory taxes and configure any mandatory property fees." ],
       "room_revenue" => [ "Room revenue", "Set how room sales post and which taxes and policies apply." ],
-      "rooms" => [ "Rooms", "Create the room types, capacity, amenities, photos, and operating details you sell." ],
+      "rooms" => [ "Rooms", "Create the room categories, capacity, amenities, policies, and room numbering this property operates." ],
       "rates_availability" => [ "Rates and availability", "Set sell-mode pricing and establish one year of sellable inventory." ],
       "extra_charges" => [ "Extra charges", "Add optional products and services guests can purchase." ],
       "discounts" => [ "Discounts", "Configure the offers that can reduce eligible charges." ],
@@ -37,7 +37,8 @@ module HotelPortal
       "roles_permissions" => { form_id: "onboarding-role-presets-form" },
       "staff_setup" => { form_id: "onboarding-staff-drafts-form", skip_label: "No additional staff for now" },
       "taxes_fees" => { form_id: "onboarding-taxes-fees-form" },
-      "room_revenue" => { form_id: "onboarding-room-revenue-form" }
+      "room_revenue" => { form_id: "onboarding-room-revenue-form" },
+      "rooms" => { form_id: "onboarding-rooms-form" }
     }.freeze
 
     def initialize(hotel:, navigation:, current_entry:)
