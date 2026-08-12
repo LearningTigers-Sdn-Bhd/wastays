@@ -238,11 +238,11 @@ module HotelPortal
     def prepare_rates_availability(entries: nil)
       @rate_rooms = current_hotel.room_types.includes(
         :room_inventories,
-        room_type_rate_plans: [ :occupancy_prices, { rate_plan: :rate_plan_age_bands } ]
+        room_type_rate_plans: [ :occupancy_prices, :age_band_prices, { rate_plan: :rate_plan_age_bands } ]
       ).order(:created_at, :id).to_a
       @custom_rate_plans = current_hotel.rate_plans.active.where(kind: "custom").includes(
         :booking_rooms, :rate_plan_age_bands,
-        room_type_rate_plans: [ :occupancy_prices, :room_type ]
+        room_type_rate_plans: [ :occupancy_prices, :age_band_prices, :room_type ]
       ).order(:created_at, :id).to_a
       @rates_start_date = Date.current
       @rates_end_date = Date.current + 364.days
@@ -270,6 +270,22 @@ module HotelPortal
       @weekend_uplift = @weekend_uplift.merge(submitted["weekend_uplift"].to_h.stringify_keys) if submitted["weekend_uplift"].present?
     end
 
+    # Band prices keyed by the band's position, matching the column order the
+    # table renders and the order the save path reads back.
+    def age_band_price_entry(assignment, plan)
+      return {} unless current_hotel.sells_per_person?
+
+      prices = plan&.rate_plan_age_bands.to_a.each_with_index.to_h do |band, index|
+        room_price = assignment&.age_band_price_for(band)
+        # Existing flat bands predate room-specific prices. Showing their
+        # amount here lets the first onboarding save carry that value forward.
+        room_price ||= band.price_value if room_price.nil? && band.amount?
+        [ index.to_s, room_price&.to_s ]
+      end
+
+      { "age_band_prices" => prices.compact }
+    end
+
     # What this room includes on this plan. Reads through the pairing so a row
     # shows the figure that will actually price it, whether the pairing carries
     # its own or is still deferring to the plan.
@@ -289,14 +305,13 @@ module HotelPortal
       bands = anchor&.rate_plan_age_bands.to_a
       return default_child_band_entries if bands.empty?
 
-      bands.map { |band| band.attributes.slice("min_age", "max_age", "price_value", "label") }
+      bands.map { |band| band.attributes.slice("min_age", "max_age", "label") }
     end
 
     def default_child_band_entries
       [
-        { "min_age" => RatePlanAgeBand::AGE_RANGE.min, "max_age" => 2, "price_value" => 0, "label" => "Infant" },
-        { "min_age" => 3, "max_age" => 11, "price_value" => nil, "label" => "Child" },
-        { "min_age" => 12, "max_age" => RatePlanAgeBand::AGE_RANGE.max, "price_value" => nil, "label" => "Teen" }
+        { "min_age" => RatePlanAgeBand::AGE_RANGE.min, "max_age" => 2, "label" => "Infant" },
+        { "min_age" => 3, "max_age" => RatePlanAgeBand::REQUIRED_AGE_RANGE.max, "label" => "Child" }
       ]
     end
 
@@ -309,6 +324,7 @@ module HotelPortal
       pricing.default_rate = room.base_price unless current_hotel.sells_per_person?
       { "name" => plan&.name }
         .merge(occupancy_rule_entry(assignment, plan))
+        .merge(age_band_price_entry(assignment, plan))
         .merge("room_type_id" => room.id.to_s, "room_name" => room.name)
         .merge(pricing.to_h)
     end
@@ -341,7 +357,9 @@ module HotelPortal
             "id" => assignment&.id.to_s,
             "client_key" => "assignment-#{room.id}",
             "room_type_id" => room.id.to_s
-          }.merge(occupancy_rule_entry(assignment, plan)).merge(pricing.to_h)
+          }.merge(occupancy_rule_entry(assignment, plan))
+           .merge(age_band_price_entry(assignment, plan))
+           .merge(pricing.to_h)
         end
       }
     end

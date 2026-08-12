@@ -110,6 +110,7 @@ module Onboarding
           room.update!(base_price: pricing.default_rate)
         end
         apply_occupancy_rules!(plan, room, entry)
+        apply_age_band_prices!(plan, room, entry)
         remember_weekend_rule(room, plan)
       end
     end
@@ -143,6 +144,7 @@ module Onboarding
           result = RatePlans::SaveRoomPricing.call(rate_plan: plan, room_type: room, pricing: pricing)
           fail_transaction!("#{plan.name}, row #{assignment_index + 1}: #{result.error}") unless result.success?
           apply_occupancy_rules!(plan, room, assignment_entry)
+          apply_age_band_prices!(plan, room, assignment_entry)
           remember_weekend_rule(room, plan)
         end
 
@@ -165,6 +167,37 @@ module Onboarding
     # What a room includes belongs to the pairing, not to the plan: one plan
     # covers a single and a suite, and they do not include the same number of
     # pax. Blank stays blank so the plan's own figure still answers.
+    # Band prices are per room per plan, keyed by the band's position rather than
+    # its id: the bands are rewritten on every save, so ids are not stable across
+    # one submission but the order the operator sees them in is.
+    def apply_age_band_prices!(plan, room, entry)
+      return unless hotel.sells_per_person?
+
+      assignment = plan.room_type_rate_plans.find_by(room_type: room)
+      return if assignment.nil?
+
+      submitted = indexed_values(entry["age_band_prices"])
+      bands = plan.rate_plan_age_bands.reload.to_a
+
+      assignment.age_band_prices.destroy_all
+      bands.each_with_index do |band, index|
+        price = optional_decimal(submitted[index.to_s])
+        next if price.nil?
+
+        assignment.age_band_prices.create!(rate_plan_age_band: band, price: price)
+      end
+    end
+
+    # Scalar fields submitted under an index — `[age_band_prices][0]` — arrive as
+    # a hash of strings from the form and as an array when they round-trip
+    # through the session.
+    def indexed_values(value)
+      collection = value.respond_to?(:to_unsafe_h) ? value.to_unsafe_h : value
+      return collection.transform_keys(&:to_s) if collection.is_a?(Hash)
+
+      Array(collection).each_with_index.to_h { |item, index| [ index.to_s, item ] }
+    end
+
     def apply_occupancy_rules!(plan, room, entry)
       assignment = plan.room_type_rate_plans.find_by(room_type: room)
       return if assignment.nil?
@@ -213,9 +246,7 @@ module Onboarding
           {
             min_age: integer(band["min_age"]),
             max_age: integer(band["max_age"]),
-            price_value: decimal(band["price_value"]),
             label: band["label"].to_s.strip.presence,
-            pricing_mode: "amount",
             position: index
           }
         end
@@ -237,20 +268,27 @@ module Onboarding
 
       sorted = bands.sort_by { |band| band[:min_age] }
       return "Child age bands cannot overlap or leave a gap." if sorted.each_cons(2).any? { |before, after| after[:min_age] != before[:max_age] + 1 }
-      return "Child age bands must cover ages #{RatePlanAgeBand::AGE_RANGE.min}–#{RatePlanAgeBand::AGE_RANGE.max}." unless
-        sorted.first[:min_age] == RatePlanAgeBand::AGE_RANGE.min && sorted.last[:max_age] == RatePlanAgeBand::AGE_RANGE.max
+      return "Child age bands must cover ages #{RatePlanAgeBand::REQUIRED_AGE_RANGE.min}–#{RatePlanAgeBand::REQUIRED_AGE_RANGE.max}." unless
+        sorted.first[:min_age] == RatePlanAgeBand::REQUIRED_AGE_RANGE.min &&
+          sorted.last[:max_age] >= RatePlanAgeBand::REQUIRED_AGE_RANGE.max
 
       nil
     end
 
-    # Replace rather than reconcile: the bands are identical on every plan, so
-    # matching them row by row buys nothing. material_signature compares band
-    # values and not ids, so rewriting them is not a material change by itself.
+    # Rebuild by position because every plan receives the same age policy. Keep
+    # each plan's legacy percentage/amount fallback at that position so the
+    # first save after room-specific pricing ships cannot erase old prices.
     def apply_child_bands!(plan)
       return if child_band_attributes.empty?
 
+      legacy_prices = plan.rate_plan_age_bands.to_a.map do |band|
+        { pricing_mode: band.pricing_mode, price_value: band.price_value }
+      end
       plan.rate_plan_age_bands.destroy_all
-      child_band_attributes.each { |attributes| plan.rate_plan_age_bands.create!(attributes) }
+      child_band_attributes.each_with_index do |attributes, index|
+        fallback = legacy_prices[index] || { pricing_mode: "amount", price_value: 0 }
+        plan.rate_plan_age_bands.create!(attributes.merge(fallback))
+      end
     end
 
     def persisted_weekend_rules
@@ -350,6 +388,10 @@ module Onboarding
           .order(:room_type_rate_plan_id, :adults).pluck(:room_type_rate_plan_id, :adults, :price),
         RatePlanAgeBand.where(rate_plan_id: plan_ids).order(:rate_plan_id, :position, :min_age)
           .pluck(:rate_plan_id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position),
+        RoomTypeRatePlanAgeBandPrice.joins(:room_type_rate_plan, :rate_plan_age_band)
+          .where(room_type_rate_plans: { room_type_id: room_ids, rate_plan_id: plan_ids })
+          .order(:room_type_rate_plan_id, "rate_plan_age_bands.position")
+          .pluck(:room_type_rate_plan_id, "rate_plan_age_bands.position", :price),
         RoomInventory.where(room_type_id: room_ids, date: start_date..end_date).order(:room_type_id, :date)
           .pluck(:room_type_id, :date, :quantity, :status),
         RoomRate.where(room_type_id: room_ids, rate_plan_id: plan_ids, date: start_date..end_date)
@@ -377,7 +419,7 @@ module Onboarding
     def standard_entries = normalize_collection(params["standard_entries"])
     def custom_plan_entries = normalize_collection(params["custom_plans"]).map { |entry| entry.slice(*PLAN_FIELDS, "assignments") }
     def availability_entries = normalize_collection(params["availability_entries"])
-    def normalized_assignments(entry) = normalize_collection(entry["assignments"]).map { |item| item.slice(*ASSIGNMENT_FIELDS, "prices") }
+    def normalized_assignments(entry) = normalize_collection(entry["assignments"]).map { |item| item.slice(*ASSIGNMENT_FIELDS, "prices", "age_band_prices") }
 
     def normalize_collection(value)
       collection = value.respond_to?(:to_unsafe_h) ? value.to_unsafe_h.values : (value.is_a?(Hash) ? value.values : Array(value))

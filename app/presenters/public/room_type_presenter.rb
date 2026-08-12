@@ -90,6 +90,27 @@ module Public
       pricing_summary[:rate_plan]&.child_price_multiplier
     end
 
+    # The bands the browser preview prices children with. The band supplies the
+    # ages; this room's own figure supplies the money where it has one, which is
+    # always a flat amount — falling back to the band's percentage or amount
+    # keeps plans configured before per-room child pricing working unchanged.
+    def rate_plan_age_bands
+      rate_plan = pricing_summary[:rate_plan]
+      return [] unless rate_plan && per_pax_billing?
+
+      assignment = @room_type.room_type_rate_plans.find { |item| item.rate_plan_id == rate_plan.id }
+
+      rate_plan.rate_plan_age_bands.map do |band|
+        room_price = assignment&.effective_age_band_price_for(band)
+        {
+          minAge: band.min_age,
+          maxAge: band.max_age,
+          pricingMode: room_price ? "amount" : band.pricing_mode,
+          value: (room_price || band.price_value).to_f
+        }
+      end
+    end
+
     def stay_nights
       stay_dates.size
     end

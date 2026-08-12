@@ -6,6 +6,10 @@ class RoomTypeRatePlan < ApplicationRecord
     class_name: "RoomTypeRatePlanOccupancyPrice",
     dependent: :destroy,
     inverse_of: :room_type_rate_plan
+  has_many :age_band_prices,
+    class_name: "RoomTypeRatePlanAgeBandPrice",
+    dependent: :destroy,
+    inverse_of: :room_type_rate_plan
 
   attr_accessor :included
 
@@ -47,6 +51,32 @@ class RoomTypeRatePlan < ApplicationRecord
 
   def occupancy_price_for(adults)
     occupancy_prices.find { |item| item.adults == adults.to_i }&.price
+  end
+
+  # What this room charges for a child in the given band. Nil means the pairing
+  # has priced nothing of its own, and the band's own figure still stands.
+  def age_band_price_for(band)
+    return nil if band.nil?
+
+    age_band_prices.find { |item| item.rate_plan_age_band_id == band.id }&.price
+  end
+
+  # A derived plan's child amount follows Standard for the same room. The
+  # selected plan may still override it directly; old plans without room-level
+  # amounts continue to fall back to their own band percentage or amount.
+  def effective_age_band_price_for(band)
+    direct_price = age_band_price_for(band)
+    return direct_price unless direct_price.nil?
+    return nil unless derives_price? && band
+
+    standard_plan = room_type.standard_rate_plan
+    return nil if standard_plan.nil? || standard_plan.id == rate_plan_id
+
+    standard_band = standard_plan.band_for_age(band.min_age)
+    standard_assignment = room_type.room_type_rate_plans.find do |assignment|
+      assignment.rate_plan_id == standard_plan.id
+    end
+    standard_assignment&.age_band_price_for(standard_band)
   end
 
   private

@@ -2,10 +2,15 @@
     under it are the records. Plans sit side by side in one scan rather than
     behind separate accordion panels. %>
 <% max_adults = @rate_rooms.map(&:max_adults).map(&:to_i).max.to_i %>
+<% bands = current_hotel.sells_per_person? ? Array(@child_bands) : [] %>
+<%# Adult columns plus a column per child band outgrow a laptop once a property
+    holds four adults, so the table scrolls inside its own region rather than
+    pushing the page sideways. %>
 <%= render HotelPortal::Setup::RecordTable.new(
       caption: "Rate plan pricing",
       empty: "Add a room category before setting prices.",
       addable: false, removable: !presenter.read_only?,
+      spreadsheet: current_hotel.sells_per_person?,
       class: "panel-record-table--rates") do |table| %>
   <% table.with_column(label: "Room category", required: true) %>
   <%# Occupancy rules sit on the row because they belong to this room under this
@@ -13,6 +18,9 @@
       columns already price every party size, including a lone guest. %>
   <% if current_hotel.sells_per_person? %>
     <% (1..max_adults).each { |adults| table.with_column(label: pluralize(adults, "adult")) } %>
+    <% bands.each_with_index do |band, index| %>
+      <% table.with_column(label: child_band_column_label(band, index)) %>
+    <% end %>
   <% else %>
     <% table.with_column(label: "Base occupancy") %>
     <% table.with_column(label: "Base rate", required: true) %>
@@ -31,14 +39,15 @@
     <% room = @rate_rooms.find { |candidate| candidate.id.to_s == entry["room_type_id"].to_s } %>
     <% table.with_row(remove_label: "Remove #{room&.name}", removable: false, key: key) do %>
       <%= render "rate_assignment_cells", entry: entry, row_key: key, plan_index: "standard",
-            room: room, standard: true, plan_entry: {}, presenter: presenter, max_adults: max_adults %>
+            room: room, standard: true, plan_entry: {}, presenter: presenter,
+            max_adults: max_adults, bands: bands %>
     <% end %>
   <% end %>
 
   <% @custom_rate_entries.each_with_index do |plan_entry, plan_index| %>
     <% plan_key = plan_entry["client_key"].presence || "plan-#{plan_entry['id'].presence || plan_index}" %>
     <%= render "rate_plan_group", entry: plan_entry, plan_key: plan_key,
-          presenter: presenter, table: table, max_adults: max_adults %>
+          presenter: presenter, table: table, max_adults: max_adults, bands: bands %>
   <% end %>
 
   <%# The clone source for "Add rate plan" is a real group rendered through the
@@ -47,6 +56,7 @@
       submits blank, which the save path skips. %>
   <% unless presenter.read_only? %>
     <%= render "rate_plan_group", entry: @new_rate_plan_entry, plan_key: "PLAN_KEY",
-          presenter: presenter, table: table, max_adults: max_adults, template_plan: true %>
+          presenter: presenter, table: table, max_adults: max_adults,
+          bands: bands, template_plan: true %>
   <% end %>
 <% end %>

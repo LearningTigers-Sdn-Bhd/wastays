@@ -306,12 +306,12 @@ module BookingEngine
 
       ActiveRecord::Associations::Preloader.new(
         records: room_types,
-        associations: :rate_plans
+        associations: { rate_plans: :rate_plan_age_bands }
       ).call
 
       ActiveRecord::Associations::Preloader.new(
         records: room_types,
-        associations: { room_type_rate_plans: :occupancy_prices }
+        associations: { room_type_rate_plans: [ :occupancy_prices, :age_band_prices ] }
       ).call
     end
 

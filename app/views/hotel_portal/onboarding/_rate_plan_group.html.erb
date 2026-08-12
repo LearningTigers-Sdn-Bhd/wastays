@@ -43,6 +43,7 @@
   <% table.with_row(remove_label: "Remove #{room&.name}", persisted: assignment["id"].present?,
         key: row_key, removable: false) do %>
     <%= render "rate_assignment_cells", entry: assignment, row_key: row_key, plan_index: plan_key,
-          room: room, standard: false, plan_entry: entry, presenter: presenter, max_adults: max_adults %>
+          room: room, standard: false, plan_entry: entry, presenter: presenter,
+          max_adults: max_adults, bands: bands %>
   <% end %>
 <% end %>

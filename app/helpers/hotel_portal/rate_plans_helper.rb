@@ -97,6 +97,15 @@ module HotelPortal
       rate_plan_pricing_basis(entry) != "manual"
     end
 
+    # A band column is headed by its label, falling back to the ages it covers
+    # so an unnamed band is still identifiable while it is being typed.
+    def child_band_column_label(band, index)
+      band["label"].presence || begin
+        ages = [ band["min_age"], band["max_age"] ].map(&:presence)
+        ages.all? ? "Ages #{ages.first}–#{ages.last}" : "Band #{index + 1}"
+      end
+    end
+
     def age_band_pricing_choices
       [
         { label: "% of the adult rate", value: "multiplier" },

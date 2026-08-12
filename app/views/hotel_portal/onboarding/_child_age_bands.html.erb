@@ -1,22 +1,21 @@
-<%# One child policy for the whole property. The bands define who counts as a
-    child and what they pay; every rate plan is saved with the same set, so a
-    guest of a given age is priced the same however they booked. %>
+<%# One child age policy for the whole property. The bands define who counts as
+    a child; each room/plan row below supplies what that child pays. %>
 <div class="space-y-3" data-controller="onboarding-child-bands"
      data-action="input->onboarding-child-bands#recalculate"
      data-onboarding-child-bands-min-value="<%= RatePlanAgeBand::AGE_RANGE.min %>"
      data-onboarding-child-bands-max-value="<%= RatePlanAgeBand::AGE_RANGE.max %>"
+     data-onboarding-child-bands-required-max-value="<%= RatePlanAgeBand::REQUIRED_AGE_RANGE.max %>"
      data-onboarding-child-bands-limit-value="<%= Onboarding::SaveRatesAvailability::MAX_CHILD_BANDS %>">
   <div>
     <h3 class="text-base font-semibold">Child age bands</h3>
     <p class="text-sm text-muted-foreground">
-      Applies to every rate plan. A flat nightly price per child — percentages of the adult rate can be set later per plan.
+      Who counts as a child, for the whole property. Each band becomes a price column in the table below.
     </p>
   </div>
 
   <div class="rounded-md border border-border bg-card p-3">
     <div class="hidden gap-2 pb-2 text-xs font-medium text-muted-foreground sm:flex">
       <span class="w-40">Age range</span>
-      <span class="w-28">Price per night</span>
       <span>Label</span>
     </div>
 
@@ -37,7 +36,7 @@
           <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %> Band
         <% end %>
         <p class="text-xs text-muted-foreground" data-onboarding-child-bands-target="coverage">
-          Bands must cover ages <%= RatePlanAgeBand::AGE_RANGE.min %>–<%= RatePlanAgeBand::AGE_RANGE.max %> without a gap.
+          Bands must cover ages <%= RatePlanAgeBand::REQUIRED_AGE_RANGE.min %>–<%= RatePlanAgeBand::REQUIRED_AGE_RANGE.max %>. Ages 13–17 are optional.
         </p>
       </div>
     <% end %>

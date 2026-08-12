@@ -47,4 +47,23 @@ RSpec.describe Public::RoomTypePresenter do
       expect(presenter.pax_rate_value).to eq(150.0)
     end
   end
+
+  describe "#rate_plan_age_bands" do
+    it "exposes the inherited Standard room amount for a derived plan" do
+      standard_band = create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 0, max_age: 12,
+                                                  pricing_mode: "amount", price_value: 0)
+      standard_assignment = room_type.room_type_rate_plans.find_by!(rate_plan: rate_plan)
+      standard_assignment.age_band_prices.create!(rate_plan_age_band: standard_band, price: 35)
+      derived_plan = create(:rate_plan, :custom, hotel: hotel)
+      create(:rate_plan_age_band, rate_plan: derived_plan, min_age: 0, max_age: 12,
+                                    pricing_mode: "amount", price_value: 0)
+      create(:room_type_rate_plan, room_type: room_type, rate_plan: derived_plan,
+                                   pricing_mode: "multiplier", pricing_value: -10)
+      allow(presenter).to receive(:pricing_summary).and_return(rate_plan: derived_plan)
+
+      expect(presenter.rate_plan_age_bands).to eq([
+        { minAge: 0, maxAge: 12, pricingMode: "amount", value: 35.0 }
+      ])
+    end
+  end
 end

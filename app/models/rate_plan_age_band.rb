@@ -1,5 +1,9 @@
 class RatePlanAgeBand < ApplicationRecord
   belongs_to :rate_plan
+  has_many :room_type_rate_plan_age_band_prices,
+    class_name: "RoomTypeRatePlanAgeBandPrice",
+    dependent: :destroy,
+    inverse_of: :rate_plan_age_band
 
   default_scope { order(:position, :min_age) }
 
@@ -8,6 +12,7 @@ class RatePlanAgeBand < ApplicationRecord
   # The one definition of "child" for the whole product: search occupancy, the
   # age pickers and the age bands operators can configure all bound to this.
   AGE_RANGE = (0..17).freeze
+  REQUIRED_AGE_RANGE = (0..12).freeze
 
   validates :min_age, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: AGE_RANGE.min, less_than_or_equal_to: AGE_RANGE.max }
   validates :max_age, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: AGE_RANGE.min, less_than_or_equal_to: AGE_RANGE.max }

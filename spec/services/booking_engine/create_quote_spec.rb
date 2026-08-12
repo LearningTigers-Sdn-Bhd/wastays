@@ -287,6 +287,39 @@ RSpec.describe BookingEngine::CreateQuote do
         expect(teen_band["price_value"]).to eq("20.0")
       end
 
+      it "freezes inherited Standard room child amounts for a derived plan" do
+        assignment = family_room.room_type_rate_plans.find_by!(rate_plan: pax_rate_plan)
+        assignment.update!(pricing_mode: "multiplier", pricing_value: -10)
+        standard_plan = family_room.standard_rate_plan
+        child_band = standard_plan.rate_plan_age_bands.create!(
+          min_age: 4, max_age: 11, pricing_mode: "amount", price_value: 0, label: "Child"
+        )
+        teen_band = standard_plan.rate_plan_age_bands.create!(
+          min_age: 12, max_age: 17, pricing_mode: "amount", price_value: 0, label: "Teen"
+        )
+        standard_assignment = family_room.room_type_rate_plans.find_by!(rate_plan: standard_plan)
+        standard_assignment.age_band_prices.create!(rate_plan_age_band: child_band, price: 30)
+        standard_assignment.age_band_prices.create!(rate_plan_age_band: teen_band, price: 45)
+
+        result = described_class.new(
+          hotel_id: hotel.id,
+          allocations: [ { room_type_id: family_room.id, quantity: 1 } ],
+          check_in: check_in,
+          check_out: check_out,
+          adults: 2,
+          children: 2,
+          child_ages: [ 6, 15 ],
+          room_count: 1,
+          rate_plan_id: pax_rate_plan.id
+        ).call
+
+        expect(result.success?).to be true
+        expect(result.quote.total_amount).to eq(350.0)
+        snapshot = result.quote.booking_quote_items.first.occupancy_snapshot
+        expect(snapshot["child_age_bands"].map { |band| [ band["pricing_mode"], band["price_value"] ] })
+          .to eq([ [ "amount", "30.0" ], [ "amount", "45.0" ] ])
+      end
+
       it "falls back to the flat child_price_multiplier and empty child_ages when no ages are supplied" do
         service = described_class.new(
           hotel_id: hotel.id,

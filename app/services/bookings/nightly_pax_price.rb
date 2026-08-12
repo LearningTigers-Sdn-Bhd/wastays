@@ -96,11 +96,15 @@ module Bookings
       price
     end
 
+    # The band says who this child is; what they cost can be answered by the
+    # room they are staying in, since a child in a suite is not worth the same
+    # as one in a single. A pairing that has priced nothing leaves the band's
+    # own figure standing.
     def per_child_price(age)
       band = @rate_plan.age_banded? ? @rate_plan.band_for_age(age) : nil
-      return band.price_for(@base_nightly_rate) if band
+      return @base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d) if band.nil?
 
-      @base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d)
+      @assignment&.effective_age_band_price_for(band) || band.price_for(@base_nightly_rate)
     end
   end
 end

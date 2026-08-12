@@ -85,6 +85,13 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     expect(response.body).to include("Child age bands")
     expect(response.body).not_to include("Extra guest", "Extra adult")
 
+    # The band section defines who a child is; what they cost is a column per
+    # room on each plan, so the section itself carries no price field.
+    bands_section = response.parsed_body.css("[data-controller='onboarding-child-bands']")
+    expect(bands_section.css("input[name*='[label]']")).not_to be_empty
+    expect(bands_section.css("input[name*='price']")).to be_empty
+    expect(response.parsed_body.css("input[name*='[age_band_prices]']")).not_to be_empty
+
     # The adult columns already price a lone guest, so a supplement on top of
     # them could only ever be ignored — NightlyPaxPrice skips it whenever an
     # occupancy matrix exists, and onboarding always saves a complete one.
@@ -150,7 +157,7 @@ RSpec.describe "Onboarding rates and availability", type: :request do
         /\[quantity\]/ => "2"
       })
 
-      expect(payload["child_bands"].values.map { |band| band["max_age"] }).to eq(%w[2 11 17])
+      expect(payload["child_bands"].values.map { |band| band["max_age"] }).to eq(%w[2 12])
 
       patch hotel_onboarding_section_path(pax_hotel, section_key: "rates_availability"),
             params: payload.merge("navigation_action" => "save_continue")
@@ -160,7 +167,7 @@ RSpec.describe "Onboarding rates and availability", type: :request do
 
       bands = pax_room.reload.standard_rate_plan.rate_plan_age_bands
       expect(bands.map { |band| [ band.min_age, band.max_age, band.pricing_mode ] })
-        .to eq([ [ 0, 2, "amount" ], [ 3, 11, "amount" ], [ 12, 17, "amount" ] ])
+        .to eq([ [ 0, 2, "amount" ], [ 3, 12, "amount" ] ])
     end
   end
 
@@ -177,7 +184,10 @@ RSpec.describe "Onboarding rates and availability", type: :request do
 
     table = response.parsed_body.at_css("table.panel-record-table--rates")
     header_count = table.css("thead th").size
-    expect(header_count).to eq(6) # remove + room category + 4 occupancy columns
+    # remove + room category + 4 occupancy columns + 2 required child bands
+    expect(header_count).to eq(8)
+    expect(table.css("thead th").map(&:text)).to include("Infant", "Child")
+    expect(table.css("thead th").map(&:text)).not_to include("Teen")
 
     table.css("tr.panel-record-table__row").each do |row|
       expect(row.css("> td").size).to eq(header_count)

@@ -5,7 +5,12 @@ import { Controller } from "@hotwired/stimulus"
 // so before the operator submits.
 export default class extends Controller {
   static targets = ["rows", "row", "template", "addButton", "coverage"]
-  static values = { min: { type: Number, default: 0 }, max: { type: Number, default: 17 }, limit: { type: Number, default: 4 } }
+  static values = {
+    min: { type: Number, default: 0 },
+    max: { type: Number, default: 17 },
+    requiredMax: { type: Number, default: 12 },
+    limit: { type: Number, default: 4 }
+  }
 
   connect() {
     this.#syncCoverage()
@@ -43,13 +48,13 @@ export default class extends Controller {
       .sort((a, b) => a[0] - b[0])
   }
 
-  // Covered means: starts at the youngest age, ends at the oldest, and each band
-  // begins exactly where the previous one left off.
+  // Required coverage ends at 12. A property may continue with gapless bands
+  // through 17 when it treats older teenagers as children.
   #covered() {
     const ranges = this.#ranges()
     if (ranges.length === 0) return false
     if (ranges[0][0] !== this.minValue) return false
-    if (ranges.at(-1)[1] !== this.maxValue) return false
+    if (ranges.at(-1)[1] < this.requiredMaxValue || ranges.at(-1)[1] > this.maxValue) return false
 
     return ranges.every((range, index) => index === 0 || range[0] === ranges[index - 1][1] + 1)
   }
@@ -62,8 +67,8 @@ export default class extends Controller {
 
     const covered = this.#covered()
     this.coverageTarget.textContent = covered
-      ? `Ages ${this.minValue}–${this.maxValue} fully covered.`
-      : `Bands must cover ages ${this.minValue}–${this.maxValue} without a gap.`
+      ? `Required ages ${this.minValue}–${this.requiredMaxValue} covered. Ages 13–${this.maxValue} are optional.`
+      : `Bands must cover ages ${this.minValue}–${this.requiredMaxValue} without a gap.`
     this.coverageTarget.classList.toggle("text-success", covered)
     this.coverageTarget.classList.toggle("text-muted-foreground", !covered)
   }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_12_100001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_12_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2447,6 +2447,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100001) do
     t.index ["room_type_id"], name: "index_room_statuses_on_room_type_id"
   end
 
+  create_table "room_type_rate_plan_age_band_prices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.bigint "rate_plan_age_band_id", null: false
+    t.bigint "room_type_rate_plan_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["rate_plan_age_band_id"], name: "idx_on_rate_plan_age_band_id_8651e86d34"
+    t.index ["room_type_rate_plan_id", "rate_plan_age_band_id"], name: "idx_rtrp_age_band_prices_unique", unique: true
+    t.index ["room_type_rate_plan_id"], name: "idx_on_room_type_rate_plan_id_9349ebacfa"
+  end
+
   create_table "room_type_rate_plan_occupancy_prices", force: :cascade do |t|
     t.integer "adults", null: false
     t.datetime "created_at", null: false
@@ -2857,6 +2868,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100001) do
   add_foreign_key "room_statuses", "room_types"
   add_foreign_key "room_statuses", "users", column: "assigned_to_id"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
+  add_foreign_key "room_type_rate_plan_age_band_prices", "rate_plan_age_bands"
+  add_foreign_key "room_type_rate_plan_age_band_prices", "room_type_rate_plans"
   add_foreign_key "room_type_rate_plan_occupancy_prices", "room_type_rate_plans"
   add_foreign_key "room_type_rate_plans", "rate_plans"
   add_foreign_key "room_type_rate_plans", "room_types"

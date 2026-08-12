@@ -24,6 +24,20 @@
       <% end %>
     </td>
   <% end %>
+  <%# One column per child age band. The band names the ages; the figure here is
+      what this room charges for a child of that age on this plan. %>
+  <% Array(bands).each_with_index do |band, band_index| %>
+    <td>
+      <% if derived %>
+        <span class="text-xs text-muted-foreground">From Standard</span>
+      <% else %>
+        <%= number_field_tag "#{prefix}[age_band_prices][#{band_index}]",
+              entry.dig("age_band_prices", band_index.to_s), min: 0, step: 0.01,
+              disabled: presenter.read_only?, class: "panel-input w-24",
+              aria: { label: "#{child_band_column_label(band, band_index)} price for #{room&.name}" } %>
+      <% end %>
+    </td>
+  <% end %>
 <% else %>
   <td>
     <%= number_field_tag "#{prefix}[base_occupancy]", entry["base_occupancy"], min: 1, step: 1,

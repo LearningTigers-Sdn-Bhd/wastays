@@ -196,7 +196,8 @@ RSpec.describe Onboarding::SaveRatesAvailability do
         "standard_entries" => {
           "standard" => {
             "room_type_id" => pax_room.id.to_s,
-            "prices" => { "1" => "100", "2" => "180" }
+            "prices" => { "1" => "100", "2" => "180" },
+            "age_band_prices" => { "0" => "0", "1" => "60", "2" => "90" }
           }
         },
         "custom_plans" => custom_plans,
@@ -208,9 +209,16 @@ RSpec.describe Onboarding::SaveRatesAvailability do
 
     def full_bands
       {
-        "0" => { "min_age" => "0", "max_age" => "2", "price_value" => "0", "label" => "Infant" },
-        "1" => { "min_age" => "3", "max_age" => "11", "price_value" => "60", "label" => "Child" },
-        "2" => { "min_age" => "12", "max_age" => "17", "price_value" => "90", "label" => "Teen" }
+        "0" => { "min_age" => "0", "max_age" => "2", "label" => "Infant" },
+        "1" => { "min_age" => "3", "max_age" => "11", "label" => "Child" },
+        "2" => { "min_age" => "12", "max_age" => "17", "label" => "Teen" }
+      }
+    end
+
+    def required_bands
+      {
+        "0" => { "min_age" => "0", "max_age" => "2", "label" => "Infant" },
+        "1" => { "min_age" => "3", "max_age" => "12", "label" => "Child" }
       }
     end
 
@@ -219,7 +227,7 @@ RSpec.describe Onboarding::SaveRatesAvailability do
       complete_prerequisites(pax_hotel, actor)
     end
 
-    it "writes the same amount-priced bands to every rate plan" do
+    it "writes the same age ranges to every rate plan" do
       custom = {
         "new" => {
           "name" => "Advance Purchase", "rate_mode" => "manual",
@@ -237,9 +245,66 @@ RSpec.describe Onboarding::SaveRatesAvailability do
       plans = pax_hotel.rate_plans.where(kind: %w[standard custom])
       expect(plans.count).to be >= 2
       plans.each do |plan|
-        expect(plan.rate_plan_age_bands.map { |band| [ band.min_age, band.max_age, band.price_value, band.pricing_mode ] })
-          .to eq([ [ 0, 2, 0, "amount" ], [ 3, 11, 60, "amount" ], [ 12, 17, 90, "amount" ] ])
+        expect(plan.rate_plan_age_bands.map { |band| [ band.min_age, band.max_age, band.label ] })
+          .to eq([ [ 0, 2, "Infant" ], [ 3, 11, "Child" ], [ 12, 17, "Teen" ] ])
       end
+    end
+
+    # The point of the band columns: the ranges are one property policy, but a
+    # child in a suite need not cost what a child in a single costs.
+    it "prices each band per room on each plan" do
+      second_room = create(:room_type, hotel: pax_hotel, quantity: 1, max_adults: 2, base_price: 0)
+      submitted = pax_params(bands: full_bands)
+      submitted["standard_entries"]["second"] = {
+        "room_type_id" => second_room.id.to_s,
+        "prices" => { "1" => "150", "2" => "260" },
+        "age_band_prices" => { "0" => "0", "1" => "95", "2" => "130" }
+      }
+      submitted["availability_entries"]["1"] = {
+        "room_type_id" => second_room.id.to_s, "quantity" => "1", "status" => "open"
+      }
+
+      result = described_class.call(hotel: pax_hotel, actor: actor, params: submitted, complete: true)
+
+      expect(result).to be_success
+
+      def band_prices(room)
+        assignment = room.room_type_rate_plans.find_by(rate_plan: room.standard_rate_plan)
+        room.standard_rate_plan.rate_plan_age_bands.map { |band| assignment.age_band_price_for(band) }
+      end
+
+      expect(band_prices(pax_room.reload)).to eq([ 0, 60, 90 ])
+      expect(band_prices(second_room.reload)).to eq([ 0, 95, 130 ])
+    end
+
+    it "leaves a band unpriced for a room that states nothing, so the band's own figure stands" do
+      submitted = pax_params(bands: full_bands)
+      submitted["standard_entries"]["standard"]["age_band_prices"] = { "0" => "", "1" => "", "2" => "" }
+
+      result = described_class.call(hotel: pax_hotel, actor: actor, params: submitted, complete: true)
+
+      expect(result).to be_success
+      assignment = pax_room.reload.room_type_rate_plans.find_by(rate_plan: pax_room.standard_rate_plan)
+      expect(assignment.age_band_prices).to be_empty
+    end
+
+    it "preserves legacy flat and percentage prices when onboarding rewrites the age policy" do
+      plan = pax_room.standard_rate_plan
+      plan.rate_plan_age_bands.destroy_all
+      plan.rate_plan_age_bands.create!(min_age: 0, max_age: 2, pricing_mode: "amount", price_value: 15, label: "Infant", position: 0)
+      plan.rate_plan_age_bands.create!(min_age: 3, max_age: 12, pricing_mode: "multiplier", price_value: 40, label: "Child", position: 1)
+      submitted = pax_params(bands: required_bands)
+      submitted["standard_entries"]["standard"]["age_band_prices"] = { "0" => "15", "1" => "" }
+
+      result = described_class.call(hotel: pax_hotel, actor: actor, params: submitted, complete: true)
+
+      expect(result).to be_success
+      bands = plan.reload.rate_plan_age_bands.to_a
+      expect(bands.map { |band| [ band.pricing_mode, band.price_value ] })
+        .to eq([ [ "amount", 15 ], [ "multiplier", 40 ] ])
+      assignment = pax_room.reload.room_type_rate_plans.find_by!(rate_plan: plan)
+      expect(assignment.age_band_price_for(bands.first)).to eq(15)
+      expect(assignment.age_band_price_for(bands.second)).to be_nil
     end
 
     it "rejects a gap, because an unpriced age silently falls through to the adult rate" do
@@ -251,13 +316,36 @@ RSpec.describe Onboarding::SaveRatesAvailability do
       expect(result.error).to match(/overlap or leave a gap/)
     end
 
-    it "rejects bands that stop short of the oldest child age" do
+    it "accepts required coverage that stops at age 12" do
+      result = described_class.call(hotel: pax_hotel, actor: actor, params: pax_params(bands: required_bands), complete: true)
+
+      expect(result).to be_success
+    end
+
+    it "rejects bands that stop before age 12" do
       short = full_bands.except("2")
 
       result = described_class.call(hotel: pax_hotel, actor: actor, params: pax_params(bands: short), complete: true)
 
       expect(result).not_to be_success
-      expect(result.error).to match(/must cover ages 0–17/)
+      expect(result.error).to match(/must cover ages 0–12/)
+    end
+
+    it "accepts optional continuous coverage through age 17" do
+      result = described_class.call(hotel: pax_hotel, actor: actor, params: pax_params(bands: full_bands), complete: true)
+
+      expect(result).to be_success
+    end
+
+    it "rejects a gap before an optional older-child band" do
+      optional_gap = required_bands.merge(
+        "2" => { "min_age" => "14", "max_age" => "17", "label" => "Teen" }
+      )
+
+      result = described_class.call(hotel: pax_hotel, actor: actor, params: pax_params(bands: optional_gap), complete: true)
+
+      expect(result).not_to be_success
+      expect(result.error).to match(/overlap or leave a gap/)
     end
 
     it "rejects more bands than the setup screen offers" do
@@ -298,5 +386,47 @@ RSpec.describe Onboarding::SaveRatesAvailability do
     expect(hotel.onboarding_sections.find_by!(section_key: "rates_availability").state).to eq("complete")
     expect(downstream.reload.state).to eq("needs_attention")
     expect(hotel.onboarding_audit_events.where(section_key: "channel_manager", event_type: "invalidated")).to exist
+  end
+
+  it "marks downstream setup for review when only a room child price changes" do
+    pax_hotel = create(:hotel, :per_person, account: hotel.account)
+    pax_room = create(:room_type, hotel: pax_hotel, quantity: 2, max_adults: 2, base_price: 0)
+    complete_prerequisites(pax_hotel, actor)
+    bands = {
+      "0" => { "min_age" => "0", "max_age" => "2", "label" => "Infant" },
+      "1" => { "min_age" => "3", "max_age" => "12", "label" => "Child" }
+    }
+    submitted = {
+      "start_date" => Date.current.to_s,
+      "end_date" => (Date.current + 364.days).to_s,
+      "weekend_days" => %w[0 6],
+      "weekend_uplift" => { "adjustment_mode" => "percent", "adjustment_value" => "0" },
+      "child_bands" => bands,
+      "standard_entries" => {
+        "standard" => {
+          "room_type_id" => pax_room.id.to_s,
+          "prices" => { "1" => "100", "2" => "180" },
+          "age_band_prices" => { "0" => "0", "1" => "60" }
+        }
+      },
+      "custom_plans" => {},
+      "availability_entries" => {
+        "0" => { "room_type_id" => pax_room.id.to_s, "quantity" => "2", "status" => "open" }
+      }
+    }
+    expect(described_class.call(hotel: pax_hotel, actor: actor, params: submitted, complete: true)).to be_success
+    downstream = pax_hotel.onboarding_sections.find_by!(section_key: "channel_manager")
+    downstream.update!(state: "complete", completed_at: Time.current)
+
+    unchanged = described_class.call(hotel: pax_hotel, actor: actor, params: submitted.deep_dup, complete: true)
+    expect(unchanged).to be_success
+    expect(downstream.reload.state).to eq("complete")
+
+    changed = submitted.deep_dup
+    changed["standard_entries"]["standard"]["age_band_prices"]["1"] = "75"
+    result = described_class.call(hotel: pax_hotel, actor: actor, params: changed, complete: true)
+
+    expect(result).to be_success
+    expect(downstream.reload.state).to eq("needs_attention")
   end
 end

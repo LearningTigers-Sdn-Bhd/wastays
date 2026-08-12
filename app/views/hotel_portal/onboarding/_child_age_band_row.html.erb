@@ -9,9 +9,6 @@
           max: RatePlanAgeBand::AGE_RANGE.max, step: 1, disabled: presenter.read_only?,
           class: "panel-input w-16", aria: { label: "Oldest age in this band" } %>
   </div>
-  <%= number_field_tag "#{prefix}[price_value]", band["price_value"], min: 0, step: 0.01,
-        disabled: presenter.read_only?, class: "panel-input w-28",
-        aria: { label: "Nightly price per child in this band" } %>
   <%= text_field_tag "#{prefix}[label]", band["label"], disabled: presenter.read_only?,
         placeholder: "Child", class: "panel-input w-36", aria: { label: "Band label" } %>
   <% unless presenter.read_only? %>

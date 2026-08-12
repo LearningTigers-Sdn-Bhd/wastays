@@ -43,6 +43,26 @@ RSpec.describe Bookings::NightlyPaxPrice do
     expect(total).to eq(160)
   end
 
+  it "inherits the Standard room child amount for a derived plan" do
+    pax_room = create(:room_type, hotel: pax_hotel, base_price: 100)
+    standard_plan = pax_room.standard_rate_plan
+    standard_band = create(:rate_plan_age_band, rate_plan: standard_plan, min_age: 0, max_age: 12,
+                                                pricing_mode: "amount", price_value: 0)
+    standard_assignment = pax_room.room_type_rate_plans.find_by!(rate_plan: standard_plan)
+    standard_assignment.age_band_prices.create!(rate_plan_age_band: standard_band, price: 35)
+    derived_plan = create(:rate_plan, :custom, hotel: pax_hotel)
+    derived_band = create(:rate_plan_age_band, rate_plan: derived_plan, min_age: 0, max_age: 12,
+                                               pricing_mode: "amount", price_value: 0)
+    assignment = create(:room_type_rate_plan, room_type: pax_room, rate_plan: derived_plan,
+                                              pricing_mode: "multiplier", pricing_value: -10)
+
+    total = described_class.call(base_nightly_rate: 100.to_d, rate: nil, rate_plan: derived_plan,
+                                 adults: 1, children: 1, child_ages: [ 8 ], assignment: assignment)
+
+    expect(derived_band).to be_present
+    expect(total).to eq(135)
+  end
+
   it "prefers per-date RoomRate overrides over rate_plan defaults" do
     rate_plan = create(:rate_plan, hotel: hotel, base_occupancy: 2, extra_pax_charge: 25)
     rate = create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 150, base_occupancy: 3, extra_pax_charge: 10)
