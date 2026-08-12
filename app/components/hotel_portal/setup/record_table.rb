@@ -43,21 +43,28 @@ module HotelPortal
         # `remove_label` names the record rather than the column: "Remove
         # Breakfast" tells an operator which row the button discards, which the
         # header alone cannot.
+        # `soft_remove` keeps a removed row in the DOM, hidden and marked for
+        # destruction, rather than discarding it. A row whose identity comes from
+        # elsewhere — a room category the operator cannot retype — has to survive
+        # its own removal so something can put it back.
         def initialize(remove_label:, persisted: false, confirm: nil, key: nil, removable: true,
-                       remove_disabled_reason: nil, table: nil)
+                       remove_disabled_reason: nil, soft_remove: false, hidden: false, table: nil)
           @remove_label = remove_label
           @persisted = persisted
           @confirm = confirm
           @key = key
           @removable = removable
           @remove_disabled_reason = remove_disabled_reason
+          @soft_remove = soft_remove
+          @hidden = hidden
           @table = table
         end
 
         def call
-          tag.tr(class: "panel-record-table__row", data: {
+          tag.tr(class: "panel-record-table__row", hidden: @hidden, data: {
             "#{CONTROLLER}_target": "row",
             record_table_persisted: @persisted.to_s,
+            record_table_soft: (@soft_remove ? "true" : nil),
             record_table_key: @key
           }.compact) do
             safe_join([ remove_cell, content ].compact)

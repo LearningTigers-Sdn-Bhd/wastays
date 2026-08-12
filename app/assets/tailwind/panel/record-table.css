@@ -26,6 +26,12 @@
     min-width: 72rem;
   }
 
+  /* Rate headings describe compact pricing dimensions. Keep each label on one
+     line and let the spreadsheet region scroll instead of wrapping headers. */
+  .panel-record-table--rates thead th {
+    white-space: nowrap;
+  }
+
   /* Rooms is intentionally Excel-like: these widths establish its minimum
      working grid, but the table remains fluid and fills wider containers. The
      labelled region above owns horizontal scrolling below that minimum. */
@@ -53,7 +59,10 @@
     background: var(--card);
   }
 
-  .panel-record-table--spreadsheet :is(thead, tbody) tr > :nth-child(2) {
+  /* The group heading is excluded: its second cell is the spanning label, and
+     pinning that to the room-category column would size it to one column and
+     wrap the plan's controls into a stack. It pins its own contents instead. */
+  .panel-record-table--spreadsheet :is(thead, tbody) tr:not(.panel-record-table__group) > :nth-child(2) {
     position: sticky;
     inset-inline-start: 3.25rem;
     z-index: 2;
@@ -86,6 +95,27 @@
     align-items: center;
     gap: 0.5rem;
     font-weight: 500;
+  }
+
+  /* The muted ground has to beat the sticky first column, which paints itself
+     card-coloured for the records — a heading striped white at its left edge
+     stops reading as one row. */
+  .panel-record-table--spreadsheet tbody tr.panel-record-table__group > * {
+    background: var(--muted);
+  }
+
+  /* Wide enough for the plan's own fields and no wider: the heading spans a
+     table that scrolls, so its contents ride along at the left edge instead of
+     scrolling out of reach. `nowrap` is what makes that width real — a wrapping
+     flex container's max-content size is only its widest child, which would
+     stack the plan's fields into a column. */
+  .panel-record-table--spreadsheet .panel-record-table__group-content {
+    position: sticky;
+    inset-inline-start: 3.25rem;
+    flex-wrap: nowrap;
+    width: max-content;
+    max-width: 100%;
+    padding-inline-end: 0.5rem;
   }
 
   .panel-record-table__required {

@@ -147,4 +147,87 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(room.room_numbers).to eq([ "101", "102" ])
     expect(room.amenities).to eq([ amenity[:id].to_s ])
   end
+
+  # Coverage is edited on the rows: a category comes off a plan by removing its
+  # row, and "+ Room" adds a row that asks which category to put back.
+  it "takes a room category off a custom rate plan and puts it back" do
+    suite = create(:room_type, hotel: hotel, name: "Suite", quantity: 1, max_adults: 2, base_price: 200)
+    create(:room_type, hotel: hotel, name: "Deluxe", quantity: 1, max_adults: 2, base_price: 150)
+    Onboarding::InitializeProgress.new(hotel: hotel, actor: user).call
+    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
+      hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
+    end
+    plan = create(:rate_plan, :custom, hotel: hotel, name: "Corporate")
+    hotel.room_types.each { |type| RatePlans::BootstrapAssignment.call!(rate_plan: plan, room_type: type) }
+
+    visit hotel_onboarding_section_path(hotel, section_key: "rates_availability")
+
+    # The clone source for "Add rate plan" carries the same row keys, so wait for
+    # the controller to lift it out before addressing a row by its category.
+    expect(page).to have_css("tr[data-record-table-key='assignment-#{suite.id}']", count: 1)
+    plan_heading = all("tr.panel-record-table__group").find { |row| row.has_field?("Rate plan name", with: "Corporate") }
+    deluxe_row = find("tr[data-record-table-key='assignment-#{hotel.room_types.find_by!(name: 'Deluxe').id}']")
+
+    # Nothing to add while the plan sells everything.
+    expect(plan_heading).not_to have_button("Room")
+
+    deluxe_row.find("button[aria-label='Remove Deluxe from Corporate']").click
+
+    expect(deluxe_row).not_to be_visible
+    expect(plan_heading).to have_button("Room")
+
+    # The last category standing cannot be removed: a plan that prices nothing
+    # is not a plan, and removing it is the control one row up.
+    suite_row = find("tr[data-record-table-key='assignment-#{suite.id}']")
+    expect(suite_row.find("button[aria-label='Remove Suite from Corporate']")).to be_disabled
+
+    plan_heading.click_button("Room")
+
+    # The picker offers what the plan is missing and nothing it already sells,
+    # so a property with thirty categories reads the same as one with two.
+    expect(all("tr.panel-record-table__row [role='option']", visible: :all).map { |option| option.text(:all) })
+      .to contain_exactly("Deluxe")
+
+    find("tr.panel-record-table__row .panel-select-menu__trigger").click
+    find("tr.panel-record-table__row [role='option']", text: "Deluxe").click
+
+    expect(deluxe_row).to be_visible
+    expect(page).to have_no_css("select[name*='room_picker']", visible: :all)
+    expect(plan_heading).not_to have_button("Room")
+  end
+
+  # The screenshot bug: the per-pax table pins its first two columns, and the
+  # heading's spanning cell was pinned with them — squeezing the plan's name,
+  # basis and adjustment into a column-wide stack.
+  it "lays a rate plan heading across the pinned columns rather than inside them" do
+    pax_hotel = create(:hotel, :per_person, account: account, status: "setup")
+    create(:user_hotel_access, user: user, hotel: pax_hotel, role: role)
+    create(:room_type, hotel: pax_hotel, name: "Suite", quantity: 1, max_adults: 4, base_price: 200)
+    Onboarding::InitializeProgress.new(hotel: pax_hotel, actor: user).call
+    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
+      pax_hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
+    end
+    plan = create(:rate_plan, :custom, hotel: pax_hotel, name: "Corporate")
+    RatePlans::BootstrapAssignment.call!(rate_plan: plan, room_type: pax_hotel.room_types.sole)
+
+    visit hotel_onboarding_section_path(pax_hotel, section_key: "rates_availability")
+    expect(page).to have_field("Rate plan name", with: "Corporate")
+
+    layout = page.evaluate_script(<<~JS)
+      (() => {
+        const name = document.querySelector("input[name$='[name]'][placeholder='Rate plan name']")
+        const content = name.closest(".panel-record-table__group-content")
+        const adjust = content.querySelector("input[name$='[derive_value]']")
+        const column = document.querySelector(".panel-record-table--rates tbody tr.panel-record-table__row > :nth-child(2)")
+        return {
+          width: content.getBoundingClientRect().width,
+          column: column.getBoundingClientRect().width,
+          sameLine: Math.round(name.getBoundingClientRect().top) === Math.round(adjust.getBoundingClientRect().top)
+        }
+      })()
+    JS
+
+    expect(layout["width"]).to be > layout["column"]
+    expect(layout["sameLine"]).to be(true)
+  end
 end

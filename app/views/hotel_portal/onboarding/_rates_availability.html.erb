@@ -10,6 +10,7 @@
   <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "rates_availability"),
                 method: :patch, id: "onboarding-rates-availability-form", class: "space-y-8",
                 data: { controller: "onboarding-rates",
+                        action: "record-table:changed->onboarding-rates#changed",
                         onboarding_rates_read_only_value: presenter.read_only? } do %>
     <% if current_hotel.sells_per_person? %>
       <%= render "child_age_bands", bands: @child_bands, presenter: presenter %>
@@ -20,7 +21,9 @@
         <h3 class="text-base font-semibold">Rate plans</h3>
         <p class="text-sm text-muted-foreground">
           <%= current_hotel.sells_per_person? ? "Nightly price per person, by room." : "Nightly room price, by room." %>
-          Standard Rate covers every room category and cannot be removed.
+          Standard Rate covers every room category and cannot be removed. A plan you add starts on
+          every category too — remove a row to take that category off the plan, and use the plan's
+          "Room" button to put one back.
         </p>
       </div>
 

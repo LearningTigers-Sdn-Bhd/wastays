@@ -50,13 +50,13 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     expect(groups.first.css("button[aria-label^='Remove']")).to be_empty
     expect(groups.first.text).to include("Standard Rate")
 
-    # A custom plan heading carries only what belongs to the plan: its name and
-    # how it gets its prices. Rooms are not attached from here.
+    # A custom plan heading carries what belongs to the plan: its name and how
+    # it gets its prices. Coverage is decided on the rows, so the heading offers
+    # no room picker of its own.
     custom_heading = groups.find { |group| group.css("input[name$='[name]']").any? }
     expect(custom_heading.css("input[name$='[name]']")).not_to be_empty
     expect(custom_heading.css("select[name$='[rate_mode]']")).not_to be_empty
     expect(custom_heading.css("select[name*='room_type_id']")).to be_empty
-    expect(body.css("[data-record-table-group-param]")).to be_empty
   end
 
   it "drops the maintenance surfaces that only matter once the property is live" do
@@ -194,6 +194,7 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     header_text = table.css("thead th").map { |header| header.text.squish }
     expect(header_text).to include(a_string_starting_with("Infant"), a_string_starting_with("Child"))
     expect(header_text).not_to include(a_string_starting_with("Teen"))
+    expect(table.css("thead th > .flex.items-center").size).to eq(2)
 
     table.css("tr.panel-record-table__row").each do |row|
       expect(row.css("> td").size).to eq(header_count)
@@ -204,6 +205,47 @@ RSpec.describe "Onboarding rates and availability", type: :request do
       spanned = group.css("> td").sum { |cell| (cell["colspan"] || 1).to_i }
       expect(spanned).to eq(header_count)
     end
+  end
+
+  # A plan that should not sell every category — Corporate on suites only — is
+  # expressed by dropping its rows, so each custom row carries removal and the
+  # plan carries a row that asks which category to add back.
+  it "lets a custom plan drop a room category and add one back through a picker" do
+    custom = create(:rate_plan, :custom, hotel: hotel, name: "Advance Purchase")
+    RatePlans::BootstrapAssignment.call!(rate_plan: custom, room_type: room)
+    create(:room_type, hotel: hotel, name: "Pool Villa", quantity: 1, max_adults: 2)
+
+    get hotel_onboarding_section_path(hotel, section_key: "rates_availability")
+
+    body = response.parsed_body
+    rows = body.css("tr.panel-record-table__row")
+    custom_rows = rows.select { |row| row.css("input[name^='custom_plans[plan-#{custom.id}]']").any? }
+    expect(custom_rows.size).to eq(2)
+
+    custom_rows.each do |row|
+      expect(row["data-record-table-soft"]).to eq("true")
+      expect(row.css("input[data-record-table-destroy][value='0']")).not_to be_empty
+      expect(row.css("button[aria-label^='Remove']").map { |button| button["aria-label"] })
+        .to all(end_with("from Advance Purchase"))
+    end
+
+    # Standard has no coverage decision to make, so its rows keep neither.
+    standard_rows = rows.select { |row| row.css("input[name^='standard_entries']").any? }
+    expect(standard_rows.flat_map { |row| row.css("input[data-record-table-destroy]").to_a }).to be_empty
+
+    heading = body.css("tr.panel-record-table__group").find do |group|
+      group.css("input[name^='custom_plans[plan-#{custom.id}]']").any?
+    end
+    expect(heading.css("[data-record-table-group-param='plan-#{custom.id}']").text.squish).to eq("Room")
+
+    # The row that button adds asks which category, rather than the heading
+    # listing every category the plan already sells.
+    picker = body.css("template[data-record-table-group='plan-#{custom.id}']").sole
+    choices = picker.css("select[name$='[room_type_id]'] option").map { |option| option.text.squish }
+    expect(choices).to include("Deluxe King", "Pool Villa")
+    # Its cells still line up with the columns the chosen room will fill.
+    expect(picker.css("tr.panel-record-table__row > td").size)
+      .to eq(body.at_css("table.panel-record-table--rates thead").css("th").size)
   end
 
   it "dashes the occupancy cells a room cannot hold rather than offering an unusable field" do
@@ -218,5 +260,10 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     expect(twin.text).to include("—")
     expect(twin.css("input[name*='[prices][3]']")).to be_empty
     expect(twin.css("input[name*='[prices][2]']")).not_to be_empty
+
+    # A cell nobody has priced yet shows the zero it already means to the save
+    # path, rather than reading as a field that failed to load.
+    expect(twin.css("input[name*='[prices][2]'], input[name*='[age_band_prices]']").map { |cell| cell["value"] })
+      .to all(eq("0.0"))
   end
 end

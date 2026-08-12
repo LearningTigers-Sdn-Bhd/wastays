@@ -41,7 +41,10 @@ export default class extends Controller {
     // meaning once their heading is gone.
     if (row.dataset.recordTableTarget === "group") return this.#removeGroup(row, event)
 
-    if (row.dataset.recordTablePersisted === "true") {
+    // A saved record has to report its own removal, so it stays in the DOM
+    // marked for destruction. A soft row does the same for a different reason:
+    // it is the only copy of a record the operator may want back.
+    if (row.dataset.recordTablePersisted === "true" || row.dataset.recordTableSoft === "true") {
       const message = event.currentTarget.dataset.recordTableConfirm
       const confirmed = !message || await Turbo.config.forms.confirm(message, event.currentTarget)
       if (!confirmed) return

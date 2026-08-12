@@ -144,6 +144,52 @@ RSpec.describe Onboarding::SaveRatesAvailability do
       expect(assignment.effective_base_occupancy).to eq(assignment.rate_plan.base_occupancy)
     end
 
+    # The table renders a row for every category, so taking one off the plan
+    # arrives as a row marked for destruction rather than a missing one.
+    it "detaches the room a submitted row reports off the plan" do
+      second_room
+      submitted = params(custom_plans: {
+        "new" => {
+          "name" => "Corporate", "rate_mode" => "manual",
+          "assignments" => {
+            "row-0" => { "room_type_id" => room.id.to_s, "default_rate" => "99" },
+            "row-1" => { "room_type_id" => second_room.id.to_s, "default_rate" => "199", "_destroy" => "1" }
+          }
+        }
+      })
+      submitted["standard_entries"]["second"] = {
+        "room_type_id" => second_room.id.to_s, "base_occupancy" => "2", "default_rate" => "150"
+      }
+      submitted["availability_entries"]["1"] = {
+        "room_type_id" => second_room.id.to_s, "quantity" => "1", "status" => "open"
+      }
+
+      result = described_class.call(hotel: hotel, actor: actor, params: submitted, complete: true)
+
+      expect(result).to be_success
+      plan = hotel.rate_plans.find_by!(kind: "custom", name: "Corporate")
+      expect(plan.room_type_rate_plans.map(&:room_type_id)).to eq([ room.id ])
+      # Standard still covers it: coming off one plan is not coming off sale.
+      expect(second_room.room_type_rate_plans.map(&:rate_plan)).to include(second_room.standard_rate_plan)
+    end
+
+    it "refuses a plan whose every room row was taken off it" do
+      submitted = params(custom_plans: {
+        "new" => {
+          "name" => "Corporate", "rate_mode" => "manual",
+          "assignments" => {
+            "row-0" => { "room_type_id" => room.id.to_s, "default_rate" => "99", "_destroy" => "1" }
+          }
+        }
+      })
+
+      result = described_class.call(hotel: hotel, actor: actor, params: submitted, complete: true)
+
+      expect(result).not_to be_success
+      expect(result.error).to include("at least one room category")
+      expect(hotel.rate_plans.where(kind: "custom")).to be_empty
+    end
+
     it "prices directly when the plan is not derived" do
       custom = {
         "new" => {

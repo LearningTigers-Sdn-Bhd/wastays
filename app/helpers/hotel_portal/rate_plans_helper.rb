@@ -3,7 +3,7 @@
 module HotelPortal
   module RatePlansHelper
     RoomSelectionScope = Struct.new(:room_type_id)
-    OnboardingFieldScope = Struct.new(:rate_mode, :derive_mode, :adjustment_mode, :status)
+    OnboardingFieldScope = Struct.new(:rate_mode, :derive_mode, :adjustment_mode, :status, :room_type_id)
 
     def rate_plan_rate_mode_options(pricing)
       {
@@ -93,6 +93,11 @@ module HotelPortal
       entry["derive_mode"].to_s == "offset" ? "derived_offset" : "derived_multiplier"
     end
 
+    # An empty money cell and a zero read the same to the save path, so the table
+    # shows the zero. A priced room next to a blank one otherwise looks like a
+    # field that has not loaded rather than one nobody has charged for yet.
+    def rate_amount_value(value) = value.to_s.presence || "0.0"
+
     def rate_plan_derived?(entry)
       rate_plan_pricing_basis(entry) != "manual"
     end
@@ -110,7 +115,7 @@ module HotelPortal
       label = child_band_column_label(band, index)
       mode = band["pricing_mode"].presence || "amount"
 
-      tag.div(class: "flex min-w-24 flex-col items-start gap-2") do
+      tag.div(class: "flex min-w-24 items-center gap-2") do
         safe_join([
           tag.span(label),
           render(PanelsUI::Switch.new(
