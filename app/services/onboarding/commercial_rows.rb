@@ -13,8 +13,13 @@ module Onboarding
     private
 
     def rows
-      @rows ||= normalize_collection(@entries).map { |row| row.slice(*self.class::ENTRY_FIELDS) }
+      @rows ||= normalize_collection(@entries).map { |row| prepare_row(row.slice(*self.class::ENTRY_FIELDS)) }
     end
+
+    # Hook for a section that fills in a field its table no longer asks for.
+    # Rows are prepared in submission order, so a generator can take account of
+    # what the rows before it have already claimed.
+    def prepare_row(row) = row
 
     def retained_rows
       @retained_rows ||= rows.reject { |row| discarded?(row) || blank_row?(row) }

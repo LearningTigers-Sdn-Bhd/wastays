@@ -26,17 +26,14 @@ RSpec.describe "Onboarding commercial setup" do
       resolve_through!("rates_availability")
     end
 
+    # The four fields the table submits. A code is derived from the name unless
+    # the row already carries one.
     def charge_entry(overrides = {})
       {
         "client_key" => "draft-1",
         "name" => "Airport transfer",
-        "code" => "TRANSFER",
-        "category" => "other",
-        "pricing_type" => "fixed",
         "rate_value" => "80",
         "charging_unit" => "per_item",
-        "allow_amount_override" => "true",
-        "active" => "true",
         "tax_rule_keys" => []
       }.merge(overrides)
     end
@@ -51,11 +48,63 @@ RSpec.describe "Onboarding commercial setup" do
       expect(result.success?).to be(true)
       charge = hotel.hotel_extra_charges.sole
       expect(charge).to have_attributes(
-        name: "Airport transfer", code: "TRANSFER", pricing_type: "fixed",
+        name: "Airport transfer", code: "AIRPORT_TR", pricing_type: "fixed",
         rate_value: 80.to_d, charging_unit: "per_item"
       )
       expect(result.section).to have_attributes(state: "complete")
       expect(result.section.decision_metadata).not_to have_key("placeholder")
+    end
+
+    # An owner naming what the property sells is not keeping the books, so the
+    # table does not ask for a code — but the record still needs a unique one.
+    it "derives a code from the name, sidestepping codes already taken" do
+      hotel.transaction_codes.find_by!(system_key: "fnb_revenue").update!(code: "AIRPORT_TR")
+
+      result = save(entries: { "draft-1" => charge_entry })
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_extra_charges.sole.code).to eq("AIRPORT_2")
+    end
+
+    # An empty price is how the table says "staff decide when they post it": it
+    # is the only pricing method a single field can express alongside an amount.
+    it "treats an empty price as a charge staff price themselves" do
+      result = save(entries: { "draft-1" => charge_entry("rate_value" => "") })
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_extra_charges.sole).to have_attributes(pricing_type: "manual", rate_value: nil)
+    end
+
+    # Percentage pricing is set up in the settings portal and has no field here.
+    # Saving the section must not flatten it into a fixed amount.
+    it "keeps the pricing of a percentage charge the table cannot express" do
+      save(entries: { "draft-1" => charge_entry }, complete: true)
+      charge = hotel.hotel_extra_charges.sole
+      charge.update!(pricing_type: "percentage", rate_value: 10, percentage_basis: "room_charges",
+                     allow_amount_override: false)
+
+      result = save(entries: {
+        "draft-1" => charge_entry("id" => charge.id.to_s, "code" => charge.code, "rate_value" => "")
+      })
+
+      expect(result.success?).to be(true)
+      expect(charge.reload).to have_attributes(
+        pricing_type: "percentage", rate_value: 10.to_d, percentage_basis: "room_charges"
+      )
+    end
+
+    # Nothing in the table stands for the description or the reporting category,
+    # so a charge the settings portal filled in has to come back out unchanged.
+    it "leaves the fields the table does not show as they stand" do
+      save(entries: { "draft-1" => charge_entry }, complete: true)
+      charge = hotel.hotel_extra_charges.sole
+      charge.update!(description: "Book at reception the day before")
+      charge.transaction_code.update!(category: "parking")
+
+      save(entries: { "draft-1" => charge_entry("id" => charge.id.to_s, "code" => charge.code) })
+
+      expect(charge.reload.description).to eq("Book at reception the day before")
+      expect(charge.category).to eq("parking")
     end
 
     # The page offers the seeded revenue codes as unsaved rows. Saving one has to
@@ -66,7 +115,7 @@ RSpec.describe "Onboarding commercial setup" do
       result = save(entries: {
         "suggested" => charge_entry(
           "transaction_code_id" => code.id.to_s, "name" => "Food & Beverage",
-          "code" => "FNB", "category" => "fb", "pricing_type" => "manual", "rate_value" => ""
+          "code" => "FNB", "rate_value" => ""
         )
       }, complete: true)
 
@@ -90,7 +139,7 @@ RSpec.describe "Onboarding commercial setup" do
     it "rolls every row back when one row is invalid" do
       result = save(entries: {
         "first" => charge_entry("client_key" => "first"),
-        "second" => charge_entry("client_key" => "second", "code" => "SPA", "name" => "", "rate_value" => "0")
+        "second" => charge_entry("client_key" => "second", "name" => "Spa", "rate_value" => "0")
       })
 
       expect(result.success?).to be(false)
@@ -98,8 +147,10 @@ RSpec.describe "Onboarding commercial setup" do
       expect(hotel.hotel_extra_charges).to be_empty
     end
 
-    # Two codes that normalize alike would otherwise reach the per-hotel unique
-    # index and surface as a 500 rather than something the owner can fix.
+    # Derived codes are unique by construction, so this now guards the codes the
+    # table carries for rows that already have one. Two that normalize alike
+    # would otherwise reach the per-hotel unique index and surface as a 500
+    # rather than something the owner can fix.
     it "refuses two rows whose codes normalize to the same value" do
       result = save(entries: {
         "first" => charge_entry("client_key" => "first", "code" => "AIR-PORT"),
@@ -150,11 +201,18 @@ RSpec.describe "Onboarding commercial setup" do
     end
 
     it "reopens downstream commercial sections when a charge stops being sellable" do
-      save(entries: { "draft-1" => charge_entry }, complete: true)
-      charge = hotel.hotel_extra_charges.sole
+      save(entries: {
+        "draft-1" => charge_entry,
+        "draft-2" => charge_entry("client_key" => "draft-2", "name" => "Spa")
+      }, complete: true)
+      charge, kept = hotel.hotel_extra_charges.ordered.to_a
       hotel.onboarding_sections.find_by!(section_key: "payment_methods").update!(state: "complete")
 
-      result = save(entries: { "draft-1" => charge_entry("id" => charge.id.to_s, "active" => "false") }, complete: true)
+      result = save(entries: {
+        "draft-1" => charge_entry("id" => charge.id.to_s, "code" => charge.code, "_destroy" => "1"),
+        "draft-2" => charge_entry("client_key" => "draft-2", "name" => kept.name, "id" => kept.id.to_s,
+                                  "code" => kept.code)
+      }, complete: true)
 
       expect(result.success?).to be(true)
       expect(hotel.onboarding_sections.find_by(section_key: "payment_methods").state).to eq("needs_attention")

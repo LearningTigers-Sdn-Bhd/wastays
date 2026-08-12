@@ -15,6 +15,15 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     sign_in_as_system(user)
   end
 
+  def reach_commercial_phase!
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    Onboarding::InitializeProgress.new(hotel: hotel).call
+    keys = Onboarding::SectionCatalog.keys
+    keys[0..keys.index("rates_availability")].each do |key|
+      hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
+    end
+  end
+
   it "offers compact progress details on a narrow screen" do
     page.current_window.resize_to(390, 844)
 
@@ -231,15 +240,41 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(layout["sameLine"]).to be(true)
   end
 
+  # An owner naming what the property sells should not have to answer for an
+  # accounting code, a pricing method or an override rule to do it.
+  it "adds an extra charge from a name alone" do
+    reach_commercial_phase!
+
+    visit hotel_onboarding_section_path(hotel, section_key: "extra_charges")
+    click_button "Add extra charge"
+    all("input[placeholder='Airport transfer']").last.set("Airport transfer")
+    click_button "Save & continue"
+
+    expect(page).to have_css("h1", text: "Discounts")
+    expect(hotel.hotel_extra_charges.find_by!(transaction_code: hotel.transaction_codes.find_by(name: "Airport transfer")))
+      .to have_attributes(code: "AIRPORT_TR", pricing_type: "manual", charging_unit: "per_item")
+  end
+
+  # The page is headed once, by the shell, and the columns that need explaining
+  # explain themselves from their own headers rather than in prose above.
+  it "explains the extra charge columns from their headers, and heads the page once" do
+    reach_commercial_phase!
+
+    visit hotel_onboarding_section_path(hotel, section_key: "extra_charges")
+
+    expect(page).to have_css("h1", text: "Extra charges")
+    expect(page).to have_no_css("h2", text: "What else can guests buy?")
+    expect(page).to have_css("button[aria-label^='Price (MYR): Leave it empty']")
+
+    find("button[aria-label='About Charged']").hover
+
+    expect(page).to have_text("For each room, every night")
+  end
+
   # The commercial phase's owner path: one way to take money is required, the
   # other three sections are answered rather than left silent.
   it "takes an owner through the commercial phase" do
-    Financials::EnsureDefaultTransactionCodes.call(hotel)
-    Onboarding::InitializeProgress.new(hotel: hotel).call
-    keys = Onboarding::SectionCatalog.keys
-    keys[0..keys.index("rates_availability")].each do |key|
-      hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
-    end
+    reach_commercial_phase!
 
     visit hotel_onboarding_section_path(hotel, section_key: "extra_charges")
 

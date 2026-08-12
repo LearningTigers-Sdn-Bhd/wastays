@@ -16,20 +16,64 @@ module HotelPortal
     class RecordTable < PanelsUI::BaseComponent
       CONTROLLER = "record-table"
 
+      # A column may explain itself. The header is the only place a spreadsheet
+      # row has to put guidance — the cells hold controls and their own labels
+      # are hidden — so the explanation hangs off the header rather than
+      # repeating under every row.
+      #
+      # `hint` is a sentence and gets a tooltip. Block content is anything
+      # longer — a list of what each option means — and gets a popover, which
+      # stays open to be read and can be reached by keyboard.
       class Column < PanelsUI::BaseComponent
-        def initialize(label:, required: false, class: nil)
+        def initialize(label:, required: false, hint: nil, help_id: nil, class: nil)
           @label = label
           @required = required
+          @hint = hint
+          @help_id = help_id
           @class = binding.local_variable_get(:class)
         end
 
         def call
           tag.th(scope: "col", class: @class) do
-            safe_join([ @label, (required_marker if @required) ].compact)
+            safe_join([ @label, (required_marker if @required), help_control ].compact)
           end
         end
 
         private
+
+        def help_control
+          return popover_help if content.present?
+
+          tooltip_help if @hint.present?
+        end
+
+        # `with_content` rather than a block, for the reason Row gives: a block
+        # passed from a `call` method writes to no output buffer.
+        def tooltip_help
+          trigger = tag.button(help_icon, type: "button", class: "panel-record-table__hint",
+                               aria: { label: "#{@label}: #{@hint}" })
+
+          render PanelsUI::Tooltip.new(text: @hint, class: "max-w-64").with_content(trigger)
+        end
+
+        # Hover-opened, like the tooltip beside it: both are the same offer of
+        # help from the same mark, and one opening on hover while the other
+        # wanted a click would make the mark mean two things. The trigger keeps
+        # its click and focus handling, so touch and keyboard still reach it.
+        def popover_help
+          popover = PanelsUI::Popover.new(id: help_id, placement: :bottom_start,
+                                          trigger_on: :hover, close_delay: 200, class: "w-72")
+          popover.with_trigger(unstyled: true, class: "panel-record-table__hint",
+                               aria_label: "About #{@label}") { help_icon }
+
+          render popover.with_content(content)
+        end
+
+        def help_icon
+          helpers.app_icon("info", class: "size-3.5", aria: { hidden: "true" })
+        end
+
+        def help_id = @help_id.presence || "record-table-help-#{@label.to_s.parameterize}"
 
         # Each control carries its own required state for assistive tech. The
         # header repeats it visually because the field's own label — and with it

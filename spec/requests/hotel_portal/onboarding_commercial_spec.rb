@@ -26,9 +26,8 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
 
   def charge_entry(overrides = {})
     {
-      "name" => "Airport transfer", "code" => "TRANSFER", "category" => "other",
-      "pricing_type" => "fixed", "rate_value" => "80", "charging_unit" => "per_item",
-      "allow_amount_override" => "true", "active" => "true", "_destroy" => "false"
+      "name" => "Airport transfer", "code" => "", "rate_value" => "80",
+      "charging_unit" => "per_item", "_destroy" => "false"
     }.merge(overrides)
   end
 
@@ -66,12 +65,20 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
         patch hotel_onboarding_section_path(hotel, section_key: "extra_charges"),
               params: {
                 navigation_action: "save_continue",
-                extra_charge_entries: { "0" => charge_entry("name" => "", "code" => "TRANSFER") }
+                extra_charge_entries: { "0" => charge_entry("rate_value" => "0") }
               }
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(response.body).to include("TRANSFER")
+        expect(response.body).to include("Airport transfer")
         expect(hotel.hotel_extra_charges).to be_empty
+      end
+
+      # The table asks for a name, not an accounting code.
+      it "names the charge without asking for a code" do
+        patch hotel_onboarding_section_path(hotel, section_key: "extra_charges"),
+              params: { navigation_action: "save_continue", extra_charge_entries: { "0" => charge_entry } }
+
+        expect(hotel.hotel_extra_charges.sole.code).to eq("AIRPORT_TR")
       end
 
       it "records an explicit skip decision" do

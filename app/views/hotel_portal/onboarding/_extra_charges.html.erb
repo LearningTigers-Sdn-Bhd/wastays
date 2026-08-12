@@ -1,14 +1,9 @@
-<section aria-labelledby="onboarding-extra-charges-heading" class="space-y-5">
-  <div>
-    <h2 id="onboarding-extra-charges-heading" class="text-base font-semibold">What else can guests buy?</h2>
-    <p class="mt-1 text-sm text-muted-foreground">
-      Anything sold on top of the room — breakfast, parking, an airport transfer. Mandatory
-      charges every guest pays belong in Taxes and fees instead.
-    </p>
-  </div>
-
+<%# The shell already heads the page with this section's name and what it is
+    for, so the body opens straight into the work. A second heading saying the
+    same thing is what DESIGN.md §7 calls a duplicated heading. %>
+<section aria-label="Extra charges">
   <% if presenter.read_only? %>
-    <% if @extra_charge_entries.any? %>
+    <% if @extra_charges.any? %>
       <%= render PanelsUI::Table.new(caption: "Extra charges", header_style: :sentence,
                                      wrapper_class: "rounded-md border border-border bg-card") do |table| %>
         <% table.with_header do %>
@@ -16,26 +11,16 @@
             <th scope="col">Name</th>
             <th scope="col">Code</th>
             <th scope="col">Pricing</th>
-            <th scope="col">Charged</th>
             <th scope="col">Status</th>
           </tr>
         <% end %>
         <% table.with_body do %>
-          <% @extra_charge_entries.each do |entry| %>
+          <% @extra_charges.each do |charge| %>
             <tr>
-              <td class="font-medium"><%= entry["name"] %></td>
-              <td class="text-muted-foreground"><%= entry["code"] %></td>
-              <td class="tabular-nums">
-                <% if entry["pricing_type"] == "manual" %>
-                  Staff enters the amount
-                <% elsif entry["pricing_type"] == "percentage" %>
-                  <%= entry["rate_value"] %>%
-                <% else %>
-                  <%= current_hotel.default_currency.presence || "MYR" %> <%= entry["rate_value"] %>
-                <% end %>
-              </td>
-              <td class="text-muted-foreground"><%= entry["charging_unit"].to_s.humanize %></td>
-              <td class="text-muted-foreground"><%= entry["active"] == "false" ? "Not offered" : "Offered" %></td>
+              <td class="font-medium"><%= charge.name %></td>
+              <td class="text-muted-foreground"><%= charge.code %></td>
+              <td class="tabular-nums"><%= charge.pricing_label %></td>
+              <td class="text-muted-foreground"><%= charge.active? ? "Offered" : "Not offered" %></td>
             </tr>
           <% end %>
         <% end %>
@@ -59,33 +44,50 @@
         <% end %>
       <% end %>
 
+      <%# Four fields fit the page, so this is a plain record table rather than a
+          spreadsheet region: nothing has to scroll sideways, no column needs
+          pinning, and the rows stack into readable editors on a phone. %>
       <div class="mt-4">
         <%= render HotelPortal::Setup::RecordTable.new(
               caption: "Extra charges",
               add_label: "Add extra charge",
-              empty: "No extra charges yet. If this property sells nothing beyond the room, choose no extra charges for now.",
-              spreadsheet: true) do |table| %>
-          <% table.with_column(label: "Name", required: true) %>
-          <% table.with_column(label: "Code", required: true) %>
-          <% table.with_column(label: "Pricing") %>
-          <% table.with_column(label: "Amount") %>
-          <% table.with_column(label: "Percentage of") %>
-          <% table.with_column(label: "Charged") %>
-          <% table.with_column(label: "Taxes") %>
-          <% table.with_column(label: "Amount editable") %>
-          <% table.with_column(label: "Offer this") %>
+              empty: "No extra charges yet. If this property sells nothing beyond the room, choose no extra charges for now.") do |table| %>
+          <% table.with_column(label: "Name", required: true, class: "w-[34%]") %>
+          <% table.with_column(label: "Price (#{current_hotel.default_currency.presence || 'MYR'})",
+                               class: "w-[15%]",
+                               hint: "Leave it empty when staff decide the amount each time they charge for it.") %>
+          <% table.with_column(label: "Charged", class: "w-[21%]") do %>
+            <h3 class="text-sm font-semibold text-foreground">How often the charge repeats</h3>
+            <dl class="mt-2 space-y-1.5 text-left text-xs text-muted-foreground">
+              <% [ [ "Per item", "Once for each one sold." ],
+                   [ "Per stay", "Once for the whole booking, however long it runs." ],
+                   [ "Per night", "Once for every night of the stay." ],
+                   [ "Per room", "Once for each room on the booking." ],
+                   [ "Per room night", "For each room, every night — two rooms for three nights posts six times." ],
+                   [ "Per person", "Once for each guest on the booking." ],
+                   [ "Per person night", "For each guest, every night." ] ].each do |unit, meaning| %>
+                <div>
+                  <dt class="inline font-medium text-foreground"><%= unit %>.</dt>
+                  <dd class="inline"><%= meaning %></dd>
+                </div>
+              <% end %>
+            </dl>
+          <% end %>
+          <% table.with_column(label: "Taxes", class: "w-[30%]") %>
 
           <% @extra_charge_entries.each_with_index do |entry, index| %>
             <% table.with_row(
                  remove_label: "Remove #{entry['name'].presence || 'this extra charge'}",
                  persisted: entry["id"].present?,
                  key: entry["client_key"]) do %>
-              <%= render "extra_charge_row", entry: entry, index: index, tax_rule_choices: @tax_rule_choices %>
+              <%= render "extra_charge_row", entry: entry, index: index, tax_rule_choices: @tax_rule_choices,
+                                             percentage_charges: @percentage_extra_charges %>
             <% end %>
           <% end %>
 
           <% table.with_blank_row(remove_label: "Remove this extra charge") do %>
-            <%= render "extra_charge_row", entry: {}, index: "NEW_RECORD", tax_rule_choices: @tax_rule_choices %>
+            <%= render "extra_charge_row", entry: {}, index: "NEW_RECORD", tax_rule_choices: @tax_rule_choices,
+                                           percentage_charges: @percentage_extra_charges %>
           <% end %>
         <% end %>
       </div>

@@ -45,6 +45,42 @@ RSpec.describe HotelPortal::Setup::RecordTable, type: :component do
     expect(page.find("thead th", text: "Amount")).to have_no_css(".panel-record-table__required")
   end
 
+  # The cells hold controls whose own labels are hidden at table widths, so a
+  # column that needs explaining has only its header to say it in.
+  describe "columns that explain themselves" do
+    def render_explained
+      render_inline(described_class.new(caption: "Extra charges", add_label: "Add", empty: "None")) do |table|
+        table.with_column(label: "Name")
+        table.with_column(label: "Price", hint: "Leave it empty when staff decide the amount.")
+        table.with_column(label: "Charged") { "<p>Per stay bills once for the booking.</p>".html_safe }
+        table.with_blank_row(remove_label: "Remove this") { "<td></td><td></td><td></td>".html_safe }
+      end
+    end
+
+    it "puts a sentence in a tooltip the trigger also names for assistive tech" do
+      render_explained
+
+      header = page.find("thead th", text: "Price")
+      expect(header).to have_css("button.panel-record-table__hint[aria-label='Price: Leave it empty when staff decide the amount.']")
+      expect(header).to have_css("[role='tooltip']", text: "Leave it empty when staff decide the amount.", visible: :all)
+    end
+
+    it "puts longer guidance in a popover opened the same way the tooltip is" do
+      render_explained
+
+      header = page.find("thead th", text: "Charged")
+      expect(header).to have_css("button.panel-record-table__hint[aria-label='About Charged'][aria-haspopup='dialog']")
+      expect(header).to have_css("[data-panels-ui--popover-trigger-on-value='hover']")
+      expect(header).to have_css("#record-table-help-charged-panel", text: "Per stay bills once for the booking.", visible: :all)
+    end
+
+    it "leaves a column that needs no explaining unmarked" do
+      render_explained
+
+      expect(page.find("thead th", text: "Name")).to have_no_css(".panel-record-table__hint")
+    end
+  end
+
   it "hides the empty state while records exist and shows it when none do" do
     render_table(rows: 1)
     expect(page.find("tr.panel-record-table__empty", visible: :all)).to be_present

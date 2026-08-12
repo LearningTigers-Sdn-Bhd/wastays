@@ -119,8 +119,19 @@ module HotelPortal
       when "rates_availability"
         prepare_rates_availability(entries: entries)
       when "extra_charges"
-        @extra_charge_entries = entries || persisted_extra_charge_entries
-        @tax_rule_choices = TaxRuleOptionsQuery.new(current_hotel).choices
+        # A review reads the saved charges; only the editor works from entries,
+        # which may be a failed submission rather than what is stored.
+        if @presenter.read_only?
+          @extra_charges = current_hotel.hotel_extra_charges.includes(:transaction_code).ordered
+        else
+          @extra_charge_entries = entries || persisted_extra_charge_entries
+          @tax_rule_choices = TaxRuleOptionsQuery.new(current_hotel).choices
+          # Percentage pricing is a property of the record, not of the
+          # submission: the table has no field for it, so a failed save that
+          # hands back what was typed still has to know which rows are one.
+          @percentage_extra_charges = current_hotel.hotel_extra_charges.where(pricing_type: "percentage")
+                                                   .includes(:transaction_code).index_by { |charge| charge.id.to_s }
+        end
       when "discounts"
         @discount_entries = entries || persisted_discount_entries
         @charge_code_choices = current_hotel.transaction_codes.active.discountable.order(:code)
@@ -251,18 +262,12 @@ module HotelPortal
           "client_key" => "extra-charge-#{charge.id}",
           "name" => charge.name,
           "code" => charge.code,
-          "category" => charge.category,
-          "description" => charge.description,
-          "pricing_type" => charge.pricing_type,
-          "rate_value" => charge.rate_value&.to_s,
+          "rate_value" => (charge.rate_value&.to_s unless charge.percentage?),
           "charging_unit" => charge.charging_unit,
-          "percentage_basis" => charge.percentage_basis,
-          "allow_amount_override" => charge.allow_amount_override.to_s,
-          "active" => charge.active?.to_s,
           "tax_rule_keys" => charge.transaction_code.tax_rule_keys
         }
       end
-      return adopted if adopted.any? || @presenter.read_only?
+      return adopted if adopted.any?
 
       suggested_extra_charge_entries
     end
@@ -278,11 +283,7 @@ module HotelPortal
           "client_key" => "suggested-#{code.system_key}",
           "name" => code.name,
           "code" => code.code,
-          "category" => code.category,
-          "pricing_type" => "manual",
           "charging_unit" => "per_item",
-          "allow_amount_override" => "true",
-          "active" => "true",
           "tax_rule_keys" => []
         }
       end

@@ -21,7 +21,7 @@ module HotelPortal
       "room_revenue" => [ "Room revenue", "Set how room sales post and which taxes and policies apply." ],
       "rooms" => [ "Rooms", "Create the room categories, capacity, amenities, policies, and room numbering this property operates." ],
       "rates_availability" => [ "Rates and availability", "Set sell-mode pricing and establish one year of sellable inventory." ],
-      "extra_charges" => [ "Extra charges", "Add optional products and services guests can purchase." ],
+      "extra_charges" => [ "Extra charges", "Anything sold on top of the room — breakfast, parking, an airport transfer. Mandatory charges every guest pays belong in Taxes and fees instead." ],
       "discounts" => [ "Discounts", "Configure the offers that can reduce eligible charges." ],
       "payment_methods" => [ "Payment methods", "Choose at least one way guests can pay and configure any surcharges." ],
       "corporate_accounts" => [ "Corporate accounts", "Prepare company accounts and invitations for submission." ],

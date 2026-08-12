@@ -118,6 +118,28 @@
     padding-inline-end: 0.5rem;
   }
 
+  /* A column that explains itself. The mark sits on the header baseline beside
+     the label, quiet until it is wanted — it is an offer of help, not a state
+     the operator has to read past on every scan. */
+  .panel-record-table__hint {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-start: 0.25rem;
+    color: var(--muted-foreground);
+    vertical-align: text-bottom;
+    cursor: help;
+    border-radius: 0.25rem;
+  }
+
+  .panel-record-table__hint:is(:hover, :focus-visible) {
+    color: var(--foreground);
+  }
+
+  .panel-record-table__hint:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
   .panel-record-table__required {
     margin-inline-start: 0.1875rem;
     color: var(--destructive-on-surface);

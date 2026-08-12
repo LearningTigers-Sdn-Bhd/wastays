@@ -18,11 +18,14 @@ module Onboarding
 
     Result = ApplicationResult.define(:section, :entries)
 
+    # Onboarding asks for four things: what the charge is called, what it costs,
+    # how it is counted, and what tax it carries. Everything else the record
+    # holds is either derived from those or kept as it stands — the settings
+    # portal is where the full editor lives, and a table that does not show a
+    # field must not quietly rewrite it.
     ENTRY_FIELDS = %w[
       id transaction_code_id client_key _destroy
-      name code category description pricing_type rate_value
-      charging_unit percentage_basis allow_amount_override active
-      tax_rule_keys
+      name code rate_value charging_unit tax_rule_keys
     ].freeze
 
     RECORD_LABEL = "Extra charge"
@@ -94,7 +97,7 @@ module Onboarding
         charge = build_or_find_charge(row)
         result = ExtraCharges::Save.call(
           extra_charge: charge,
-          attributes: row.slice(*ENTRY_FIELDS).merge("position" => index),
+          attributes: charge_attributes(charge, row, index),
           tax_rule_keys: row["tax_rule_keys"]
         )
         next if result.success?
@@ -122,12 +125,84 @@ module Onboarding
       )
     end
 
+    # The four submitted fields, plus what the record already says about
+    # everything the table leaves out. Category, description and whether the
+    # charge is offered all come off the record, so a charge configured in the
+    # settings portal survives a pass through onboarding unchanged.
+    def charge_attributes(charge, row, index)
+      {
+        "name" => row["name"],
+        "code" => row["code"].presence || charge.code,
+        "category" => charge.transaction_code.category.presence || "other",
+        "description" => charge.description,
+        "charging_unit" => row["charging_unit"].presence || "per_item",
+        "active" => charge.active?.to_s,
+        "position" => index
+      }.merge(pricing_attributes(charge, row))
+    end
+
+    # One price field stands in for the pricing method: an amount means a fixed
+    # price, and leaving it empty means staff decide when they post it.
+    #
+    # Percentage pricing has no square to type it in, so a charge already set
+    # that way in the settings portal keeps its rate and basis rather than being
+    # flattened into a fixed amount by a table that cannot express it.
+    def pricing_attributes(charge, row)
+      if charge.persisted? && charge.percentage?
+        return {
+          "pricing_type" => "percentage",
+          "rate_value" => charge.rate_value,
+          "percentage_basis" => charge.percentage_basis
+        }
+      end
+
+      price = row["rate_value"].to_s.strip
+      {
+        "pricing_type" => price.present? ? "fixed" : "manual",
+        "rate_value" => price.presence,
+        "allow_amount_override" => (charge.persisted? ? charge.allow_amount_override : true).to_s
+      }
+    end
+
     def surcharge_blocker(charge)
       HotelPaymentMethod.where(surcharge_extra_charge_id: charge.id)
                         .includes(:transaction_code).first&.name
     end
 
     def charge_name(charge) = charge.name.presence || "This extra charge"
+
+    # --- codes --------------------------------------------------------------
+
+    # An owner setting the property up is naming what they sell, not keeping the
+    # books, so the table does not ask for an accounting code. A row typed from
+    # scratch gets one derived from its name here rather than at save time, so
+    # the duplicate check and the unique index both see the value that will be
+    # stored. Rows that already have a code — an adopted revenue code, or a
+    # charge the property saved earlier — carry it through untouched.
+    def prepare_row(row)
+      return row if row["id"].present? || row["transaction_code_id"].present?
+      return row if row["code"].to_s.strip.present? || row["name"].to_s.strip.blank? || discarded?(row)
+
+      row.merge("code" => generated_code(row["name"]))
+    end
+
+    def generated_code(name)
+      base = normalize_code(name).first(10).delete_suffix("_").presence || "CHARGE"
+      candidate = base
+      suffix = 2
+
+      while claimed_codes.include?(candidate)
+        candidate = "#{base.first(9 - suffix.to_s.length).delete_suffix('_')}_#{suffix}"
+        suffix += 1
+      end
+
+      claimed_codes << candidate
+      candidate
+    end
+
+    def claimed_codes
+      @claimed_codes ||= hotel.transaction_codes.pluck(:code).map { |code| normalize_code(code) }.to_set
+    end
 
     # --- validation ---------------------------------------------------------
 
@@ -186,14 +261,8 @@ module Onboarding
           "client_key" => "extra-charge-#{charge.id}",
           "name" => charge.name,
           "code" => charge.code,
-          "category" => charge.category,
-          "description" => charge.description,
-          "pricing_type" => charge.pricing_type,
-          "rate_value" => charge.rate_value&.to_s,
+          "rate_value" => (charge.rate_value&.to_s unless charge.percentage?),
           "charging_unit" => charge.charging_unit,
-          "percentage_basis" => charge.percentage_basis,
-          "allow_amount_override" => charge.allow_amount_override.to_s,
-          "active" => charge.active?.to_s,
           "tax_rule_keys" => charge.transaction_code.tax_rule_keys
         }
       end
