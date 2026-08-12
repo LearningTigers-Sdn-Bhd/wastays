@@ -182,4 +182,68 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
       expect(hotel.onboarding_sections.find_by(section_key: "payment_methods").state).to eq("complete")
     end
   end
+
+  describe "corporate accounts" do
+    before { resolve_through!("payment_methods") }
+
+    it "says plainly that nothing is sent during setup" do
+      get hotel_onboarding_section_path(hotel, section_key: "corporate_accounts")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("No invitations are sent yet")
+    end
+
+    it "queues a draft and advances to the channel manager without sending" do
+      expect {
+        patch hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"),
+              params: {
+                navigation_action: "save_continue",
+                corporate_draft_entries: { "0" => {
+                  "email" => "accounts@acme.com", "company_name" => "Acme Sdn Bhd",
+                  "account_type" => "company", "relationship_type" => "direct_bill",
+                  "credit_currency" => "MYR", "payment_terms_days" => "30", "_destroy" => "false"
+                } }
+              }
+      }.not_to change(Invitation, :count)
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "channel_manager"))
+      expect(hotel.onboarding_corporate_drafts.sole.email).to eq("accounts@acme.com")
+    end
+
+    it "records an explicit skip decision" do
+      patch hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"),
+            params: { navigation_action: "skip" }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "channel_manager"))
+      section = hotel.onboarding_sections.find_by(section_key: "corporate_accounts")
+      expect(section.state).to eq("skipped")
+      expect(section.decision_metadata).to include("decision" => "no_corporate_accounts")
+    end
+  end
+
+  # The point of the phase: four resolved sections stop blocking submission.
+  describe "readiness" do
+    it "no longer reports the commercial sections as blocking" do
+      resolve_through!("rates_availability")
+
+      # In catalog order: each skip needs its own prerequisite resolved first.
+      %w[extra_charges discounts].each do |key|
+        patch hotel_onboarding_section_path(hotel, section_key: key), params: { navigation_action: "skip" }
+      end
+      patch hotel_onboarding_section_path(hotel, section_key: "payment_methods"),
+            params: {
+              navigation_action: "save_continue",
+              payment_method_entries: { "0" => {
+                "name" => "Cash", "code" => "CASHDESK", "payment_method_type" => "cash",
+                "guest_advance" => "false", "default_cash" => "true", "active" => "true",
+                "surcharge_enabled" => "false", "_destroy" => "false"
+              } }
+            }
+      patch hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"),
+            params: { navigation_action: "skip" }
+
+      blocking = Onboarding::Readiness.new(hotel: hotel.reload).call.blocking_issues.map(&:section_key)
+      expect(blocking).not_to include("extra_charges", "discounts", "payment_methods", "corporate_accounts")
+    end
+  end
 end

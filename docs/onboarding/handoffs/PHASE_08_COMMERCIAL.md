@@ -72,10 +72,37 @@ Phase 4 already established the pattern for this with `onboarding_staff_drafts` 
 `Onboarding::SaveStaffDrafts`. Mirror it: store requested corporate invitations as drafts,
 without delivery.
 
-**`IMPLEMENTATION_MAP.md` §8 item 11 flags this as unresolved:** the corporate invitation
-queue representation and submission idempotency are undecided, and Phase 10 needs an
-idempotent draft-to-invitation delivery marker. Resolve the storage shape here — Phase 10
-depends on whatever you choose — and record the decision in this file when you do.
+**`IMPLEMENTATION_MAP.md` §8 item 11 flagged this as unresolved.** It is now decided.
+
+### Resolved: `onboarding_corporate_drafts`
+
+Real columns mirroring `onboarding_staff_drafts`, plus two for delivery:
+
+| Column | Purpose |
+|---|---|
+| `hotel_id`, `email` | unique on `(hotel_id, LOWER(email))` |
+| `company_name`, `account_type`, `relationship_type`, `credit_limit`, `credit_currency`, `payment_terms_days` | what the invitation carries; `CorporateInvitation` keeps these in `metadata` jsonb, but onboarding validates them, so they are columns here |
+| `invitation_id` | **the idempotency marker.** Unique where not null |
+| `delivered_at` | when submission sent it |
+
+**Phase 10 delivers `hotel.onboarding_corporate_drafts.undelivered`,** setting `invitation_id`
+and `delivered_at` in the same transaction that creates the invitation. A retried submission
+sees `invitation_id` present and skips, and the partial unique index makes double-linking
+impossible even under a race.
+
+Two consequences Phase 10 must honour:
+
+- **Drafts are never deleted after delivery.** They are the idempotency record.
+  `SaveCorporateDrafts` upserts rather than `delete_all`-ing (unlike `SaveStaffDrafts`), and
+  refuses to remove a delivered row, so a changes-requested re-edit cannot cause a resend.
+  `onboarding_staff_drafts` has the same latent problem and no marker — Phase 10 needs to
+  solve it there too.
+- **Validation happens at draft time.** `OnboardingCorporateDraft` mirrors
+  `CorporateInvitation`'s rules and calls `CorporateInvitations::CheckEligibility` (extracted
+  from `CreateService` in this phase) so a draft that saves will not be rejected at send time.
+  It also rejects an email colliding with a pending invitation or a staff draft: the
+  `invitations` unique index on `(hotel_id, email) WHERE accepted_at IS NULL` is **not** scoped
+  by kind, so that collision would otherwise explode during delivery.
 
 ## Explicit skip decisions
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_12_100002) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_12_100003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1899,6 +1899,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100002) do
     t.index ["user_id"], name: "index_onboarding_audit_events_on_user_id"
   end
 
+  create_table "onboarding_corporate_drafts", force: :cascade do |t|
+    t.string "account_type", default: "company", null: false
+    t.string "company_name"
+    t.datetime "created_at", null: false
+    t.string "credit_currency", null: false
+    t.decimal "credit_limit", precision: 12, scale: 2
+    t.datetime "delivered_at"
+    t.string "email", null: false
+    t.bigint "hotel_id", null: false
+    t.bigint "invitation_id"
+    t.integer "payment_terms_days"
+    t.string "relationship_type", default: "standard", null: false
+    t.datetime "updated_at", null: false
+    t.index "hotel_id, lower((email)::text)", name: "index_onboarding_corporate_drafts_on_hotel_and_lower_email", unique: true
+    t.index ["hotel_id"], name: "index_onboarding_corporate_drafts_on_hotel_id"
+    t.index ["invitation_id"], name: "index_onboarding_corporate_drafts_on_delivered_invitation", unique: true, where: "(invitation_id IS NOT NULL)"
+    t.index ["invitation_id"], name: "index_onboarding_corporate_drafts_on_invitation_id"
+  end
+
   create_table "onboarding_sessions", force: :cascade do |t|
     t.datetime "completed_at"
     t.datetime "created_at", null: false
@@ -2810,6 +2829,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100002) do
   add_foreign_key "notification_deliveries", "hotels"
   add_foreign_key "onboarding_audit_events", "hotels"
   add_foreign_key "onboarding_audit_events", "users"
+  add_foreign_key "onboarding_corporate_drafts", "hotels"
+  add_foreign_key "onboarding_corporate_drafts", "invitations"
   add_foreign_key "onboarding_sessions", "hotels"
   add_foreign_key "onboarding_staff_drafts", "hotels"
   add_foreign_key "onboarding_staff_drafts", "roles"

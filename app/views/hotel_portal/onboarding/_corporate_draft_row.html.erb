@@ -1,0 +1,59 @@
+<%# The record table owns the row and its remove control; this partial supplies
+    only the field cells. %>
+<% object = OnboardingCorporateDraft.new(
+     email: entry["email"],
+     company_name: entry["company_name"],
+     account_type: entry["account_type"].presence || "company",
+     relationship_type: entry["relationship_type"].presence || "standard",
+     credit_limit: entry["credit_limit"],
+     payment_terms_days: entry["payment_terms_days"]
+   ) %>
+<%= fields_for "corporate_draft_entries[#{index}]", object do |row_form| %>
+  <td>
+    <%= row_form.hidden_field :id, value: entry["id"] %>
+    <%= hidden_field_tag "corporate_draft_entries[#{index}][_destroy]", "false", data: { record_table_destroy: true } %>
+    <%= hidden_field_tag "corporate_draft_entries[#{index}][credit_currency]",
+                         entry["credit_currency"].presence || current_hotel.default_currency %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :company_name, label: "Company", size: :sm) do |field| %>
+      <% field.with_input(placeholder: "Acme Sdn Bhd") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :email, label: "Email", size: :sm, required: true,
+                                       hint: "Where the invitation goes after approval.") do |field| %>
+      <% field.with_input(type: :email, placeholder: "accounts@acme.com", autocomplete: "off") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :account_type, label: "Account type", size: :sm) do |field| %>
+      <% field.with_select_menu(
+           HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } },
+           selected: entry["account_type"].presence || "company") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :relationship_type, label: "Billing", size: :sm) do |field| %>
+      <% field.with_select_menu(
+           [ { label: "Pays on departure", value: "standard" },
+             { label: "Billed to the company", value: "direct_bill" } ],
+           selected: entry["relationship_type"].presence || "standard") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :credit_limit,
+                                       label: "Credit limit (#{current_hotel.default_currency})", size: :sm,
+                                       hint: "Leave blank for no limit.") do |field| %>
+      <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :payment_terms_days, label: "Payment terms (days)", size: :sm) do |field| %>
+      <% field.with_input(type: :number, step: "1", min: "0", inputmode: "numeric", placeholder: "30") %>
+    <% end %>
+  </td>
+<% end %>

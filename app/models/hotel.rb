@@ -93,6 +93,7 @@ class Hotel < ApplicationRecord
   has_many :onboarding_sections, class_name: "HotelOnboardingSection", dependent: :destroy
   has_many :onboarding_audit_events, dependent: :destroy
   has_many :onboarding_staff_drafts, dependent: :destroy
+  has_many :onboarding_corporate_drafts, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many :room_rates, through: :room_types
   has_many :room_locks, dependent: :destroy

@@ -230,4 +230,38 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(layout["width"]).to be > layout["column"]
     expect(layout["sameLine"]).to be(true)
   end
+
+  # The commercial phase's owner path: one way to take money is required, the
+  # other three sections are answered rather than left silent.
+  it "takes an owner through the commercial phase" do
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    Onboarding::InitializeProgress.new(hotel: hotel).call
+    keys = Onboarding::SectionCatalog.keys
+    keys[0..keys.index("rates_availability")].each do |key|
+      hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
+    end
+
+    visit hotel_onboarding_section_path(hotel, section_key: "extra_charges")
+
+    expect(page).to have_css("h1", text: "Extra charges")
+    expect(page).to have_text("These are suggestions, not saved yet")
+    click_button "No extra charges for now"
+
+    expect(page).to have_css("h1", text: "Discounts")
+    click_button "No discounts for now"
+
+    expect(page).to have_css("h1", text: "Payment methods")
+    # Required: no skip is offered here at all.
+    expect(page).to have_no_button("No payment methods for now")
+    expect(page).to have_text("Surcharges need an extra charge to post to")
+    click_button "Save & continue"
+
+    expect(page).to have_css("h1", text: "Corporate accounts")
+    expect(page).to have_text("No invitations are sent yet")
+    click_button "No corporate accounts for now"
+
+    expect(page).to have_css("h1", text: "Channel manager")
+    expect(hotel.hotel_payment_methods.active).to be_present
+    expect(Invitation.count).to eq(0)
+  end
 end

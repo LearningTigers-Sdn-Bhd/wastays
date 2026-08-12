@@ -16,7 +16,7 @@ verb-named class per file; reuse before adding; align on approach before writing
 
 ## Status as of 2026-08-12
 
-Phases 0–6 are complete. Phase 7 is the next slice — do not start a phase whose
+Phases 0–8 are complete. Phase 9 is the next slice — do not start a phase whose
 prerequisite section is still a placeholder.
 
 | Phase | Sections | State |
@@ -24,8 +24,8 @@ prerequisite section is still a placeholder.
 | 4 | `property_profile`, `roles_permissions`, `staff_setup` | Complete |
 | 5 | `taxes_fees`, `room_revenue` | Complete |
 | 6 | `rooms` | Complete |
-| 7 | `rates_availability` | Handoff: `PHASE_07_PRICING_AVAILABILITY.md` |
-| 8 | `extra_charges`, `discounts`, `payment_methods`, `corporate_accounts` | Handoff: `PHASE_08_COMMERCIAL.md` |
+| 7 | `rates_availability` | Complete |
+| 8 | `extra_charges`, `discounts`, `payment_methods`, `corporate_accounts` | Complete |
 | 9 | `channel_manager` | Handoff: `PHASE_09_CHANNEL_MANAGER.md` |
 | 10 | `review` + submission | Handoff: `PHASE_10_REVIEW_SUBMISSION.md` |
 

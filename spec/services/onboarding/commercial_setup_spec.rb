@@ -374,6 +374,120 @@ RSpec.describe "Onboarding commercial setup" do
     end
   end
 
+  describe Onboarding::SaveCorporateDrafts do
+    before { resolve_through!("payment_methods") }
+
+    def draft_entry(overrides = {})
+      {
+        "client_key" => "draft-1",
+        "email" => "accounts@acme.com",
+        "company_name" => "Acme Sdn Bhd",
+        "account_type" => "company",
+        "relationship_type" => "direct_bill",
+        "credit_limit" => "5000",
+        "credit_currency" => "MYR",
+        "payment_terms_days" => "30"
+      }.merge(overrides)
+    end
+
+    def save(entries:, complete: false)
+      described_class.call(hotel: hotel, actor: actor, entries: entries, complete: complete)
+    end
+
+    it "queues a draft without sending anything" do
+      expect {
+        result = save(entries: { "draft-1" => draft_entry }, complete: true)
+        expect(result.success?).to be(true)
+      }.not_to change(Invitation, :count)
+
+      draft = hotel.onboarding_corporate_drafts.sole
+      expect(draft).to have_attributes(
+        email: "accounts@acme.com", company_name: "Acme Sdn Bhd",
+        relationship_type: "direct_bill", credit_limit: 5000.to_d, payment_terms_days: 30
+      )
+      expect(draft).not_to be_delivered
+      expect(hotel.onboarding_sections.find_by(section_key: "corporate_accounts").decision_metadata)
+        .not_to have_key("placeholder")
+    end
+
+    it "does not enqueue an invitation email" do
+      expect {
+        save(entries: { "draft-1" => draft_entry }, complete: true)
+      }.not_to have_enqueued_mail(CorporateInvitationMailer, :invite)
+    end
+
+    it "refuses two rows sharing an email" do
+      result = save(entries: {
+        "first" => draft_entry("client_key" => "first"),
+        "second" => draft_entry("client_key" => "second", "company_name" => "Other")
+      })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("accounts@acme.com")
+      expect(hotel.onboarding_corporate_drafts).to be_empty
+    end
+
+    # `invitations` has a unique index on (hotel_id, email) for anything not yet
+    # accepted, and it is not scoped by kind — so this would explode at delivery
+    # rather than here.
+    it "refuses an email already queued as a staff member" do
+      role = create(:role, account: hotel.account, slug: "front_desk")
+      hotel.onboarding_staff_drafts.create!(email: "accounts@acme.com", role: role, name: "Sam")
+
+      result = save(entries: { "draft-1" => draft_entry })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("staff member")
+    end
+
+    # A changes-requested edit after submission must not be able to erase the
+    # marker that stops delivery sending twice.
+    it "keeps a delivered draft when the section is re-saved" do
+      delivered = create(:onboarding_corporate_draft, hotel: hotel, email: "sent@acme.com",
+                                                      invitation: create(:corporate_invitation, hotel: hotel, account: hotel.account, email: "sent@acme.com"))
+
+      result = save(entries: { "draft-1" => draft_entry })
+
+      expect(result.success?).to be(true)
+      expect(delivered.reload).to be_persisted
+      expect(hotel.onboarding_corporate_drafts.count).to eq(2)
+    end
+
+    it "refuses to remove a draft that has already been invited" do
+      delivered = create(:onboarding_corporate_draft, hotel: hotel, email: "sent@acme.com",
+                                                      invitation: create(:corporate_invitation, hotel: hotel, account: hotel.account, email: "sent@acme.com"))
+
+      result = save(entries: { "draft-1" => draft_entry("id" => delivered.id.to_s, "_destroy" => "1") })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("already been invited")
+      expect(delivered.reload).to be_persisted
+    end
+
+    it "will not complete with nobody to invite" do
+      result = save(entries: {}, complete: true)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("no corporate accounts for now")
+    end
+  end
+
+  describe Onboarding::DecideNoCorporateAccounts do
+    before { resolve_through!("payment_methods") }
+
+    it "discards queued drafts but keeps delivered ones" do
+      create(:onboarding_corporate_draft, hotel: hotel, email: "queued@acme.com")
+      delivered = create(:onboarding_corporate_draft, hotel: hotel, email: "sent@acme.com",
+                                                      invitation: create(:corporate_invitation, hotel: hotel, account: hotel.account, email: "sent@acme.com"))
+
+      result = described_class.call(hotel: hotel, actor: actor)
+
+      expect(result.success?).to be(true)
+      expect(result.section).to have_attributes(state: "skipped")
+      expect(hotel.onboarding_corporate_drafts.reload).to contain_exactly(delivered)
+    end
+  end
+
   describe Onboarding::SkipOptionalSection do
     before { resolve_through!("rates_availability") }
 

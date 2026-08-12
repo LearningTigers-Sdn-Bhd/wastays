@@ -19,6 +19,7 @@ module HotelPortal
       extra_charges
       discounts
       payment_methods
+      corporate_accounts
     ].freeze
 
     # Skipping an implemented section is a recorded decision, not a silent
@@ -27,7 +28,8 @@ module HotelPortal
     SECTION_SKIPS = {
       "staff_setup" => "No additional staff will be invited for now.",
       "extra_charges" => "No extra charges will be offered for now.",
-      "discounts" => "No discounts will be offered for now."
+      "discounts" => "No discounts will be offered for now.",
+      "corporate_accounts" => "No corporate accounts will be invited for now."
     }.freeze
 
     before_action :authorize_onboarding!
@@ -128,6 +130,26 @@ module HotelPortal
         @payment_method_entries = entries || persisted_payment_method_entries
         @surcharge_charge_choices = current_hotel.hotel_extra_charges.active.includes(:transaction_code).ordered
                                                  .map { |charge| { label: charge.name, value: charge.id.to_s } }
+      when "corporate_accounts"
+        @corporate_draft_entries = entries || persisted_corporate_draft_entries
+        @corporate_draft_entries += [ {} ] unless @presenter.read_only?
+      end
+    end
+
+    def persisted_corporate_draft_entries
+      current_hotel.onboarding_corporate_drafts.order(:created_at, :id).map do |draft|
+        {
+          "id" => draft.id.to_s,
+          "client_key" => "corporate-draft-#{draft.id}",
+          "email" => draft.email,
+          "company_name" => draft.company_name,
+          "account_type" => draft.account_type,
+          "relationship_type" => draft.relationship_type,
+          "credit_limit" => draft.credit_limit&.to_s,
+          "credit_currency" => draft.credit_currency,
+          "payment_terms_days" => draft.payment_terms_days&.to_s,
+          "delivered" => draft.delivered?.to_s
+        }
       end
     end
 
@@ -356,6 +378,13 @@ module HotelPortal
             entries: params[:payment_method_entries] || {},
             complete: complete
           )
+        when "corporate_accounts"
+          Onboarding::SaveCorporateDrafts.call(
+            hotel: current_hotel,
+            actor: current_user,
+            entries: params[:corporate_draft_entries] || {},
+            complete: complete
+          )
         end
 
       return render_section_error(result) unless result.success?
@@ -579,6 +608,8 @@ module HotelPortal
       result =
         if key == "staff_setup"
           Onboarding::DecideNoAdditionalStaff.new(hotel: current_hotel, actor: current_user).call
+        elsif key == "corporate_accounts"
+          Onboarding::DecideNoCorporateAccounts.call(hotel: current_hotel, actor: current_user)
         else
           Onboarding::SkipOptionalSection.call(hotel: current_hotel, actor: current_user, section_key: key)
         end
