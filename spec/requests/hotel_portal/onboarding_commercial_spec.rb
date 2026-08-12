@@ -143,4 +143,43 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
       end
     end
   end
+
+  describe "payment methods" do
+    before { resolve_through!("discounts") }
+
+    it "offers no skip and rejects a forged one" do
+      get hotel_onboarding_section_path(hotel, section_key: "payment_methods")
+      expect(response.body).not_to include("navigation_action\" value=\"skip\"")
+
+      patch hotel_onboarding_section_path(hotel, section_key: "payment_methods"),
+            params: { navigation_action: "skip" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(hotel.onboarding_sections.find_by(section_key: "payment_methods").state).not_to eq("skipped")
+    end
+
+    it "switches the surcharge columns off when there is nothing to post to" do
+      get hotel_onboarding_section_path(hotel, section_key: "payment_methods")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Surcharges need an extra charge to post to")
+      expect(response.body).to include("No extra charges to post to")
+    end
+
+    it "saves and advances to corporate accounts" do
+      patch hotel_onboarding_section_path(hotel, section_key: "payment_methods"),
+            params: {
+              navigation_action: "save_continue",
+              payment_method_entries: { "0" => {
+                "name" => "Cash", "code" => "CASHDESK", "payment_method_type" => "cash",
+                "guest_advance" => "false", "default_cash" => "true", "active" => "true",
+                "surcharge_enabled" => "false", "_destroy" => "false"
+              } }
+            }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"))
+      expect(hotel.hotel_payment_methods.sole.name).to eq("Cash")
+      expect(hotel.onboarding_sections.find_by(section_key: "payment_methods").state).to eq("complete")
+    end
+  end
 end

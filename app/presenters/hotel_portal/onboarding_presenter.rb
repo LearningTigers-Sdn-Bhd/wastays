@@ -41,7 +41,9 @@ module HotelPortal
       "rooms" => { form_id: "onboarding-rooms-form" },
       "rates_availability" => { form_id: "onboarding-rates-availability-form" },
       "extra_charges" => { form_id: "onboarding-extra-charges-form", skip_label: "No extra charges for now" },
-      "discounts" => { form_id: "onboarding-discounts-form", skip_label: "No discounts for now" }
+      "discounts" => { form_id: "onboarding-discounts-form", skip_label: "No discounts for now" },
+      # No skip_label: a property with no way to take money cannot open.
+      "payment_methods" => { form_id: "onboarding-payment-methods-form" }
     }.freeze
 
     def initialize(hotel:, navigation:, current_entry:)

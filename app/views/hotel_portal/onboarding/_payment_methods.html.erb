@@ -1,0 +1,111 @@
+<section aria-labelledby="onboarding-payment-methods-heading" class="space-y-5">
+  <div>
+    <h2 id="onboarding-payment-methods-heading" class="text-base font-semibold">How can guests pay?</h2>
+    <p class="mt-1 text-sm text-muted-foreground">
+      At least one payment method has to be accepted before this property can open.
+      Mark the one your front desk uses for cash as the default.
+    </p>
+  </div>
+
+  <% if presenter.read_only? %>
+    <% if @payment_method_entries.any? %>
+      <%= render PanelsUI::Table.new(caption: "Payment methods", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Code</th>
+            <th scope="col">Type</th>
+            <th scope="col">Surcharge</th>
+            <th scope="col">Status</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @payment_method_entries.each do |entry| %>
+            <tr>
+              <td class="font-medium">
+                <%= entry["name"] %>
+                <% if entry["default_cash"] == "true" %>
+                  <span class="text-xs text-muted-foreground">· default cash</span>
+                <% end %>
+              </td>
+              <td class="text-muted-foreground"><%= entry["code"] %></td>
+              <td class="text-muted-foreground"><%= entry["payment_method_type"] == "cash" ? "Cash" : "Card or bank" %></td>
+              <td class="tabular-nums">
+                <% if entry["surcharge_enabled"] == "true" %>
+                  <%= entry["surcharge_posting_type"] == "percentage" ? "#{entry['surcharge_value']}%" : "#{current_hotel.default_currency.presence || 'MYR'} #{entry['surcharge_value']}" %>
+                <% else %>
+                  None
+                <% end %>
+              </td>
+              <td class="text-muted-foreground"><%= entry["active"] == "false" ? "Not accepted" : "Accepted" %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No payment methods were configured.</p>
+    <% end %>
+
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "payment_methods"),
+                  method: :patch, id: "onboarding-payment-methods-form" do %>
+      <%# A surcharge posts as an extra charge, so with none configured there is
+          nothing for it to post to. Say that rather than offering an empty picker. %>
+      <% if @surcharge_charge_choices.empty? %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "Surcharges need an extra charge to post to") do |alert| %>
+          <% alert.with_description do %>
+            This property has no extra charges yet, so the surcharge columns are switched off.
+            <%= link_to "Add an extra charge",
+                        hotel_onboarding_section_path(current_hotel, section_key: "extra_charges"),
+                        class: "underline underline-offset-4" %>
+            if a card payment should carry a fee.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if @payment_method_entries.any? && @payment_method_entries.none? { |entry| entry["id"].present? } %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "These are suggestions, not saved yet") do |alert| %>
+          <% alert.with_description do %>
+            We have started you off with the ways most properties take payment. Keep what you
+            accept, remove the rest. Nothing is created until you save.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <div class="mt-4">
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Payment methods",
+              add_label: "Add payment method",
+              empty: "No payment methods yet. Add at least one way guests can pay.",
+              spreadsheet: true) do |table| %>
+          <% table.with_column(label: "Name", required: true) %>
+          <% table.with_column(label: "Code", required: true) %>
+          <% table.with_column(label: "Type") %>
+          <% table.with_column(label: "Guest advance") %>
+          <% table.with_column(label: "Default cash") %>
+          <% table.with_column(label: "Surcharge") %>
+          <% table.with_column(label: "Surcharge type") %>
+          <% table.with_column(label: "Surcharge amount") %>
+          <% table.with_column(label: "Surcharge posts to") %>
+          <% table.with_column(label: "Accept this") %>
+
+          <% @payment_method_entries.each_with_index do |entry, index| %>
+            <% table.with_row(
+                 remove_label: "Remove #{entry['name'].presence || 'this payment method'}",
+                 persisted: entry["id"].present?,
+                 key: entry["client_key"]) do %>
+              <%= render "payment_method_row", entry: entry, index: index,
+                         surcharge_charge_choices: @surcharge_charge_choices %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this payment method") do %>
+            <%= render "payment_method_row", entry: {}, index: "NEW_RECORD",
+                       surcharge_charge_choices: @surcharge_charge_choices %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

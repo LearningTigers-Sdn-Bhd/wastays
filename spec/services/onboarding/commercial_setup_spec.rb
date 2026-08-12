@@ -261,6 +261,119 @@ RSpec.describe "Onboarding commercial setup" do
     end
   end
 
+  describe Onboarding::SavePaymentMethods do
+    before do
+      seed_transaction_codes!
+      resolve_through!("discounts")
+    end
+
+    def method_entry(overrides = {})
+      {
+        "client_key" => "draft-1",
+        "name" => "Cash",
+        "code" => "CASHDESK",
+        "payment_method_type" => "cash",
+        "guest_advance" => "false",
+        "default_cash" => "true",
+        "active" => "true",
+        "surcharge_enabled" => "false"
+      }.merge(overrides)
+    end
+
+    def save(entries:, complete: false)
+      described_class.call(hotel: hotel, actor: actor, entries: entries, complete: complete)
+    end
+
+    it "completes once one method can take money" do
+      result = save(entries: { "draft-1" => method_entry }, complete: true)
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_payment_methods.sole).to have_attributes(name: "Cash", payment_method_type: "cash", default_cash: true)
+      expect(result.section).to have_attributes(state: "complete")
+      expect(result.section.decision_metadata).not_to have_key("placeholder")
+    end
+
+    it "refuses to complete with nothing guests can pay with" do
+      result = save(entries: { "draft-1" => method_entry("active" => "false", "default_cash" => "false") }, complete: true)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("at least one payment method")
+    end
+
+    # A partial unique index allows one per hotel and the domain save demotes the
+    # others as it goes, so two claims would silently resolve to the last row.
+    it "refuses two rows claiming the default cash method" do
+      result = save(entries: {
+        "first" => method_entry("client_key" => "first"),
+        "second" => method_entry("client_key" => "second", "name" => "Petty cash", "code" => "PETTY")
+      })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("single default cash method")
+      expect(hotel.hotel_payment_methods).to be_empty
+    end
+
+    it "requires a default when cash is accepted" do
+      result = save(entries: { "draft-1" => method_entry("default_cash" => "false") }, complete: true)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("which cash method is the default")
+    end
+
+    it "refuses a half-configured surcharge" do
+      result = save(entries: {
+        "draft-1" => method_entry(
+          "payment_method_type" => "bank_gateway", "default_cash" => "false",
+          "surcharge_enabled" => "true", "surcharge_posting_type" => "percentage"
+        )
+      })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to start_with("Payment method 1:")
+      expect(hotel.hotel_payment_methods).to be_empty
+    end
+
+    it "refuses a surcharge pointing at another property's extra charge" do
+      other = create(:hotel)
+      Financials::EnsureDefaultExtraCharges.call(other)
+
+      result = save(entries: {
+        "draft-1" => method_entry(
+          "payment_method_type" => "bank_gateway", "default_cash" => "false",
+          "surcharge_enabled" => "true", "surcharge_posting_type" => "fixed",
+          "surcharge_value" => "5", "surcharge_extra_charge_id" => other.hotel_extra_charges.first.id.to_s
+        )
+      })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("do not belong to this property")
+    end
+
+    it "posts a surcharge to one of this property's extra charges" do
+      Financials::EnsureDefaultExtraCharges.call(hotel)
+      charge = hotel.hotel_extra_charges.first
+
+      result = save(entries: {
+        "draft-1" => method_entry(
+          "name" => "Card", "code" => "CARDPAY", "payment_method_type" => "bank_gateway", "default_cash" => "false",
+          "surcharge_enabled" => "true", "surcharge_posting_type" => "fixed",
+          "surcharge_value" => "5", "surcharge_extra_charge_id" => charge.id.to_s
+        )
+      }, complete: true)
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_payment_methods.sole.surcharge_extra_charge).to eq(charge)
+    end
+
+    it "cannot be skipped" do
+      result = Onboarding::UpdateSection.new(
+        hotel: hotel, section_key: "payment_methods", state: "skipped", actor: actor, metadata: {}
+      ).call
+
+      expect(result.success?).to be(false)
+    end
+  end
+
   describe Onboarding::SkipOptionalSection do
     before { resolve_through!("rates_availability") }
 

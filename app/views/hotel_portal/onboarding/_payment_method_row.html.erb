@@ -1,0 +1,108 @@
+<%# The record table owns the row and its remove control; this partial supplies
+    only the field cells. Name and code live on the transaction code, so the
+    object is built as the pair the save path writes. %>
+<% object = HotelPaymentMethod.new(transaction_code: TransactionCode.new) %>
+<% object.assign_attributes(
+     name: entry["name"],
+     code: entry["code"],
+     payment_method_type: entry["payment_method_type"].presence || "bank_gateway",
+     surcharge_posting_type: entry["surcharge_posting_type"],
+     surcharge_value: entry["surcharge_value"],
+     surcharge_extra_charge_id: entry["surcharge_extra_charge_id"]
+   ) %>
+<%= fields_for "payment_method_entries[#{index}]", object do |row_form| %>
+  <td>
+    <%= row_form.hidden_field :id, value: entry["id"] %>
+    <%= hidden_field_tag "payment_method_entries[#{index}][transaction_code_id]", entry["transaction_code_id"] %>
+    <%= hidden_field_tag "payment_method_entries[#{index}][_destroy]", "false", data: { record_table_destroy: true } %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :name, label: "Name", size: :sm, required: true) do |field| %>
+      <% field.with_input(placeholder: "Cash") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :code, label: "Code", size: :sm, required: true,
+                                       hint: "Up to 10 characters.") do |field| %>
+      <% field.with_input(placeholder: "CASH", maxlength: 10, class: "uppercase") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :payment_method_type, label: "Type", size: :sm) do |field| %>
+      <% field.with_select_menu(
+           [ { label: "Cash", value: "cash" }, { label: "Card or bank", value: "bank_gateway" } ],
+           selected: entry["payment_method_type"].presence || "bank_gateway") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::Switch.new(
+          form: row_form,
+          attribute: :guest_advance,
+          label: "Guests pay in advance with this",
+          size: :sm,
+          checked: entry["guest_advance"] == "true") %>
+  </td>
+
+  <td>
+    <%# Only one per property, and only for cash taken at the desk. %>
+    <%= render PanelsUI::Switch.new(
+          form: row_form,
+          attribute: :default_cash,
+          label: "Default cash method",
+          size: :sm,
+          checked: entry["default_cash"] == "true") %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::Switch.new(
+          form: row_form,
+          attribute: :surcharge_enabled,
+          label: "Adds a surcharge",
+          size: :sm,
+          disabled: surcharge_charge_choices.empty?,
+          checked: entry["surcharge_enabled"] == "true" && surcharge_charge_choices.any?) %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_posting_type, label: "Surcharge type", size: :sm,
+                                       disabled: surcharge_charge_choices.empty?) do |field| %>
+      <% field.with_select_menu(
+           [ { label: "Fixed amount", value: "fixed" }, { label: "Percentage", value: "percentage" } ],
+           prompt: "No surcharge",
+           selected: entry["surcharge_posting_type"]) %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_value, label: "Surcharge", size: :sm,
+                                       disabled: surcharge_charge_choices.empty?) do |field| %>
+      <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%# A surcharge posts as an extra charge, so it carries that charge's taxes.
+        With no extra charges there is nothing to point at, and a select with no
+        options is worse than saying so. %>
+    <% if surcharge_charge_choices.empty? %>
+      <p class="text-sm text-muted-foreground">No extra charges to post to</p>
+    <% else %>
+      <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_extra_charge_id, label: "Surcharge posts to", size: :sm) do |field| %>
+        <% field.with_select_menu(
+             surcharge_charge_choices,
+             prompt: "Not applicable",
+             selected: entry["surcharge_extra_charge_id"]) %>
+      <% end %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::Switch.new(
+          form: row_form,
+          attribute: :active,
+          label: "Accept this",
+          size: :sm,
+          checked: entry.fetch("active", "true") != "false") %>
+  </td>
+<% end %>

@@ -18,6 +18,7 @@ module HotelPortal
       rates_availability
       extra_charges
       discounts
+      payment_methods
     ].freeze
 
     # Skipping an implemented section is a recorded decision, not a silent
@@ -123,6 +124,56 @@ module HotelPortal
         @charge_code_choices = current_hotel.transaction_codes.active.discountable.order(:code)
                                             .map { |code| { label: "#{code.name} (#{code.code})", value: code.id.to_s } }
         @extra_charges_skipped = @navigation.fetch("extra_charges").record.state == "skipped"
+      when "payment_methods"
+        @payment_method_entries = entries || persisted_payment_method_entries
+        @surcharge_charge_choices = current_hotel.hotel_extra_charges.active.includes(:transaction_code).ordered
+                                                 .map { |charge| { label: charge.name, value: charge.id.to_s } }
+      end
+    end
+
+    def persisted_payment_method_entries
+      adopted = current_hotel.hotel_payment_methods.includes(:transaction_code).ordered.map do |method|
+        {
+          "id" => method.id.to_s,
+          "client_key" => "payment-method-#{method.id}",
+          "name" => method.name,
+          "code" => method.code,
+          "payment_method_type" => method.payment_method_type,
+          "guest_advance" => method.guest_advance.to_s,
+          "default_cash" => method.default_cash.to_s,
+          "active" => method.active?.to_s,
+          "surcharge_enabled" => method.surcharge?.to_s,
+          "surcharge_posting_type" => method.surcharge_posting_type,
+          "surcharge_value" => method.surcharge_value&.to_s,
+          "surcharge_extra_charge_id" => method.surcharge_extra_charge_id&.to_s
+        }
+      end
+      return adopted if adopted.any? || @presenter.read_only?
+
+      suggested_payment_method_entries
+    end
+
+    def suggested_payment_method_entries
+      cash_claimed = false
+      current_hotel.transaction_codes
+                   .where(system_key: PaymentMethods::EnsureDefaults::SYSTEM_KEYS)
+                   .where.missing(:hotel_payment_method)
+                   .order(:code)
+                   .map do |code|
+        cash = code.system_key == "cash_payment"
+        default_cash = cash && !cash_claimed
+        cash_claimed ||= default_cash
+        {
+          "transaction_code_id" => code.id.to_s,
+          "client_key" => "suggested-#{code.system_key}",
+          "name" => code.name,
+          "code" => code.code,
+          "payment_method_type" => cash ? "cash" : "bank_gateway",
+          "guest_advance" => (code.category == "booking_payment").to_s,
+          "default_cash" => default_cash.to_s,
+          "active" => "true",
+          "surcharge_enabled" => "false"
+        }
       end
     end
 
@@ -296,6 +347,13 @@ module HotelPortal
             hotel: current_hotel,
             actor: current_user,
             entries: params[:discount_entries] || {},
+            complete: complete
+          )
+        when "payment_methods"
+          Onboarding::SavePaymentMethods.call(
+            hotel: current_hotel,
+            actor: current_user,
+            entries: params[:payment_method_entries] || {},
             complete: complete
           )
         end
