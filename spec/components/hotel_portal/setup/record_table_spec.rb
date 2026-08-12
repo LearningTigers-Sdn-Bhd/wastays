@@ -116,6 +116,18 @@ RSpec.describe HotelPortal::Setup::RecordTable, type: :component do
     }.to raise_error(ArgumentError, /blank_row/)
   end
 
+  # Pinning columns is the only thing the spreadsheet variant decides. Density and
+  # the scrollable region are the same either way, so the two variants read as one
+  # table with more or fewer columns rather than as two kinds of table.
+  it "renders both variants at one density inside a reachable, named scroll region" do
+    render_table
+    expect(page).to have_css("[role='region'][tabindex='0'][aria-label='Extra charges'] table[data-density='compact']")
+    expect(page).to have_no_css("table.panel-record-table--spreadsheet")
+
+    render_table(spreadsheet: true)
+    expect(page).to have_css("[role='region'][tabindex='0'][aria-label='Extra charges'] table[data-density='compact']")
+  end
+
   it "supports a horizontally scrollable spreadsheet with a trailing Actions column" do
     render_table(spreadsheet: true, actions: true)
 

@@ -9,8 +9,8 @@
     <%= row_form.hidden_field :_destroy, value: entry["_destroy"].presence || "0", data: { record_table_destroy: true } %>
     <%= render PanelsUI::FormField.new(
           form: row_form, attribute: :name, label: "Room category", label_hidden: true,
-          required: true, id: "#{field_id_prefix}-name") do |field| %>
-      <% field.with_input(value: entry["name"], placeholder: "e.g. Deluxe Twin", autocomplete: "off", size: :sm) %>
+          size: :sm, required: true, id: "#{field_id_prefix}-name") do |field| %>
+      <% field.with_input(value: entry["name"], placeholder: "e.g. Deluxe Twin", autocomplete: "off") %>
     <% end %>
   </td>
 
@@ -18,9 +18,9 @@
     <td>
       <%= render PanelsUI::FormField.new(
             form: row_form, attribute: attribute, label: "#{label} for #{entry_name}", label_hidden: true,
-            required: true, id: "#{field_id_prefix}-#{attribute}") do |field| %>
+            size: :sm, required: true, id: "#{field_id_prefix}-#{attribute}") do |field| %>
         <% field.with_input(
-             type: :number, value: entry[attribute], min: minimum, step: 1, size: :sm,
+             type: :number, value: entry[attribute], min: minimum, step: 1,
              data: ({ onboarding_room_grid_field: "quantity", action: "input->onboarding-room-grid#quantityChanged" } if attribute == "quantity")) %>
       <% end %>
     </td>

@@ -29,7 +29,7 @@
 
     <%= text_field_tag "#{prefix}[name]", entry["name"], required: !template_plan,
           disabled: presenter.read_only?, placeholder: "Rate plan name",
-          class: "panel-input w-56", aria: { label: "Rate plan name" } %>
+          class: "panel-input w-56", data: { size: :sm }, aria: { label: "Rate plan name" } %>
 
     <% basis_scope = HotelPortal::RatePlansHelper::OnboardingFieldScope.new(rate_plan_pricing_basis(entry)) %>
     <%= fields_for prefix, basis_scope do |field_form| %>
@@ -38,8 +38,8 @@
             disabled: presenter.read_only?, size: :sm, class: "w-48") %>
     <% end %>
     <%= number_field_tag "#{prefix}[derive_value]", entry["derive_value"], step: 0.01,
-          disabled: presenter.read_only?, class: "panel-input w-24", placeholder: "Adjust",
-          aria: { label: "Adjustment applied to Standard Rate" } %>
+          disabled: presenter.read_only?, class: "panel-input w-24", data: { size: :sm },
+          placeholder: "Adjust", aria: { label: "Adjustment applied to Standard Rate" } %>
   </div>
 <% end %>
 

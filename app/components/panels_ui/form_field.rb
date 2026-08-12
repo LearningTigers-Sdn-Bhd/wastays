@@ -151,26 +151,26 @@ module PanelsUI
 
     def build_input(**attributes)
       @control_kind = :input
-      Input.new(**attributes, **control_options)
+      Input.new(**attributes, **control_options(attributes))
     end
 
     # Cally-backed date control (popover calendar). Renders its own wrapper (like
     # combobox/select_menu), so it does not support addons.
     def build_date_picker(**attributes)
       @control_kind = :date_picker
-      DatePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options)
+      DatePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options(attributes))
     end
 
     # Segmented time control (popover HH:MM). Own wrapper, no addons.
     def build_time_picker(**attributes)
       @control_kind = :time_picker
-      TimePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options)
+      TimePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options(attributes))
     end
 
     # Cally calendar + segmented time (popover). Own wrapper, no addons.
     def build_date_time_picker(**attributes)
       @control_kind = :date_time_picker
-      DateTimePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options)
+      DateTimePicker.new(**attributes, labelled_by: (@label.present? ? label_id : nil), **control_options(attributes))
     end
 
     def build_dropzone(**attributes)
@@ -178,20 +178,20 @@ module PanelsUI
       Dropzone.new(
         **attributes,
         labelled_by: (@label.present? ? label_id : nil),
-        **control_options.except(:readonly)
+        **control_options(attributes).except(:readonly)
       )
     end
 
     def build_text_area(**attributes)
       @control_kind = :text_area
-      TextArea.new(**attributes, **control_options)
+      TextArea.new(**attributes, **control_options(attributes))
     end
 
     # A native <select> has no readonly state, so drop it rather than emit an
     # attribute the element ignores.
     def build_native_select(choices, **attributes)
       @control_kind = :native_select
-      NativeSelect.new(choices: choices, **attributes, **control_options.except(:readonly))
+      NativeSelect.new(choices: choices, **attributes, **control_options(attributes).except(:readonly))
     end
 
     # Like build_native_select, but the token-styled progressive-enhancement variant. It
@@ -199,25 +199,30 @@ module PanelsUI
     # readonly is likewise dropped (a select has no such state).
     def build_select_menu(choices, **attributes)
       @control_kind = :select_menu
-      SelectMenu.new(choices: choices, **attributes, **control_options.except(:readonly))
+      SelectMenu.new(choices: choices, **attributes, **control_options(attributes).except(:readonly))
     end
 
     def build_combobox(choices, **attributes)
       @control_kind = :combobox
-      Combobox.new(choices: choices, **attributes, **control_options.except(:readonly))
+      Combobox.new(choices: choices, **attributes, **control_options(attributes).except(:readonly))
     end
 
     def build_autocomplete(**attributes)
       @control_kind = :autocomplete
-      Autocomplete.new(**attributes, **control_options)
+      Autocomplete.new(**attributes, **control_options(attributes))
     end
 
     def build_multi_select(choices, **attributes)
       @control_kind = :multi_select
-      MultiSelect.new(choices: choices, **attributes, **control_options.except(:readonly))
+      MultiSelect.new(choices: choices, **attributes, **control_options(attributes).except(:readonly))
     end
 
-    def control_options
+    # Splatted after the caller's own attributes so the field stays the authority
+    # on what ties a control to its label and messages. `size` is the exception:
+    # a control may be sized against its container — a field in a table cell — and
+    # silently discarding the size the caller asked for is worse than letting the
+    # control and its label differ.
+    def control_options(overrides = {})
       {
         form: @form,
         attribute: @attribute,
@@ -228,7 +233,7 @@ module PanelsUI
         disabled: @disabled,
         readonly: @readonly,
         size: @size
-      }
+      }.merge(overrides.slice(:size))
     end
   end
 end

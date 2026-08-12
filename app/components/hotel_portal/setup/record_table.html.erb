@@ -1,15 +1,20 @@
+<%# One density for every record table. Compact is what an editable grid wants —
+    the row is a line of controls, and the controls carry their own height — and a
+    table that pins its columns is not a different kind of table from one that
+    does not, so it should not be a different size either. %>
 <% table_markup = capture do %>
 <%= render PanelsUI::Table.new(
       caption: caption,
       header_style: :sentence,
-      density: (spreadsheet? ? :compact : :default),
+      density: :compact,
       sticky_header: spreadsheet?,
-      wrapper_class: "rounded-md border border-border bg-card",
       class: table_classes,
       data: { controller: HotelPortal::Setup::RecordTable::CONTROLLER }) do |table| %>
   <% table.with_header do %>
     <tr>
-      <% if removable? %><th scope="col" class="panel-record-table__control">Remove</th><% end %>
+      <%# The column holds an icon button, so it is sized for one. Its name is for
+          assistive tech and for the row that stacks below 48rem. %>
+      <% if removable? %><th scope="col" class="panel-record-table__control"><span class="sr-only">Remove</span></th><% end %>
       <%= safe_join(columns) %>
       <% if actions? %><th scope="col" class="panel-record-table__actions">Actions</th><% end %>
     </tr>
@@ -40,12 +45,12 @@
 <% end %>
 <% end %>
 
-<% if spreadsheet? %>
-  <%= tag.div(table_markup,
-              class: "panel-record-table__spreadsheet-region",
-              role: "region",
-              tabindex: 0,
-              aria: { label: caption }) %>
-<% else %>
-  <%= table_markup %>
-<% end %>
+<%# Every record table can outgrow its container — the pinned ones by design, the
+    rest between 48rem and their own minimum. The region is what makes that scroll
+    reachable from the keyboard and gives it a name, so it is not the pinned
+    tables' privilege. %>
+<%= tag.div(table_markup,
+            class: "panel-record-table__region",
+            role: "region",
+            tabindex: 0,
+            aria: { label: caption }) %>
