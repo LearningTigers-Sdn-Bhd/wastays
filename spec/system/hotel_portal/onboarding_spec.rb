@@ -76,4 +76,29 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(hotel.onboarding_sections.find_by!(section_key: "room_revenue").state).to eq("complete")
     expect(hotel.hotel_reservation_policies.count).to eq(4)
   end
+
+  it "adds and removes records in an editable table" do
+    Onboarding::InitializeProgress.new(hotel: hotel).call
+    hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
+    # The preset roles the staff rows choose from are created by this step, so
+    # run it rather than only marking its section complete.
+    Onboarding::ConfirmRolePresets.new(hotel: hotel, actor: user, confirmed: true).call
+
+    visit hotel_onboarding_section_path(hotel, section_key: "staff_setup")
+
+    # The page opens on the trailing blank row the controller appends.
+    expect(page).to have_css("tr[data-record-table-target='row']", count: 1)
+    expect(page).to have_no_css("tr.panel-record-table__empty")
+
+    click_button "Add staff member"
+
+    expect(page).to have_css("tr[data-record-table-target='row']", count: 2)
+    # Focus lands on the first field, not on the remove button that precedes it.
+    expect(page.evaluate_script("document.activeElement.name")).to end_with("[name]")
+
+    all("button[aria-label='Remove this staff member']").each(&:click)
+
+    expect(page).to have_no_css("tr[data-record-table-target='row']")
+    expect(page).to have_css("tr.panel-record-table__empty", text: "No staff yet")
+  end
 end

@@ -6,34 +6,49 @@
 
   <% if presenter.read_only? %>
     <% if @staff_entries.any? %>
-      <div class="divide-y divide-border border-y border-border">
-        <% @staff_entries.each do |entry| %>
-          <div class="grid gap-1 py-3 text-sm sm:grid-cols-3">
-            <span class="font-medium"><%= entry["name"].presence || "Name not provided" %></span>
-            <span><%= entry["email"] %></span>
-            <span class="text-muted-foreground"><%= entry["role_name"] %></span>
-          </div>
+      <%= render PanelsUI::Table.new(caption: "Draft staff", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Preset role</th>
+          </tr>
         <% end %>
-      </div>
+        <% table.with_body do %>
+          <% @staff_entries.each do |entry| %>
+            <tr>
+              <td class="font-medium"><%= entry["name"].presence || "Name not provided" %></td>
+              <td><%= entry["email"] %></td>
+              <td class="text-muted-foreground"><%= entry["role_name"] %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
     <% else %>
       <p class="text-sm text-muted-foreground">No additional staff for now.</p>
     <% end %>
   <% else %>
-    <% form_id = "onboarding-staff-drafts-form" %>
-    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "staff_setup"), method: :patch, id: form_id, data: { controller: "onboarding-staff-drafts" } do %>
-      <div class="space-y-3" data-onboarding-staff-drafts-target="list">
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "staff_setup"), method: :patch, id: "onboarding-staff-drafts-form" do %>
+      <%= render HotelPortal::Setup::RecordTable.new(
+            caption: "Draft staff",
+            add_label: "Add staff member",
+            empty: "No staff yet. You can invite the rest of the team after onboarding.",
+            class: "md:min-w-[44rem]") do |table| %>
+        <% table.with_column(label: "Name") %>
+        <% table.with_column(label: "Email", required: true) %>
+        <% table.with_column(label: "Preset role", required: true) %>
+
         <% @staff_entries.each_with_index do |entry, index| %>
-          <%= render "staff_draft_row", entry: entry, index: index, staff_roles: @staff_roles %>
+          <% table.with_row(remove_label: "Remove #{entry['name'].presence || entry['email'].presence || 'this staff member'}") do %>
+            <%= render "staff_draft_row", entry: entry, index: index, staff_roles: @staff_roles %>
+          <% end %>
         <% end %>
-      </div>
-      <template data-onboarding-staff-drafts-target="template">
-        <%= render "staff_draft_row", entry: {}, index: "NEW_RECORD", staff_roles: @staff_roles %>
-      </template>
-      <div class="mt-3">
-        <%= render PanelsUI::Button.new(as: :button, variant: :secondary, size: :sm, data: { action: "onboarding-staff-drafts#add" }) do %>
-          <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %><span>Add staff member</span>
+
+        <% table.with_blank_row(remove_label: "Remove this staff member") do %>
+          <%= render "staff_draft_row", entry: {}, index: "NEW_RECORD", staff_roles: @staff_roles %>
         <% end %>
-      </div>
+      <% end %>
     <% end %>
   <% end %>
 </section>

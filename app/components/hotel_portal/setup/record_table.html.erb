@@ -1,0 +1,36 @@
+<%= render PanelsUI::Table.new(
+      caption: caption,
+      header_style: :sentence,
+      wrapper_class: "rounded-md border border-border bg-card",
+      class: table_classes,
+      data: { controller: HotelPortal::Setup::RecordTable::CONTROLLER }) do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col" class="panel-record-table__control">Remove</th>
+      <%= safe_join(columns) %>
+    </tr>
+  <% end %>
+
+  <% table.with_body do %>
+    <%= safe_join(rows) %>
+
+    <template data-record-table-target="template"><%= blank_row %></template>
+
+    <%= tag.tr(class: "panel-record-table__empty", hidden: rows.any?,
+               data: { "record-table-target": "empty" }) do %>
+      <td colspan="<%= column_count %>"><%= empty %></td>
+    <% end %>
+  <% end %>
+
+  <% table.with_footer do %>
+    <tr>
+      <td colspan="<%= column_count %>">
+        <%= render PanelsUI::Button.new(as: :button, variant: :ghost, size: :sm,
+              data: { action: "#{HotelPortal::Setup::RecordTable::CONTROLLER}#add" }) do %>
+          <%= helpers.app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
+          <span><%= add_label %></span>
+        <% end %>
+      </td>
+    </tr>
+  <% end %>
+<% end %>

@@ -18,26 +18,36 @@
       </div>
     </dl>
 
-    <div>
+    <div class="space-y-3">
       <h2 class="text-base font-semibold">Property taxes and fees</h2>
       <% if @tax_entries.any? %>
-        <div class="mt-3 divide-y divide-border border-y border-border">
-          <% @tax_entries.each do |entry| %>
-            <div class="grid gap-1 py-3 text-sm sm:grid-cols-4">
-              <span class="font-medium"><%= entry["name"] %></span>
-              <span class="text-muted-foreground"><%= entry["charge_type"] == "tax" ? "Tax" : "Fee" %></span>
-              <span><%= entry["rate_type"] == "percentage" ? "#{entry['amount']}%" : "#{current_hotel.default_currency.presence || 'MYR'} #{entry['amount']}" %></span>
-              <span class="text-muted-foreground"><%= entry["enabled"] == "false" ? "Not charged" : "Charged" %></span>
-            </div>
+        <%= render PanelsUI::Table.new(caption: "Property taxes and fees", header_style: :sentence,
+                                       wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Type</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Status</th>
+            </tr>
           <% end %>
-        </div>
+          <% table.with_body do %>
+            <% @tax_entries.each do |entry| %>
+              <tr>
+                <td class="font-medium"><%= entry["name"] %></td>
+                <td class="text-muted-foreground"><%= entry["charge_type"] == "tax" ? "Tax" : "Fee" %></td>
+                <td class="tabular-nums"><%= entry["rate_type"] == "percentage" ? "#{entry['amount']}%" : "#{current_hotel.default_currency.presence || 'MYR'} #{entry['amount']}" %></td>
+                <td class="text-muted-foreground"><%= entry["enabled"] == "false" ? "Not charged" : "Charged" %></td>
+              </tr>
+            <% end %>
+          <% end %>
+        <% end %>
       <% else %>
-        <p class="mt-2 text-sm text-muted-foreground">No property taxes or fees were added.</p>
+        <p class="text-sm text-muted-foreground">No property taxes or fees were added.</p>
       <% end %>
     </div>
   <% else %>
-    <% form_id = "onboarding-taxes-fees-form" %>
-    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "taxes_fees"), method: :patch, id: form_id, data: { controller: "onboarding-hotel-taxes" } do %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "taxes_fees"), method: :patch, id: "onboarding-taxes-fees-form" do %>
       <%= fields_for :hotel, current_hotel do |hotel_form| %>
         <div class="space-y-4">
           <%= render PanelsUI::Switch.new(
@@ -73,24 +83,28 @@
         <p class="text-sm text-muted-foreground">Add any mandatory charge your property applies on top of the statutory taxes. Optional extras guests choose to buy come later.</p>
       </div>
 
-      <% if @tax_entries.empty? %>
-        <p class="mt-3 rounded-md border border-dashed border-border px-3 py-4 text-sm text-muted-foreground" data-onboarding-hotel-taxes-target="empty">
-          No property taxes or fees yet. Most properties charge none beyond the statutory taxes above.
-        </p>
-      <% end %>
-
-      <div class="mt-3 space-y-3" data-onboarding-hotel-taxes-target="list">
-        <% @tax_entries.each_with_index do |entry, index| %>
-          <%= render "hotel_tax_row", entry: entry, index: index %>
-        <% end %>
-      </div>
-      <template data-onboarding-hotel-taxes-target="template">
-        <%= render "hotel_tax_row", entry: {}, index: "NEW_RECORD" %>
-      </template>
-
       <div class="mt-3">
-        <%= render PanelsUI::Button.new(as: :button, variant: :secondary, size: :sm, data: { action: "onboarding-hotel-taxes#add" }) do %>
-          <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %><span>Add tax or fee</span>
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Property taxes and fees",
+              add_label: "Add tax or fee",
+              empty: "No property taxes or fees yet. Most properties charge none beyond the statutory taxes above.",
+              class: "md:min-w-[60rem]") do |table| %>
+          <% table.with_column(label: "Name", required: true) %>
+          <% table.with_column(label: "Type") %>
+          <% table.with_column(label: "Rate type") %>
+          <% table.with_column(label: "Amount", required: true) %>
+          <% table.with_column(label: "Charge now") %>
+          <% table.with_column(label: "Foreign guests only") %>
+
+          <% @tax_entries.each_with_index do |entry, index| %>
+            <% table.with_row(remove_label: "Remove #{entry['name'].presence || 'this tax or fee'}") do %>
+              <%= render "hotel_tax_row", entry: entry, index: index %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this tax or fee") do %>
+            <%= render "hotel_tax_row", entry: {}, index: "NEW_RECORD" %>
+          <% end %>
         <% end %>
       </div>
 
