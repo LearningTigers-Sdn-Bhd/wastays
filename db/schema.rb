@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_12_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_12_100001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2457,11 +2457,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100000) do
   end
 
   create_table "room_type_rate_plans", force: :cascade do |t|
+    t.integer "base_occupancy"
     t.datetime "created_at", null: false
+    t.decimal "extra_pax_charge", precision: 10, scale: 2
     t.string "pricing_mode", default: "fixed", null: false
     t.decimal "pricing_value", precision: 10, scale: 2
     t.bigint "rate_plan_id", null: false
     t.bigint "room_type_id", null: false
+    t.decimal "single_supplement", precision: 10, scale: 2
     t.datetime "updated_at", null: false
     t.index ["rate_plan_id"], name: "index_room_type_rate_plans_on_rate_plan_id"
     t.index ["room_type_id", "rate_plan_id"], name: "idx_room_type_rate_plans_unique_assignment", unique: true

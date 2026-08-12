@@ -67,7 +67,8 @@ module Rates
         adults: @adults,
         children: @children,
         child_ages: @child_ages,
-        adult_occupancy_price: occupancy_amount
+        adult_occupancy_price: occupancy_amount,
+        assignment: room_type_rate_plan
       )
 
       Result.new(

@@ -13,8 +13,20 @@ class RoomTypeRatePlan < ApplicationRecord
   validates :rate_plan_id, uniqueness: { scope: :room_type_id }
   validates :pricing_value, presence: true, numericality: true, unless: -> { pricing_mode == "fixed" }
   validates :pricing_value, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true, if: -> { pricing_mode == "fixed" }
+  validates :base_occupancy, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validates :extra_pax_charge, :single_supplement,
+    numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   after_commit :trigger_ari_sync, on: [ :create, :update ]
+
+  # Occupancy rules narrow from the plan to this pairing. Null means the pair
+  # has nothing of its own to say, so the plan answers — which is what every
+  # assignment written before these columns existed relies on.
+  OCCUPANCY_RULES = %i[base_occupancy extra_pax_charge single_supplement].freeze
+
+  OCCUPANCY_RULES.each do |rule|
+    define_method(:"effective_#{rule}") { self[rule].presence || rate_plan&.public_send(rule) }
+  end
 
   def derives_price?
     pricing_mode.in?(%w[multiplier offset])
