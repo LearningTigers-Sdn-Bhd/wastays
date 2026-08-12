@@ -209,12 +209,21 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
       expect(hotel.onboarding_sections.find_by(section_key: "payment_methods").state).not_to eq("skipped")
     end
 
-    it "switches the surcharge columns off when there is nothing to post to" do
+    it "asks for a name and a type, and carries the rest hidden" do
       get hotel_onboarding_section_path(hotel, section_key: "payment_methods")
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Surcharges need an extra charge to post to")
-      expect(response.body).to include("No extra charges to post to")
+      expect(response.body).not_to include("Surcharge")
+      expect(response.body).to include("payment_method_entries[0][surcharge_enabled]")
+    end
+
+    # The standard codes are shown; only a row the owner adds is typed.
+    it "shows the standard payment codes rather than offering them for editing" do
+      get hotel_onboarding_section_path(hotel, section_key: "payment_methods")
+
+      expect(response.body).to include("Cash Payment", "Card Payment")
+      expect(response.body).not_to include("payment_method_entries[0][name]")
+      expect(response.body).to include("payment_method_entries[NEW_RECORD][name]")
     end
 
     it "saves and advances to corporate accounts" do
@@ -222,14 +231,15 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
             params: {
               navigation_action: "save_continue",
               payment_method_entries: { "0" => {
-                "name" => "Cash", "code" => "CASHDESK", "payment_method_type" => "cash",
-                "guest_advance" => "false", "default_cash" => "true", "active" => "true",
+                "name" => "Front desk cash", "code" => "", "payment_method_type" => "cash",
+                "guest_advance" => "false", "default_cash" => "false", "active" => "true",
                 "surcharge_enabled" => "false", "_destroy" => "false"
               } }
             }
 
       expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"))
-      expect(hotel.hotel_payment_methods.sole.name).to eq("Cash")
+      expect(hotel.hotel_payment_methods.sole)
+        .to have_attributes(name: "Front desk cash", code: "FRONT_DESK", default_cash: true)
       expect(hotel.onboarding_sections.find_by(section_key: "payment_methods").state).to eq("complete")
     end
   end

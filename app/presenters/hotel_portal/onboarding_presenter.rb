@@ -23,7 +23,7 @@ module HotelPortal
       "rates_availability" => [ "Rates and availability", "Set sell-mode pricing and establish one year of sellable inventory." ],
       "extra_charges" => [ "Extra charges", "Anything sold on top of the room — breakfast, parking, an airport transfer. Mandatory charges every guest pays belong in Taxes and fees instead." ],
       "discounts" => [ "Discounts", "Offers staff apply to a folio — an early bird rate, a staff rate, a goodwill rebate. Each one names the charges it is allowed to reduce." ],
-      "payment_methods" => [ "Payment methods", "Choose at least one way guests can pay and configure any surcharges." ],
+      "payment_methods" => [ "Payment methods", "The ways guests can hand over money. At least one is needed before this property can open; card surcharges are set under Settings." ],
       "corporate_accounts" => [ "Corporate accounts", "Prepare company accounts and invitations for submission." ],
       "channel_manager" => [ "Channel manager", "Review the preferred provider and decide whether to connect now." ],
       "review" => [ "Review and submit", "Resolve blocking issues, review your choices, and submit the property for approval." ]

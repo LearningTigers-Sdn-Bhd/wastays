@@ -143,9 +143,13 @@ module HotelPortal
           @extra_charges_skipped = @navigation.fetch("extra_charges").record.state == "skipped"
         end
       when "payment_methods"
-        @payment_method_entries = entries || persisted_payment_method_entries
-        @surcharge_charge_choices = current_hotel.hotel_extra_charges.active.includes(:transaction_code).ordered
-                                                 .map { |charge| { label: charge.name, value: charge.id.to_s } }
+        # A review reads the saved methods; only the editor works from entries,
+        # which may be a failed submission rather than what is stored.
+        if @presenter.read_only?
+          @payment_methods = current_hotel.hotel_payment_methods.includes(:transaction_code).ordered
+        else
+          @payment_method_entries = entries || persisted_payment_method_entries
+        end
       when "corporate_accounts"
         @corporate_draft_entries = entries || persisted_corporate_draft_entries
         @corporate_draft_entries += [ {} ] unless @presenter.read_only?
@@ -174,6 +178,10 @@ module HotelPortal
         {
           "id" => method.id.to_s,
           "client_key" => "payment-method-#{method.id}",
+          # The standard codes every property is given are shown, not edited.
+          # A hint for the table only: the save path decides this again from the
+          # record rather than trusting what comes back.
+          "locked" => method.transaction_code.system_required?.to_s,
           "name" => method.name,
           "code" => method.code,
           "payment_method_type" => method.payment_method_type,
@@ -186,7 +194,7 @@ module HotelPortal
           "surcharge_extra_charge_id" => method.surcharge_extra_charge_id&.to_s
         }
       end
-      return adopted if adopted.any? || @presenter.read_only?
+      return adopted if adopted.any?
 
       suggested_payment_method_entries
     end
@@ -204,6 +212,7 @@ module HotelPortal
         {
           "transaction_code_id" => code.id.to_s,
           "client_key" => "suggested-#{code.system_key}",
+          "locked" => code.system_required?.to_s,
           "name" => code.name,
           "code" => code.code,
           "payment_method_type" => cash ? "cash" : "bank_gateway",

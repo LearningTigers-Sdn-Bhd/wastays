@@ -62,17 +62,23 @@ module Onboarding
 
     attr_reader :hotel, :actor, :complete
 
+    # Removing the default cash method is allowed: the rows that remain settle
+    # the default between them below, so there is nothing for an owner to fix
+    # first and nothing they could fix with — the table has no such field.
+    #
+    # A standard payment code is not removable at all. The table says so in
+    # place of the remove control; this is where that holds.
     def destroy_rows!
       discarded_rows.each do |row|
         method = existing_methods.fetch(row["id"].to_s)
-        fail_transaction!("#{method.name} is the default cash method. Make another cash method the default before removing it.") if method.default_cash?
+        next if method.transaction_code.system_required?
 
         method.destroy!
       end
     end
 
     def save_rows!
-      retained_rows.each_with_index do |row, index|
+      rows_to_save.each_with_index do |row, index|
         method = build_or_find_method(row)
         method.position = index
 
@@ -93,6 +99,60 @@ module Onboarding
           hotel: hotel, kind: "payment", category: "gateway_payment", active: true, system_required: false
         )
       )
+    end
+
+    # --- rows ---------------------------------------------------------------
+
+    # The table asks for a name and a type. Everything else a payment method
+    # holds is carried through hidden, derived here, or left to Settings.
+    def prepare_row(row) = derived_code_row(locked_row(row), fallback: "PAY")
+
+    # A row backed by one of the standard payment codes is shown as text, not
+    # as fields. What it holds is read from the record here rather than taken
+    # from the submission, so the lock is the rule and the text is only how the
+    # table says so. Its type and whether it is taken in advance follow from the
+    # code, the same way EnsureDefaults derives them.
+    def locked_row(row)
+      code = locked_code(row)
+      return row if code.blank?
+
+      row.merge(
+        "name" => code.name,
+        "code" => code.code,
+        "payment_method_type" => code.system_key == "cash_payment" ? "cash" : "bank_gateway",
+        "guest_advance" => (code.category == "booking_payment").to_s
+      )
+    end
+
+    def locked_code(row)
+      code =
+        if row["id"].present?
+          existing_methods[row["id"].to_s]&.transaction_code
+        elsif row["transaction_code_id"].present?
+          adoptable_codes[row["transaction_code_id"].to_s]
+        end
+
+      code if code&.system_required?
+    end
+
+    # Which drawer is the default is not a question the table asks: with one
+    # cash method it has one answer, and the completion contract below requires
+    # an answer. A row that already holds it and still takes cash at the desk
+    # keeps it — a method configured under Settings stays where it was put —
+    # and otherwise the first row that qualifies takes it. Every other row is
+    # cleared, so a method switched to a card no longer carries a claim only
+    # its old type allowed.
+    def rows_to_save
+      @rows_to_save ||= begin
+        claimant = retained_rows.index { |row| desk_cash?(row) && boolean(row["default_cash"]) } ||
+                   retained_rows.index { |row| desk_cash?(row) }
+
+        retained_rows.each_with_index.map { |row, index| row.merge("default_cash" => (index == claimant).to_s) }
+      end
+    end
+
+    def desk_cash?(row)
+      row["payment_method_type"] == "cash" && !boolean(row["guest_advance"]) && boolean(row.fetch("active", "true"))
     end
 
     # --- validation ---------------------------------------------------------

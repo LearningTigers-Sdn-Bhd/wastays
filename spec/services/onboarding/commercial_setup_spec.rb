@@ -399,11 +399,70 @@ RSpec.describe "Onboarding commercial setup" do
       expect(hotel.hotel_payment_methods).to be_empty
     end
 
-    it "requires a default when cash is accepted" do
-      result = save(entries: { "draft-1" => method_entry("default_cash" => "false") }, complete: true)
+    # The table has no field for it, so the rows settle it between them.
+    it "gives the default cash drawer to the first cash method taken at the desk" do
+      result = save(entries: {
+        "first" => method_entry("client_key" => "first", "name" => "Card", "code" => "CARDPAY",
+                                "payment_method_type" => "bank_gateway", "default_cash" => "false"),
+        "second" => method_entry("client_key" => "second", "default_cash" => "false")
+      }, complete: true)
 
-      expect(result.success?).to be(false)
-      expect(result.error).to include("which cash method is the default")
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_payment_methods.find_by!(default_cash: true).name).to eq("Cash")
+    end
+
+    # The table shows a standard code as text and offers no remove control for
+    # it. Both hold here, so a forged row changes nothing.
+    it "keeps a standard payment code as the property was given it" do
+      PaymentMethods::EnsureDefaults.call(hotel)
+      card = hotel.hotel_payment_methods.joins(:transaction_code)
+                  .find_by!(transaction_codes: { system_key: "card_payment" })
+
+      result = save(entries: { "draft-1" => method_entry(
+        "id" => card.id.to_s, "name" => "Renamed", "code" => "RENAMED",
+        "payment_method_type" => "cash", "default_cash" => "false"
+      ) })
+
+      expect(result.success?).to be(true)
+      expect(card.reload).to have_attributes(name: "Card Payment", code: "CARD", payment_method_type: "bank_gateway")
+    end
+
+    it "refuses to remove a standard payment code" do
+      PaymentMethods::EnsureDefaults.call(hotel)
+      card = hotel.hotel_payment_methods.joins(:transaction_code)
+                  .find_by!(transaction_codes: { system_key: "card_payment" })
+
+      result = save(entries: { "draft-1" => method_entry("id" => card.id.to_s, "_destroy" => "true") })
+
+      expect(result.success?).to be(true)
+      expect(card.reload).to be_persisted
+    end
+
+    it "derives a code from the name of a row typed from scratch" do
+      result = save(entries: { "draft-1" => method_entry("name" => "Front desk cash", "code" => "") })
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_payment_methods.sole.code).to eq("FRONT_DESK")
+    end
+
+    # Nothing in setup can hand the default to another row first, so refusing
+    # the removal would leave an owner stuck with a method they do not take.
+    it "removes the default cash method and hands the drawer to what is left" do
+      save(entries: {
+        "first" => method_entry("client_key" => "first"),
+        "second" => method_entry("client_key" => "second", "name" => "Petty cash", "code" => "PETTY",
+                                 "default_cash" => "false")
+      })
+      cash = hotel.hotel_payment_methods.find_by!(default_cash: true)
+
+      result = save(entries: {
+        "first" => method_entry("client_key" => "first", "id" => cash.id.to_s, "_destroy" => "true"),
+        "second" => method_entry("client_key" => "second", "id" => hotel.hotel_payment_methods.where.not(id: cash.id).sole.id.to_s,
+                                 "name" => "Petty cash", "code" => "PETTY", "default_cash" => "false")
+      }, complete: true)
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_payment_methods.sole).to have_attributes(name: "Petty cash", default_cash: true)
     end
 
     it "refuses a half-configured surcharge" do

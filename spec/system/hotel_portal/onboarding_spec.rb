@@ -346,7 +346,14 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(page).to have_css("h1", text: "Payment methods")
     # Required: no skip is offered here at all.
     expect(page).to have_no_button("No payment methods for now")
-    expect(page).to have_text("Surcharges need an extra charge to post to")
+    # Headed once, by the shell, and asking two things: a surcharge is a fee
+    # decision the property makes under Settings. The standard codes read as
+    # text and say, where their remove control would be, why they stay.
+    expect(page).to have_no_css("h2", text: "How can guests pay?")
+    expect(page).to have_no_css("th", text: "Surcharge")
+    expect(page).to have_css("tr.panel-record-table__row", text: "Cash Payment")
+    expect(page).to have_no_css("button[aria-label='Remove Cash Payment']")
+    expect(page).to have_css("button[aria-label^='A standard payment code']")
     click_button "Save & continue"
 
     expect(page).to have_css("h1", text: "Corporate accounts")

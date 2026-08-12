@@ -2,125 +2,81 @@
     only the field cells. Name and code live on the transaction code, so the
     object is built as the pair the save path writes.
 
-    Every label is hidden: the column header names the field, so a visible label
-    in the cell only repeats it. The label stays in the DOM as the control's
-    accessible name, and names the payment method as well as the field so a row
-    read out of the header's context still says which method it belongs to.
-    Spreadsheet tables never reflow into stacked editors, so nothing brings the
-    labels back. %>
+    Two fields, not ten: a property being set up is saying how guests can hand
+    over money, not configuring the till. The accounting code is derived from
+    the name, the default cash drawer is settled by the rows themselves, and
+    whether the method is accepted is what keeping or removing the row already
+    means. A surcharge posts as an extra charge and carries its taxes, which is
+    a fee decision rather than an opening one — it stays under Settings, where
+    the picker it needs always has something in it.
+
+    The standard codes every property is given — cash, card, bank transfer and
+    the two the channel side posts through — read as text rather than fields.
+    Renaming or retyping one would break what the rest of the system posts
+    through it, and the owner's decision about it is the one the remove control
+    already offers: keep it or do not. Only rows they add themselves are typed.
+
+    Everything the table stopped asking for is still carried, hidden: a method
+    adopted from a seeded code, or one already configured under Settings, must
+    come back out of this form as it went in. What a locked row holds is not
+    carried at all — the save path reads it from the record, so a submission
+    saying otherwise changes nothing.
+
+    Labels are plain and are not hidden here. At table widths the record table
+    hides them itself, because the column header does the naming; below 48rem
+    the header row is gone, each row becomes a stacked editor, and these labels
+    come back to carry it. A locked cell wears the same label class so it reads
+    the same way in both. %>
+<% locked = entry["locked"] == "true" %>
 <% object = HotelPaymentMethod.new(transaction_code: TransactionCode.new) %>
 <% object.assign_attributes(
      name: entry["name"],
-     code: entry["code"],
-     payment_method_type: entry["payment_method_type"].presence || "bank_gateway",
-     surcharge_posting_type: entry["surcharge_posting_type"],
-     surcharge_value: entry["surcharge_value"],
-     surcharge_extra_charge_id: entry["surcharge_extra_charge_id"]
+     payment_method_type: entry["payment_method_type"].presence || "bank_gateway"
    ) %>
-<% method_name = entry["name"].presence || "this payment method" %>
 <%= fields_for "payment_method_entries[#{index}]", object do |row_form| %>
   <td>
     <%= row_form.hidden_field :id, value: entry["id"] %>
-    <%= hidden_field_tag "payment_method_entries[#{index}][transaction_code_id]", entry["transaction_code_id"] %>
+    <% { "transaction_code_id" => entry["transaction_code_id"],
+         "code" => entry["code"],
+         "guest_advance" => entry.fetch("guest_advance", "false"),
+         "default_cash" => entry.fetch("default_cash", "false"),
+         "active" => entry.fetch("active", "true"),
+         "surcharge_enabled" => entry.fetch("surcharge_enabled", "false"),
+         "surcharge_posting_type" => entry["surcharge_posting_type"],
+         "surcharge_value" => entry["surcharge_value"],
+         "surcharge_extra_charge_id" => entry["surcharge_extra_charge_id"] }.each do |field, value| %>
+      <%= hidden_field_tag "payment_method_entries[#{index}][#{field}]", value %>
+    <% end %>
     <%= hidden_field_tag "payment_method_entries[#{index}][_destroy]", "false", data: { record_table_destroy: true } %>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :name, label: "Name", label_hidden: true,
-                                       size: :sm, required: true) do |field| %>
-      <% field.with_input(placeholder: "Cash") %>
-    <% end %>
-  </td>
 
-  <td>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :code, label: "Code for #{method_name}",
-                                       label_hidden: true, size: :sm, required: true) do |field| %>
-      <% field.with_input(placeholder: "CASH", maxlength: 10, class: "uppercase") %>
-    <% end %>
-  </td>
-
-  <td>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :payment_method_type, label: "Type of #{method_name}",
-                                       label_hidden: true, size: :sm) do |field| %>
-      <% field.with_select_menu(
-           [ { label: "Cash", value: "cash" }, { label: "Card or bank", value: "bank_gateway" } ],
-           selected: entry["payment_method_type"].presence || "bank_gateway") %>
-    <% end %>
-  </td>
-
-  <td>
-    <%= render PanelsUI::Switch.new(
-          form: row_form,
-          attribute: :guest_advance,
-          label: "Guests pay in advance with #{method_name}",
-          label_hidden: true,
-          size: :sm,
-          checked: entry["guest_advance"] == "true") %>
-  </td>
-
-  <td>
-    <%# Only one per property, and only for cash taken at the desk. %>
-    <%= render PanelsUI::Switch.new(
-          form: row_form,
-          attribute: :default_cash,
-          label: "#{method_name} is the default cash method",
-          label_hidden: true,
-          size: :sm,
-          checked: entry["default_cash"] == "true") %>
-  </td>
-
-  <td>
-    <%= render PanelsUI::Switch.new(
-          form: row_form,
-          attribute: :surcharge_enabled,
-          label: "#{method_name} adds a surcharge",
-          label_hidden: true,
-          size: :sm,
-          disabled: surcharge_charge_choices.empty?,
-          checked: entry["surcharge_enabled"] == "true" && surcharge_charge_choices.any?) %>
-  </td>
-
-  <td>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_posting_type,
-                                       label: "Surcharge type for #{method_name}", label_hidden: true, size: :sm,
-                                       disabled: surcharge_charge_choices.empty?) do |field| %>
-      <% field.with_select_menu(
-           [ { label: "Fixed amount", value: "fixed" }, { label: "Percentage", value: "percentage" } ],
-           prompt: "No surcharge",
-           selected: entry["surcharge_posting_type"]) %>
-    <% end %>
-  </td>
-
-  <td>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_value,
-                                       label: "Surcharge amount for #{method_name}", label_hidden: true, size: :sm,
-                                       disabled: surcharge_charge_choices.empty?) do |field| %>
-      <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
-    <% end %>
-  </td>
-
-  <td>
-    <%# A surcharge posts as an extra charge, so it carries that charge's taxes.
-        With no extra charges there is nothing to point at, and a select with no
-        options is worse than saying so. %>
-    <% if surcharge_charge_choices.empty? %>
-      <p class="text-sm text-muted-foreground">No extra charges to post to</p>
+    <% if locked %>
+      <div class="panel-form-field">
+        <span class="panel-form-field__label">Name</span>
+        <p class="text-sm font-medium text-foreground"><%= entry["name"] %></p>
+      </div>
     <% else %>
-      <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_extra_charge_id,
-                                         label: "Surcharge for #{method_name} posts to", label_hidden: true,
-                                         size: :sm) do |field| %>
-        <% field.with_select_menu(
-             surcharge_charge_choices,
-             prompt: "Not applicable",
-             selected: entry["surcharge_extra_charge_id"]) %>
+      <%= render PanelsUI::FormField.new(form: row_form, attribute: :name, label: "Name",
+                                         size: :sm, required: true) do |field| %>
+        <% field.with_input(placeholder: "Cash") %>
       <% end %>
     <% end %>
   </td>
 
   <td>
-    <%= render PanelsUI::Switch.new(
-          form: row_form,
-          attribute: :active,
-          label: "Accept #{method_name}",
-          label_hidden: true,
-          size: :sm,
-          checked: entry.fetch("active", "true") != "false") %>
+    <% if locked %>
+      <div class="panel-form-field">
+        <span class="panel-form-field__label">Type</span>
+        <p class="text-sm text-muted-foreground">
+          <%= entry["payment_method_type"] == "cash" ? "Cash" : "Card or bank" %>
+        </p>
+      </div>
+    <% else %>
+      <%= render PanelsUI::FormField.new(form: row_form, attribute: :payment_method_type, label: "Type",
+                                         size: :sm) do |field| %>
+        <% field.with_select_menu(
+             [ { label: "Cash", value: "cash" }, { label: "Card or bank", value: "bank_gateway" } ],
+             selected: entry["payment_method_type"].presence || "bank_gateway") %>
+      <% end %>
+    <% end %>
   </td>
 <% end %>
