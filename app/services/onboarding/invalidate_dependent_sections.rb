@@ -9,12 +9,16 @@ module Onboarding
 
     def self.call(...) = new(...).call
 
-    def initialize(hotel:, section_keys:, actor:, source:, explanation:)
+    # `invalidated_by` names the section whose change caused this, which is what
+    # an admin reading the audit trail needs; without it every invalidation looks
+    # like it came from the same place.
+    def initialize(hotel:, section_keys:, actor:, source:, explanation:, invalidated_by:)
       @hotel = hotel
       @section_keys = Array(section_keys).map(&:to_s)
       @actor = actor
       @source = source
       @explanation = explanation
+      @invalidated_by = invalidated_by
     end
 
     def call
@@ -31,7 +35,7 @@ module Onboarding
           metadata: {
             source: @source,
             explanation: @explanation,
-            invalidated_by: "rooms"
+            invalidated_by: @invalidated_by
           }
         ).call
         return Result.failure(result.error, section_keys: invalidated) unless result.success?

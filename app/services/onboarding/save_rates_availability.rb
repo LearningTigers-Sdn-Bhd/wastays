@@ -70,7 +70,8 @@ module Onboarding
             section_keys: DOWNSTREAM_SECTIONS,
             actor: @actor,
             source: "rates_availability_change",
-            explanation: "Rates or availability changed. Review downstream commercial and channel setup before launch."
+            explanation: "Rates or availability changed. Review downstream commercial and channel setup before launch.",
+            invalidated_by: "rates_availability"
           )
           fail_transaction!(invalidation.error) unless invalidation.success?
         end

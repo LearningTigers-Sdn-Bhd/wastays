@@ -16,7 +16,16 @@ module HotelPortal
       room_revenue
       rooms
       rates_availability
+      extra_charges
     ].freeze
+
+    # Skipping an implemented section is a recorded decision, not a silent
+    # omission, so each one names the service that makes that decision and what
+    # to tell the owner afterwards. Sections absent here cannot be skipped.
+    SECTION_SKIPS = {
+      "staff_setup" => "No additional staff will be invited for now.",
+      "extra_charges" => "No extra charges will be offered for now."
+    }.freeze
 
     before_action :authorize_onboarding!
     before_action :build_navigation
@@ -104,6 +113,57 @@ module HotelPortal
         end
       when "rates_availability"
         prepare_rates_availability(entries: entries)
+      when "extra_charges"
+        @extra_charge_entries = entries || persisted_extra_charge_entries
+        @tax_rule_choices = TaxRuleOptionsQuery.new(current_hotel).choices
+      end
+    end
+
+    # A property that has adopted nothing yet starts from the seeded revenue
+    # codes rather than an empty table — but as unsaved rows, so the charges it
+    # actually sells are the ones it saves. Removing a suggestion here simply
+    # means never creating it.
+    def persisted_extra_charge_entries
+      adopted = current_hotel.hotel_extra_charges.includes(transaction_code: :transaction_code_taxes).ordered.map do |charge|
+        {
+          "id" => charge.id.to_s,
+          "client_key" => "extra-charge-#{charge.id}",
+          "name" => charge.name,
+          "code" => charge.code,
+          "category" => charge.category,
+          "description" => charge.description,
+          "pricing_type" => charge.pricing_type,
+          "rate_value" => charge.rate_value&.to_s,
+          "charging_unit" => charge.charging_unit,
+          "percentage_basis" => charge.percentage_basis,
+          "allow_amount_override" => charge.allow_amount_override.to_s,
+          "active" => charge.active?.to_s,
+          "tax_rule_keys" => charge.transaction_code.tax_rule_keys
+        }
+      end
+      return adopted if adopted.any? || @presenter.read_only?
+
+      suggested_extra_charge_entries
+    end
+
+    def suggested_extra_charge_entries
+      current_hotel.transaction_codes
+                   .where(system_key: Financials::EnsureDefaultExtraCharges::SYSTEM_KEYS)
+                   .where.missing(:hotel_extra_charge)
+                   .order(:code)
+                   .map do |code|
+        {
+          "transaction_code_id" => code.id.to_s,
+          "client_key" => "suggested-#{code.system_key}",
+          "name" => code.name,
+          "code" => code.code,
+          "category" => code.category,
+          "pricing_type" => "manual",
+          "charging_unit" => "per_item",
+          "allow_amount_override" => "true",
+          "active" => "true",
+          "tax_rule_keys" => []
+        }
       end
     end
 
@@ -125,7 +185,7 @@ module HotelPortal
 
     def update_implemented_section
       action = params.require(:navigation_action)
-      return skip_staff_setup if action == "skip" && @current_entry.definition.key == "staff_setup"
+      return skip_implemented_section if action == "skip" && SECTION_SKIPS.key?(@current_entry.definition.key)
       return head :unprocessable_entity unless action.in?(%w[save_draft save_continue])
 
       complete = action == "save_continue"
@@ -174,6 +234,13 @@ module HotelPortal
             hotel: current_hotel,
             actor: current_user,
             params: params,
+            complete: complete
+          )
+        when "extra_charges"
+          Onboarding::SaveExtraCharges.call(
+            hotel: current_hotel,
+            actor: current_user,
+            entries: params[:extra_charge_entries] || {},
             complete: complete
           )
         end
@@ -394,13 +461,19 @@ module HotelPortal
       (value.respond_to?(:to_unsafe_h) ? value.to_unsafe_h.values : value.to_h.values).map(&:deep_stringify_keys)
     end
 
-    def skip_staff_setup
-      result = Onboarding::DecideNoAdditionalStaff.new(hotel: current_hotel, actor: current_user).call
+    def skip_implemented_section
+      key = @current_entry.definition.key
+      result =
+        if key == "staff_setup"
+          Onboarding::DecideNoAdditionalStaff.new(hotel: current_hotel, actor: current_user).call
+        else
+          Onboarding::SkipOptionalSection.call(hotel: current_hotel, actor: current_user, section_key: key)
+        end
       return render_section_error(result) unless result.success?
 
       build_navigation
-      destination = @navigation.next_entry(@current_entry.definition.key) || @navigation.fetch(@current_entry.definition.key)
-      redirect_to onboarding_path(destination), notice: "No additional staff will be invited for now."
+      destination = @navigation.next_entry(key) || @navigation.fetch(key)
+      redirect_to onboarding_path(destination), notice: SECTION_SKIPS.fetch(key)
     end
 
     def update_placeholder_section

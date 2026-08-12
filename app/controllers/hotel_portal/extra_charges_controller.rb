@@ -94,28 +94,7 @@ module HotelPortal
     end
 
     def prepare_tax_rules
-      @tax_rules = [
-        {
-          key: "primary:sst_tax",
-          name: "Service Tax (SST)",
-          rate_type: "percentage",
-          amount: 8.to_d,
-          enabled: current_hotel.sst_enabled?
-        },
-        {
-          key: "primary:tourism_tax",
-          name: "Tourism Tax",
-          rate_type: "flat",
-          amount: current_hotel.tourism_tax_amount.to_d,
-          enabled: current_hotel.tourism_tax_enabled?
-        }
-      ]
-      @tax_rules.concat(current_hotel.hotel_taxes.order(:name).map do |tax|
-        {
-          key: "hotel_tax:#{tax.id}", name: tax.name, rate_type: tax.rate_type,
-          amount: tax.amount.to_d, enabled: tax.enabled?
-        }
-      end)
+      @tax_rule_choices = TaxRuleOptionsQuery.new(current_hotel).choices
     end
   end
 end

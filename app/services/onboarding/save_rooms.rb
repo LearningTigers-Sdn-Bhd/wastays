@@ -75,7 +75,8 @@ module Onboarding
             section_keys: [ "rates_availability" ],
             actor: @actor,
             source: "room_structure_change",
-            explanation: "Room quantities, occupancy, or numbering changed. Review pricing and availability against the updated rooms."
+            explanation: "Room quantities, occupancy, or numbering changed. Review pricing and availability against the updated rooms.",
+            invalidated_by: "rooms"
           )
           unless invalidation.success?
             @error = invalidation.error

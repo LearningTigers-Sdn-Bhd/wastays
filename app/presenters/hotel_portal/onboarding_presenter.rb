@@ -39,7 +39,8 @@ module HotelPortal
       "taxes_fees" => { form_id: "onboarding-taxes-fees-form" },
       "room_revenue" => { form_id: "onboarding-room-revenue-form" },
       "rooms" => { form_id: "onboarding-rooms-form" },
-      "rates_availability" => { form_id: "onboarding-rates-availability-form" }
+      "rates_availability" => { form_id: "onboarding-rates-availability-form" },
+      "extra_charges" => { form_id: "onboarding-extra-charges-form", skip_label: "No extra charges for now" }
     }.freeze
 
     def initialize(hotel:, navigation:, current_entry:)

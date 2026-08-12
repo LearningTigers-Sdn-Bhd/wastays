@@ -46,6 +46,10 @@ class TransactionCode < ApplicationRecord
   scope :active, -> { where(active: true) }
   scope :system_required, -> { where(system_required: true) }
   scope :charge, -> { where(kind: "charge") }
+  # What a discount is allowed to target. Mirrors the rule
+  # HotelDiscountTransactionCode enforces on the join row, so the picker cannot
+  # offer a code the join would then reject.
+  scope :discountable, -> { charge.where.not(category: "tax") }
 
   def hotel_tax_ids
     tax_ids

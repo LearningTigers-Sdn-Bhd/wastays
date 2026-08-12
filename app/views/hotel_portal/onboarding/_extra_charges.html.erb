@@ -1,0 +1,94 @@
+<section aria-labelledby="onboarding-extra-charges-heading" class="space-y-5">
+  <div>
+    <h2 id="onboarding-extra-charges-heading" class="text-base font-semibold">What else can guests buy?</h2>
+    <p class="mt-1 text-sm text-muted-foreground">
+      Anything sold on top of the room — breakfast, parking, an airport transfer. Mandatory
+      charges every guest pays belong in Taxes and fees instead.
+    </p>
+  </div>
+
+  <% if presenter.read_only? %>
+    <% if @extra_charge_entries.any? %>
+      <%= render PanelsUI::Table.new(caption: "Extra charges", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Code</th>
+            <th scope="col">Pricing</th>
+            <th scope="col">Charged</th>
+            <th scope="col">Status</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @extra_charge_entries.each do |entry| %>
+            <tr>
+              <td class="font-medium"><%= entry["name"] %></td>
+              <td class="text-muted-foreground"><%= entry["code"] %></td>
+              <td class="tabular-nums">
+                <% if entry["pricing_type"] == "manual" %>
+                  Staff enters the amount
+                <% elsif entry["pricing_type"] == "percentage" %>
+                  <%= entry["rate_value"] %>%
+                <% else %>
+                  <%= current_hotel.default_currency.presence || "MYR" %> <%= entry["rate_value"] %>
+                <% end %>
+              </td>
+              <td class="text-muted-foreground"><%= entry["charging_unit"].to_s.humanize %></td>
+              <td class="text-muted-foreground"><%= entry["active"] == "false" ? "Not offered" : "Offered" %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No extra charges were added.</p>
+    <% end %>
+
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "extra_charges"),
+                  method: :patch, id: "onboarding-extra-charges-form" do %>
+      <%# Rows the property has not saved yet are suggestions drawn from its
+          standard revenue codes. Removing one here means it is never created —
+          nothing is written until this form is saved. %>
+      <% if @extra_charge_entries.any? && @extra_charge_entries.none? { |entry| entry["id"].present? } %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "These are suggestions, not saved yet") do |alert| %>
+          <% alert.with_description do %>
+            We have started you off with the charges most properties sell. Edit what you need,
+            remove what you do not, and add your own. Nothing is created until you save.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <div class="mt-4">
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Extra charges",
+              add_label: "Add extra charge",
+              empty: "No extra charges yet. If this property sells nothing beyond the room, choose no extra charges for now.",
+              spreadsheet: true) do |table| %>
+          <% table.with_column(label: "Name", required: true) %>
+          <% table.with_column(label: "Code", required: true) %>
+          <% table.with_column(label: "Pricing") %>
+          <% table.with_column(label: "Amount") %>
+          <% table.with_column(label: "Percentage of") %>
+          <% table.with_column(label: "Charged") %>
+          <% table.with_column(label: "Taxes") %>
+          <% table.with_column(label: "Amount editable") %>
+          <% table.with_column(label: "Offer this") %>
+
+          <% @extra_charge_entries.each_with_index do |entry, index| %>
+            <% table.with_row(
+                 remove_label: "Remove #{entry['name'].presence || 'this extra charge'}",
+                 persisted: entry["id"].present?,
+                 key: entry["client_key"]) do %>
+              <%= render "extra_charge_row", entry: entry, index: index, tax_rule_choices: @tax_rule_choices %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this extra charge") do %>
+            <%= render "extra_charge_row", entry: {}, index: "NEW_RECORD", tax_rule_choices: @tax_rule_choices %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</section>
