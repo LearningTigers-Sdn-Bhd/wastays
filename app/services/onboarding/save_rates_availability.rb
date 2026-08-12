@@ -316,9 +316,9 @@ module Onboarding
       custom_names = custom_plans.where(archived_at: nil).pluck(:name).map { |name| name.to_s.strip.downcase }
       return "Custom rate plan names must be unique." if custom_names.uniq.size != custom_names.size
       return "Every custom room assignment needs positive pricing." unless custom_assignments_positive?
-      return "Configure every room for the complete 365-day horizon." unless coverage.configured_days == coverage.total_slots
-      return "Every room category needs at least one sellable date." if coverage.room_results.any? { |room| room.sellable_days.zero? }
-      return "Resolve open dates without positive Standard pricing or inventory." if coverage.gaps.any? { |gap| gap[:type] == "unsellable" }
+      return "Configure every room for the complete 365-day horizon." unless coverage.fully_configured?
+      return "Every room category needs at least one sellable date." unless coverage.every_room_sellable?
+      return "Resolve open dates without positive Standard pricing or inventory." if coverage.unsellable_gaps?
 
       nil
     end

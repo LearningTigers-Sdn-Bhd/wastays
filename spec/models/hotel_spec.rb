@@ -50,6 +50,7 @@ RSpec.describe Hotel, type: :model do
   describe 'constants' do
     it 'defines allowed statuses' do
       expect(Hotel::STATUSES).to match_array(%w[
+        setup
         registered
         email_verified
         profile_incomplete
@@ -247,6 +248,27 @@ RSpec.describe Hotel, type: :model do
       it 'leaves the hotel’s other attributes editable while locked' do
         expect(hotel.update(name: "#{hotel.name} Resort")).to be true
       end
+    end
+  end
+
+  describe '#inventory_ready?' do
+    let(:hotel) { create(:hotel) }
+    let!(:room) { create(:room_type, hotel: hotel, quantity: 2, base_price: 110, max_adults: 2) }
+
+    it 'refuses a hotel priced for the next month but empty for the rest of the year' do
+      (Date.current..Date.current + 30.days).each do |date|
+        create(:room_inventory, room_type: room, date: date, quantity: 2, status: 'open')
+      end
+
+      expect(hotel.inventory_ready?).to be false
+    end
+
+    it 'accepts a hotel stocked and priced across the full horizon' do
+      (Date.current..Date.current + 364.days).each do |date|
+        create(:room_inventory, room_type: room, date: date, quantity: 2, status: 'open')
+      end
+
+      expect(hotel.inventory_ready?).to be true
     end
   end
 end

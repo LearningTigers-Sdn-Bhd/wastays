@@ -498,10 +498,14 @@ class Hotel < ApplicationRecord
   end
 
   def inventory_ready?
-    # Check if there are rates set for at least some days in the next 30 days
-    room_rates.where(date: Date.current..30.days.from_now.to_date)
-              .where("price > 0")
-              .exists?
+    setup_coverage.complete?
+  end
+
+  # Memoized because the audit walks a year of inventory per room type and the
+  # readiness views ask more than once per render. Scoped to this instance, so a
+  # save that changes rates gets a fresh audit on the next request.
+  def setup_coverage
+    @setup_coverage ||= Rates::SetupCoverage.call(hotel: self)
   end
 
   def submit_for_review!

@@ -10,7 +10,16 @@ module Rates
       :start_date, :end_date, :total_days, :total_slots, :configured_days,
       :sellable_days, :configured_percentage, :sellable_percentage,
       :room_results, :gaps, :expires_on, :expiring
-    )
+    ) do
+      # What "priced and stocked, no holes" means, asked once so onboarding and
+      # the go-live gate cannot drift apart on the answer. A property with no
+      # rooms configures zero of zero slots, which is vacuously whole — hence
+      # the positive guards rather than a bare equality.
+      def fully_configured? = total_slots.positive? && configured_days == total_slots
+      def every_room_sellable? = room_results.any? && room_results.none? { |room| room.sellable_days.zero? }
+      def unsellable_gaps? = gaps.any? { |gap| gap[:type] == "unsellable" }
+      def complete? = fully_configured? && every_room_sellable? && !unsellable_gaps?
+    end
 
     def self.call(...) = new(...).call
 

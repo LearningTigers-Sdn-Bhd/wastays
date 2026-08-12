@@ -34,4 +34,44 @@ RSpec.describe Rates::SetupCoverage do
     expect(result.sellable_days).to eq(0)
     expect(result.gaps).to include(include(type: "unsellable", dates: [ start_date ]))
   end
+
+  describe "#complete?" do
+    it "is true when every room is configured and sellable across the horizon" do
+      (start_date..end_date).each do |date|
+        create(:room_inventory, room_type: room, date: date, quantity: 3, status: "open")
+      end
+
+      result = described_class.call(hotel: hotel, start_date: start_date, end_date: end_date)
+
+      expect(result).to be_complete
+    end
+
+    it "is false when a date in the horizon has no inventory" do
+      create(:room_inventory, room_type: room, date: start_date, quantity: 3, status: "open")
+
+      result = described_class.call(hotel: hotel, start_date: start_date, end_date: end_date)
+
+      expect(result).not_to be_fully_configured
+      expect(result).not_to be_complete
+    end
+
+    it "is false when a room category cannot be sold on any date" do
+      create(:room_inventory, room_type: room, date: start_date, quantity: 3, status: "open")
+      other = create(:room_type, hotel: hotel, quantity: 2, base_price: 90, max_adults: 2)
+      create(:room_inventory, room_type: other, date: start_date, quantity: 0, status: "closed")
+
+      result = described_class.call(hotel: hotel, start_date: start_date, end_date: start_date)
+
+      expect(result).to be_fully_configured
+      expect(result).not_to be_every_room_sellable
+      expect(result).not_to be_complete
+    end
+
+    it "is false for a property with no room categories at all" do
+      result = described_class.call(hotel: create(:hotel), start_date: start_date, end_date: end_date)
+
+      expect(result.total_slots).to eq(0)
+      expect(result).not_to be_complete
+    end
+  end
 end
