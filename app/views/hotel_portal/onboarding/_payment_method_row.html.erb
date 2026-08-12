@@ -1,6 +1,13 @@
 <%# The record table owns the row and its remove control; this partial supplies
     only the field cells. Name and code live on the transaction code, so the
-    object is built as the pair the save path writes. %>
+    object is built as the pair the save path writes.
+
+    Every label is hidden: the column header names the field, so a visible label
+    in the cell only repeats it. The label stays in the DOM as the control's
+    accessible name, and names the payment method as well as the field so a row
+    read out of the header's context still says which method it belongs to.
+    Spreadsheet tables never reflow into stacked editors, so nothing brings the
+    labels back. %>
 <% object = HotelPaymentMethod.new(transaction_code: TransactionCode.new) %>
 <% object.assign_attributes(
      name: entry["name"],
@@ -10,25 +17,28 @@
      surcharge_value: entry["surcharge_value"],
      surcharge_extra_charge_id: entry["surcharge_extra_charge_id"]
    ) %>
+<% method_name = entry["name"].presence || "this payment method" %>
 <%= fields_for "payment_method_entries[#{index}]", object do |row_form| %>
   <td>
     <%= row_form.hidden_field :id, value: entry["id"] %>
     <%= hidden_field_tag "payment_method_entries[#{index}][transaction_code_id]", entry["transaction_code_id"] %>
     <%= hidden_field_tag "payment_method_entries[#{index}][_destroy]", "false", data: { record_table_destroy: true } %>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :name, label: "Name", size: :sm, required: true) do |field| %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :name, label: "Name", label_hidden: true,
+                                       size: :sm, required: true) do |field| %>
       <% field.with_input(placeholder: "Cash") %>
     <% end %>
   </td>
 
   <td>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :code, label: "Code", size: :sm, required: true,
-                                       hint: "Up to 10 characters.") do |field| %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :code, label: "Code for #{method_name}",
+                                       label_hidden: true, size: :sm, required: true) do |field| %>
       <% field.with_input(placeholder: "CASH", maxlength: 10, class: "uppercase") %>
     <% end %>
   </td>
 
   <td>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :payment_method_type, label: "Type", size: :sm) do |field| %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :payment_method_type, label: "Type of #{method_name}",
+                                       label_hidden: true, size: :sm) do |field| %>
       <% field.with_select_menu(
            [ { label: "Cash", value: "cash" }, { label: "Card or bank", value: "bank_gateway" } ],
            selected: entry["payment_method_type"].presence || "bank_gateway") %>
@@ -39,7 +49,8 @@
     <%= render PanelsUI::Switch.new(
           form: row_form,
           attribute: :guest_advance,
-          label: "Guests pay in advance with this",
+          label: "Guests pay in advance with #{method_name}",
+          label_hidden: true,
           size: :sm,
           checked: entry["guest_advance"] == "true") %>
   </td>
@@ -49,7 +60,8 @@
     <%= render PanelsUI::Switch.new(
           form: row_form,
           attribute: :default_cash,
-          label: "Default cash method",
+          label: "#{method_name} is the default cash method",
+          label_hidden: true,
           size: :sm,
           checked: entry["default_cash"] == "true") %>
   </td>
@@ -58,14 +70,16 @@
     <%= render PanelsUI::Switch.new(
           form: row_form,
           attribute: :surcharge_enabled,
-          label: "Adds a surcharge",
+          label: "#{method_name} adds a surcharge",
+          label_hidden: true,
           size: :sm,
           disabled: surcharge_charge_choices.empty?,
           checked: entry["surcharge_enabled"] == "true" && surcharge_charge_choices.any?) %>
   </td>
 
   <td>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_posting_type, label: "Surcharge type", size: :sm,
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_posting_type,
+                                       label: "Surcharge type for #{method_name}", label_hidden: true, size: :sm,
                                        disabled: surcharge_charge_choices.empty?) do |field| %>
       <% field.with_select_menu(
            [ { label: "Fixed amount", value: "fixed" }, { label: "Percentage", value: "percentage" } ],
@@ -75,7 +89,8 @@
   </td>
 
   <td>
-    <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_value, label: "Surcharge", size: :sm,
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_value,
+                                       label: "Surcharge amount for #{method_name}", label_hidden: true, size: :sm,
                                        disabled: surcharge_charge_choices.empty?) do |field| %>
       <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
     <% end %>
@@ -88,7 +103,9 @@
     <% if surcharge_charge_choices.empty? %>
       <p class="text-sm text-muted-foreground">No extra charges to post to</p>
     <% else %>
-      <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_extra_charge_id, label: "Surcharge posts to", size: :sm) do |field| %>
+      <%= render PanelsUI::FormField.new(form: row_form, attribute: :surcharge_extra_charge_id,
+                                         label: "Surcharge for #{method_name} posts to", label_hidden: true,
+                                         size: :sm) do |field| %>
         <% field.with_select_menu(
              surcharge_charge_choices,
              prompt: "Not applicable",
@@ -101,7 +118,8 @@
     <%= render PanelsUI::Switch.new(
           form: row_form,
           attribute: :active,
-          label: "Accept this",
+          label: "Accept #{method_name}",
+          label_hidden: true,
           size: :sm,
           checked: entry.fetch("active", "true") != "false") %>
   </td>
