@@ -10,21 +10,36 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["template", "row", "empty"]
 
-  add() {
+  add(event) {
+    // A grouped table carries one template per group, so the add button names
+    // the run it extends. Ungrouped tables have exactly one and say nothing.
+    const group = event?.params?.group
+    const template = group
+      ? this.templateTargets.find(candidate => candidate.dataset.recordTableGroup === group)
+      : this.templateTargets[0]
+    if (!template) return
+
     const index = `${Date.now()}-${this.rowTargets.length}`
-    this.templateTarget.insertAdjacentHTML("beforebegin", this.templateTarget.innerHTML.replaceAll("NEW_RECORD", index))
+    template.insertAdjacentHTML("beforebegin", template.innerHTML.replaceAll("NEW_RECORD", index))
     this.#syncEmptyState()
+    this.dispatch("changed")
 
     // Focus the first field, not the row's remove button — that sits ahead of
     // the fields in the markup and would hand focus straight to a destructive
     // control the operator never asked for.
-    const row = this.rowTargets.at(-1)
+    const row = template.previousElementSibling
     row?.querySelector("input:not([type='hidden']), select, textarea")?.focus()
   }
 
   async remove(event) {
-    const row = event.currentTarget.closest("[data-record-table-target='row']")
+    const row = event.currentTarget.closest(
+      "[data-record-table-target='row'], [data-record-table-target='group']"
+    )
     if (!row) return
+
+    // Removing a group takes the records priced under it with it — they have no
+    // meaning once their heading is gone.
+    if (row.dataset.recordTableTarget === "group") return this.#removeGroup(row, event)
 
     if (row.dataset.recordTablePersisted === "true") {
       const message = event.currentTarget.dataset.recordTableConfirm
@@ -39,6 +54,41 @@ export default class extends Controller {
     }
 
     this.#syncEmptyState()
+    this.dispatch("changed")
+  }
+
+  // A group owns every sibling up to the next heading: its records and its own
+  // clone template.
+  #groupMembers(group) {
+    const members = []
+    const boundaries = ["group", "empty"]
+    let node = group.nextElementSibling
+    while (node && !boundaries.includes(node.dataset.recordTableTarget)) {
+      members.push(node)
+      node = node.nextElementSibling
+    }
+    return members
+  }
+
+  async #removeGroup(group, event) {
+    const members = this.#groupMembers(group)
+
+    if (group.dataset.recordTablePersisted === "true") {
+      const message = event.currentTarget.dataset.recordTableConfirm
+      const confirmed = !message || await Turbo.config.forms.confirm(message, event.currentTarget)
+      if (!confirmed) return
+
+      const destroyInput = group.querySelector("input[data-record-table-destroy]")
+      if (destroyInput) destroyInput.value = "1"
+      group.hidden = true
+      members.forEach(member => { member.hidden = true })
+    } else {
+      members.forEach(member => member.remove())
+      group.remove()
+    }
+
+    this.#syncEmptyState()
+    this.dispatch("changed")
   }
 
   #syncEmptyState() {

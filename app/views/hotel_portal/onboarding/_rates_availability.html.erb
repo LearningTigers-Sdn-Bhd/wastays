@@ -1,0 +1,119 @@
+<section aria-labelledby="onboarding-rates-heading" class="space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h2 id="onboarding-rates-heading" class="text-base font-semibold">Pricing and availability</h2>
+      <p class="mt-1 text-sm text-muted-foreground">This property sells <%= current_hotel.sells_per_person? ? "per pax" : "per room" %>. That mode is fixed for this setup.</p>
+    </div>
+    <%= render PanelsUI::Badge.new(label: "Currency · #{current_hotel.default_currency.presence || 'MYR'}", variant: :outline) %>
+  </div>
+
+  <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "rates_availability"),
+                method: :patch, id: "onboarding-rates-availability-form", class: "space-y-8",
+                data: { controller: "onboarding-rates",
+                        onboarding_rates_read_only_value: presenter.read_only? } do %>
+    <% if current_hotel.sells_per_person? %>
+      <%= render "child_age_bands", bands: @child_bands, presenter: presenter %>
+    <% end %>
+
+    <div class="space-y-3">
+      <div>
+        <h3 class="text-base font-semibold">Rate plans</h3>
+        <p class="text-sm text-muted-foreground">
+          <%= current_hotel.sells_per_person? ? "Nightly price per person, by room." : "Nightly room price, by room." %>
+          Standard Rate covers every room category and cannot be removed.
+        </p>
+      </div>
+
+      <%= render "rate_plans_table", presenter: presenter %>
+
+      <% unless presenter.read_only? %>
+        <div>
+          <%= render PanelsUI::Button.new(as: :button, variant: :secondary, size: :sm,
+                data: { action: "onboarding-rates#addPlan" }) do %>
+            <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %> Add rate plan
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="space-y-3">
+      <div>
+        <h3 class="text-base font-semibold">Availability</h3>
+        <p class="text-sm text-muted-foreground">One explicit decision is created for each room and date. Quantity cannot exceed the room total set in Rooms.</p>
+      </div>
+
+      <div class="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-2">
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="rates-start-date">Selling opens</label>
+          <%= date_field_tag :start_date, @rates_start_date, id: "rates-start-date",
+                disabled: presenter.read_only?, class: "panel-input w-full" %>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="rates-end-date">Through</label>
+          <%= date_field_tag :end_date, @rates_end_date, id: "rates-end-date",
+                disabled: presenter.read_only?, data: { onboarding_rates_target: "endDate" },
+                class: "panel-input w-full" %>
+        </div>
+        <p class="text-xs text-muted-foreground sm:col-span-2">Dates beyond this window stay closed until you extend it.</p>
+      </div>
+
+      <fieldset class="flex flex-wrap items-end gap-4 rounded-md border border-border p-3">
+        <legend class="px-1 text-sm font-medium">Weekend pricing</legend>
+        <div class="flex flex-wrap gap-4">
+          <% [ [ 0, "Sunday" ], [ 5, "Friday" ], [ 6, "Saturday" ] ].each do |value, label| %>
+            <%= render PanelsUI::Checkbox.new(name: "weekend_days[]", id: "weekend-day-#{value}", value: value,
+                  checked: [ 0, 6 ].include?(value), label: label, disabled: presenter.read_only?) %>
+          <% end %>
+        </div>
+        <div class="flex items-end gap-1">
+          <% uplift_scope = HotelPortal::RatePlansHelper::OnboardingFieldScope.new(nil, nil, @weekend_uplift["adjustment_mode"]) %>
+          <%= fields_for :weekend_uplift, uplift_scope do |field_form| %>
+            <%= render PanelsUI::SelectMenu.new(form: field_form, attribute: :adjustment_mode,
+                  choices: [ [ "%", "percent" ], [ "Amount", "amount" ] ], selected: uplift_scope.adjustment_mode,
+                  disabled: presenter.read_only?, size: :sm, class: "w-28") %>
+          <% end %>
+          <%= number_field_tag "weekend_uplift[adjustment_value]", @weekend_uplift["adjustment_value"], step: 0.01,
+                disabled: presenter.read_only?, class: "panel-input w-24",
+                aria: { label: "Weekend uplift value" } %>
+        </div>
+        <p class="w-full text-xs text-muted-foreground">Applied to every room and rate plan on the days ticked above. Leave at zero for one price all week.</p>
+      </fieldset>
+
+      <%= render PanelsUI::Table.new(caption: "Default room availability", header_style: :sentence,
+            wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %><tr><th>Room category</th><th>Status</th><th>Rooms sellable</th></tr><% end %>
+        <% table.with_body do %>
+          <% @availability_entries.each_with_index do |entry, index| %>
+            <% room = @rate_rooms.find { |candidate| candidate.id.to_s == entry["room_type_id"].to_s } %>
+            <tr>
+              <td class="font-medium"><%= room&.name || entry["room_name"] %><%= hidden_field_tag "availability_entries[#{index}][room_type_id]", entry["room_type_id"] %></td>
+              <td>
+                <% status_scope = HotelPortal::RatePlansHelper::OnboardingFieldScope.new(nil, nil, nil, entry["status"].presence || "open") %>
+                <%= fields_for "availability_entries[#{index}]", status_scope do |field_form| %>
+                  <%= render PanelsUI::SelectMenu.new(form: field_form, attribute: :status,
+                        choices: [ [ "Open", "open" ], [ "Closed", "closed" ] ], selected: status_scope.status,
+                        disabled: presenter.read_only?, size: :sm) %>
+                <% end %>
+              </td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <%= number_field_tag "availability_entries[#{index}][quantity]", entry["quantity"], min: 0, max: room&.quantity, step: 1, disabled: presenter.read_only?, class: "panel-input max-w-24" %>
+                  <span class="text-xs text-muted-foreground">of <%= room&.quantity %></span>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <p class="text-sm text-muted-foreground">
+      <% if @rates_coverage.sellable_percentage.to_d >= 100 %>
+        <%= app_icon "check", class: "inline size-4 text-success", aria: { hidden: "true" } %>
+        Every room is priced and open for the full <%= pluralize(@rates_coverage.total_days, "night") %>.
+      <% else %>
+        <%= @rates_coverage.sellable_percentage %>% of the <%= pluralize(@rates_coverage.total_days, "night") %> window is priced and open. Save to recalculate.
+      <% end %>
+    </p>
+  <% end %>
+</section>

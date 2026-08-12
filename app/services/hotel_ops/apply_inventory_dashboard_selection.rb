@@ -21,7 +21,7 @@ module HotelOps
         return failure("Select at least one rate plan.")
       end
       return failure("Enter at least one price when applying rates.") if channel_id.blank? && apply_rates? && price.blank? && occupancy_prices.empty? && selection[:single_supplement].blank? && selection[:base_occupancy].blank? && selection[:extra_pax_charge].blank?
-      return failure("Per-pax pricing fields (base occupancy, extra pax charge, single supplement) don't apply to OTA channel rates.") if channel_id.present? && pax_fields_requested?
+      return failure("Local occupancy and supplement fields don't apply to OTA channel rates.") if channel_id.present? && pax_fields_requested?
 
       ActiveRecord::Base.transaction do
         Thread.current[:skip_ari_sync] = true
@@ -337,7 +337,7 @@ module HotelOps
               stop_sell: rate.stop_sell,
               base_occupancy: rate.base_occupancy,
               extra_pax_charge: rate.extra_pax_charge&.to_f,
-              single_supplement: rate.single_supplement&.to_f,
+                single_supplement: rate.single_supplement&.to_f,
               occupancy_prices: rate.occupancy_prices
             },
             metadata: { source: "inventory_dashboard_selection", rate_kind: rate_plan.kind }

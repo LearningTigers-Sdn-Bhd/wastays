@@ -481,7 +481,7 @@ export default class extends Controller {
         rateParts.push(`Base Occ: ${values.base_occupancy}`)
       }
       if (modifiedFields.includes("extra_pax_charge") && values.extra_pax_charge !== "") {
-        rateParts.push(`Extra Pax: ${this.baseCurrencyValue || "MYR"} ${values.extra_pax_charge}`)
+        rateParts.push(`Extra guest: ${this.baseCurrencyValue || "MYR"} ${values.extra_pax_charge}`)
       }
       if (modifiedFields.includes("single_supplement") && values.single_supplement !== "") {
         rateParts.push(`Single Supp: ${this.baseCurrencyValue || "MYR"} ${values.single_supplement}`)

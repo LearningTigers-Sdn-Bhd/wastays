@@ -15,6 +15,7 @@ module HotelPortal
       taxes_fees
       room_revenue
       rooms
+      rates_availability
     ].freeze
 
     before_action :authorize_onboarding!
@@ -101,6 +102,8 @@ module HotelPortal
         @room_amenity_choices = Hotel::CATEGORIZED_ROOM_AMENITIES.flat_map do |group|
           group[:items].map { |amenity| { label: "#{group[:category]} · #{amenity[:name]}", value: amenity[:id].to_s } }
         end
+      when "rates_availability"
+        prepare_rates_availability(entries: entries)
       end
     end
 
@@ -166,6 +169,13 @@ module HotelPortal
             entries: params[:room_entries] || {},
             complete: complete
           ).call
+        when "rates_availability"
+          Onboarding::SaveRatesAvailability.call(
+            hotel: current_hotel,
+            actor: current_user,
+            params: params,
+            complete: complete
+          )
         end
 
       return render_section_error(result) unless result.success?
@@ -223,6 +233,147 @@ module HotelPortal
           "room_numbers" => room_type.room_numbers
         }
       end
+    end
+
+    def prepare_rates_availability(entries: nil)
+      @rate_rooms = current_hotel.room_types.includes(
+        :room_inventories,
+        room_type_rate_plans: [ :occupancy_prices, { rate_plan: :rate_plan_age_bands } ]
+      ).order(:created_at, :id).to_a
+      @custom_rate_plans = current_hotel.rate_plans.active.where(kind: "custom").includes(
+        :booking_rooms, :rate_plan_age_bands,
+        room_type_rate_plans: [ :occupancy_prices, :room_type ]
+      ).order(:created_at, :id).to_a
+      @rates_start_date = Date.current
+      @rates_end_date = Date.current + 364.days
+      @standard_rate_entries = @rate_rooms.map { |room| standard_rate_entry(room) }
+      @custom_rate_entries = @custom_rate_plans.map { |plan| custom_rate_entry(plan) }
+      @availability_entries = @rate_rooms.map { |room| availability_entry(room) }
+      @child_bands = child_band_entries
+      @new_rate_plan_entry = new_custom_rate_entry
+      @weekend_uplift = { "adjustment_mode" => "percent", "adjustment_value" => "0" }
+      @rates_coverage = Rates::SetupCoverage.call(
+        hotel: current_hotel,
+        start_date: @rates_start_date,
+        end_date: @rates_end_date
+      )
+
+      return unless entries.present?
+
+      submitted = entries.respond_to?(:to_unsafe_h) ? entries.to_unsafe_h : entries.to_h
+      @rates_start_date = submitted["start_date"].to_date if submitted["start_date"].present?
+      @rates_end_date = submitted["end_date"].to_date if submitted["end_date"].present?
+      @standard_rate_entries = submitted_collection(submitted["standard_entries"]) if submitted["standard_entries"].present?
+      @custom_rate_entries = submitted_collection(submitted["custom_plans"]) if submitted["custom_plans"].present?
+      @availability_entries = submitted_collection(submitted["availability_entries"]) if submitted["availability_entries"].present?
+      @child_bands = submitted_collection(submitted["child_bands"]) if submitted["child_bands"].present?
+      @weekend_uplift = @weekend_uplift.merge(submitted["weekend_uplift"].to_h.stringify_keys) if submitted["weekend_uplift"].present?
+    end
+
+    # What this room includes on this plan. Reads through the pairing so a row
+    # shows the figure that will actually price it, whether the pairing carries
+    # its own or is still deferring to the plan.
+    def occupancy_rule_entry(assignment, plan)
+      RoomTypeRatePlan::OCCUPANCY_RULES.index_with do |rule|
+        value = assignment&.public_send(:"effective_#{rule}") || plan&.public_send(rule)
+        value&.to_s
+      end.stringify_keys
+    end
+
+    # Bands are one property-wide policy stored per plan, so any plan answers for
+    # all of them. Standard is the anchor because it always exists.
+    def child_band_entries
+      return [] unless current_hotel.sells_per_person?
+
+      anchor = @rate_rooms.filter_map { |room| room.standard_rate_plan }.first
+      bands = anchor&.rate_plan_age_bands.to_a
+      return default_child_band_entries if bands.empty?
+
+      bands.map { |band| band.attributes.slice("min_age", "max_age", "price_value", "label") }
+    end
+
+    def default_child_band_entries
+      [
+        { "min_age" => RatePlanAgeBand::AGE_RANGE.min, "max_age" => 2, "price_value" => 0, "label" => "Infant" },
+        { "min_age" => 3, "max_age" => 11, "price_value" => nil, "label" => "Child" },
+        { "min_age" => 12, "max_age" => RatePlanAgeBand::AGE_RANGE.max, "price_value" => nil, "label" => "Teen" }
+      ]
+    end
+
+    def standard_rate_entry(room)
+      plan = room.standard_rate_plan
+      assignment = room.room_type_rate_plans.find { |item| item.rate_plan_id == plan&.id }
+      pricing = HotelPortal::RatePlanRoomPricing.from_assignment(
+        assignment, room_type: room, sells_per_person: current_hotel.sells_per_person?
+      )
+      pricing.default_rate = room.base_price unless current_hotel.sells_per_person?
+      { "name" => plan&.name }
+        .merge(occupancy_rule_entry(assignment, plan))
+        .merge("room_type_id" => room.id.to_s, "room_name" => room.name)
+        .merge(pricing.to_h)
+    end
+
+    # A custom plan covers every room category, so the rows are built from the
+    # property's rooms rather than from whatever happens to be attached. An
+    # unattached room shows up as an empty row waiting for a price.
+    def custom_rate_entry(plan)
+      attached = plan.room_type_rate_plans.index_by(&:room_type_id)
+      pricings = @rate_rooms.map do |room|
+        [ room, attached[room.id], HotelPortal::RatePlanRoomPricing.from_assignment(
+          attached[room.id], room_type: room, sells_per_person: current_hotel.sells_per_person?
+        ) ]
+      end
+
+      # Pricing basis is one decision for the plan. It is still stored per
+      # assignment, so the first attached room answers for the group heading.
+      basis = pricings.find { |_room, assignment, _pricing| assignment }&.last
+
+      {
+        "name" => plan.name,
+        "id" => plan.id.to_s,
+        "client_key" => "plan-#{plan.id}",
+        "deletable" => plan.deletable?,
+        "rate_mode" => basis&.rate_mode || "manual",
+        "derive_mode" => basis&.derive_mode || "multiplier",
+        "derive_value" => basis&.derive_value.to_s,
+        "assignments" => pricings.map do |room, assignment, pricing|
+          {
+            "id" => assignment&.id.to_s,
+            "client_key" => "assignment-#{room.id}",
+            "room_type_id" => room.id.to_s
+          }.merge(occupancy_rule_entry(assignment, plan)).merge(pricing.to_h)
+        end
+      }
+    end
+
+    # A new plan starts from what each room already includes on Standard, so the
+    # operator adjusts prices rather than re-entering occupancy rules they have
+    # just finished setting a row above.
+    def new_custom_rate_entry
+      {
+        "client_key" => "PLAN_KEY",
+        "rate_mode" => "manual",
+        "assignments" => @rate_rooms.map do |room|
+          standard = room.standard_rate_plan
+          assignment = room.room_type_rate_plans.find { |item| item.rate_plan_id == standard&.id }
+          { "client_key" => "assignment-#{room.id}", "room_type_id" => room.id.to_s }
+            .merge(occupancy_rule_entry(assignment, standard))
+        end
+      }
+    end
+
+    def availability_entry(room)
+      inventory = room.room_inventories.find { |item| item.date == @rates_start_date }
+      {
+        "room_type_id" => room.id.to_s,
+        "room_name" => room.name,
+        "quantity" => (inventory&.quantity || room.quantity).to_s,
+        "status" => inventory&.status || "open"
+      }
+    end
+
+    def submitted_collection(value)
+      (value.respond_to?(:to_unsafe_h) ? value.to_unsafe_h.values : value.to_h.values).map(&:deep_stringify_keys)
     end
 
     def skip_staff_setup

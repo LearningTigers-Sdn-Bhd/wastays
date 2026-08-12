@@ -1,0 +1,47 @@
+<%# The record cells for one room under one rate plan. Everything here belongs to
+    that pairing — what the room includes on this plan, and what it costs. How
+    the plan gets its prices is the plan's own decision and lives in the heading. %>
+<% prefix = standard ? "standard_entries[#{row_key}]" : "custom_plans[#{plan_index}][assignments][#{row_key}]" %>
+<% derived = !standard && rate_plan_derived?(plan_entry) %>
+<td>
+  <%= hidden_field_tag "#{prefix}[id]", entry["id"] %>
+  <%= hidden_field_tag "#{prefix}[client_key]", row_key %>
+  <%= hidden_field_tag "#{prefix}[room_type_id]", room&.id %>
+  <span class="font-medium"><%= room&.name %></span>
+</td>
+
+<% if current_hotel.sells_per_person? %>
+  <% (1..max_adults).each do |adults| %>
+    <td>
+      <% if room.present? && adults > room.max_adults.to_i %>
+        <span class="text-muted-foreground" title="<%= room.name %> holds <%= pluralize(room.max_adults, 'adult') %>">—</span>
+      <% elsif derived %>
+        <span class="text-xs text-muted-foreground">From Standard</span>
+      <% else %>
+        <%= number_field_tag "#{prefix}[prices][#{adults}]", entry.dig("prices", adults.to_s), min: 0, step: 0.01,
+              disabled: presenter.read_only?, class: "panel-input w-24",
+              aria: { label: "#{pluralize(adults, 'adult')} price for #{room&.name}" } %>
+      <% end %>
+    </td>
+  <% end %>
+<% else %>
+  <td>
+    <%= number_field_tag "#{prefix}[base_occupancy]", entry["base_occupancy"], min: 1, step: 1,
+          disabled: presenter.read_only?, class: "panel-input w-20",
+          aria: { label: "Base occupancy for #{room&.name}" } %>
+  </td>
+  <td>
+    <% if derived %>
+      <span class="text-xs text-muted-foreground">From Standard</span>
+    <% else %>
+      <%= number_field_tag "#{prefix}[default_rate]", entry["default_rate"], min: 0, step: 0.01,
+            disabled: presenter.read_only?, class: "panel-input w-28",
+            aria: { label: "Base rate for #{room&.name}" } %>
+    <% end %>
+  </td>
+  <td>
+    <%= number_field_tag "#{prefix}[extra_pax_charge]", entry["extra_pax_charge"], min: 0, step: 0.01,
+          disabled: presenter.read_only?, class: "panel-input w-24",
+          aria: { label: "Extra adult charge for #{room&.name}" } %>
+  </td>
+<% end %>

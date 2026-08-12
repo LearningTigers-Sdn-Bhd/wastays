@@ -38,7 +38,8 @@ module HotelPortal
       "staff_setup" => { form_id: "onboarding-staff-drafts-form", skip_label: "No additional staff for now" },
       "taxes_fees" => { form_id: "onboarding-taxes-fees-form" },
       "room_revenue" => { form_id: "onboarding-room-revenue-form" },
-      "rooms" => { form_id: "onboarding-rooms-form" }
+      "rooms" => { form_id: "onboarding-rooms-form" },
+      "rates_availability" => { form_id: "onboarding-rates-availability-form" }
     }.freeze
 
     def initialize(hotel:, navigation:, current_entry:)

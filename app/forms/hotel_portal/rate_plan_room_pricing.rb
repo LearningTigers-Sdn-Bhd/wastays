@@ -110,6 +110,7 @@ module HotelPortal
     def occupancy_matrix
       return {} unless per_person?
       return manual_matrix if manual?
+      return derived_matrix if derived?
 
       RatePlans::OccupancyLadder.call(
         anchor: anchor,
@@ -138,6 +139,21 @@ module HotelPortal
       adult_counts.index_with { |adults| price_for(adults).to_s.to_d.round(2) }
     end
 
+    def derived_matrix
+      adjustment = RoomTypeRatePlan.new(pricing_mode: derive_mode, pricing_value: derive_value)
+      adult_counts.index_with do |adults|
+        adjustment.derive_price(standard_occupancy_prices.fetch(adults)).round(2)
+      end
+    end
+
+    def standard_occupancy_prices
+      @standard_occupancy_prices ||= begin
+        plan = room_type&.standard_rate_plan
+        assignment = room_type&.room_type_rate_plans&.includes(:occupancy_prices)&.find_by(rate_plan: plan)
+        assignment&.occupancy_prices&.index_by(&:adults)&.transform_values(&:price) || {}
+      end
+    end
+
     def rate_mode_is_offered
       return if available_modes.include?(rate_mode)
 
@@ -163,9 +179,9 @@ module HotelPortal
     # a category saved without one has nothing to step away from. Say that
     # here rather than letting the ladder build a matrix of zeroes.
     def anchor_is_available
-      return if room_type&.base_price.present?
+      return if adult_counts.all? { |adults| standard_occupancy_prices[adults].present? }
 
-      errors.add(:base, "#{room_type&.name} has no standard rate to derive from. Set one on the room category, or price this room manually.")
+      errors.add(:base, "#{room_type&.name} needs a complete Standard Rate occupancy matrix before this price can be derived.")
     end
 
     def auto_rate_is_present

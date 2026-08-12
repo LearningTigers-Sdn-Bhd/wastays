@@ -3,6 +3,7 @@
 module HotelPortal
   module RatePlansHelper
     RoomSelectionScope = Struct.new(:room_type_id)
+    OnboardingFieldScope = Struct.new(:rate_mode, :derive_mode, :adjustment_mode, :status)
 
     def rate_plan_rate_mode_options(pricing)
       {
@@ -66,6 +67,34 @@ module HotelPortal
 
     def money_summary(amount, currency)
       "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
+    end
+
+    # Onboarding submits a rate plan's assignments as either an array or the
+    # index-keyed hash a cloned row produces; both mean the same list.
+    def plan_entry_assignments(entry)
+      value = entry["assignments"]
+      value.respond_to?(:values) ? value.values : Array(value)
+    end
+
+    # Onboarding folds rate mode and derive mode into one choice. Two selects for
+    # what is really one decision — how this plan gets its prices — is the kind of
+    # split that made the old sheet hard to read.
+    def rate_plan_pricing_basis_choices
+      [
+        { label: "Set prices directly", value: "manual" },
+        { label: "Standard Rate ± %", value: "derived_multiplier" },
+        { label: "Standard Rate ± amount", value: "derived_offset" }
+      ]
+    end
+
+    def rate_plan_pricing_basis(entry)
+      return "manual" unless entry["rate_mode"].to_s == "derived"
+
+      entry["derive_mode"].to_s == "offset" ? "derived_offset" : "derived_multiplier"
+    end
+
+    def rate_plan_derived?(entry)
+      rate_plan_pricing_basis(entry) != "manual"
     end
 
     def age_band_pricing_choices

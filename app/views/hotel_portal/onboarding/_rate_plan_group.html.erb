@@ -1,0 +1,48 @@
+<%# One custom rate plan: a heading naming it and saying how it gets its prices,
+    then one row per room category. Room attachment is not asked for — a plan
+    created here covers the property, the same way Standard does, and rooms can
+    be detached later in the rate plan editor. %>
+<% prefix = "custom_plans[#{plan_key}]" %>
+<% assignments = plan_entry_assignments(entry) %>
+<% persisted_plan = @custom_rate_plans.find { |plan| plan.id.to_s == entry["id"].to_s } %>
+<% deletable = entry["id"].blank? || persisted_plan.nil? || persisted_plan.deletable? %>
+<% template_plan = local_assigns[:template_plan] %>
+
+<% table.with_group_row(
+      key: plan_key,
+      locked: presenter.read_only? || !deletable,
+      locked_reason: (deletable ? nil : "An existing booking uses this rate plan."),
+      remove_label: "Remove #{entry['name'].presence || 'this rate plan'}",
+      persisted: entry["id"].present?,
+      confirm: (entry["id"].present? ? "Remove #{entry['name']} and its pricing?" : nil)) do %>
+  <div data-onboarding-rates-target="plan" data-plan-key="<%= plan_key %>"
+       data-new-plan-template="<%= template_plan.present? %>">
+    <%= hidden_field_tag "#{prefix}[id]", entry["id"] %>
+    <%= hidden_field_tag "#{prefix}[client_key]", plan_key %>
+    <%= hidden_field_tag "#{prefix}[_destroy]", entry["_destroy"].presence || "0", data: { record_table_destroy: true } %>
+
+    <%= text_field_tag "#{prefix}[name]", entry["name"], required: !template_plan,
+          disabled: presenter.read_only?, placeholder: "Rate plan name",
+          class: "panel-input w-56", aria: { label: "Rate plan name" } %>
+
+    <% basis_scope = HotelPortal::RatePlansHelper::OnboardingFieldScope.new(rate_plan_pricing_basis(entry)) %>
+    <%= fields_for prefix, basis_scope do |field_form| %>
+      <%= render PanelsUI::SelectMenu.new(form: field_form, attribute: :rate_mode,
+            choices: rate_plan_pricing_basis_choices, selected: basis_scope.rate_mode,
+            disabled: presenter.read_only?, size: :sm, class: "w-48") %>
+    <% end %>
+    <%= number_field_tag "#{prefix}[derive_value]", entry["derive_value"], step: 0.01,
+          disabled: presenter.read_only?, class: "panel-input w-24", placeholder: "Adjust",
+          aria: { label: "Adjustment applied to Standard Rate" } %>
+  </div>
+<% end %>
+
+<% assignments.each_with_index do |assignment, row_index| %>
+  <% row_key = assignment["client_key"].presence || "row-#{assignment['id'].presence || row_index}" %>
+  <% room = @rate_rooms.find { |candidate| candidate.id.to_s == assignment["room_type_id"].to_s } %>
+  <% table.with_row(remove_label: "Remove #{room&.name}", persisted: assignment["id"].present?,
+        key: row_key, removable: false) do %>
+    <%= render "rate_assignment_cells", entry: assignment, row_key: row_key, plan_index: plan_key,
+          room: room, standard: false, plan_entry: entry, presenter: presenter, max_adults: max_adults %>
+  <% end %>
+<% end %>

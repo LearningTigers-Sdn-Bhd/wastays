@@ -9,7 +9,7 @@
       data: { controller: HotelPortal::Setup::RecordTable::CONTROLLER }) do |table| %>
   <% table.with_header do %>
     <tr>
-      <th scope="col" class="panel-record-table__control">Remove</th>
+      <% if removable? %><th scope="col" class="panel-record-table__control">Remove</th><% end %>
       <%= safe_join(columns) %>
       <% if actions? %><th scope="col" class="panel-record-table__actions">Actions</th><% end %>
     </tr>
@@ -18,25 +18,25 @@
   <% table.with_body do %>
     <%= safe_join(rows) %>
 
-    <template data-record-table-target="template"><%= blank_row %></template>
+    <% if addable? %><template data-record-table-target="template"><%= blank_row %></template><% end %>
 
-    <%= tag.tr(class: "panel-record-table__empty", hidden: rows.any?,
+    <%= tag.tr(class: "panel-record-table__empty", hidden: records?,
                data: { "record-table-target": "empty" }) do %>
       <td colspan="<%= column_count %>"><%= empty %></td>
     <% end %>
   <% end %>
 
-  <% table.with_footer do %>
+  <% if addable? || footer_message.present? %><% table.with_footer do %>
     <tr>
       <td colspan="<%= column_count %>">
-        <%= render PanelsUI::Button.new(as: :button, variant: :ghost, size: :sm,
+        <% if addable? %><%= render PanelsUI::Button.new(as: :button, variant: :ghost, size: :sm,
               data: { action: "#{HotelPortal::Setup::RecordTable::CONTROLLER}#add" }) do %>
           <%= helpers.app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
           <span><%= add_label %></span>
-        <% end %>
+        <% end %><% else %><span class="text-xs text-muted-foreground"><%= footer_message %></span><% end %>
       </td>
     </tr>
-  <% end %>
+  <% end %><% end %>
 <% end %>
 <% end %>
 

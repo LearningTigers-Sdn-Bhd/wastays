@@ -71,6 +71,23 @@
     min-width: 10rem;
   }
 
+  /* A group heading is a rowheader, not a record: it takes the muted ground the
+     column header uses so the records under it stay the only white rows. */
+  .panel-record-table__group > * {
+    background: var(--muted);
+  }
+
+  /* The heading's contents lay out in a row inside the cell. The flex goes on a
+     wrapper rather than the <td>: `display: flex` on a cell takes it out of the
+     table layout and its colspan stops holding the columns together. */
+  .panel-record-table__group-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+  }
+
   .panel-record-table__required {
     margin-inline-start: 0.1875rem;
     color: var(--destructive-on-surface);
@@ -170,6 +187,24 @@
     .panel-record-table:not(.panel-record-table--spreadsheet) :is(.panel-record-table__empty, tfoot) td {
       display: block;
       padding: 0.75rem;
+    }
+
+    /* The heading keeps its control and label side by side while the records
+       below it stack — it names the run, so it must stay one line of chrome. */
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__group > td {
+      display: block;
+      padding: 0;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__group > .panel-record-table__group-label {
+      flex: 1;
     }
   }
 }

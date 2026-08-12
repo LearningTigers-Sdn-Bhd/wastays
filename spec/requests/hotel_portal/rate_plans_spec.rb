@@ -347,6 +347,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       rate_plan = RatePlan.last
       expect(rate_plan.name).to eq('Flexible Breakfast Rate')
       expect(rate_plan.room_types).to include(room_type)
+      expect(rate_plan.extra_pax_charge).to eq(50.to_d)
       expect(rate_plan.room_type_rate_plans.find_by(room_type: room_type).pricing_value).to eq(120.to_d)
     end
 
