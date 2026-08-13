@@ -69,7 +69,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_css(".panel-navbar__center [data-controller='panels-ui--command-palette']")
     within(".panel-navbar__brand") do
       identity = find_link(hotel.name, href: hotel_dashboard_path(hotel))
-      expect(identity).to have_css(".panel-navbar__identity-meta", text: "##{hotel.id}")
+      expect(identity).to have_css(".panel-navbar__identity-meta", text: hotel.unique_id)
       expect(page).to have_css("[data-testid='hotel-sell-mode-badge']", text: "Sells per room")
     end
     expect(page).to have_css("#hotel-profile a[href='#{help_center_path}']", text: "Help")
