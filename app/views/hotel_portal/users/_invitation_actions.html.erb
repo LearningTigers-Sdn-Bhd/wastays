@@ -21,7 +21,7 @@
        method: :post,
        data: { turbo_frame: "_top" }) do %>
     <%= app_icon "send", class: "size-4", aria: { hidden: "true" } %>
-    <span>Resend invitation</span>
+    <span><%= row.send_label %></span>
   <% end %>
 
   <% menu.with_item(
@@ -30,8 +30,10 @@
        variant: :danger,
        data: {
          turbo_confirm: "Revoke this invitation?",
-         turbo_confirm_title: "Revoke invitation?",
-         turbo_confirm_text: "The link sent to #{row.email} will stop working. You can invite them again at any time.",
+         turbo_confirm_title: (row.sent ? "Revoke invitation?" : "Remove this person?"),
+         turbo_confirm_text: (row.sent ?
+           "The link sent to #{row.email} will stop working. You can invite them again at any time." :
+           "#{row.email} was never emailed, so nothing is withdrawn — this just takes them off the list. You can add them again at any time."),
          turbo_confirm_tone: "destructive",
          turbo_frame: "_top"
        }) do %>
