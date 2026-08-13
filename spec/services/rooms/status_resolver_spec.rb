@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Rooms::StatusResolver do
   it "returns occupied when a checked-in booking overlaps today" do
     hotel = create(:hotel)
-    room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
     booking = create(:booking, hotel: hotel, status: "checked_in", check_in: Date.current, check_out: Date.tomorrow, checked_in_at: Time.current)
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 200)
     create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
@@ -18,7 +18,7 @@ RSpec.describe Rooms::StatusResolver do
 
   it "returns persisted readiness status when the room is not occupied" do
     hotel = create(:hotel)
-    room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
     create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
     result = described_class.new(hotel: hotel, room_type: room_type, room_number: "101", date: Date.current).call
@@ -29,7 +29,7 @@ RSpec.describe Rooms::StatusResolver do
 
   describe "the stay the room is shown against" do
     let(:hotel) { create(:hotel) }
-    let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ]) }
+    let(:room_type) { create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ]) }
 
     def resolve
       described_class.new(hotel: hotel, room_type: room_type, room_number: "101", date: Date.current).call

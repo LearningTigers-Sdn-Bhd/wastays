@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
   let(:hotel) { create(:hotel) }
-  let(:room_type) { create(:room_type, hotel: hotel, quantity: 5, room_numbers: [ "101" ]) }
+  let(:room_type) { create(:room_type, hotel: hotel, quantity: 5, room_numbers: (101..105).map(&:to_s)) }
   let(:common_params) do
     {
       guest_name: "Reserved Guest", guest_email: "reserved@example.com", guest_phone: "123456",
@@ -93,7 +93,7 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
   end
 
   it "rolls back all rooms when cumulative unassigned reservations exceed inventory" do
-    room_type.update!(quantity: 1)
+    room_type.update!(quantity: 1, room_numbers: %w[101])
     create(:room_inventory, room_type: room_type, date: Date.current, quantity: 1, status: "open")
     rows = Array.new(2) { { room_type_id: room_type.id, room_number: "" } }
 

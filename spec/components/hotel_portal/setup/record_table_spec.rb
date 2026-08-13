@@ -304,7 +304,9 @@ RSpec.describe HotelPortal::Setup::RecordTable, type: :component do
     end
   end
 
-  it "renders a disabled final-row removal with its explanation" do
+  # A row that cannot be removed shows a keyboard-reachable hint carrying the
+  # reason, not a greyed-out bin — see RecordTable::Row#reason_hint.
+  it "replaces a blocked final-row removal with a hint explaining why" do
     render_inline(described_class.new(caption: "Assignments", empty: "None", removable: true, addable: false)) do |table|
       table.with_column(label: "Room")
       table.with_row(
@@ -313,7 +315,10 @@ RSpec.describe HotelPortal::Setup::RecordTable, type: :component do
       ) { "<td>Deluxe</td>".html_safe }
     end
 
-    expect(page).to have_css("button[aria-label='Remove Deluxe'][disabled]")
-    expect(page).to have_css("button[title='A rate plan must keep one room.']")
+    expect(page).to have_no_css("button[aria-label='Remove Deluxe']")
+    expect(page).to have_css(
+      "button.panel-record-table__hint[aria-label='A rate plan must keep one room.']"
+    )
+    expect(page).to have_text("A rate plan must keep one room.")
   end
 end

@@ -11,7 +11,8 @@ RSpec.describe Concierge::SelfCheckIn, frozen_time: Time.zone.local(2026, 6, 10,
   end
 
   def with_available_room(room_number: "101", date: Date.today)
-    room_type.update!(room_number_mode: "custom", room_numbers: (room_type.room_numbers + [ room_number ]).uniq)
+    numbers = (room_type.room_numbers + [ room_number ]).uniq
+    room_type.update!(room_number_mode: "custom", quantity: numbers.size, room_numbers: numbers)
     create(:room_inventory, room_type: room_type, date: date,
            quantity: 1, status: "open", available_room_numbers: [ room_number ])
     room_number
@@ -258,7 +259,7 @@ RSpec.describe Concierge::SelfCheckIn, frozen_time: Time.zone.local(2026, 6, 10,
 
   context "when several rooms are available" do
     before do
-      room_type.update!(room_number_mode: "custom", room_numbers: %w[105 101 110])
+      room_type.update!(room_number_mode: "custom", quantity: 3, room_numbers: %w[105 101 110])
       create(:room_inventory, room_type: room_type, date: Date.today,
              quantity: 3, status: "open", available_room_numbers: %w[105 101 110])
     end

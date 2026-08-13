@@ -449,7 +449,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
   end
 
   describe "GET /availability" do
-    let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101", "102" ]) }
+    let(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ]) }
 
     it "returns room options including disabled non-ready rooms" do
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")

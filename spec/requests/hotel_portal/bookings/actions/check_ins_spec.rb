@@ -7,7 +7,7 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
   let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
-  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: %w[101 102 103]) }
+  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", quantity: 3, room_numbers: %w[101 102 103]) }
   let(:booking) do
     create(
       :booking,

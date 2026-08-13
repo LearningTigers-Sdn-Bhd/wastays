@@ -321,6 +321,7 @@ RSpec.describe RatePlan, type: :model do
   describe '#sync_with_channel_manager' do
     it 'queues retirement reconciliation but no structure sync for an unsupported assignment' do
       hotel = create(:hotel, :per_person, preferred_channel_manager: 'channex')
+      create(:channel_mapping, mappable: hotel)
       room_type = create(:room_type, hotel: hotel, max_adults: 2)
       clear_enqueued_jobs
 
@@ -332,6 +333,7 @@ RSpec.describe RatePlan, type: :model do
 
     it 'enqueues structure and ARI syncs for a compatible assignment' do
       hotel = create(:hotel, preferred_channel_manager: 'channex')
+      create(:channel_mapping, mappable: hotel)
       room_type = create(:room_type, hotel: hotel)
       clear_enqueued_jobs
 

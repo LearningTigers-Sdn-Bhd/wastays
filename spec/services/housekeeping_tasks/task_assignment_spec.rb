@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe HousekeepingTasks::TaskAssignment do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account:) }
-  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101]) }
+  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 1, room_numbers: %w[101]) }
   let(:booking) do
     create(:booking, hotel:).tap { |record| create(:booking_room, booking: record, room_type:, room_number: "101") }
   end

@@ -7,7 +7,7 @@ RSpec.describe "HotelPortal::Bookings::Actions checkouts", frozen_time: :busines
   let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
-  let(:room_type) { create(:room_type, hotel: hotel, name: "Garden Suite", room_number_mode: "custom", room_numbers: %w[101 102]) }
+  let(:room_type) { create(:room_type, hotel: hotel, name: "Garden Suite", room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102]) }
   let(:booking) do
     create(:booking, hotel: hotel, guest_name: "Ada Lovelace", status: "checkout_required", check_in: Date.yesterday, check_out: Date.current).tap do |record|
       create(:booking_room, booking: record, room_type: room_type, room_number: "101")

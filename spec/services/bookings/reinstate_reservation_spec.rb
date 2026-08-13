@@ -7,7 +7,7 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
   let(:user) { create(:user) }
   let(:check_in) { 1.day.ago.to_date }
   let(:check_out) { 2.days.from_now.to_date }
-  let(:room_type) { create(:room_type, hotel: hotel, base_price: 200, room_numbers: %w[101 102]) }
+  let(:room_type) { create(:room_type, hotel: hotel, base_price: 200, quantity: 2, room_numbers: %w[101 102]) }
   let(:booking) { create(:booking, hotel: hotel, status: "no_show", check_in: check_in, check_out: check_out) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type, room_number: "101", subtotal: 600) }
   let(:params) { { booking_rooms_attributes: [ { id: booking_room.id, room_number: "101" } ] } }
@@ -67,7 +67,7 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
     end
 
     it "updates room category, selected rate, subtotal, and booking total" do
-      new_room_type = create(:room_type, hotel: hotel, base_price: 250, room_numbers: %w[201 202])
+      new_room_type = create(:room_type, hotel: hotel, base_price: 250, quantity: 2, room_numbers: %w[201 202])
       rate_plan = create(:rate_plan, room_type: new_room_type)
       params[:booking_rooms_attributes][0].merge!(
         room_type_id: new_room_type.id,
@@ -87,7 +87,7 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
     end
 
     it "returns failure when the selected rate does not belong to the selected room category" do
-      other_room_type = create(:room_type, hotel: hotel, base_price: 250, room_numbers: %w[201])
+      other_room_type = create(:room_type, hotel: hotel, base_price: 250, quantity: 1, room_numbers: %w[201])
       other_rate_plan = create(:rate_plan, room_type: other_room_type)
       params[:booking_rooms_attributes][0].merge!(rate_plan_id: other_rate_plan.id)
 
@@ -143,7 +143,7 @@ RSpec.describe Bookings::ReinstateReservation, type: :service do
     end
 
     it "does not persist room or pricing changes" do
-      new_room_type = create(:room_type, hotel: hotel, base_price: 250, room_numbers: %w[201])
+      new_room_type = create(:room_type, hotel: hotel, base_price: 250, quantity: 1, room_numbers: %w[201])
       other_booking = create(:booking, hotel: hotel, status: "confirmed", check_in: check_in, check_out: check_out)
       create(:booking_room, booking: other_booking, room_type: new_room_type, room_number: "201")
       params[:booking_rooms_attributes][0].merge!(room_type_id: new_room_type.id, room_number: "201")

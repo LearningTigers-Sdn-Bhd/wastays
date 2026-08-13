@@ -10,7 +10,7 @@ RSpec.describe "Hotel Room Assignment Locks", type: :system do
   let(:hotel) { create(:hotel) }
   let(:user1) { create(:user, account: hotel.account, name: "Admin One") }
   let(:user2) { create(:user, account: hotel.account, name: "Admin Two") }
-  let!(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "206", "207" ]) }
+  let!(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "206", "207" ]) }
   let!(:booking) { create(:booking, hotel: hotel, status: "confirmed", check_in: hotel_today(hotel), check_out: hotel_today(hotel) + 2.days) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type) }
 

@@ -261,7 +261,10 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, frozen_time: :business
     end
 
     it "does not assign stale room numbers beyond the room type quantity" do
-      room_type.update!(quantity: 1, room_numbers: %w[101 102])
+      # RoomType now rejects a list longer than the quantity, so write the stale
+      # row directly — the point of the test is that the seeder ignores the
+      # extra number even when legacy data carries one.
+      room_type.update_columns(quantity: 1, room_numbers: %w[101 102])
 
       result = build_service.call
 

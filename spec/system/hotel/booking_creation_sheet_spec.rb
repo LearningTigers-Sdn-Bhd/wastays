@@ -7,7 +7,7 @@ RSpec.describe "Hotel booking creation sheet", type: :system, js: true, frozen_t
   let(:hotel) { create(:hotel, account:, status: "live", accounting_business_date: Date.current) }
   let(:user) { create(:user, account:, role: "hotel_staff") }
   let(:role) { create(:role, account:, slug: "front_desk", name: "Front Desk") }
-  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 102]) }
+  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102]) }
   let!(:rate_plan) { create(:rate_plan, room_type:, name: "Flexible Rate") }
 
   before do

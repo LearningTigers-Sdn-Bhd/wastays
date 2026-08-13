@@ -23,7 +23,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
     end
 
     it "returns 404 when hotel is not active" do
-      hotel.update!(status: "draft")
+      hotel.update!(status: "setup")
       get "/hotels/#{hotel.slug}/rate_calendar", params: base_params
       expect(response).to have_http_status(:not_found)
     end

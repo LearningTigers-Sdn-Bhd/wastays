@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "HotelPortal::ManualBookings", type: :request do
   let(:hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user) }
-  let(:room_type) { create(:room_type, hotel: hotel, quantity: 10, base_price: 100, room_numbers: [ "101", "102", "103" ]) }
+  let(:room_type) { create(:room_type, hotel: hotel, quantity: 10, base_price: 100, room_numbers: (101..110).map(&:to_s)) }
 
   before do
     role = create(:role, account: hotel.account)
@@ -264,7 +264,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
 
   describe "GET /availability" do
     it "returns available room numbers" do
-      room_type.update!(room_numbers: [ "101", "102", "103" ])
+      room_type.update!(quantity: 3, room_numbers: [ "101", "102", "103" ])
 
       get "/hotel/#{hotel.id}/bookings/availability", params: {
         check_in: Date.current,

@@ -7,7 +7,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
   let(:feature_group) { create(:feature_group) }
   let(:hotel) { create(:hotel, plan: plan) }
   let(:user) { create(:user, account: hotel.account) }
-  let(:room_type) { create(:room_type, hotel: hotel, base_price: 100, room_numbers: [ "101", "102" ]) }
+  let(:room_type) { create(:room_type, hotel: hotel, base_price: 100, quantity: 2, room_numbers: [ "101", "102" ]) }
   let(:existing_guest) { create(:guest, created_by_hotel: hotel, name: "Existing Guest", email: "existing@example.com") }
 
   before do

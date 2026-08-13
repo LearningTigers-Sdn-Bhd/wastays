@@ -7,7 +7,7 @@ RSpec.describe "HotelPortal::Bookings::Actions reinstatements", frozen_time: :bu
   let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
-  let(:room_type) { create(:room_type, hotel: hotel, name: "Garden Suite", room_number_mode: "custom", room_numbers: %w[101 102 103]) }
+  let(:room_type) { create(:room_type, hotel: hotel, name: "Garden Suite", room_number_mode: "custom", quantity: 3, room_numbers: %w[101 102 103]) }
   let(:booking) do
     create(:booking, hotel: hotel, guest_name: "Ada Lovelace", status: "no_show", check_in: Date.current, check_out: Date.current + 1.day).tap do |record|
       create(:booking_room, booking: record, room_type: room_type, room_number: "101")
