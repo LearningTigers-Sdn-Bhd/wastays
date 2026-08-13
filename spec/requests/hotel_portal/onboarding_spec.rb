@@ -39,7 +39,12 @@ RSpec.describe "Hotel onboarding shell", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Onboarding progress")
-    expect(response.body).to include("Property profile")
+    document = response.parsed_body
+    expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Property profile" ])
+    expect(document.at_css("nav[aria-label='Property steps']")).to be_present
+    expect(document.at_css("section[aria-label='Identity and guest details']")).to be_present
+    expect(document.css("h2").map { |heading| heading.text.strip }).not_to include("Identity and guest details")
+    expect(response.body).not_to include("The legal account was created by WAStays")
     expect(response.body).to include("Save draft")
     expect(response.body).not_to include("Open navigation")
   end

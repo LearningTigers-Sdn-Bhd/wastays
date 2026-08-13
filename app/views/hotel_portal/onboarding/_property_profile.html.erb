@@ -27,11 +27,9 @@
                 method: :patch,
                 id: form_id,
                 class: "space-y-8" do |form| %>
-    <section aria-labelledby="property-identity-heading" class="space-y-4">
-      <div>
-        <h2 id="property-identity-heading" class="text-base font-semibold">Identity and guest details</h2>
-        <p class="mt-1 text-sm text-muted-foreground">The legal account was created by WAStays. Complete the property details guests and integrations will use.</p>
-      </div>
+    <%# The shell already owns the Property profile heading and introduction, so
+        this first field group opens directly into the fields. %>
+    <section aria-label="Identity and guest details" class="space-y-4">
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="space-y-1">
           <p class="text-sm font-medium">Legal account</p>
