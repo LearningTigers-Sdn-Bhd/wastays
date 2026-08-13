@@ -26,11 +26,14 @@ module HotelPortal
     # Skipping an implemented section is a recorded decision, not a silent
     # omission, so each one names the service that makes that decision and what
     # to tell the owner afterwards. Sections absent here cannot be skipped.
+    #
+    # The record-table sections — staff, corporate accounts, channel manager —
+    # are absent on purpose: their empty table already states the decision, and
+    # continuing from it records the same thing a skip button would. A second
+    # control saying it again would be asking twice.
     SECTION_SKIPS = {
-      "staff_setup" => "No additional staff will be invited for now.",
       "extra_charges" => "No extra charges will be offered for now.",
-      "discounts" => "No discounts will be offered for now.",
-      "corporate_accounts" => "No corporate accounts will be invited for now."
+      "discounts" => "No discounts will be offered for now."
     }.freeze
 
     before_action :authorize_onboarding!
@@ -103,7 +106,9 @@ module HotelPortal
             "role_name" => draft.role.name
           }
         end
-        @staff_entries = @staff_entries + [ {} ] unless @presenter.read_only?
+        # No trailing blank row: an empty table is a valid answer here, and a row
+        # already waiting to be filled in argues with the empty state saying so.
+        # Rows are added deliberately instead.
       when "taxes_fees"
         # No trailing blank row here: its required fields would block submission
         # for a property that simply has no fees of its own. Rows are added
@@ -152,11 +157,11 @@ module HotelPortal
           @payment_method_entries = entries || persisted_payment_method_entries
         end
       when "corporate_accounts"
+        # See staff_setup: no trailing blank row, because empty is an answer.
         @corporate_draft_entries = entries || persisted_corporate_draft_entries
-        @corporate_draft_entries += [ {} ] unless @presenter.read_only?
       when "channel_manager"
+        # See staff_setup: no trailing blank row, because empty is an answer.
         @ota_credential_entries = entries || persisted_ota_credential_entries
-        @ota_credential_entries += [ {} ] unless @presenter.read_only?
       end
     end
 
@@ -661,14 +666,7 @@ module HotelPortal
 
     def skip_implemented_section
       key = @current_entry.definition.key
-      result =
-        if key == "staff_setup"
-          Onboarding::DecideNoAdditionalStaff.new(hotel: current_hotel, actor: current_user).call
-        elsif key == "corporate_accounts"
-          Onboarding::DecideNoCorporateAccounts.call(hotel: current_hotel, actor: current_user)
-        else
-          Onboarding::SkipOptionalSection.call(hotel: current_hotel, actor: current_user, section_key: key)
-        end
+      result = Onboarding::SkipOptionalSection.call(hotel: current_hotel, actor: current_user, section_key: key)
       return render_section_error(result) unless result.success?
 
       build_navigation

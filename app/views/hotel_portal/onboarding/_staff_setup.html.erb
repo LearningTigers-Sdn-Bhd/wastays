@@ -33,7 +33,9 @@
       <%= render HotelPortal::Setup::RecordTable.new(
             caption: "Draft staff",
             add_label: "Add staff member",
-            empty: "No staff yet. You can invite the rest of the team after onboarding.",
+            empty: "No staff added yet",
+            empty_description: "Leave this empty and continue if you are the only one who needs access for now — the rest of the team can be invited after onboarding.",
+            empty_icon: "users",
             class: "md:min-w-[44rem]") do |table| %>
         <% table.with_column(label: "Name") %>
         <% table.with_column(label: "Email", required: true) %>

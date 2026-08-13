@@ -90,6 +90,50 @@ RSpec.describe HotelPortal::Setup::RecordTable, type: :component do
     expect(page).to have_css("tr.panel-record-table__empty", text: "No extra charges yet.")
   end
 
+  # An empty table states what is missing, what to do about it, and offers the
+  # one action that fixes it — rather than a line of grey text with the add
+  # button somewhere below the fold of the row.
+  describe "the empty state" do
+    it "states the case with an icon, a description and its own add action" do
+      render_table(rows: 0, empty: "No extra charges yet",
+                   empty_description: "If this property sells nothing beyond the room, continue.",
+                   empty_icon: "concierge-bell")
+
+      state = page.find("tr.panel-record-table__empty")
+      expect(state).to have_css(".panel-record-table__empty-icon svg")
+      expect(state).to have_css(".panel-record-table__empty-title", text: "No extra charges yet")
+      expect(state).to have_css(".panel-record-table__empty-description",
+                                text: "If this property sells nothing beyond the room, continue.")
+      expect(state).to have_button("Add extra charge")
+    end
+
+    # Two add buttons on screen at once would be the same offer twice, and the
+    # footer's sits below a block that already carries it.
+    it "stands the add footer down while it shows, and back up once a record exists" do
+      render_table(rows: 0)
+      expect(page).to have_css("tfoot tr[hidden]", visible: :all)
+      expect(page).to have_button("Add extra charge", count: 1)
+
+      render_table(rows: 1)
+      expect(page).to have_no_css("tfoot tr[hidden]", visible: :all)
+      expect(page).to have_button("Add extra charge", count: 1)
+    end
+
+    # A message-only footer says something about the table as a whole, so it is
+    # not the empty state's to hide.
+    it "leaves a message-only footer in place" do
+      render_inline(described_class.new(
+        caption: "Standard pricing", empty: "No rooms yet", removable: false,
+        addable: false, footer_message: "All room categories are assigned."
+      )) do |table|
+        table.with_column(label: "Room")
+      end
+
+      expect(page).to have_text("All room categories are assigned.")
+      expect(page).to have_no_css("tfoot tr[hidden]", visible: :all)
+    end
+  end
+
   it "carries a blank row the add action can clone, placed ahead of the empty state" do
     render_table
 

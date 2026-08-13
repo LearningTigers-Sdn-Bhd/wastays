@@ -66,10 +66,13 @@ RSpec.describe "Hotel onboarding shell", type: :system do
 
     expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "staff_setup"))
     expect(page).to have_text("Nothing is sent now")
-    click_button "No additional staff for now"
+    # Nobody else needs access yet, and the empty table says so: continuing from
+    # it is the decision, with no separate skip button to press.
+    expect(page).to have_text("No staff added yet")
+    click_button "Save & continue"
 
     expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "taxes_fees"))
-    expect(page).to have_text("No additional staff will be invited for now")
+    expect(hotel.onboarding_sections.find_by!(section_key: "staff_setup").state).to eq("skipped")
 
     expect(page).to have_css("h1", text: "Taxes and fees")
     check "I confirm these are the taxes and fees this property charges"
@@ -95,20 +98,26 @@ RSpec.describe "Hotel onboarding shell", type: :system do
 
     visit hotel_onboarding_section_path(hotel, section_key: "staff_setup")
 
-    # The page opens on the trailing blank row the controller appends.
-    expect(page).to have_css("tr[data-record-table-target='row']", count: 1)
-    expect(page).to have_no_css("tr.panel-record-table__empty")
+    # The page opens on the empty state, which carries the add action itself. The
+    # footer's copy of it stands down while that is showing.
+    expect(page).to have_no_css("tr[data-record-table-target='row']")
+    expect(page).to have_css("tr.panel-record-table__empty", text: "No staff added yet")
+    expect(page).to have_css("button", text: "Add staff member", count: 1)
 
     click_button "Add staff member"
 
-    expect(page).to have_css("tr[data-record-table-target='row']", count: 2)
+    expect(page).to have_css("tr[data-record-table-target='row']", count: 1)
+    expect(page).to have_no_css("tr.panel-record-table__empty")
     # Focus lands on the first field, not on the remove button that precedes it.
     expect(page.evaluate_script("document.activeElement.name")).to end_with("[name]")
+
+    click_button "Add staff member"
+    expect(page).to have_css("tr[data-record-table-target='row']", count: 2)
 
     all("button[aria-label='Remove this staff member']").each(&:click)
 
     expect(page).to have_no_css("tr[data-record-table-target='row']")
-    expect(page).to have_css("tr.panel-record-table__empty", text: "No staff yet")
+    expect(page).to have_css("tr.panel-record-table__empty", text: "No staff added yet")
   end
 
   it "configures rooms in the spreadsheet and stages amenities and numbering in one sheet" do
@@ -358,7 +367,8 @@ RSpec.describe "Hotel onboarding shell", type: :system do
 
     expect(page).to have_css("h1", text: "Corporate accounts")
     expect(page).to have_text("No invitations are sent yet")
-    click_button "No corporate accounts for now"
+    expect(page).to have_text("No corporate accounts yet")
+    click_button "Save & continue"
 
     expect(page).to have_css("h1", text: "Channel manager")
     expect(hotel.hotel_payment_methods.active).to be_present

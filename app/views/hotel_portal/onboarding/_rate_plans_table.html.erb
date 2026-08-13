@@ -8,7 +8,9 @@
     pushing the page sideways. %>
 <%= render HotelPortal::Setup::RecordTable.new(
       caption: "Rate plan pricing",
-      empty: "Add a room category before setting prices.",
+      empty: "No room pricing yet",
+      empty_description: "Add a room category before setting prices.",
+      empty_icon: "banknote",
       addable: false, removable: !presenter.read_only?,
       spreadsheet: current_hotel.sells_per_person?,
       class: "panel-record-table--rates") do |table| %>

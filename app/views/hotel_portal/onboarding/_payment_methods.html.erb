@@ -57,7 +57,9 @@
         <%= render HotelPortal::Setup::RecordTable.new(
               caption: "Payment methods",
               add_label: "Add payment method",
-              empty: "No payment methods yet. Add at least one way guests can pay.") do |table| %>
+              empty: "No payment methods yet",
+              empty_description: "Add at least one way guests can pay before this property can open.",
+              empty_icon: "credit-card") do |table| %>
           <% table.with_column(label: "Name", required: true, class: "w-1/2") %>
           <% table.with_column(label: "Type") %>
 

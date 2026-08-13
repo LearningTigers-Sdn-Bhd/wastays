@@ -121,7 +121,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
 
     expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "staff_setup"))
     follow_redirect!
-    expect(response.body).to include("Add staff member", "No additional staff for now")
+    expect(response.body).to include("Add staff member", "No staff added yet")
     expect(account.roles.where(slug: Onboarding::ConfirmRolePresets::PRESET_SLUGS).count).to eq(4)
     expect(hotel.onboarding_sections.find_by!(section_key: "roles_permissions").decision_metadata)
       .to include("permission_fingerprint" => be_present)
@@ -149,14 +149,16 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(hotel.onboarding_staff_drafts.first).to have_attributes(email: "ari@example.com", role: staff_role)
   end
 
-  it "records the explicit no-additional-staff decision and clears drafts" do
+  # An emptied table is the decision. Continuing from one records it and discards
+  # the drafts, so nobody the owner just removed is left queued for an invitation.
+  it "reads an empty staff table as the no-additional-staff decision and clears drafts" do
     HotelOps::SeedAccountRoles.call(account)
     hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
     hotel.onboarding_sections.create!(section_key: "roles_permissions", state: "complete")
     create(:onboarding_staff_draft, hotel: hotel, role: account.roles.find_by!(slug: "housekeeper"))
 
     patch hotel_onboarding_section_path(hotel, section_key: "staff_setup"),
-          params: { navigation_action: "skip" }
+          params: { navigation_action: "save_continue", staff_entries: {} }
 
     expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "taxes_fees"))
     expect(hotel.onboarding_staff_drafts).to be_empty
@@ -166,15 +168,19 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     )
   end
 
-  it "allows optional steps to be explicitly skipped" do
+  it "offers no separate staff skip button and rejects a forged one" do
+    HotelOps::SeedAccountRoles.call(account)
     hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
     hotel.onboarding_sections.create!(section_key: "roles_permissions", state: "complete")
+
+    get hotel_onboarding_section_path(hotel, section_key: "staff_setup")
+    expect(response.body).not_to include("navigation_action\" value=\"skip\"")
 
     patch hotel_onboarding_section_path(hotel, section_key: "staff_setup"),
           params: { navigation_action: "skip" }
 
-    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "taxes_fees"))
-    expect(hotel.onboarding_sections.find_by!(section_key: "staff_setup").state).to eq("skipped")
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(hotel.onboarding_sections.find_by!(section_key: "staff_setup").state).not_to eq("skipped")
   end
 
   it "keeps pending-review onboarding read-only" do

@@ -87,7 +87,9 @@
         <%= render HotelPortal::Setup::RecordTable.new(
               caption: "Property taxes and fees",
               add_label: "Add tax or fee",
-              empty: "No property taxes or fees yet. Most properties charge none beyond the statutory taxes above.",
+              empty: "No property taxes or fees yet",
+              empty_description: "Most properties charge none beyond the statutory taxes above.",
+              empty_icon: "receipt-text",
               class: "md:min-w-[60rem]") do |table| %>
           <% table.with_column(label: "Name", required: true) %>
           <% table.with_column(label: "Type") %>

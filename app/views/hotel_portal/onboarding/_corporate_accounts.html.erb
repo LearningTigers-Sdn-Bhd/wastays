@@ -46,7 +46,9 @@
         <%= render HotelPortal::Setup::RecordTable.new(
               caption: "Corporate accounts",
               add_label: "Add corporate account",
-              empty: "No corporate accounts yet. If this property bills no companies directly, leave this empty and continue.",
+              empty: "No corporate accounts yet",
+              empty_description: "If this property bills no companies directly, leave this empty and continue.",
+              empty_icon: "building-2",
               class: "md:min-w-[60rem]") do |table| %>
           <% table.with_column(label: "Company") %>
           <% table.with_column(label: "Email", required: true,

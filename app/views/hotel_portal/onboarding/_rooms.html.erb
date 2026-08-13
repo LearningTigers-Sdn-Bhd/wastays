@@ -43,7 +43,9 @@
       <%= render HotelPortal::Setup::RecordTable.new(
             caption: "Room categories",
             add_label: "Add room category",
-            empty: "No room categories yet. Add the first room this property operates.",
+            empty: "No room categories yet",
+            empty_description: "Add the first room this property operates.",
+            empty_icon: "bed-double",
             spreadsheet: true,
             actions: true,
             class: "panel-record-table--rooms") do |table| %>

@@ -58,7 +58,9 @@
         <%= render HotelPortal::Setup::RecordTable.new(
               caption: "OTA logins",
               add_label: "Add OTA login",
-              empty: "No OTA logins yet. If this property does not sell through any OTA, leave this empty and continue.",
+              empty: "No OTA logins yet",
+              empty_description: "If this property does not sell through any OTA, leave this empty and continue.",
+              empty_icon: "globe",
               class: "md:min-w-[72rem]") do |table| %>
           <% table.with_column(label: "Channel", required: true,
                                hint: "The extranet these details sign in to, such as Booking.com.") %>

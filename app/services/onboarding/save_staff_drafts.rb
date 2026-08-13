@@ -12,7 +12,10 @@ module Onboarding
     end
 
     def call
-      return failure("Add at least one staff member, or choose No additional staff for now.") if @complete && entries.empty?
+      # Continuing with an empty table is itself the answer: nobody else needs
+      # access yet. Making the owner press a separate button to say what the empty
+      # table already says would be asking twice.
+      return decide_no_additional_staff if @complete && entries.empty?
       return failure(validation_errors.to_sentence) if validation_errors.any?
 
       transition_result = nil
@@ -34,6 +37,16 @@ module Onboarding
     end
 
     private
+
+    # The same decision the skip button used to record, including discarding any
+    # drafts left behind, so an owner who empties the table leaves no invitations
+    # queued for people they just removed.
+    def decide_no_additional_staff
+      result = DecideNoAdditionalStaff.new(hotel: @hotel, actor: @actor).call
+      return failure(result.error, section: result.section) unless result.success?
+
+      Result.success(section: result.section, entries: [])
+    end
 
     def entries
       @entries ||= begin

@@ -65,7 +65,9 @@
         <%= render HotelPortal::Setup::RecordTable.new(
               caption: "Discounts",
               add_label: "Add discount",
-              empty: "No discounts yet. If this property offers none, choose no discounts for now.") do |table| %>
+              empty: "No discounts yet",
+              empty_description: "If this property offers none, choose no discounts for now.",
+              empty_icon: "tag") do |table| %>
           <%# Name and Amount are sized to what they hold; Applies to carries a
               scope and the charges that scope can narrow to, so it takes what is
               left rather than a share of the table. %>

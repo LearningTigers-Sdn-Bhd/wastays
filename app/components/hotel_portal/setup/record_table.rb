@@ -301,11 +301,20 @@ module HotelPortal
       # without it the add button has nothing to add.
       renders_one :blank_row, Row
 
-      def initialize(caption:, add_label: nil, empty:, spreadsheet: false, actions: false,
+      # `empty` is the headline of the empty state — a short statement of what is
+      # not there yet. `empty_description` is the sentence under it that says what
+      # to do about it, including when doing nothing is a valid answer, and
+      # `empty_icon` gives the block something to hang on. The state carries the
+      # add action itself, so an operator looking at an empty table never has to
+      # find the footer to start.
+      def initialize(caption:, add_label: nil, empty:, empty_description: nil, empty_icon: "inbox",
+                     spreadsheet: false, actions: false,
                      removable: true, addable: true, footer_message: nil, class: nil)
         @caption = caption
         @add_label = add_label
         @empty = empty
+        @empty_description = empty_description
+        @empty_icon = empty_icon
         @spreadsheet = spreadsheet
         @actions = actions
         @removable = removable
@@ -314,7 +323,7 @@ module HotelPortal
         @class = binding.local_variable_get(:class)
       end
 
-      attr_reader :caption, :add_label, :empty
+      attr_reader :caption, :add_label, :empty, :empty_description, :empty_icon
       def spreadsheet? = @spreadsheet
       def actions? = @actions
       def removable? = @removable

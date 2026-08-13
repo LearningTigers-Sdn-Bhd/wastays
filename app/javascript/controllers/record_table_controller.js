@@ -8,7 +8,7 @@ import { Controller } from "@hotwired/stimulus"
 // own. Its index placeholder is swapped for a fresh one on each add so the
 // server sees a distinct set of params per row.
 export default class extends Controller {
-  static targets = ["template", "row", "empty"]
+  static targets = ["template", "row", "empty", "footer"]
 
   add(event) {
     // A grouped table carries one template per group, so the add button names
@@ -94,9 +94,11 @@ export default class extends Controller {
     this.dispatch("changed")
   }
 
+  // The empty state carries its own add button, so the footer's would be the
+  // same offer twice. Exactly one of the two is on screen at any moment.
   #syncEmptyState() {
-    if (this.hasEmptyTarget) {
-      this.emptyTarget.hidden = this.rowTargets.some(row => !row.hidden)
-    }
+    const populated = this.rowTargets.some(row => !row.hidden)
+    if (this.hasEmptyTarget) this.emptyTarget.hidden = populated
+    if (this.hasFooterTarget) this.footerTarget.hidden = !populated
   }
 }

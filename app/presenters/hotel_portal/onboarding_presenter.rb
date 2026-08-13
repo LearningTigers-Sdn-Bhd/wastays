@@ -35,7 +35,9 @@ module HotelPortal
     SECTION_FORMS = {
       "property_profile" => { form_id: "onboarding-property-profile-form" },
       "roles_permissions" => { form_id: "onboarding-role-presets-form" },
-      "staff_setup" => { form_id: "onboarding-staff-drafts-form", skip_label: "No additional staff for now" },
+      # No skip_label: an empty table already says there is nobody else to invite,
+      # and continuing from it records that answer.
+      "staff_setup" => { form_id: "onboarding-staff-drafts-form" },
       "taxes_fees" => { form_id: "onboarding-taxes-fees-form" },
       "room_revenue" => { form_id: "onboarding-room-revenue-form" },
       "rooms" => { form_id: "onboarding-rooms-form" },
@@ -44,7 +46,8 @@ module HotelPortal
       "discounts" => { form_id: "onboarding-discounts-form", skip_label: "No discounts for now" },
       # No skip_label: a property with no way to take money cannot open.
       "payment_methods" => { form_id: "onboarding-payment-methods-form" },
-      "corporate_accounts" => { form_id: "onboarding-corporate-accounts-form", skip_label: "No corporate accounts for now" },
+      # No skip_label, for the same reason as staff above.
+      "corporate_accounts" => { form_id: "onboarding-corporate-accounts-form" },
       # No skip_label: an empty table already says there is nothing to connect,
       # and continuing from it records that answer.
       "channel_manager" => { form_id: "onboarding-channel-manager-form" }

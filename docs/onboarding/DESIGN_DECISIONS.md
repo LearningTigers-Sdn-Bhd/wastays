@@ -252,7 +252,10 @@ Table requirements:
 - Inline field errors
 - Unsaved-change feedback
 - Keyboard operation
-- Clear empty state
+- Clear empty state: an icon, a short title, a sentence saying what to do about
+  it (including when leaving it empty is a valid answer), and the add action
+  itself, in a block that holds the body's height. The footer's add button
+  stands down while it shows, so the same action is never offered twice.
 - Destructive confirmation where data dependencies exist
 - Mobile reflow into stacked record editors instead of mandatory spreadsheet scrolling
 
@@ -299,6 +302,14 @@ An optional section is not silently completed. It requires one of:
 - An explicit `Skip for now` or equivalent decision
 
 A skipped section remains visible in progress and in final review.
+
+For a section whose whole body is a record table — staff, corporate accounts,
+channel manager — the empty table *is* the equivalent decision: pressing
+`Save & continue` with no records records the same "none for now" answer a skip
+button would, including discarding any drafts left behind. Those sections carry
+no skip button, because a second control saying what the empty table already
+says is asking twice. Sections whose body is not a table of records (extra
+charges, discounts) keep their explicit `Skip for now`.
 
 ## Errors, warnings, and readiness
 

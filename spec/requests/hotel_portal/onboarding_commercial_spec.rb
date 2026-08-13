@@ -289,9 +289,14 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
         .to have_attributes(email: "accounts@acme.com", relationship_type: "direct_bill")
     end
 
-    it "records an explicit skip decision" do
+    # The empty table is the decision. There is no separate skip button to press,
+    # and continuing from an empty table records what one would have recorded.
+    it "reads an empty table as the decision, without a skip button" do
+      get hotel_onboarding_section_path(hotel, section_key: "corporate_accounts")
+      expect(response.body).not_to include("navigation_action\" value=\"skip\"")
+
       patch hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"),
-            params: { navigation_action: "skip" }
+            params: { navigation_action: "save_continue", corporate_draft_entries: {} }
 
       expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "channel_manager"))
       section = hotel.onboarding_sections.find_by(section_key: "corporate_accounts")
@@ -452,10 +457,10 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
                 "surcharge_enabled" => "false", "_destroy" => "false"
               } }
             }
+      # Corporate accounts and the channel manager have no skip button: an empty
+      # table, continued from, is the same answer.
       patch hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"),
-            params: { navigation_action: "skip" }
-      # The channel manager has no skip button: an empty table, continued from,
-      # is the same answer.
+            params: { navigation_action: "save_continue", corporate_draft_entries: {} }
       patch hotel_onboarding_section_path(hotel, section_key: "channel_manager"),
             params: { navigation_action: "save_continue", ota_credential_entries: {} }
 
