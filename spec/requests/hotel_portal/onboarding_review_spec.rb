@@ -129,7 +129,7 @@ RSpec.describe "Hotel onboarding review page", type: :request do
     expect(document.at_css("#onboarding-submission-form")).to be_nil
   end
 
-  it "uses approved wording without a review message" do
+  it "sends the review page to the dashboard once the property is live" do
     hotel.update!(status: "live")
     create(
       :onboarding_submission, hotel:, submitted_by: user, status: "approved", snapshot:,
@@ -138,17 +138,30 @@ RSpec.describe "Hotel onboarding review page", type: :request do
 
     get_review
 
-    expect(response.body).to include("Setup approved", "Property is live", "Approved by Platform Admin")
-    expect(response.body).not_to include("submitted for review", "Awaiting WAStays review")
-    expect(response.parsed_body.at_css("footer[data-slot='setup-actions']")).to be_nil
+    expect(response).to redirect_to(hotel_dashboard_path(hotel))
   end
 
-  it "uses approved read-only wording while viewing another onboarding section" do
+  it "sends every other onboarding section to the dashboard once the property is live" do
     hotel.update!(status: "live")
 
     get hotel_onboarding_section_path(hotel, section_key: "property_profile")
 
-    expect(response.body).to include("Setup approved", "This approved setup is read-only because the property is live.")
-    expect(response.body).not_to include("Setup submitted for review")
+    expect(response).to redirect_to(hotel_dashboard_path(hotel))
+  end
+
+  it "sends the onboarding entry point to the dashboard once the property is live" do
+    hotel.update!(status: "live")
+
+    get hotel_onboarding_path(hotel)
+
+    expect(response).to redirect_to(hotel_dashboard_path(hotel))
+  end
+
+  it "still lets the property be edited while it is back in setup" do
+    hotel.update!(status: "setup")
+
+    get hotel_onboarding_section_path(hotel, section_key: "property_profile")
+
+    expect(response).to have_http_status(:ok)
   end
 end

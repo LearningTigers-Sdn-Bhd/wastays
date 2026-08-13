@@ -29,6 +29,7 @@ module HotelPortal
     # service records it — see Onboarding::SkipOptionalSection for the decisions
     # they write. A separate skip control would only ask the same thing twice.
     before_action :authorize_onboarding!
+    before_action :redirect_completed_onboarding
     before_action :build_navigation
     before_action :set_current_entry, except: :index
     before_action :redirect_locked_section, only: :show
@@ -55,6 +56,16 @@ module HotelPortal
 
     def authorize_onboarding!
       authorize current_hotel, :update?, policy_class: HotelPolicy
+    end
+
+    # Onboarding is over once the property is live. Everyone goes to the dashboard —
+    # the property is open and this is no longer where the work happens. The submitted
+    # setup is still readable in full on the admin onboarding page, which holds the
+    # immutable snapshot.
+    def redirect_completed_onboarding
+      return unless current_hotel.status == "live"
+
+      redirect_to hotel_dashboard_path(current_hotel)
     end
 
     def build_navigation
