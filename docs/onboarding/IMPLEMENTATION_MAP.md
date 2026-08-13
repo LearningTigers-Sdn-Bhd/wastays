@@ -1,5 +1,11 @@
 # Hotel onboarding implementation map (Phase 0)
 
+> **Historical baseline:** legacy submission, approval, training, and admin-visibility
+> findings below predate the Phase 10–11 implementation on 2026-08-13. Use
+> `handoffs/PHASE_10_REVIEW_SUBMISSION.md`, `handoffs/PHASE_11_ADMIN_REVIEW.md`, and
+> `handoffs/REMAINING_WORK.md` for current behaviour. The old references remain useful as
+> Phase 13 migration inventory.
+
 Verified against the Rails application code and schema on 12 August 2026. This is a discovery artifact only; it does not define new behavior. The target behavior is in `FLOW_DECISIONS.md` and `DESIGN_DECISIONS.md`.
 
 ## Executive findings

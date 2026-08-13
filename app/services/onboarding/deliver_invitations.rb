@@ -2,7 +2,7 @@
 
 module Onboarding
   # Turns the staff and corporate drafts collected during setup into real
-  # invitations, once, after the property has been approved.
+  # invitations, once, after the property has been submitted.
   #
   # Every draft becomes an invitation. Only the drafts whose owner switched
   # "Send invitation" on are emailed; the rest are created unsent, so they appear

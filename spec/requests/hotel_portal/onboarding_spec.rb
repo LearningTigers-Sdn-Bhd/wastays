@@ -197,12 +197,31 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
           params: { navigation_action: "save_draft" }
 
-    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "property_profile"))
-    expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("not_started")
+    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+    expect(hotel.onboarding_sections).to be_empty
 
     follow_redirect!
     expect(response.body).to include("Setup submitted for review")
     expect(response.body).not_to include("Save draft")
+  end
+
+  it "submits through the singular idempotent owner endpoint" do
+    submission = build_stubbed(:onboarding_submission, hotel:, submitted_by: user)
+    result = Onboarding::SubmitOnboarding::Result.success(submission:, readiness: nil)
+    allow(Onboarding::SubmitOnboarding).to receive(:call).and_return(result)
+
+    post hotel_onboarding_submission_path(hotel), params: { idempotency_key: "browser-attempt-1" }
+
+    expect(Onboarding::SubmitOnboarding).to have_received(:call).with(
+      hotel:, actor: user, idempotency_key: "browser-attempt-1"
+    )
+    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+  end
+
+  it "removes the legacy dashboard submission path" do
+    post "/hotel/#{hotel.to_param}/submit_for_review"
+
+    expect(response).to have_http_status(:not_found)
   end
 
   it "presents requested changes in the affected section" do

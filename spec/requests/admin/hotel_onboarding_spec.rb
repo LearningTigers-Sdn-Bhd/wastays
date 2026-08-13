@@ -58,6 +58,62 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       expect(trainer_names).to include("Farid Osman")
       expect(trainer_names.index("Mira Tan")).to be < trainer_names.index("Farid Osman")
     end
+
+    it "shows the submitted snapshot, safe OTA presence, deliveries, and review actions" do
+      submitter = create(:user, account: hotel.account, name: "Property Owner")
+      sections = Onboarding::SectionCatalog.keys.index_with { { "state" => "complete", "decision" => {} } }
+      submission = create(
+        :onboarding_submission,
+        hotel:,
+        submitted_by: submitter,
+        snapshot: {
+          "property" => { "name" => hotel.name, "city" => hotel.city, "country" => hotel.country, "default_currency" => "MYR" },
+          "sections" => sections,
+          "rooms" => [ { "name" => "Deluxe", "quantity" => 4 } ],
+          "rates" => { "coverage" => { "configured_percentage" => "100.0", "end_date" => "2027-08-12" } },
+          "commercial" => { "payment_methods" => [ { "name" => "Cash" } ] },
+          "ota_handover" => [ { "channel_name" => "Booking.com", "credentials_supplied" => true } ]
+        }
+      )
+      create(:onboarding_delivery, onboarding_submission: submission, status: "failed")
+
+      get onboarding_admin_hotel_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Property Owner", "Deluxe", "Booking.com", "Credentials supplied", "Request changes", "Approve &amp; go live")
+      expect(response.body).not_to include("private-user", "private-password")
+      document = Nokogiri::HTML(response.body)
+      expect(document.css('input[name="section_keys[]"]').size).to eq(12)
+      expect(document.at_css('#request-onboarding-changes-sheet')).to be_present
+    end
+  end
+
+  describe "POST review actions" do
+    let(:hotel) { create(:hotel, account: admin_account, status: "pending_review") }
+
+    it "passes targeted sections and the explanation to the change service" do
+      result = Onboarding::RequestChanges::Result.success(submission: nil, section_keys: %w[rooms])
+      allow(Onboarding::RequestChanges).to receive(:call).and_return(result)
+
+      post request_onboarding_changes_admin_hotel_path(hotel),
+           params: { section_keys: %w[rooms], explanation: "Add the missing room." }
+
+      expect(Onboarding::RequestChanges).to have_received(:call).with(
+        hotel:, actor: superadmin, section_keys: %w[rooms], explanation: "Add the missing room."
+      )
+      expect(response).to redirect_to(onboarding_admin_hotel_path(hotel))
+    end
+
+    it "uses only the canonical approval service" do
+      result = Onboarding::ApproveOnboarding::Result.failure("Not ready", submission: nil, readiness: nil)
+      allow(Onboarding::ApproveOnboarding).to receive(:call).and_return(result)
+
+      post approve_onboarding_admin_hotel_path(hotel)
+
+      expect(Onboarding::ApproveOnboarding).to have_received(:call).with(hotel:, actor: superadmin)
+      expect(response).to redirect_to(onboarding_admin_hotel_path(hotel))
+      expect(flash[:alert]).to eq("Not ready")
+    end
   end
 
   describe "PATCH /admin/hotels/:id/onboarding-sessions/:session_id" do

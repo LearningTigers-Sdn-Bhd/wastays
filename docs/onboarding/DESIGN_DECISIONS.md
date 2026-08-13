@@ -400,5 +400,5 @@ A new onboarding progress primitive is justified only if existing PanelsUI navig
 ### Live
 
 - Normal hotel portal replaces onboarding as the default destination.
-- Onboarding remains available as a read-only setup summary when useful.
+- Onboarding remains available as a read-only summary of the immutable approved snapshot.
 - Future operational changes occur in regular hotel settings.

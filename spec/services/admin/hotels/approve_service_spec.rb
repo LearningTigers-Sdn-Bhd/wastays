@@ -7,11 +7,12 @@ RSpec.describe Admin::Hotels::ApproveService, type: :service do
   subject { described_class.new(hotel: hotel) }
 
   describe "#call" do
-    it "approves the hotel and activates the account" do
+    it "directs pending-review hotels to the canonical onboarding approval" do
       result = subject.call
-      expect(result.success?).to be true
-      expect(hotel.reload.status).to eq("approved")
-      expect(account.reload.status).to eq("active")
+      expect(result.success?).to be false
+      expect(result.error).to include("Only suspended properties")
+      expect(hotel.reload.status).to eq("pending_review")
+      expect(account.reload.status).to eq("pending")
     end
 
     context "when reactivating a suspended hotel" do
@@ -22,6 +23,8 @@ RSpec.describe Admin::Hotels::ApproveService, type: :service do
         result = subject.call
         expect(result.success?).to be true
         expect(result.reactivating?).to be true
+        expect(hotel.reload.status).to eq("live")
+        expect(account.reload.status).to eq("active")
       end
     end
   end

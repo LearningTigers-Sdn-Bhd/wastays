@@ -16,11 +16,11 @@ verb-named class per file; reuse before adding; align on approach before writing
 
 ## Status as of 2026-08-13
 
-Phases 0–9 are complete. Phase 10 is the next slice — do not start a phase whose
-prerequisite section is still a placeholder.
+Phases 0–11 are implemented. Phase 12 is the next slice; do not broaden the pending-review
+write guard into full setup-hotel portal enforcement without the Phase 12 rollout work.
 
 **Start at `REMAINING_WORK.md`** — it is the verified state of the branch and the scope of
-phases 10–13, and it supersedes any phase file it disagrees with.
+phases 12–13, and it supersedes any phase file it disagrees with.
 
 | Phase | Sections | State |
 |---|---|---|
@@ -30,8 +30,9 @@ phases 10–13, and it supersedes any phase file it disagrees with.
 | 7 | `rates_availability` | Complete |
 | 8 | `extra_charges`, `discounts`, `payment_methods`, `corporate_accounts` | Complete |
 | 9 | `channel_manager` | Complete as rescoped — credential intake only |
-| 10 | `review` + submission | Next. `REMAINING_WORK.md`, then `PHASE_10_REVIEW_SUBMISSION.md` |
-| 11–13 | admin launch, enforcement, legacy cleanup | `REMAINING_WORK.md` |
+| 10 | `review` + submission and durable deliveries | Complete — `PHASE_10_REVIEW_SUBMISSION.md` |
+| 11 | admin review, targeted changes, launch | Complete — `PHASE_11_ADMIN_REVIEW.md` |
+| 12–13 | enforcement/rollout and legacy cleanup | `REMAINING_WORK.md` |
 
 Phases are strictly sequential: `section_catalog.rb` encodes a prerequisite chain, and
 `UpdateSection` refuses any transition whose prerequisites are unresolved. Do not attempt
@@ -62,10 +63,10 @@ get   "onboarding/:section_key", to: "onboarding#show",   as: :onboarding_sectio
 patch "onboarding/:section_key", to: "onboarding#update"
 ```
 
-Nothing in phases 6–10 should need new top-level onboarding routes for the main
-save/continue flow. Sub-resource routes (adding a room type, uploading a photo,
-retrying a channel connection) are the legitimate exception — nest them under the
-`hotel` scope and keep them reachable from the onboarding layout.
+The normal section save/continue flow uses these shared routes. Phase 10 added one
+intentional exception: singular `onboarding_submission#create`, because submission is a
+lifecycle command rather than another section update. Other sub-resource routes should
+stay nested under the `hotel` scope and reachable from the onboarding layout.
 
 ### Controller
 
@@ -80,9 +81,9 @@ current shape:
 - `IMPLEMENTED_SECTIONS` → the constant both `implemented_section?` and `show.html.erb` read,
   so the controller and the view cannot disagree about which sections are real
 
-**Your phase's work here:** add your section keys to `IMPLEMENTED_SECTIONS`, extend the
-`case` in `prepare_section` and the one in `update_implemented_section`, and route each key
-to its own `Onboarding::*` service.
+All thirteen keys are now implemented. Future changes should keep the controller and view
+driven by the same `IMPLEMENTED_SECTIONS` constant and route domain mutations to their
+existing `Onboarding::*` services.
 
 The controller is already long. If your phase adds substantial per-section branching,
 extract per-section handling rather than growing the `case` indefinitely — but do not
@@ -193,7 +194,8 @@ bin/rubocop
 4. **Invalidate downstream, warn rather than delete.** When an upstream change breaks a
    completed section, move it to `needs_attention` with an explanatory audit event.
    Do not silently delete referencing records.
-5. **No portal redirect enforcement yet.** That is Phase 12. Do not add global redirects.
+5. **Pending-review writes are protected; setup-hotel portal enforcement is not.** The
+   broader redirect/allowlist rollout remains Phase 12. Do not add global setup redirects.
 6. **Legacy status writes stay untouched.** Phase 13 removes them. If you touch a domain
    service that advances legacy `Hotel#status` (e.g. `SaveRoomType`), leave that behaviour
    alone unless your handoff says otherwise.

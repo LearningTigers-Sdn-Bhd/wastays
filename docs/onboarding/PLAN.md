@@ -14,7 +14,9 @@ Existing hotel, tax, room, rate, financial, staff, corporate account, and channe
 
 Per-phase handoff briefs live in `docs/onboarding/handoffs/`, starting with `docs/onboarding/handoffs/README.md`. They exist so a session with no prior context can pick up a single phase.
 
-**Current position (2026-08-13): phases 0-9 complete, phase 10 next.** `docs/onboarding/handoffs/REMAINING_WORK.md` holds the verified state of the branch and the scope of phases 10-13; where it disagrees with a phase brief, it is right.
+**Current position (2026-08-13): phases 0–11 implemented, phase 12 next.**
+`docs/onboarding/handoffs/REMAINING_WORK.md` holds the verified branch state and the scope
+of phases 12–13; where it disagrees with an older phase brief, it is right.
 
 ## Delivery principles
 
@@ -228,41 +230,34 @@ Deferred to a later superadmin slice, not delivered here:
 - Property provisioning, room and rate-plan mapping, initial rate and availability push
 - Connection states, retry, and diagnostics
 - Plan gating for `manage_40_otas`
-- Any admin-side view of the credential rows — until that lands the table is write-only and no UI reads it
+- Any admin access to actual credential values. Phase 11 review shows only channel name
+  and credential presence from the safe submission snapshot.
 
 Carry-forward defect: every sync guard tests `hotel.preferred_channel_manager.blank?` (`app/models/room_type.rb:174` and others), but Phase 2 stores explicit `"undecided"` / `"none"` values, both of which are `present?`. Hotels wanting no channel manager therefore enqueue sync jobs that die downstream on a missing mapping. Fix the guards to test connectedness when the superadmin slice is built.
 
 Deliverable: an owner hands over the logins their channels need and reaches review either way, with local setup unaffected.
 
-## Phase 10: Review, submission, and invitations — Next
+## Phase 10: Review, submission, and invitations — Complete
 
-Three services already exist with no production caller, landed early by the phases that owned their data. Wire them; do not rebuild them:
-
-- `Onboarding::Readiness` — findings, plus the `decision_metadata["placeholder"]` rule that blocks submission while a stub section remains
-- `Onboarding::TransitionLifecycle` — `setup -> pending_review`, re-running readiness server-side inside the guard, status change and `submitted` audit event in one transaction
-- `Onboarding::DeliverInvitations` — staff and corporate drafts to real invitations, one transaction per draft, `invitation_id` + `delivered_at` as the idempotent marker, mail enqueued outside the transaction
-
-Build the full readiness review:
+Delivered:
 
 - Group findings by phase.
 - Distinguish blocking issues, warnings, complete, skipped, and needs attention.
 - Link each finding to its owning page.
 - Re-run readiness server-side on submission.
-- Send queued staff invitations only after successful submission.
-- Send requested corporate invitations after successful submission.
+- Create an immutable, secret-free submission snapshot and durable outbox effects.
+- Process queued staff and requested corporate invitations only after successful submission.
 - Change the hotel to `pending_review` atomically with submission records.
 - Make submitted onboarding read-only.
 - Notify admins.
 
-Delivery must be idempotent so retries do not send duplicate invitations or duplicate submission effects.
+Delivery is application-idempotent and retryable. Exact-once external email is not claimed.
 
 Deliverable: an owner can complete and submit onboarding safely.
 
-## Phase 11: Admin review and launch
+## Phase 11: Admin review and launch — Complete
 
-An admin onboarding surface already exists, and it is the **legacy** one: `Admin::Hotels::OnboardingController` drives training-session scheduling and `Admin::CompleteOnboarding`, the old approval path. Its index already reads `Hotel.pending_review_onboarding`, so a hotel submitted through Phase 10 appears there with none of the new readiness detail. Decide before coding whether this phase extends that controller or replaces it — two parallel paths reaching `live` is the failure mode.
-
-Deliver:
+Delivered through the canonical admin onboarding page:
 
 - Admin setup summary
 - Section completion and readiness findings
@@ -271,6 +266,9 @@ Deliver:
 - Approve & go live with final server-side readiness validation
 - Audit trail
 - Existing suspension/reactivation alignment with the simplified lifecycle
+- Immutable approved snapshot retained after launch
+- Training retained as informational and non-blocking
+- Legacy completion removed; generic approval limited to suspended reactivation
 
 Deliverable: admins can request targeted corrections or launch a ready hotel.
 
@@ -324,20 +322,22 @@ Run the relevant project test domain and RuboCop for each implementation slice. 
 
 ## Open decisions
 
-The following remain intentionally unresolved. None of them blocks Phase 10's review page.
+The following remain intentionally unresolved:
 
 | Decision | Blocks |
 |---|---|
-| 1. Whether a channel manager will eventually become mandatory for some plans or properties. | The deferred superadmin channel slice |
-| 2. Whether one-year availability remains a one-time initial population or becomes a maintained rolling horizon. | 13, and any coverage-expiry work |
-| 3. Whether existing admin training sessions remain a launch prerequisite, a warning, or an independent operational process. | 10, 11 |
-| 4. How existing non-live hotels map to `setup` versus `pending_review` during migration. | 12 |
-| 5. Whether live hotels retain a read-only onboarding summary indefinitely or only an audit record. | 10, 11 |
-| 6. Whether old `pending_review` submissions are grandfathered, returned to setup, or revalidated under the target checks. | 12 |
+| Whether a channel manager will eventually become mandatory for some plans or properties. | The deferred superadmin channel slice |
+| Whether one-year availability remains a one-time initial population or becomes a maintained rolling horizon. | 13, and any coverage-expiry work |
+| How existing non-live hotels map to `setup` versus `pending_review` during migration. | 12 |
+| Whether old `pending_review` submissions are grandfathered, returned to setup, or revalidated under the target checks. | 12 |
 
 Resolved during delivery:
 
-- **Corporate and staff invitation queueing and submission idempotency** (was unresolved in `IMPLEMENTATION_MAP.md` §8 item 11). Both draft tables carry `invitation_id` plus `delivered_at`; `Onboarding::DeliverInvitations` delivers resumably and sends nothing twice.
+- **Corporate and staff invitation delivery:** durable `OnboardingDelivery` effects are
+  unique and retryable; per-draft invitation links prevent duplicate application work.
+  Exact-once external email is intentionally not claimed.
+- **Training and launch:** training is visible but independent and never blocks launch.
+- **Post-launch summary:** live hotels retain the immutable approved submission snapshot.
 - **Owner-facing channel-manager connection states.** Phase 9's rescope removed the question: the owner hands over credentials, and connection states belong to the deferred superadmin slice.
 
 Resolve each open decision before its dependent delivery phase; do not block unrelated earlier slices.

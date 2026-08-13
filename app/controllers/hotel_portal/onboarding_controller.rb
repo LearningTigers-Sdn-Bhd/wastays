@@ -21,6 +21,7 @@ module HotelPortal
       payment_methods
       corporate_accounts
       channel_manager
+      review
     ].freeze
 
     # No implemented section takes a skip action. Each optional one answers
@@ -67,6 +68,7 @@ module HotelPortal
     end
 
     def redirect_locked_section
+      return if pending_review? && @current_entry.definition.key == "review"
       return if @current_entry.available
 
       redirect_to onboarding_path(@navigation.resume_entry),
@@ -154,6 +156,19 @@ module HotelPortal
       when "channel_manager"
         # See staff_setup: no trailing blank row, because empty is an answer.
         @ota_credential_entries = entries || persisted_ota_credential_entries
+      when "review"
+        @readiness = Onboarding::Readiness.new(hotel: current_hotel).call
+        @submission = current_hotel.onboarding_submissions.includes(:submitted_by).newest_first.first
+        @review_findings = (@readiness.blocking_issues + @readiness.warnings).index_by(&:section_key)
+        @invitation_totals = {
+          staff: current_hotel.onboarding_staff_drafts.count,
+          corporate: current_hotel.onboarding_corporate_drafts.count,
+          sending: current_hotel.onboarding_staff_drafts.where(send_invitation: true).count +
+            current_hotel.onboarding_corporate_drafts.where(send_invitation: true).count,
+          held: current_hotel.onboarding_staff_drafts.where(send_invitation: false).count +
+            current_hotel.onboarding_corporate_drafts.where(send_invitation: false).count
+        }
+        @submission_idempotency_key = SecureRandom.uuid unless @presenter.read_only?
       end
     end
 
@@ -352,6 +367,8 @@ module HotelPortal
     end
 
     def update_implemented_section
+      return head :method_not_allowed if @current_entry.definition.key == "review"
+
       action = params.require(:navigation_action)
       return head :unprocessable_entity unless action.in?(%w[save_draft save_continue])
 

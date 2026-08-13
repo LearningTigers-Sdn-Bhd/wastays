@@ -20,7 +20,7 @@
               <td><%= entry["email"] %></td>
               <td class="text-muted-foreground"><%= entry["role_name"] %></td>
               <td class="text-muted-foreground">
-                <%= entry["send_invitation"] == "true" ? "Sends on approval" : "Held" %>
+                <%= entry["send_invitation"] == "true" ? "Sends after submission" : "Held" %>
               </td>
             </tr>
           <% end %>

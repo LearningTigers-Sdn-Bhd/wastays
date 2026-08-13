@@ -25,15 +25,18 @@ module Onboarding
     end
 
     def call
-      from = LifecycleCompatibility.canonical_status(@hotel.status)
-      unless TRANSITIONS.fetch(from, []).include?(@to)
-        return Result.failure("Hotel cannot transition from #{from} to #{@to}.", hotel: @hotel)
-      end
-      if from == "setup" && @to == "pending_review" && !Readiness.new(hotel: @hotel).call.ready
-        return Result.failure("Hotel onboarding is not ready for submission.", hotel: @hotel)
-      end
+      result = nil
+      @hotel.with_lock do
+        from = LifecycleCompatibility.canonical_status(@hotel.reload.status)
+        unless TRANSITIONS.fetch(from, []).include?(@to)
+          result = Result.failure("Hotel cannot transition from #{from} to #{@to}.", hotel: @hotel)
+          next
+        end
+        if readiness_required?(from) && !Readiness.new(hotel: @hotel).call.ready
+          result = Result.failure("Hotel onboarding is not ready for #{@to == 'live' ? 'approval' : 'submission'}.", hotel: @hotel)
+          next
+        end
 
-      Hotel.transaction do
         @hotel.update!(status: @to)
         @hotel.onboarding_audit_events.create!(
           user: @actor,
@@ -41,11 +44,18 @@ module Onboarding
           metadata: @metadata,
           occurred_at: Time.current
         )
+        result = Result.success(hotel: @hotel)
       end
 
-      Result.success(hotel: @hotel)
+      result
     rescue ActiveRecord::RecordInvalid => e
       Result.failure(e.record.errors.full_messages.to_sentence, hotel: @hotel)
+    end
+
+    private
+
+    def readiness_required?(from)
+      (from == "setup" && @to == "pending_review") || (from == "pending_review" && @to == "live")
     end
   end
 end

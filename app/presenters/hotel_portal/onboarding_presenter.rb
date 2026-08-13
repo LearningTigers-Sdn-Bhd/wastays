@@ -24,7 +24,7 @@ module HotelPortal
       "extra_charges" => [ "Extra charges", "Anything sold on top of the room — breakfast, parking, an airport transfer. Mandatory charges every guest pays belong in Taxes and fees instead." ],
       "discounts" => [ "Discounts", "Offers staff apply to a folio — an early bird rate, a staff rate, a goodwill rebate. Each one names the charges it is allowed to reduce." ],
       "payment_methods" => [ "Payment methods", "The ways guests can hand over money. At least one is needed before this property can open; card surcharges are set under Settings." ],
-      "corporate_accounts" => [ "Corporate accounts", "Add corporate clients, travel agents, and airlines that book with this property. Each will be invited to set up an account after approval." ],
+      "corporate_accounts" => [ "Corporate accounts", "Add corporate clients, travel agents, and airlines that book with this property. Each will be invited after you submit the property for review." ],
       "channel_manager" => [ "Channel manager", "Hand over the extranet logins for the OTAs this property sells on. The WAStays team connects each channel after approval — nothing is connected from here." ],
       "review" => [ "Review and submit", "Resolve blocking issues, review your choices, and submit the property for approval." ]
     }.freeze
@@ -48,7 +48,8 @@ module HotelPortal
       "discounts" => "onboarding-discounts-form",
       "payment_methods" => "onboarding-payment-methods-form",
       "corporate_accounts" => "onboarding-corporate-accounts-form",
-      "channel_manager" => "onboarding-channel-manager-form"
+      "channel_manager" => "onboarding-channel-manager-form",
+      "review" => "onboarding-submission-form"
     }.freeze
 
     def initialize(hotel:, navigation:, current_entry:)
@@ -63,7 +64,8 @@ module HotelPortal
     def description = SECTION_CONTENT.fetch(current_entry.definition.key).last
     def phase_label = PHASE_LABELS.fetch(current_entry.definition.phase)
     def required? = current_entry.definition.required
-    def read_only? = Onboarding::LifecycleCompatibility.canonical_status(hotel.status) == "pending_review"
+    def read_only? = Onboarding::LifecycleCompatibility.canonical_status(hotel.status).in?(%w[pending_review live])
+    def review? = current_entry.definition.key == "review"
     def current_position = navigation.entries.index(current_entry) + 1
     def total_sections = navigation.entries.length
 

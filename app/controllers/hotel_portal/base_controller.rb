@@ -9,6 +9,7 @@ module HotelPortal
     before_action :authenticate_user!
     before_action :reject_corporate_user!
     before_action :ensure_hotel_access!
+    before_action :protect_pending_review_writes!
 
     helper_method :locked_hotel_portal_shell?
 
@@ -41,6 +42,15 @@ module HotelPortal
 
     def locked_hotel_portal_shell?
       current_hotel.present? && (current_hotel.onboarding? || current_hotel.status == "pending_review")
+    end
+
+    def protect_pending_review_writes!
+      return if request.get? || request.head?
+      return unless current_hotel&.status == "pending_review"
+      return if is_a?(HotelPortal::UserProfilesController) || is_a?(HotelPortal::OnboardingSubmissionsController)
+
+      redirect_to hotel_onboarding_section_path(current_hotel, section_key: "review"),
+                  alert: "Property setup is read-only while WAStays reviews it.", status: :see_other
     end
   end
 end

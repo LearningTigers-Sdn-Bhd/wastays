@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_100001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_110001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1936,6 +1936,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_100001) do
     t.index ["invitation_id"], name: "index_onboarding_corporate_drafts_on_invitation_id"
   end
 
+  create_table "onboarding_deliveries", force: :cascade do |t|
+    t.integer "attempt_count", default: 0, null: false
+    t.datetime "attempted_at"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.string "delivery_type", null: false
+    t.text "error_message"
+    t.string "idempotency_key", null: false
+    t.bigint "onboarding_submission_id", null: false
+    t.string "recipient_email"
+    t.bigint "source_id"
+    t.string "source_type"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["idempotency_key"], name: "index_onboarding_deliveries_on_idempotency_key", unique: true
+    t.index ["onboarding_submission_id"], name: "index_onboarding_deliveries_on_onboarding_submission_id"
+    t.index ["source_type", "source_id"], name: "index_onboarding_deliveries_on_source_type_and_source_id"
+    t.index ["status", "updated_at"], name: "index_onboarding_deliveries_on_status_and_updated_at"
+    t.check_constraint "delivery_type::text = ANY (ARRAY['staff_invitation'::character varying, 'corporate_invitation'::character varying, 'admin_submitted'::character varying, 'owner_changes_requested'::character varying, 'owner_approved'::character varying]::text[])", name: "onboarding_deliveries_type_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'sent'::character varying, 'held'::character varying, 'failed'::character varying]::text[])", name: "onboarding_deliveries_status_allowed"
+  end
+
   create_table "onboarding_sessions", force: :cascade do |t|
     t.datetime "completed_at"
     t.datetime "created_at", null: false
@@ -1964,6 +1986,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_100001) do
     t.index ["invitation_id"], name: "index_onboarding_staff_drafts_on_delivered_invitation", unique: true, where: "(invitation_id IS NOT NULL)"
     t.index ["invitation_id"], name: "index_onboarding_staff_drafts_on_invitation_id"
     t.index ["role_id"], name: "index_onboarding_staff_drafts_on_role_id"
+  end
+
+  create_table "onboarding_submissions", force: :cascade do |t|
+    t.string "configuration_digest", null: false
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.string "idempotency_key", null: false
+    t.jsonb "readiness_snapshot", default: {}, null: false
+    t.text "review_explanation"
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.jsonb "snapshot", default: {}, null: false
+    t.integer "snapshot_version", default: 1, null: false
+    t.string "status", default: "pending_review", null: false
+    t.datetime "submitted_at", null: false
+    t.bigint "submitted_by_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "submitted_at"], name: "index_onboarding_submissions_on_hotel_id_and_submitted_at"
+    t.index ["hotel_id"], name: "idx_onboarding_submissions_one_pending", unique: true, where: "((status)::text = 'pending_review'::text)"
+    t.index ["hotel_id"], name: "index_onboarding_submissions_on_hotel_id"
+    t.index ["idempotency_key"], name: "index_onboarding_submissions_on_idempotency_key", unique: true
+    t.index ["reviewed_by_id"], name: "index_onboarding_submissions_on_reviewed_by_id"
+    t.index ["submitted_by_id"], name: "index_onboarding_submissions_on_submitted_by_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending_review'::character varying, 'changes_requested'::character varying, 'approved'::character varying]::text[])", name: "onboarding_submissions_status_allowed"
   end
 
   create_table "ota_financial_component_mappings", force: :cascade do |t|
@@ -2855,10 +2901,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_100001) do
   add_foreign_key "onboarding_audit_events", "users"
   add_foreign_key "onboarding_corporate_drafts", "hotels"
   add_foreign_key "onboarding_corporate_drafts", "invitations"
+  add_foreign_key "onboarding_deliveries", "onboarding_submissions"
   add_foreign_key "onboarding_sessions", "hotels"
   add_foreign_key "onboarding_staff_drafts", "hotels"
   add_foreign_key "onboarding_staff_drafts", "invitations"
   add_foreign_key "onboarding_staff_drafts", "roles"
+  add_foreign_key "onboarding_submissions", "hotels"
+  add_foreign_key "onboarding_submissions", "users", column: "reviewed_by_id"
+  add_foreign_key "onboarding_submissions", "users", column: "submitted_by_id"
   add_foreign_key "ota_financial_component_mappings", "booking_sources"
   add_foreign_key "ota_financial_component_mappings", "hotels"
   add_foreign_key "ota_financial_component_mappings", "transaction_codes"

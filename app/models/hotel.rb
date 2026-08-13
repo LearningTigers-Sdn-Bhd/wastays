@@ -93,6 +93,7 @@ class Hotel < ApplicationRecord
   has_many :onboarding_sessions, dependent: :destroy
   has_many :onboarding_sections, class_name: "HotelOnboardingSection", dependent: :destroy
   has_many :onboarding_audit_events, dependent: :destroy
+  has_many :onboarding_submissions, dependent: :destroy
   has_many :onboarding_staff_drafts, dependent: :destroy
   has_many :onboarding_corporate_drafts, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
@@ -508,10 +509,6 @@ class Hotel < ApplicationRecord
   # save that changes rates gets a fresh audit on the next request.
   def setup_coverage
     @setup_coverage ||= Rates::SetupCoverage.call(hotel: self)
-  end
-
-  def submit_for_review!
-    update(status: "pending_review") if ready_for_review?
   end
 
   def tourism_tax_applicable_for?(country)

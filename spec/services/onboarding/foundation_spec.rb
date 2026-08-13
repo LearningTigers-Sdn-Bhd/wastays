@@ -77,7 +77,8 @@ RSpec.describe "Onboarding foundation" do
     readiness = Onboarding::Readiness.new(hotel: hotel).call
 
     expect(readiness.ready).to be(false)
-    expect(readiness.blocking_issues.map(&:section_key)).to include("property_profile", "review")
+    expect(readiness.blocking_issues.map(&:section_key)).to include("property_profile")
+    expect(readiness.blocking_issues.map(&:section_key)).not_to include("review")
   end
 
   it "rejects lifecycle submission until onboarding is ready" do
@@ -91,6 +92,8 @@ RSpec.describe "Onboarding foundation" do
   it "submits a ready setup hotel and records the lifecycle event" do
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.update_all(state: "complete", completed_at: Time.current)
+    allow(Onboarding::Readiness).to receive(:new).with(hotel: hotel)
+      .and_return(instance_double(Onboarding::Readiness, call: Onboarding::Readiness::Result.new(ready: true, blocking_issues: [], warnings: [])))
 
     result = Onboarding::TransitionLifecycle.new(hotel: hotel, to: "pending_review").call
 

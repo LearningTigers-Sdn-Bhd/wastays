@@ -22,8 +22,10 @@ module HotelPortal
 
       def step_label(entry, index)
         label = "#{index + 1}. #{presenter.section_title(entry)}"
-        entry.available ? label : "#{label} · Locked"
+        enabled?(entry) ? label : "#{label} · Locked"
       end
+
+      def enabled?(entry) = entry.available || entry == presenter.current_entry
 
       # Built from the presenter's hotel rather than the view's `current_hotel`,
       # so the component stays independent of controller state.

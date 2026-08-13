@@ -1,5 +1,5 @@
 class Admin::Hotels::OnboardingController < Admin::BaseController
-  before_action :set_hotel, only: [ :show, :complete, :save_period ]
+  before_action :set_hotel, only: [ :show, :request_changes, :approve, :save_period ]
 
   def index
     @hotels = Hotel.pending_review_onboarding
@@ -8,23 +8,29 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
   def show
     @sessions = @hotel.onboarding_sessions
                       .order(scheduled_at: :asc, created_at: :asc)
+    @submission = @hotel.onboarding_submissions.includes(:submitted_by, :reviewed_by, :deliveries).newest_first.first
+    @readiness = Onboarding::Readiness.new(hotel: @hotel).call
+    @configuration_unchanged = configuration_unchanged?
+    @audit_events = @hotel.onboarding_audit_events.includes(:user).order(occurred_at: :desc, id: :desc)
   end
 
-  def complete
-    start_date = params[:start_date].presence ? Time.zone.parse(params[:start_date]) : @hotel.onboarding_start_date.beginning_of_day
-    end_date = params[:end_date].presence ? Time.zone.parse(params[:end_date]).end_of_day : @hotel.onboarding_end_date.end_of_day
-
-    result = Admin::CompleteOnboarding.new(
+  def request_changes
+    result = Onboarding::RequestChanges.call(
       hotel: @hotel,
-      start_date: start_date,
-      end_date: end_date
-    ).call
+      actor: current_user,
+      section_keys: params[:section_keys],
+      explanation: params[:explanation]
+    )
 
-    if result.success?
-      redirect_to onboarding_admin_hotels_path, notice: "Onboarding for #{@hotel.name} completed successfully."
-    else
-      redirect_to onboarding_admin_hotels_path, alert: "Failed to complete onboarding: #{result.error}"
-    end
+    redirect_to onboarding_admin_hotel_path(@hotel),
+                (result.success? ? { notice: "Changes requested from the property owner." } : { alert: result.error })
+  end
+
+  def approve
+    result = Onboarding::ApproveOnboarding.call(hotel: @hotel, actor: current_user)
+
+    redirect_to onboarding_admin_hotel_path(@hotel),
+                (result.success? ? { notice: "#{@hotel.name} is now live." } : { alert: result.error })
   end
 
   def save_period
@@ -62,5 +68,12 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
 
   def set_hotel
     @hotel = Hotel.friendly.find(params[:id])
+  end
+
+  def configuration_unchanged?
+    return false unless @submission
+
+    current_digest = Onboarding::SubmissionSnapshot.call(hotel: @hotel).digest
+    ActiveSupport::SecurityUtils.secure_compare(current_digest, @submission.configuration_digest)
   end
 end

@@ -185,7 +185,8 @@ Rails.application.routes.draw do
       end
       member do
         get :onboarding, to: "hotels/onboarding#show"
-        post :complete_onboarding, to: "hotels/onboarding#complete"
+        post "onboarding/request_changes", to: "hotels/onboarding#request_changes", as: :request_onboarding_changes
+        post "onboarding/approve", to: "hotels/onboarding#approve", as: :approve_onboarding
         post :save_onboarding_period, to: "hotels/onboarding#save_period"
         post :approve, to: "hotels/status#approve"
         post :suspend, to: "hotels/status#suspend"
@@ -288,8 +289,8 @@ Rails.application.routes.draw do
     get "onboarding", to: "onboarding#index", as: :onboarding
     get "onboarding/:section_key", to: "onboarding#show", as: :onboarding_section
     patch "onboarding/:section_key", to: "onboarding#update"
+    resource :onboarding_submission, only: :create
     get "dashboard", to: "dashboard#index", as: :dashboard
-    post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resources :onboarding_sessions, only: [ :index ] do
       member do

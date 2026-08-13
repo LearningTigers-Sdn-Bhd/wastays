@@ -126,11 +126,6 @@
                     Manage
                   <% end %>
 
-                  <% unless is_live_or_approved %>
-                    <%= form_with url: complete_onboarding_admin_hotel_path(hotel), id: "complete-form-#{hotel.id}", class: "contents" do |f| %>
-                      <%= f.submit "Complete", class: "inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-emerald-700", data: { turbo_confirm: "Are you sure you want to mark onboarding as completed for #{hotel.name}?" } %>
-                    <% end %>
-                  <% end %>
                 </div>
               </td>
             </tr>

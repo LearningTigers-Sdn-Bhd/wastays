@@ -1,46 +1,192 @@
-<div class="w-full space-y-6">
+<div class="w-full space-y-8">
   <div>
-    <%= link_to onboarding_admin_hotels_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground" do %>
-      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Back to Onboarding Tracker
+    <%= render PanelsUI::Button.new(label: "Back to onboarding queue", href: onboarding_admin_hotels_path, variant: :ghost, size: :sm) do %>
+      <%= app_icon "arrow-left", aria: { hidden: "true" } %>
+      <span>Back to onboarding queue</span>
     <% end %>
   </div>
 
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-    <!-- Main Column: Training Sessions -->
-    <div class="space-y-6 xl:col-span-12">
-      <!-- Hotel Header -->
-      <section class="rounded-2xl border border-border bg-card shadow-sm">
-        <div class="px-6 py-6 sm:px-8">
-          <%= render PanelsUI::PageHeader.new(
-                title: safe_join([
-                  @hotel.name,
-                  tag.span(@hotel.status.titleize, class: "inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200")
-                ], " ")) do |header| %>
-            <% header.with_caption do %>
-              <%= @hotel.city %>, <%= @hotel.country %>
-            <% end %>
+  <%= render PanelsUI::PageHeader.new(
+        title: @hotel.name,
+        description: [ @hotel.city, @hotel.country ].compact_blank.join(", ")) do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Badge.new(label: @hotel.status.humanize, variant: @hotel.status == "live" ? :success : :warning) %>
+    <% end %>
+  <% end %>
+
+  <% if @submission.blank? %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "No new onboarding submission") do |alert| %>
+      <% alert.with_description { "This property reached the legacy review queue without a versioned setup submission." } %>
+    <% end %>
+  <% else %>
+    <%= render PanelsUI::Alert.new(
+          tone: (@readiness.ready && @configuration_unchanged ? :success : :warning),
+          title: (@readiness.ready && @configuration_unchanged ? "Ready to launch" : "Review before launch")) do |alert| %>
+      <% alert.with_description do %>
+        Submitted by <%= @submission.submitted_by.name %> on <%= l(@submission.submitted_at, format: :long) %>.
+        <%= @configuration_unchanged ? "The current setup matches this submission." : "The property setup changed after submission." %>
+      <% end %>
+    <% end %>
+
+    <section aria-labelledby="setup-summary-heading" class="space-y-3">
+      <div>
+        <h2 id="setup-summary-heading" class="text-base font-semibold">Setup summary</h2>
+        <p class="mt-1 text-sm text-muted-foreground">The version submitted by the property owner.</p>
+      </div>
+      <div class="divide-y divide-border border-y border-border">
+        <% HotelPortal::OnboardingPresenter::PHASE_LABELS.except("review").each do |phase_key, phase_label| %>
+          <% definitions = Onboarding::SectionCatalog.all.select { |section| section.phase == phase_key } %>
+          <div class="grid gap-2 py-3 sm:grid-cols-[10rem_1fr]">
+            <h3 class="text-sm font-medium"><%= phase_label %></h3>
+            <div class="flex flex-wrap gap-2">
+              <% definitions.each do |definition| %>
+                <% state = @submission.snapshot.dig("sections", definition.key, "state") || "not_started" %>
+                <% variant = { "completed" => :success, "needs_attention" => :warning, "in_progress" => :information }.fetch(state, :neutral) %>
+                <%= render PanelsUI::Badge.new(label: "#{HotelPortal::OnboardingPresenter::SECTION_CONTENT.fetch(definition.key).first}: #{state.humanize}", variant:, size: :sm) %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </section>
+
+    <div class="grid gap-8 lg:grid-cols-2">
+      <section aria-labelledby="property-snapshot-heading" class="space-y-3">
+        <h2 id="property-snapshot-heading" class="text-base font-semibold">Property submitted</h2>
+        <% property = @submission.snapshot.fetch("property", {}) %>
+        <dl class="divide-y divide-border border-y border-border text-sm">
+          <% {
+               "Name" => property["name"], "Address" => property["address"],
+               "City" => property["city"], "Country" => property["country"],
+               "Currency" => property["default_currency"], "Sell mode" => property["sell_mode"]&.humanize,
+               "Photos" => property["photo_count"]
+             }.each do |label, value| %>
+            <div class="grid grid-cols-[8rem_1fr] gap-3 py-2">
+              <dt class="text-muted-foreground"><%= label %></dt><dd class="font-medium"><%= value.presence || "Not supplied" %></dd>
+            </div>
           <% end %>
-        </div>
+        </dl>
       </section>
 
-      <!-- Training Sessions -->
-      <section class="rounded-2xl border border-border bg-card shadow-sm">
-        <div class="border-b border-border px-6 py-5 sm:px-8 flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Onboarding & Training</h2>
-            <p class="mt-1 text-sm text-muted-foreground">Assign a team member, set a meeting link, and track the completion of the training session.</p>
-          </div>
-        </div>
-
-        <div class="px-6 py-6 sm:px-8 space-y-6">
-          <!-- Add Session Form -->
-          <%= render "admin/hotels/onboarding_session_form", session: OnboardingSession.new %>
-
-          <!-- Sessions List -->
-          <%= render "admin/hotels/onboarding_sessions_list", sessions: @sessions, hotel: @hotel %>
-        </div>
+      <section aria-labelledby="rates-snapshot-heading" class="space-y-3">
+        <h2 id="rates-snapshot-heading" class="text-base font-semibold">Rooms and rates submitted</h2>
+        <% rooms = Array(@submission.snapshot["rooms"]) %>
+        <% coverage = @submission.snapshot.dig("rates", "coverage") || {} %>
+        <dl class="divide-y divide-border border-y border-border text-sm">
+          <div class="grid grid-cols-[8rem_1fr] gap-3 py-2"><dt class="text-muted-foreground">Room types</dt><dd class="font-medium"><%= rooms.size %></dd></div>
+          <div class="grid grid-cols-[8rem_1fr] gap-3 py-2"><dt class="text-muted-foreground">Coverage</dt><dd class="font-medium"><%= coverage["configured_percentage"].presence || "Not supplied" %><%= "%" if coverage["configured_percentage"].present? %></dd></div>
+          <div class="grid grid-cols-[8rem_1fr] gap-3 py-2"><dt class="text-muted-foreground">Through</dt><dd class="font-medium"><%= coverage["end_date"].presence || "Not supplied" %></dd></div>
+        </dl>
+        <% if rooms.any? %>
+          <ul class="divide-y divide-border border-y border-border text-sm">
+            <% rooms.each do |room| %>
+              <li class="flex items-center justify-between gap-3 py-2"><span class="font-medium"><%= room["name"] %></span><span class="text-muted-foreground"><%= room["quantity"] %> rooms</span></li>
+            <% end %>
+          </ul>
+        <% end %>
       </section>
     </div>
-  </div>
+
+    <section aria-labelledby="commercial-snapshot-heading" class="space-y-3">
+      <h2 id="commercial-snapshot-heading" class="text-base font-semibold">Commercial setup submitted</h2>
+      <% commercial = @submission.snapshot.fetch("commercial", {}) %>
+      <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        <div><dt class="text-muted-foreground">Extra charges</dt><dd class="font-medium"><%= Array(commercial["extra_charges"]).size %></dd></div>
+        <div><dt class="text-muted-foreground">Discounts</dt><dd class="font-medium"><%= Array(commercial["discounts"]).size %></dd></div>
+        <div><dt class="text-muted-foreground">Payment methods</dt><dd class="font-medium"><%= Array(commercial["payment_methods"]).size %></dd></div>
+        <div><dt class="text-muted-foreground">Corporate accounts</dt><dd class="font-medium"><%= Array(commercial["corporate_accounts"]).size %></dd></div>
+      </dl>
+    </section>
+
+    <div class="grid gap-8 lg:grid-cols-2">
+      <section aria-labelledby="delivery-heading" class="space-y-3">
+        <h2 id="delivery-heading" class="text-base font-semibold">Invitation delivery</h2>
+        <% counts = @submission.deliveries.group_by(&:status).transform_values(&:size) %>
+        <dl class="grid grid-cols-2 gap-3 text-sm">
+          <div><dt class="text-muted-foreground">Sent</dt><dd class="font-medium"><%= counts.fetch("sent", 0) %></dd></div>
+          <div><dt class="text-muted-foreground">Held</dt><dd class="font-medium"><%= counts.fetch("held", 0) %></dd></div>
+          <div><dt class="text-muted-foreground">Pending</dt><dd class="font-medium"><%= counts.fetch("pending", 0) + counts.fetch("processing", 0) %></dd></div>
+          <div><dt class="text-muted-foreground">Failed</dt><dd class="font-medium"><%= counts.fetch("failed", 0) %></dd></div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="ota-heading" class="space-y-3">
+        <h2 id="ota-heading" class="text-base font-semibold">OTA handover</h2>
+        <% ota_rows = Array(@submission.snapshot["ota_handover"]) %>
+        <% if ota_rows.any? %>
+          <ul class="divide-y divide-border border-y border-border">
+            <% ota_rows.each do |row| %>
+              <li class="flex items-center justify-between gap-3 py-2 text-sm"><span><%= row["channel_name"] %></span><span class="text-muted-foreground">Credentials supplied</span></li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="text-sm text-muted-foreground">No OTA credentials were supplied.</p>
+        <% end %>
+        <p class="text-xs text-muted-foreground">Usernames and passwords are not shown in onboarding review.</p>
+      </section>
+    </div>
+  <% end %>
+
+  <section aria-labelledby="audit-history-heading" class="space-y-3 border-t border-border pt-6">
+    <div>
+      <h2 id="audit-history-heading" class="text-base font-semibold">Onboarding history</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Submission, review, and section changes in newest-first order.</p>
+    </div>
+    <% if @audit_events.any? %>
+      <ol class="divide-y divide-border border-y border-border">
+        <% @audit_events.each do |event| %>
+          <li class="grid gap-1 py-3 text-sm sm:grid-cols-[11rem_1fr_auto] sm:items-center">
+            <span class="font-medium"><%= event.event_type.humanize %></span>
+            <span class="text-muted-foreground"><%= event.section_key&.humanize || "Property lifecycle" %><%= " · #{event.user.name}" if event.user %></span>
+            <time class="text-xs text-muted-foreground" datetime="<%= event.occurred_at.iso8601 %>"><%= l(event.occurred_at, format: :short) %></time>
+          </li>
+        <% end %>
+      </ol>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No onboarding history has been recorded yet.</p>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="training-heading" class="space-y-4 border-t border-border pt-6">
+    <div>
+      <h2 id="training-heading" class="text-base font-semibold">Training</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Training is managed separately and does not block launch.</p>
+    </div>
+    <%= render "admin/hotels/onboarding_session_form", session: OnboardingSession.new %>
+    <%= render "admin/hotels/onboarding_sessions_list", sessions: @sessions, hotel: @hotel %>
+  </section>
+
+  <% if @submission&.pending_review? && @hotel.status == "pending_review" %>
+    <div class="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-5">
+      <%= render PanelsUI::Button.new(label: "Request changes", variant: :neutral, command: "show-modal", commandfor: "request-onboarding-changes-sheet") %>
+      <%= button_to "Approve & go live", approve_onboarding_admin_hotel_path(@hotel), class: "panel-button",
+                    data: { variant: "success", size: "md", turbo_confirm: "Approve #{@hotel.name} and make it live?" } %>
+    </div>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "request-onboarding-changes-sheet", side: :right, size: :md,
+          title: "Request changes", description: "Choose what the property owner must review before submitting again.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with url: request_onboarding_changes_admin_hotel_path(@hotel), id: "request-onboarding-changes-form", class: "space-y-5 py-2" do |form| %>
+          <fieldset class="space-y-3">
+            <legend class="text-sm font-medium">Sections to review</legend>
+            <% Onboarding::SectionCatalog.all.reject { |section| section.key == "review" }.each do |section| %>
+              <%= render PanelsUI::Checkbox.new(
+                    name: "section_keys[]", value: section.key,
+                    label: HotelPortal::OnboardingPresenter::SECTION_CONTENT.fetch(section.key).first,
+                    include_hidden: false) %>
+            <% end %>
+          </fieldset>
+          <%= render PanelsUI::FormField.new(form:, attribute: :explanation, label: "Explanation", required: true,
+                                             hint: "The owner sees this message in every selected section.") do |field| %>
+            <% field.with_text_area(rows: 5, placeholder: "Explain what needs to change and why.") %>
+          <% end %>
+        <% end %>
+      <% end %>
+      <% sheet.with_footer do %>
+        <button type="button" class="panel-button" data-variant="ghost" data-size="md" data-action="panels-ui--sheet#close">Cancel</button>
+        <button type="submit" form="request-onboarding-changes-form" class="panel-button" data-variant="primary" data-size="md">Request changes</button>
+      <% end %>
+    <% end %>
+  <% end %>
 </div>

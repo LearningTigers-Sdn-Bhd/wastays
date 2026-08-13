@@ -1,0 +1,68 @@
+<section aria-label="Property setup readiness" class="space-y-6">
+  <% if presenter.read_only? && @submission.present? %>
+    <%= render PanelsUI::Alert.new(
+          tone: (@submission.approved? ? :success : :info),
+          title: (@submission.approved? ? "Property setup approved" : "Submitted for review")) do |alert| %>
+      <% alert.with_description do %>
+        Submitted by <%= @submission.submitted_by.name %> on <%= l(@submission.submitted_at, format: :long) %>.
+        <%= @submission.approved? ? "This is the setup WAStays approved." : "Editing resumes only if WAStays requests changes." %>
+      <% end %>
+    <% end %>
+  <% elsif @readiness.ready %>
+    <%= render PanelsUI::Alert.new(tone: :success, title: "Ready for submission") do |alert| %>
+      <% alert.with_description { "All required setup is complete. Review the choices below, then send the property to WAStays." } %>
+    <% end %>
+  <% else %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Setup needs attention") do |alert| %>
+      <% alert.with_description { "Resolve #{@readiness.blocking_issues.size} blocking #{'issue'.pluralize(@readiness.blocking_issues.size)} before submitting." } %>
+    <% end %>
+  <% end %>
+
+  <% presenter.phases.reject { |phase| phase.key == "review" }.each do |phase| %>
+    <section aria-labelledby="review-phase-<%= phase.key %>" class="space-y-2">
+      <h2 id="review-phase-<%= phase.key %>" class="text-base font-semibold"><%= phase.label %></h2>
+      <div class="divide-y divide-border border-y border-border">
+        <% phase.entries.each do |entry| %>
+          <% finding = @review_findings[entry.definition.key] %>
+          <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0 space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-sm font-medium"><%= presenter.section_title(entry) %></span>
+                <%= render PanelsUI::Badge.new(
+                      label: finding ? (finding.severity == :blocking ? "Needs attention" : "Deferred") : onboarding_state_label(entry.record.state),
+                      variant: finding&.severity == :blocking ? :destructive : onboarding_state_variant(entry.record.state),
+                      size: :sm) %>
+              </div>
+              <% if finding %><p class="text-xs text-muted-foreground"><%= finding.message %></p><% end %>
+            </div>
+            <% unless presenter.read_only? %>
+              <%= render PanelsUI::Button.new(
+                    label: finding&.severity == :blocking ? "Fix" : "View",
+                    href: hotel_onboarding_section_path(current_hotel, section_key: entry.definition.route_name),
+                    variant: :ghost, size: :sm) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <section aria-labelledby="invitation-summary-heading" class="space-y-3">
+    <div>
+      <h2 id="invitation-summary-heading" class="text-base font-semibold">Invitations after submission</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Invitations marked to send are processed after the submission succeeds. Held invitations are created without sending email.</p>
+    </div>
+    <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+      <div><dt class="text-muted-foreground">Staff</dt><dd class="font-medium"><%= @invitation_totals[:staff] %></dd></div>
+      <div><dt class="text-muted-foreground">Corporate</dt><dd class="font-medium"><%= @invitation_totals[:corporate] %></dd></div>
+      <div><dt class="text-muted-foreground">Sending</dt><dd class="font-medium"><%= @invitation_totals[:sending] %></dd></div>
+      <div><dt class="text-muted-foreground">Held</dt><dd class="font-medium"><%= @invitation_totals[:held] %></dd></div>
+    </dl>
+  </section>
+
+  <% unless presenter.read_only? %>
+    <%= form_with url: hotel_onboarding_submission_path(current_hotel), method: :post, id: "onboarding-submission-form" do %>
+      <%= hidden_field_tag :idempotency_key, @submission_idempotency_key %>
+    <% end %>
+  <% end %>
+</section>

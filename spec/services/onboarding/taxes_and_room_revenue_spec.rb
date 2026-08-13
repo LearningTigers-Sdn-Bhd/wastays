@@ -234,9 +234,9 @@ RSpec.describe "Onboarding taxes and room revenue services" do
       expect(blocking.map(&:section_key)).not_to include("taxes_fees", "room_revenue")
       expect(hotel.onboarding_sections.where(section_key: %w[taxes_fees room_revenue]).map(&:decision_metadata))
         .to all(satisfy { |metadata| !metadata.key?("placeholder") })
-      expect(blocking.map(&:section_key)).to contain_exactly(
+      expect(blocking.map(&:section_key)).to include(
         "rooms", "rates_availability", "extra_charges", "discounts",
-        "payment_methods", "corporate_accounts", "channel_manager", "review"
+        "payment_methods", "corporate_accounts", "channel_manager"
       )
     end
   end

@@ -5,6 +5,11 @@ module Onboarding
     Result = ApplicationResult.define(:section)
     PRESET_SLUGS = %w[hotel_owner general_manager front_desk housekeeper].freeze
 
+    def self.permission_fingerprint(roles)
+      ordered = roles.sort_by { |role| PRESET_SLUGS.index(role.slug) }
+      Digest::SHA256.hexdigest(ordered.to_h { |role| [ role.slug, role.permissions.map(&:slug).sort ] }.to_json)
+    end
+
     def initialize(hotel:, actor:, confirmed:)
       @hotel = hotel
       @actor = actor
@@ -39,7 +44,7 @@ module Onboarding
     end
 
     def permission_fingerprint
-      Digest::SHA256.hexdigest(roles.to_h { |role| [ role.slug, role.permissions.map(&:slug).sort ] }.to_json)
+      self.class.permission_fingerprint(roles)
     end
 
     def section

@@ -1,145 +1,82 @@
 # Phase 10 — Review, submission, and invitations
 
-Read `docs/onboarding/handoffs/README.md` first for the shared pattern and rules, then
-`REMAINING_WORK.md` for the verified state of the branch.
+Implemented on `feat/onboarding-shell` on 2026-08-13 together with Phase 11. This file
+describes the delivered code, not the earlier proposal.
 
-> **Partly built since this brief was written.** `Onboarding::DeliverInvitations` now
-> exists and solves the idempotency requirement below for **both** staff and corporate
-> drafts (`invitation_id` + `delivered_at` per draft, `undelivered` scope, one transaction
-> per draft, mail enqueued outside it). It has no production caller yet. Read it before
-> designing anything in the "Idempotency" section — that problem is solved, only the wiring
-> is left. What remains is the `review` section itself, a submission service joining
-> `TransitionLifecycle` to `DeliverInvitations`, and admin notification.
+## Delivered outcome
 
-## Goal
+An owner sees a grouped readiness ledger, submits through one idempotent endpoint, and
+enters `pending_review`. Submission creates an immutable, versioned, secret-free snapshot
+and durable delivery records in the same transaction. Invitations and lifecycle email are
+processed after commit and remain retryable if external delivery fails.
 
-An owner can review the full readiness report, submit onboarding safely, and have queued
-invitations delivered exactly once.
+## Main implementation
 
-`PLAN.md` §"Phase 10" is the scope authority.
+- `OnboardingSubmission` stores submitter/reviewer, status, idempotency key, submitted and
+  reviewed timestamps, readiness snapshot, versioned configuration snapshot, digest, and
+  review explanation. Submitted fields are read-only after creation.
+- A partial unique database index permits only one `pending_review` submission per hotel.
+- `OnboardingDelivery` is the application outbox for staff/corporate invitations and
+  submission/change/approval email. Each effect has a unique idempotency key, status,
+  attempts, error, and completion time.
+- `Onboarding::DispatchPendingDeliveriesJob` retries pending/failed effects and recovers a
+  delivery left `processing` by a stopped worker. `config/recurring.yml` sweeps every five
+  minutes in production and demo.
+- `Onboarding::SubmissionSnapshot` deliberately records OTA channel name and
+  `credentials_supplied` only. It never reads or serializes the encrypted username or
+  password. Delivery JSON never contains invitation tokens or credentials.
+- `Onboarding::SubmitOnboarding` locks and reloads the hotel, reruns readiness, completes
+  Review, creates the submission and outbox effects, transitions to `pending_review`, and
+  writes the lifecycle audit event in one transaction. Effects enqueue after commit.
+- Reusing the same idempotency key returns the successful submission. A different key
+  while a pending submission exists returns that submission and creates nothing new.
+- `HotelPortal::BaseController` rejects hotel mutations during `pending_review`; safe reads,
+  profile/security, logout, and the idempotent submission response remain reachable.
+- The old dashboard submission action and route were removed. The dashboard now sends the
+  owner to `Review and submit` through `Continue property setup`.
 
-## Prerequisite
+## Readiness contract
 
-All twelve preceding sections implemented. This phase is the one that turns the shell's
-placeholder scaffolding into a real gate, so it genuinely cannot run early.
+Review does not block itself. Findings have stable error codes and staff-facing messages.
+Readiness verifies current domain data as well as section state:
 
-## Deliverables
+- complete property data and featured photo;
+- the four standard roles and the permission fingerprint last confirmed by the owner;
+- explicit staff and optional-section decisions;
+- current tax confirmation and room-revenue tax fingerprint;
+- at least one operationally valid room type;
+- sell-mode pricing and one-year setup coverage;
+- at least one active payment method.
 
-- Group findings by phase
-- Distinguish blocking issues, warnings, complete, skipped, and needs attention
-- Link each finding to its owning page
-- Re-run readiness **server-side** on submission
-- Send queued staff invitations only after successful submission
-- Send requested corporate invitations after successful submission
-- Change the hotel to `pending_review` atomically with submission records
-- Make submitted onboarding read-only
-- Notify admins
+`ConfirmRolePresets.permission_fingerprint` is the single calculation used at save and at
+readiness time. Role order is the preset order (`hotel_owner`, `general_manager`,
+`front_desk`, `housekeeper`), not alphabetical order. Changing the ordering changes the
+digest and will falsely mark a saved section stale, so do not duplicate this calculation.
 
-## What already exists
+## Invitation semantics
 
-`Onboarding::Readiness` (`app/services/onboarding/readiness.rb`) already returns
-`Result(ready:, blocking_issues:, warnings:)` with `Finding(section_key:, severity:, message:)`.
-Its current messages are generic ("Complete this required section."). This phase should
-enrich findings with section-specific detail and phase grouping — the `Finding` struct
-already carries `section_key`, so grouping by `SectionCatalog.fetch(key).phase` and linking
-to `onboarding_section_path` is straightforward.
+- Drafts marked Send are processed after successful submission.
+- Held drafts become invitation records without sending email.
+- Acceptance never blocks admin approval.
+- Retrying is application-idempotent. Do not claim mathematical exactly-once email across
+  an external provider crash boundary.
+- Submission alerts go to a deliverable assigned salesperson address plus deduplicated
+  superadmins. Generated `.local` salesperson addresses are excluded.
+- Owner lifecycle messages go to all active Hotel Owner accesses for the property.
 
-**Critically, `Readiness` treats `decision_metadata["placeholder"]` as blocking.** That is
-the mechanism preventing submission while stub sections remain. When every phase is
-implemented, no section should carry that flag — verify this explicitly, because a leftover
-placeholder is a silent submission blocker.
+## Owner screen
 
-`Onboarding::TransitionLifecycle` (`app/services/onboarding/transition_lifecycle.rb`)
-already:
+The Review page groups all setup sections by phase, shows status/finding badges, direct
+Fix/View links, warnings, and staff/corporate invitation totals. In `pending_review` it is
+read-only and remains reachable even though earlier steps are locked.
 
-- enforces `setup -> pending_review` and re-runs `Readiness` server-side inside the guard
-- writes the status change and a `submitted` audit event in one transaction
-- rejects the transition when readiness fails
+## Validation completed
 
-So the lifecycle half of submission is built. This phase adds the **side effects**:
-invitations and admin notification, atomically with the transition.
+- Focused onboarding group: 230 examples, 0 failures.
+- `bin/test hotel_management`: 353 examples, 0 failures.
+- RuboCop: no offenses.
+- Brakeman, Bundle Audit, Importmap Audit, and Tailwind build passed.
+- A later full parallel suite was stopped at the user's request after unrelated existing
+  room-number factory and legacy expectation failures; system/browser coverage was not run.
 
-## Idempotency is the hard requirement
-
-"Delivery must be idempotent so retries do not send duplicate invitations or duplicate
-submission effects."
-
-`IMPLEMENTATION_MAP.md` §8 item 11 states the open problem directly: staff drafts are
-stored in `onboarding_staff_drafts` without delivery, and **this phase must define an
-idempotent draft-to-invitation delivery marker before sending them.** Phase 8 was asked to
-settle the equivalent question for corporate invitation drafts — check what it chose and
-stay consistent.
-
-Design guidance: a per-draft `delivered_at` (or an invitation foreign key on the draft) is
-simpler and more auditable than a per-submission flag, because it survives partial
-delivery. Sending must be resumable, not all-or-nothing-from-scratch.
-
-Note the transactional tension: the status transition must be atomic, but invitation
-delivery involves outbound mail and should not sit inside that transaction. The usual
-resolution is to commit the transition and submission records, then enqueue delivery jobs
-that mark each draft delivered as they succeed. Confirm the approach with the user before
-building it.
-
-## Invitation services
-
-| Need | Reuse | Note |
-|---|---|---|
-| Staff invitations | `StaffInvitations::CreateService`, `ResendService` | Sends immediately — call only after submission |
-| Corporate invitations | `CorporateInvitations::CreateService`, `ResendService` | Same |
-| Token model | `Invitation` (`app/models/invitation.rb`) | SHA-256 digest, 7-day expiry, rotation on resend |
-
-`IMPLEMENTATION_MAP.md` §6 flags a semantic trap: existing staff acceptance always creates
-a user with coarse role `hotel_staff`, while owner creation uses coarse role `admin` plus an
-account-level Hotel Owner role. Do not blindly reuse the staff path for anything
-owner-shaped.
-
-## Read-only after submission
-
-The shell already handles this: `OnboardingController#update` calls `redirect_read_only`
-when `pending_review?`, and the presenter exposes `read_only?`. Verify every section
-partial delivered in phases 5–9 actually honours `@presenter.read_only?` — this is the
-first phase where that state is reachable in practice.
-
-## Admin notification
-
-Check what admin notification mechanism the app already uses before adding one. The admin
-review queue reads hotels with `pending_review` status
-(`app/models/hotel.rb:215-222`), so the queue populates itself; notification is the
-additional signal.
-
-## Open decisions — resolve before coding
-
-1. **Do existing admin training sessions remain a launch prerequisite, a warning, or an
-   independent process?** (`PLAN.md` open decision 3.) This determines whether
-   `OnboardingSession` records appear in the readiness report at all. The implementation
-   map recommends keeping them independent.
-2. **Do live hotels retain a read-only onboarding summary indefinitely or only an audit
-   record?** (`PLAN.md` open decision 5.) This affects what the review page renders
-   post-launch.
-
-## Tests
-
-- Service specs: readiness grouping and finding links; submission happy path; submission
-  refused when readiness fails; **retry sends nothing twice**
-- Request specs: review page authorization, submit action, read-only enforcement after
-  submission
-- Job specs for invitation delivery, including partial-failure resume
-- System spec: the full owner path ending in a successful submission
-
-```bash
-bin/test hotel_management
-```
-
-Phase 10 is an integration milestone — per `PLAN.md`, this is a reasonable point to run the
-full suite rather than a single domain.
-
-```bash
-bin/ci
-```
-
-## Done when
-
-An owner with every section resolved can submit; the hotel moves to `pending_review`
-atomically with its submission record; queued staff and corporate invitations are
-delivered exactly once even if submission is retried; onboarding becomes read-only; and
-admins can see the hotel in their review queue.
+Phase 11 is described in `PHASE_11_ADMIN_REVIEW.md`.

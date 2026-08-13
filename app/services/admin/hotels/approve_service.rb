@@ -11,6 +11,7 @@ module Admin
 
       def call
         reactivating = @hotel.status == "suspended" || @hotel.account.status == "suspended"
+        return Result.new(false, false, "Only suspended properties can use this reactivation action.") unless reactivating
 
         ActiveRecord::Base.transaction do
           target_account_status = if reactivating && @hotel.account.pre_suspension_status.present?
@@ -19,10 +20,10 @@ module Admin
             "active"
           end
 
-          target_hotel_status = if reactivating && @hotel.pre_suspension_status.present?
+          target_hotel_status = if @hotel.pre_suspension_status.present?
             @hotel.pre_suspension_status
           else
-            "approved"
+            "live"
           end
 
           Rails.logger.info "[ApproveService] Reactivating: #{reactivating}, Pre-Hotel-Status: #{@hotel.pre_suspension_status}, Target: #{target_hotel_status}"

@@ -299,12 +299,13 @@ is that answer — it records the same decision an explicit skip once did.
 
 On successful submission:
 
-1. Save remaining drafts.
-2. Send queued staff invitations.
-3. Send requested corporate invitations.
-4. Change the hotel to `pending_review`.
-5. Notify the admin.
-6. Make onboarding read-only until changes are requested.
+1. Lock and revalidate the current setup.
+2. Create the immutable submission snapshot and durable delivery effects.
+3. Change the hotel to `pending_review` and record the audit event in the same transaction.
+4. Make onboarding read-only until changes are requested.
+5. After commit, process queued staff/corporate invitations and notify the assigned
+   salesperson plus superadmins. Delivery failures remain retryable and do not undo the
+   submission.
 
 ## Admin review
 
@@ -317,13 +318,21 @@ The admin can:
 - Add an explanation.
 - Mark those sections `Needs attention`.
 - Notify the owner and resume them at the affected section.
+- Keep the earlier submission as immutable history; do not delete or resend invitations.
 
 ### Approve & go live
 
 - Run final server-side readiness validation.
+- Compare the current configuration digest with the submitted snapshot and block approval
+  if the property changed after submission.
 - Change the hotel to `live`.
 - Enable normal hotel portal access.
 - Enable booking eligibility and normal scheduled operations.
+- Retain the approved snapshot as the read-only onboarding summary.
+
+Training sessions remain visible and manageable in admin review but are informational and
+never block submission or launch. OTA review shows channel names and credential presence
+only, never usernames or passwords.
 
 ### Suspend
 

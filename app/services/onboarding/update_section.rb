@@ -10,12 +10,13 @@ module Onboarding
       "needs_attention" => "invalidated"
     }.freeze
 
-    def initialize(hotel:, section_key:, state:, actor: nil, metadata: {})
+    def initialize(hotel:, section_key:, state:, actor: nil, metadata: {}, event_type: nil)
       @hotel = hotel
       @definition = SectionCatalog.fetch(section_key)
       @state = state.to_s
       @actor = actor
       @metadata = metadata.to_h
+      @event_type = event_type&.to_s
     end
 
     def call
@@ -33,7 +34,7 @@ module Onboarding
         section.update!(transition_attributes)
         @hotel.onboarding_audit_events.create!(
           user: @actor,
-          event_type: EVENTS.fetch(@state),
+          event_type: @event_type.presence || EVENTS.fetch(@state),
           section_key: @definition.key,
           metadata: @metadata,
           occurred_at: Time.current

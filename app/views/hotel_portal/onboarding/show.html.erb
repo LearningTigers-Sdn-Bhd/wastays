@@ -51,7 +51,9 @@
 
   <% if @presenter.actions? %>
     <% shell.with_footer do %>
-      <% if @presenter.form_id %>
+      <% if @presenter.review? %>
+        <%= render "review_actions", presenter: @presenter %>
+      <% elsif @presenter.form_id %>
         <%= render "form_actions", presenter: @presenter, form_id: @presenter.form_id %>
       <% else %>
         <%= render "actions", presenter: @presenter %>

@@ -9,8 +9,8 @@
     <% tabs.with_tab(
          name: step_name(entry),
          label: step_label(entry, index),
-         href: (step_path(entry) if entry.available),
-         disabled: !entry.available
+         href: (step_path(entry) if enabled?(entry)),
+         disabled: !enabled?(entry)
        ) %>
   <% end %>
 <% end %>

@@ -31,6 +31,9 @@ production:
   financial_observability:
     class: FinancialObservabilityJob
     schedule: every hour
+  retry_onboarding_deliveries:
+    class: Onboarding::DispatchPendingDeliveriesJob
+    schedule: every 5 minutes
 
 demo:
   release_expired_holds:
@@ -51,3 +54,6 @@ demo:
   financial_observability:
     class: FinancialObservabilityJob
     schedule: every hour
+  retry_onboarding_deliveries:
+    class: Onboarding::DispatchPendingDeliveriesJob
+    schedule: every 5 minutes

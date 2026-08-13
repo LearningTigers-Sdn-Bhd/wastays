@@ -34,6 +34,8 @@ RSpec.describe "Onboarding property and team services" do
       "confirmed_role_slugs" => Onboarding::ConfirmRolePresets::PRESET_SLUGS,
       "permission_fingerprint" => be_present
     )
+    expect(Onboarding::Readiness.new(hotel: hotel).call.blocking_issues.map(&:section_key))
+      .not_to include("roles_permissions")
   end
 
   it "keeps invalid staff rows out of persistent drafts" do
