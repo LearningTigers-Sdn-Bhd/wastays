@@ -528,7 +528,6 @@ RSpec.describe "Onboarding commercial setup" do
         "email" => "accounts@acme.com",
         "company_name" => "Acme Sdn Bhd",
         "account_type" => "company",
-        "relationship_type" => "direct_bill",
         "credit_limit" => "5000",
         "credit_currency" => "MYR",
         "payment_terms_days" => "30"
@@ -553,6 +552,13 @@ RSpec.describe "Onboarding commercial setup" do
       expect(draft).not_to be_delivered
       expect(hotel.onboarding_sections.find_by(section_key: "corporate_accounts").decision_metadata)
         .not_to have_key("placeholder")
+    end
+
+    it "keeps onboarding corporate accounts on direct bill when a forged row says otherwise" do
+      result = save(entries: { "draft-1" => draft_entry("relationship_type" => "standard") }, complete: true)
+
+      expect(result.success?).to be(true)
+      expect(hotel.onboarding_corporate_drafts.sole.relationship_type).to eq("direct_bill")
     end
 
     it "does not enqueue an invitation email" do

@@ -254,6 +254,23 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
       expect(response.body).to include("No invitations are sent yet")
     end
 
+    it "uses the page heading once and explains repeated fields from their column headers" do
+      get hotel_onboarding_section_path(hotel, section_key: "corporate_accounts")
+
+      document = Nokogiri::HTML(response.body)
+
+      expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Corporate accounts" ])
+      expect(document.at_css("section[aria-label='Corporate accounts']")).to be_present
+      expect(document.at_css("h2#onboarding-corporate-accounts-heading")).to be_nil
+      expect(document.at_css("thead th button[aria-label='Email: Where the invitation goes after approval.']")).to be_present
+      expect(document.at_css("thead th button[aria-label='Credit limit: Leave blank for no limit.']")).to be_present
+      expect(document.css("thead th").map { |header| header.text.strip }).not_to include("Billing")
+      expect(document.at_css("[name*='[relationship_type]']")).to be_nil
+      expect(document.at_css("input[name*='[credit_limit]'][placeholder='e.g. 5000.00']")).to be_present
+      expect(document.at_css("input[name*='[payment_terms_days]'][placeholder='e.g. 30']")).to be_present
+      expect(document.css("tbody .panel-form-field__hint")).to be_empty
+    end
+
     it "queues a draft and advances to the channel manager without sending" do
       expect {
         patch hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"),
@@ -261,14 +278,15 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
                 navigation_action: "save_continue",
                 corporate_draft_entries: { "0" => {
                   "email" => "accounts@acme.com", "company_name" => "Acme Sdn Bhd",
-                  "account_type" => "company", "relationship_type" => "direct_bill",
+                  "account_type" => "company",
                   "credit_currency" => "MYR", "payment_terms_days" => "30", "_destroy" => "false"
                 } }
               }
       }.not_to change(Invitation, :count)
 
       expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "channel_manager"))
-      expect(hotel.onboarding_corporate_drafts.sole.email).to eq("accounts@acme.com")
+      expect(hotel.onboarding_corporate_drafts.sole)
+        .to have_attributes(email: "accounts@acme.com", relationship_type: "direct_bill")
     end
 
     it "records an explicit skip decision" do

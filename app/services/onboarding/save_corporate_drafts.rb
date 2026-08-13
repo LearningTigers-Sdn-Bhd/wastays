@@ -18,7 +18,7 @@ module Onboarding
 
     ENTRY_FIELDS = %w[
       id client_key _destroy
-      email company_name account_type relationship_type
+      email company_name account_type
       credit_limit credit_currency payment_terms_days
     ].freeze
 
@@ -73,6 +73,11 @@ module Onboarding
       retained_rows.each_with_index do |row, index|
         draft = row["id"].present? ? existing_drafts.fetch(row["id"].to_s) : hotel.onboarding_corporate_drafts.new
         draft.assign_attributes(row.slice(*ENTRY_FIELDS).except("id", "client_key", "_destroy"))
+        # A corporate account added during property setup is, by definition,
+        # billed to the company. The normal settings portal can support other
+        # relationships later; onboarding should not ask the owner to restate
+        # the decision that brought the account here.
+        draft.relationship_type = "direct_bill"
 
         # What submission will ask before it sends. Failing here means the owner
         # can fix it now instead of after review.
