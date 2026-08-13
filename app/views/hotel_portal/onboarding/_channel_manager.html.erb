@@ -1,0 +1,90 @@
+<%# The setup shell already owns this section's heading and introduction. Keep
+    the body focused on the decision and the records rather than heading the
+    same page twice. %>
+<% provider = current_hotel.preferred_channel_manager %>
+<%# "undecided" and "none" are real stored answers from admin hotel creation, not
+    a provider — neither names something to connect to. %>
+<% provider_named = provider.present? && %w[undecided none].exclude?(provider) %>
+<section aria-label="Channel manager" class="space-y-5">
+  <% if presenter.read_only? %>
+    <% if @ota_credential_entries.any? %>
+      <%= render PanelsUI::Table.new(caption: "OTA logins", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Channel</th>
+            <th scope="col">Property ID</th>
+            <th scope="col">Username</th>
+            <th scope="col">Password</th>
+            <th scope="col">Market manager</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @ota_credential_entries.each do |entry| %>
+            <tr>
+              <td class="font-medium"><%= entry["channel_name"] %></td>
+              <td class="text-muted-foreground"><%= entry["property_code"].presence || "—" %></td>
+              <td class="text-muted-foreground"><%= entry["username"].presence || "—" %></td>
+              <td class="text-muted-foreground"><%= entry["password_saved"] == "true" ? "On file" : "Not provided" %></td>
+              <td class="text-muted-foreground"><%= entry["market_manager_name"].presence || "—" %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No OTA logins were provided.</p>
+    <% end %>
+
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "channel_manager"),
+                  method: :patch, id: "onboarding-channel-manager-form" do %>
+      <%# An owner is being asked to type the passwords to their live revenue
+          channels. Say who reads them and what happens next, on the page where
+          they type them — not in a help article they will not open. %>
+      <%= render PanelsUI::Alert.new(tone: :info, title: "Only the WAStays team reads these") do |alert| %>
+        <% alert.with_description do %>
+          Passwords are stored encrypted and are never shown again in this portal — you can replace one,
+          but nobody at your property can read it back.
+          <% if provider_named %>
+            WAStays set this property up for <%= provider.titleize %> and will connect each channel to it after approval.
+          <% else %>
+            The WAStays team will use them to connect each channel after approval.
+          <% end %>
+          Nothing is connected from this page.
+        <% end %>
+      <% end %>
+
+      <div class="mt-4">
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "OTA logins",
+              add_label: "Add OTA login",
+              empty: "No OTA logins yet",
+              empty_description: "If this property does not sell through any OTA, leave this empty and continue.",
+              empty_icon: "globe",
+              class: "md:min-w-[72rem]") do |table| %>
+          <% table.with_column(label: "Channel", required: true,
+                               hint: "The extranet these details sign in to, such as Booking.com.") %>
+          <% table.with_column(label: "Property ID", hint: "Your property's own code on that channel.") %>
+          <% table.with_column(label: "Username") %>
+          <% table.with_column(label: "Password", hint: "Stored encrypted. Leave blank to keep the one already saved.") %>
+          <% table.with_column(label: "Market manager") %>
+          <% table.with_column(label: "Market manager phone") %>
+          <% table.with_column(label: "Market manager email") %>
+
+          <% @ota_credential_entries.each_with_index do |entry, index| %>
+            <% table.with_row(
+                 remove_label: "Remove #{entry['channel_name'].presence || 'this OTA login'}",
+                 persisted: entry["id"].present?,
+                 key: entry["client_key"]) do %>
+              <%= render "ota_credential_row", entry: entry, index: index %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this OTA login") do %>
+            <%= render "ota_credential_row", entry: {}, index: "NEW_RECORD" %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

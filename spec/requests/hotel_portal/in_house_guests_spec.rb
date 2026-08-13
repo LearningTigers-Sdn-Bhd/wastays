@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::InHouseGuests", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user) }
 
   before do

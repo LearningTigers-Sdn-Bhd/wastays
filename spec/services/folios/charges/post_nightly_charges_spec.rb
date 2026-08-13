@@ -51,14 +51,14 @@ RSpec.describe Folios::Charges::PostNightlyCharges do
       booking: booking,
       subtotal: 999.0,
       nightly_rate_snapshot: {
-        business_date.iso8601 => { "price" => "250.00", "source" => "room_rate" },
+        business_date.iso8601 => { "price" => "250.00", "posting_price" => "240.00", "source" => "room_rate" },
         (business_date + 1.day).iso8601 => { "price" => "300.00", "source" => "room_rate" }
       })
     folio = create(:booking_folio, hotel: hotel, booking: booking)
 
     described_class.call(night_audit: night_audit, user: user)
 
-    expect(folio.folio_transactions.charge.find_by(category: "accommodation").amount).to eq(250.0)
+    expect(folio.folio_transactions.charge.find_by(category: "accommodation").amount).to eq(240.0)
     tax = folio.folio_transactions.charge.find_by(category: "tax")
     expect(tax.amount).to eq(20.0)
     expect(tax.metadata["tax_line"]["source"]).to eq("hotel_sst")
@@ -382,5 +382,45 @@ RSpec.describe Folios::Charges::PostNightlyCharges do
     forecast = folio.folio_forecasted_charges.sole
     expect(forecast.reload.status).to eq("actualized")
     expect(forecast.actualizing_transaction).to eq(existing_transaction)
+  end
+
+  it "posts OTA financial components with their transaction codes and does not double inclusive tax" do
+    booking = create(:booking, hotel: hotel, status: "checked_in", check_in: business_date, check_out: business_date + 1.day)
+    room = create(:booking_room, booking: booking, subtotal: 999)
+    folio = create(:booking_folio, hotel: hotel, booking: booking)
+    snapshot = create(:ota_financial_snapshot, hotel: hotel, booking: booking,
+      original_currency: booking.currency, currency: booking.currency)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    fee_code = hotel.transaction_codes.find_by!(system_key: "ota_unmapped_fee")
+    tax_code = hotel.transaction_codes.find_by!(system_key: "ota_unmapped_tax")
+    rebate_code = hotel.transaction_codes.find_by!(system_key: "rebate")
+
+    create(:ota_financial_component, ota_financial_snapshot: snapshot, booking: booking,
+      booking_room: room, transaction_code: room_code, stable_key: "room/night", amount: 125,
+      posting_amount: 115, gross_effect_amount: 125)
+    create(:ota_financial_component, ota_financial_snapshot: snapshot, booking: booking,
+      booking_room: nil, transaction_code: fee_code, component_kind: "service", stable_key: "service/cleaning",
+      provider_name: "Cleaning", amount: 20, posting_amount: 20, gross_effect_amount: 20)
+    create(:ota_financial_component, ota_financial_snapshot: snapshot, booking: booking,
+      booking_room: nil, transaction_code: tax_code, component_kind: "tax", stable_key: "tax/inclusive",
+      provider_name: "VAT", amount: 10, posting_amount: 10, gross_effect_amount: 0, is_inclusive: true)
+    create(:ota_financial_component, ota_financial_snapshot: snapshot, booking: booking,
+      booking_room: nil, transaction_code: rebate_code, component_kind: "discount", stable_key: "discount/member",
+      provider_name: "Member", amount: 5, posting_amount: -5, gross_effect_amount: -5)
+
+    Folios::Forecasts::SyncForecastedCharges.call(booking_folio: folio)
+    expect { described_class.call(night_audit: night_audit, user: user) }
+      .to change(FolioTransaction, :count).by(4)
+    expect { described_class.call(night_audit: night_audit, user: user) }
+      .not_to change(FolioTransaction, :count)
+
+    room_charge = folio.folio_transactions.find_by!(transaction_code: room_code)
+    discount = folio.folio_transactions.find_by!(transaction_code: rebate_code)
+    expect(room_charge.amount).to eq(115.to_d)
+    expect(room_charge.metadata).to include("ota_component_stable_key" => "room/night", "posting_amount" => "115.0")
+    expect(discount).to have_attributes(transaction_type: "adjustment", category: "discount", amount: -5.to_d)
+    expect(folio.folio_transactions.find_by!(transaction_code: tax_code).amount).to eq(10.to_d)
+    expect(folio.folio_transactions.where(transaction_code: [ room_code, tax_code ]).sum(:amount)).to eq(125.to_d)
+    expect(folio.folio_forecasted_charges.actualized.count).to eq(4)
   end
 end

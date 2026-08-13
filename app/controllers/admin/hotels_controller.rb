@@ -7,13 +7,14 @@ class Admin::HotelsController < Admin::BaseController
   before_action :set_breadcrumbs, only: [ :show, :new, :edit, :create, :update ]
 
   def index
-    @all_hotels = HotelsQuery.new.call(params)
-    @hotels = @all_hotels.page(params[:page]).per(25)
-
-    respond_to do |format|
-      format.html
-      format.turbo_stream
-    end
+    page_size = Admin::Hotels::IndexPresenter.normalize_page_size(params[:per_page])
+    hotels = HotelsQuery.new.call(params).page(params[:page]).per(page_size)
+    @presenter = Admin::Hotels::IndexPresenter.new(
+      hotels: hotels,
+      summary: HotelsSummaryQuery.new.call,
+      status: params[:status],
+      page_size: page_size
+    )
   end
 
   def show
@@ -22,16 +23,19 @@ class Admin::HotelsController < Admin::BaseController
 
   def new
     @form = Admin::Hotels::CreateForm.new
-    @hotel = @form.hotel
   end
 
   def create
     @form = Admin::Hotels::CreateForm.new(create_params)
 
-    if @form.save
-      redirect_to admin_hotel_path(@form.hotel), notice: "Hotel created successfully. Default password: #{HotelOps::CreateHotel::DEFAULT_PASSWORD}."
+    if @form.save(actor: current_user)
+      message = if @form.create_and_onboard?
+        "Hotel created and the owner invitation was queued."
+      else
+        "Hotel created without sending the owner invitation."
+      end
+      complete_create(destination: admin_hotel_path(@form.hotel), notice: message)
     else
-      @hotel = @form.hotel
       render :new, status: :unprocessable_content
     end
   end
@@ -78,25 +82,35 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def create_params
-    {
-      account_name: params.dig(:account, :name),
-      user_name: params.dig(:user, :name),
-      user_email: params.dig(:user, :email),
-      hotel_name: params.dig(:hotel, :name),
-      address: params.dig(:hotel, :address),
-      city: params.dig(:hotel, :city),
-      country: params.dig(:hotel, :country),
-      star_rating: params.dig(:hotel, :star_rating),
-      salesperson_id: params.dig(:hotel, :salesperson_id),
-      preferred_channel_manager: params.dig(:hotel, :preferred_channel_manager),
-      amenities: params.dig(:hotel, :amenities),
-      allow_pax_pricing: params.dig(:hotel, :allow_pax_pricing),
-      allow_boat_information: params.dig(:hotel, :allow_boat_information)
-    }
+    params.fetch(:admin_hotels_create_form, {}).permit(
+      :account_name,
+      :owner_name,
+      :owner_email,
+      :hotel_name,
+      :sell_mode,
+      :plan_id,
+      :preferred_channel_manager,
+      :salesperson_id,
+      :creation_action
+    )
+  end
+
+  def complete_create(destination:, notice:)
+    respond_to do |format|
+      format.turbo_stream do
+        flash[:notice] = notice
+        render body: helpers.turbo_stream_action_tag(
+          :complete_sheet,
+          target: "admin_hotel_action_sheet",
+          url: destination
+        ), content_type: Mime[:turbo_stream]
+      end
+      format.html { redirect_to destination, notice: notice, status: :see_other }
+    end
   end
 
   def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, :pax_pricing_only, :allow_pax_pricing, :allow_boat_information, amenities: [])
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, :sell_mode, :allow_boat_information, amenities: [])
   end
 
   def salesperson_name_param

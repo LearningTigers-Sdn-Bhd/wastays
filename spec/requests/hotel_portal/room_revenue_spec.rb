@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "HotelPortal::RoomRevenue", type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "registered", sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10) }
+  let(:hotel) { create(:hotel, account: account, status: "setup", sst_enabled: true, tourism_tax_enabled: true, tourism_tax_amount: 10) }
   let!(:service_charge) { create(:hotel_tax, hotel: hotel, name: "Service Charge", rate_type: "percentage", amount: 10.0) }
   let!(:inactive_fee) { create(:hotel_tax, hotel: hotel, name: "Inactive Levy", rate_type: "flat", amount: 2.0, enabled: false) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }

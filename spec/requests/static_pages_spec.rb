@@ -82,7 +82,7 @@ RSpec.describe "StaticPages", type: :request do
     it "shows at most six featured stays" do
       hotels = Array.new(7) do |index|
         create(:hotel,
-               status: "approved",
+               status: "live",
                name: "Featured Hotel #{index + 1}",
                city: "Kuala Lumpur",
                country: "Malaysia")
@@ -109,8 +109,8 @@ RSpec.describe "StaticPages", type: :request do
 
     it "does not render easy plan hotels in featured stays" do
       easy_plan = create(:plan, slug: "easy", name: "Easy")
-      easy_hotel = create(:hotel, status: "approved", name: "Easy Hidden", city: "Kuala Lumpur", country: "Malaysia", plan: easy_plan)
-      visible_hotel = create(:hotel, status: "approved", name: "Visible Explore", city: "Kuala Lumpur", country: "Malaysia")
+      easy_hotel = create(:hotel, status: "live", name: "Easy Hidden", city: "Kuala Lumpur", country: "Malaysia", plan: easy_plan)
+      visible_hotel = create(:hotel, status: "live", name: "Visible Explore", city: "Kuala Lumpur", country: "Malaysia")
 
       create(:room_type, hotel: easy_hotel, max_adults: 2)
       create(:room_type, hotel: visible_hotel, max_adults: 2)

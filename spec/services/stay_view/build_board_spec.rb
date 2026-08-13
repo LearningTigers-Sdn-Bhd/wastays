@@ -15,8 +15,8 @@ RSpec.describe StayView::BuildBoard do
   end
 
   it "builds immutable scalar view models for sequential, completed, and grouped one-room stays" do
-    deluxe = create(:room_type, hotel:, name: "Deluxe", room_numbers: %w[101 102])
-    suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
+    deluxe = create(:room_type, hotel:, name: "Deluxe", quantity: 2, room_numbers: %w[101 102])
+    suite = create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ])
     first = create(:booking, hotel:, check_in: start_date, check_out: start_date + 1.day, guest_name: "First Guest")
     completed = create(:booking, hotel:, status: "completed", check_in: start_date - 2.days, check_out: start_date + 1.day, guest_name: "Past Guest")
     group = create(:group_booking, hotel:, name: "Tour Group")
@@ -55,7 +55,7 @@ RSpec.describe StayView::BuildBoard do
   end
 
   it "excludes non-occupying booking statuses" do
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     %w[cancelled no_show pending overbooked].each do |status|
       booking = create(:booking, hotel:, status:, check_in: start_date, check_out: start_date + 2.days)
       create(:booking_room, booking:, room_type:, room_number: "101")
@@ -68,8 +68,8 @@ RSpec.describe StayView::BuildBoard do
   end
 
   it "applies filters before calculating counts" do
-    deluxe = create(:room_type, hotel:, name: "Deluxe", room_numbers: [ "101" ])
-    suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
+    deluxe = create(:room_type, hotel:, name: "Deluxe", quantity: 1, room_numbers: [ "101" ])
+    suite = create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ])
     create(:room_status, hotel:, room_type: deluxe, room_number: "101", status: "dirty")
     create(:room_status, hotel:, room_type: suite, room_number: "201", status: "ready")
     booking = create(:booking, hotel:, check_in: start_date, check_out: start_date + 2.days)
@@ -95,7 +95,7 @@ RSpec.describe StayView::BuildBoard do
   end
 
   it "builds date summaries from authoritative inventory without exposing active records" do
-    room_type = create(:room_type, hotel:, room_numbers: %w[101 102])
+    room_type = create(:room_type, hotel:, quantity: 2, room_numbers: %w[101 102])
     booking = create(:booking, hotel:, check_in: start_date, check_out: start_date + 1.day)
     create(:booking_room, booking:, room_type:, room_number: "101")
     create(:room_inventory, room_type:, date: start_date, quantity: 1, available_room_numbers: [ "102" ])
@@ -129,7 +129,7 @@ RSpec.describe StayView::BuildBoard do
   end
 
   it "ignores the removed booking status filter instead of altering occupancy" do
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     booking = create(:booking, hotel:, check_in: start_date, check_out: start_date + 2.days)
     create(:booking_room, booking:, room_type:, room_number: "101")
 
@@ -143,8 +143,8 @@ RSpec.describe StayView::BuildBoard do
   it "filters linked room types and recalculates summaries for an explicit rate plan" do
     manage_rates = Permission.find_or_create_by!(slug: "manage_rates") { |record| record.name = "Manage Rates" }
     create(:role_permission, role:, permission: manage_rates)
-    deluxe = create(:room_type, hotel:, name: "Deluxe", room_numbers: [ "101" ], base_price: 100)
-    suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ], base_price: 200)
+    deluxe = create(:room_type, hotel:, name: "Deluxe", quantity: 1, room_numbers: [ "101" ], base_price: 100)
+    suite = create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ], base_price: 200)
     flexible = create(:rate_plan, hotel:, name: "Flexible", currency: "USD")
     create(:room_type_rate_plan, room_type: deluxe, rate_plan: flexible)
     create(:room_rate, room_type: deluxe, rate_plan: flexible, date: start_date, price: 175, currency: "USD")
@@ -169,7 +169,7 @@ RSpec.describe StayView::BuildBoard do
   it "canonicalizes an unavailable rate plan to Standard" do
     manage_rates = Permission.find_or_create_by!(slug: "manage_rates") { |record| record.name = "Manage Rates" }
     create(:role_permission, role:, permission: manage_rates)
-    create(:room_type, hotel:, name: "Deluxe", room_numbers: [ "101" ])
+    create(:room_type, hotel:, name: "Deluxe", quantity: 1, room_numbers: [ "101" ])
     foreign_plan = create(:rate_plan, hotel: create(:hotel), name: "Foreign")
 
     board = described_class.call(
@@ -185,7 +185,7 @@ RSpec.describe StayView::BuildBoard do
     readiness = Permission.find_or_create_by!(slug: "view_room_readiness") { |record| record.name = "View Room Readiness" }
     role.role_permissions.delete_all
     create(:role_permission, role:, permission: readiness)
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     booking = create(:booking, hotel:, check_in: start_date, check_out: start_date + 2.days, guest_name: "Sensitive Name")
     create(:booking_room, booking:, room_type:, room_number: "101")
 
@@ -197,7 +197,7 @@ RSpec.describe StayView::BuildBoard do
   end
 
   it "publishes build metrics" do
-    create(:room_type, hotel:, room_numbers: [ "101" ])
+    create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     events = []
 
     ActiveSupport::Notifications.subscribed(->(*args) { events << ActiveSupport::Notifications::Event.new(*args) }, described_class::EVENT_NAME) do
@@ -226,7 +226,7 @@ RSpec.describe StayView::BuildBoard do
     create(:role_permission, role: current_role, permission:)
     create(:user_hotel_access, user: current_user, hotel: current_hotel, role: current_role)
     room_numbers = room_count.times.map { |index| (200 + index).to_s }
-    room_type = create(:room_type, hotel: current_hotel, room_numbers: room_numbers)
+    room_type = create(:room_type, hotel: current_hotel, quantity: room_count, room_numbers: room_numbers)
     days.times do |offset|
       create(:room_inventory, room_type:, date: start_date + offset.days, quantity: room_count)
     end

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel sidebar active aliases", type: :system do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account) }
 

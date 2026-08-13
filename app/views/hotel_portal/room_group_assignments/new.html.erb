@@ -1,0 +1,90 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = "assign-room-group-form" %>
+<%
+  room_type_choices = @room_types.map do |room_type|
+    label = room_type.room_group ? "#{room_type.name} · #{room_type.room_group.name}" : room_type.name
+    { label: label, value: room_type.id }
+  end
+%>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "assign-room-group-sheet",
+          side: :right,
+          size: :md,
+          title: "Assign Room Group",
+          description: "Choose a room group and the room categories that should move into it.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @assignment,
+                      scope: :room_group_assignment,
+                      url: hotel_room_group_assignment_path(current_hotel),
+                      method: :post,
+                      id: form_id,
+                      class: "space-y-5 py-2",
+                      data: { controller: "room-group-assignment", action: "change->room-group-assignment#toggleNewGroup" } do |form| %>
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :room_group_id,
+                label: "Room group",
+                required: true) do |field| %>
+            <% field.with_select_menu(
+                 [ { label: "Create new room group", value: "new" } ] +
+                   @room_groups.map { |group| { label: group.name, value: group.id } },
+                 selected: @assignment.room_group_id,
+                 prompt: "Select a room group",
+                 data: { room_group_assignment_target: "group" }) %>
+          <% end %>
+
+          <div data-room-group-assignment-target="newGroupField" hidden>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :new_group_name,
+                  label: "New room group name") do |field| %>
+              <% field.with_input(placeholder: "e.g. Main Tower", autocomplete: "off") %>
+            <% end %>
+          </div>
+
+          <% if @room_types.any? %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :room_type_ids,
+                  label: "Room categories",
+                  hint: "Categories already assigned to another group will move to the selected group.",
+                  required: true) do |field| %>
+              <% field.with_multi_select(
+                   room_type_choices,
+                   selected: @selected_room_type_ids,
+                   prompt: "Search and select room categories") %>
+            <% end %>
+          <% else %>
+            <%= render PanelsUI::Alert.new(tone: :warning, title: "Create a room category first", role: :status) do |alert| %>
+              <% alert.with_description { "A room group assignment needs at least one room category." } %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <% if @room_types.any? %>
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                form: form_id,
+                size: :sm,
+                data: { turbo_submits_with: "Assigning…" }) do %>
+            Assign room group
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

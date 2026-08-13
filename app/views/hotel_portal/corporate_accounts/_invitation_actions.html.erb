@@ -16,7 +16,7 @@
       turbo_frame: "corporate_accounts_results"
     }) do %>
     <%= cached_icon "send", class: "size-3.5", aria: { hidden: true } %>
-    Resend
+    <%= row.send_label %>
   <% end %>
 <% else %>
   <%= render PanelsUI::ButtonGroup.new(class: "ml-auto", data: { testid: "external-invitation-actions-#{row.id}" }) do %>
@@ -31,7 +31,7 @@
         turbo_frame: "corporate_accounts_results"
       }) do %>
       <%= cached_icon "send", class: "size-3.5", aria: { hidden: true } %>
-      Resend
+      <%= row.send_label %>
     <% end %>
 
     <%= render PanelsUI::Button.new(
@@ -43,7 +43,9 @@
         testid: "external-invitation-revoke-#{row.id}",
         turbo_method: :delete,
         turbo_frame: "corporate_accounts_results",
-        turbo_confirm: "Revoke the invitation to #{row.contact_email}?"
+        turbo_confirm: (row.sent? ?
+          "Revoke the invitation to #{row.contact_email}?" :
+          "Remove #{row.contact_email}? They were never emailed, so nothing is withdrawn.")
       }) do %>
       <%= cached_icon "trash-2", class: "size-3.5", aria: { hidden: true } %>
       Revoke

@@ -10,5 +10,12 @@ FactoryBot.define do
     name { "Invited Staff" }
     token_digest { StaffInvitation.digest("token-#{SecureRandom.hex(8)}") }
     expires_at { StaffInvitation::EXPIRY.from_now }
+    last_sent_at { Time.current }
+
+    # Queued during onboarding with the send switch off: the invitation exists,
+    # but the person has never been emailed.
+    trait :held do
+      last_sent_at { nil }
+    end
   end
 end

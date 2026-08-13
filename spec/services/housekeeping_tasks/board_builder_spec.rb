@@ -7,10 +7,10 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
   let(:hotel) { create(:hotel, account:, accounting_business_date: selected_date) }
   let(:selected_date) { Date.new(2026, 8, 15) }
   let!(:penthouse) do
-    create(:room_type, hotel:, name: "Executive Penthouse", room_number_mode: "custom", room_numbers: %w[101 102])
+    create(:room_type, hotel:, name: "Executive Penthouse", room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102])
   end
   let!(:garden_suite) do
-    create(:room_type, hotel:, name: "Garden Suite", room_number_mode: "custom", room_numbers: %w[101])
+    create(:room_type, hotel:, name: "Garden Suite", room_number_mode: "custom", quantity: 1, room_numbers: %w[101])
   end
 
   def build_board(**filters)

@@ -38,8 +38,7 @@ module Bookings
           result = CreateManualBooking.new(
             hotel: @hotel,
             params: child_params(row),
-            user: @user,
-            rate_tier: rate_tier(row[:rate_plan_id])
+            user: @user
           ).call
           raise CreationFailed, Array(result.errors).to_sentence unless result.success?
 
@@ -77,7 +76,7 @@ module Bookings
 
     def child_params(row)
       params = @common_params.merge(
-        room_type_id: row[:room_type_id], room_number: row[:room_number], rate_plan_id: normalized_rate_plan_id(row[:rate_plan_id]),
+        room_type_id: row[:room_type_id], room_number: row[:room_number], rate_plan_id: row[:rate_plan_id],
         adults: row[:adults].presence || 1, children: row[:children].presence || 0,
         manual_rate_override: row[:manual_rate_override], posting_date: @posting_date,
         source: @booking_type == "reservation" ? @common_params[:source] : "walk_in",
@@ -91,16 +90,6 @@ module Bookings
         }
       end
       params
-    end
-
-    def normalized_rate_plan_id(value)
-      value.to_s.start_with?("tier_") ? value.to_s.split("_").last : value
-    end
-
-    def rate_tier(value)
-      return :standard unless value.to_s.start_with?("tier_")
-
-      value.to_s.split("_")[1] == "walk" ? :walk_in : value.to_s.split("_")[1].to_sym
     end
 
     def group_attributes(bookings)

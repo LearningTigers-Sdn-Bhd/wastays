@@ -144,13 +144,17 @@ domain_paths() {
     hotel_management)
       printf "%s\n" \
         spec/services/hotel_knowledges \
+        spec/services/hotel_portal/room_groups \
         spec/services/hotel_portal/room_types \
         spec/services/corporate_invitations \
         spec/services/staff_invitations \
         spec/requests/hotel_portal/profiles_spec.rb \
         spec/requests/hotel_portal/profile_photo_queue_spec.rb \
         spec/requests/hotel_portal/settings_spec.rb \
+        spec/requests/hotel_portal/room_groups_spec.rb \
+        spec/requests/hotel_portal/room_group_assignments_spec.rb \
         spec/requests/hotel_portal/room_types_spec.rb \
+        spec/requests/hotel_portal/rate_plan_attachments_spec.rb \
         spec/requests/hotel_portal/hotel_knowledge_documents_spec.rb \
         spec/requests/hotel_portal/knowledge_diagnostics_spec.rb \
         spec/requests/hotel_portal/users_spec.rb \

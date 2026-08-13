@@ -22,6 +22,32 @@ RSpec.describe "HotelPortal::Users", type: :request do
       expect(response.body).to include("Staff Management")
     end
 
+    context "an invitation queued during onboarding that was never emailed" do
+      let(:staff_role) { create(:role, account: account, name: "Front Desk", slug: "front_desk") }
+
+      it "is listed as not sent rather than waiting on the invitee" do
+        create(:staff_invitation, :held, account: account, hotel: hotel, role: staff_role,
+                                         invited_by_user: user, email: "held@example.com")
+
+        get hotel_users_path(hotel)
+
+        expect(response.body).to include("held@example.com", "Not sent", "Send invitation")
+        expect(response.body).not_to include("Resend invitation")
+      end
+
+      # Its seven days have not started, so the row must not disappear a week
+      # after the owner listed the person.
+      it "stays on the page past the unstarted expiry window" do
+        create(:staff_invitation, :held, account: account, hotel: hotel, role: staff_role,
+                                         invited_by_user: user, email: "held@example.com",
+                                         expires_at: 2.days.ago)
+
+        get hotel_users_path(hotel)
+
+        expect(response.body).to include("held@example.com")
+      end
+    end
+
     it "lists staff with their status and role as plain text" do
       staff_role = create(:role, account: account, name: "Front Desk", slug: "front_desk")
       member = create(:user, account: account, name: "Aisha Rahman")

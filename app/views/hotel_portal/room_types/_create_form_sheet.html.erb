@@ -1,0 +1,43 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = "new-room-category-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "new-room-category-sheet",
+          side: :right,
+          size: :xl,
+          dismissible: false,
+          title: "Add Room Category",
+          description: "Define a room configuration, its occupancy limits, inventory, and base price.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="w-full py-2">
+          <%= render "form",
+                     room_type: room_type,
+                     form_id: form_id,
+                     single_column: true,
+                     show_photos: false %>
+        </div>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: form_id,
+              size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>
+          Create Room Category
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

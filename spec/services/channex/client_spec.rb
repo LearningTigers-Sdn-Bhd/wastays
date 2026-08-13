@@ -36,5 +36,19 @@ RSpec.describe Channex::Client do
       expect(response[:error]).to eq('Channel Manager API error: 401')
       expect(response[:details]).to eq('Unauthorized')
     end
+
+    it 'marks only throttling and server responses as retryable' do
+      [ 429, 503 ].each do |status|
+        stub_request(:get, "https://staging.channex.io/api/v1/properties")
+          .to_return(status: status, body: { errors: 'Try later' }.to_json)
+
+        expect(client.get('/properties')[:retryable]).to be(true)
+      end
+
+      stub_request(:get, "https://staging.channex.io/api/v1/properties")
+        .to_return(status: 422, body: { errors: 'Invalid input' }.to_json)
+
+      expect(client.get('/properties')[:retryable]).to be(false)
+    end
   end
 end

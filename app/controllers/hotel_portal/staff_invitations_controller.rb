@@ -29,10 +29,17 @@ module HotelPortal
     end
 
     def resend
+      # The same action does first sends and resends — a draft queued during
+      # setup with the send switch off arrives here never having been emailed —
+      # so the wording follows what actually happened rather than always
+      # claiming a repeat.
+      first_send = !@invitation.sent?
+
       if StaffInvitations::ResendService.new(@invitation, current_user).call
-        redirect_to hotel_users_path(current_hotel), notice: "Invitation resent to #{@invitation.email}."
+        verb = first_send ? "sent" : "resent"
+        redirect_to hotel_users_path(current_hotel), notice: "Invitation #{verb} to #{@invitation.email}."
       else
-        redirect_to hotel_users_path(current_hotel), alert: "Failed to resend invitation."
+        redirect_to hotel_users_path(current_hotel), alert: "Failed to send invitation."
       end
     end
 

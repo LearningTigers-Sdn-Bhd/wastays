@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Hotel front desk toolbar", type: :system, js: true do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account, slug: "hotel_owner", name: "Hotel Owner") }
 

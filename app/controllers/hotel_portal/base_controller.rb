@@ -9,6 +9,20 @@ module HotelPortal
     before_action :authenticate_user!
     before_action :reject_corporate_user!
     before_action :ensure_hotel_access!
+    before_action :enforce_onboarding_lock!
+    before_action :protect_pending_review_writes!
+
+    # Controllers a property that is not live yet can always reach. Onboarding itself is
+    # the point of the lock; the rest are the things someone needs regardless of whether
+    # their property is open — their own profile, and the page explaining the wait.
+    # Logging out is not a hotel-portal controller, so it stays reachable for free.
+    ONBOARDING_LOCK_EXEMPT = %w[
+      HotelPortal::OnboardingController
+      HotelPortal::OnboardingSubmissionsController
+      HotelPortal::OnboardingSessionsController
+      HotelPortal::UserProfilesController
+      HotelPortal::SetupLocksController
+    ].freeze
 
     helper_method :locked_hotel_portal_shell?
 
@@ -41,6 +55,44 @@ module HotelPortal
 
     def locked_hotel_portal_shell?
       current_hotel.present? && (current_hotel.onboarding? || current_hotel.status == "pending_review")
+    end
+
+    # A property that is not live has nothing to run — no rates, no inventory, often no
+    # rooms — so the portal around it is a maze of empty pages. Onboarding is the only
+    # page that means anything until launch, so that is where everyone goes.
+    #
+    # In setup that is wherever the owner left off; awaiting review it is the review
+    # section, which already states that WAStays is looking at the property. Whoever
+    # cannot drive setup gets the explainer instead.
+    #
+    # Off unless the hotel opts in, so this rolls out one property at a time.
+    def enforce_onboarding_lock!
+      return if current_hotel.nil? || current_hotel.status.in?(%w[live suspended])
+      return unless current_hotel.setup_lock_enabled?
+      return if current_user&.superadmin?
+      return if ONBOARDING_LOCK_EXEMPT.include?(self.class.name)
+
+      unless HotelPolicy.new(current_user, current_hotel).update?
+        redirect_to hotel_setup_lock_path(current_hotel)
+        return
+      end
+
+      redirect_to hotel_onboarding_section_path(current_hotel, section_key: onboarding_lock_section)
+    end
+
+    def onboarding_lock_section
+      return "review" if current_hotel.status == "pending_review"
+
+      Onboarding::ResumePageResolver.new(hotel: current_hotel).call.key
+    end
+
+    def protect_pending_review_writes!
+      return if request.get? || request.head?
+      return unless current_hotel&.status == "pending_review"
+      return if is_a?(HotelPortal::UserProfilesController) || is_a?(HotelPortal::OnboardingSubmissionsController)
+
+      redirect_to hotel_onboarding_section_path(current_hotel, section_key: "review"),
+                  alert: "Property setup is read-only while WAStays reviews it.", status: :see_other
     end
   end
 end

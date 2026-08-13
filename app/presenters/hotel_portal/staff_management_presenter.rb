@@ -28,6 +28,10 @@ module HotelPortal
       :email,
       :role_name,
       :invited_by,
+      :sent,
+      :status_label,
+      :status_variant,
+      :send_label,
       :expires_at,
       :edit_path,
       :resend_path,
@@ -72,7 +76,7 @@ module HotelPortal
     end
 
     def invitations
-      hotel.staff_invitations.pending.includes(:role, :invited_by_user).order(created_at: :desc)
+      hotel.staff_invitations.listable.includes(:role, :invited_by_user).order(created_at: :desc)
     end
 
     def staff_row(access)
@@ -111,6 +115,13 @@ module HotelPortal
         email: invitation.email,
         role_name: invitation.role&.name,
         invited_by: invitation.invited_by_user.name,
+        # "Pending" is a claim about the invitee — they were asked and have not
+        # answered. Someone listed during setup with the send switch off has not
+        # been asked, so the row says so rather than blaming them for silence.
+        sent: invitation.sent?,
+        status_label: invitation.sent? ? "Pending" : "Not sent",
+        status_variant: invitation.sent? ? :warning : :outline,
+        send_label: invitation.sent? ? "Resend invitation" : "Send invitation",
         expires_at: invitation.expires_at,
         edit_path: routes.edit_hotel_staff_invitation_path(hotel, invitation),
         resend_path: routes.resend_hotel_staff_invitation_path(hotel, invitation),

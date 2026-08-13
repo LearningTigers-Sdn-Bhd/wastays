@@ -2,8 +2,8 @@ require 'rails_helper'
 
 RSpec.describe "Api::V1::Hotels", type: :request do
   let!(:account) { Account.create!(name: "Test Account", status: "active") }
-  let!(:hotel_1) { Hotel.create!(account: account, name: "Hotel Alpha", city: "KL", country: "Malaysia", status: "approved") }
-  let!(:hotel_2) { Hotel.create!(account: account, name: "Hotel Beta", city: "Penang", country: "Malaysia", status: "approved") }
+  let!(:hotel_1) { Hotel.create!(sell_mode: "per_room", account: account, name: "Hotel Alpha", city: "KL", country: "Malaysia", status: "live") }
+  let!(:hotel_2) { Hotel.create!(sell_mode: "per_room", account: account, name: "Hotel Beta", city: "Penang", country: "Malaysia", status: "live") }
 
   let!(:superadmin_key) { ApiKey.create!(name: "Global Key") }
   let!(:hotel_1_key) { ApiKey.create!(name: "Alpha Key", bearer: hotel_1) }

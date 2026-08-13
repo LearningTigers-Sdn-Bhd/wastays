@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Bookings::TransitionStatus, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
-  let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101" ]) }
+  let(:room_type) { create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ]) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", checked_in_at: 1.day.ago, check_out: Date.current) }
 
   before do

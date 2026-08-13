@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, status: 'approved', plan: plan) }
+  let(:hotel) { create(:hotel, status: 'live', plan: plan) }
   let(:user) { create(:user) }
 
   before do

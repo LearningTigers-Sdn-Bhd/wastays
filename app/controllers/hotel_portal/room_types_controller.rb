@@ -8,12 +8,16 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
   before_action :set_room_type, only: [ :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos ]
 
   def index
-    @all_room_types = RoomTypesQuery.new(@hotel.room_types).call(params)
+    room_types = @hotel.room_types.includes(
+      :room_group,
+      room_type_rate_plans: [ :channel_mapping, :occupancy_prices, :rate_plan ]
+    )
+    @all_room_types = RoomTypesQuery.new(room_types).call(params)
     @room_types = @all_room_types.page(params[:page]).per(25)
 
     @room_groups = @hotel.room_groups.order(:name)
-    @unassigned_count = @hotel.room_types.unassigned.count
-    @active_group_id = params[:room_group_id]
+    @selected_room_group_ids = Array(params[:room_group_ids]).compact_blank.map(&:to_s)
+    @filters_active = params[:q].present? || @selected_room_group_ids.any?
   end
 
   def new

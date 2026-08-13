@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Admin panel access", type: :request do
   let(:account) { create(:account, name: "Admin Panel Access") }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:hotel_role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
 
   let(:admin) { create(:user, :admin, account: account) }

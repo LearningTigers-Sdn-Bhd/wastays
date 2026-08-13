@@ -9,7 +9,7 @@ class GlobalSearchService
     { title: "Bookings", subtitle: "All hotel bookings", route: :hotel_front_desk_path, tab: "bookings", keywords: "bookings reservations recent bookings" },
     { title: "Requests", subtitle: "Housekeeping and complaints", route: :hotel_requests_path, keywords: "requests housekeeping complaints" },
     { title: "Guest Records", subtitle: "Past and upcoming guest history", route: :hotel_guests_path, keywords: "guest records guests" },
-    { title: "Room Categories", subtitle: "Manage room types", route: :hotel_room_types_path, keywords: "room categories room types" },
+    { title: "Room Inventory", subtitle: "Manage room types and rate plans", route: :hotel_room_types_path, keywords: "room inventory room categories room types rate plans" },
     { title: "Rates & Inventory", subtitle: "Rates calendar and inventory", route: :hotel_inventory_index_path, keywords: "rates inventory calendar" },
     { title: "Reports", subtitle: "Financial performance", route: :hotel_reports_path, keywords: "reports financial performance" },
     { title: "Weekly Settlements", subtitle: "Payout reports", route: :payouts_hotel_reports_path, keywords: "payouts settlements weekly" },

@@ -2,7 +2,7 @@
 
 class BookingFolio < ApplicationRecord
   FOLIO_TYPES = %w[guest external house].freeze
-  PAYER_TYPES = %w[guest company agent hotel custom].freeze
+  PAYER_TYPES = %w[guest company ota agent hotel custom].freeze
 
   belongs_to :hotel
   belongs_to :booking
@@ -12,6 +12,8 @@ class BookingFolio < ApplicationRecord
   belongs_to :created_by, class_name: "User", optional: true
   belongs_to :closed_by, class_name: "User", optional: true
   has_many :folio_transactions, dependent: :restrict_with_error
+  has_many :channel_settlement_allocations, dependent: :restrict_with_error
+  has_many :channel_settlements, through: :channel_settlement_allocations
   has_many :folio_forecasted_charges, dependent: :destroy
   has_one :ar_invoice, dependent: :restrict_with_error
   has_one :invoice, dependent: :restrict_with_error
@@ -39,6 +41,7 @@ class BookingFolio < ApplicationRecord
   validate :booking_room_matches_booking
   validate :booking_billing_party_matches_booking
   validate :booking_billing_party_matches_payer
+  validate :ota_payer_requires_ota_billing_party
   validate :company_payer_requires_active_hotel_corporate_account
   validate :closed_folio_reopen_must_be_authorized
   validate :last_primary_folio_cannot_be_unset
@@ -237,7 +240,16 @@ class BookingFolio < ApplicationRecord
       if hotel_corporate_account_id.present? && hotel_corporate_account_id != booking_billing_party.hotel_corporate_account_id
         errors.add(:booking_billing_party, "must match the selected company account")
       end
+    when "ota"
+      errors.add(:booking_billing_party, "must match OTA payer type") unless payer_type == "ota"
     end
+  end
+
+  def ota_payer_requires_ota_billing_party
+    return unless payer_type == "ota"
+    return if booking_billing_party&.party_kind == "ota"
+
+    errors.add(:booking_billing_party, "must be an OTA billing party")
   end
 
   def company_payer_requires_active_hotel_corporate_account

@@ -22,8 +22,7 @@ hotel.default_currency = "MYR"
 hotel.usd_conversion_rate = 4.65
 hotel.tourism_tax_enabled = true
 hotel.tourism_tax_amount = 10.0
-hotel.allow_pax_pricing = true
-hotel.pax_pricing_only = true
+hotel.sell_mode = "per_person"
 # Island resort - guests transfer by boat, not car, so front desk needs a boat
 # schedule to assign guests to and the kitchen needs boat times to plan meals around
 # (see BiboReport / MealPrepReport, both driven entirely by BookingGuest#boat_in_at

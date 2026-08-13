@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Hotel settings tabs", type: :system, js: true do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "registered") }
+  let(:hotel) { create(:hotel, account: account, status: "setup") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:manage_account_permission) do
     Permission.find_or_create_by!(slug: "manage_account") { |permission| permission.name = "Manage Account" }
@@ -38,7 +38,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
       expect(page).to have_link("Notifications", href: hotel_notification_settings_path(hotel))
       expect(page).to have_css("a[aria-current='page']", text: "Notifications")
       expect(page).to have_no_css("[data-controller='panels-ui--tabs']")
-      expect(all("a").map { |link| link.text.squish }).to eq([ "General", "Boat Settings", "Rate Settings", "Notifications", "Plan & Billing" ])
+      expect(all("a").map { |link| link.text.squish }).to eq([ "General", "Boat Settings", "Notifications", "Plan & Billing" ])
     end
 
     visit hotel_ai_concierge_settings_path(hotel)

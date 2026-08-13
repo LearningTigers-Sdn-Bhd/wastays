@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe 'Room Setup', type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
-  let(:hotel) { create(:hotel, account: account, status: 'approved') }
+  let(:hotel) { create(:hotel, account: account, status: 'live') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner') }
 
   before do
@@ -16,11 +16,11 @@ RSpec.describe 'Room Setup', type: :system do
     sign_in_through_ui(user)
   end
 
-  it 'allows the user to add a room type' do
+  it 'allows the user to add a room category from Room Inventory' do
     visit hotel_room_types_path(hotel)
 
     expect(page).to have_content('No room categories found')
-    first(:link, 'Create Room Category').click
+    first(:link, 'Create room category').click
 
     # Every section is on one scrollable sheet now — no tab to click through.
     fill_in 'Room Category Name', with: 'Deluxe Suite'
@@ -33,8 +33,19 @@ RSpec.describe 'Room Setup', type: :system do
 
     expect(page).to have_content('Room category created successfully.')
     expect(page).to have_content('Deluxe Suite')
+    expect(page).to have_css(".panel-collapsible[data-state='closed']", text: 'Deluxe Suite')
+    click_button 'Assign'
+    click_link 'Assign Room Rate'
+
+    within '#assign-room-rate-sheet' do
+      expect(page).to have_css('.panel-autocomplete', text: '')
+      expect(page).to have_css('.panel-multi-select', text: 'Deluxe Suite')
+      expect(page).to have_no_content('Guest pricing')
+      click_button 'Cancel'
+    end
 
     visit hotel_dashboard_path(hotel)
-    expect(page).to have_content('Hotel Portal')
+    expect(page).to have_current_path(hotel_dashboard_path(hotel))
+    expect(page).to have_content('Rates & Inventory')
   end
 end

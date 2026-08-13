@@ -2,15 +2,15 @@
      data-rate-plan-age-bands-target="row"
      data-role="age-band-row">
   <div class="grid gap-3 sm:grid-cols-3">
-    <%= render PanelsUI::FormField.new(form: band_form, attribute: :label, label: "Name", size: :sm) do |field| %>
+    <%= render PanelsUI::FormField.new(form: band_form, attribute: :label, label: "Age group name", size: :sm) do |field| %>
       <% field.with_input(placeholder: "Toddler", autocomplete: "off") %>
     <% end %>
 
-    <%= render PanelsUI::FormField.new(form: band_form, attribute: :min_age, label: "Min age", size: :sm, required: true) do |field| %>
+    <%= render PanelsUI::FormField.new(form: band_form, attribute: :min_age, label: "Youngest age", size: :sm, required: true) do |field| %>
       <% field.with_input(type: :number, min: 0, step: 1, inputmode: "numeric") %>
     <% end %>
 
-    <%= render PanelsUI::FormField.new(form: band_form, attribute: :max_age, label: "Max age", size: :sm, required: true) do |field| %>
+    <%= render PanelsUI::FormField.new(form: band_form, attribute: :max_age, label: "Oldest age", size: :sm, required: true) do |field| %>
       <% field.with_input(type: :number, min: 0, step: 1, inputmode: "numeric") %>
     <% end %>
   </div>
@@ -23,7 +23,7 @@
     </div>
 
     <div>
-      <%= render PanelsUI::FormField.new(form: band_form, attribute: :price_value, label: "Amount", size: :sm, required: true) do |field| %>
+      <%= render PanelsUI::FormField.new(form: band_form, attribute: :price_value, label: "Nightly child price", size: :sm, required: true) do |field| %>
         <% field.with_input(type: :number, min: 0, step: 1, inputmode: "decimal", data: { role: "price-value" }) %>
         <% field.with_addon(align: :inline_end, variant: :bare, data: { role: "value-unit-hint" }) do %>
           <%= (band.nil? || band.pricing_mode != "amount") ? "%" : currency %>

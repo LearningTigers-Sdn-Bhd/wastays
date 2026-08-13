@@ -1,0 +1,21 @@
+<%# The shell footer owns placement and its rule; this partial owns only the controls. %>
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <% if presenter.previous_entry %>
+      <%= render PanelsUI::Button.new(label: "Back", variant: :ghost, href: onboarding_section_path_for(presenter.previous_entry)) do %>
+        <%= app_icon "arrow-left", aria: { hidden: "true" } %>
+        <span>Back</span>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="flex flex-wrap items-center justify-end gap-2">
+    <%# No skip button: an optional section says "none for now" by being left
+        empty, and Save & continue records that. %>
+    <button type="submit" form="<%= form_id %>" name="navigation_action" value="save_draft" formnovalidate class="panel-button" data-variant="neutral" data-size="md">Save draft</button>
+    <button type="submit" form="<%= form_id %>" name="navigation_action" value="save_continue" class="panel-button" data-variant="primary" data-size="md">
+      Save &amp; continue
+      <%= app_icon "arrow-right", aria: { hidden: "true" } %>
+    </button>
+  </div>
+</div>

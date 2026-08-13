@@ -156,15 +156,22 @@
           </div>
 
           <div>
-            <span class="mb-2 block text-sm font-medium text-slate-700">Per-Pax Pricing Feature</span>
-            <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 cursor-pointer">
-              <span class="text-xs text-slate-600">Allow Hotel to Use Per-Pax Pricing</span>
-              <span class="relative inline-flex items-center">
-                <%= f.check_box :allow_pax_pricing, class: "sr-only peer" %>
-                <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full"></span>
-              </span>
-            </label>
-            <p class="mt-1 text-xs text-slate-400">If enabled, the hotel portal can choose to restrict bookings to per-person rates.</p>
+            <% if hotel.persisted? %>
+              <p class="mb-2 text-sm font-medium text-foreground">How the property charges</p>
+              <p class="text-sm text-foreground"><%= hotel.sell_mode_label %></p>
+              <p class="mt-1 text-xs text-muted-foreground">Permanent. The charging model cannot be changed after the hotel is created.</p>
+            <% else %>
+              <%= render PanelsUI::RadioGroup.new(
+                    form: f,
+                    attribute: :sell_mode,
+                    label: "How does the property charge?",
+                    description: "Choose carefully. Every rate plan follows this model, and it cannot be changed after the hotel is created.",
+                    options: [
+                      { label: "Per room", value: "per_room", description: "One nightly price for the room, with optional extra guest charges." },
+                      { label: "Per guest", value: "per_person", description: "A different nightly total for each number of adults." }
+                    ],
+                    required: true) %>
+            <% end %>
           </div>
 
           <div>

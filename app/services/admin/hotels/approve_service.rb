@@ -11,6 +11,7 @@ module Admin
 
       def call
         reactivating = @hotel.status == "suspended" || @hotel.account.status == "suspended"
+        return Result.new(false, false, "Only suspended properties can use this reactivation action.") unless reactivating
 
         ActiveRecord::Base.transaction do
           target_account_status = if reactivating && @hotel.account.pre_suspension_status.present?
@@ -19,10 +20,13 @@ module Admin
             "active"
           end
 
-          target_hotel_status = if reactivating && @hotel.pre_suspension_status.present?
+          # A row suspended before the lifecycle was normalized can still be carrying a
+          # status that no longer exists. Reactivate it as live rather than restoring
+          # something the model would now reject.
+          target_hotel_status = if @hotel.pre_suspension_status.in?(Hotel::STATUSES)
             @hotel.pre_suspension_status
           else
-            "approved"
+            "live"
           end
 
           Rails.logger.info "[ApproveService] Reactivating: #{reactivating}, Pre-Hotel-Status: #{@hotel.pre_suspension_status}, Target: #{target_hotel_status}"

@@ -2,7 +2,7 @@ require "rails_helper"
 require "cgi"
 
 RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
   let(:booking) { create(:booking, hotel: hotel) }

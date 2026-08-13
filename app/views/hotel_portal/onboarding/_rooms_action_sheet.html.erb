@@ -1,0 +1,97 @@
+<%= render PanelsUI::Sheet.new(
+      id: "onboarding_action_sheet",
+      side: :right,
+      size: :md,
+      title: "Manage room details",
+      description: "Changes stay in this spreadsheet until you save the Rooms step.") do |sheet| %>
+  <% sheet.with_body do %>
+    <div data-onboarding-room-grid-target="amenitiesPanel" hidden>
+      <div class="space-y-1">
+        <h3 class="text-base font-semibold">Amenities</h3>
+        <p class="text-sm text-muted-foreground">Select the facilities included in <span data-onboarding-room-grid-target="roomName">this room category</span>.</p>
+      </div>
+
+      <div class="mt-5">
+        <%= fields_for :room_amenity_sheet do |amenity_form| %>
+          <%= render PanelsUI::FormField.new(
+                form: amenity_form,
+                attribute: :amenities,
+                label: "Room amenities",
+                hint: "Search and select every amenity included with this room category.") do |field| %>
+            <% field.with_multi_select(
+                 amenity_choices,
+                 prompt: "Search room amenities",
+                 empty_text: "No room amenities found",
+                 all_selected_text: "All room amenities selected",
+                 data: { onboarding_room_grid_target: "amenityPicker" }) %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <div data-onboarding-room-grid-target="numberingPanel" hidden>
+      <div class="space-y-1">
+        <h3 class="text-base font-semibold">Room numbering</h3>
+        <p class="text-sm text-muted-foreground">Identify individual rooms or keep quantity-only inventory for <span data-onboarding-room-grid-target="numberingRoomName">this room category</span>.</p>
+      </div>
+
+      <fieldset class="mt-5 space-y-3">
+        <legend class="text-sm font-medium">Numbering method</legend>
+        <%= render PanelsUI::Radio.new(
+              name: "room_numbering_sheet_mode", value: "quantity", checked: true,
+              label: "Quantity only", description: "Track the number of rooms without individual identifiers.",
+              data: { onboarding_room_grid_target: "numberingMode", action: "change->onboarding-room-grid#numberingChanged" }) %>
+        <%= render PanelsUI::Radio.new(
+              name: "room_numbering_sheet_mode", value: "range",
+              label: "Sequential numbers", description: "Generate one number for every room from a starting number.",
+              data: { onboarding_room_grid_target: "numberingMode", action: "change->onboarding-room-grid#numberingChanged" }) %>
+        <%= render PanelsUI::Radio.new(
+              name: "room_numbering_sheet_mode", value: "custom",
+              label: "Custom numbers", description: "Enter identifiers separated by commas or new lines.",
+              data: { onboarding_room_grid_target: "numberingMode", action: "change->onboarding-room-grid#numberingChanged" }) %>
+      </fieldset>
+
+      <div class="mt-5" data-onboarding-room-grid-target="rangeFields" hidden>
+        <label for="onboarding-room-number-start" class="panel-form-field__label">Starting number</label>
+        <input id="onboarding-room-number-start" type="number" min="1" step="1" value="101"
+               class="panel-input mt-1" data-size="md"
+               data-onboarding-room-grid-target="rangeStart"
+               data-action="input->onboarding-room-grid#numberingChanged">
+      </div>
+
+      <div class="mt-5" data-onboarding-room-grid-target="customFields" hidden>
+        <label for="onboarding-room-number-custom" class="panel-form-field__label">Room numbers</label>
+        <textarea id="onboarding-room-number-custom" rows="4"
+                  class="panel-text-area mt-1" data-size="md"
+                  placeholder="101, 102, 201, 202"
+                  data-onboarding-room-grid-target="customNumbers"
+                  data-action="input->onboarding-room-grid#numberingChanged"></textarea>
+      </div>
+
+      <div class="mt-6 space-y-3">
+        <div>
+          <h4 class="text-sm font-medium">Preview</h4>
+          <p class="mt-1 text-xs text-muted-foreground" data-onboarding-room-grid-target="numberingStatus">Quantity-only inventory</p>
+        </div>
+        <div class="flex flex-wrap gap-1.5" data-onboarding-room-grid-target="numberBadges"></div>
+        <template data-onboarding-room-grid-target="numberBadgeTemplate">
+          <%= render PanelsUI::Badge.new(label: "ROOM_NUMBER", size: :xs, variant: :outline) %>
+        </template>
+        <p class="text-sm text-destructive" role="alert" data-onboarding-room-grid-target="numberingError" hidden></p>
+      </div>
+    </div>
+  <% end %>
+
+  <% sheet.with_footer do %>
+    <%= render PanelsUI::Button.new(
+          as: :button, type: :button, variant: :secondary, size: :sm,
+          data: { action: "onboarding-room-grid#cancelSheet" }) do %>
+      Cancel
+    <% end %>
+    <%= render PanelsUI::Button.new(
+          as: :button, type: :button, size: :sm,
+          data: { action: "onboarding-room-grid#applySheet" }) do %>
+      Apply
+    <% end %>
+  <% end %>
+<% end %>

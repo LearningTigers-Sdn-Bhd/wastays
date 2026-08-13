@@ -62,6 +62,28 @@ RSpec.describe PanelsUI::Accordion, type: :component do
     expect(page).to have_css("#settings [aria-disabled]", count: 0)
   end
 
+  it "forwards item header content, header styling, and caller attributes" do
+    render_inline(described_class.new(id: "inventory", heading_level: 3, type: :single, collapsible: true)) do |accordion|
+      accordion.with_item(
+        value: "deluxe",
+        id: "inventory-deluxe",
+        region: true,
+        header_class: "grid-cols-2",
+        data: { room_type_id: 42 },
+        aria: { label: "Deluxe inventory" }
+      ) do |item|
+        item.with_trigger { "Deluxe" }
+        item.with_header_content { '<span data-testid="group">Villas</span>'.html_safe }
+        item.with_body { "Rates" }
+      end
+    end
+
+    expect(page).to have_css("#inventory-deluxe[data-room-type-id='42'][data-accordion-item][data-accordion-value='deluxe'][aria-label='Deluxe inventory']")
+    expect(page).to have_css("#inventory-deluxe > .panel-collapsible__header.grid-cols-2 [data-testid='group']", text: "Villas")
+    expect(page).to have_css("#inventory-deluxe-trigger[aria-expanded='false'][aria-controls='inventory-deluxe-content']", text: "Deluxe")
+    expect(page).to have_css("#inventory-deluxe-content[role='region'][hidden][inert]", visible: :all)
+  end
+
   it "requires trigger and body slots" do
     expect do
       render_inline(described_class.new(heading_level: 3, collapsible: true)) do |accordion|

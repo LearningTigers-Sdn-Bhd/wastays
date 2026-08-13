@@ -14,7 +14,7 @@
                 title: safe_join([
                   @hotel.name,
                   tag.span(@hotel.status.titleize, class: "inline-flex items-center gap-x-1.5 rounded-full px-3 py-1.5 text-xs font-semibold #{case @hotel.status
-                  when 'approved', 'live' then 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
+                  when 'live' then 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
                   when 'pending_review' then 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
                   when 'suspended' then 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200'
                   else 'bg-muted text-foreground ring-1 ring-inset ring-ring'
@@ -166,6 +166,19 @@
               </span>
             <% end %>
           </div>
+
+          <%# A per-guest property has nothing the channel manager can carry:
+              Channex models one flat child fee per rate plan, taken from a
+              property-level policy, with no per-band pricing. Room types and
+              availability still sync; rates and restrictions do not. %>
+          <% if @hotel.sells_per_person? %>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p class="text-xs font-semibold text-amber-900">Rates will not be distributed</p>
+              <p class="mt-1 text-xs leading-relaxed text-amber-800">
+                This property sells per guest, which the channel manager cannot represent. Room types and availability still sync; rate plans and restrictions are skipped.
+              </p>
+            </div>
+          <% end %>
 
           <% if @hotel.channel_mapping&.external_id.present? %>
             <div class="rounded-xl bg-muted p-3 border border-border">

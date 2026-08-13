@@ -8,7 +8,7 @@ RSpec.describe "Hotel portal housekeeping room operations", type: :request do
   let(:hotel) { create(:hotel, account:, status: "live", plan:) }
   let(:user) { create(:user, account:, role: "admin") }
   let(:role) { create(:role, account:, slug: "housekeeping-operator", name: "Housekeeping Operator") }
-  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101]) }
+  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 1, room_numbers: %w[101]) }
 
   before do
     permission = Permission.find_or_create_by!(slug: "perform_housekeeping_tasks") { |record| record.name = "Perform housekeeping tasks" }

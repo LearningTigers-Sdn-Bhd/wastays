@@ -17,10 +17,6 @@ module HotelPortal::RoomTypesHelper
     end
   end
 
-  def onboarding_incomplete?(hotel)
-    hotel.status == "inventory_incomplete"
-  end
-
   def unassigned_room_types_count(hotel)
     hotel.room_types.unassigned.count
   end

@@ -49,34 +49,50 @@ RSpec.describe Hotel, type: :model do
 
   describe 'constants' do
     it 'defines allowed statuses' do
-      expect(Hotel::STATUSES).to match_array(%w[
-        registered
-        email_verified
-        profile_incomplete
-        rooms_incomplete
-        inventory_incomplete
-        pending_review
-        approved
-        live
-        suspended
-      ])
+      expect(Hotel::STATUSES).to match_array(%w[setup pending_review live suspended])
+    end
+  end
+
+  describe 'lifecycle status' do
+    it 'rejects a status outside the canonical lifecycle' do
+      hotel = build(:hotel, status: 'approved')
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:status]).to be_present
+    end
+
+    it 'accepts every canonical status' do
+      Hotel::STATUSES.each do |status|
+        hotel = build(:hotel, status: status)
+        hotel.valid?
+
+        expect(hotel.errors[:status]).to be_empty, "expected #{status} to be a valid hotel status"
+      end
     end
   end
 
   describe '#active?' do
-    it 'returns true if status is approved' do
-      hotel = build(:hotel, status: 'approved')
-      expect(hotel.active?).to be true
-    end
-
     it 'returns true if status is live' do
       hotel = build(:hotel, status: 'live')
       expect(hotel.active?).to be true
     end
 
-    it 'returns false if status is registered' do
-      hotel = build(:hotel, status: 'registered')
+    it 'returns false while the hotel is still in setup' do
+      hotel = build(:hotel, status: 'setup')
       expect(hotel.active?).to be false
+    end
+
+    it 'returns false while the hotel is awaiting review' do
+      hotel = build(:hotel, status: 'pending_review')
+      expect(hotel.active?).to be false
+    end
+  end
+
+  describe '#onboarding?' do
+    it 'is true only in setup' do
+      expect(build(:hotel, status: 'setup')).to be_onboarding
+      expect(build(:hotel, status: 'pending_review')).not_to be_onboarding
+      expect(build(:hotel, status: 'live')).not_to be_onboarding
     end
   end
 
@@ -206,77 +222,68 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
-  describe 'pax pricing settings' do
-    let(:hotel) { create(:hotel, allow_pax_pricing: false, pax_pricing_only: false) }
+  describe 'sell mode' do
+    let(:hotel) { create(:hotel) }
 
-    it 'defaults allow_pax_pricing to false' do
-      expect(hotel.allow_pax_pricing).to be false
+    it 'requires an explicit value on creation' do
+      account = create(:account)
+
+      expect(build(:hotel, account: account, sell_mode: nil)).not_to be_valid
+      expect(build(:hotel, account: account, sell_mode: 'per_room')).to be_valid
+      expect(build(:hotel, account: account, sell_mode: 'per_person')).to be_valid
     end
 
-    it 'defaults pax_pricing_only to false' do
-      expect(hotel.pax_pricing_only).to be false
+    it 'rejects a value outside the rate plan vocabulary' do
+      hotel.sell_mode = 'per_night'
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:sell_mode]).to be_present
     end
 
-    context 'when allow_pax_pricing is false' do
-      it 'resets pax_pricing_only to false before validation' do
-        hotel.pax_pricing_only = true
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be false
+    describe '#sells_per_person?' do
+      it 'is true only for per_person' do
+        expect(hotel.sells_per_person?).to be false
+        expect(create(:hotel, :per_person).sells_per_person?).to be true
       end
     end
 
-    context 'when allow_pax_pricing is true' do
-      before do
-        hotel.allow_pax_pricing = true
+    describe 'locking after creation' do
+      it 'refuses a per-room to per-guest change before the hotel is bookable' do
+        expect(hotel.update(sell_mode: 'per_person')).to be false
+        expect(hotel.errors[:sell_mode]).to include('cannot be changed after the hotel is created')
+        expect(hotel.reload.sell_mode).to eq('per_room')
       end
 
-      it 'allows pax_pricing_only to be true' do
-        hotel.pax_pricing_only = true
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be true
+      it 'refuses a per-guest to per-room change' do
+        hotel = create(:hotel, :per_person)
+
+        expect(hotel.update(sell_mode: 'per_room')).to be false
+        expect(hotel.reload.sell_mode).to eq('per_person')
       end
 
-      it 'resets pax_pricing_only to false when allow_pax_pricing is disabled' do
-        hotel.pax_pricing_only = true
-        hotel.save!
+      it 'leaves the hotel’s other attributes editable while locked' do
+        expect(hotel.update(name: "#{hotel.name} Resort")).to be true
+      end
+    end
+  end
 
-        hotel.allow_pax_pricing = false
-        expect(hotel).to be_valid
-        expect(hotel.pax_pricing_only).to be false
+  describe '#inventory_ready?' do
+    let(:hotel) { create(:hotel) }
+    let!(:room) { create(:room_type, hotel: hotel, quantity: 2, base_price: 110, max_adults: 2) }
+
+    it 'refuses a hotel priced for the next month but empty for the rest of the year' do
+      (Date.current..Date.current + 30.days).each do |date|
+        create(:room_inventory, room_type: room, date: date, quantity: 2, status: 'open')
       end
 
-      it 'resets rate plans to per_room when allow_pax_pricing is disabled' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-        rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
+      expect(hotel.inventory_ready?).to be false
+    end
 
-        hotel.allow_pax_pricing = false
-        expect(hotel).to be_valid
-        expect(rate_plan.reload.sell_mode).to eq('per_room')
+    it 'accepts a hotel stocked and priced across the full horizon' do
+      (Date.current..Date.current + 364.days).each do |date|
+        create(:room_inventory, room_type: room, date: date, quantity: 2, status: 'open')
       end
 
-      it 'logs a warning when disabling allow_pax_pricing force-flips existing per_person rate plans' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-        rate_plan = create(:rate_plan, hotel: hotel, sell_mode: 'per_person')
-
-        expect(Rails.logger).to receive(:warn).with(
-          a_string_matching(/Hotel##{hotel.id}.*force-flipped 1 rate plan.*rate_plan_ids=\[#{rate_plan.id}\]/)
-        )
-
-        hotel.allow_pax_pricing = false
-        hotel.save!
-      end
-
-      it 'does not log anything when there are no per_person rate plans to flip' do
-        hotel.allow_pax_pricing = true
-        hotel.save!
-
-        expect(Rails.logger).not_to receive(:warn)
-
-        hotel.allow_pax_pricing = false
-        hotel.save!
-      end
+      expect(hotel.inventory_ready?).to be true
     end
   end
 end

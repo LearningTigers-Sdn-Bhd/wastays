@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.local(2026, 6, 10, 3) do
-  let(:hotel) { create(:hotel, status: 'approved') }
+  let(:hotel) { create(:hotel, status: 'live') }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
   let(:booking) { create(:booking, hotel: hotel) }
@@ -348,7 +348,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       expect(JSON.parse(response.body)["total_amount"].to_d).to eq(250.to_d)
     end
 
-    it "falls back to base pricing when the selected rate plan is stale" do
+    it "rejects a stale selected rate plan" do
       get "/hotel/#{hotel.id}/bookings/stay_price", params: {
         room_type_id: room_type.id,
         rate_plan_id: 999_999,
@@ -356,8 +356,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
         check_out: (Date.current + 2.days).to_s
       }
 
-      expect(response).to have_http_status(:success)
-      expect(JSON.parse(response.body)["total_amount"].to_d).to eq(200.to_d)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(JSON.parse(response.body)["error"]).to be_present
     end
   end
 
@@ -409,7 +409,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       }
 
       expect(response).to have_http_status(:success)
-      option = JSON.parse(response.body)["rate_options"].first
+      option = JSON.parse(response.body)["rate_options"].find { |item| item["id"] == rate_plan.id }
       expect(option).to include("id" => rate_plan.id, "name" => "Flexible Rate", "currency" => "MYR")
       expect(option["total_amount"].to_d).to eq(125.to_d)
     end
@@ -436,7 +436,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       expect(JSON.parse(response.body)["rate_options"].map { |option| option["id"] }).not_to include(rate_plan.id)
     end
 
-    it "returns a base rate option when no rate plans exist" do
+    it "returns no options when no rate plans exist" do
       room_type.rate_plans.destroy_all
       get "/hotel/#{hotel.id}/bookings/rate_options", params: {
         room_type_id: room_type.id,
@@ -444,14 +444,12 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
         check_out: (Date.current + 2.days).to_s
       }
 
-      option = JSON.parse(response.body)["rate_options"].first
-      expect(option).to include("id" => nil, "name" => "Base Rate", "currency" => "MYR")
-      expect(option["total_amount"].to_d).to eq(200.to_d)
+      expect(JSON.parse(response.body)["rate_options"]).to be_empty
     end
   end
 
   describe "GET /availability" do
-    let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101", "102" ]) }
+    let(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ]) }
 
     it "returns room options including disabled non-ready rooms" do
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")

@@ -91,7 +91,7 @@ RSpec.describe "Booking workspace actions", frozen_time: :business_day, type: :s
   end
 
   it "checks in a booking through the action Sheet", js: true do
-    room_type = create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel: hotel, room_number_mode: "custom", quantity: 1, room_numbers: [ "101" ])
     booking.update!(status: "confirmed", check_in: Time.current, check_out: 2.days.from_now)
     booking.booking_rooms.first.update!(room_type: room_type, room_number: "101")
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
@@ -113,7 +113,7 @@ RSpec.describe "Booking workspace actions", frozen_time: :business_day, type: :s
   end
 
   it "selects and checks in multiple group children with the static action form", js: true do
-    room_type = create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: %w[101 102])
+    room_type = create(:room_type, hotel: hotel, room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102])
     group = create(:group_booking, hotel: hotel, name: "Tour Group")
     booking.update!(status: "confirmed", group_booking: group, group_position: 1, guest_name: "First Guest", check_in: Time.current, check_out: 2.days.from_now)
     booking.booking_rooms.first.update!(room_type: room_type, room_number: "101")

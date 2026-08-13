@@ -2,13 +2,13 @@ require "rails_helper"
 
 RSpec.describe BookingEngine::RateCalendarService do
   let!(:account)   { Account.create!(name: "Test", slug: "test-rc", status: "active") }
-  let!(:hotel)     { Hotel.create!(name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel)     { Hotel.create!(sell_mode: "per_room", name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "live") }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Standard", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:today) { Date.current }
 
   def seed_day(date, price: 200.0, quantity: 5, status: "open")
-    RoomRate.create!(room_type: room_type, date: date, price: price, currency: "MYR")
+    RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: date, price: price, currency: "MYR")
     RoomInventory.create!(room_type: room_type, date: date, quantity: quantity, status: status)
   end
 
@@ -46,7 +46,7 @@ RSpec.describe BookingEngine::RateCalendarService do
     end
 
     it "returns available: false when quantity is 0" do
-      RoomRate.create!(room_type: room_type, date: today, price: 200, currency: "MYR")
+      RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 200, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 0, status: "open")
       day = call(start_date: today, end_date: today)[:days].first
       expect(day.available).to be false
@@ -61,8 +61,8 @@ RSpec.describe BookingEngine::RateCalendarService do
 
     it "returns min_price across multiple room types" do
       room_type2 = RoomType.create!(hotel: hotel, name: "Suite", quantity: 2, max_adults: 2, base_price: 500, room_number_mode: "range")
-      RoomRate.create!(room_type: room_type, date: today, price: 300, currency: "MYR")
-      RoomRate.create!(room_type: room_type2, date: today, price: 150, currency: "MYR")
+      RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 300, currency: "MYR")
+      RoomRate.create!(room_type: room_type2, rate_plan: room_type2.standard_rate_plan, date: today, price: 150, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 5, status: "open")
       RoomInventory.create!(room_type: room_type2, date: today, quantity: 2, status: "open")
       day = call(start_date: today, end_date: today)[:days].first
@@ -71,8 +71,8 @@ RSpec.describe BookingEngine::RateCalendarService do
 
     it "shows price of available room type when cheaper one is sold out" do
       room_type2 = RoomType.create!(hotel: hotel, name: "Suite", quantity: 2, max_adults: 2, base_price: 500, room_number_mode: "range")
-      RoomRate.create!(room_type: room_type,  date: today, price: 150, currency: "MYR")
-      RoomRate.create!(room_type: room_type2, date: today, price: 300, currency: "MYR")
+      RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 150, currency: "MYR")
+      RoomRate.create!(room_type: room_type2, rate_plan: room_type2.standard_rate_plan, date: today, price: 300, currency: "MYR")
       RoomInventory.create!(room_type: room_type,  date: today, quantity: 0, status: "open") # sold out
       RoomInventory.create!(room_type: room_type2, date: today, quantity: 2, status: "open")
       day = call(start_date: today, end_date: today)[:days].first
@@ -81,7 +81,7 @@ RSpec.describe BookingEngine::RateCalendarService do
     end
 
     it "excludes nights where inventory < room_count" do
-      RoomRate.create!(room_type: room_type, date: today, price: 200, currency: "MYR")
+      RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 200, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 2, status: "open")
       day = call(start_date: today, end_date: today, room_count: 3)[:days].first
       expect(day.available).to be false
@@ -90,6 +90,25 @@ RSpec.describe BookingEngine::RateCalendarService do
 
     it "returns nil min_price for days with no rate" do
       day = call(start_date: today, end_date: today)[:days].first
+      expect(day.min_price).to be_nil
+      expect(day.available).to be false
+    end
+
+    it "uses the active Standard plan's category price when inventory exists without a daily row" do
+      RoomInventory.create!(room_type: room_type, date: today, quantity: 3, status: "open")
+
+      day = call(start_date: today, end_date: today)[:days].first
+
+      expect(day.min_price).to eq(100.0)
+      expect(day.available).to be true
+    end
+
+    it "does not fall back to an archived Standard plan" do
+      room_type.standard_rate_plan.archive!
+      RoomInventory.create!(room_type: room_type, date: today, quantity: 3, status: "open")
+
+      day = call(start_date: today, end_date: today)[:days].first
+
       expect(day.min_price).to be_nil
       expect(day.available).to be false
     end

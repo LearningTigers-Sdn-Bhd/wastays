@@ -5,21 +5,55 @@ module Admin
     class CreateForm
       include ActiveModel::Model
 
-      attr_accessor :account_name, :user_name, :user_email, :hotel_name, :address, :city, :country, :star_rating, :salesperson_id, :preferred_channel_manager, :amenities, :allow_pax_pricing, :allow_boat_information
+      ACTIONS = %w[create_only create_and_onboard].freeze
+      CHANNEL_MANAGER_OPTIONS = [
+        [ "Undecided", "undecided" ],
+        [ "No channel manager", "none" ],
+        [ "Channex", "channex" ]
+      ].freeze
 
-      validates :account_name, :user_name, :user_email, :hotel_name, :city, :country, presence: true
+      attr_accessor :account_name, :owner_name, :owner_email, :hotel_name, :sell_mode,
+                    :plan_id, :preferred_channel_manager, :salesperson_id, :creation_action
+      attr_reader :hotel, :owner_invitation
 
-      def save
+      validates :account_name, :owner_name, :owner_email, :hotel_name, :sell_mode, :plan_id,
+                :preferred_channel_manager, :creation_action, presence: true
+      validates :owner_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+      validates :sell_mode, inclusion: { in: ->(_) { RatePlan.sell_modes } }, allow_blank: true
+      validates :preferred_channel_manager,
+                inclusion: { in: CHANNEL_MANAGER_OPTIONS.map(&:last) }, allow_blank: true
+      validates :creation_action, inclusion: { in: ACTIONS }, allow_blank: true
+      validate :plan_is_active
+
+      def initialize(attributes = {})
+        super
+        self.preferred_channel_manager ||= "undecided"
+        self.creation_action ||= "create_only"
+      end
+
+      def save(actor:)
         return false unless valid?
 
         result = HotelOps::CreateHotel.new(
           account_params: { name: account_name },
-          user_params: { name: user_name, email: user_email },
-          hotel_params: hotel_attributes
+          user_params: { name: owner_name, email: owner_email },
+          hotel_params: {
+            name: hotel_name,
+            status: "setup",
+            sell_mode: sell_mode,
+            plan_id: plan_id,
+            salesperson_id: salesperson_id.presence,
+            preferred_channel_manager: preferred_channel_manager
+          },
+          owner_invitation: {
+            invited_by: actor,
+            deliver: creation_action == "create_and_onboard"
+          }
         ).call
 
         if result[:success]
           @hotel = result[:hotel]
+          @owner_invitation = result[:owner_invitation]
           true
         else
           errors.add(:base, result[:error])
@@ -27,26 +61,16 @@ module Admin
         end
       end
 
-      def hotel
-        @hotel || Hotel.new(hotel_attributes)
+      def create_and_onboard?
+        creation_action == "create_and_onboard"
       end
 
       private
 
-      def hotel_attributes
-        {
-          name: hotel_name,
-          address: address,
-          city: city,
-          country: country,
-          star_rating: star_rating,
-          salesperson_id: salesperson_id,
-          preferred_channel_manager: preferred_channel_manager,
-          amenities: amenities || [],
-          status: "approved",
-          allow_pax_pricing: ActiveModel::Type::Boolean.new.cast(allow_pax_pricing) || false,
-          allow_boat_information: allow_boat_information.nil? ? true : ActiveModel::Type::Boolean.new.cast(allow_boat_information)
-        }
+      def plan_is_active
+        return if plan_id.blank? || Plan.active.exists?(id: plan_id)
+
+        errors.add(:plan_id, "must be an active subscription plan")
       end
     end
   end

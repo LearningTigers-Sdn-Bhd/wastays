@@ -1,0 +1,19 @@
+<section aria-labelledby="audit-history-heading" class="space-y-3">
+  <div>
+    <h2 id="audit-history-heading" class="text-base font-semibold">Onboarding history</h2>
+    <p class="mt-1 text-sm text-muted-foreground">Submission, review, and section changes in newest-first order.</p>
+  </div>
+  <% if @audit_events.any? %>
+    <ol class="divide-y divide-border border-y border-border">
+      <% @audit_events.each do |event| %>
+        <li class="grid gap-1 py-3 text-sm sm:grid-cols-[11rem_1fr_auto] sm:items-center">
+          <span class="font-medium"><%= event.event_type.humanize %></span>
+          <span class="text-muted-foreground"><%= event.section_key&.humanize || "Property lifecycle" %><%= " · #{event.user.name}" if event.user %></span>
+          <time class="text-xs text-muted-foreground" datetime="<%= event.occurred_at.iso8601 %>"><%= l(event.occurred_at, format: :short) %></time>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p class="text-sm text-muted-foreground">No onboarding history has been recorded yet.</p>
+  <% end %>
+</section>

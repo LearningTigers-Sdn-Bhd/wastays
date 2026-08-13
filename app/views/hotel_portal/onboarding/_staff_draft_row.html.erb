@@ -1,0 +1,29 @@
+<%# The record table owns the row and its remove control; this partial supplies
+    only the field cells. %>
+<% object = OnboardingStaffDraft.new(entry.slice("name", "email", "role_id")) %>
+<% send_invitation = entry["send_invitation"] == "true" %>
+<%= fields_for "staff_entries[#{index}]", object do |staff_form| %>
+  <td>
+    <%= render PanelsUI::FormField.new(form: staff_form, attribute: :name, label: "Name", size: :sm) do |field| %>
+      <% field.with_input(autocomplete: "name") %>
+    <% end %>
+  </td>
+  <td>
+    <%= render PanelsUI::FormField.new(form: staff_form, attribute: :email, label: "Email", size: :sm, required: true) do |field| %>
+      <% field.with_input(type: :email, autocomplete: "email") %>
+    <% end %>
+  </td>
+  <td>
+    <%= render PanelsUI::FormField.new(form: staff_form, attribute: :role_id, label: "Preset role", size: :sm, required: true) do |field| %>
+      <% field.with_select_menu(staff_roles.map { |role| [role.name, role.id] }, prompt: "Select role", selected: entry["role_id"]) %>
+    <% end %>
+  </td>
+  <td>
+    <%= render PanelsUI::Switch.new(
+          form: staff_form,
+          attribute: :send_invitation,
+          label: "Send invitation",
+          size: :sm,
+          checked: send_invitation) %>
+  </td>
+<% end %>

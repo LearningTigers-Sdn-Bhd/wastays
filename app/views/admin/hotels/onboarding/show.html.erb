@@ -1,46 +1,134 @@
-<div class="w-full space-y-6">
-  <div>
-    <%= link_to onboarding_admin_hotels_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground" do %>
-      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Back to Onboarding Tracker
-    <% end %>
-  </div>
+<% content_for :full_height_page, true %>
 
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-    <!-- Main Column: Training Sessions -->
-    <div class="space-y-6 xl:col-span-12">
-      <!-- Hotel Header -->
-      <section class="rounded-2xl border border-border bg-card shadow-sm">
-        <div class="px-6 py-6 sm:px-8">
-          <%= render PanelsUI::PageHeader.new(
-                title: safe_join([
-                  @hotel.name,
-                  tag.span(@hotel.status.titleize, class: "inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200")
-                ], " ")) do |header| %>
-            <% header.with_caption do %>
-              <%= @hotel.city %>, <%= @hotel.country %>
-            <% end %>
-          <% end %>
+<div class="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-hidden px-5 py-4">
+  <% period_start = @hotel.onboarding_start_date %>
+  <% period_end = @hotel.onboarding_end_date %>
+  <% period_days = (period_end - period_start).to_i %>
+  <% review_actions_available = @submission&.pending_review? && @hotel.status == "pending_review" %>
+
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between" data-testid="admin-onboarding-header">
+    <div class="flex min-w-0 items-start gap-3">
+      <%= link_to admin_hotels_path(status: "pending_review"),
+            class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            aria: { label: "Back to pending review" } do %>
+        <%= app_icon "arrow-left", class: "size-4", aria: { hidden: "true" } %>
+      <% end %>
+
+      <div class="min-w-0 space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="min-w-0 truncate text-base font-semibold tracking-tight text-foreground"><%= @hotel.name %></h1>
+          <%= render PanelsUI::Badge.new(label: @hotel.status.humanize, variant: @hotel.status == "live" ? :success : :warning, size: :sm) %>
         </div>
-      </section>
-
-      <!-- Training Sessions -->
-      <section class="rounded-2xl border border-border bg-card shadow-sm">
-        <div class="border-b border-border px-6 py-5 sm:px-8 flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Onboarding & Training</h2>
-            <p class="mt-1 text-sm text-muted-foreground">Assign a team member, set a meeting link, and track the completion of the training session.</p>
-          </div>
-        </div>
-
-        <div class="px-6 py-6 sm:px-8 space-y-6">
-          <!-- Add Session Form -->
-          <%= render "admin/hotels/onboarding_session_form", session: OnboardingSession.new %>
-
-          <!-- Sessions List -->
-          <%= render "admin/hotels/onboarding_sessions_list", sessions: @sessions, hotel: @hotel %>
-        </div>
-      </section>
+        <p class="text-xs text-muted-foreground"><%= [ @hotel.city, @hotel.country ].compact_blank.join(", ") %></p>
+        <p class="text-xs text-muted-foreground">
+          <%= l(period_start, format: "%d %b") %> – <%= l(period_end, format: "%d %b %Y") %>
+          · <%= period_days.zero? ? "< 1 day" : "#{period_days} #{'day'.pluralize(period_days)}" %>
+        </p>
+      </div>
     </div>
+
+    <%= render PanelsUI::DropdownMenu.new(id: "admin-onboarding-actions", placement: :bottom_end, class: "w-56") do |menu| %>
+      <% menu.with_trigger(variant: :primary, size: :md, aria_label: "Onboarding actions") do %>
+        Actions
+        <%= app_icon "chevron-down", class: "size-4", aria: { hidden: "true" } %>
+      <% end %>
+      <% menu.with_item(command: "show-modal", commandfor: "edit-onboarding-period-sheet", aria: { haspopup: "dialog" }) do %>
+        <%= app_icon "calendar", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+        <span>Edit onboarding period</span>
+      <% end %>
+      <% if @hotel.status.in?(%w[setup pending_review]) %>
+        <% menu.with_item(
+             href: toggle_setup_lock_admin_hotel_path(@hotel),
+             method: :post,
+             form: { data: { turbo_confirm: @hotel.setup_lock_enabled? ? "Let staff back into the hotel portal before #{@hotel.name} goes live?" : "Keep staff inside onboarding until #{@hotel.name} goes live?" } }) do %>
+          <%= app_icon @hotel.setup_lock_enabled? ? "lock-open" : "lock", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+          <span><%= @hotel.setup_lock_enabled? ? "Disable setup lock" : "Enable setup lock" %></span>
+        <% end %>
+      <% end %>
+      <% if review_actions_available %>
+        <% menu.with_separator %>
+        <% menu.with_item(command: "show-modal", commandfor: "request-onboarding-changes-sheet", aria: { haspopup: "dialog" }) do %>
+          <%= app_icon "message-square", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+          <span>Request changes</span>
+        <% end %>
+        <% menu.with_item(
+             href: approve_onboarding_admin_hotel_path(@hotel),
+             method: :post,
+             variant: :success,
+             form: { data: { turbo_confirm: "Approve #{@hotel.name} and make it live?" } }) do %>
+          <%= app_icon "circle-check", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+          <span>Approve and go live</span>
+        <% end %>
+      <% end %>
+    <% end %>
+  </header>
+
+  <%= render PanelsUI::Tabs.new(
+        id: "admin-onboarding-tabs",
+        active: @active_tab,
+        variant: :line,
+        aria_label: "Onboarding review sections") do |tabs| %>
+    <% Admin::Hotels::OnboardingController::TAB_LABELS.each do |tab, label| %>
+      <% tab_path = tab == "overview" ? onboarding_admin_hotel_path(@hotel) : onboarding_tab_admin_hotel_path(@hotel, tab:) %>
+      <% tabs.with_tab(name: tab, label:, href: tab_path) %>
+    <% end %>
+  <% end %>
+
+  <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar" data-testid="admin-onboarding-tab-content">
+    <%= render "admin/hotels/onboarding/#{@active_tab}" %>
   </div>
+
+  <%= render PanelsUI::Sheet.new(
+        id: "edit-onboarding-period-sheet",
+        side: :right,
+        size: :sm,
+        title: "Edit onboarding period",
+        description: "Correct the dates used to measure how long property setup took.") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: save_onboarding_period_admin_hotel_path(@hotel), method: :post,
+                    id: "edit-onboarding-period-form", class: "space-y-5 py-2" do |form| %>
+        <%= form.hidden_field :tab, value: @active_tab %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :start_date, label: "Start date", required: true) do |field| %>
+          <% field.with_date_picker(value: period_start, linked_to: :end_date) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :end_date, label: "End date", required: true) do |field| %>
+          <% field.with_date_picker(value: period_end, min: period_start) %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% sheet.with_footer do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost,
+                                      data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: "edit-onboarding-period-form",
+                                      data: { turbo_submits_with: "Saving…" }) do %>Save period<% end %>
+    <% end %>
+  <% end %>
+
+  <% if review_actions_available %>
+    <%= render PanelsUI::Sheet.new(
+          id: "request-onboarding-changes-sheet", side: :right, size: :md,
+          title: "Request changes", description: "Choose what the property owner must review before submitting again.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with url: request_onboarding_changes_admin_hotel_path(@hotel), id: "request-onboarding-changes-form", class: "space-y-5 py-2" do |form| %>
+          <fieldset class="space-y-3">
+            <legend class="text-sm font-medium">Sections to review</legend>
+            <% Onboarding::SectionCatalog.all.reject { |section| section.key == "review" }.each do |section| %>
+              <%= render PanelsUI::Checkbox.new(
+                    name: "section_keys[]", value: section.key,
+                    label: HotelPortal::OnboardingPresenter::SECTION_CONTENT.fetch(section.key).first,
+                    include_hidden: false) %>
+            <% end %>
+          </fieldset>
+          <%= render PanelsUI::FormField.new(form:, attribute: :explanation, label: "Explanation", required: true,
+                                             hint: "The owner sees this message in every selected section.") do |field| %>
+            <% field.with_text_area(rows: 5, placeholder: "Explain what needs to change and why.") %>
+          <% end %>
+        <% end %>
+      <% end %>
+      <% sheet.with_footer do %>
+        <button type="button" class="panel-button" data-variant="ghost" data-size="md" data-action="panels-ui--sheet#close">Cancel</button>
+        <button type="submit" form="request-onboarding-changes-form" class="panel-button" data-variant="primary" data-size="md">Request changes</button>
+      <% end %>
+    <% end %>
+  <% end %>
 </div>

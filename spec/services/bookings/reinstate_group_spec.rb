@@ -6,7 +6,7 @@ RSpec.describe Bookings::ReinstateGroup, type: :service do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user) }
   let(:group) { create(:group_booking, hotel: hotel) }
-  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: %w[101 102 103]) }
+  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", quantity: 3, room_numbers: %w[101 102 103]) }
   let(:first) { create(:booking, hotel: hotel, group_booking: group, status: "no_show") }
   let(:second) { create(:booking, hotel: hotel, group_booking: group, status: "no_show") }
   let!(:first_room) { create(:booking_room, booking: first, room_type: room_type, room_number: "101") }

@@ -1,0 +1,125 @@
+<% frame_id = turbo_frame_request_id.presence || "admin_hotel_action_sheet" %>
+<% form_id = "create-hotel-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "create-hotel-sheet",
+          side: :right,
+          size: :xl,
+          title: "Add hotel",
+          description: "Create the platform account and choose the commercial settings the owner cannot change later.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: form, url: admin_hotels_path, id: form_id, class: "space-y-6 py-2" do |builder| %>
+          <% if form.errors.any? %>
+            <div class="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert" tabindex="-1">
+              <h3 class="font-semibold"><%= pluralize(form.errors.count, "issue") %> prevented this hotel from being created.</h3>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <% form.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <section class="space-y-4" aria-labelledby="hotel-account-heading">
+            <div>
+              <h3 id="hotel-account-heading" class="text-base font-semibold">Account and owner</h3>
+              <p class="mt-1 text-sm text-muted-foreground">The owner completes the operational property profile after activation.</p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: builder, attribute: :account_name, label: "Company or group name", required: true) do |field| %>
+              <% field.with_input(autocomplete: "organization") %>
+            <% end %>
+
+            <div class="grid items-start gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: builder, attribute: :owner_name, label: "Owner name", required: true) do |field| %>
+                <% field.with_input(autocomplete: "name") %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: builder, attribute: :owner_email, label: "Owner email", hint: "Used for the secure activation invitation.", required: true) do |field| %>
+                <% field.with_input(type: :email, autocomplete: "email") %>
+              <% end %>
+            </div>
+          </section>
+
+          <section class="space-y-4 border-t border-border pt-5" aria-labelledby="hotel-platform-heading">
+            <div>
+              <h3 id="hotel-platform-heading" class="text-base font-semibold">Platform choices</h3>
+              <p class="mt-1 text-sm text-muted-foreground">These choices establish the setup lifecycle and commercial model.</p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: builder, attribute: :hotel_name, label: "Hotel name", required: true) do |field| %>
+              <% field.with_input(autocomplete: "organization") %>
+            <% end %>
+
+            <%= render PanelsUI::RadioGroup.new(
+                  form: builder,
+                  attribute: :sell_mode,
+                  label: "How does the property sell rooms?",
+                  description: "This applies to every rate plan and cannot be changed after creation.",
+                  options: [
+                    { label: "Per room", value: "per_room", description: "One nightly room price, with optional guest supplements." },
+                    { label: "Per guest", value: "per_person", description: "A nightly price for each supported adult occupancy." }
+                  ],
+                  required: true) %>
+
+            <div class="grid items-start gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: builder, attribute: :plan_id, label: "Subscription plan", required: true) do |field| %>
+                <% field.with_select_menu(
+                     (@plans.any? ? @plans.map { |plan| { label: plan.name, value: plan.id } } : [ { label: "No active plans available", value: "", disabled: true } ]),
+                     prompt: "Select a plan") %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: builder, attribute: :preferred_channel_manager, label: "Preferred channel manager", required: true) do |field| %>
+                <% field.with_select_menu(
+                     Admin::Hotels::CreateForm::CHANNEL_MANAGER_OPTIONS.map { |label, value| { label: label, value: value } }) %>
+              <% end %>
+            </div>
+
+            <%= render PanelsUI::FormField.new(
+                  form: builder,
+                  attribute: :salesperson_id,
+                  label: "Internal salesperson",
+                  hint: "Optional. Used for platform ownership and reporting.") do |field| %>
+              <% field.with_select_menu(
+                   [ { label: "No salesperson", value: "" } ] + @salespersons.map { |person| { label: person.name, value: person.id } }) %>
+            <% end %>
+          </section>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: form_id,
+              name: "admin_hotels_create_form[creation_action]",
+              value: "create_only",
+              variant: :secondary,
+              size: :sm,
+              data: { turbo_submits_with: "Creating…" }) do %>
+          Create only
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: form_id,
+              name: "admin_hotels_create_form[creation_action]",
+              value: "create_and_onboard",
+              size: :sm,
+              data: { turbo_submits_with: "Creating…" }) do %>
+          Create & onboard
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

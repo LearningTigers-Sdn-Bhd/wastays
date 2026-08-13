@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Bookings::ValidateStayProposal do
   let(:hotel) { create(:hotel) }
-  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 102]) }
+  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102]) }
   let(:booking) { create(:booking, hotel:, check_in: Date.current, check_out: Date.current + 2.days) }
 
   before { create(:booking_room, booking:, room_type:, room_number: "101") }

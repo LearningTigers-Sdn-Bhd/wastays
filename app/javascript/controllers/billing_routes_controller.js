@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { selectMenuFor, syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
 
 export default class extends Controller {
   static targets = ["row", "children", "chevron", "party", "folio", "childChoice"]
@@ -73,7 +74,7 @@ export default class extends Controller {
     const renderedChoices = choices.length ? choices : [{ label: "No open folio available", value: "", disabled: true }]
     const currentAvailable = choices.some((choice) => String(choice.value) === select.value && !choice.disabled)
     const selectedValue = !reset && currentAvailable ? select.value : choices.find((choice) => !choice.disabled)?.value || ""
-    const controller = this.selectMenuFor(select)
+    const controller = selectMenuFor(this.application, select)
 
     if (controller) {
       controller.replaceOptions(renderedChoices, selectedValue)
@@ -97,13 +98,6 @@ export default class extends Controller {
     }
   }
 
-  selectMenuFor(select) {
-    const root = select.closest("[data-controller~='panels-ui--select-menu']")
-    if (!root) return null
-
-    return this.application.getControllerForElementAndIdentifier(root, "panels-ui--select-menu")
-  }
-
   nativeSelect(row, targetName) {
     const target = row?.querySelector(`[data-billing-routes-target~='${targetName}']`)
     if (!target) return null
@@ -113,12 +107,12 @@ export default class extends Controller {
 
   setSelectValue(select, value) {
     select.value = String(value || "")
-    this.selectMenuFor(select)?.syncFromNative()
+    syncSelectMenu(this.application, select)
   }
 
   setSelectDisabled(select, disabled) {
     select.disabled = disabled
-    const controller = this.selectMenuFor(select)
+    const controller = selectMenuFor(this.application, select)
     if (!controller) return
 
     controller.triggerTarget.disabled = disabled

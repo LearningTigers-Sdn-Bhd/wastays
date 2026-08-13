@@ -109,6 +109,17 @@ RSpec.describe PanelsUI::FormField, type: :component do
     end
   end
 
+  # The field's own size used to be splatted over whatever the control asked for,
+  # so a caller sizing the control against its container — a field in a table
+  # cell — was silently rendered at the field's size instead.
+  it "lets a control keep the size it was given rather than the field's" do
+    render_field(size: :md) do |field|
+      field.with_input(size: :sm)
+    end
+
+    expect(page).to have_css(".panel-form-field[data-size='md'] .panel-input[data-size='sm']")
+  end
+
   it "creates an inline control group for start and end addons after the input in the DOM" do
     render_field(label: "Rate") do |field|
       field.with_input(type: :number)

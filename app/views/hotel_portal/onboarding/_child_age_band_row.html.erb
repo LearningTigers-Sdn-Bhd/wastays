@@ -1,0 +1,21 @@
+<% prefix = "child_bands[#{index}]" %>
+<div class="flex flex-wrap items-center gap-2" data-onboarding-child-bands-target="row">
+  <div class="flex w-40 items-center gap-1">
+    <%= number_field_tag "#{prefix}[min_age]", band["min_age"], min: RatePlanAgeBand::AGE_RANGE.min,
+          max: RatePlanAgeBand::AGE_RANGE.max, step: 1, disabled: presenter.read_only?,
+          class: "panel-input w-16", aria: { label: "Youngest age in this band" } %>
+    <span class="text-xs text-muted-foreground">to</span>
+    <%= number_field_tag "#{prefix}[max_age]", band["max_age"], min: RatePlanAgeBand::AGE_RANGE.min,
+          max: RatePlanAgeBand::AGE_RANGE.max, step: 1, disabled: presenter.read_only?,
+          class: "panel-input w-16", aria: { label: "Oldest age in this band" } %>
+  </div>
+  <%= text_field_tag "#{prefix}[label]", band["label"], disabled: presenter.read_only?,
+        placeholder: "Child", class: "panel-input w-36", aria: { label: "Band label" } %>
+  <% unless presenter.read_only? %>
+    <%= render PanelsUI::Button.new(as: :button, variant: :ghost, size: :icon_sm, icon_only: true,
+          aria_label: "Remove this age band", class: "ms-auto",
+          data: { action: "onboarding-child-bands#remove" }) do %>
+      <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+    <% end %>
+  <% end %>
+</div>

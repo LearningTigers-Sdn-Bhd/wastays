@@ -4,20 +4,28 @@ require "ostruct"
 
 module Bookings
   class BuildFinancialSnapshot
-    def initialize(hotel:, check_in:, check_out:, guest_country:, booking: nil, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, corporate_rate: false, rate_tier: :standard)
+    def initialize(hotel:, check_in:, check_out:, guest_country:, booking: nil, room_type: nil, rate_plan: nil, quantity: 1, manual_total_amount: nil, nightly_rate_snapshot: nil, room_items: nil, adults: nil, children: nil, child_ages: [])
       @hotel = hotel
       @booking = booking
       @check_in = check_in.to_date
       @check_out = check_out.to_date
       @guest_country = guest_country
       @room_type = room_type
-      @rate_plan = rate_plan
+      @rate_plan = rate_plan || room_type&.standard_rate_plan
       @quantity = quantity.to_i
       @manual_total_amount = manual_total_amount.presence&.to_d
       @nightly_rate_snapshot = nightly_rate_snapshot
       @room_items = room_items
-      @corporate_rate = corporate_rate
-      @rate_tier = rate_tier&.to_sym || :standard
+
+      # Occupancy only moves the number for per-person plans, but it has to be
+      # carried on every path: this service produces booking.total_amount, the
+      # folio charges and the tax base, so a party size it doesn't know about
+      # is a party size the guest isn't billed for. The default of 2 adults
+      # matches CalculateStayPrice so the two agree when a caller omits it.
+      @adults = (adults || 2).to_i
+      @children = (children || 0).to_i
+      ages = Array(child_ages).map(&:to_i)
+      @child_ages = (ages.size == @children) ? ages : []
     end
 
     def call
@@ -64,45 +72,38 @@ module Bookings
 
       currency = @rate_plan&.currency.presence || @hotel.default_currency.presence || "MYR"
       all_eligible_rates = @room_type.room_rates.includes(:rate_plan).where(date: stay_dates, currency: currency)
-      rates_by_plan_and_date = all_eligible_rates.group_by(&:rate_plan_id)
-
-      plans_to_try = [ @rate_plan, @room_type.standard_rate_plan, nil ].uniq
-      plan_ids_to_try = plans_to_try.map { |p| p.respond_to?(:id) ? p.id : p }
+      assignment = @rate_plan && @room_type.room_type_rate_plans.find_by(rate_plan: @rate_plan)
 
       snapshot = stay_dates.index_with do |date|
-        rate = nil
-        plan_ids_to_try.each do |pid|
-          rate = rates_by_plan_and_date[pid]&.find { |r| r.date == date }
-          break if rate
+        resolved = Rates::ResolveEffectiveNightlyPrice.call(
+          room_type: @room_type,
+          rate_plan: @rate_plan,
+          date: date,
+          currency: currency,
+          adults: @adults,
+          children: @children,
+          child_ages: @child_ages,
+          room_rates: all_eligible_rates,
+          room_type_rate_plan: assignment
+        )
+
+        # This snapshot becomes booking.total_amount and the folio charges, so a
+        # night the resolver cannot price has to stop the booking. `nil.to_d` is
+        # 0, which billed the guest nothing for that night instead.
+        if resolved.amount.nil?
+          raise ArgumentError,
+            "No price for #{@room_type.name} on #{date.iso8601} at #{@adults} adults / #{@children} children."
         end
 
-        if rate.present?
-          tier_kind = @rate_tier != :standard ? @rate_tier : rate.rate_plan&.special_tier_kind
-
-          price = case tier_kind
-          when :walk_in then rate.walk_in_price
-          when :corporate then rate.corporate_price
-          else
-            @corporate_rate ? rate.corporate_price : nil
-          end
-          price ||= rate.price
-
-          rate.as_json.merge(
-            "room_rate_id" => rate.id,
-            "source" => "room_rate",
-            "price" => price.to_d.to_s("F"),
-            "currency" => rate.currency
-          )
-        else
-          {
-            "date" => date.iso8601,
-            "price" => @room_type.base_price.to_d.to_s("F"),
-            "currency" => currency,
-            "rate_plan_id" => @rate_plan&.id,
-            "room_type_id" => @room_type.id,
-            "source" => "base_price_fallback"
-          }
-        end
+        (resolved.room_rate&.as_json || {}).merge(
+          "room_rate_id" => resolved.room_rate&.id,
+          "date" => date.iso8601,
+          "price" => resolved.amount.to_d.to_s("F"),
+          "currency" => resolved.currency,
+          "rate_plan_id" => @rate_plan&.id,
+          "room_type_id" => @room_type.id,
+          "source" => resolved.source.to_s
+        ).compact
       end.transform_keys(&:iso8601)
 
       total = stay_dates.sum { |date| snapshot.dig(date.iso8601, "price").to_d * @quantity }

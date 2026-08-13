@@ -3,11 +3,11 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :business_day, type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
-  let(:other_hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
+  let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
-  let(:room_type) { create(:room_type, hotel: hotel, name: "Garden Suite", room_number_mode: "custom", room_numbers: %w[101 102 103]) }
+  let(:room_type) { create(:room_type, hotel: hotel, name: "Garden Suite", room_number_mode: "custom", quantity: 3, room_numbers: %w[101 102 103]) }
   let(:booking) do
     create(:booking, hotel: hotel, guest_name: "Ada Lovelace", status: "due_out_detected", check_in: Date.yesterday, check_out: Date.current).tap do |record|
       create(:booking_room, booking: record, room_type: room_type, room_number: "101")

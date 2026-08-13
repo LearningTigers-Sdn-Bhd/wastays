@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:booking) { create(:booking, hotel:, guest_name: "Primary Guest", status: "confirmed") }

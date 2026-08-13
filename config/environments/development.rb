@@ -79,7 +79,10 @@ Rails.application.configure do
   config.hotwire_livereload.debounce_delay_ms = 300
 
   config.hosts << "wastays.jesseltonpixel.com"
-  config.hosts << /.*\.wastays\.com/
+  # Anchored so a host merely containing these names (foo.wastays.com.attacker.test)
+  # is not authorised.
+  config.hosts << /\A.*\.wastays\.com\z/
+  config.hosts << /\A[a-z0-9-]+\.trycloudflare\.com\z/
 
   # Enable Bullet N+1 query detection in development
   config.after_initialize do

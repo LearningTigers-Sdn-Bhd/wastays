@@ -57,7 +57,7 @@ module Folios
           next if actualized_forecast_exists?(line)
           next if active_forecast_exists?(line, target_folio)
 
-          target_folio.folio_forecasted_charges.create!(line.slice(:stay_date, :charge_kind, :identity, :amount, :description))
+          target_folio.folio_forecasted_charges.create!(line.slice(:stay_date, :charge_kind, :identity, :amount, :description, :metadata))
         end
       end
 
@@ -86,7 +86,7 @@ module Folios
       end
 
       def forecast_changed?(forecast, line)
-        forecast.amount != line[:amount].to_d || forecast.description != line[:description]
+        forecast.amount != line[:amount].to_d || forecast.description != line[:description] || forecast.metadata.to_h != line[:metadata].to_h.stringify_keys
       end
 
       def posted_transaction_for(line)
@@ -110,7 +110,6 @@ module Folios
 
         FolioTransaction.joins(:booking_folio)
           .where(booking_folios: { booking_id: @booking.id })
-          .charge
           .where(
             "metadata->>'nightly_charge_key' = :nightly_key OR metadata->>'reconciles_nightly_charge_key' = :nightly_key OR catch_up_key = :catch_up_key OR metadata->>'catch_up_key' = :catch_up_key",
             nightly_key: nightly_key,
@@ -137,7 +136,7 @@ module Folios
       end
 
       def active_forecasts
-        booking_forecasts.nightly_room.forecast
+        booking_forecasts.nightly_financial.forecast
       end
 
       def booking_forecasts

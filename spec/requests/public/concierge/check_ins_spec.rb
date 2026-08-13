@@ -10,7 +10,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
   end
   let(:room_type) do
-    create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ])
+    create(:room_type, hotel: hotel, room_number_mode: "custom", quantity: 1, room_numbers: [ "101" ])
   end
   let(:booking) do
     b = create(:booking, hotel: hotel, guest_name: "Ahmad Zulkifli", status: "confirmed",

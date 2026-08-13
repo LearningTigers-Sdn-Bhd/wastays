@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe BookingEngine::ConfirmBooking do
   let(:hotel) do
-    create(:hotel, status: 'approved', tourism_tax_enabled: true, tourism_tax_amount: 10.0)
+    create(:hotel, status: 'live', tourism_tax_enabled: true, tourism_tax_amount: 10.0)
   end
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:quote) do

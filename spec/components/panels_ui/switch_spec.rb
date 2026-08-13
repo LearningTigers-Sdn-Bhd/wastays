@@ -49,6 +49,28 @@ RSpec.describe PanelsUI::Switch, type: :component do
     expect(page).to have_css("input.panel-switch__input.w-full[type='checkbox'][role='switch'][name='beta'][value='on'][checked][disabled]")
   end
 
+  it "renders a large icon-state switch with named off and on states" do
+    render_inline(
+      described_class.new(
+        name: "pricing_mode", value: "multiplier", unchecked_value: "amount",
+        checked: true, label: "Percentage of the one-adult price", label_hidden: true,
+        variant: :icon, size: :lg, off_icon: "badge-dollar-sign", on_icon: "percent"
+      )
+    )
+
+    expect(page).to have_css("label.panel-switch[data-variant='icon'][data-size='lg'][data-label-hidden='true']")
+    expect(page).to have_css(".panel-switch__control input[role='switch'][value='multiplier'][checked]")
+    expect(page).to have_css("input[type='hidden'][name='pricing_mode'][value='amount']", visible: :all)
+    expect(page).to have_css(".panel-switch__state-icon[data-state='off'] svg", visible: :all)
+    expect(page).to have_css(".panel-switch__state-icon[data-state='on'] svg", visible: :all)
+  end
+
+  it "requires both icons for the icon variant" do
+    expect {
+      render_inline(described_class.new(name: "mode", label: "Mode", variant: :icon, off_icon: "percent"))
+    }.to raise_error(ArgumentError, "Icon switches require off_icon: and on_icon:")
+  end
+
   it "rejects missing labels and invalid control sources" do
     expect { described_class.new(name: "beta", label: nil) }.to raise_error(ArgumentError, "Switches require a label")
     expect { described_class.new(form: form_for, label: "Beta") }.to raise_error(ArgumentError, "Switches require either form: and attribute:, or name:")

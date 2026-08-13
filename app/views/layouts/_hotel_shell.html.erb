@@ -22,10 +22,21 @@
       <%= render PanelsUI::Navbar.new(key: navigation_key, sidebar_state_key: navigation_state_key, navigation: !locked_hotel_portal_shell?) do |navbar| %>
         <% navbar.with_brand do %>
           <% if current_hotel %>
-            <a href="<%= hotel_dashboard_path(current_hotel) %>" class="panel-navbar__identity" aria-label="<%= current_hotel.name %>">
-              <span class="panel-navbar__identity-name"><%= current_hotel.name %></span>
-              <span class="panel-navbar__identity-meta">#<%= current_hotel.id %></span>
-            </a>
+            <%# The badge sits beside the identity rather than inside it: how the
+                property sells is a fact about the tenant, not part of the link
+                to its dashboard. Hidden below md so the name keeps the rail. %>
+            <div class="flex items-center gap-2">
+              <a href="<%= hotel_dashboard_path(current_hotel) %>" class="panel-navbar__identity" aria-label="<%= current_hotel.name %>">
+                <span class="panel-navbar__identity-name"><%= current_hotel.name %></span>
+                <span class="panel-navbar__identity-meta">#<%= current_hotel.id %></span>
+              </a>
+              <%= render PanelsUI::Badge.new(
+                    label: current_hotel.sell_mode_label,
+                    variant: :outline,
+                    size: :sm,
+                    class: "hidden md:inline-flex",
+                    data: { testid: "hotel-sell-mode-badge" }) %>
+            </div>
           <% else %>
             <a href="<%= root_path %>" class="flex items-center" aria-label="WAStays">
               <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-9 w-auto" %>

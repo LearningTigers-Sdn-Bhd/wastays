@@ -68,6 +68,21 @@ module HotelPortal
       calendar.cell_for(row, date)
     end
 
+    # A rate plan can be assigned to several room categories, so the calendar's
+    # per-category option list repeats one plan under each of them. Those repeats
+    # share a value, which in a single <select> means the first label wins — an
+    # Executive Penthouse cell would show its plan as "Ocean Villa King - …".
+    # Collapse them: the room category is chosen in its own field, so the plan
+    # only needs its own name. Tiers keep the category, being category-specific.
+    def inventory_rate_plan_choices(calendar)
+      calendar.rate_plan_options_struct.each_with_object([]) do |option, choices|
+        next if choices.any? { |_label, value| value == option.id.to_s }
+
+        label = option.kind == :tier ? option.label : option.label.split(" - ", 2).last
+        choices << [ label, option.id.to_s ]
+      end
+    end
+
     def inventory_weekday_options
       [
         [ "Mon", 1 ],

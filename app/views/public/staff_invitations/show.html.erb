@@ -1,3 +1,4 @@
+<% owner_activation = @invitation.role.slug == "hotel_owner" %>
 <div class="bg-[#fdfbf7] min-h-screen flex items-center justify-center px-6 py-10">
   <div class="w-full max-w-xl">
     <div class="mb-10 text-center">
@@ -7,15 +8,19 @@
 
       <div class="flex items-center justify-center gap-x-3 mb-6">
         <span class="w-6 h-px bg-brand-primary/30"></span>
-        <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary">Staff Invitation</span>
+        <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary"><%= owner_activation ? "Owner activation" : "Staff invitation" %></span>
         <span class="w-6 h-px bg-brand-primary/30"></span>
       </div>
 
       <h1 class="text-4xl font-serif text-neutral-text-primary leading-tight mb-3">
-        Join <span class="italic text-brand-primary"><%= @invitation.hotel.name %></span>
+        <%= owner_activation ? "Set up" : "Join" %> <span class="italic text-brand-primary"><%= @invitation.hotel.name %></span>
       </h1>
       <p class="text-neutral-text-secondary text-sm leading-relaxed">
-        You were invited as <span class="font-semibold text-neutral-text-primary"><%= @invitation.role.name %></span>.
+        <% if owner_activation %>
+          Create your secure password to begin the property setup.
+        <% else %>
+          You were invited as <span class="font-semibold text-neutral-text-primary"><%= @invitation.role.name %></span>.
+        <% end %>
       </p>
     </div>
 
@@ -56,7 +61,7 @@
             <%= f.password_field :password_confirmation, required: true, autocomplete: "new-password", class: "w-full rounded-xl border border-neutral-border bg-white px-4 py-3 text-sm text-neutral-text-primary focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20" %>
           </div>
 
-          <%= f.submit "Create Account & Accept", class: "w-full rounded-xl bg-brand-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-primary/90" %>
+          <%= f.submit(owner_activation ? "Activate owner account" : "Create Account & Accept", class: "w-full rounded-xl bg-brand-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-primary/90") %>
         <% end %>
       <% end %>
     </div>

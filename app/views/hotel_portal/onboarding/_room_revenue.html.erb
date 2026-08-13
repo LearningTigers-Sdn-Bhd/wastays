@@ -1,0 +1,151 @@
+<% rr = @room_revenue_presenter %>
+<% currency = rr.currency %>
+
+<%# The shell heads the step. The tax rules and the later-change rule are peer groups
+    within it, so neither heading labels the page as a whole. %>
+<div class="space-y-5">
+  <% if presenter.read_only? %>
+    <div>
+      <h2 class="text-base font-semibold">Taxes on a room night</h2>
+      <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
+        These apply to every night a room is billed — the nightly charge and the four stay events
+        (late checkout, early departure, no-show, cancellation), which post under their own ledger
+        codes but are taxed as room revenue.
+      </p>
+    </div>
+
+    <% if rr.selected_tax_rules.any? %>
+      <ul class="divide-y divide-border border-y border-border">
+        <% rr.selected_tax_rules.each do |rule| %>
+          <li class="flex items-baseline justify-between gap-4 py-3 text-sm">
+            <span><%= rule[:name] %></span>
+            <span class="text-muted-foreground"><%= rr.rate_label(rule) %><%= " · inactive" unless rule[:enabled] %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No taxes are applied to room revenue.</p>
+    <% end %>
+  <% else %>
+    <% form_id = "onboarding-room-revenue-form" %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "room_revenue"), method: :patch, id: form_id do %>
+      <%# Left is the rules and what they come to — the selection with its money
+          read back beneath it, which is where an owner checks their answer.
+          Right is what those rules then govern: how far a later change reaches,
+          and the four stay events it reaches into. %>
+      <div class="grid gap-6 lg:grid-cols-2 lg:gap-x-12">
+        <div class="space-y-5">
+          <div>
+            <h2 class="text-base font-semibold">Taxes on a room night</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              These apply to every night a room is billed. They also apply to the four stay events —
+              late checkout, early departure, no-show and cancellation — because those are charged
+              as room revenue too.
+            </p>
+          </div>
+
+          <%= fields_for :transaction_code, rr.room_revenue_code do |code_form| %>
+            <%= render PanelsUI::FormField.new(
+                  form: code_form,
+                  attribute: :tax_rule_keys,
+                  label: "Taxes and fees applied",
+                  hint: "A tax you switch off stays on this list and is skipped until you switch it back on.") do |field| %>
+              <% field.with_multi_select(rr.tax_rule_choices, selected: rr.selected_tax_rule_keys, prompt: "Select taxes and fees") %>
+            <% end %>
+          <% end %>
+
+          <section aria-labelledby="onboarding-room-revenue-preview-heading"
+                   class="overflow-hidden rounded-md border border-border bg-card"
+                   data-testid="onboarding-room-revenue-preview">
+            <div class="border-b border-border bg-muted px-3 py-2">
+              <h3 id="onboarding-room-revenue-preview-heading" class="text-sm font-semibold">Posting preview</h3>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                What a guest pays for one room night of <%= currency %> <%= number_with_precision(rr.preview_amount, precision: 2, delimiter: ",") %>, using the rules you have saved.
+              </p>
+            </div>
+            <div class="divide-y divide-border">
+              <div class="flex items-baseline justify-between gap-4 px-3 py-2 text-sm">
+                <span class="min-w-0 truncate font-medium">Room</span>
+                <span class="shrink-0 font-mono tabular-nums"><%= currency %> <%= number_with_precision(rr.preview_amount, precision: 2, delimiter: ",") %></span>
+              </div>
+              <% rr.preview_lines.each do |line| %>
+                <div class="flex items-baseline justify-between gap-4 px-3 py-2 text-sm">
+                  <span class="min-w-0 truncate text-muted-foreground"><%= line[:name] %> <span class="text-xs">· <%= line[:detail] %></span></span>
+                  <span class="shrink-0 font-mono tabular-nums text-muted-foreground"><%= currency %> <%= number_with_precision(line[:amount], precision: 2, delimiter: ",") %></span>
+                </div>
+              <% end %>
+              <% if rr.preview_lines.empty? %>
+                <p class="px-3 py-2 text-sm text-muted-foreground">No taxes are switched on, so a room night is charged untaxed.</p>
+              <% end %>
+              <div class="flex items-baseline justify-between gap-4 bg-muted px-3 py-2 text-sm font-semibold">
+                <span>Guest pays</span>
+                <span class="font-mono tabular-nums"><%= currency %> <%= number_with_precision(rr.preview_total, precision: 2, delimiter: ",") %></span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="space-y-5">
+          <section aria-labelledby="onboarding-tax-application-heading" class="space-y-3">
+            <div class="space-y-1">
+              <h2 id="onboarding-tax-application-heading" class="text-base font-semibold">If you change these later</h2>
+              <p class="text-sm text-muted-foreground">
+                Charges already posted never change. This decides whether the charges still to come on
+                open folios are worked out again.
+              </p>
+            </div>
+
+            <%= fields_for :hotel_transaction_configuration, rr.transaction_configuration do |config_form| %>
+              <%= render PanelsUI::RadioGroup.new(
+                    form: config_form,
+                    attribute: :room_revenue_tax_rule_application,
+                    label: "Apply later changes to",
+                    selected: rr.transaction_configuration.room_revenue_tax_rule_application.presence || "new_bookings_only",
+                    options: [
+                      { label: "New bookings only",
+                        value: "new_bookings_only",
+                        description: "New bookings use the new rules. Bookings already open keep the rules they were made with." },
+                      { label: "New bookings and charges still to come on open folios",
+                        value: "open_folio_forecasts",
+                        description: "Also works out charges that have not been posted yet. This can change what a guest was already quoted." }
+                    ]) %>
+            <% end %>
+          </section>
+
+          <section aria-labelledby="onboarding-reservation-policies-heading" class="space-y-3">
+            <div>
+              <h2 id="onboarding-reservation-policies-heading" class="text-base font-semibold">Stay-event policies</h2>
+              <p class="mt-1 text-sm text-muted-foreground">
+                Set up to charge nothing, except one night for a no-show. Change them in Settings once you are live.
+              </p>
+            </div>
+            <% if rr.reservation_policies.any? %>
+              <%# What each event charges, not whether it is switched on: an
+                  inactive policy charges nothing, and the column says so. %>
+              <%= render PanelsUI::Table.new(caption: "Stay-event policies", header_style: :sentence,
+                                             density: :compact,
+                                             wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+                <% table.with_header do %>
+                  <tr>
+                    <th scope="col">Stay event</th>
+                    <th scope="col">What it charges</th>
+                  </tr>
+                <% end %>
+                <% table.with_body do %>
+                  <% rr.reservation_policies.each do |policy| %>
+                    <tr>
+                      <td class="font-medium"><%= policy.policy_type_label %></td>
+                      <td class="text-muted-foreground"><%= policy.pricing_label %></td>
+                    </tr>
+                  <% end %>
+                <% end %>
+              <% end %>
+            <% else %>
+              <p class="text-sm text-muted-foreground">Stay-event policies are created when you save this step.</p>
+            <% end %>
+          </section>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

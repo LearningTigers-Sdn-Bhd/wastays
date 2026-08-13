@@ -35,6 +35,9 @@ class BookingSource < ApplicationRecord
   ].freeze
 
   has_one_attached :logo
+  has_many :booking_billing_parties, dependent: :restrict_with_error
+  has_many :channel_settlements, dependent: :restrict_with_error
+  has_many :channel_settlement_receipts, dependent: :restrict_with_error
 
   before_validation :normalize_key
   before_validation :normalize_colors
