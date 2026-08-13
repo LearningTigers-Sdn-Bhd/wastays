@@ -46,7 +46,8 @@ module CorporateInvitations
         credit_currency: @attributes[:credit_currency].presence || @hotel.default_currency,
         payment_terms_days: @attributes[:payment_terms_days].presence,
         token_digest: Invitation.digest(token),
-        expires_at: Invitation::EXPIRY.from_now
+        expires_at: Invitation::EXPIRY.from_now,
+        last_sent_at: Time.current
       }
     end
 

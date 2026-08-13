@@ -16,11 +16,12 @@ module Onboarding
       # access yet. Making the owner press a separate button to say what the empty
       # table already says would be asking twice.
       return decide_no_additional_staff if @complete && entries.empty?
+      return failure(delivered_removal_error) if delivered_removal_error.present?
       return failure(validation_errors.to_sentence) if validation_errors.any?
 
       transition_result = nil
       OnboardingStaffDraft.transaction do
-        @hotel.onboarding_staff_drafts.delete_all
+        discarded_drafts.each(&:destroy!)
         drafts.each(&:save!)
         transition_result = UpdateSection.new(
           hotel: @hotel,
@@ -61,7 +62,11 @@ module Onboarding
         values = entry.respond_to?(:to_unsafe_h) ? entry.to_unsafe_h : entry.to_h
         normalized = values.stringify_keys.slice("name", "email", "role_id").transform_values { |value| value.to_s.strip }
         normalized["email"] = normalized["email"].downcase
-          normalized unless normalized.values.all?(&:blank?)
+          # The switch always submits — off included — so it cannot join the
+          # emptiness test, or an untouched row would look like a real record.
+          next if normalized.values.all?(&:blank?)
+
+          normalized.merge("send_invitation" => ActiveModel::Type::Boolean.new.cast(values.stringify_keys["send_invitation"]).present?)
         end
       end
     end
@@ -70,14 +75,44 @@ module Onboarding
       @roles ||= @hotel.account.roles.where(slug: ConfirmRolePresets::PRESET_SLUGS).index_by { |role| role.id.to_s }
     end
 
+    # Rows are matched to existing drafts by email rather than rebuilt from
+    # scratch. A draft that has already produced an invitation carries the
+    # marker that keeps delivery idempotent, and recreating the row would throw
+    # it away and invite the person a second time. Reuse also means an unchanged
+    # row validates its uniqueness against itself instead of against its own
+    # database record.
+    # Read straight from the table rather than through the association, which
+    # may have been loaded before delivery stamped these rows — and which would
+    # otherwise collect the unsaved records built below as though they had
+    # already been added.
+    def existing_drafts
+      @existing_drafts ||= OnboardingStaffDraft.where(hotel_id: @hotel.id).index_by { |draft| draft.email.to_s.downcase }
+    end
+
     def drafts
       @drafts ||= entries.map do |entry|
-        OnboardingStaffDraft.new(
-          hotel: @hotel,
+        draft = existing_drafts[entry["email"]] || OnboardingStaffDraft.new(hotel: @hotel)
+        draft.assign_attributes(
           name: entry["name"],
           email: entry["email"],
-          role: roles[entry["role_id"]]
+          role: roles[entry["role_id"]],
+          send_invitation: entry["send_invitation"]
         )
+        draft
+      end
+    end
+
+    def discarded_drafts
+      @discarded_drafts ||= existing_drafts.values - drafts
+    end
+
+    # Mirrors SaveCorporateDrafts: once someone has been invited, taking their
+    # row out of the table cannot unsend the email, so the table stops pretending
+    # it can.
+    def delivered_removal_error
+      @delivered_removal_error ||= begin
+        blocked = discarded_drafts.select(&:delivered?)
+        "#{blocked.map { |draft| draft.name.presence || draft.email }.to_sentence} has already been invited and cannot be removed here." if blocked.any?
       end
     end
 
@@ -100,14 +135,24 @@ module Onboarding
       @unavailable_emails ||= begin
         active = @hotel.user_hotel_accesses.active.includes(:user).map { |access| access.user.email.downcase }
         pending = @hotel.staff_invitations.unaccepted.pluck(:email).map(&:downcase)
-        (active + pending).uniq
+        # A draft that has already been delivered owns the pending invitation
+        # bearing its address. Counting that against itself would make the step
+        # unsaveable after a changes-requested review.
+        (active + pending).uniq - existing_drafts.values.select(&:delivered?).map(&:email)
       end
     end
 
     def serialized_entries
       entries.each_with_index.map do |entry, index|
         role = drafts[index].role
-        entry.merge("role_slug" => role&.slug, "role_name" => role&.name)
+        # The views read these as strings, matching what the controller builds
+        # from persisted drafts, so a re-render after a failed save redraws the
+        # switch the owner left rather than resetting it.
+        entry.merge(
+          "role_slug" => role&.slug,
+          "role_name" => role&.name,
+          "send_invitation" => entry["send_invitation"].to_s
+        )
       end
     end
 

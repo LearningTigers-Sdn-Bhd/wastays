@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_100001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1668,6 +1668,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_090000) do
     t.bigint "hotel_id", null: false
     t.bigint "invited_by_user_id", null: false
     t.string "kind", default: "staff", null: false
+    t.datetime "last_sent_at"
     t.jsonb "metadata", default: {}, null: false
     t.string "name"
     t.bigint "role_id"
@@ -1927,6 +1928,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_090000) do
     t.bigint "invitation_id"
     t.integer "payment_terms_days"
     t.string "relationship_type", default: "standard", null: false
+    t.boolean "send_invitation", default: false, null: false
     t.datetime "updated_at", null: false
     t.index "hotel_id, lower((email)::text)", name: "index_onboarding_corporate_drafts_on_hotel_and_lower_email", unique: true
     t.index ["hotel_id"], name: "index_onboarding_corporate_drafts_on_hotel_id"
@@ -1949,13 +1951,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_090000) do
 
   create_table "onboarding_staff_drafts", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "delivered_at"
     t.string "email", null: false
     t.bigint "hotel_id", null: false
+    t.bigint "invitation_id"
     t.string "name"
     t.bigint "role_id", null: false
+    t.boolean "send_invitation", default: false, null: false
     t.datetime "updated_at", null: false
     t.index "hotel_id, lower((email)::text)", name: "index_onboarding_staff_drafts_on_hotel_and_lower_email", unique: true
     t.index ["hotel_id"], name: "index_onboarding_staff_drafts_on_hotel_id"
+    t.index ["invitation_id"], name: "index_onboarding_staff_drafts_on_delivered_invitation", unique: true, where: "(invitation_id IS NOT NULL)"
+    t.index ["invitation_id"], name: "index_onboarding_staff_drafts_on_invitation_id"
     t.index ["role_id"], name: "index_onboarding_staff_drafts_on_role_id"
   end
 
@@ -2850,6 +2857,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_090000) do
   add_foreign_key "onboarding_corporate_drafts", "invitations"
   add_foreign_key "onboarding_sessions", "hotels"
   add_foreign_key "onboarding_staff_drafts", "hotels"
+  add_foreign_key "onboarding_staff_drafts", "invitations"
   add_foreign_key "onboarding_staff_drafts", "roles"
   add_foreign_key "ota_financial_component_mappings", "booking_sources"
   add_foreign_key "ota_financial_component_mappings", "hotels"

@@ -37,8 +37,9 @@
           to know it will not be emailed today. %>
       <%= render PanelsUI::Alert.new(tone: :info, title: "No invitations are sent yet") do |alert| %>
         <% alert.with_description do %>
-          These are queued. Each company is emailed only after this property is approved,
-          so you can add them now without anyone hearing from us early.
+          Nothing is emailed while you are setting up. Once this property is approved, only the
+          companies with <strong>Send invitation</strong> switched on are contacted — the rest stay
+          on your Corporate Accounts page for you to invite whenever you are ready.
         <% end %>
       <% end %>
 
@@ -56,6 +57,10 @@
           <% table.with_column(label: "Account type") %>
           <% table.with_column(label: "Credit limit", hint: "Leave blank for no limit.") %>
           <% table.with_column(label: "Payment terms") %>
+          <%# Off by default, for the reason the alert above gives: adding a
+              company here is bookkeeping, not correspondence. %>
+          <% table.with_column(label: "Send invitation",
+                               hint: "Off keeps the company queued — invite them from Corporate Accounts whenever you are ready.") %>
 
           <% @corporate_draft_entries.each_with_index do |entry, index| %>
             <% delivered = entry["delivered"] == "true" %>

@@ -3,8 +3,13 @@
 class OnboardingStaffDraft < ApplicationRecord
   belongs_to :hotel
   belongs_to :role
+  belongs_to :invitation, optional: true
 
   before_validation :normalize_attributes
+
+  scope :undelivered, -> { where(invitation_id: nil) }
+
+  def delivered? = invitation_id.present?
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP },
                     uniqueness: { scope: :hotel_id, case_sensitive: false }

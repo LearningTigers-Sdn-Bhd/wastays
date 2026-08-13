@@ -10,6 +10,7 @@
             <th scope="col">Name</th>
             <th scope="col">Email</th>
             <th scope="col">Preset role</th>
+            <th scope="col">Invitation</th>
           </tr>
         <% end %>
         <% table.with_body do %>
@@ -18,6 +19,9 @@
               <td class="font-medium"><%= entry["name"].presence || "Name not provided" %></td>
               <td><%= entry["email"] %></td>
               <td class="text-muted-foreground"><%= entry["role_name"] %></td>
+              <td class="text-muted-foreground">
+                <%= entry["send_invitation"] == "true" ? "Sends on approval" : "Held" %>
+              </td>
             </tr>
           <% end %>
         <% end %>
@@ -37,6 +41,12 @@
         <% table.with_column(label: "Name") %>
         <% table.with_column(label: "Email", required: true) %>
         <% table.with_column(label: "Preset role", required: true) %>
+        <%# Off by default: an owner listing their team is describing it, not
+            asking us to email anyone. Leaving it off keeps the person queued as
+            an uninvited entry they can send from Staff Management whenever the
+            property is actually ready for them. %>
+        <% table.with_column(label: "Send invitation",
+                             hint: "Off keeps them queued — invite them from Staff Management whenever you are ready.") %>
 
         <% @staff_entries.each_with_index do |entry, index| %>
           <% table.with_row(remove_label: "Remove #{entry['name'].presence || entry['email'].presence || 'this staff member'}") do %>

@@ -5,8 +5,10 @@
      company_name: entry["company_name"],
      account_type: entry["account_type"].presence || "company",
      credit_limit: entry["credit_limit"],
-     payment_terms_days: entry["payment_terms_days"]
+     payment_terms_days: entry["payment_terms_days"],
+     send_invitation: entry["send_invitation"] == "true"
    ) %>
+<% delivered = entry["delivered"] == "true" %>
 <%= fields_for "corporate_draft_entries[#{index}]", object do |row_form| %>
   <td>
     <%= row_form.hidden_field :id, value: entry["id"] %>
@@ -43,5 +45,17 @@
     <%= render PanelsUI::FormField.new(form: row_form, attribute: :payment_terms_days, label: "Payment terms (days)", size: :sm) do |field| %>
       <% field.with_input(type: :number, step: "1", min: "0", inputmode: "numeric", placeholder: "e.g. 30") %>
     <% end %>
+  </td>
+
+  <%# A row that has already been delivered has nothing left to decide, and a
+      live switch would imply the send could be taken back. %>
+  <td>
+    <%= render PanelsUI::Switch.new(
+          form: row_form,
+          attribute: :send_invitation,
+          label: "Send invitation",
+          size: :sm,
+          checked: delivered || entry["send_invitation"] == "true",
+          disabled: delivered) %>
   </td>
 <% end %>

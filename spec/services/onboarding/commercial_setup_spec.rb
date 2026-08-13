@@ -559,6 +559,18 @@ RSpec.describe "Onboarding commercial setup" do
         .not_to have_key("placeholder")
     end
 
+    it "holds the company by default, so adding one is bookkeeping rather than correspondence" do
+      expect(save(entries: { "draft-1" => draft_entry }, complete: true).success?).to be(true)
+      expect(hotel.onboarding_corporate_drafts.sole.send_invitation).to be(false)
+    end
+
+    it "records the owner switching the invitation on" do
+      result = save(entries: { "draft-1" => draft_entry("send_invitation" => "1") }, complete: true)
+
+      expect(result.success?).to be(true)
+      expect(hotel.onboarding_corporate_drafts.sole.send_invitation).to be(true)
+    end
+
     it "keeps onboarding corporate accounts on direct bill when a forged row says otherwise" do
       result = save(entries: { "draft-1" => draft_entry("relationship_type" => "standard") }, complete: true)
 

@@ -94,7 +94,8 @@ module HotelPortal
             "email" => draft.email,
             "role_id" => draft.role_id.to_s,
             "role_slug" => draft.role.slug,
-            "role_name" => draft.role.name
+            "role_name" => draft.role.name,
+            "send_invitation" => draft.send_invitation.to_s
           }
         end
         # No trailing blank row: an empty table is a valid answer here, and a row
@@ -187,6 +188,7 @@ module HotelPortal
           "credit_limit" => draft.credit_limit&.to_s,
           "credit_currency" => draft.credit_currency,
           "payment_terms_days" => draft.payment_terms_days&.to_s,
+          "send_invitation" => draft.send_invitation.to_s,
           "delivered" => draft.delivered?.to_s
         }
       end

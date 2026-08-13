@@ -20,6 +20,7 @@ module Onboarding
       id client_key _destroy
       email company_name account_type
       credit_limit credit_currency payment_terms_days
+      send_invitation
     ].freeze
 
     RECORD_LABEL = "Corporate account"
@@ -147,6 +148,7 @@ module Onboarding
           "credit_limit" => draft.credit_limit&.to_s,
           "credit_currency" => draft.credit_currency,
           "payment_terms_days" => draft.payment_terms_days&.to_s,
+          "send_invitation" => draft.send_invitation.to_s,
           "delivered" => draft.delivered?.to_s
         }
       end
