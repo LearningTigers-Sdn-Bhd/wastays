@@ -5,5 +5,8 @@
 # See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
-  :account_number
+  :account_number,
+  # Half of an OTA extranet login. `passw` already covers the other half, and a
+  # log holding one of the pair is worth as little as possible.
+  :username
 ]

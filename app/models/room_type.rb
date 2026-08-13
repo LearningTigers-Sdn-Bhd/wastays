@@ -32,6 +32,7 @@ class RoomType < ApplicationRecord
   validates :base_price, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :room_number_mode, presence: true, inclusion: { in: %w[range custom] }
   validate :amenities_must_be_from_list
+  validate :room_numbers_must_match_quantity
 
   def room_numbers
     Array(super).flatten.compact.map(&:to_s).reject(&:blank?)
@@ -133,6 +134,23 @@ class RoomType < ApplicationRecord
 
     if invalid_amenities.any?
       errors.add(:amenities, "contains invalid options: #{invalid_amenities.join(', ')}")
+    end
+  end
+
+  # An empty list is the supported quantity-only inventory mode. Once a hotel
+  # identifies individual rooms, the list becomes the inventory identity and
+  # must describe every unit exactly once. Keep this on the domain record so
+  # Settings and onboarding cannot persist different definitions of a room.
+  def room_numbers_must_match_quantity
+    numbers = room_numbers
+    return if numbers.empty?
+
+    if numbers.uniq.length != numbers.length
+      errors.add(:room_numbers, "must be unique")
+    end
+
+    if quantity.present? && numbers.length != quantity
+      errors.add(:room_numbers, "must include exactly one number for each room")
     end
   end
 

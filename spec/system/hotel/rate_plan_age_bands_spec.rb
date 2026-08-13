@@ -4,7 +4,7 @@ RSpec.describe 'Hotel Portal Rate Plan Age Bands', type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
   # Age bands only apply to per-guest pricing, which is a property-level setting.
-  let(:hotel) { create(:hotel, :per_person, account: account, status: 'registered') }
+  let(:hotel) { create(:hotel, :per_person, account: account, status: 'setup') }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
   let!(:rate_plan) { create(:rate_plan, hotel: hotel, name: "Per Person Plan", kind: "custom") }
   let!(:band) { create(:rate_plan_age_band, rate_plan: rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child") }

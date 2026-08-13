@@ -3,14 +3,14 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::FrontDesk::ArrivalsQuery, frozen_time: Date.new(2026, 7, 15) do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
 
   describe "#call" do
     it "scopes active bookings to selected hotel and arrival date" do
       matching_booking = create(:booking, hotel:, status: "confirmed", check_in: hotel_time("2026-07-15"))
       create(:booking, hotel:, status: "completed", check_in: hotel_time("2026-07-15"))
       create(:booking, hotel:, status: "confirmed", check_in: hotel_time("2026-07-16"))
-      create(:booking, hotel: create(:hotel, status: "approved"), status: "confirmed", check_in: hotel_time("2026-07-15"))
+      create(:booking, hotel: create(:hotel, status: "live"), status: "confirmed", check_in: hotel_time("2026-07-15"))
 
       query = described_class.new(hotel:, params: { arrival_date: "2026-07-15" })
 

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html class="h-full">
+  <head>
+    <title><%= content_for(:title) || "Property setup | WAStays" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= content_for(:head) %>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full overflow-hidden" data-theme="panel-light">
+    <div class="flex h-screen h-dvh min-h-screen min-h-dvh flex-col bg-background text-foreground">
+      <%= render PanelsUI::Navbar.new(key: "onboarding", navigation: false) do |navbar| %>
+        <% navbar.with_brand do %>
+          <div class="flex min-w-0 items-center gap-3">
+            <%= link_to root_path, aria: { label: "WAStays home" }, class: "shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring" do %>
+              <%= image_tag "logo/long-logo.png", alt: "WAStays", width: 1000, height: 350, class: "h-7 w-auto" %>
+            <% end %>
+            <span class="hidden h-5 w-px bg-sidebar-border sm:block" aria-hidden="true"></span>
+            <span class="hidden max-w-56 truncate text-sm font-medium sm:block"><%= current_hotel.name %></span>
+          </div>
+        <% end %>
+        <% navbar.with_actions do %>
+          <%= link_to help_center_path, class: "panel-navbar__action" do %>
+            <%= app_icon "circle-question-mark", class: "panel-navbar__icon", aria: { hidden: "true" } %>
+            <span>Help</span>
+          <% end %>
+        <% end %>
+        <% if content_for?(:navbar_secondary) %>
+          <% navbar.with_secondary { content_for(:navbar_secondary) } %>
+        <% end %>
+        <% navbar.with_profile do %>
+          <%= render PanelsUI::ProfileMenu.new(
+                id: "onboarding-profile",
+                display_name: current_user.name || "Hotel owner",
+                secondary_text: current_user.email,
+                trigger_label: "Open account menu"
+              ) do |menu| %>
+            <% menu.with_item(label: "My account", href: edit_hotel_user_profile_path(current_hotel), icon: "user") %>
+            <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
+            <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div class="panel-page panel-page--workspace">
+          <%= yield %>
+        </div>
+      </main>
+    </div>
+
+    <%= render "shared/turbo_confirm" %>
+    <%= render PanelsUI::ToastViewport.new %>
+    <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
+  </body>
+</html>

@@ -30,7 +30,8 @@ module StaffInvitations
         role: @role,
         invited_by_user: @invited_by,
         token_digest: StaffInvitation.digest(token),
-        expires_at: StaffInvitation::EXPIRY.from_now
+        expires_at: StaffInvitation::EXPIRY.from_now,
+        last_sent_at: Time.current
       )
 
       unless invitation.save

@@ -6,7 +6,7 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
   let(:account) { create(:account) }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, account: account, plan: plan, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: "live") }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account) }
 

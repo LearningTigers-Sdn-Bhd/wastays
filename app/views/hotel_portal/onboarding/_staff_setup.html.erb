@@ -1,0 +1,63 @@
+<%# The shell already heads this step and carries the "nothing is sent now" caveat,
+    so the drafts open straight into the table. %>
+<section aria-label="Draft staff" class="space-y-4">
+  <% if presenter.read_only? %>
+    <% if @staff_entries.any? %>
+      <%= render PanelsUI::Table.new(caption: "Draft staff", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Preset role</th>
+            <th scope="col">Invitation</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @staff_entries.each do |entry| %>
+            <tr>
+              <td class="font-medium"><%= entry["name"].presence || "Name not provided" %></td>
+              <td><%= entry["email"] %></td>
+              <td class="text-muted-foreground"><%= entry["role_name"] %></td>
+              <td class="text-muted-foreground">
+                <%= entry["send_invitation"] == "true" ? "Sends after submission" : "Held" %>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No additional staff for now.</p>
+    <% end %>
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "staff_setup"), method: :patch, id: "onboarding-staff-drafts-form" do %>
+      <%= render HotelPortal::Setup::RecordTable.new(
+            caption: "Draft staff",
+            add_label: "Add staff member",
+            empty: "No staff added yet",
+            empty_description: "Leave this empty and continue if you are the only one who needs access for now — the rest of the team can be invited after onboarding.",
+            empty_icon: "users",
+            class: "md:min-w-[44rem]") do |table| %>
+        <% table.with_column(label: "Name") %>
+        <% table.with_column(label: "Email", required: true) %>
+        <% table.with_column(label: "Preset role", required: true) %>
+        <%# Off by default: an owner listing their team is describing it, not
+            asking us to email anyone. Leaving it off keeps the person queued as
+            an uninvited entry they can send from Staff Management whenever the
+            property is actually ready for them. %>
+        <% table.with_column(label: "Send invitation",
+                             hint: "Off keeps them queued — invite them from Staff Management whenever you are ready.") %>
+
+        <% @staff_entries.each_with_index do |entry, index| %>
+          <% table.with_row(remove_label: "Remove #{entry['name'].presence || entry['email'].presence || 'this staff member'}") do %>
+            <%= render "staff_draft_row", entry: entry, index: index, staff_roles: @staff_roles %>
+          <% end %>
+        <% end %>
+
+        <% table.with_blank_row(remove_label: "Remove this staff member") do %>
+          <%= render "staff_draft_row", entry: {}, index: "NEW_RECORD", staff_roles: @staff_roles %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

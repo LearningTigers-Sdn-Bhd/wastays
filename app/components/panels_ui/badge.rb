@@ -3,7 +3,7 @@
 module PanelsUI
   class Badge < PanelsUI::BaseComponent
     VARIANTS = %i[neutral primary accent info success warning destructive outline].freeze
-    SIZES = %i[sm md lg].freeze
+    SIZES = %i[xs sm md lg].freeze
     SHAPES = %i[rectangular rounded circular].freeze
 
     def initialize(label: nil, variant: :neutral, size: :md, shape: :rectangular,

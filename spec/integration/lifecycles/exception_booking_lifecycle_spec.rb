@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "Exception Booking Lifecycles", type: :integration do
   let(:hotel) { create(:hotel) }
   let(:user) { create(:user, :superadmin) }
-  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: %w[101]) }
+  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", quantity: 1, room_numbers: %w[101]) }
   let(:business_date) { hotel.current_business_date }
 
   before do

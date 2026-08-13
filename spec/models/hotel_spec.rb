@@ -49,34 +49,50 @@ RSpec.describe Hotel, type: :model do
 
   describe 'constants' do
     it 'defines allowed statuses' do
-      expect(Hotel::STATUSES).to match_array(%w[
-        registered
-        email_verified
-        profile_incomplete
-        rooms_incomplete
-        inventory_incomplete
-        pending_review
-        approved
-        live
-        suspended
-      ])
+      expect(Hotel::STATUSES).to match_array(%w[setup pending_review live suspended])
+    end
+  end
+
+  describe 'lifecycle status' do
+    it 'rejects a status outside the canonical lifecycle' do
+      hotel = build(:hotel, status: 'approved')
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:status]).to be_present
+    end
+
+    it 'accepts every canonical status' do
+      Hotel::STATUSES.each do |status|
+        hotel = build(:hotel, status: status)
+        hotel.valid?
+
+        expect(hotel.errors[:status]).to be_empty, "expected #{status} to be a valid hotel status"
+      end
     end
   end
 
   describe '#active?' do
-    it 'returns true if status is approved' do
-      hotel = build(:hotel, status: 'approved')
-      expect(hotel.active?).to be true
-    end
-
     it 'returns true if status is live' do
       hotel = build(:hotel, status: 'live')
       expect(hotel.active?).to be true
     end
 
-    it 'returns false if status is registered' do
-      hotel = build(:hotel, status: 'registered')
+    it 'returns false while the hotel is still in setup' do
+      hotel = build(:hotel, status: 'setup')
       expect(hotel.active?).to be false
+    end
+
+    it 'returns false while the hotel is awaiting review' do
+      hotel = build(:hotel, status: 'pending_review')
+      expect(hotel.active?).to be false
+    end
+  end
+
+  describe '#onboarding?' do
+    it 'is true only in setup' do
+      expect(build(:hotel, status: 'setup')).to be_onboarding
+      expect(build(:hotel, status: 'pending_review')).not_to be_onboarding
+      expect(build(:hotel, status: 'live')).not_to be_onboarding
     end
   end
 
@@ -247,6 +263,27 @@ RSpec.describe Hotel, type: :model do
       it 'leaves the hotel’s other attributes editable while locked' do
         expect(hotel.update(name: "#{hotel.name} Resort")).to be true
       end
+    end
+  end
+
+  describe '#inventory_ready?' do
+    let(:hotel) { create(:hotel) }
+    let!(:room) { create(:room_type, hotel: hotel, quantity: 2, base_price: 110, max_adults: 2) }
+
+    it 'refuses a hotel priced for the next month but empty for the rest of the year' do
+      (Date.current..Date.current + 30.days).each do |date|
+        create(:room_inventory, room_type: room, date: date, quantity: 2, status: 'open')
+      end
+
+      expect(hotel.inventory_ready?).to be false
+    end
+
+    it 'accepts a hotel stocked and priced across the full horizon' do
+      (Date.current..Date.current + 364.days).each do |date|
+        create(:room_inventory, room_type: room, date: date, quantity: 2, status: 'open')
+      end
+
+      expect(hotel.inventory_ready?).to be true
     end
   end
 end

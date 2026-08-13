@@ -116,6 +116,75 @@
     background-color: var(--primary-foreground);
   }
 
+  /* Icon-state switches use the state icon AS the thumb. The generic pseudo
+     thumb is removed for this variant, so the glyph cannot sit beside or drift
+     away from it. The inactive icon stays out of the visual and accessibility
+     trees; the checkbox's stable label and checked state convey the control to
+     assistive technology. */
+  .panel-switch__control {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+  }
+
+  .panel-switch[data-variant="icon"] .panel-switch__input {
+    width: 2.75rem;
+    height: 1.5rem;
+    forced-color-adjust: auto;
+  }
+
+  .panel-switch[data-variant="icon"] .panel-switch__input::before {
+    content: none;
+  }
+
+  .panel-switch__state-icon {
+    position: absolute;
+    top: 50%;
+    inset-inline-start: 0.1875rem;
+    z-index: 1;
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: var(--muted-foreground);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+    color: var(--card);
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .panel-switch__state-icon svg {
+    width: 0.5rem;
+    height: 0.5rem;
+    stroke-width: 2;
+  }
+
+  .panel-switch__state-icon[data-state="on"] {
+    display: none;
+    inset-inline-start: auto;
+    inset-inline-end: 0.1875rem;
+  }
+
+  .panel-switch__input:checked ~ .panel-switch__state-icon[data-state="off"] {
+    display: none;
+  }
+
+  .panel-switch__input:checked ~ .panel-switch__state-icon[data-state="on"] {
+    display: inline-flex;
+    background-color: var(--primary-foreground);
+    color: var(--primary);
+  }
+
+  .panel-switch[data-invalid="true"] .panel-switch__input:not(:checked) ~ .panel-switch__state-icon[data-state="off"] {
+    background-color: var(--destructive-on-surface);
+  }
+
+  .panel-switch[data-invalid="true"] .panel-switch__input:checked ~ .panel-switch__state-icon[data-state="on"] {
+    color: var(--destructive-on-surface);
+  }
+
   .panel-switch[data-invalid="true"] .panel-switch__input,
   .panel-switch[data-invalid="true"][data-variant="card"] {
     border-color: var(--destructive-on-surface);
@@ -172,6 +241,62 @@
   .panel-switch[data-size="lg"] .panel-switch__input::before { width: 0.9375rem; height: 0.9375rem; }
   .panel-switch[data-size="lg"] .panel-switch__input:checked::before { inset-inline-start: calc(100% - 0.9375rem - 0.1875rem); }
   .panel-switch[data-size="lg"] .panel-switch__label { @apply text-sm; }
+
+  .panel-switch[data-variant="icon"][data-size="sm"] .panel-switch__input {
+    width: 2.5rem;
+    height: 1.375rem;
+  }
+
+  .panel-switch[data-variant="icon"][data-size="sm"] .panel-switch__state-icon {
+    width: 0.9375rem;
+    height: 0.9375rem;
+  }
+
+  .panel-switch[data-variant="icon"][data-size="sm"] .panel-switch__state-icon svg {
+    width: 0.4375rem;
+    height: 0.4375rem;
+  }
+
+  .panel-switch[data-variant="icon"][data-size="sm"] .panel-switch__state-icon[data-state="on"] {
+    inset-inline-start: auto;
+    inset-inline-end: 0.1875rem;
+  }
+
+  .panel-switch[data-variant="icon"][data-size="lg"] .panel-switch__input {
+    width: 3rem;
+    height: 1.625rem;
+  }
+
+  .panel-switch[data-variant="icon"][data-size="lg"] .panel-switch__state-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .panel-switch[data-variant="icon"][data-size="lg"] .panel-switch__state-icon svg {
+    width: 0.5625rem;
+    height: 0.5625rem;
+  }
+
+  .panel-switch[data-variant="icon"][data-size="lg"] .panel-switch__state-icon[data-state="on"] {
+    inset-inline-start: auto;
+    inset-inline-end: 0.1875rem;
+  }
+
+  @media (forced-colors: active) {
+    .panel-switch[data-variant="icon"] .panel-switch__input {
+      border-color: ButtonText;
+    }
+
+    .panel-switch[data-variant="icon"] .panel-switch__state-icon {
+      background-color: ButtonText;
+      color: ButtonFace;
+    }
+
+    .panel-switch[data-variant="icon"] .panel-switch__input:checked ~ .panel-switch__state-icon[data-state="on"] {
+      background-color: ButtonFace;
+      color: ButtonText;
+    }
+  }
 
   /* A screen-reader-only label leaves nothing to sit beside the control, so the
      gap that would space them apart has to go with it. */

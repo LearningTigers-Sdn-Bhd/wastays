@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "Nearby attractions sheet", type: :system, js: true do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
 
   before do

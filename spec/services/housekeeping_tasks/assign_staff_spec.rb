@@ -7,8 +7,8 @@ RSpec.describe HousekeepingTasks::AssignStaff do
   let(:hotel) { create(:hotel, account:) }
 
   # Two different rooms that happen to share the number 101.
-  let(:penthouse) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101]) }
-  let(:garden_suite) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101]) }
+  let(:penthouse) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 1, room_numbers: %w[101]) }
+  let(:garden_suite) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 1, room_numbers: %w[101]) }
 
   # Only users on a "housekeeper" role are assignable, per ActiveHousekeepersQuery.
   let(:housekeeper_role) do

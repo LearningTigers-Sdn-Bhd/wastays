@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Folios::Actions billing routes", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
-  let(:other_hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
+  let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:booking) { create(:booking, hotel: hotel) }

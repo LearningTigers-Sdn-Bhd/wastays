@@ -6,7 +6,7 @@ FactoryBot.define do
     city { Faker::Address.city }
     country { "Malaysia" }
     star_rating { 4 }
-    status { "registered" }
+    status { "setup" }
     sell_mode { "per_room" }
 
     transient do

@@ -10,6 +10,9 @@ class RoomRate < ApplicationRecord
   validates :date, uniqueness: { scope: [ :room_type_id, :rate_plan_id, :currency ] }
   validates :min_stay, numericality: { only_integer: true, greater_than: 0, allow_nil: true }
   validates :max_stay, numericality: { only_integer: true, greater_than: 0, allow_nil: true }
+  validates :base_occupancy, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validates :extra_pax_charge, :single_supplement,
+    numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :occupancy_prices_are_valid
 
   before_validation :normalize_currency

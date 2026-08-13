@@ -6,9 +6,9 @@ RSpec.describe NightAudits::RunScheduledJob, type: :job do
   let(:business_date) { Date.new(2026, 4, 23) }
 
   it "runs only for approved and live hotels using yesterday's business date" do
-    approved_hotel = create(:hotel, :without_current_business_date, status: "approved")
+    approved_hotel = create(:hotel, :without_current_business_date, status: "live")
     live_hotel = create(:hotel, :without_current_business_date, status: "live")
-    create(:hotel, :without_current_business_date, status: "registered")
+    create(:hotel, :without_current_business_date, status: "setup")
 
     allow(NightAudits::RunJob).to receive(:perform_later)
 
@@ -30,7 +30,7 @@ RSpec.describe NightAudits::RunScheduledJob, type: :job do
   end
 
   it "continues when one hotel raises" do
-    failing_hotel = create(:hotel, :without_current_business_date, status: "approved")
+    failing_hotel = create(:hotel, :without_current_business_date, status: "live")
     succeeding_hotel = create(:hotel, :without_current_business_date, status: "live")
 
     allow(NightAudits::Schedule).to receive(:call).and_call_original

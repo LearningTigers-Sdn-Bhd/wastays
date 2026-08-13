@@ -22,7 +22,7 @@ RSpec.describe MoveHousekeepingOperationsToRoomStatuses do
 
   it "backfills current room operations and archives legacy operational tasks" do
     hotel = create(:hotel)
-    room_type = create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 202])
+    room_type = create(:room_type, hotel:, room_number_mode: "custom", quantity: 2, room_numbers: %w[101 202])
     existing = create(:room_status, hotel:, room_type:, room_number: "101", status: "cleaning", notes: nil)
     booking = create(:booking, hotel:)
     create(:booking_room, booking:, room_type:, room_number: "101")

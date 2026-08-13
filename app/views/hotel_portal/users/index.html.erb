@@ -22,7 +22,10 @@
     <section aria-labelledby="pending-invitations-heading" class="space-y-3">
       <div>
         <h2 id="pending-invitations-heading" class="text-base font-semibold text-foreground">Pending Invitations</h2>
-        <p class="mt-1 text-sm text-muted-foreground">Invited staff who have not accepted yet.</p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          Staff who do not have access yet. <strong>Not sent</strong> means nobody has been emailed —
+          send them their invitation when you are ready for them.
+        </p>
       </div>
 
       <%= render PanelsUI::Table.new(
@@ -46,13 +49,19 @@
           <% @presenter.invitation_rows.each do |row| %>
             <tr id="staff-invitation-row-<%= row.id %>">
               <td class="align-middle">
-                <%= render PanelsUI::Badge.new(label: "Pending", variant: :warning, size: :sm) %>
+                <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm) %>
               </td>
               <th scope="row" class="align-middle font-medium text-foreground"><%= row.email %></th>
               <td class="align-middle text-muted-foreground"><%= row.role_name %></td>
               <td class="align-middle text-muted-foreground"><%= row.invited_by %></td>
+              <%# An unsent invitation has no expiry worth showing: its seven days
+                  start when it is sent, not when it was typed. %>
               <td class="align-middle whitespace-nowrap text-muted-foreground">
-                <%= l(row.expires_at, format: :short) %>
+                <% if row.sent %>
+                  <%= l(row.expires_at, format: :short) %>
+                <% else %>
+                  <span aria-label="No expiry until this invitation is sent">—</span>
+                <% end %>
               </td>
               <td class="text-right align-middle">
                 <%= render "hotel_portal/users/invitation_actions", row: row %>

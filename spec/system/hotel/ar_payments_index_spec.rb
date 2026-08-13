@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel AR payments index", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:user) { create(:user, account: account) }
   let(:role) { create(:role, account: account) }
   let(:relationship) { create(:hotel_corporate_account, hotel: hotel) }

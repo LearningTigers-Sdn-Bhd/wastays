@@ -1,0 +1,84 @@
+<section aria-label="Property setup readiness" class="space-y-5">
+  <%= render PanelsUI::Alert.new(tone: @review_presenter.status_tone, title: @review_presenter.status_title) do |alert| %>
+    <% alert.with_description { @review_presenter.status_description } %>
+  <% end %>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Setup statistics">
+    <% @review_presenter.metrics.each do |metric| %>
+      <%= render PanelsUI::MetricCard.new(**metric.to_h) %>
+    <% end %>
+  </div>
+
+  <section aria-labelledby="setup-summary-heading" class="space-y-3">
+    <h2 id="setup-summary-heading" class="text-base font-semibold">Setup summary</h2>
+
+    <div class="hidden md:block">
+      <%= render PanelsUI::Table.new(
+            caption: "Property setup summary", density: :compact,
+            header_style: :sentence, hoverable: true,
+            wrapper_class: "rounded-md border border-border") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Section</th>
+            <th scope="col">Setup</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="sr-only">Action</span></th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @review_presenter.groups.each do |group| %>
+            <tr class="bg-muted/50">
+              <th scope="rowgroup" colspan="4" class="font-semibold"><%= group.label %></th>
+            </tr>
+            <% group.rows.each do |row| %>
+              <tr>
+                <th scope="row" class="font-medium"><%= row.title %></th>
+                <td class="text-muted-foreground"><%= row.summary %></td>
+                <td>
+                  <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm) %>
+                </td>
+                <td class="text-right">
+                  <%= render PanelsUI::Button.new(
+                        label: row.action_label,
+                        href: hotel_onboarding_section_path(current_hotel, section_key: row.entry.definition.route_name),
+                        variant: :ghost, size: :sm) %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="space-y-4 md:hidden" aria-label="Property setup summary for small screens">
+      <% @review_presenter.groups.each do |group| %>
+        <section aria-labelledby="review-mobile-phase-<%= group.key %>" class="space-y-1">
+          <h3 id="review-mobile-phase-<%= group.key %>" class="text-sm font-semibold"><%= group.label %></h3>
+          <ul class="divide-y divide-border border-y border-border">
+            <% group.rows.each do |row| %>
+              <li class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-2">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium"><%= row.title %></p>
+                  <p class="truncate text-xs text-muted-foreground"><%= row.summary %></p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm) %>
+                  <%= render PanelsUI::Button.new(
+                        label: row.action_label,
+                        href: hotel_onboarding_section_path(current_hotel, section_key: row.entry.definition.route_name),
+                        variant: :ghost, size: :sm) %>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+    </div>
+  </section>
+
+  <% unless presenter.read_only? %>
+    <%= form_with url: hotel_onboarding_submission_path(current_hotel), method: :post, id: "onboarding-submission-form" do %>
+      <%= hidden_field_tag :idempotency_key, @submission_idempotency_key %>
+    <% end %>
+  <% end %>
+</section>

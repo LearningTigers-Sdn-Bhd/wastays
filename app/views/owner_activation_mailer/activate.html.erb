@@ -1,0 +1,4 @@
+<h1>Activate your WAStays owner account</h1>
+<p><%= @invitation.name %>, WAStays is ready for you to set up <strong><%= @hotel.name %></strong>.</p>
+<p><%= link_to "Create your password and begin setup", @activation_url %></p>
+<p>This secure link expires <%= l(@expires_at, format: :long) %>.</p>

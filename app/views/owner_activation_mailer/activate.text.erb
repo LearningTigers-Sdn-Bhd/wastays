@@ -1,0 +1,8 @@
+Activate your WAStays owner account
+
+<%= @invitation.name %>, WAStays is ready for you to set up <%= @hotel.name %>.
+
+Create your password and begin setup:
+<%= @activation_url %>
+
+This secure link expires <%= l(@expires_at, format: :long) %>.

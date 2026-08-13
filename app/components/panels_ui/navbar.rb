@@ -6,6 +6,10 @@ module PanelsUI
     renders_one :center
     renders_one :actions
     renders_one :profile
+    # An optional second row inside the bar, for navigation that belongs to the
+    # bar rather than to the page — wizard progress, for instance. It shares the
+    # navbar surface and its sticky behaviour.
+    renders_one :secondary
 
     def initialize(key:, navigation: true, sidebar_state_key: key, sticky: true, class: nil, **attributes)
       @key = key.to_s

@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Admin::RefundRequests", type: :request do
   let(:superadmin) { create(:user, :superadmin) }
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:booking) { create(:booking, hotel: hotel, status: "cancelled") }
   let!(:refund_request) { create(:refund_request, booking: booking) }
 

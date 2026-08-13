@@ -4,10 +4,10 @@ require "rails_helper"
 
 RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zone.local(2026, 7, 16, 10) do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account:, status: "approved", accounting_business_date: Date.current) }
+  let(:hotel) { create(:hotel, account:, status: "live", accounting_business_date: Date.current) }
   let(:user) { create(:user, account:, role: "hotel_staff") }
   let(:role) { create(:role, account:, slug: "front_desk", name: "Front Desk") }
-  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 102]) }
+  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102]) }
   let!(:booking) do
     create(:booking, hotel:, guest_name: "Ada Lovelace", check_in: Date.current, check_out: Date.current + 2.days).tap do |record|
       create(:booking_room, booking: record, room_type:, room_number: "101")
@@ -700,12 +700,13 @@ RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zon
   end
 
   it "keeps room-type and footer summaries aligned while sticky headings and footer hold their positions" do
-    room_type.update!(room_numbers: (101..114).map(&:to_s))
+    room_type.update!(quantity: 14, room_numbers: (101..114).map(&:to_s))
     create(
       :room_type,
       hotel:,
       name: "Suites",
       room_number_mode: "custom",
+      quantity: 20,
       room_numbers: (201..220).map(&:to_s)
     )
 

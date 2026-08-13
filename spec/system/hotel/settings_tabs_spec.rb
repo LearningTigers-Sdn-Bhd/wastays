@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Hotel settings tabs", type: :system, js: true do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "registered") }
+  let(:hotel) { create(:hotel, account: account, status: "setup") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:manage_account_permission) do
     Permission.find_or_create_by!(slug: "manage_account") { |permission| permission.name = "Manage Account" }

@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Folios", type: :request, frozen_time: Time.zone.local(2026, 6, 18, 10) do
-  let(:hotel) { create(:hotel, status: "approved") }
-  let(:other_hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
+  let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:view_bookings) { Permission.find_or_create_by!(slug: "view_bookings") { |permission| permission.name = "View Bookings" } }

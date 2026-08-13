@@ -6,7 +6,7 @@ RSpec.describe NightAudits::ProcessNoShowDetections do
   let(:business_date) { Date.new(2026, 5, 18) }
   let(:hotel) { create(:hotel, time_zone: "Kuala Lumpur") }
   let(:user) { create(:user, account: hotel.account) }
-  let(:room_type) { create(:room_type, hotel: hotel, quantity: 5, room_numbers: [ "101" ]) }
+  let(:room_type) { create(:room_type, hotel: hotel, quantity: 5, room_numbers: (101..105).map(&:to_s)) }
 
   def audit(date)
     current = hotel.current_business_date_record

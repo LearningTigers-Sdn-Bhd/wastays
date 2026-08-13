@@ -76,7 +76,7 @@ module HotelPortal
     end
 
     def prepare_charge_codes
-      @charge_codes = current_hotel.transaction_codes.active.where(kind: "charge").where.not(category: "tax").order(:code)
+      @charge_codes = current_hotel.transaction_codes.active.discountable.order(:code)
     end
   end
 end

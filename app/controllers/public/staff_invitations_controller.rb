@@ -49,7 +49,16 @@ module Public
     def accept_invitation_for(user)
       @invitation.accept!(user)
       session[:user_id] = user.id
-      redirect_to hotel_dashboard_path(@invitation.hotel), notice: "Welcome to #{@invitation.hotel.name}."
+      redirect_to invitation_destination, notice: "Welcome to #{@invitation.hotel.name}."
+    end
+
+    def invitation_destination
+      if @invitation.role.slug == "hotel_owner" &&
+         @invitation.hotel.status == "setup"
+        hotel_onboarding_path(@invitation.hotel)
+      else
+        hotel_dashboard_path(@invitation.hotel)
+      end
     end
 
     def user_params

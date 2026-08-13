@@ -171,12 +171,17 @@ module BookingEngine
                   # "multiplier" always means whole percent here, so the
                   # no-band fallback is scaled up from its fraction to match.
                   fallback_percent = (data[:rate_plan]&.child_price_multiplier || 1.to_d) * 100
+                  # A price set for this room on this plan is a flat amount and
+                  # outranks the band's own figure, matching what was charged.
+                  room_pricing = data[:room_type]&.room_type_rate_plans
+                    &.find { |item| item.rate_plan_id == data[:rate_plan]&.id }
+                    &.effective_age_band_pricing_for(band)
                   {
                     age: age,
                     band_id: band&.id,
                     band_label: band&.label,
-                    pricing_mode: band&.pricing_mode || "multiplier",
-                    price_value: (band&.price_value || fallback_percent).to_s
+                    pricing_mode: room_pricing&.mode || band&.pricing_mode || "multiplier",
+                    price_value: (room_pricing&.value || band&.price_value || fallback_percent).to_s
                   }
                 }
               }

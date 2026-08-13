@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Public::Quotes", type: :request do
   describe "GET /quotes/:token" do
-    let(:hotel) { create(:hotel, status: "approved") }
+    let(:hotel) { create(:hotel, status: "live") }
     let(:quote) { create(:booking_quote, hotel: hotel, **snapshot) }
 
     before { create(:booking_quote_item, booking_quote: quote, room_type: create(:room_type, hotel: hotel)) }
@@ -47,7 +47,7 @@ RSpec.describe "Public::Quotes", type: :request do
 
   describe "POST /quotes" do
     let!(:account) { create(:account) }
-    let!(:hotel) { create(:hotel, account: account, status: "approved") }
+    let!(:hotel) { create(:hotel, account: account, status: "live") }
     let!(:room_type) { create(:room_type, hotel: hotel, max_adults: 2, quantity: 5, base_price: 100) }
     let!(:rate_plan) { create(:rate_plan, room_type: room_type, name: "2-4 Night Rate", currency: "MYR") }
     let(:check_in) { Date.current }

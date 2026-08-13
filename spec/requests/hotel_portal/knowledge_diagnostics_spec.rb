@@ -8,7 +8,7 @@ RSpec.describe "HotelPortal::KnowledgeDiagnostics", type: :request, frozen_time:
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
-  let(:hotel) { create(:hotel, account: account, status: "approved", plan: plan) }
+  let(:hotel) { create(:hotel, account: account, status: "live", plan: plan) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
 
   before do
@@ -80,7 +80,7 @@ RSpec.describe "HotelPortal::KnowledgeDiagnostics", type: :request, frozen_time:
     end
 
     it "does not expose another hotel's diagnostics" do
-      other_hotel = create(:hotel, account: account, status: "approved")
+      other_hotel = create(:hotel, account: account, status: "live")
       other_diagnostic = create(:hotel_knowledge_diagnostic, hotel: other_hotel, question: "Other hotel question")
 
       get hotel_knowledge_diagnostics_path(hotel)
@@ -90,7 +90,7 @@ RSpec.describe "HotelPortal::KnowledgeDiagnostics", type: :request, frozen_time:
     end
 
     it "rejects diagnostics for inaccessible hotels" do
-      other_hotel = create(:hotel, status: "approved")
+      other_hotel = create(:hotel, status: "live")
       create(:hotel_knowledge_diagnostic, hotel: other_hotel, question: "Private question")
 
       get hotel_knowledge_diagnostics_path(other_hotel)

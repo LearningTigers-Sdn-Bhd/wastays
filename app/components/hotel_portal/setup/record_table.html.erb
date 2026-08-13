@@ -1,0 +1,82 @@
+<%# One density for every record table. Compact is what an editable grid wants —
+    the row is a line of controls, and the controls carry their own height — and a
+    table that pins its columns is not a different kind of table from one that
+    does not, so it should not be a different size either. %>
+<% table_markup = capture do %>
+<%= render PanelsUI::Table.new(
+      caption: caption,
+      header_style: :sentence,
+      density: :compact,
+      sticky_header: spreadsheet?,
+      class: table_classes,
+      data: { controller: HotelPortal::Setup::RecordTable::CONTROLLER }) do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <%# The column holds an icon button, so it is sized for one. Its name is for
+          assistive tech and for the row that stacks below 48rem. %>
+      <% if removable? %><th scope="col" class="panel-record-table__control"><span class="sr-only">Remove</span></th><% end %>
+      <%= safe_join(columns) %>
+      <% if actions? %><th scope="col" class="panel-record-table__actions">Actions</th><% end %>
+    </tr>
+  <% end %>
+
+  <% table.with_body do %>
+    <%= safe_join(rows) %>
+
+    <% if addable? %><template data-record-table-target="template"><%= blank_row %></template><% end %>
+
+    <%# An empty table says what is missing and offers the one action that fixes
+        it, in a block deep enough to read as a state rather than as a stray row.
+        The add button is the footer's, moved into the state: the footer stands
+        down while this shows, so the table never offers the same action twice. %>
+    <%= tag.tr(class: "panel-record-table__empty", hidden: records?,
+               data: { "record-table-target": "empty" }) do %>
+      <td colspan="<%= column_count %>">
+        <div class="panel-record-table__empty-content">
+          <% if empty_icon.present? %>
+            <span class="panel-record-table__empty-icon" aria-hidden="true">
+              <%= helpers.app_icon empty_icon, class: "size-5" %>
+            </span>
+          <% end %>
+          <p class="panel-record-table__empty-title"><%= empty %></p>
+          <% if empty_description.present? %>
+            <p class="panel-record-table__empty-description"><%= empty_description %></p>
+          <% end %>
+          <% if addable? %>
+            <%= render PanelsUI::Button.new(as: :button, variant: :neutral, size: :sm,
+                  data: { action: "#{HotelPortal::Setup::RecordTable::CONTROLLER}#add" }) do %>
+              <%= helpers.app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
+              <span><%= add_label %></span>
+            <% end %>
+          <% end %>
+        </div>
+      </td>
+    <% end %>
+  <% end %>
+
+  <% if addable? || footer_message.present? %><% table.with_footer do %>
+    <%# Only the add footer stands down for the empty state. A message-only footer
+        says something about the table as a whole and stays put. %>
+    <%= tag.tr(hidden: (addable? && !records?),
+               data: { "record-table-target": ("footer" if addable?) }.compact) do %>
+      <td colspan="<%= column_count %>">
+        <% if addable? %><%= render PanelsUI::Button.new(as: :button, variant: :ghost, size: :sm,
+              data: { action: "#{HotelPortal::Setup::RecordTable::CONTROLLER}#add" }) do %>
+          <%= helpers.app_icon "plus", class: "size-4", aria: { hidden: "true" } %>
+          <span><%= add_label %></span>
+        <% end %><% else %><span class="text-xs text-muted-foreground"><%= footer_message %></span><% end %>
+      </td>
+    <% end %>
+  <% end %><% end %>
+<% end %>
+<% end %>
+
+<%# Every record table can outgrow its container — the pinned ones by design, the
+    rest between 48rem and their own minimum. The region is what makes that scroll
+    reachable from the keyboard and gives it a name, so it is not the pinned
+    tables' privilege. %>
+<%= tag.div(table_markup,
+            class: "panel-record-table__region",
+            role: "region",
+            tabindex: 0,
+            aria: { label: caption }) %>

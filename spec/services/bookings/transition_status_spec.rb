@@ -575,7 +575,7 @@ RSpec.describe Bookings::TransitionStatus do
       end
 
       it "cancels a detected no-show without charges and releases its assigned room" do
-        room_type = create(:room_type, hotel: booking.hotel, room_numbers: [ "101" ])
+        room_type = create(:room_type, hotel: booking.hotel, quantity: 1, room_numbers: [ "101" ])
         create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
         room_status = create(:room_status, hotel: booking.hotel, room_type: room_type, room_number: "101", status: "dirty")
         booking.transition_status_to!(

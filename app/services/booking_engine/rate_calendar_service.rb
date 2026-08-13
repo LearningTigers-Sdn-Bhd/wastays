@@ -13,7 +13,7 @@ module BookingEngine
     def call
       validate!
       dates = (@start_date..@end_date).to_a
-      room_types = @hotel.room_types.includes(:rate_plans, room_type_rate_plans: :occupancy_prices).to_a
+      room_types = @hotel.room_types.includes(:rate_plans, room_type_rate_plans: [ :occupancy_prices, :age_band_prices ]).to_a
       room_type_ids = room_types.pluck(:id)
 
       rates = RoomRate

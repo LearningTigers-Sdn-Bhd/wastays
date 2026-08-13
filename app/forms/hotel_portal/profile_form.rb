@@ -22,9 +22,7 @@ module HotelPortal
           end
         end
 
-        photo_upload_result = hotel.attach_photos_with_limit(profile_params[:photos])
-        hotel.complete_profile!
-        photo_upload_result
+        hotel.attach_photos_with_limit(profile_params[:photos])
       else
         false
       end
@@ -35,7 +33,8 @@ module HotelPortal
     def hotel_params
       permitted = params.require(:hotel).permit(
         :name, :description, :address, :city, :country, :star_rating,
-        :featured_photo_attachment_id, :google_map_link,
+        :featured_photo_attachment_id, :google_map_link, :contact_email,
+        :contact_phone, :whatsapp_number, :time_zone, :default_currency,
         photos: [], amenities: []
       )
 

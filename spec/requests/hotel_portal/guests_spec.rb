@@ -6,7 +6,7 @@ require "cgi"
 RSpec.describe "HotelPortal::Guests", type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, status: "approved", plan: plan) }
+  let(:hotel) { create(:hotel, status: "live", plan: plan) }
   let(:user) { create(:user) }
 
   before do

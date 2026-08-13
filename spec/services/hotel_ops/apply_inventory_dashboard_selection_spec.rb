@@ -331,7 +331,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
 
 
 
-    it "updates base_occupancy, extra_pax_charge, and single_supplement when rates are modified" do
+    it "updates base occupancy and separate adult/child supplements when rates are modified" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
       rate_plan = room_type.rate_plans.first
 

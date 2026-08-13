@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Guest::Bookings DND toggle", type: :request do
   let(:guest) { create(:guest, phone: "+60123456789") }
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Standard Room") }
   let(:booking) do
     create(:booking,

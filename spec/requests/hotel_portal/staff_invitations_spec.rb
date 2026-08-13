@@ -55,6 +55,18 @@ RSpec.describe "HotelPortal::StaffInvitations", type: :request do
       expect(response).to redirect_to(hotel_users_path(hotel))
       expect(flash[:notice]).to include("Invitation resent")
     end
+
+    # An invitation queued during onboarding with the send switch off reaches
+    # this action never having been emailed, so calling it a resend would tell
+    # the owner something happened twice that has not happened once.
+    it "reports a first send for an invitation that was never emailed" do
+      held = create(:staff_invitation, :held, account: account, hotel: hotel, role: staff_role, invited_by_user: user)
+
+      post resend_hotel_staff_invitation_path(hotel, held)
+
+      expect(flash[:notice]).to include("Invitation sent to #{held.email}")
+      expect(held.reload.last_sent_at).to be_present
+    end
   end
 
   describe "DELETE /hotel/:hotel_id/staff_invitations/:id" do

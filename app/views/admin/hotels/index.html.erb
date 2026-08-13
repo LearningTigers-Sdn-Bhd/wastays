@@ -1,162 +1,22 @@
-<% total_hotels = @all_hotels.size %>
-<% pending_hotels = @all_hotels.count { |hotel| hotel.status == "pending_review" } %>
-<% active_hotels = @all_hotels.count { |hotel| ["approved", "live"].include?(hotel.status) } %>
-<% suspended_hotels = @all_hotels.count { |hotel| hotel.status == "suspended" } %>
-
-<div class="w-full space-y-8">
+<div class="space-y-4">
   <%= render PanelsUI::PageHeader.new(
         title: "Manage Hotels",
         description: "Review hotel registrations, approvals, and account status across the platform.") do |header| %>
     <% header.with_actions do %>
-      <%= render PanelsUI::Button.new(as: :a, href: new_admin_hotel_path) do %>
-        <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      <%= render PanelsUI::Button.new(
+            as: :a,
+            href: new_admin_hotel_path,
+            data: { turbo_frame: "admin_hotel_action_sheet" }) do %>
+        <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
         Add New Hotel
       <% end %>
     <% end %>
   <% end %>
 
-  <div id="hotel_stats">
-    <%= render "stats", all_hotels: @all_hotels %>
-  </div>
-
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <div class="flex items-center justify-between border-b border-border px-6 py-5 sm:px-8">
-      <div>
-        <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Hotel Registry</h2>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">Current hotel records with registration and status visibility.</p>
-      </div>
-
-      <span class="text-sm font-medium text-muted-foreground">Total <span class="font-semibold text-foreground"><%= @all_hotels.size %></span></span>
-    </div>
-
-    <div class="flex flex-col gap-4 border-b border-border bg-muted/70 px-6 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
-      <%= form_with url: admin_hotels_path, method: :get, class: "contents", data: { controller: "auto-submit", turbo_frame: "hotels_list", turbo_action: "advance" } do |f| %>
-        <label class="relative block w-full max-w-xl">
-          <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-muted-foreground">
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </span>
-          <%= f.text_field :q, value: params[:q], placeholder: "Search hotels...", class: "w-full rounded-xl border border-border bg-card py-2.5 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { action: "input->auto-submit#submit" } %>
-        </label>
-
-        <div class="flex items-center gap-3">
-          <label for="hotel-status-filter" class="text-sm font-medium text-muted-foreground">Status</label>
-          <%= f.select :status, options_for_select(["All Status", "Pending Review", "Approved", "Live", "Suspended"].map { |s| [s, s.parameterize.underscore] }.map { |l, v| [l, v == "pending_review" ? "pending_review" : (v == "all_status" ? "All Status" : v)] }, params[:status]), {}, id: "hotel-status-filter", class: "rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submitNow" } %>
-        </div>
-      <% end %>
-    </div>
-
-    <%= turbo_frame_tag "hotels_list" do %>
-      <div id="admin-hotels-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
-      <% @hotels.each do |hotel| %>
-        <% status_dot_classes = case hotel.status
-           when "approved", "live"
-             "bg-emerald-500"
-           when "pending_review"
-             "bg-amber-500"
-           when "suspended"
-             "bg-rose-500"
-           else
-             "bg-muted"
-           end %>
-        <% status_text_classes = case hotel.status
-           when "approved", "live"
-             "text-emerald-700"
-           when "pending_review"
-             "text-amber-700"
-           when "suspended"
-             "text-rose-700"
-           else
-             "text-muted-foreground"
-           end %>
-
-        <div class="rounded-2xl border border-border bg-muted/60 p-4 shadow-sm">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <%= link_to admin_hotel_path(hotel), class: "group inline-flex items-center gap-1 text-base font-semibold text-foreground hover:text-red-700", data: { turbo_frame: "_top" } do %>
-                <span class="underline decoration-muted-foreground underline-offset-2 group-hover:decoration-red-400"><%= hotel.name %></span>
-              <% end %>
-              <p class="mt-1 text-sm text-muted-foreground"><%= hotel.city.presence || "City not set" %></p>
-            </div>
-            <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_text_classes %>">
-              <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
-              <%= hotel.status.titleize %>
-            </div>
-          </div>
-
-          <div class="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-            <span>Registered <%= hotel.created_at.strftime("%d %b %Y") %></span>
-            <%= link_to hotel_dashboard_path(hotel), target: "_blank", class: "inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted" do %>
-              <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-              Open Dashboard
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-    </div>
-
-    <div class="hidden lg:block overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-muted">
-          <tr>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8">Hotel Name</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">City</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Registered</th>
-            <th class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-card">
-          <% @hotels.each_with_index do |hotel, index| %>
-            <% status_dot_classes = case hotel.status
-               when "approved", "live"
-                 "bg-emerald-500"
-               when "pending_review"
-                 "bg-amber-500"
-               when "suspended"
-                 "bg-rose-500"
-               else
-                 "bg-muted"
-               end %>
-            <% status_text_classes = case hotel.status
-               when "approved", "live"
-                 "text-emerald-700"
-               when "pending_review"
-                 "text-amber-700"
-               when "suspended"
-                 "text-rose-700"
-               else
-                 "text-muted-foreground"
-               end %>
-
-            <tr class="transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sm:px-8">
-                <%= link_to admin_hotel_path(hotel), class: "group inline-flex items-center gap-1 text-foreground hover:text-red-700", data: { turbo_frame: "_top" } do %>
-                  <span class="underline decoration-muted-foreground underline-offset-2 group-hover:decoration-red-400"><%= hotel.name %></span>
-                <% end %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground"><%= hotel.city %></td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="inline-flex items-center gap-2 text-sm font-medium <%= status_text_classes %>">
-                  <span class="size-2.5 rounded-sm <%= status_dot_classes %>"></span>
-                  <%= hotel.status.titleize %>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground"><%= hotel.created_at.strftime("%d %b %Y") %></td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <%= link_to hotel_dashboard_path(hotel), target: "_blank", class: "inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm hover:bg-muted" do %>
-                  <svg class="size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                  Open Dashboard
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center sm:px-8">
-      <%= paginate @hotels %>
-    </div>
-    <% end %>
-  </div>
+  <%= turbo_frame_tag "hotels_list", aria: { live: "polite" } do %>
+    <%= render "registry", presenter: @presenter %>
+  <% end %>
 </div>
+
+
+<%= turbo_frame_tag "admin_hotel_action_sheet" %>

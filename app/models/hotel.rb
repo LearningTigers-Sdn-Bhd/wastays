@@ -75,6 +75,7 @@ class Hotel < ApplicationRecord
   has_many :hotel_discounts, dependent: :destroy
   has_many :hotel_payment_methods, dependent: :destroy
   has_many :hotel_reservation_policies, dependent: :destroy
+  has_many :hotel_ota_credentials, dependent: :destroy
   has_one :hotel_transaction_configuration, dependent: :destroy
   has_one :hotel_boat_setting, dependent: :destroy
   accepts_nested_attributes_for :hotel_boat_setting
@@ -90,6 +91,11 @@ class Hotel < ApplicationRecord
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
+  has_many :onboarding_sections, class_name: "HotelOnboardingSection", dependent: :destroy
+  has_many :onboarding_audit_events, dependent: :destroy
+  has_many :onboarding_submissions, dependent: :destroy
+  has_many :onboarding_staff_drafts, dependent: :destroy
+  has_many :onboarding_corporate_drafts, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many :room_rates, through: :room_types
   has_many :room_locks, dependent: :destroy
@@ -116,8 +122,9 @@ class Hotel < ApplicationRecord
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
-  validates :city, presence: true
-  validates :country, presence: true
+  validates :status, inclusion: { in: ->(_) { STATUSES } }, allow_blank: true
+  validates :city, presence: true, unless: :setup?
+  validates :country, presence: true, unless: :setup?
   validates :business_starts_at, :business_ends_at, presence: true
   validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
@@ -185,14 +192,11 @@ class Hotel < ApplicationRecord
     where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q", q: q)
   }
 
+  # The onboarding lifecycle. A property is in `setup` until its owner submits it,
+  # `pending_review` while WAStays looks at it, and `live` once approved.
   STATUSES = %w[
-    registered
-    email_verified
-    profile_incomplete
-    rooms_incomplete
-    inventory_incomplete
+    setup
     pending_review
-    approved
     live
     suspended
   ].freeze
@@ -212,17 +216,12 @@ class Hotel < ApplicationRecord
     end
   end
 
-  def self.pending_review_onboarding
-    where(status: "pending_review").to_a.sort_by(&:onboarding_sort_key)
-  end
-
-  def onboarding_sort_key
-    duration = onboarding_duration_days
-    [ duration.present? ? duration.to_f : Float::INFINITY, created_at ]
+  def setup?
+    status == "setup"
   end
 
   def active?
-    %w[approved live].include?(status)
+    status == "live"
   end
 
   def publicly_bookable?
@@ -442,35 +441,7 @@ class Hotel < ApplicationRecord
   end
 
   def onboarding?
-    %w[registered email_verified profile_incomplete rooms_incomplete inventory_incomplete].include?(status)
-  end
-
-  def profile_completed?
-    !status.in?([ "registered", "email_verified" ])
-  end
-
-  def policies_completed?
-    !status.in?([ "registered", "email_verified", "profile_incomplete" ])
-  end
-
-  def rooms_completed?
-    !status.in?([ "registered", "email_verified", "profile_incomplete", "rooms_incomplete" ])
-  end
-
-  def ready_for_review?
-    status == "inventory_incomplete"
-  end
-
-  def complete_profile!
-    update(status: "profile_incomplete") if status == "registered"
-  end
-
-  def complete_policies!
-    update(status: "rooms_incomplete") if status == "profile_incomplete"
-  end
-
-  def complete_rooms!
-    update(status: "inventory_incomplete") if status == "rooms_incomplete"
+    status == "setup"
   end
 
   def ready_for_review?
@@ -490,14 +461,14 @@ class Hotel < ApplicationRecord
   end
 
   def inventory_ready?
-    # Check if there are rates set for at least some days in the next 30 days
-    room_rates.where(date: Date.current..30.days.from_now.to_date)
-              .where("price > 0")
-              .exists?
+    setup_coverage.complete?
   end
 
-  def submit_for_review!
-    update(status: "pending_review") if ready_for_review?
+  # Memoized because the audit walks a year of inventory per room type and the
+  # readiness views ask more than once per render. Scoped to this instance, so a
+  # save that changes rates gets a fresh audit on the next request.
+  def setup_coverage
+    @setup_coverage ||= Rates::SetupCoverage.call(hotel: self)
   end
 
   def tourism_tax_applicable_for?(country)
@@ -551,7 +522,7 @@ class Hotel < ApplicationRecord
   end
 
   def onboarding_completion_date
-    return nil unless [ "approved", "live" ].include?(status)
+    return nil unless status == "live"
     final_onboarding_session&.completed_at
   end
 

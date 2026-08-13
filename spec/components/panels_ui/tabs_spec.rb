@@ -71,6 +71,53 @@ RSpec.describe PanelsUI::Tabs, type: :component do
     expect(page).to have_no_css("#nav [role='tablist'], #nav [role='tab']")
   end
 
+  it "renders a disabled navigation tab as inert without breaking href inference" do
+    render_inline(described_class.new(id: "nav", active: "taxes", aria_label: "Finance steps")) do |tabs|
+      tabs.with_tab(name: "taxes", label: "1. Taxes and fees", href: "/onboarding/taxes")
+      tabs.with_tab(name: "revenue", label: "2. Room revenue · Locked", disabled: true)
+    end
+
+    expect(page).to have_css("nav.tabs-list--line a#nav-tab-taxes[aria-current='page']")
+    expect(page).to have_css(
+      "span#nav-tab-revenue.tabs-tab--line[aria-disabled='true'][data-slot='tabs-trigger']",
+      text: "2. Room revenue · Locked"
+    )
+    expect(page).to have_no_css("#nav-tab-revenue a, a#nav-tab-revenue")
+  end
+
+  it "keeps a disabled panel tab out of the tablist stops" do
+    render_inline(described_class.new(id: "t", active: "one", aria_label: "Sections")) do |tabs|
+      tabs.with_tab(name: "one", label: "One")
+      tabs.with_tab(name: "two", label: "Two", disabled: true)
+      tabs.with_panel(name: "one") { "Panel one" }
+      tabs.with_panel(name: "two") { "Panel two" }
+    end
+
+    expect(page).to have_css("button#t-tab-one[role='tab']")
+    expect(page).to have_css("span#t-tab-two[aria-disabled='true']")
+    expect(page).to have_no_css("#t-tab-two[data-panels-ui--tabs-target='tab']")
+  end
+
+  it "falls back to the first enabled tab when active does not match" do
+    render_inline(described_class.new(id: "t", active: "missing", aria_label: "Sections")) do |tabs|
+      tabs.with_tab(name: "one", label: "One", disabled: true)
+      tabs.with_tab(name: "two", label: "Two")
+      tabs.with_panel(name: "one") { "Panel one" }
+      tabs.with_panel(name: "two") { "Panel two" }
+    end
+
+    expect(page).to have_css("button#t-tab-two[aria-selected='true']")
+    expect(page).to have_no_css("#t-panel-two[hidden]", visible: :all)
+  end
+
+  it "rejects a tab set with no enabled tab" do
+    expect {
+      render_inline(described_class.new(id: "t", aria_label: "Sections")) do |tabs|
+        tabs.with_tab(name: "one", label: "One", disabled: true)
+      end
+    }.to raise_error(ArgumentError, /at least one enabled tab/)
+  end
+
   it "renders no current navigation link when active is absent" do
     render_inline(described_class.new(id: "nav", aria_label: "Sections")) do |tabs|
       tabs.with_tab(name: "one", label: "One", href: "/one")

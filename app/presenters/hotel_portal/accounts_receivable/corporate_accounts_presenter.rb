@@ -277,7 +277,12 @@ module HotelPortal
 
         def pending? = true
 
-        def expired? = invitation.expired?
+        # A company queued during property setup with the send switch off has a
+        # real invitation nobody has been emailed. Its expiry has not started
+        # running, so it is neither pending an answer nor expired.
+        def sent? = invitation.sent?
+
+        def expired? = invitation.sent? && invitation.expired?
 
         def account_name = nil
 
@@ -306,20 +311,28 @@ module HotelPortal
         end
 
         def status
+          return "not_sent" unless sent?
+
           expired? ? "expired" : "pending"
         end
 
         def status_label
-          status.humanize
+          sent? ? status.humanize : "Not sent"
         end
 
         def status_variant
+          return :outline unless sent?
+
           expired? ? :destructive : :info
         end
 
         def expiry_label
+          return "Not sent yet" unless sent?
+
           "#{expired? ? 'Expired' : 'Expires'} #{invitation.expires_at.strftime('%d %b %Y')}"
         end
+
+        def send_label = sent? ? "Resend" : "Send"
 
         def created_on_label
           invitation.created_at.strftime("%d %b %Y")

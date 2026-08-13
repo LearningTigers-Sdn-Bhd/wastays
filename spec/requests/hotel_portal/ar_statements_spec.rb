@@ -5,8 +5,8 @@ require "pdf/reader"
 require "stringio"
 
 RSpec.describe "HotelPortal::ArStatements", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
-  let(:other_hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
+  let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account, name: "AR Manager") }
   let(:role) { create(:role, account: hotel.account) }
   let(:view_reports) { Permission.find_or_create_by!(slug: "view_reports") { |permission| permission.name = "View Reports" } }

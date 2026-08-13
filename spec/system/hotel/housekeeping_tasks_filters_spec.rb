@@ -9,7 +9,7 @@ RSpec.describe "Housekeeping task filters", type: :system do
   let(:user) { create(:user, account:, role: "admin") }
   let(:role) { create(:role, account:, slug: "front_desk", name: "Front Desk") }
   let!(:room_type) do
-    create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 202])
+    create(:room_type, hotel:, room_number_mode: "custom", quantity: 2, room_numbers: %w[101 202])
   end
 
   before do

@@ -6,7 +6,7 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
   subject(:presenter) { described_class.new(account: account, params: params) }
 
   let(:account) { create(:account, :corporate) }
-  let(:hotel) { create(:hotel, status: "approved", default_currency: "MYR") }
+  let(:hotel) { create(:hotel, status: "live", default_currency: "MYR") }
   let(:relationship) { create(:hotel_corporate_account, hotel: hotel, corporate_account: account, credit_currency: "MYR") }
   let(:params) { {} }
 
@@ -21,7 +21,7 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
   end
 
   describe "filtering" do
-    let(:second_hotel) { create(:hotel, status: "approved", default_currency: "MYR", name: "Seaside Resort") }
+    let(:second_hotel) { create(:hotel, status: "live", default_currency: "MYR", name: "Seaside Resort") }
     let(:second_relationship) { create(:hotel_corporate_account, hotel: second_hotel, corporate_account: account, credit_currency: "MYR") }
 
     before do
@@ -74,11 +74,11 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
 
   describe "hotel_options" do
     it "lists only active hotel relationships sorted by hotel name" do
-      hotel_a = create(:hotel, status: "approved", name: "Zenith Hotel")
-      hotel_b = create(:hotel, status: "approved", name: "Apex Suites")
+      hotel_a = create(:hotel, status: "live", name: "Zenith Hotel")
+      hotel_b = create(:hotel, status: "live", name: "Apex Suites")
       rel_a = create(:hotel_corporate_account, hotel: hotel_a, corporate_account: account, credit_currency: "MYR")
       rel_b = create(:hotel_corporate_account, hotel: hotel_b, corporate_account: account, credit_currency: "MYR")
-      suspended = create(:hotel_corporate_account, hotel: create(:hotel, status: "approved"), corporate_account: account, credit_currency: "MYR", status: "suspended")
+      suspended = create(:hotel_corporate_account, hotel: create(:hotel, status: "live"), corporate_account: account, credit_currency: "MYR", status: "suspended")
 
       option_ids = presenter.hotel_options.map(&:id)
       expect(option_ids).to include(hotel_a.id, hotel_b.id)
@@ -95,7 +95,7 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
       create_invoice(relationship: relationship, amount: 80, due_on: today + 3.days)
       create_invoice(relationship: relationship, amount: 60, due_on: today + 30.days)
 
-      second_relationship = create(:hotel_corporate_account, hotel: create(:hotel, status: "approved"), corporate_account: account, credit_currency: "MYR")
+      second_relationship = create(:hotel_corporate_account, hotel: create(:hotel, status: "live"), corporate_account: account, credit_currency: "MYR")
       create_invoice(relationship: second_relationship, amount: 50, currency: "USD", due_on: today + 2.days)
 
       create(:ar_payment, hotel: relationship.hotel, hotel_corporate_account: relationship, amount: 100, currency: "MYR", received_at: today)

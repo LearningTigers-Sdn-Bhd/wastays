@@ -21,6 +21,7 @@ RSpec.describe ChannelManagers::SyncRatePlanAri do
   before do
     ActiveJob::Base.queue_adapter = :test
     Thread.current[:skip_ari_sync] = true
+    hotel.create_channel_mapping!(provider: "channex", external_id: "property-123")
   end
 
   after { Thread.current[:skip_ari_sync] = nil }

@@ -202,7 +202,7 @@ RSpec.describe HotelPortal::InventoryCalendarPresenter do
 
   describe '#sold_counts_by_room_type' do
     it 'correctly calculates sold counts using date ranges even when database check_in/check_out are time-zoned' do
-      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: [ "101" ], quantity: 5)
+      room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin", room_numbers: (101..105).map(&:to_s), quantity: 5)
       booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 2.days, status: "confirmed")
       create(:booking_room, booking: booking, room_type: room_type)
 

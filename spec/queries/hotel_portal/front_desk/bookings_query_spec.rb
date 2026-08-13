@@ -3,13 +3,13 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::FrontDesk::BookingsQuery do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
 
   describe "#call" do
     it "returns all hotel bookings when no date range is selected" do
       older_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-14"))
       newer_booking = create(:booking, hotel:, check_in: hotel_time("2026-07-16"))
-      create(:booking, hotel: create(:hotel, status: "approved"), check_in: hotel_time("2026-07-15"))
+      create(:booking, hotel: create(:hotel, status: "live"), check_in: hotel_time("2026-07-15"))
 
       expect(described_class.new(hotel:, params: {}).call).to contain_exactly(older_booking, newer_booking)
       expect(described_class.new(hotel:, params: {}).start_date).to be_nil

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::HousekeepingRequestsQuery do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:room_number) { "101" }
 
@@ -49,7 +49,7 @@ RSpec.describe HotelPortal::HousekeepingRequestsQuery do
       end
 
       context "when booking is for a different hotel" do
-        let(:other_hotel) { create(:hotel, status: "approved") }
+        let(:other_hotel) { create(:hotel, status: "live") }
         let(:other_booking) { create(:booking, hotel: other_hotel, status: "checked_in") }
         let!(:other_booking_room) { create(:booking_room, booking: other_booking, room_type: room_type, room_number: "101") }
         let!(:other_request) do

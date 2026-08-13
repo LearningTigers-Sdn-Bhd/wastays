@@ -74,4 +74,22 @@ RSpec.describe RatePlans::SaveRoomPricing do
     expect(result.error).to include("3 adults")
     expect(rate_plan.room_type_rate_plans.where(room_type: room_type)).to be_empty
   end
+
+  it "derives every per-guest occupancy from the corresponding Standard Rate rung", :per_person do
+    standard_assignment = room_type.room_type_rate_plans.find_by!(rate_plan: room_type.standard_rate_plan)
+    [ 180, 300, 410 ].each_with_index do |price, index|
+      standard_assignment.occupancy_prices.create!(adults: index + 1, price: price)
+    end
+
+    result = described_class.call(
+      rate_plan: rate_plan,
+      room_type: room_type,
+      pricing: pricing(rate_mode: "derived", derive_mode: "multiplier", derive_value: "-10")
+    )
+
+    expect(result).to be_success
+    expect(result.assignment.occupancy_prices.order(:adults).pluck(:adults, :price)).to eq([
+      [ 1, 162.to_d ], [ 2, 270.to_d ], [ 3, 369.to_d ]
+    ])
+  end
 end

@@ -30,7 +30,7 @@ module BookingEngine
 
     def find_available_hotels
       # 1. Base query: active hotels
-      hotels = Hotel.where(status: [ "approved", "live" ])
+      hotels = Hotel.where(status: "live")
       hotels = hotels.where("city ILIKE ?", "%#{@city}%") if @city.present?
 
       # 2. Filter by availability using find_each to avoid memory bloat
@@ -306,12 +306,12 @@ module BookingEngine
 
       ActiveRecord::Associations::Preloader.new(
         records: room_types,
-        associations: :rate_plans
+        associations: { rate_plans: :rate_plan_age_bands }
       ).call
 
       ActiveRecord::Associations::Preloader.new(
         records: room_types,
-        associations: { room_type_rate_plans: :occupancy_prices }
+        associations: { room_type_rate_plans: [ :occupancy_prices, :age_band_prices ] }
       ).call
     end
 
@@ -527,6 +527,8 @@ module BookingEngine
       highest_priority = 0
       complete_rates_by_date = {}
 
+      assignment = rate_plan && room_type_rate_plan_for(room_type, rate_plan)
+
       stay_dates.each do |date|
         rate = rates_by_date[date]
         restriction_rate = rate
@@ -546,7 +548,7 @@ module BookingEngine
           children: r_children,
           child_ages: r_child_ages,
           room_rates: room_type.room_rates,
-          room_type_rate_plan: rate_plan && room_type_rate_plan_for(room_type, rate_plan)
+          room_type_rate_plan: assignment
         )
         price = resolved.amount
         return nil if price.nil?
@@ -562,6 +564,17 @@ module BookingEngine
           "applied_rule_type" => resolved.room_rate&.applied_rule_type || "base",
           "source" => resolved.source.to_s
         )
+
+        # Frozen for the quote, so it has to follow the same narrowing the price
+        # did — dated override, then this room's rule on the plan, then the
+        # plan's. Reading past the pairing would show an occupancy the guest was
+        # not charged on.
+        if rate_plan&.sell_mode == "per_room"
+          snapshot_data["base_occupancy"] =
+            resolved.room_rate&.base_occupancy || assignment&.effective_base_occupancy || rate_plan.base_occupancy
+          snapshot_data["extra_pax_charge"] =
+            (resolved.room_rate&.extra_pax_charge || assignment&.effective_extra_pax_charge || rate_plan.extra_pax_charge).to_d.to_s("F")
+        end
 
         if resolved.breakdown&.adults_cost
           snapshot_data["pax_breakdown"] = {

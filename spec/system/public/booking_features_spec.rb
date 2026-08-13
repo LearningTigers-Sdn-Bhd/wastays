@@ -6,7 +6,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     create(
       :hotel,
       account: account,
-      status: "approved",
+      status: "live",
       time_zone: "UTC",
       sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
     )
@@ -25,7 +25,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     @standard_rate = create(:room_rate, room_type: @room_type, rate_plan: @standard_plan, date: Date.current, price: 150.0)
 
     # Ensure hotel is publicly bookable
-    hotel.update!(status: "approved")
+    hotel.update!(status: "live")
   end
 
   # A rate plan's mode follows its property, so the per-pax plan only exists

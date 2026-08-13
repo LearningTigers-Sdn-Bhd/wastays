@@ -1,6 +1,6 @@
 # Rate plans and rate inventory — technical handover
 
-Last reviewed against the implementation on 2026-08-10.
+Last reviewed against the implementation on 2026-08-12.
 
 This document describes the current rate-plan, Room Inventory, and Rates &
 Availability behavior. It is a handover for engineers and product reviewers,
@@ -21,7 +21,8 @@ owns the category-specific pricing rule or occupancy-price matrix.
 
 The hotel owns the charging model:
 
-- `per_room` — one room price, with guests included and an extra-guest charge;
+- `per_room` — one room price, with included adults, an extra-adult charge,
+  and a separate per-child charge;
 - `per_person` — a total nightly room price for each supported adult count,
   plus the plan's child-pricing rules.
 
@@ -187,10 +188,10 @@ changes their effective price unless a daily override exists.
 every adult count from 1 through the category's `max_adults`.
 
 Manual entry must be complete. Derived and Auto are input helpers that generate
-and materialize a complete matrix through `RatePlans::OccupancyLadder`:
+and materialize a complete matrix:
 
-- **Derived:** adjust the category's base price to obtain the anchor, then step
-  across adult counts.
+- **Derived:** apply the selected amount or percentage adjustment to every
+  corresponding Standard Rate occupancy amount.
 - **Auto:** use a typed anchor, then step across adult counts.
 
 Generator provenance is not persisted. Reopening the plan shows editable direct
@@ -229,7 +230,7 @@ Once any applicable occupancy matrix exists, a missing requested adult count
 returns no price. It does not fall back to a scalar price.
 
 After the adult/room amount is resolved, `Bookings::NightlyPaxPrice` applies
-per-room extra-guest charges or per-person child pricing. The one-guest
+per-room extra-adult and per-child supplements or per-person child pricing. The one-guest
 surcharge remains a legacy fallback only when no occupancy price supplied the
 adult total.
 
@@ -253,8 +254,8 @@ Editing is staged:
 
 Rate editing is charging-model-specific:
 
-- Per-room local rates show room price, guests included, and extra-guest
-  charge.
+- Per-room local rates show room price, included adults, extra-adult charge,
+  and per-child charge.
 - Per-person local rates show one occupancy field per adult count for the
   clicked category. Child prices and age bands remain plan-wide.
 - Channel overrides use the channel-compatible scalar controls.
@@ -275,13 +276,14 @@ app/javascript/controllers/inventory_calendar_controller.js
 
 ## 9. Channel behavior
 
-Per-room plans are Channex-syncable. Rate-plan saves and new attachments batch
-structure and ARI work for the affected room categories.
-
-Per-person plans are not Channex-syncable. Availability can continue to sync at
-room-category level, but the plan's prices and restrictions remain in Wastays.
-The create sheet surfaces this limitation when the hotel has a preferred
-channel manager.
+Channel eligibility is capability-based rather than sell-mode-wide.
+`ChannelManagers::ChannexRatePlanCapability` accepts distributable per-room
+plans and per-person assignments with a complete occupancy matrix. Per-person
+age bands are flattened only when both Channex child and infant fees are set;
+otherwise that plan remains unsupported. Scalar adult-rate export continues to
+resolve adults with zero children, so the local per-child supplement does not
+invent a new channel child-pricing contract. Rate-plan saves and new
+attachments batch structure and ARI work for the affected room categories.
 
 Special tier plans (`walk_in`, `corporate`, and `ota`) are internal price
 anchors rather than guest-selectable offers. They cannot be archived or
@@ -309,9 +311,11 @@ changes admin-only until an explicit transition service exists.
 
 ### Per-person distribution
 
-Channex does not currently receive Wastays per-person rates or restrictions.
-The future policy must define occupancy options and how Wastays age bands map
-to the channel's flatter child-pricing model.
+Per-person distribution requires a complete adult occupancy matrix. Direct
+age-band pricing is richer than Channex's child model, so age-banded plans are
+distributed only through the explicit flattened child and infant fees described
+above. Unsupported assignments remain local without blocking room-level
+availability synchronization.
 
 ### Inventory setup guidance
 

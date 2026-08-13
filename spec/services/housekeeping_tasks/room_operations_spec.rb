@@ -6,7 +6,7 @@ RSpec.describe "room-centric housekeeping operations" do
   let(:account) { create(:account) }
   let(:hotel) { create(:hotel, account:) }
   let(:business_date) { hotel.current_business_date }
-  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101]) }
+  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 1, room_numbers: %w[101]) }
 
   def grant(role, *slugs)
     slugs.each do |slug|
@@ -26,7 +26,7 @@ RSpec.describe "room-centric housekeeping operations" do
 
   describe HousekeepingTasks::UpdateRoomStatus do
     it "reports a passed due-out for the exact room and transitions its booking atomically" do
-      other_type = create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101])
+      other_type = create(:room_type, hotel:, room_number_mode: "custom", quantity: 1, room_numbers: %w[101])
       other_booking = create(:booking, hotel:, status: "checked_in", check_out: 2.hours.ago)
       create(:booking_room, booking: other_booking, room_type: other_type, room_number: "101")
       booking = create(:booking, hotel:, status: "checked_in", check_out: 1.hour.ago)

@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Public::Hotels rate_calendar", type: :request do
   let!(:account)   { Account.create!(name: "RC Req", slug: "rc-req", status: "active") }
-  let!(:hotel)     { Hotel.create!(sell_mode: "per_room", name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel)     { Hotel.create!(sell_mode: "per_room", name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "live") }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Standard", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
   let!(:easy_plan) { create(:plan, slug: "easy", name: "Easy") }
 
@@ -23,7 +23,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
     end
 
     it "returns 404 when hotel is not active" do
-      hotel.update!(status: "draft")
+      hotel.update!(status: "setup")
       get "/hotels/#{hotel.slug}/rate_calendar", params: base_params
       expect(response).to have_http_status(:not_found)
     end

@@ -6,7 +6,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
-  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan, allow_boat_information: false) }
+  let(:hotel) { create(:hotel, account: account, status: 'setup', plan: plan, allow_boat_information: false) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -185,7 +185,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "uses the dedicated flat settings navigation and portal breadcrumbs" do
-      hotel.update!(status: "approved")
+      hotel.update!(status: "live")
       manage_users = Permission.find_or_create_by!(slug: "manage_users") { |permission| permission.name = "Manage Users" }
       RolePermission.find_or_create_by!(role: role, permission: manage_users)
       get hotel_general_settings_path(hotel)
@@ -225,7 +225,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "renders Commercial as a sidebar menu with Taxes & Fees as its active child" do
-      hotel.update!(status: "approved")
+      hotel.update!(status: "live")
       get hotel_taxes_fees_path(hotel)
 
       document = response.parsed_body
@@ -241,7 +241,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "places the admin portal destination in the footer for superadmins" do
-      hotel.update!(status: "approved")
+      hotel.update!(status: "live")
       sign_in_as(create(:user, :superadmin, account: account))
 
       get hotel_general_settings_path(hotel)
@@ -252,7 +252,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "leaves the footer mark inert for everyone else" do
-      hotel.update!(status: "approved")
+      hotel.update!(status: "live")
 
       get hotel_general_settings_path(hotel)
 
@@ -656,7 +656,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
-      expect(hotel.reload.status).to eq('registered')
+      expect(hotel.reload.status).to eq('setup')
       banking_detail = account.reload.banking_detail
       expect(banking_detail.account_holder_name).to eq('Syarikat Maju Jaya Sdn Bhd')
       expect(banking_detail.bank_name).to eq('Maybank')

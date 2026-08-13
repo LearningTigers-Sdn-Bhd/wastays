@@ -3,6 +3,7 @@
 module HotelPortal
   module RatePlansHelper
     RoomSelectionScope = Struct.new(:room_type_id)
+    OnboardingFieldScope = Struct.new(:rate_mode, :derive_mode, :adjustment_mode, :status, :room_type_id)
 
     def rate_plan_rate_mode_options(pricing)
       {
@@ -66,6 +67,72 @@ module HotelPortal
 
     def money_summary(amount, currency)
       "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
+    end
+
+    # Onboarding submits a rate plan's assignments as either an array or the
+    # index-keyed hash a cloned row produces; both mean the same list.
+    def plan_entry_assignments(entry)
+      value = entry["assignments"]
+      value.respond_to?(:values) ? value.values : Array(value)
+    end
+
+    # Onboarding folds rate mode and derive mode into one choice. Two selects for
+    # what is really one decision — how this plan gets its prices — is the kind of
+    # split that made the old sheet hard to read.
+    def rate_plan_pricing_basis_choices
+      [
+        { label: "Set prices directly", value: "manual" },
+        { label: "Standard Rate ± %", value: "derived_multiplier" },
+        { label: "Standard Rate ± amount", value: "derived_offset" }
+      ]
+    end
+
+    def rate_plan_pricing_basis(entry)
+      return "manual" unless entry["rate_mode"].to_s == "derived"
+
+      entry["derive_mode"].to_s == "offset" ? "derived_offset" : "derived_multiplier"
+    end
+
+    # An empty money cell and a zero read the same to the save path, so the table
+    # shows the zero. A priced room next to a blank one otherwise looks like a
+    # field that has not loaded rather than one nobody has charged for yet.
+    def rate_amount_value(value) = value.to_s.presence || "0.0"
+
+    def rate_plan_derived?(entry)
+      rate_plan_pricing_basis(entry) != "manual"
+    end
+
+    # A band column is headed by its label, falling back to the ages it covers
+    # so an unnamed band is still identifiable while it is being typed.
+    def child_band_column_label(band, index)
+      band["label"].presence || begin
+        ages = [ band["min_age"], band["max_age"] ].map(&:presence)
+        ages.all? ? "Ages #{ages.first}–#{ages.last}" : "Band #{index + 1}"
+      end
+    end
+
+    def child_band_column_header(band, index, read_only: false)
+      label = child_band_column_label(band, index)
+      mode = band["pricing_mode"].presence || "amount"
+
+      tag.div(class: "flex min-w-24 items-center gap-2") do
+        safe_join([
+          tag.span(label),
+          render(PanelsUI::Switch.new(
+            name: "child_bands[#{index}][pricing_mode]",
+            value: "multiplier",
+            unchecked_value: "amount",
+            checked: mode == "multiplier",
+            disabled: read_only,
+            label: "Use percentage of the one-adult price for #{label}",
+            label_hidden: true,
+            variant: :icon,
+            size: :md,
+            off_icon: "dollar-sign",
+            on_icon: "percent"
+          ))
+        ])
+      end
     end
 
     def age_band_pricing_choices

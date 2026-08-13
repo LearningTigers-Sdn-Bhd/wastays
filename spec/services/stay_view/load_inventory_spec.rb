@@ -13,7 +13,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "does not select pricing scalars or query pricing tables without rate permission" do
-    create(:room_type, hotel:, room_numbers: [ "101" ], base_price: 987.65)
+    create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ], base_price: 987.65)
     sql = capture_sql do
       @inventory = described_class.call(hotel:, date_window: window, capabilities:, rate_plan_id: 999)
     end
@@ -29,7 +29,7 @@ RSpec.describe StayView::LoadInventory do
 
   it "loads scoped immutable standard-rate records in a bounded pricing query set" do
     visible = capabilities.with(view_rates: true)
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ], base_price: 100)
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ], base_price: 100)
     master_plan = room_type.rate_plans.order(:id).first
     included = create(:room_rate, room_type:, rate_plan: master_plan, date: start_date, price: 145, currency: master_plan.currency)
     create(:room_rate, room_type:, rate_plan: nil, date: start_date + 1.day, price: 120, currency: master_plan.currency)
@@ -62,8 +62,8 @@ RSpec.describe StayView::LoadInventory do
 
   it "loads only an explicitly selected hotel plan and its linked room types" do
     visible = capabilities.with(view_rates: true)
-    deluxe = create(:room_type, hotel:, name: "Deluxe", room_numbers: [ "101" ], base_price: 100)
-    suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ], base_price: 200)
+    deluxe = create(:room_type, hotel:, name: "Deluxe", quantity: 1, room_numbers: [ "101" ], base_price: 100)
+    suite = create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ], base_price: 200)
     flexible = create(:rate_plan, hotel:, name: "Flexible", currency: "USD")
     create(:room_type_rate_plan, room_type: deluxe, rate_plan: flexible)
     selected_rate = create(:room_rate, room_type: deluxe, rate_plan: flexible, date: start_date, price: 175, currency: "USD")
@@ -95,7 +95,7 @@ RSpec.describe StayView::LoadInventory do
 
   it "falls back to Standard for a cross-hotel rate plan" do
     visible = capabilities.with(view_rates: true)
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ], base_price: 100)
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ], base_price: 100)
     master_plan = room_type.rate_plans.first
     create(:room_rate, room_type:, rate_plan: master_plan, date: start_date, price: 145, currency: master_plan.currency)
     foreign_plan = create(:rate_plan, hotel: create(:hotel), name: "Foreign")
@@ -110,7 +110,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "loads bounded scalar inventory and redacts booking identity without permission" do
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     create(:room_status, hotel:, room_type:, room_number: "101", status: "dirty")
     booking = create(
       :booking,
@@ -153,7 +153,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "loads primary-guest VIP, hotel-scoped blacklist, and same-hotel repeat status in bounded queries" do
-    room_type = create(:room_type, hotel:, room_numbers: %w[101 102 103])
+    room_type = create(:room_type, hotel:, quantity: 3, room_numbers: %w[101 102 103])
     other_hotel = create(:hotel)
     repeat_guest = create(
       :guest,
@@ -208,7 +208,7 @@ RSpec.describe StayView::LoadInventory do
 
   it "loads late checkouts into both the Room and Timeline views by actual occupancy" do
     business_date = Date.new(2026, 7, 19)
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     zone = hotel.hotel_time_zone
     booking = create(
       :booking,
@@ -244,7 +244,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "loads room-status notes only with readiness permission without adding queries" do
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     create(
       :room_status,
       hotel:,
@@ -287,9 +287,9 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "loads immutable room inventory records only for the hotel room types and visible dates" do
-    room_type = create(:room_type, hotel:, room_numbers: %w[101 102])
+    room_type = create(:room_type, hotel:, quantity: 2, room_numbers: %w[101 102])
     other_hotel = create(:hotel)
-    other_room_type = create(:room_type, hotel: other_hotel, room_numbers: [ "201" ])
+    other_room_type = create(:room_type, hotel: other_hotel, quantity: 1, room_numbers: [ "201" ])
     included = create(
       :room_inventory,
       room_type:,
@@ -315,7 +315,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "excludes completed and out-of-range room blocks before inventory summary projection" do
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     create(
       :room_block,
       hotel:,
@@ -340,7 +340,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "loads display-ready group identity as scalar values with booking permission" do
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     group = create(:group_booking, hotel:, name: "Conference Group")
     booking = create(
       :booking,
@@ -366,7 +366,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "loads booking pax and primary-guest boat times as bounded scalars when enabled" do
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     booking = create(
       :booking,
       hotel:,
@@ -399,7 +399,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "does not select pax or boat scalars when booking identity is redacted" do
-    room_type = create(:room_type, hotel:, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
     booking = create(:booking, hotel:, adults: 3, children: 2, check_in: start_date, check_out: start_date + 2.days)
     create(:booking_room, booking:, room_type:, room_number: "101")
     create(:booking_guest, booking:, is_primary: true, boat_in_at: Time.zone.local(2026, 7, 16, 9))
@@ -412,7 +412,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "loads active hotel-owned and legacy booking-owned housekeeping alerts without booking identity" do
-    room_type = create(:room_type, hotel:, room_numbers: %w[101 102])
+    room_type = create(:room_type, hotel:, quantity: 2, room_numbers: %w[101 102])
     booking = create(:booking, hotel:, guest_name: "Sensitive Guest", check_in: start_date, check_out: start_date + 2.days)
     create(:booking_room, booking:, room_type:, room_number: "102")
     assignment_history = (1..6).map do |number|
@@ -472,7 +472,7 @@ RSpec.describe StayView::LoadInventory do
   end
 
   it "loads the primary guest and every occupying group room in one display-ready collection" do
-    room_type = create(:room_type, hotel:, name: "Deluxe", room_numbers: %w[101 102 103])
+    room_type = create(:room_type, hotel:, name: "Deluxe", quantity: 3, room_numbers: %w[101 102 103])
     group = create(:group_booking, hotel:, name: "Conference Group")
     visible = create(:booking, hotel:, group_booking: group, group_position: 1, check_in: start_date, check_out: start_date + 2.days)
     outside = create(:booking, hotel:, group_booking: group, group_position: 2, status: "completed", check_in: start_date - 30.days, check_out: start_date - 29.days)

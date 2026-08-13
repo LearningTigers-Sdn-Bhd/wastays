@@ -13,7 +13,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
 
     if @session.save
       respond_to do |format|
-        format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session scheduled successfully." }
+        format.html { redirect_to training_path, notice: "Training session scheduled successfully." }
         format.turbo_stream do
           @sessions = @hotel.onboarding_sessions.ordered
           render turbo_stream: [
@@ -33,7 +33,7 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
       end
     else
       respond_to do |format|
-        format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}" }
+        format.html { redirect_to training_path, alert: "Failed to schedule session: #{@session.errors.full_messages.to_sentence}" }
         format.turbo_stream do
           @sessions = @hotel.onboarding_sessions.ordered
           render turbo_stream: [
@@ -63,12 +63,12 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
   def update
     if @session.update(onboarding_session_params)
       respond_to do |format|
-        format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session updated successfully." }
+        format.html { redirect_to training_path, notice: "Training session updated successfully." }
         format.turbo_stream { render_onboarding_sessions_list("Training session updated successfully.") }
       end
     else
       respond_to do |format|
-        format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session: #{@session.errors.full_messages.to_sentence}" }
+        format.html { redirect_to training_path, alert: "Failed to update session: #{@session.errors.full_messages.to_sentence}" }
         format.turbo_stream { render_onboarding_sessions_list("Failed to update session: #{@session.errors.full_messages.to_sentence}", :alert, status: :unprocessable_content) }
       end
     end
@@ -76,18 +76,18 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
 
   def complete
     if @session.scheduled_at.blank? || @session.scheduled_at > Time.current
-      redirect_to onboarding_admin_hotel_path(@hotel), alert: "This training session cannot be marked completed until its scheduled time."
+      redirect_to training_path, alert: "This training session cannot be marked completed until its scheduled time."
       return
     end
 
     if @session.complete!
       respond_to do |format|
-        format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session marked as completed." }
+        format.html { redirect_to training_path, notice: "Training session marked as completed." }
         format.turbo_stream { render_onboarding_sessions_list("Training session marked as completed.") }
       end
     else
       respond_to do |format|
-        format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to update session." }
+        format.html { redirect_to training_path, alert: "Failed to update session." }
         format.turbo_stream { render_onboarding_sessions_list("Failed to update session.", :alert, status: :unprocessable_content) }
       end
     end
@@ -95,13 +95,13 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
 
   def cancel
     unless @session.status == "scheduled"
-      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Only scheduled sessions can be cancelled."
+      redirect_to training_path, alert: "Only scheduled sessions can be cancelled."
       return
     end
 
     cancel_reason = params[:cancel_reason].to_s.strip
     if cancel_reason.blank?
-      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Please provide a reason before cancelling the session."
+      redirect_to training_path, alert: "Please provide a reason before cancelling the session."
       return
     end
 
@@ -111,12 +111,12 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
     )
 
     respond_to do |format|
-      format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session cancelled successfully." }
+      format.html { redirect_to training_path, notice: "Training session cancelled successfully." }
       format.turbo_stream { render_onboarding_sessions_list("Training session cancelled successfully.") }
     end
   rescue ActiveRecord::RecordInvalid => e
     respond_to do |format|
-      format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to cancel session: #{e.message}" }
+      format.html { redirect_to training_path, alert: "Failed to cancel session: #{e.message}" }
       format.turbo_stream { render_onboarding_sessions_list("Failed to cancel session: #{e.message}", :alert, status: :unprocessable_content) }
     end
   end
@@ -124,18 +124,18 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
   def destroy
     if @session.destroy
       respond_to do |format|
-        format.html { redirect_to onboarding_admin_hotel_path(@hotel), notice: "Training session deleted successfully." }
+        format.html { redirect_to training_path, notice: "Training session deleted successfully." }
         format.turbo_stream { render_onboarding_sessions_list("Training session deleted successfully.") }
       end
     else
       respond_to do |format|
-        format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to delete session." }
+        format.html { redirect_to training_path, alert: "Failed to delete session." }
         format.turbo_stream { render_onboarding_sessions_list("Failed to delete session.", :alert, status: :unprocessable_content) }
       end
     end
   rescue ActiveRecord::RecordInvalid => e
     respond_to do |format|
-      format.html { redirect_to onboarding_admin_hotel_path(@hotel), alert: "Failed to delete session: #{e.message}" }
+      format.html { redirect_to training_path, alert: "Failed to delete session: #{e.message}" }
       format.turbo_stream { render_onboarding_sessions_list("Failed to delete session: #{e.message}", :alert, status: :unprocessable_content) }
     end
   end
@@ -152,6 +152,10 @@ class Admin::Hotels::OnboardingSessionsController < Admin::BaseController
 
   def onboarding_session_params
     params.permit(:trainer_name, :scheduled_at, :meeting_link)
+  end
+
+  def training_path
+    onboarding_tab_admin_hotel_path(@hotel, tab: "training")
   end
 
   def render_onboarding_sessions_list(message, key = :notice, status: :ok)

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::FrontDesk::DeparturesQuery, frozen_time: Time.zone.local(2026, 7, 15, 12) do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
 
   def hotel_time(date)
     Bookings::ScheduledStay.at_hotel_time(hotel:, value: Date.iso8601(date), kind: :check_out)
@@ -16,7 +16,7 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery, frozen_time: Time.zone.l
       create(:booking, hotel:, status: "cancelled", check_out: hotel_time("2026-07-15"))
       create(:booking, hotel:, status: "no_show", check_out: hotel_time("2026-07-15"))
       create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-16"))
-      create(:booking, hotel: create(:hotel, status: "approved"), status: "checked_in", check_out: hotel_time("2026-07-15"))
+      create(:booking, hotel: create(:hotel, status: "live"), status: "checked_in", check_out: hotel_time("2026-07-15"))
 
       query = described_class.new(hotel:, params: {})
 

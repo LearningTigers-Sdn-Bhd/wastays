@@ -4,7 +4,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: 'admin') }
   let(:hotel) do
-    create(:hotel, account: account, status: 'registered', tourism_tax_enabled: true, tourism_tax_amount: 10.0)
+    create(:hotel, account: account, status: 'setup', tourism_tax_enabled: true, tourism_tax_amount: 10.0)
   end
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 

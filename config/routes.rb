@@ -180,13 +180,14 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index"
     get "analytics", to: "dashboard#analytics"
     resources :hotels do
-      collection do
-        get :onboarding, to: "hotels/onboarding#index", as: :onboarding
-      end
       member do
         get :onboarding, to: "hotels/onboarding#show"
-        post :complete_onboarding, to: "hotels/onboarding#complete"
+        get "onboarding/:tab", to: "hotels/onboarding#show", as: :onboarding_tab,
+                               constraints: { tab: /history|training/ }
+        post "onboarding/request_changes", to: "hotels/onboarding#request_changes", as: :request_onboarding_changes
+        post "onboarding/approve", to: "hotels/onboarding#approve", as: :approve_onboarding
         post :save_onboarding_period, to: "hotels/onboarding#save_period"
+        post "onboarding/setup_lock", to: "hotels/onboarding#toggle_setup_lock", as: :toggle_setup_lock
         post :approve, to: "hotels/status#approve"
         post :suspend, to: "hotels/status#suspend"
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
@@ -285,8 +286,12 @@ Rails.application.routes.draw do
   get "/hotel/:hotel_id/settings/property/hotel-details", to: "hotel_portal/profiles#edit", as: :edit_hotel_profile
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
+    get "onboarding", to: "onboarding#index", as: :onboarding
+    get "onboarding/:section_key", to: "onboarding#show", as: :onboarding_section
+    patch "onboarding/:section_key", to: "onboarding#update"
+    resource :onboarding_submission, only: :create
+    resource :setup_lock, only: :show
     get "dashboard", to: "dashboard#index", as: :dashboard
-    post "submit_for_review", to: "dashboard#submit_for_review", as: :submit_for_review
 
     resources :onboarding_sessions, only: [ :index ] do
       member do

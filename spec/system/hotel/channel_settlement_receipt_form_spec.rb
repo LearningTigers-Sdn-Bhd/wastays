@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "OTA settlement receipt form", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account:, status: "approved") }
+  let(:hotel) { create(:hotel, account:, status: "live") }
   let(:user) { create(:user, account:, email: "ota-receipt@example.com") }
   let(:role) { create(:role, account:) }
   let(:source) { create(:booking_source, kind: "ota", label: "Booking Test") }
