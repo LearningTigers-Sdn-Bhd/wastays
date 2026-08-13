@@ -222,7 +222,7 @@
                         </div>
                         
                         <%= form_with url: quotes_path, method: :post, local: true, class: "w-auto lg:w-full" do |f| %>
-                          <%= f.hidden_field :hotel_id, value: @hotel.slug %>
+                          <%= f.hidden_field :hotel_id, value: @hotel.to_param %>
                           <%= f.hidden_field :check_in, value: @check_in %>
                           <%= f.hidden_field :check_out, value: @check_out %>
                           <%= f.hidden_field :adults, value: @adults %>
@@ -386,7 +386,7 @@
           </div>
 
           <%= form_with url: quotes_path, method: :post, local: true, class: "flex items-center" do |f| %>
-            <%= f.hidden_field :hotel_id, value: @hotel.slug %>
+            <%= f.hidden_field :hotel_id, value: @hotel.to_param %>
             <%= f.hidden_field :check_in, value: @check_in %>
             <%= f.hidden_field :check_out, value: @check_out %>
             <%= f.hidden_field :adults, value: @adults %>

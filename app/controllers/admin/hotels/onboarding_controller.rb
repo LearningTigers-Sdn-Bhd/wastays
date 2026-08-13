@@ -78,7 +78,7 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
   private
 
   def set_hotel
-    @hotel = Hotel.friendly.find(params[:id])
+    @hotel = Hotel.locate!(params[:id])
   end
 
   def parse_period_date(value)

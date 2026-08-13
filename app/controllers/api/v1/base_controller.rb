@@ -52,13 +52,20 @@ class Api::V1::BaseController < ApplicationController
 
   # Helper to check if a specific hotel is authorized for this key
   def authorize_hotel!(hotel_identifier)
-    hotel = hotel_scope.where(slug: hotel_identifier.to_s).first || hotel_scope.find_by(id: hotel_identifier)
+    hotel = find_api_hotel(hotel_identifier)
     unless hotel
       render json: { error: "Forbidden: You do not have access to this hotel" }, status: :forbidden
       return nil
     end
 
     hotel
+  end
+
+  # The API keeps accepting a numeric id, unlike the browser-facing routes: it is
+  # authenticated by key and already narrowed to that key's hotels, so there is
+  # nothing to enumerate, and integrators hold ids issued before `unique_id` existed.
+  def find_api_hotel(hotel_identifier)
+    Hotel.locate(hotel_identifier, scope: hotel_scope) || hotel_scope.find_by(id: hotel_identifier)
   end
 
   def set_cors_headers

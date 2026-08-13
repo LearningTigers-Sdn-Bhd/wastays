@@ -64,7 +64,7 @@ class Admin::HotelsController < Admin::BaseController
   private
 
   def set_hotel
-    @hotel = Hotel.friendly.find(params[:id])
+    @hotel = Hotel.locate!(params[:id])
   end
 
   def load_salespersons

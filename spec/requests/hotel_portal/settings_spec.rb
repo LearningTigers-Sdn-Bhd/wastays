@@ -22,10 +22,25 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
   describe 'GET /hotel/settings with legacy hotel_id param' do
     it 'redirects to the canonical hotel-scoped path' do
-      get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
+      get legacy_hotel_settings_path, params: { hotel_id: hotel.to_param }
       follow_redirect!
 
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
+    end
+
+    it 'canonicalises a legacy slug param onto the hotel code' do
+      get legacy_hotel_settings_path, params: { hotel_id: hotel.slug }
+      follow_redirect!
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+    end
+
+    # Numeric ids are deliberately unresolvable now — that is what stops hotels
+    # being enumerated from the URL.
+    it 'refuses a numeric id' do
+      get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
+
+      expect(response).to redirect_to(root_path)
     end
   end
 

@@ -109,6 +109,9 @@ class Hotel < ApplicationRecord
 
 
   validates :name, presence: true
+  validates :unique_id, presence: true, uniqueness: { case_sensitive: false }
+  validate :unique_id_is_immutable, on: :update, if: :will_save_change_to_unique_id?
+  before_validation :assign_unique_id, on: :create
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
                            length: { in: 3..6 },
                            format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
@@ -189,7 +192,7 @@ class Hotel < ApplicationRecord
   scope :search, ->(query) {
     return all if query.blank?
     q = "%#{sanitize_sql_like(query.to_s.downcase)}%"
-    where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q", q: q)
+    where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q OR LOWER(hotels.unique_id) LIKE :q", q: q)
   }
 
   # The onboarding lifecycle. A property is in `setup` until its owner submits it,
@@ -201,6 +204,30 @@ class Hotel < ApplicationRecord
     suspended
   ].freeze
   MAX_PHOTOS = 20
+
+  # The public identifier. Five characters over the ambiguity-free confirmation-token
+  # charset — no I, O, L, 0 or 1 — so a code survives being read down a phone line.
+  UNIQUE_ID_LENGTH = 5
+  UNIQUE_ID_CHARSET = DocumentIdentifiers::HotelReferences::TOKEN_CHARSET
+
+  # Resolves the identifier that appears in URLs. `unique_id` is canonical; `slug` is
+  # kept as a permanent legacy read path so bookmarks and printed concierge QR codes
+  # issued before the codes existed keep resolving. There is deliberately no `id`
+  # branch — numeric ids are enumerable, and that is the point of the change.
+  def self.locate(key, scope: all)
+    key = key.to_s.strip
+    return nil if key.blank?
+
+    scope.find_by(unique_id: key.upcase) || scope.find_by(slug: key)
+  end
+
+  def self.locate!(key, scope: all)
+    locate(key, scope: scope) || raise(ActiveRecord::RecordNotFound, "Couldn't find Hotel with identifier #{key.inspect}")
+  end
+
+  def to_param
+    unique_id
+  end
 
   PhotoUploadResult = Struct.new(:attached_count, :trimmed_count, keyword_init: true) do
     def trimmed?
@@ -619,12 +646,31 @@ class Hotel < ApplicationRecord
     extract_coordinate("4d", /@(?:-?\d+\.\d+),(-?\d+\.\d+)/)
   end
 
+  # Only ever on create. A slug that followed the hotel name would invalidate every
+  # link to the property each time it was renamed; `unique_id` is the canonical param
+  # now, so the slug's one remaining job is to keep old URLs alive forever.
   def should_generate_new_friendly_id?
-    name_changed? || slug.blank?
+    slug.blank?
   end
 
 
   private
+
+  def assign_unique_id
+    return if unique_id.present?
+
+    candidate = generate_unique_id
+    candidate = generate_unique_id while Hotel.exists?(unique_id: candidate)
+    self.unique_id = candidate
+  end
+
+  def generate_unique_id
+    Array.new(UNIQUE_ID_LENGTH) { UNIQUE_ID_CHARSET.sample }.join
+  end
+
+  def unique_id_is_immutable
+    errors.add(:unique_id, "cannot be changed after the hotel is created")
+  end
 
   def hotel_prefix_has_not_been_used_by_another_hotel
     return if hotel_prefix.blank?

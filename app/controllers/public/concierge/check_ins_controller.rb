@@ -18,7 +18,7 @@ module Public
 
         case booking.status
         when "checked_in"
-          redirect_to concierge_check_in_success_path(@hotel.slug)
+          redirect_to concierge_check_in_success_path(@hotel)
         when "completed"
           @error = "This booking has already been checked out."
           render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
@@ -30,7 +30,7 @@ module Public
             status: "pending", document_status: "pending", signature_status: "pending"
           ) unless booking.pre_checkin.present?
           set_concierge_booking_cookie(booking)
-          redirect_to concierge_check_in_now_path(@hotel.slug)
+          redirect_to concierge_check_in_now_path(@hotel)
         else
           @error = "This booking is not ready for check-in. Please see the front desk."
           render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
@@ -38,21 +38,21 @@ module Public
       end
 
       def check_in_now
-        return redirect_to concierge_check_in_path(@hotel.slug) unless @booking
+        return redirect_to concierge_check_in_path(@hotel) unless @booking
         @form = ::Concierge::CheckInForm.new(booking: @booking)
         @presenter = ::Public::Concierge::CheckInPresenter.new(booking: @booking, hotel: @hotel)
         render "check_in_now_mobile" if mobile_request?
       end
 
       def submit_check_in
-        return redirect_to concierge_check_in_path(@hotel.slug) unless @booking
+        return redirect_to concierge_check_in_path(@hotel) unless @booking
 
         @form = ::Concierge::CheckInForm.new(booking: @booking, params: check_in_form_params)
         @presenter = ::Public::Concierge::CheckInPresenter.new(booking: @booking, hotel: @hotel)
 
         if @form.needs_registration?
           if @form.save
-            redirect_to concierge_check_in_now_path(@hotel.slug), notice: "Registration completed successfully. Please confirm your check-in."
+            redirect_to concierge_check_in_now_path(@hotel), notice: "Registration completed successfully. Please confirm your check-in."
             return
           else
             @error_code = :registration_error
@@ -70,7 +70,7 @@ module Public
 
         if result.success?
           session[:concierge_check_in_room] = result.room_number
-          redirect_to concierge_check_in_success_path(@hotel.slug)
+          redirect_to concierge_check_in_success_path(@hotel)
         else
           @error_code = result.error_code
           @error = @presenter.error_message_for(@error_code) ||
@@ -83,7 +83,7 @@ module Public
       def check_in_success
         @room_number = session.delete(:concierge_check_in_room) ||
                        @booking&.booking_rooms&.first&.room_number
-        return redirect_to concierge_home_path(@hotel.slug) unless @booking
+        return redirect_to concierge_home_path(@hotel) unless @booking
         render "check_in_success_mobile" if mobile_request?
       end
 

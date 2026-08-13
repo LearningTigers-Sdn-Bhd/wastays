@@ -6,7 +6,7 @@ module Public
       end
 
       def book
-        redirect_to hotel_path(@hotel.slug)
+        redirect_to hotel_path(@hotel)
       end
     end
   end

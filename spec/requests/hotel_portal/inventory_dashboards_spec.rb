@@ -328,7 +328,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Room", quantity: 4)
       create(:room_inventory, room_type: room_type, date: Date.current, quantity: 0, status: "closed")
 
-      get "/hotel/#{hotel.id}/inventory", params: { start_date: Date.current.to_s }
+      get "/hotel/#{hotel.to_param}/inventory", params: { start_date: Date.current.to_s }
 
       expect(response).to have_http_status(:success)
 
@@ -347,7 +347,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       create(:rate_plan, room_type: twin, name: "Non Refundable")
       create(:room_rate, room_type: deluxe, rate_plan: deluxe_plan, date: Date.current, price: 320, currency: "MYR")
 
-      get "/hotel/#{hotel.id}/inventory", params: {
+      get "/hotel/#{hotel.to_param}/inventory", params: {
         room_type_id: deluxe.id,
         rate_plan_id: deluxe_plan.id,
         display_currency: "MYR",
@@ -377,7 +377,7 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
         stop_sell: true
       )
 
-      get "/hotel/#{hotel.id}/inventory", params: { display_currency: "MYR", start_date: Date.current.to_s }
+      get "/hotel/#{hotel.to_param}/inventory", params: { display_currency: "MYR", start_date: Date.current.to_s }
 
       expect(response).to have_http_status(:success)
 

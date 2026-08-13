@@ -44,6 +44,15 @@
 
           <%= render PanelsUI::FormField.new(
                 form: form,
+                attribute: :unique_id,
+                label: "Hotel Code",
+                hint: "Quote this code when contacting WAStays support. It never changes.",
+                readonly: true) do |field| %>
+            <% field.with_input(value: @hotel.unique_id) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
                 attribute: :star_rating,
                 label: "Star Rating") do |field| %>
             <% field.with_select_menu(

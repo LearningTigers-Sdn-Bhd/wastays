@@ -286,4 +286,77 @@ RSpec.describe Hotel, type: :model do
       expect(hotel.inventory_ready?).to be true
     end
   end
+
+  describe 'unique_id' do
+    it 'assigns a five-character code from the unambiguous charset on create' do
+      hotel = create(:hotel)
+
+      expect(hotel.unique_id).to match(/\A[A-HJ-KM-NP-Z2-9]{5}\z/)
+    end
+
+    it 'is the URL parameter' do
+      hotel = create(:hotel)
+
+      expect(hotel.to_param).to eq(hotel.unique_id)
+    end
+
+    it 'cannot be changed once the hotel exists' do
+      hotel = create(:hotel)
+      hotel.unique_id = 'ZZZZZ'
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:unique_id]).to include('cannot be changed after the hotel is created')
+    end
+
+    it 'rejects a code already taken by another hotel' do
+      taken = create(:hotel).unique_id
+
+      expect(build(:hotel, unique_id: taken)).not_to be_valid
+    end
+  end
+
+  describe 'slug' do
+    it 'survives a rename so links issued before it keep resolving' do
+      hotel = create(:hotel)
+      original = hotel.slug
+
+      hotel.update!(name: 'Completely Different Name')
+
+      expect(hotel.reload.slug).to eq(original)
+    end
+  end
+
+  describe '.locate' do
+    let!(:hotel) { create(:hotel) }
+
+    it 'finds by unique_id regardless of case' do
+      expect(Hotel.locate(hotel.unique_id)).to eq(hotel)
+      expect(Hotel.locate(hotel.unique_id.downcase)).to eq(hotel)
+    end
+
+    it 'still finds by the legacy slug' do
+      expect(Hotel.locate(hotel.slug)).to eq(hotel)
+    end
+
+    # The whole point of the code: a numeric id in the URL must not resolve.
+    it 'refuses a numeric id' do
+      expect(Hotel.locate(hotel.id.to_s)).to be_nil
+    end
+
+    it 'returns nil for a blank or unknown key' do
+      expect(Hotel.locate(nil)).to be_nil
+      expect(Hotel.locate('')).to be_nil
+      expect(Hotel.locate('NOPE1')).to be_nil
+    end
+
+    it 'honours the given scope' do
+      other = create(:hotel)
+
+      expect(Hotel.locate(hotel.unique_id, scope: Hotel.where(id: other.id))).to be_nil
+    end
+
+    it 'raises from locate! when nothing matches' do
+      expect { Hotel.locate!('NOPE1') }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+  end
 end

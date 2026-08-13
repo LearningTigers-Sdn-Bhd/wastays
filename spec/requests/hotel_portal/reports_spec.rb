@@ -128,7 +128,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "returns http success" do
-      get "/hotel/#{hotel.id}/reports"
+      get "/hotel/#{hotel.to_param}/reports"
 
       page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
@@ -177,16 +177,16 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "exports financial performance csv/xlsx/pdf" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 300, margin_amount: 30, net_amount: 270, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
-      get "/hotel/#{hotel.id}/reports.csv"
+      get "/hotel/#{hotel.to_param}/reports.csv"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
 
-      get "/hotel/#{hotel.id}/reports.xlsx"
+      get "/hotel/#{hotel.to_param}/reports.xlsx"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       expect(response.body).to start_with("PK")
 
-      get "/hotel/#{hotel.id}/reports.pdf"
+      get "/hotel/#{hotel.to_param}/reports.pdf"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
     end
@@ -1471,7 +1471,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     it "renders the Daily Report page for the selected range" do
       create(:booking, hotel: hotel, status: "confirmed", source: "walk_in", total_amount: 100, tourism_tax_applied: true, tourism_tax_amount: 10, created_at: Time.zone.local(2026, 5, 6, 10, 0))
 
-      get "/hotel/#{hotel.id}/reports/daily_report", params: { start_date: start_date.to_s, end_date: end_date.to_s }
+      get "/hotel/#{hotel.to_param}/reports/daily_report", params: { start_date: start_date.to_s, end_date: end_date.to_s }
 
       page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
@@ -1488,10 +1488,10 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
 
     it "redirects the legacy Daily Revenue URL while preserving its query string" do
-      get "/hotel/#{hotel.id}/reports/daily_revenue", params: { tab: "cashier", start_date: start_date.to_s }
+      get "/hotel/#{hotel.to_param}/reports/daily_revenue", params: { tab: "cashier", start_date: start_date.to_s }
 
       expect(response).to redirect_to(
-        "/hotel/#{hotel.id}/reports/daily_report?tab=cashier&start_date=#{start_date}"
+        "/hotel/#{hotel.to_param}/reports/daily_report?tab=cashier&start_date=#{start_date}"
       )
     end
 

@@ -91,7 +91,7 @@ RSpec.describe ApplicationHelper, type: :helper do
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 100.0)
 
       result = BookingEngine::CreateQuote.new(
-        hotel_id: hotel.id,
+        hotel_id: hotel.to_param,
         allocations: { "0" => { room_type_id: room_type.id, quantity: 1 } },
         check_in: Date.current, check_out: Date.current + 1,
         adults: adults, children: children, child_ages: child_ages,
@@ -138,7 +138,7 @@ RSpec.describe ApplicationHelper, type: :helper do
                            price: 300.0, occupancy_prices: { "1" => 180.0, "2" => 300.0 })
 
         result = BookingEngine::CreateQuote.new(
-          hotel_id: hotel.id,
+          hotel_id: hotel.to_param,
           allocations: { "0" => { room_type_id: room_type.id, quantity: 1 } },
           check_in: Date.current, check_out: Date.current + 1,
           adults: adults, children: children, child_ages: child_ages,

@@ -117,23 +117,23 @@ class ApplicationController < ActionController::Base
     return unless request.get? || request.head?
     return unless params[:hotel_id].present?
     return unless request.path.match?(%r{\A/hotel/(dashboard|profile|faq|policy|property_policy|user_profile|bookings|arrivals|audit_logs|reports|inventory|guests|settings)})
-    return if request.path.match?(%r{\A/hotel/\d+/})
+    # Nothing to canonicalise onto if the identifier does not resolve — a numeric id,
+    # say, which no longer names a hotel. Fall through and let access control answer.
+    return if current_hotel.blank?
+    return if request.path.start_with?("/hotel/#{current_hotel.to_param}/")
 
-    redirect_to canonical_hotel_portal_path(params[:hotel_id], request.path, request.query_parameters.except(:hotel_id))
+    redirect_to canonical_hotel_portal_path(request.path, request.query_parameters.except(:hotel_id))
   end
 
-  def canonical_hotel_portal_path(hotel_id, legacy_path, query_params)
+  def canonical_hotel_portal_path(legacy_path, query_params)
     suffix = legacy_path.delete_prefix("/hotel")
-    canonical_hotel_id = current_hotel&.to_param || hotel_id
-    path = "/hotel/#{canonical_hotel_id}#{suffix}"
+    path = "/hotel/#{current_hotel.to_param}#{suffix}"
     query_string = query_params.to_query
     query_string.present? ? "#{path}?#{query_string}" : path
   end
 
   def find_hotel_for_scope(scope, hotel_identifier)
-    hotel_key = hotel_identifier.to_s
-
-    scope.where(slug: hotel_key).first || scope.find_by(id: hotel_key)
+    Hotel.locate(hotel_identifier, scope: scope)
   end
 
   helper_method :current_hotel, :permitted_hotels, :hotel_portal_params

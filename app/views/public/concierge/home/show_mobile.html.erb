@@ -43,7 +43,7 @@
   <div class="px-6 pb-12 space-y-4">
     
     <%# Primary Check-In Card (Full Row, Green) %>
-    <%= link_to concierge_check_in_path(@hotel.slug),
+    <%= link_to concierge_check_in_path(@hotel),
           class: "group relative flex items-center justify-between min-h-[120px] bg-primary rounded-[2rem] p-6 shadow-xl shadow-primary/20 overflow-hidden border border-white/5 active:scale-[0.98] transition-all duration-300" do %>
       <div class="relative z-10 flex items-center gap-x-5">
         <div class="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
@@ -66,13 +66,13 @@
     <%# 2x2 Grid for Remaining Actions %>
     <div class="grid grid-cols-2 gap-4">
       <% [
-        { path: concierge_check_out_path(@hotel.slug), label: "Check Out", description: "Notify desk",
+        { path: concierge_check_out_path(@hotel), label: "Check Out", description: "Notify desk",
           icon_svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>' },
-        { path: concierge_book_path(@hotel.slug), label: "Booking", description: "View rooms",
+        { path: concierge_book_path(@hotel), label: "Booking", description: "View rooms",
           icon_svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>' },
-        { path: concierge_new_request_path(@hotel.slug), label: "Request", description: "Housekeeping",
+        { path: concierge_new_request_path(@hotel), label: "Request", description: "Housekeeping",
           icon_svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>' },
-        { path: concierge_contact_path(@hotel.slug), label: "Contact Us", description: "Get help",
+        { path: concierge_contact_path(@hotel), label: "Contact Us", description: "Get help",
           icon_svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>' }
       ].each do |tile| %>
         <%= link_to tile[:path],

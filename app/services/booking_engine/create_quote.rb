@@ -4,7 +4,7 @@ module BookingEngine
   class CreateQuote
     def initialize(params)
       hotel_key = params[:hotel_id].to_s
-      @hotel = Hotel.where(slug: hotel_key).first || Hotel.find(hotel_key)
+      @hotel = Hotel.locate!(hotel_key)
       raw_allocations = params[:allocations]
       if raw_allocations.is_a?(Hash) || (defined?(ActionController::Parameters) && raw_allocations.is_a?(ActionController::Parameters))
         @allocations = raw_allocations.values

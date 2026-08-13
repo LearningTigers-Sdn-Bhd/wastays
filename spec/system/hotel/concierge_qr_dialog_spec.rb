@@ -49,7 +49,7 @@ RSpec.describe "Concierge QR dialog", type: :system, js: true do
     JS
     click_in_overlay "Copy URL"
     expect(page).to have_button("Copied")
-    expect(page.evaluate_script("window.__conciergeCopiedUrl")).to include("/concierge/#{hotel.slug}")
+    expect(page.evaluate_script("window.__conciergeCopiedUrl")).to include("/concierge/#{hotel.to_param}")
   end
 
   it "restores page state after close and supports reopening and Escape" do

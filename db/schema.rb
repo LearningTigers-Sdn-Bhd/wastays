@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1602,6 +1602,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_160000) do
     t.string "time_zone"
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
     t.boolean "tourism_tax_enabled", default: false, null: false
+    t.string "unique_id", null: false
     t.datetime "updated_at", null: false
     t.decimal "usd_conversion_rate", precision: 10, scale: 4, default: "4.5", null: false
     t.string "whatsapp_number"
@@ -1611,6 +1612,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_160000) do
     t.index ["plan_id"], name: "index_hotels_on_plan_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
+    t.index ["unique_id"], name: "index_hotels_on_unique_id", unique: true
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
