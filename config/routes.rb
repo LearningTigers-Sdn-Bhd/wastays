@@ -187,6 +187,7 @@ Rails.application.routes.draw do
         post "onboarding/request_changes", to: "hotels/onboarding#request_changes", as: :request_onboarding_changes
         post "onboarding/approve", to: "hotels/onboarding#approve", as: :approve_onboarding
         post :save_onboarding_period, to: "hotels/onboarding#save_period"
+        post "onboarding/setup_lock", to: "hotels/onboarding#toggle_setup_lock", as: :toggle_setup_lock
         post :approve, to: "hotels/status#approve"
         post :suspend, to: "hotels/status#suspend"
         post :onboard_channex, to: "hotels/channel_managers#onboard_channex"
@@ -289,6 +290,7 @@ Rails.application.routes.draw do
     get "onboarding/:section_key", to: "onboarding#show", as: :onboarding_section
     patch "onboarding/:section_key", to: "onboarding#update"
     resource :onboarding_submission, only: :create
+    resource :setup_lock, only: :show
     get "dashboard", to: "dashboard#index", as: :dashboard
 
     resources :onboarding_sessions, only: [ :index ] do

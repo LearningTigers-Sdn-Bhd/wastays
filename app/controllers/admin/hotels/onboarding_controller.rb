@@ -5,7 +5,7 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
     "training" => "Training"
   }.freeze
 
-  before_action :set_hotel, only: [ :show, :request_changes, :approve, :save_period ]
+  before_action :set_hotel, only: [ :show, :request_changes, :approve, :save_period, :toggle_setup_lock ]
 
   def show
     @active_tab = params[:tab].presence || "overview"
@@ -41,6 +41,16 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
 
     redirect_to onboarding_admin_hotel_path(@hotel),
                 (result.success? ? { notice: "#{@hotel.name} is now live." } : { alert: result.error })
+  end
+
+  # The setup lock is rolled out one property at a time, so it needs a switch that is
+  # not the Rails console.
+  def toggle_setup_lock
+    enabled = !@hotel.setup_lock_enabled?
+    @hotel.update!(setup_lock_enabled: enabled)
+
+    redirect_to onboarding_admin_hotel_path(@hotel),
+                notice: enabled ? "Setup lock enabled. Staff are kept inside onboarding." : "Setup lock disabled."
   end
 
   def save_period

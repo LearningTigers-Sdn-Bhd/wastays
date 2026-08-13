@@ -36,6 +36,15 @@
         <%= app_icon "calendar", class: "size-4 shrink-0", aria: { hidden: "true" } %>
         <span>Edit onboarding period</span>
       <% end %>
+      <% if @hotel.status == "setup" %>
+        <% menu.with_item(
+             href: toggle_setup_lock_admin_hotel_path(@hotel),
+             method: :post,
+             form: { data: { turbo_confirm: @hotel.setup_lock_enabled? ? "Let staff back into the hotel portal before #{@hotel.name} goes live?" : "Keep staff inside onboarding until #{@hotel.name} goes live?" } }) do %>
+          <%= app_icon @hotel.setup_lock_enabled? ? "lock-open" : "lock", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+          <span><%= @hotel.setup_lock_enabled? ? "Disable setup lock" : "Enable setup lock" %></span>
+        <% end %>
+      <% end %>
       <% if review_actions_available %>
         <% menu.with_separator %>
         <% menu.with_item(command: "show-modal", commandfor: "request-onboarding-changes-sheet", aria: { haspopup: "dialog" }) do %>

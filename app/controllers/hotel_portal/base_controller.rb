@@ -9,7 +9,20 @@ module HotelPortal
     before_action :authenticate_user!
     before_action :reject_corporate_user!
     before_action :ensure_hotel_access!
+    before_action :enforce_setup_lock!
     before_action :protect_pending_review_writes!
+
+    # Controllers a property still in setup can always reach. Onboarding itself is the
+    # point of the lock; the rest are the things someone needs regardless of whether
+    # their property is open — their own profile, and the page explaining the wait.
+    # Logging out is not a hotel-portal controller, so it stays reachable for free.
+    SETUP_LOCK_EXEMPT = %w[
+      HotelPortal::OnboardingController
+      HotelPortal::OnboardingSubmissionsController
+      HotelPortal::OnboardingSessionsController
+      HotelPortal::UserProfilesController
+      HotelPortal::SetupLocksController
+    ].freeze
 
     helper_method :locked_hotel_portal_shell?
 
@@ -42,6 +55,27 @@ module HotelPortal
 
     def locked_hotel_portal_shell?
       current_hotel.present? && (current_hotel.onboarding? || current_hotel.status == "pending_review")
+    end
+
+    # A property that has not been submitted yet has nothing to run — no rates, no
+    # inventory, often no rooms — so the portal around it is a maze of empty pages.
+    # Send whoever can finish setup back to where they left off, and tell everyone
+    # else to wait.
+    #
+    # Off unless the hotel opts in, so this rolls out one property at a time.
+    def enforce_setup_lock!
+      return unless current_hotel&.status == "setup"
+      return unless current_hotel.setup_lock_enabled?
+      return if current_user&.superadmin?
+      return if SETUP_LOCK_EXEMPT.include?(self.class.name)
+
+      if HotelPolicy.new(current_user, current_hotel).update?
+        redirect_to hotel_onboarding_section_path(
+          current_hotel, section_key: Onboarding::ResumePageResolver.new(hotel: current_hotel).call.key
+        )
+      else
+        redirect_to hotel_setup_lock_path(current_hotel)
+      end
     end
 
     def protect_pending_review_writes!

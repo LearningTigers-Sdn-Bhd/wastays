@@ -530,4 +530,33 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       expect(session_row.text).not_to include("Delete")
     end
   end
+
+  describe "POST /admin/hotels/:id/onboarding/setup_lock" do
+    let(:hotel) { create(:hotel, account: admin_account, status: "setup") }
+
+    it "turns the setup lock on and back off" do
+      post toggle_setup_lock_admin_hotel_path(hotel)
+
+      expect(response).to redirect_to(onboarding_admin_hotel_path(hotel))
+      expect(hotel.reload.setup_lock_enabled).to be true
+
+      post toggle_setup_lock_admin_hotel_path(hotel)
+
+      expect(hotel.reload.setup_lock_enabled).to be false
+    end
+
+    it "offers the toggle on the onboarding page while the hotel is in setup" do
+      get onboarding_admin_hotel_path(hotel)
+
+      expect(response.body).to include("Enable setup lock")
+    end
+
+    it "does not offer the toggle once the hotel has been submitted" do
+      hotel.update!(status: "pending_review")
+
+      get onboarding_admin_hotel_path(hotel)
+
+      expect(response.body).not_to include("setup lock")
+    end
+  end
 end
