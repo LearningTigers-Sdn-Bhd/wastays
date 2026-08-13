@@ -29,9 +29,10 @@
   </td>
 
   <td>
-    <%# One column while the row is a stacked editor, two once it is a table row.
-        A tax always has an amount, so nothing here hides; the marks swap. %>
-    <div class="grid grid-cols-1 gap-2 md:grid-cols-2" data-controller="record-row"
+    <%# The table takes two thirds of a desktop row, so the pair only sits side by
+        side where that leaves room for it; everywhere narrower it stacks. A tax
+        always has an amount, so nothing here hides — the marks swap. %>
+    <div class="grid grid-cols-1 gap-2 xl:grid-cols-2" data-controller="record-row"
          data-action="change->record-row#update" data-record-row-unpriced-value="">
       <div data-record-row-target="typeField">
         <%= render PanelsUI::FormField.new(form: tax_form, attribute: :rate_type, label: "Rate type", size: :sm) do |field| %>
