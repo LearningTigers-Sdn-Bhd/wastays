@@ -1,9 +1,8 @@
-<section aria-labelledby="onboarding-rates-heading" class="space-y-8">
+<%# The shell heads the step. Child bands, rate plans, and availability are peer
+    groups within it, so this row only states the terms the whole step runs on. %>
+<div class="space-y-8">
   <div class="flex flex-wrap items-start justify-between gap-3">
-    <div>
-      <h2 id="onboarding-rates-heading" class="text-base font-semibold">Pricing and availability</h2>
-      <p class="mt-1 text-sm text-muted-foreground">This property sells <%= current_hotel.sells_per_person? ? "per pax" : "per room" %>. That mode is fixed for this setup.</p>
-    </div>
+    <p class="text-sm text-muted-foreground">This property sells <%= current_hotel.sells_per_person? ? "per pax" : "per room" %>. That mode is fixed for this setup.</p>
     <%= render PanelsUI::Badge.new(label: "Currency · #{current_hotel.default_currency.presence || 'MYR'}", variant: :outline) %>
   </div>
 
@@ -16,9 +15,9 @@
       <%= render "child_age_bands", bands: @child_bands, presenter: presenter %>
     <% end %>
 
-    <div class="space-y-3">
+    <section aria-labelledby="onboarding-rate-plans-heading" class="space-y-3">
       <div>
-        <h3 class="text-base font-semibold">Rate plans</h3>
+        <h2 id="onboarding-rate-plans-heading" class="text-base font-semibold">Rate plans</h2>
         <p class="text-sm text-muted-foreground">
           <%= current_hotel.sells_per_person? ? "Nightly price per person, by room." : "Nightly room price, by room." %>
           Standard Rate covers every room category and cannot be removed. A plan you add starts on
@@ -37,11 +36,11 @@
           <% end %>
         </div>
       <% end %>
-    </div>
+    </section>
 
-    <div class="space-y-3">
+    <section aria-labelledby="onboarding-availability-heading" class="space-y-3">
       <div>
-        <h3 class="text-base font-semibold">Availability</h3>
+        <h2 id="onboarding-availability-heading" class="text-base font-semibold">Availability</h2>
         <p class="text-sm text-muted-foreground">One explicit decision is created for each room and date. Quantity cannot exceed the room total set in Rooms.</p>
       </div>
 
@@ -108,7 +107,7 @@
           <% end %>
         <% end %>
       <% end %>
-    </div>
+    </section>
 
     <p class="text-sm text-muted-foreground">
       <% if @rates_coverage.sellable_percentage.to_d >= 100 %>
@@ -119,4 +118,4 @@
       <% end %>
     </p>
   <% end %>
-</section>
+</div>

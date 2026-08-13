@@ -1,6 +1,8 @@
-<section aria-labelledby="onboarding-taxes-heading" class="space-y-5">
+<%# The shell heads the step. Statutory taxes and property taxes are peer groups
+    within it, so neither heading labels the page as a whole. %>
+<div class="space-y-5">
   <div>
-    <h2 id="onboarding-taxes-heading" class="text-base font-semibold">Statutory taxes</h2>
+    <h2 class="text-base font-semibold">Statutory taxes</h2>
     <p class="mt-1 text-sm text-muted-foreground">These apply to every room night once enabled. You assign them to room revenue on the next step.</p>
   </div>
 
@@ -18,8 +20,8 @@
       </div>
     </dl>
 
-    <div class="space-y-3">
-      <h2 class="text-base font-semibold">Property taxes and fees</h2>
+    <section aria-labelledby="onboarding-property-taxes-heading" class="space-y-3">
+      <h2 id="onboarding-property-taxes-heading" class="text-base font-semibold">Property taxes and fees</h2>
       <% if @tax_entries.any? %>
         <%= render PanelsUI::Table.new(caption: "Property taxes and fees", header_style: :sentence,
                                        wrapper_class: "rounded-md border border-border bg-card") do |table| %>
@@ -45,7 +47,7 @@
       <% else %>
         <p class="text-sm text-muted-foreground">No property taxes or fees were added.</p>
       <% end %>
-    </div>
+    </section>
   <% else %>
     <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "taxes_fees"), method: :patch, id: "onboarding-taxes-fees-form" do %>
       <%= fields_for :hotel, current_hotel do |hotel_form| %>
@@ -78,12 +80,12 @@
         </div>
       <% end %>
 
-      <div class="mt-6 space-y-1">
-        <h2 class="text-base font-semibold">Property taxes and fees</h2>
-        <p class="text-sm text-muted-foreground">Add any mandatory charge your property applies on top of the statutory taxes. Optional extras guests choose to buy come later.</p>
-      </div>
+      <section aria-labelledby="onboarding-property-taxes-heading" class="mt-6 space-y-3">
+        <div class="space-y-1">
+          <h2 id="onboarding-property-taxes-heading" class="text-base font-semibold">Property taxes and fees</h2>
+          <p class="text-sm text-muted-foreground">Add any mandatory charge your property applies on top of the statutory taxes. Optional extras guests choose to buy come later.</p>
+        </div>
 
-      <div class="mt-3">
         <%= render HotelPortal::Setup::RecordTable.new(
               caption: "Property taxes and fees",
               add_label: "Add tax or fee",
@@ -108,7 +110,7 @@
             <%= render "hotel_tax_row", entry: {}, index: "NEW_RECORD" %>
           <% end %>
         <% end %>
-      </div>
+      </section>
 
       <div class="mt-6">
         <%= render PanelsUI::Checkbox.new(
@@ -122,4 +124,4 @@
     <% end %>
 
   <% end %>
-</section>
+</div>

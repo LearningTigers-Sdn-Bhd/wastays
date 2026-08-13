@@ -1,9 +1,11 @@
 <% rr = @room_revenue_presenter %>
 <% currency = rr.currency %>
 
-<section aria-labelledby="onboarding-room-revenue-heading" class="space-y-5">
+<%# The shell heads the step. The tax rules and the later-change rule are peer groups
+    within it, so neither heading labels the page as a whole. %>
+<div class="space-y-5">
   <div>
-    <h2 id="onboarding-room-revenue-heading" class="text-base font-semibold">Taxes on a room night</h2>
+    <h2 class="text-base font-semibold">Taxes on a room night</h2>
     <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
       These apply to every night a room is billed — the nightly charge and the four stay events
       (late checkout, early departure, no-show, cancellation), which post under their own ledger
@@ -67,34 +69,36 @@
         </div>
       </section>
 
-      <div class="space-y-1">
-        <h2 class="text-base font-semibold">How far a later change reaches</h2>
-        <p class="max-w-2xl text-sm text-muted-foreground">
-          Posted transactions never change. This decides whether changing these rules after you go
-          live also rewrites the unposted forecast lines on open folios.
-        </p>
-      </div>
+      <section aria-labelledby="onboarding-tax-application-heading" class="space-y-3">
+        <div class="space-y-1">
+          <h2 id="onboarding-tax-application-heading" class="text-base font-semibold">How far a later change reaches</h2>
+          <p class="max-w-2xl text-sm text-muted-foreground">
+            Posted transactions never change. This decides whether changing these rules after you go
+            live also rewrites the unposted forecast lines on open folios.
+          </p>
+        </div>
 
-      <%= fields_for :hotel_transaction_configuration, rr.transaction_configuration do |config_form| %>
-        <%= render PanelsUI::RadioGroup.new(
-              form: config_form,
-              attribute: :room_revenue_tax_rule_application,
-              label: "Apply later changes to",
-              selected: rr.transaction_configuration.room_revenue_tax_rule_application.presence || "new_bookings_only",
-              options: [
-                { label: "New bookings only",
-                  value: "new_bookings_only",
-                  description: "New booking tax snapshots use the current rules. Existing open folio forecasts stay unchanged." },
-                { label: "New bookings and upcoming transactions on open folios",
-                  value: "open_folio_forecasts",
-                  description: "Also recalculates unposted forecast charges on open folios. This can change guest booking contract totals." }
-              ]) %>
-      <% end %>
+        <%= fields_for :hotel_transaction_configuration, rr.transaction_configuration do |config_form| %>
+          <%= render PanelsUI::RadioGroup.new(
+                form: config_form,
+                attribute: :room_revenue_tax_rule_application,
+                label: "Apply later changes to",
+                selected: rr.transaction_configuration.room_revenue_tax_rule_application.presence || "new_bookings_only",
+                options: [
+                  { label: "New bookings only",
+                    value: "new_bookings_only",
+                    description: "New booking tax snapshots use the current rules. Existing open folio forecasts stay unchanged." },
+                  { label: "New bookings and upcoming transactions on open folios",
+                    value: "open_folio_forecasts",
+                    description: "Also recalculates unposted forecast charges on open folios. This can change guest booking contract totals." }
+                ]) %>
+        <% end %>
+      </section>
     <% end %>
 
     <section aria-labelledby="onboarding-reservation-policies-heading" class="space-y-3">
       <div>
-        <h3 id="onboarding-reservation-policies-heading" class="text-sm font-semibold">Stay-event policies</h3>
+        <h2 id="onboarding-reservation-policies-heading" class="text-sm font-semibold">Stay-event policies</h2>
         <p class="mt-1 text-sm text-muted-foreground">
           Seeded to charge nothing beyond a one-night no-show. Adjust them in Settings once you are live.
         </p>
@@ -114,4 +118,4 @@
     </section>
 
   <% end %>
-</section>
+</div>

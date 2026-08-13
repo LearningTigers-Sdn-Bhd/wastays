@@ -1,9 +1,6 @@
-<section aria-labelledby="staff-drafts-heading" class="space-y-4">
-  <div>
-    <h2 id="staff-drafts-heading" class="text-base font-semibold">Draft staff</h2>
-    <p class="mt-1 text-sm text-muted-foreground">Nothing is sent now. Invitations are created only after onboarding is successfully submitted.</p>
-  </div>
-
+<%# The shell already heads this step and carries the "nothing is sent now" caveat,
+    so the drafts open straight into the table. %>
+<section aria-label="Draft staff" class="space-y-4">
   <% if presenter.read_only? %>
     <% if @staff_entries.any? %>
       <%= render PanelsUI::Table.new(caption: "Draft staff", header_style: :sentence,

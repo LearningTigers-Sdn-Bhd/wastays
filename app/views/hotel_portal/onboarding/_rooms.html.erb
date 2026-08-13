@@ -1,9 +1,6 @@
-<section aria-labelledby="onboarding-rooms-heading" class="space-y-4">
-  <div>
-    <h2 id="onboarding-rooms-heading" class="text-base font-semibold">Room categories</h2>
-    <p class="mt-1 text-sm text-muted-foreground">Enter the rooms this property operates. Pricing, photos, and descriptive details are configured later.</p>
-  </div>
-
+<%# The shell already heads this step and says what is deferred to later steps,
+    so the categories open straight into the table. %>
+<section aria-label="Room categories" class="space-y-4">
   <% if presenter.read_only? %>
     <%= render PanelsUI::Table.new(
           caption: "Room categories", header_style: :sentence,

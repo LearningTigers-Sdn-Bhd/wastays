@@ -42,6 +42,12 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     body = response.parsed_body
     expect(body.at_css("#onboarding-rate-plans")).to be_nil
 
+    # The shell heads the step; the partial opens on its peer groups, not on a
+    # second statement of the same subject.
+    expect(body.css("h1").map { |heading| heading.text.strip }).to eq([ "Rates and availability" ])
+    expect(body.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
+      .to eq([ "Rate plans", "Availability" ])
+
     groups = body.css("tr.panel-record-table__group")
     expect(groups.size).to be >= 2
 
@@ -84,6 +90,8 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     expect(response.body).to include("1 adult", "2 adults", "3 adults", pax_room.name)
     expect(response.body).to include("Child age bands")
     expect(response.body).not_to include("Extra guest", "Extra adult")
+    expect(response.parsed_body.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
+      .to eq([ "Child age bands", "Rate plans", "Availability" ])
 
     # The band section defines who a child is; what they cost is a column per
     # room on each plan, so the section itself carries no price field.

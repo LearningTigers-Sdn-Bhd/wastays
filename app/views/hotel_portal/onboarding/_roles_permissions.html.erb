@@ -1,9 +1,6 @@
-<section aria-labelledby="role-presets-heading" class="space-y-4">
-  <div>
-    <h2 id="role-presets-heading" class="text-base font-semibold">Seeded role presets</h2>
-    <p class="mt-1 text-sm text-muted-foreground">These permissions are read-only during onboarding. Custom role management remains available after launch when included in the property’s plan.</p>
-  </div>
-
+<%# The shell already heads this step and states the read-only rule, so the presets
+    open straight into the grid. %>
+<section aria-label="Seeded role presets" class="space-y-4">
   <% if @preset_roles.size != Onboarding::ConfirmRolePresets::PRESET_SLUGS.size %>
     <%= render PanelsUI::Alert.new(tone: :warning, title: "Preset roles need initialization") do |alert| %>
       <% alert.with_description { "Save and continue to initialize and confirm the standard roles for this account." } %>

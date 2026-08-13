@@ -15,11 +15,11 @@ module HotelPortal
 
     SECTION_CONTENT = {
       "property_profile" => [ "Property profile", "Add the identity, location, contact details, amenities, photos, and policies guests need." ],
-      "roles_permissions" => [ "Roles and permissions", "Review the preset access levels your team will use after launch." ],
-      "staff_setup" => [ "Staff setup", "Prepare team members and their roles without sending invitations yet." ],
+      "roles_permissions" => [ "Roles and permissions", "Review the preset access levels your team will use after launch. They are read-only during onboarding; custom role management opens after launch when the property’s plan includes it." ],
+      "staff_setup" => [ "Staff setup", "Prepare team members and their roles. Nothing is sent now — invitations are created only after onboarding is successfully submitted." ],
       "taxes_fees" => [ "Taxes and fees", "Confirm statutory taxes and configure any mandatory property fees." ],
       "room_revenue" => [ "Room revenue", "Set how room sales post and which taxes and policies apply." ],
-      "rooms" => [ "Rooms", "Create the room categories, capacity, amenities, policies, and room numbering this property operates." ],
+      "rooms" => [ "Rooms", "Create the room categories, capacity, amenities, policies, and room numbering this property operates. Pricing, photos, and descriptive details come later." ],
       "rates_availability" => [ "Rates and availability", "Set sell-mode pricing and establish one year of sellable inventory." ],
       "extra_charges" => [ "Extra charges", "Anything sold on top of the room — breakfast, parking, an airport transfer. Mandatory charges every guest pays belong in Taxes and fees instead." ],
       "discounts" => [ "Discounts", "Offers staff apply to a folio — an early bird rate, a staff rate, a goodwill rebate. Each one names the charges it is allowed to reduce." ],

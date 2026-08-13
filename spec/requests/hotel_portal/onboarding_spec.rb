@@ -115,6 +115,10 @@ RSpec.describe "Hotel onboarding shell", type: :request do
 
     get hotel_onboarding_section_path(hotel, section_key: "roles_permissions")
     expect(response).to have_http_status(:ok)
+    presets_page = response.parsed_body
+    expect(presets_page.css("h1").map { |heading| heading.text.strip }).to eq([ "Roles and permissions" ])
+    expect(presets_page.at_css("section[aria-label='Seeded role presets']")).to be_present
+    expect(presets_page.css("h2").map { |heading| heading.text.strip }).not_to include("Seeded role presets")
 
     patch hotel_onboarding_section_path(hotel, section_key: "roles_permissions"),
           params: { navigation_action: "save_continue", confirm_presets: "1" }
@@ -122,6 +126,10 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "staff_setup"))
     follow_redirect!
     expect(response.body).to include("Add staff member", "No staff added yet")
+    staff_page = response.parsed_body
+    expect(staff_page.css("h1").map { |heading| heading.text.strip }).to eq([ "Staff setup" ])
+    expect(staff_page.at_css("section[aria-label='Draft staff']")).to be_present
+    expect(staff_page.css("h2").map { |heading| heading.text.strip }).not_to include("Draft staff")
     expect(account.roles.where(slug: Onboarding::ConfirmRolePresets::PRESET_SLUGS).count).to eq(4)
     expect(hotel.onboarding_sections.find_by!(section_key: "roles_permissions").decision_metadata)
       .to include("permission_fingerprint" => be_present)
@@ -231,6 +239,10 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Service Tax (SST)", "Tourism Tax (TTx)", "Add tax or fee")
       expect(response.body).to include("I confirm these are the taxes and fees this property charges")
+      document = response.parsed_body
+      expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Taxes and fees" ])
+      expect(document.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
+        .to eq([ "Statutory taxes", "Property taxes and fees" ])
     end
 
     it "refuses to complete taxes without the confirmation" do
@@ -268,6 +280,10 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       get hotel_onboarding_section_path(hotel, section_key: "room_revenue")
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Taxes and fees applied", "Posting preview")
+      document = response.parsed_body
+      expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Room revenue" ])
+      expect(document.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
+        .to eq([ "Taxes on a room night", "How far a later change reaches", "Stay-event policies" ])
 
       patch hotel_onboarding_section_path(hotel, section_key: "room_revenue"),
             params: {
@@ -348,6 +364,12 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       expect(response.body).not_to include("name=\"room_amenity_sheet[]\"")
       expect(response.body).not_to include("Standard rate", "Room group", "Photos")
       expect(response.parsed_body.at_css("[role='region'][aria-label='Room categories']")).to be_present
+      expect(response.parsed_body.css("h1").map { |heading| heading.text.strip }).to eq([ "Rooms" ])
+      expect(response.parsed_body.at_css("section[aria-label='Room categories']")).to be_present
+      # The only h2 in the body belongs to the action sheet, which titles its own
+      # dialog. The step itself is headed once, by the shell.
+      expect(response.parsed_body.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
+        .to eq([ "Manage room details" ])
       expect(response.parsed_body.at_css("table.panel-record-table--spreadsheet.panel-record-table--rooms")).to be_present
       expect(response.parsed_body.css("tbody > tr[data-record-table-target='row']").size).to eq(1)
       headers = response.parsed_body.css("thead th").map { |header| header.text.strip.delete_suffix("*") }
