@@ -180,9 +180,6 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index"
     get "analytics", to: "dashboard#analytics"
     resources :hotels do
-      collection do
-        get :onboarding, to: "hotels/onboarding#index", as: :onboarding
-      end
       member do
         get :onboarding, to: "hotels/onboarding#show"
         post "onboarding/request_changes", to: "hotels/onboarding#request_changes", as: :request_onboarding_changes

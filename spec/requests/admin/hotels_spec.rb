@@ -12,8 +12,34 @@ RSpec.describe 'Admin::Hotels', type: :request do
   end
 
   describe 'GET /admin/hotels' do
-    let!(:pending_hotel) { create(:hotel, name: "Pending Stay #{token}", status: "pending_review") }
+    let!(:pending_hotel) do
+      create(
+        :hotel,
+        name: "Pending Stay #{token}",
+        status: "pending_review",
+        onboarding_start_date: Date.new(2026, 4, 15),
+        onboarding_end_date: Date.new(2026, 4, 20)
+      )
+    end
     let!(:live_hotel) { create(:hotel, name: "Live Stay #{token}", status: "live") }
+    let!(:next_session) do
+      create(
+        :onboarding_session,
+        hotel: pending_hotel,
+        trainer_name: "Mira Tan",
+        status: "scheduled",
+        scheduled_at: Time.zone.local(2026, 4, 24, 9, 0)
+      )
+    end
+    let!(:later_session) do
+      create(
+        :onboarding_session,
+        hotel: pending_hotel,
+        trainer_name: "Farid Osman",
+        status: "scheduled",
+        scheduled_at: Time.zone.local(2026, 4, 26, 14, 30)
+      )
+    end
 
     it 'renders the registry with PanelsUI components' do
       get admin_hotels_path
@@ -28,17 +54,48 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(document.at_css("select[name='per_page'] option[selected]").text).to eq('15')
       expect(document.css('turbo-frame#hotels_list .panel-badge').size).to eq(2)
       expect(document.at_css("turbo-frame#hotels_list")).to be_present
+      expect(document.at_css('table.panel-table').text).not_to include("Onboarding period", "Scheduled session")
+      expect(response.body).not_to include('href="/admin/hotels/onboarding"')
     end
 
-    it 'filters the shared registry without changing the platform summary' do
+    it 'turns the pending-review filter into the onboarding queue' do
       get admin_hotels_path, params: { status: 'pending_review' }
 
       document = Nokogiri::HTML(response.body)
+      table = document.at_css('table.panel-table')
 
-      expect(document.at_css('table.panel-table').text).to include(pending_hotel.name)
-      expect(document.at_css('table.panel-table').text).not_to include(live_hotel.name)
+      expect(table.text).to include(
+        pending_hotel.name,
+        "Onboarding period",
+        "Scheduled session",
+        "5 days",
+        "15 Apr 2026 – 20 Apr 2026",
+        "Mira Tan",
+        "+1 more",
+        "Review onboarding"
+      )
+      expect(table.text).not_to include(live_hotel.name, "Farid Osman")
+      review_link = table.at_css("a[href='#{onboarding_admin_hotel_path(pending_hotel)}']")
+      expect(review_link).to be_present
+      expect(review_link["data-turbo-frame"]).to eq("_top")
       expect(document.at_css('#hotel-status-tabs-tab-all .tabs-tab__count').text).to eq('2')
       expect(document.at_css('#hotel-status-tabs-tab-pending_review')['aria-current']).to eq('page')
+    end
+
+    it 'shows fallback period dates and an empty scheduled-session state' do
+      hotel_without_dates = create(
+        :hotel,
+        name: "Fallback Stay #{token}",
+        status: "pending_review",
+        created_at: Time.zone.local(2026, 4, 10, 12, 0)
+      )
+
+      travel_to(Time.zone.local(2026, 4, 15, 12, 0)) do
+        get admin_hotels_path, params: { status: 'pending_review', q: hotel_without_dates.name }
+      end
+
+      table = Nokogiri::HTML(response.body).at_css('table.panel-table')
+      expect(table.text).to include("5 days", "10 Apr 2026 – 15 Apr 2026", "Not scheduled")
     end
   end
 
@@ -259,7 +316,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
       expect(response).to redirect_to(admin_hotel_path(hotel))
       expect(flash[:notice]).to eq('Account and hotel have been reactivated.')
-      expect(hotel.reload.status).to eq('approved')
+      expect(hotel.reload.status).to eq('live')
       expect(approve_account.reload.status).to eq('active')
     end
   end

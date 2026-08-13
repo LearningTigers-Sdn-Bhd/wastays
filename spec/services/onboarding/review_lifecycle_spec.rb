@@ -4,6 +4,7 @@ RSpec.describe "Onboarding review lifecycle" do
   let(:hotel) { create(:hotel, status: "setup") }
   let(:actor) { create(:user, account: hotel.account) }
   let(:ready) { Onboarding::Readiness::Result.new(ready: true, blocking_issues: [], warnings: []) }
+  let(:rates_coverage) { instance_double(Rates::SetupCoverage::Result) }
   let(:snapshot) do
     Onboarding::SubmissionSnapshot::Result.new(
       data: { "version" => 1, "sections" => {} },
@@ -14,8 +15,11 @@ RSpec.describe "Onboarding review lifecycle" do
   before do
     Onboarding::InitializeProgress.new(hotel:).call
     hotel.onboarding_sections.update_all(state: "complete", completed_at: Time.current, decision_metadata: {})
+    allow(Rates::SetupCoverage).to receive(:call).with(hotel:).and_return(rates_coverage)
     allow(Onboarding::Readiness).to receive(:new).with(hotel:).and_return(instance_double(Onboarding::Readiness, call: ready))
+    allow(Onboarding::Readiness).to receive(:new).with(hotel:, rates_coverage:).and_return(instance_double(Onboarding::Readiness, call: ready))
     allow(Onboarding::SubmissionSnapshot).to receive(:call).with(hotel:).and_return(snapshot)
+    allow(Onboarding::SubmissionSnapshot).to receive(:call).with(hotel:, rates_coverage:).and_return(snapshot)
     allow(Onboarding::DispatchPendingDeliveriesJob).to receive(:perform_later)
   end
 
@@ -51,7 +55,7 @@ RSpec.describe "Onboarding review lifecycle" do
 
   it "blocks approval when the current configuration differs" do
     submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
-    allow(Onboarding::SubmissionSnapshot).to receive(:call).with(hotel:).and_return(
+    allow(Onboarding::SubmissionSnapshot).to receive(:call).with(hotel:, rates_coverage:).and_return(
       Onboarding::SubmissionSnapshot::Result.new(data: {}, digest: Digest::SHA256.hexdigest("changed"))
     )
 

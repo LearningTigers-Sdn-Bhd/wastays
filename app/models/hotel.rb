@@ -219,15 +219,6 @@ class Hotel < ApplicationRecord
     end
   end
 
-  def self.pending_review_onboarding
-    where(status: "pending_review").to_a.sort_by(&:onboarding_sort_key)
-  end
-
-  def onboarding_sort_key
-    duration = onboarding_duration_days
-    [ duration.present? ? duration.to_f : Float::INFINITY, created_at ]
-  end
-
   def setup?
     status == "setup"
   end

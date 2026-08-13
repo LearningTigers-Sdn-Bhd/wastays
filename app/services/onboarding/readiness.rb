@@ -5,8 +5,9 @@ module Onboarding
     Finding = Data.define(:section_key, :severity, :code, :message)
     Result = Data.define(:ready, :blocking_issues, :warnings)
 
-    def initialize(hotel:)
+    def initialize(hotel:, rates_coverage: nil)
       @hotel = hotel
+      @rates_coverage = rates_coverage
     end
 
     def call
@@ -48,7 +49,7 @@ module Onboarding
       add_once(blocking, "taxes_fees", :tax_confirmation_stale, "Review and confirm the property's current taxes and fees.") unless taxes_ready?(states)
       add_once(blocking, "room_revenue", :room_revenue_invalid, "Confirm the room revenue posting and tax rules.") unless room_revenue_ready?
       add_once(blocking, "rooms", :rooms_invalid, "Add at least one operationally valid room type.") unless rooms_ready?
-      add_once(blocking, "rates_availability", :coverage_incomplete, "Complete one year of sellable rates and availability.") unless Rates::SetupCoverage.call(hotel: @hotel).complete?
+      add_once(blocking, "rates_availability", :coverage_incomplete, "Complete one year of sellable rates and availability.") unless rates_coverage.complete?
       add_once(blocking, "payment_methods", :payment_method_missing, "Add at least one active payment method.") unless @hotel.hotel_payment_methods.active.exists?
       optional_sources.each do |section_key, source|
         add_once(blocking, section_key, :decision_missing, "Review this section and record the property's decision.") unless explicit_decision?(states, section_key, source)
@@ -103,6 +104,10 @@ module Onboarding
         "corporate_accounts" => "corporate_account_setup",
         "channel_manager" => "channel_manager_setup"
       }
+    end
+
+    def rates_coverage
+      @rates_coverage ||= Rates::SetupCoverage.call(hotel: @hotel)
     end
   end
 end

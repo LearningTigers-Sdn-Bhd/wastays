@@ -4,12 +4,13 @@ module Onboarding
   class SubmissionSnapshot
     Result = Data.define(:data, :digest)
 
-    def self.call(hotel:)
-      new(hotel:).call
+    def self.call(hotel:, rates_coverage: nil)
+      new(hotel:, rates_coverage:).call
     end
 
-    def initialize(hotel:)
+    def initialize(hotel:, rates_coverage: nil)
       @hotel = hotel
+      @rates_coverage = rates_coverage
     end
 
     def call
@@ -92,7 +93,7 @@ module Onboarding
     end
 
     def rate_snapshot
-      coverage = Rates::SetupCoverage.call(hotel: hotel)
+      coverage = @rates_coverage || Rates::SetupCoverage.call(hotel: hotel)
       {
         "coverage" => {
           "start_date" => coverage.start_date.iso8601,

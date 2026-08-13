@@ -3,7 +3,21 @@
 module Admin
   module Hotels
     class IndexPresenter
-      Row = Data.define(:hotel, :name, :city, :status_label, :status_variant, :status_detail, :registered_on)
+      Row = Data.define(
+        :hotel,
+        :name,
+        :city,
+        :status_label,
+        :status_variant,
+        :status_detail,
+        :registered_on,
+        :onboarding_period,
+        :onboarding_period_dates,
+        :next_session_at,
+        :next_session_trainer,
+        :remaining_session_count,
+        :review_path
+      )
 
       STATUS_PRESENTATION = {
         "setup" => [ "Setup", :neutral, "Waiting for the owner to complete onboarding." ],
@@ -46,6 +60,8 @@ module Admin
         @status.presence_in(HotelsQuery::STATUS_FILTERS.keys) || "all"
       end
 
+      def pending_review? = active_status == "pending_review"
+
       def status_tabs
         STATUS_TABS.map do |name, label, icon, count_key|
           { name: name, label: label, icon: icon, count: summary.fetch(count_key) }
@@ -61,6 +77,7 @@ module Admin
       def rows
         @rows ||= hotels.map do |hotel|
           status_label, status_variant, status_detail = STATUS_PRESENTATION.fetch(hotel.status)
+          onboarding_details = pending_review? ? onboarding_details_for(hotel) : {}
 
           Row.new(
             hotel: hotel,
@@ -69,7 +86,13 @@ module Admin
             status_label: status_label,
             status_variant: status_variant,
             status_detail: status_detail,
-            registered_on: hotel.created_at.strftime("%d %b %Y")
+            registered_on: hotel.created_at.strftime("%d %b %Y"),
+            onboarding_period: onboarding_details[:period],
+            onboarding_period_dates: onboarding_details[:period_dates],
+            next_session_at: onboarding_details[:next_session_at],
+            next_session_trainer: onboarding_details[:next_session_trainer],
+            remaining_session_count: onboarding_details[:remaining_session_count],
+            review_path: onboarding_details[:review_path]
           )
         end
       end
@@ -79,6 +102,31 @@ module Admin
       private
 
       attr_reader :summary
+
+      def onboarding_details_for(hotel)
+        start_date = hotel.onboarding_start_date
+        end_date = hotel.onboarding_end_date
+        scheduled_sessions = hotel.onboarding_sessions
+                                  .select { |session| session.status == "scheduled" }
+                                  .sort_by { |session| [ session.scheduled_at, session.created_at ] }
+        next_session = scheduled_sessions.first
+
+        {
+          period: period_label(start_date, end_date),
+          period_dates: "#{start_date.strftime('%d %b %Y')} – #{end_date.strftime('%d %b %Y')}",
+          next_session_at: next_session && I18n.l(next_session.scheduled_at, format: "%d %b %Y, %I:%M %p"),
+          next_session_trainer: next_session&.trainer_name,
+          remaining_session_count: [ scheduled_sessions.size - 1, 0 ].max,
+          review_path: Rails.application.routes.url_helpers.onboarding_admin_hotel_path(hotel)
+        }
+      end
+
+      def period_label(start_date, end_date)
+        days = (end_date - start_date).to_i
+        return "< 1 day" if days.zero?
+
+        "#{days} #{'day'.pluralize(days)}"
+      end
     end
   end
 end

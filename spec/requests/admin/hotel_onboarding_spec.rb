@@ -59,6 +59,23 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       expect(trainer_names.index("Mira Tan")).to be < trainer_names.index("Farid Osman")
     end
 
+    it "shows the onboarding period editor and returns to the pending-review queue" do
+      hotel.update!(
+        onboarding_start_date: Date.new(2026, 4, 15),
+        onboarding_end_date: Date.new(2026, 4, 20)
+      )
+
+      get onboarding_admin_hotel_path(hotel)
+
+      document = Nokogiri::HTML(response.body)
+      expect(response).to have_http_status(:ok)
+      expect(document.at_css("a[href='#{admin_hotels_path(status: 'pending_review')}']").text).to include("Back to pending review")
+      expect(document.at_css("#onboarding-period-heading").text).to eq("Onboarding period")
+      expect(document.at_css("#edit-onboarding-period-sheet")).to be_present
+      expect(document.at_css("input[name='start_date']")['value']).to eq("2026-04-15")
+      expect(document.at_css("input[name='end_date']")['value']).to eq("2026-04-20")
+    end
+
     it "shows the submitted snapshot, safe OTA presence, deliveries, and review actions" do
       submitter = create(:user, account: hotel.account, name: "Property Owner")
       sections = Onboarding::SectionCatalog.keys.index_with { { "state" => "complete", "decision" => {} } }
@@ -76,6 +93,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
         }
       )
       create(:onboarding_delivery, onboarding_submission: submission, status: "failed")
+      allow(Rates::SetupCoverage).to receive(:call).and_call_original
 
       get onboarding_admin_hotel_path(hotel)
 
@@ -85,6 +103,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       document = Nokogiri::HTML(response.body)
       expect(document.css('input[name="section_keys[]"]').size).to eq(12)
       expect(document.at_css('#request-onboarding-changes-sheet')).to be_present
+      expect(Rates::SetupCoverage).to have_received(:call).once
     end
   end
 
@@ -113,6 +132,48 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       expect(Onboarding::ApproveOnboarding).to have_received(:call).with(hotel:, actor: superadmin)
       expect(response).to redirect_to(onboarding_admin_hotel_path(hotel))
       expect(flash[:alert]).to eq("Not ready")
+    end
+  end
+
+  describe "POST /admin/hotels/:id/save_onboarding_period" do
+    let(:hotel) do
+      create(
+        :hotel,
+        account: admin_account,
+        status: "pending_review",
+        onboarding_start_date: Date.new(2026, 4, 10),
+        onboarding_end_date: Date.new(2026, 4, 12)
+      )
+    end
+
+    it "updates a valid onboarding period" do
+      post save_onboarding_period_admin_hotel_path(hotel),
+           params: { start_date: "2026-04-15", end_date: "2026-04-20" }
+
+      expect(response).to redirect_to(onboarding_admin_hotel_path(hotel))
+      expect(flash[:notice]).to eq("Onboarding period updated.")
+      expect(hotel.reload.onboarding_start_date).to eq(Date.new(2026, 4, 15))
+      expect(hotel.onboarding_end_date).to eq(Date.new(2026, 4, 20))
+    end
+
+    it "rejects an end date before the start date without changing the hotel" do
+      expect {
+        post save_onboarding_period_admin_hotel_path(hotel),
+             params: { start_date: "2026-04-20", end_date: "2026-04-15" }
+      }.not_to change { hotel.reload.attributes.slice("onboarding_start_date", "onboarding_end_date") }
+
+      expect(response).to redirect_to(onboarding_admin_hotel_path(hotel))
+      expect(flash[:alert]).to eq("The end date must be on or after the start date.")
+    end
+
+    it "rejects missing or malformed dates without changing the hotel" do
+      expect {
+        post save_onboarding_period_admin_hotel_path(hotel),
+             params: { start_date: "not-a-date", end_date: "" }
+      }.not_to change { hotel.reload.attributes.slice("onboarding_start_date", "onboarding_end_date") }
+
+      expect(response).to redirect_to(onboarding_admin_hotel_path(hotel))
+      expect(flash[:alert]).to eq("Enter a valid start and end date.")
     end
   end
 

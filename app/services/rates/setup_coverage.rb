@@ -5,6 +5,8 @@ module Rates
   # A closed inventory row is configured but not sellable; an absent row is a
   # configuration gap.
   class SetupCoverage
+    EMPTY_RATES = [].freeze
+
     RoomResult = Data.define(:room_type_id, :room_name, :configured_days, :sellable_days, :missing_dates, :unsellable_dates)
     Result = Data.define(
       :start_date, :end_date, :total_days, :total_slots, :configured_days,
@@ -36,13 +38,21 @@ module Rates
         :room_rates,
         room_type_rate_plans: [ :occupancy_prices, :rate_plan ]
       ).order(:id).to_a
+      inventories_by_room = rooms.to_h do |room|
+        [ room.id, room.room_inventories.index_by(&:date) ]
+      end
+      rates_by_room_and_date = rooms.to_h do |room|
+        [ room.id, room.room_rates.group_by(&:date) ]
+      end
 
-      results = rooms.map { |room| coverage_for(room, dates) }
+      results = rooms.map do |room|
+        coverage_for(room, dates, inventories_by_room.fetch(room.id), rates_by_room_and_date.fetch(room.id))
+      end
       total_slots = dates.size * rooms.size
       configured = results.sum(&:configured_days)
       sellable = results.sum(&:sellable_days)
       fully_configured_dates = dates.take_while do |date|
-        rooms.any? && rooms.all? { |room| room.room_inventories.any? { |inventory| inventory.date == date } }
+        rooms.any? && rooms.all? { |room| inventories_by_room.fetch(room.id).key?(date) }
       end
 
       Result.new(
@@ -55,7 +65,7 @@ module Rates
         configured_percentage: percentage(configured, total_slots),
         sellable_percentage: percentage(sellable, total_slots),
         room_results: results,
-        gaps: results.flat_map { |result| gap_rows(result) } + plan_gap_rows(rooms, dates),
+        gaps: results.flat_map { |result| gap_rows(result) } + plan_gap_rows(rooms, dates, rates_by_room_and_date),
         expires_on: fully_configured_dates.last,
         expiring: fully_configured_dates.last.nil? || fully_configured_dates.last <= Date.current + 30.days
       )
@@ -65,8 +75,7 @@ module Rates
 
     attr_reader :hotel, :start_date, :end_date
 
-    def coverage_for(room, dates)
-      inventories = room.room_inventories.index_by(&:date)
+    def coverage_for(room, dates, inventories, rates_by_date)
       missing = []
       unsellable = []
       configured = 0
@@ -80,7 +89,7 @@ module Rates
         end
 
         configured += 1
-        if inventory.status == "open" && inventory.quantity.positive? && standard_sellable?(room, date)
+        if inventory.status == "open" && inventory.quantity.positive? && standard_sellable?(room, date, rates_by_date)
           sellable += 1
         elsif inventory.status == "open"
           unsellable << date
@@ -97,7 +106,7 @@ module Rates
       )
     end
 
-    def standard_sellable?(room, date)
+    def standard_sellable?(room, date, rates_by_date)
       plan = room.standard_rate_plan
       return false unless plan
 
@@ -110,7 +119,7 @@ module Rates
           currency: plan.currency,
           adults: adult_count,
           children: 0,
-          room_rates: room.room_rates,
+          room_rates: rates_by_date.fetch(date, EMPTY_RATES),
           room_type_rate_plan: room.room_type_rate_plans.find { |assignment| assignment.rate_plan_id == plan.id }
         ).amount&.positive?
       end
@@ -123,7 +132,7 @@ module Rates
       rows
     end
 
-    def plan_gap_rows(rooms, dates)
+    def plan_gap_rows(rooms, dates, rates_by_room_and_date)
       room_by_id = rooms.index_by(&:id)
       hotel.rate_plans.active.where(kind: "custom").includes(
         room_type_rate_plans: [ :occupancy_prices, :room_type ]
@@ -134,7 +143,8 @@ module Rates
         else
           assignments.filter_map do |assignment|
             room = room_by_id[assignment.room_type_id] || assignment.room_type
-            missing = dates.reject { |date| assignment_sellable?(assignment, room, plan, date) }
+            rates_by_date = rates_by_room_and_date.fetch(room.id)
+            missing = dates.reject { |date| assignment_sellable?(assignment, room, plan, date, rates_by_date) }
             next if missing.empty?
 
             {
@@ -150,7 +160,7 @@ module Rates
       end
     end
 
-    def assignment_sellable?(assignment, room, plan, date)
+    def assignment_sellable?(assignment, room, plan, date, rates_by_date)
       adults = plan.sell_mode == "per_person" ? (1..room.max_adults) : [ plan.base_occupancy.clamp(1, room.max_adults) ]
       adults.all? do |count|
         Rates::ResolveEffectiveNightlyPrice.call(
@@ -160,7 +170,7 @@ module Rates
           currency: plan.currency,
           adults: count,
           children: 0,
-          room_rates: room.room_rates,
+          room_rates: rates_by_date.fetch(date, EMPTY_RATES),
           room_type_rate_plan: assignment
         ).amount&.positive?
       end

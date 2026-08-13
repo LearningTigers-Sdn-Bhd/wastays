@@ -1,8 +1,8 @@
 <div class="w-full space-y-8">
   <div>
-    <%= render PanelsUI::Button.new(label: "Back to onboarding queue", href: onboarding_admin_hotels_path, variant: :ghost, size: :sm) do %>
+    <%= render PanelsUI::Button.new(label: "Back to pending review", href: admin_hotels_path(status: "pending_review"), variant: :ghost, size: :sm) do %>
       <%= app_icon "arrow-left", aria: { hidden: "true" } %>
-      <span>Back to onboarding queue</span>
+      <span>Back to pending review</span>
     <% end %>
   </div>
 
@@ -11,6 +11,51 @@
         description: [ @hotel.city, @hotel.country ].compact_blank.join(", ")) do |header| %>
     <% header.with_actions do %>
       <%= render PanelsUI::Badge.new(label: @hotel.status.humanize, variant: @hotel.status == "live" ? :success : :warning) %>
+    <% end %>
+  <% end %>
+
+  <% period_start = @hotel.onboarding_start_date %>
+  <% period_end = @hotel.onboarding_end_date %>
+  <% period_days = (period_end - period_start).to_i %>
+  <section aria-labelledby="onboarding-period-heading" class="flex flex-col gap-4 border-y border-border py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="space-y-1">
+      <h2 id="onboarding-period-heading" class="text-base font-semibold">Onboarding period</h2>
+      <p class="text-sm text-foreground">
+        <span class="font-medium"><%= period_days.zero? ? "< 1 day" : "#{period_days} #{'day'.pluralize(period_days)}" %></span>
+        <span class="text-muted-foreground"> · <%= l(period_start, format: "%d %b %Y") %> – <%= l(period_end, format: "%d %b %Y") %></span>
+      </p>
+      <p class="text-xs text-muted-foreground">These dates are used to measure how long property setup took.</p>
+    </div>
+    <%= render PanelsUI::Button.new(
+          label: "Edit period",
+          variant: :secondary,
+          size: :sm,
+          command: "show-modal",
+          commandfor: "edit-onboarding-period-sheet") %>
+  </section>
+
+  <%= render PanelsUI::Sheet.new(
+        id: "edit-onboarding-period-sheet",
+        side: :right,
+        size: :sm,
+        title: "Edit onboarding period",
+        description: "Correct the dates used to measure how long property setup took.") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: save_onboarding_period_admin_hotel_path(@hotel), method: :post,
+                    id: "edit-onboarding-period-form", class: "space-y-5 py-2" do |form| %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :start_date, label: "Start date", required: true) do |field| %>
+          <% field.with_date_picker(value: period_start, linked_to: :end_date) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :end_date, label: "End date", required: true) do |field| %>
+          <% field.with_date_picker(value: period_end, min: period_start) %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% sheet.with_footer do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost,
+                                      data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: "edit-onboarding-period-form",
+                                      data: { turbo_submits_with: "Saving…" }) do %>Save period<% end %>
     <% end %>
   <% end %>
 

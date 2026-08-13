@@ -1,16 +1,13 @@
 class Admin::Hotels::OnboardingController < Admin::BaseController
   before_action :set_hotel, only: [ :show, :request_changes, :approve, :save_period ]
 
-  def index
-    @hotels = Hotel.pending_review_onboarding
-  end
-
   def show
     @sessions = @hotel.onboarding_sessions
                       .order(scheduled_at: :asc, created_at: :asc)
     @submission = @hotel.onboarding_submissions.includes(:submitted_by, :reviewed_by, :deliveries).newest_first.first
-    @readiness = Onboarding::Readiness.new(hotel: @hotel).call
-    @configuration_unchanged = configuration_unchanged?
+    rates_coverage = Rates::SetupCoverage.call(hotel: @hotel)
+    @readiness = Onboarding::Readiness.new(hotel: @hotel, rates_coverage:).call
+    @configuration_unchanged = configuration_unchanged?(rates_coverage:)
     @audit_events = @hotel.onboarding_audit_events.includes(:user).order(occurred_at: :desc, id: :desc)
   end
 
@@ -34,33 +31,23 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
   end
 
   def save_period
-    start_date = params[:start_date].presence ? Date.parse(params[:start_date]) : @hotel.created_at.to_date
-    end_date = params[:end_date].presence ? Date.parse(params[:end_date]) : Date.current
+    start_date = parse_period_date(params[:start_date])
+    end_date = parse_period_date(params[:end_date])
+
+    if start_date.nil? || end_date.nil?
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Enter a valid start and end date."
+      return
+    end
+
+    if end_date < start_date
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: "The end date must be on or after the start date."
+      return
+    end
 
     if @hotel.update(onboarding_start_date: start_date, onboarding_end_date: end_date)
-      respond_to do |format|
-        format.json { render json: { success: true } }
-        format.turbo_stream do
-          @hotels = Hotel.pending_review_onboarding
-          render turbo_stream: turbo_stream.replace(
-            "onboarding_tracker_table",
-            partial: "admin/hotels/onboarding_tracker_table",
-            locals: { hotels: @hotels }
-          )
-        end
-      end
+      redirect_to onboarding_admin_hotel_path(@hotel), notice: "Onboarding period updated."
     else
-      respond_to do |format|
-        format.json { render json: { success: false, errors: @hotel.errors.full_messages }, status: :unprocessable_entity }
-        format.turbo_stream do
-          @hotels = Hotel.pending_review_onboarding
-          render turbo_stream: turbo_stream.replace(
-            "onboarding_tracker_table",
-            partial: "admin/hotels/onboarding_tracker_table",
-            locals: { hotels: @hotels }
-          ), status: :unprocessable_content
-        end
-      end
+      redirect_to onboarding_admin_hotel_path(@hotel), alert: @hotel.errors.full_messages.to_sentence
     end
   end
 
@@ -70,10 +57,16 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
     @hotel = Hotel.friendly.find(params[:id])
   end
 
-  def configuration_unchanged?
+  def parse_period_date(value)
+    Date.iso8601(value.to_s)
+  rescue Date::Error
+    nil
+  end
+
+  def configuration_unchanged?(rates_coverage:)
     return false unless @submission
 
-    current_digest = Onboarding::SubmissionSnapshot.call(hotel: @hotel).digest
+    current_digest = Onboarding::SubmissionSnapshot.call(hotel: @hotel, rates_coverage:).digest
     ActiveSupport::SecurityUtils.secure_compare(current_digest, @submission.configuration_digest)
   end
 end

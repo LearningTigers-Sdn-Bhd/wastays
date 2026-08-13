@@ -24,13 +24,14 @@ module Onboarding
           raise ActiveRecord::Rollback
         end
 
-        readiness = Readiness.new(hotel: @hotel).call
+        rates_coverage = Rates::SetupCoverage.call(hotel: @hotel)
+        readiness = Readiness.new(hotel: @hotel, rates_coverage:).call
         unless readiness.ready
           error = "The property is no longer ready to launch. Request changes instead."
           raise ActiveRecord::Rollback
         end
 
-        current = SubmissionSnapshot.call(hotel: @hotel)
+        current = SubmissionSnapshot.call(hotel: @hotel, rates_coverage:)
         unless ActiveSupport::SecurityUtils.secure_compare(current.digest, submission.configuration_digest)
           error = "The property setup changed after submission. Request changes before approving it."
           raise ActiveRecord::Rollback

@@ -49,6 +49,10 @@
           <th scope="col" class="hidden sm:table-cell">City</th>
           <th scope="col">Status</th>
           <th scope="col" class="hidden md:table-cell">Registered</th>
+          <% if presenter.pending_review? %>
+            <th scope="col">Onboarding period</th>
+            <th scope="col">Scheduled session</th>
+          <% end %>
           <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
         </tr>
       <% end %>
@@ -69,17 +73,48 @@
               <% end %>
             </td>
             <td class="hidden text-muted-foreground md:table-cell"><%= row.registered_on %></td>
+            <% if presenter.pending_review? %>
+              <td>
+                <span class="block font-medium text-foreground"><%= row.onboarding_period %></span>
+                <span class="mt-0.5 block text-xs text-muted-foreground"><%= row.onboarding_period_dates %></span>
+              </td>
+              <td>
+                <% if row.next_session_at.present? %>
+                  <span class="block font-medium text-foreground"><%= row.next_session_at %></span>
+                  <span class="mt-0.5 block text-xs text-muted-foreground">
+                    <%= row.next_session_trainer %>
+                    <% if row.remaining_session_count.positive? %>
+                      <span aria-label="<%= row.remaining_session_count %> more scheduled <%= 'session'.pluralize(row.remaining_session_count) %>"> · +<%= row.remaining_session_count %> more</span>
+                    <% end %>
+                  </span>
+                <% else %>
+                  <span class="text-muted-foreground">Not scheduled</span>
+                <% end %>
+              </td>
+            <% end %>
             <td class="text-right">
-              <%= render PanelsUI::Button.new(
-                    as: :a,
-                    href: hotel_dashboard_path(row.hotel),
-                    variant: :secondary,
-                    size: :sm,
-                    target: "_blank",
-                    rel: "noopener") do %>
-                <%= app_icon "external-link", class: "size-3.5", aria: { hidden: true } %>
-                <span class="hidden lg:inline">Open dashboard</span>
-                <span class="sr-only lg:hidden">Open <%= row.name %> dashboard</span>
+              <% if presenter.pending_review? %>
+                <%= render PanelsUI::Button.new(
+                      as: :a,
+                      href: row.review_path,
+                      variant: :primary,
+                      size: :sm,
+                      data: { turbo_frame: "_top" }) do %>
+                  <span>Review onboarding</span>
+                  <%= app_icon "arrow-right", class: "size-3.5", aria: { hidden: true } %>
+                <% end %>
+              <% else %>
+                <%= render PanelsUI::Button.new(
+                      as: :a,
+                      href: hotel_dashboard_path(row.hotel),
+                      variant: :secondary,
+                      size: :sm,
+                      target: "_blank",
+                      rel: "noopener") do %>
+                  <%= app_icon "external-link", class: "size-3.5", aria: { hidden: true } %>
+                  <span class="hidden lg:inline">Open dashboard</span>
+                  <span class="sr-only lg:hidden">Open <%= row.name %> dashboard</span>
+                <% end %>
               <% end %>
             </td>
           </tr>
