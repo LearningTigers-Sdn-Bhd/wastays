@@ -138,7 +138,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       metrics = document.css("section[aria-label='Submitted setup statistics'] .panel-metric-card")
       expect(header.text.squish).to include("Request changes", "Approve and go live")
       expect(document.at_css(".panel-page")["class"]).to include("panel-page--workspace")
-      expect(tab_content["class"]).to include("h-[75dvh]", "max-h-full", "overflow-y-auto")
+      expect(tab_content["class"]).to include("min-h-0", "flex-1", "overflow-y-auto")
       expect(metrics.map { |metric| metric.text.squish }).to eq([
         "Required setup 7 of 7 Complete",
         "Optional decisions 4 of 5 1 deferred",

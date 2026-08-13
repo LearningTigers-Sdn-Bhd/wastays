@@ -1,6 +1,6 @@
 <% content_for :full_height_page, true %>
 
-<div class="flex min-h-0 w-full flex-1 flex-col gap-8 overflow-hidden">
+<div class="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-hidden px-5 py-4">
   <% period_start = @hotel.onboarding_start_date %>
   <% period_end = @hotel.onboarding_end_date %>
   <% period_days = (period_end - period_start).to_i %>
@@ -65,7 +65,7 @@
     <% end %>
   <% end %>
 
-  <div class="h-[75dvh] max-h-full min-h-0 shrink overflow-y-auto" data-testid="admin-onboarding-tab-content">
+  <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar" data-testid="admin-onboarding-tab-content">
     <%= render "admin/hotels/onboarding/#{@active_tab.tr('-', '_')}" %>
   </div>
 
