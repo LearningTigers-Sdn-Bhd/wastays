@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Bookings::WorkspaceActions", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:manage_bookings) { Permission.find_or_create_by!(slug: "manage_bookings") { |permission| permission.name = "Manage Bookings" } }

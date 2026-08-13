@@ -6,7 +6,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
-  let(:hotel) { create(:hotel, account: account, status: 'registered', plan: plan, allow_boat_information: false) }
+  let(:hotel) { create(:hotel, account: account, status: 'setup', plan: plan, allow_boat_information: false) }
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
   before do
@@ -41,6 +41,13 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to have_http_status(:moved_permanently)
     end
 
+    it "permanently redirects the old Room Categories URL to Room Inventory" do
+      get "/hotel/#{hotel.to_param}/settings/property/room-categories"
+
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+    end
+
     it "permanently redirects the settings root to General" do
       get hotel_settings_path(hotel)
 
@@ -51,7 +58,6 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     it "uses the shared heading for General settings pages" do
       {
         hotel_general_settings_path(hotel) => "General Settings",
-        hotel_rates_settings_path(hotel) => "General Settings",
         hotel_ai_concierge_settings_path(hotel) => "AI Concierge",
         hotel_notification_settings_path(hotel) => "General Settings",
         hotel_banking_details_settings_path(hotel) => "Banking Details"
@@ -179,7 +185,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "uses the dedicated flat settings navigation and portal breadcrumbs" do
-      hotel.update!(status: "approved")
+      hotel.update!(status: "live")
       manage_users = Permission.find_or_create_by!(slug: "manage_users") { |permission| permission.name = "Manage Users" }
       RolePermission.find_or_create_by!(role: role, permission: manage_users)
       get hotel_general_settings_path(hotel)
@@ -202,7 +208,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[2].at_css("a")&.text&.squish).to eq("General")
       expect(breadcrumb_items[2].at_css("button[aria-label='Open General navigation']")).to be_present
       expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "General", "Rate Settings", "Notifications", "Plan & Billing" ]
+        [ "General", "Notifications", "Plan & Billing" ]
       )
     end
 
@@ -214,12 +220,12 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[1].at_css("a, button")).to be_nil
       expect(breadcrumb_items[2].at_css("button[aria-label='Open Banking Details navigation']")).to be_present
       expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "Banking Details", "Transaction Code Reference" ]
+        [ "Banking Details", "Transaction Code Reference", "OTA Financials" ]
       )
     end
 
     it "renders Commercial as a sidebar menu with Taxes & Fees as its active child" do
-      hotel.update!(status: "approved")
+      hotel.update!(status: "live")
       get hotel_taxes_fees_path(hotel)
 
       document = response.parsed_body
@@ -235,7 +241,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "places the admin portal destination in the footer for superadmins" do
-      hotel.update!(status: "approved")
+      hotel.update!(status: "live")
       sign_in_as(create(:user, :superadmin, account: account))
 
       get hotel_general_settings_path(hotel)
@@ -246,7 +252,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     end
 
     it "leaves the footer mark inert for everyone else" do
-      hotel.update!(status: "approved")
+      hotel.update!(status: "live")
 
       get hotel_general_settings_path(hotel)
 
@@ -280,6 +286,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to redirect_to(hotel_notification_settings_path(hotel))
       expect(response).to have_http_status(:moved_permanently)
 
+      get hotel_settings_path(hotel, tab: "rates")
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
+
       get hotel_settings_path(hotel, tab: "banking")
       expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
       expect(response).to have_http_status(:moved_permanently)
@@ -305,42 +315,11 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   end
 
   describe "GET /hotel/:hotel_id/settings/general/rates" do
-    it "renders the rate settings tab with a rate plan list and a New Rate Plan trigger" do
+    it "permanently redirects to Room Inventory" do
       get hotel_rates_settings_path(hotel)
 
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Rate Settings")
-      expect(response.body).to include("New rate plan")
-      expect(Nokogiri::HTML(response.body).at_css('[data-testid="rate-plans-registry"]')).to be_present
-    end
-
-    it "splits standard plans onto their own tab, so system rows do not bury composed plans" do
-      room_type = create(:room_type, hotel: hotel, name: "Ocean Villa")
-      composed = create(:rate_plan, hotel: hotel, name: "Breakfast Rate", kind: "custom", room_type: room_type)
-      standard = room_type.rate_plans.find_by(kind: "standard")
-
-      get hotel_rates_settings_path(hotel)
-      plans_tab = Nokogiri::HTML(response.body)
-      expect(plans_tab.at_css('[data-testid="rate-plans-registry"]')).to be_present
-      expect(plans_tab.at_css("#rate-plan-row-#{composed.id}")).to be_present
-      expect(plans_tab.at_css("#rate-plan-row-#{standard.id}")).to be_nil
-
-      get hotel_rates_settings_path(hotel, view: "standard")
-      standard_tab = Nokogiri::HTML(response.body)
-      expect(standard_tab.at_css('[data-testid="standard-rates-registry"]')).to be_present
-      expect(standard_tab.at_css("#rate-plan-row-#{standard.id}")).to be_present
-      expect(standard_tab.at_css("#rate-plan-row-#{composed.id}")).to be_nil
-    end
-
-    it "hides the Walk-in Rate plan row when the hotel is pax_pricing_only" do
-      hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
-      create(:rate_plan, hotel: hotel, name: "Standard Rate", sell_mode: "per_person")
-      create(:rate_plan, :walk_in_tier, hotel: hotel, sell_mode: "per_room")
-
-      get hotel_rates_settings_path(hotel)
-
-      expect(response).to have_http_status(:ok)
-      expect(response.body).not_to include("Walk-in Rate")
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(response).to have_http_status(:moved_permanently)
     end
   end
 
@@ -677,7 +656,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
       follow_redirect!
       expect(response.body).to include('Settings updated successfully.')
-      expect(hotel.reload.status).to eq('registered')
+      expect(hotel.reload.status).to eq('setup')
       banking_detail = account.reload.banking_detail
       expect(banking_detail.account_holder_name).to eq('Syarikat Maju Jaya Sdn Bhd')
       expect(banking_detail.bank_name).to eq('Maybank')

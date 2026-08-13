@@ -6,7 +6,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
   let(:hotel) { create(:hotel, accounting_business_date: Date.current) }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
-  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 102]) }
+  let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102]) }
 
   def grant(slug)
     permission = Permission.find_by(slug:) || create(:permission, slug:, name: slug.humanize)
@@ -309,7 +309,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
     it "filters both views to an explicitly selected linked rate plan" do
       grant("manage_rates")
       deluxe = room_type
-      suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
+      suite = create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ])
       flexible = create(:rate_plan, hotel:, name: "Flexible", currency: "USD")
       create(:room_type_rate_plan, room_type: deluxe, rate_plan: flexible)
       create(:room_rate, room_type: deluxe, rate_plan: flexible, date: Date.current, price: 175, currency: "USD")
@@ -456,7 +456,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
     end
 
     it "groups Room View by room type by default and flattens it on request" do
-      create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
+      create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ])
       room_type
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
@@ -821,7 +821,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
     end
 
     it "applies filters while retaining all room-type filter options" do
-      suite = create(:room_type, hotel:, name: "Suite", room_numbers: [ "201" ])
+      suite = create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ])
       create(:room_status, hotel:, room_type:, room_number: "101", status: "dirty")
       create(:room_status, hotel:, room_type: suite, room_number: "201", status: "ready")
 
@@ -1117,7 +1117,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
 
     it "returns 404 for a block owned by another hotel" do
       other_hotel = create(:hotel)
-      other_type = create(:room_type, hotel: other_hotel, room_numbers: [ "900" ])
+      other_type = create(:room_type, hotel: other_hotel, quantity: 1, room_numbers: [ "900" ])
       block = create(:room_block, hotel: other_hotel, room_type: other_type, room_number: "900")
 
       get edit_hotel_stay_view_room_block_path(hotel, block)
@@ -1256,7 +1256,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
 
     it "does not allow another hotel's request through either workflow" do
       other_hotel = create(:hotel)
-      other_type = create(:room_type, hotel: other_hotel, room_numbers: [ "900" ])
+      other_type = create(:room_type, hotel: other_hotel, quantity: 1, room_numbers: [ "900" ])
       other_request = create(
         :housekeeping_request,
         booking: nil,

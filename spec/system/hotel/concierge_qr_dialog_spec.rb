@@ -6,7 +6,7 @@ RSpec.describe "Concierge QR dialog", type: :system, js: true do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:plan) { create(:plan) }
-  let(:hotel) { create(:hotel, account: account, plan: plan, status: "registered") }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: "setup") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let(:feature_group) { create(:feature_group) }
   let(:concierge_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }

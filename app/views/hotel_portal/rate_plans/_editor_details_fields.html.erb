@@ -1,0 +1,59 @@
+<%# `f` is nil when the section is read-only for this plan — every builder use
+    below sits behind the same condition that makes the section editable. %>
+<section aria-labelledby="rate-plan-details-heading" class="space-y-4">
+  <div>
+    <h3 id="rate-plan-details-heading" class="text-base font-semibold text-foreground">Plan details</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Name, description, occupancy, and child-pricing changes apply to every room category attached to this plan.</p>
+  </div>
+
+  <% unless rate_plan.standard_rate? %>
+    <div class="grid items-start gap-4">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true) do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
+        <% field.with_text_area(rows: 3, placeholder: "Pay in full at booking. No changes or refunds.") %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <p class="text-sm text-muted-foreground">Daily prices, availability, and restrictions are managed under Rates &amp; Availability.</p>
+</section>
+
+<% unless current_hotel.sells_per_person? %>
+  <section aria-labelledby="rate-plan-occupancy-heading" class="space-y-4">
+    <div>
+      <h3 id="rate-plan-occupancy-heading" class="text-base font-semibold text-foreground">Occupancy pricing</h3>
+      <p class="mt-1 text-sm text-muted-foreground">These rules apply to every room category on this plan.</p>
+    </div>
+    <div class="grid items-start gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Guests included", hint: "Number of guests covered by the room price.") do |field| %>
+        <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge", hint: "Per night, for each guest above the included occupancy.") do |field| %>
+        <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+        <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<% if current_hotel.sells_per_person? && current_hotel.preferred_channel_manager.present? %>
+  <%= render PanelsUI::Alert.new(tone: :info, title: "Per-guest channel requirements", role: :status) do |alert| %>
+    <% alert.with_description { "Complete every adult occupancy price for each room category. Plans with age groups also need explicit flat child and infant fees for OTAs." } %>
+  <% end %>
+<% end %>
+
+<% if rate_plan.deletable? %>
+  <section aria-labelledby="rate-plan-status-heading" class="space-y-4">
+    <h3 id="rate-plan-status-heading" class="text-base font-semibold text-foreground">Plan actions</h3>
+    <div class="flex flex-wrap items-center gap-2">
+      <%= render PanelsUI::Button.new(href: hotel_rate_plan_path(current_hotel, rate_plan), variant: :ghost, size: :sm, class: "text-destructive",
+            data: { turbo_method: :delete, turbo_frame: "settings_action_sheet", rate_plan_editor_guard: "true",
+                    turbo_confirm: "Delete '#{rate_plan.name}'? This permanently removes the rate plan.",
+                    turbo_confirm_title: "Delete rate plan", turbo_confirm_color: "red" }) do %>
+        Delete
+      <% end %>
+    </div>
+  </section>
+<% end %>

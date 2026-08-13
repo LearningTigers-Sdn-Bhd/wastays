@@ -2,7 +2,12 @@ require 'rails_helper'
 
 RSpec.describe BookingEngine::CreateQuote do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
-  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved", allow_pax_pricing: true) }
+  let!(:hotel) do
+    Hotel.create!(
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room",
+      name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "live"
+    )
+  end
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:check_in) { Date.today }
@@ -152,10 +157,11 @@ RSpec.describe BookingEngine::CreateQuote do
       expect(result.message).to include("do not have enough capacity")
     end
 
-    context "with per_person pricing plan" do
-      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", sell_mode: "per_person", single_supplement: 15.0, currency: "MYR") }
+    context "with per_person pricing plan", :per_person do
+      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", single_supplement: 15.0, currency: "MYR") }
 
       before do
+        pax_rate_plan.reload
         RoomTypeRatePlan.create!(room_type: room_type, rate_plan: pax_rate_plan)
         stay_dates.each do |date|
           RoomRate.create!(room_type: room_type, rate_plan: pax_rate_plan, date: date, price: 30.0, currency: "MYR")
@@ -234,11 +240,12 @@ RSpec.describe BookingEngine::CreateQuote do
       end
     end
 
-    context "with age-banded per_person pricing plan" do
+    context "with age-banded per_person pricing plan", :per_person do
       let!(:family_room) { RoomType.create!(hotel: hotel, name: "Family", quantity: 3, max_adults: 2, max_children: 3, base_price: 100, room_number_mode: "range") }
-      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", sell_mode: "per_person", child_price_multiplier: 0.6, currency: "MYR") }
+      let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", child_price_multiplier: 0.6, currency: "MYR") }
 
       before do
+        pax_rate_plan.reload
         RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
         RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
         RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_value: 20, label: "Teen")
@@ -278,6 +285,39 @@ RSpec.describe BookingEngine::CreateQuote do
         expect(child_band["price_value"]).to eq("40.0")
         expect(teen_band["band_label"]).to eq("Teen")
         expect(teen_band["price_value"]).to eq("20.0")
+      end
+
+      it "freezes inherited Standard room child amounts for a derived plan" do
+        assignment = family_room.room_type_rate_plans.find_by!(rate_plan: pax_rate_plan)
+        assignment.update!(pricing_mode: "multiplier", pricing_value: -10)
+        standard_plan = family_room.standard_rate_plan
+        child_band = standard_plan.rate_plan_age_bands.create!(
+          min_age: 4, max_age: 11, pricing_mode: "amount", price_value: 0, label: "Child"
+        )
+        teen_band = standard_plan.rate_plan_age_bands.create!(
+          min_age: 12, max_age: 17, pricing_mode: "amount", price_value: 0, label: "Teen"
+        )
+        standard_assignment = family_room.room_type_rate_plans.find_by!(rate_plan: standard_plan)
+        standard_assignment.age_band_prices.create!(rate_plan_age_band: child_band, price: 30)
+        standard_assignment.age_band_prices.create!(rate_plan_age_band: teen_band, price: 45)
+
+        result = described_class.new(
+          hotel_id: hotel.id,
+          allocations: [ { room_type_id: family_room.id, quantity: 1 } ],
+          check_in: check_in,
+          check_out: check_out,
+          adults: 2,
+          children: 2,
+          child_ages: [ 6, 15 ],
+          room_count: 1,
+          rate_plan_id: pax_rate_plan.id
+        ).call
+
+        expect(result.success?).to be true
+        expect(result.quote.total_amount).to eq(350.0)
+        snapshot = result.quote.booking_quote_items.first.occupancy_snapshot
+        expect(snapshot["child_age_bands"].map { |band| [ band["pricing_mode"], band["price_value"] ] })
+          .to eq([ [ "amount", "30.0" ], [ "amount", "45.0" ] ])
       end
 
       it "falls back to the flat child_price_multiplier and empty child_ages when no ages are supplied" do

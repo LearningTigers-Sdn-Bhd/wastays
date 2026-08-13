@@ -159,6 +159,17 @@
                     required: true %>
               </div>
             </div>
+
+            <%= render PanelsUI::RadioGroup.new(
+                  name: "hotel[sell_mode]",
+                  label: "How does your property charge?",
+                  description: "Choose carefully. This sets how every rate is priced and cannot be changed after registration.",
+                  options: [
+                    { label: "Per room", value: "per_room", description: "One nightly price for the room, with optional extra guest charges." },
+                    { label: "Per guest", value: "per_person", description: "A different nightly total for each number of adults." }
+                  ],
+                  selected: params.dig(:hotel, :sell_mode),
+                  required: true) %>
           </div>
         </div>
 

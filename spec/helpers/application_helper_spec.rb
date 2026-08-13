@@ -83,7 +83,7 @@ RSpec.describe ApplicationHelper, type: :helper do
 
   describe "#pax_pricing_breakdown_items" do
     let(:account) { create(:account) }
-    let(:hotel) { create(:hotel, account: account, allow_pax_pricing: true, pax_pricing_only: true, default_currency: "MYR") }
+    let(:hotel) { create(:hotel, account: account, default_currency: "MYR") }
     let(:room_type) { create(:room_type, hotel: hotel, max_adults: 4, max_children: 2, base_price: 500.0) }
 
     def build_item(rate_plan:, adults:, children:, child_ages: [])
@@ -116,7 +116,7 @@ RSpec.describe ApplicationHelper, type: :helper do
     end
 
     it "falls back to the flat child_price_multiplier when there are no age bands" do
-      rate_plan = create(:rate_plan, hotel: hotel, name: "Per-Pax", sell_mode: "per_person", room_type: room_type, base_occupancy: 2, child_price_multiplier: 0.5)
+      rate_plan = create(:rate_plan, hotel: hotel, name: "Per-Pax", room_type: room_type, base_occupancy: 2, child_price_multiplier: 0.5)
       item = build_item(rate_plan: rate_plan, adults: 2, children: 1)
 
       lines = helper.pax_pricing_breakdown_items(item, hotel, "MYR")
@@ -125,6 +125,64 @@ RSpec.describe ApplicationHelper, type: :helper do
       # 1 child * 100 * 0.5 = 50
       expect(child_line[:detail]).to include("50%")
       expect(child_line[:amount]).to include("50")
+    end
+
+    context "on a per-person plan priced by an occupancy matrix" do
+      let(:hotel) { create(:hotel, :per_person, account: account, default_currency: "MYR") }
+
+      def build_matrix_item(rate_plan:, adults:, children:, child_ages: [])
+        create(:room_inventory, room_type: room_type, date: Date.current, quantity: 5, status: "open")
+        # occupancy_prices are room totals per adult count; price mirrors the
+        # max-adults total only to satisfy the non-null column.
+        create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current,
+                           price: 300.0, occupancy_prices: { "1" => 180.0, "2" => 300.0 })
+
+        result = BookingEngine::CreateQuote.new(
+          hotel_id: hotel.id,
+          allocations: { "0" => { room_type_id: room_type.id, quantity: 1 } },
+          check_in: Date.current, check_out: Date.current + 1,
+          adults: adults, children: children, child_ages: child_ages,
+          rate_plan_id: rate_plan.id,
+          guest_name: "Test Guest", guest_email: "guest@example.com", guest_phone: "0123456789"
+        ).call
+
+        expect(result.success?).to eq(true)
+        result.quote.booking_quote_items.first
+      end
+
+      it "splits the frozen room total instead of treating RoomRate#price as a per-adult rate" do
+        rate_plan = create(:rate_plan, :age_banded, hotel: hotel, name: "Matrix Plan", room_type: room_type, child_price_multiplier: 0.5)
+        item = build_matrix_item(rate_plan: rate_plan, adults: 2, children: 1, child_ages: [ 8 ])
+
+        lines = helper.pax_pricing_breakdown_items(item, hotel, "MYR")
+        adult_line = lines.find { |l| l[:label].include?("Adult") }
+        child_line = lines.find { |l| l[:label].include?("Child") }
+
+        # 2 adults = the 300 matrix total (not 2 x 300); child(8) = (300/2)*40% = 60
+        expect(adult_line[:amount]).to include("300")
+        expect(child_line[:amount]).to include("60")
+        expect(lines.none? { |l| l[:label].include?("Supplement") }).to eq(true)
+      end
+
+      it "reconciles to the amount the quote actually charged" do
+        rate_plan = create(:rate_plan, :age_banded, hotel: hotel, name: "Matrix Plan", room_type: room_type, child_price_multiplier: 0.5)
+        item = build_matrix_item(rate_plan: rate_plan, adults: 2, children: 1, child_ages: [ 8 ])
+
+        expect(item.subtotal).to eq(360.0)
+      end
+
+      it "does not drift when the rate plan is edited after the quote" do
+        rate_plan = create(:rate_plan, :age_banded, hotel: hotel, name: "Matrix Plan", room_type: room_type, child_price_multiplier: 0.5)
+        item = build_matrix_item(rate_plan: rate_plan, adults: 2, children: 1, child_ages: [ 8 ])
+
+        rate_plan.rate_plan_age_bands.find_by(min_age: 4).update!(price_value: 90)
+        rate_plan.update!(child_price_multiplier: 0.9)
+
+        lines = helper.pax_pricing_breakdown_items(item.reload, hotel, "MYR")
+        child_line = lines.find { |l| l[:label].include?("Child") }
+
+        expect(child_line[:amount]).to include("60")
+      end
     end
   end
 end

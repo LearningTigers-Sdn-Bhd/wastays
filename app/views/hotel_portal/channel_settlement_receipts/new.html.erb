@@ -1,0 +1,249 @@
+<div class="space-y-6" data-controller="ota-receipt-form" data-ota-receipt-form-currency-value="<%= @context_currency %>">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Record OTA settlement receipt",
+        description: "Record funds received from an OTA and allocate them to outstanding booking settlements."
+      ) do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(
+            label: "Back to reconciliation",
+            as: :a,
+            href: channel_settlements_hotel_reports_path(current_hotel),
+            variant: :secondary
+          ) %>
+    <% end %>
+  <% end %>
+
+  <% if @form.errors.any? %>
+    <div id="receipt-error-summary" tabindex="-1" data-ota-receipt-form-target="errorSummary">
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Receipt could not be recorded", role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 pl-5 text-sm">
+            <% @form.errors.each do |error| %>
+              <% target = error.attribute == :allocations ? "receipt-allocations-heading" : "channel_settlement_receipt_#{error.attribute}" %>
+              <li><a class="underline" href="#<%= target %>"><%= error.full_message %></a></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @booking_sources.empty? %>
+    <%= render PanelsUI::Alert.new(tone: :info, title: "No outstanding OTA settlements", role: :status) do |alert| %>
+      <% alert.with_description { "There is nothing to allocate right now. A receipt can be recorded after an OTA booking creates an expected settlement balance." } %>
+      <% alert.with_actions do %>
+        <%= render PanelsUI::Button.new(
+              label: "View OTA reconciliation",
+              as: :a,
+              href: channel_settlements_hotel_reports_path(current_hotel),
+              variant: :secondary,
+              size: :sm) %>
+      <% end %>
+    <% end %>
+  <% elsif @payment_methods.empty? %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "Add a receiving payment method", role: :status) do |alert| %>
+      <% alert.with_description do %>
+        <p>
+          OTA receipts need an active Bank / Gateway payment method.
+          <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
+            Open <span class="font-medium">Hotel Settings → Payment Methods</span>, then add or activate the account that receives OTA payouts.
+          <% else %>
+            Ask a hotel administrator to add or activate one in <span class="font-medium">Hotel Settings → Payment Methods</span>.
+          <% end %>
+        </p>
+      <% end %>
+      <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
+        <% alert.with_actions do %>
+          <%= render PanelsUI::Button.new(
+                as: :a,
+                href: hotel_payment_methods_path(current_hotel),
+                variant: :secondary,
+                size: :sm) do %>
+            <%= app_icon "settings", class: "size-4", aria: { hidden: "true" } %>
+            <span>Open Payment Methods</span>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= form_with model: @form,
+          scope: :channel_settlement_receipt,
+          url: hotel_channel_settlement_receipts_path(current_hotel),
+          method: :post,
+          class: "space-y-8",
+          data: { action: "input->ota-receipt-form#updateTotals" } do |form| %>
+      <section class="space-y-6" aria-labelledby="receipt-details-heading">
+        <div>
+          <h2 id="receipt-details-heading" class="text-base font-semibold">Receipt details</h2>
+          <p class="mt-1 text-sm text-muted-foreground">Changing the OTA source or currency reloads the page with only valid outstanding allocations.</p>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <%= render PanelsUI::FormField.new(form:, attribute: :booking_source_id, label: "OTA source", required: true) do |field| %>
+            <% field.with_select_menu(
+                 @booking_sources.map { |source| [source.label, source.id] },
+                 selected: @context_source_id,
+                 required: true,
+                 data: { action: "change->ota-receipt-form#criteriaChanged" }) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :currency, label: "Currency", required: true) do |field| %>
+            <% field.with_select_menu(
+                 @currencies.map { |currency| [currency, currency] },
+                 selected: @context_currency,
+                 required: true,
+                 data: { action: "change->ota-receipt-form#criteriaChanged" }) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :amount, label: "Receipt amount", required: true) do |field| %>
+            <% field.with_input(type: :number, min: "0.01", step: "0.01", required: true,
+                 data: { ota_receipt_form_target: "amount" }) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :received_at, label: "Received at (hotel local time)", required: true) do |field| %>
+            <% field.with_date_time_picker(
+                 value: @form.received_at&.in_time_zone(current_hotel.hotel_time_zone)&.strftime("%Y-%m-%dT%H:%M"),
+                 minute_step: 5,
+                 required: true) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :settlement_method, label: "Settlement method", required: true) do |field| %>
+            <% field.with_select_menu(
+                 HotelPortal::ChannelSettlementReceiptForm::RECEIPT_SETTLEMENT_METHODS.map { |method| [method.humanize, method] },
+                 selected: @form.settlement_method,
+                 required: true) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :hotel_payment_method_id, label: "Receiving payment method", required: true) do |field| %>
+            <% field.with_select_menu(
+                 @payment_methods.map { |method| [method.name, method.id] },
+                 prompt: "Select a payment method",
+                 selected: @form.hotel_payment_method_id,
+                 required: true) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :external_reference, label: "External reference", hint: "Optional. Must be unique for this hotel.") do |field| %>
+            <% field.with_input(autocomplete: "off") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :notes, label: "Notes", class: "md:col-span-2") do |field| %>
+            <% field.with_text_area(rows: 3) %>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="space-y-6" aria-labelledby="receipt-allocations-heading">
+        <div>
+          <h2 id="receipt-allocations-heading" class="text-base font-semibold" tabindex="-1">Allocate receipt</h2>
+          <p class="mt-1 text-sm text-muted-foreground">Enter an amount only for settlements paid by this receipt. The allocated total must equal the receipt amount.</p>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <%= render PanelsUI::FormField.new(
+                form:, attribute: :allocation_search, label: "Search allocations",
+                hint: "Search the loaded rows, or press Enter to scope a large list on the server.") do |field| %>
+            <% field.with_input(
+                 type: :search,
+                 value: @allocation_search,
+                 autocomplete: "off",
+                 data: {
+                   ota_receipt_form_target: "search",
+                   action: "input->ota-receipt-form#filter keydown.enter->ota-receipt-form#scopeSearch"
+                 }) %>
+          <% end %>
+          <% if @allocation_limit_reached %>
+            <p class="text-sm text-muted-foreground" role="status">Showing the first <%= HotelPortal::ChannelSettlementReceiptsController::ALLOCATION_LIMIT %> matches. Refine the search to see others.</p>
+          <% end %>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2" aria-live="polite" aria-atomic="true">
+          <%= render PanelsUI::MetricCard.new(label: "Allocated", value: "#{@context_currency} 0.00", data: { ota_receipt_form_target: "allocated" }) %>
+          <%= render PanelsUI::MetricCard.new(label: "Remaining", value: "#{@context_currency} 0.00", data: { ota_receipt_form_target: "remaining" }) %>
+        </div>
+
+        <div hidden data-ota-receipt-form-target="warning">
+          <%= render PanelsUI::Alert.new(tone: :warning, title: "Overpayment entered", role: :status) do |alert| %>
+            <% alert.with_description { "One or more allocation amounts exceed the outstanding balance. Continue only when the OTA actually overpaid that settlement." } %>
+          <% end %>
+        </div>
+
+        <%= fields_for :allocations, @form.allocation_fields do |allocation_form| %>
+          <%= render PanelsUI::Table.new(
+                caption: "Outstanding OTA settlement allocations",
+                density: :compact,
+                header_style: :sentence,
+                hoverable: true,
+                wrapper_class: "rounded-lg border border-border bg-card"
+              ) do |table| %>
+            <% table.with_header do %>
+              <tr>
+                <th scope="col">OTA / settlement</th>
+                <th scope="col">Booking</th>
+                <th scope="col" class="text-right">Outstanding</th>
+                <th scope="col">Allocate</th>
+              </tr>
+            <% end %>
+            <% table.with_body do %>
+              <% if @allocations.any? %>
+                <% @allocations.each_with_index do |allocation, index| %>
+                  <% settlement = allocation.channel_settlement %>
+                  <% outstanding = remaining_amount(allocation) %>
+                  <tr data-ota-receipt-form-target="row"
+                      data-search-text="<%= [settlement.booking_source.label, settlement.channel_manager_reference, allocation.booking.confirmation_token].join(" ").downcase %>">
+                    <th scope="row" class="font-semibold text-foreground">
+                      <%= settlement.booking_source.label %>
+                      <span class="mt-1 block text-xs font-normal text-muted-foreground"><%= settlement.channel_manager_reference %></span>
+                    </th>
+                    <td><%= allocation.booking.confirmation_token %></td>
+                    <td class="whitespace-nowrap text-right tabular-nums"><%= allocation.currency %> <%= format_number(outstanding, precision: 2) %></td>
+                    <td class="min-w-40">
+                      <%= render PanelsUI::FormField.new(
+                            form: allocation_form,
+                            attribute: allocation.id.to_s,
+                            id: "allocation-#{allocation.id}",
+                            label: "Amount allocated to #{settlement.channel_manager_reference}",
+                            label_hidden: true,
+                            error: (index.zero? ? @form.errors[:allocations].first : nil)) do |field| %>
+                        <% field.with_input(
+                             type: :number,
+                             min: "0.01",
+                             step: "0.01",
+                             data: {
+                               ota_receipt_form_target: "allocation",
+                               outstanding: outstanding.to_s("F")
+                             }) %>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+                <%= render "hotel_portal/reports/table_empty_state",
+                      colspan: 4,
+                      message: "No allocations match your search.",
+                      hidden: true,
+                      data: { ota_receipt_form_target: "empty" } %>
+              <% else %>
+                <%= render "hotel_portal/reports/table_empty_state", colspan: 4, message: "No outstanding OTA settlements match this source, currency, and search." %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </section>
+
+      <footer class="flex flex-col gap-3 border-t border-border py-4 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-sm text-muted-foreground">The receipt is posted only after its full amount is allocated.</p>
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <%= render PanelsUI::Button.new(
+                label: "Cancel",
+                as: :a,
+                href: channel_settlements_hotel_reports_path(current_hotel),
+                variant: :secondary,
+                class: "w-full sm:w-auto") %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, disabled: @allocations.empty?, class: "w-full sm:w-auto") do %>
+            <%= app_icon "receipt", class: "size-4", aria: { hidden: "true" } %>
+            <span>Record receipt</span>
+          <% end %>
+        </div>
+      </footer>
+    <% end %>
+  <% end %>
+</div>

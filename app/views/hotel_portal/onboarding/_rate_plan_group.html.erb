@@ -1,0 +1,81 @@
+<%# One custom rate plan: a heading naming it and saying how it gets its prices,
+    then one row per room category. A plan starts covering the property, the same
+    way Standard does, and a category it should not sell is removed from the plan
+    here — a Corporate plan on suites only is a setup decision, not something to
+    finish later in the rate plan editor. %>
+<% prefix = "custom_plans[#{plan_key}]" %>
+<% assignments = plan_entry_assignments(entry) %>
+<% persisted_plan = @custom_rate_plans.find { |plan| plan.id.to_s == entry["id"].to_s } %>
+<% deletable = entry["id"].blank? || persisted_plan.nil? || persisted_plan.deletable? %>
+<% template_plan = local_assigns[:template_plan] %>
+
+<% table.with_group_row(
+      key: plan_key,
+      locked: presenter.read_only? || !deletable,
+      locked_reason: (deletable ? nil : "An existing booking uses this rate plan."),
+      remove_label: "Remove #{entry['name'].presence || 'this rate plan'}",
+      persisted: entry["id"].present?,
+      confirm: (entry["id"].present? ? "Remove #{entry['name']} and its pricing?" : nil),
+      add_label: (presenter.read_only? ? nil : "Room")) do %>
+  <%# `contents` so the plan's fields are laid out by the heading's own row
+      rather than stacking: this wrapper exists to carry the plan's key and its
+      hidden fields, and a block box around a block-level select would break the
+      heading into a column. %>
+  <div class="contents" data-onboarding-rates-target="plan" data-plan-key="<%= plan_key %>"
+       data-new-plan-template="<%= template_plan.present? %>">
+    <%= hidden_field_tag "#{prefix}[id]", entry["id"] %>
+    <%= hidden_field_tag "#{prefix}[client_key]", plan_key %>
+    <%= hidden_field_tag "#{prefix}[_destroy]", entry["_destroy"].presence || "0", data: { record_table_destroy: true } %>
+
+    <%= text_field_tag "#{prefix}[name]", entry["name"], required: !template_plan,
+          disabled: presenter.read_only?, placeholder: "Rate plan name",
+          class: "panel-input w-56", data: { size: :sm }, aria: { label: "Rate plan name" } %>
+
+    <% basis_scope = HotelPortal::RatePlansHelper::OnboardingFieldScope.new(rate_plan_pricing_basis(entry)) %>
+    <%= fields_for prefix, basis_scope do |field_form| %>
+      <%= render PanelsUI::SelectMenu.new(form: field_form, attribute: :rate_mode,
+            choices: rate_plan_pricing_basis_choices, selected: basis_scope.rate_mode,
+            disabled: presenter.read_only?, size: :sm, class: "w-48") %>
+    <% end %>
+    <%= number_field_tag "#{prefix}[derive_value]", entry["derive_value"], step: 0.01,
+          disabled: presenter.read_only?, class: "panel-input w-24", data: { size: :sm },
+          placeholder: "Adjust", aria: { label: "Adjustment applied to Standard Rate" } %>
+  </div>
+<% end %>
+
+<% plan_name = entry["name"].presence || "this rate plan" %>
+<% assignments.each_with_index do |assignment, row_index| %>
+  <% row_key = assignment["client_key"].presence || "row-#{assignment['id'].presence || row_index}" %>
+  <% room = @rate_rooms.find { |candidate| candidate.id.to_s == assignment["room_type_id"].to_s } %>
+  <%# A row taken off the plan is hidden rather than discarded: it already holds
+      this room's occupancy columns, priced and dashed to what the room can hold,
+      so putting it back is showing it again rather than rebuilding it. %>
+  <% table.with_row(remove_label: "Remove #{room&.name} from #{plan_name}",
+        persisted: assignment["id"].present?, key: row_key,
+        removable: !presenter.read_only?, soft_remove: true,
+        hidden: assignment["_destroy"].to_s == "1") do %>
+    <%= render "rate_assignment_cells", entry: assignment, row_key: row_key, plan_index: plan_key,
+          room: room, standard: false, plan_entry: entry, presenter: presenter,
+          max_adults: max_adults, bands: bands %>
+  <% end %>
+<% end %>
+
+<%# What "+ Room" adds: a row that asks which category, rather than a heading
+    that lists every category the plan already sells. The picker is pruned to
+    what is left the moment the row lands, so a property with thirty categories
+    reads the same as one with two. Choosing swaps this row for that room's own. %>
+<% unless presenter.read_only? %>
+  <% value_columns = current_hotel.sells_per_person? ? max_adults + Array(bands).size : 3 %>
+  <%= table.with_group_template_row(group: plan_key, key: "NEW_RECORD",
+        remove_label: "Discard this room row") do %>
+    <td data-action="change->onboarding-rates#chooseRoom">
+      <% picker_scope = HotelPortal::RatePlansHelper::OnboardingFieldScope.new %>
+      <%= fields_for "room_picker[#{plan_key}][NEW_RECORD]", picker_scope do |picker_form| %>
+        <%= render PanelsUI::SelectMenu.new(form: picker_form, attribute: :room_type_id,
+              choices: @rate_rooms.map { |candidate| { label: candidate.name, value: candidate.id } },
+              prompt: "Choose a room category", size: :sm, class: "w-56") %>
+      <% end %>
+    </td>
+    <% value_columns.times do %><td></td><% end %>
+  <% end %>
+<% end %>

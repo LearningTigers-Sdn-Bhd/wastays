@@ -22,7 +22,7 @@ RSpec.describe HotelPortal::Requests::StatusUpdater do
   end
 
   it "marks room as cleaning when housekeeping request is dispatched" do
-    room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
     request = create(:housekeeping_request, booking: booking, status: "pending")
 
@@ -33,7 +33,7 @@ RSpec.describe HotelPortal::Requests::StatusUpdater do
   end
 
   it "marks room as ready when housekeeping request is completed" do
-    room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
 
     room_status = RoomStatus.find_or_create_by!(hotel: hotel, room_type: room_type, room_number: "101")
@@ -65,7 +65,7 @@ RSpec.describe HotelPortal::Requests::StatusUpdater do
   end
 
   it "walks a turnover's room from cleaning to ready" do
-    room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
     request = create(:housekeeping_request, booking: booking, hotel: hotel, room_type: room_type,
                      room_number: "101", work_context: "checkout_turnover",

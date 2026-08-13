@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Bookings::AvailableRoomNumbers do
   let(:hotel) { create(:hotel) }
-  let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101", "102", "103" ]) }
+  let(:room_type) { create(:room_type, hotel: hotel, quantity: 3, room_numbers: [ "101", "102", "103" ]) }
   let(:check_in) { Date.current }
   let(:check_out) { Date.current + 1.day }
 
@@ -58,7 +58,7 @@ RSpec.describe Bookings::AvailableRoomNumbers do
   end
 
   it "includes room numbers locked for different room types" do
-    other_room_type = create(:room_type, hotel: hotel, room_numbers: [ "102" ])
+    other_room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "102" ])
     other_user = create(:user)
     create(:room_lock, hotel: hotel, room_type: other_room_type, user: other_user, room_number: "102", expires_at: 10.minutes.from_now)
 

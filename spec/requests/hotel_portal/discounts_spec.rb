@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "HotelPortal::Discounts", type: :request do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account:, status: "approved") }
+  let(:hotel) { create(:hotel, account:, status: "live") }
   let(:user) { create(:user, account:) }
 
   before do

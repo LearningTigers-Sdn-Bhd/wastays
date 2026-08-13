@@ -7,6 +7,7 @@ export default class extends Controller {
     children: Number,
     currency: String,
     paxPricingOnly: Boolean,
+    nights: Number,
     childAges: Array
   }
 
@@ -42,6 +43,17 @@ export default class extends Controller {
         ageBands = []
       }
 
+      // adults -> average nightly room total, resolved server-side. Under an
+      // occupancy matrix this ladder is the only correct source: the room total
+      // is not linear in headcount, so a single per-person figure cannot
+      // reproduce it.
+      let occupancyPrices = {}
+      try {
+        occupancyPrices = JSON.parse(card.dataset.roomOccupancyPrices || "{}")
+      } catch (e) {
+        occupancyPrices = {}
+      }
+
       this.roomData[id] = {
         price,
         paxPrice,
@@ -52,7 +64,8 @@ export default class extends Controller {
         availableQty,
         singleSupplement,
         childMultiplier,
-        ageBands
+        ageBands,
+        occupancyPrices
       }
       this.selections[id] = 0
     })
@@ -147,12 +160,43 @@ export default class extends Controller {
     return occupancies
   }
 
-  perChildPrice(paxPrice, ageBands, flatMultiplier, age) {
+  // Mirrors RatePlanAgeBand#price_for: a band's multiplier value is a whole
+  // percent (40 means 40%), while the rate plan's flat child multiplier is
+  // already a fraction. `anchor` is the per-adult nightly rate for this room's
+  // occupancy — under a matrix that is the room total divided by its adults.
+  perChildPrice(anchor, percentageAnchor, ageBands, flatMultiplier, age) {
     const band = ageBands.find((b) => age >= b.minAge && age <= b.maxAge)
     if (band) {
-      return band.pricingMode === "amount" ? band.value : paxPrice * band.value
+      return band.pricingMode === "amount" ? band.value : percentageAnchor * (band.value / 100)
     }
-    return paxPrice * flatMultiplier
+    return anchor * flatMultiplier
+  }
+
+  // One room's average nightly price for the party it holds, mirroring
+  // Rates::ResolveEffectiveNightlyPrice + Bookings::NightlyPaxPrice.
+  nightlyPaxPrice(occ) {
+    const room = occ.room
+    const occupancyTotal = room.occupancyPrices[occ.adults]
+    const matrixPriced = occupancyTotal !== undefined && occupancyTotal !== null
+
+    // With a matrix the adults' total comes straight from the ladder (which
+    // already accounts for the single-occupancy case); without one it is the
+    // per-person rate times heads, plus the single supplement.
+    const anchor = matrixPriced && occ.adults > 0 ? occupancyTotal / occ.adults : room.paxPrice
+    const percentageAnchor = room.occupancyPrices[1] ?? room.paxPrice
+    let price = matrixPriced ? occupancyTotal : occ.adults * room.paxPrice
+
+    if (occ.childAges.length === occ.children && occ.children > 0) {
+      price += occ.childAges.reduce((sum, age) => sum + this.perChildPrice(anchor, percentageAnchor, room.ageBands, room.childMultiplier, age), 0)
+    } else {
+      price += occ.children * anchor * room.childMultiplier
+    }
+
+    if (!matrixPriced && occ.adults + occ.children === 1) {
+      price += room.singleSupplement
+    }
+
+    return price
   }
 
   updateUI() {
@@ -231,22 +275,11 @@ export default class extends Controller {
     if (totalRooms > 0) {
       if (this.paxPricingOnlyValue) {
         if (occupancies) {
+          // The sticky bar reads "Total Price", and per-room mode totals the
+          // whole stay — so scale the nightly pax price by the night count.
+          const nights = this.hasNightsValue && this.nightsValue > 0 ? this.nightsValue : 1
           occupancies.forEach(occ => {
-            const room = occ.room
-            const roomPax = occ.adults + occ.children
-
-            let roomPrice = occ.adults * room.paxPrice
-            if (occ.childAges.length === occ.children && occ.childAges.length > 0) {
-              roomPrice += occ.childAges.reduce((sum, age) => sum + this.perChildPrice(room.paxPrice, room.ageBands, room.childMultiplier, age), 0)
-            } else {
-              roomPrice += occ.children * room.paxPrice * room.childMultiplier
-            }
-
-            if (roomPax === 1) {
-              roomPrice += room.singleSupplement
-            }
-
-            totalPrice += roomPrice
+            totalPrice += this.nightlyPaxPrice(occ) * nights
           })
         } else {
           totalPrice = 0

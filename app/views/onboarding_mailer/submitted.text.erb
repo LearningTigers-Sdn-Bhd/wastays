@@ -1,0 +1,5 @@
+<%= @hotel.name %> is ready for review.
+
+<%= @submission.submitted_by.name %> submitted the property setup on <%= l(@submission.submitted_at, format: :long) %>.
+
+<%= onboarding_admin_hotel_url(@hotel) %>

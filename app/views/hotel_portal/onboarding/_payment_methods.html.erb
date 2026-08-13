@@ -1,0 +1,85 @@
+<%# The shell already heads the page with this section's name and what it is
+    for, so the body opens straight into the work. A second heading saying the
+    same thing is what DESIGN.md §7 calls a duplicated heading. %>
+<section aria-label="Payment methods">
+  <% if presenter.read_only? %>
+    <% if @payment_methods.any? %>
+      <%= render PanelsUI::Table.new(caption: "Payment methods", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Code</th>
+            <th scope="col">Type</th>
+            <th scope="col">Surcharge</th>
+            <th scope="col">Status</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @payment_methods.each do |method| %>
+            <tr>
+              <td class="font-medium">
+                <%= method.name %>
+                <% if method.default_cash? %>
+                  <span class="text-xs text-muted-foreground">· default cash</span>
+                <% end %>
+              </td>
+              <td class="text-muted-foreground"><%= method.code %></td>
+              <td class="text-muted-foreground"><%= method.cash? ? "Cash" : "Card or bank" %></td>
+              <td class="tabular-nums"><%= method.surcharge_label %></td>
+              <td class="text-muted-foreground"><%= method.active? ? "Accepted" : "Not accepted" %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No payment methods were configured.</p>
+    <% end %>
+
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "payment_methods"),
+                  method: :patch, id: "onboarding-payment-methods-form" do %>
+      <% if @payment_method_entries.any? && @payment_method_entries.none? { |entry| entry["id"].present? } %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "These are the standard codes, not saved yet") do |alert| %>
+          <% alert.with_description do %>
+            Every property gets the same ways of taking money, and they stay whether or not this
+            one uses them all. Add your own below. Nothing is created until you save.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%# Two fields, not ten: opening a property needs a way to take money, and
+          nothing more. The accounting code is derived from the name, the default
+          cash drawer is settled by the rows themselves, and a surcharge is a fee
+          decision the property makes under Settings once its extra charges are
+          in place. %>
+      <div class="mt-4">
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Payment methods",
+              add_label: "Add payment method",
+              empty: "No payment methods yet",
+              empty_description: "Add at least one way guests can pay before this property can open.",
+              empty_icon: "credit-card") do |table| %>
+          <% table.with_column(label: "Name", required: true, class: "w-1/2") %>
+          <% table.with_column(label: "Type") %>
+
+          <% @payment_method_entries.each_with_index do |entry, index| %>
+            <% locked = entry["locked"] == "true" %>
+            <% table.with_row(
+                 remove_label: "Remove #{entry['name'].presence || 'this payment method'}",
+                 removable: !locked,
+                 remove_disabled_reason: ("A standard payment code. Switch it off under Settings if you do not take it." if locked),
+                 persisted: entry["id"].present?,
+                 key: entry["client_key"]) do %>
+              <%= render "payment_method_row", entry: entry, index: index %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this payment method") do %>
+            <%= render "payment_method_row", entry: {}, index: "NEW_RECORD" %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

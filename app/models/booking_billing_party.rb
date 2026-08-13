@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class BookingBillingParty < ApplicationRecord
-  PARTY_KINDS = %w[guest company].freeze
+  PARTY_KINDS = %w[guest company ota].freeze
   ACCOUNT_TYPES = %w[company government travel_agent airline salesperson].freeze
   UNAVAILABLE_ACCOUNT_TYPES = [].freeze
 
@@ -9,6 +9,7 @@ class BookingBillingParty < ApplicationRecord
   belongs_to :booking
   belongs_to :booking_guest, optional: true
   belongs_to :hotel_corporate_account, optional: true
+  belongs_to :booking_source, optional: true
   belongs_to :created_by, class_name: "User", optional: true
   has_many :booking_folios, dependent: :restrict_with_error
   has_one :billing_terms, class_name: "BookingBillingTerms", dependent: :destroy
@@ -27,6 +28,7 @@ class BookingBillingParty < ApplicationRecord
   scope :active, -> { where(archived_at: nil) }
   scope :guests, -> { where(party_kind: "guest") }
   scope :companies, -> { where(party_kind: "company") }
+  scope :otas, -> { where(party_kind: "ota") }
 
   def display_name
     case party_kind
@@ -50,7 +52,7 @@ class BookingBillingParty < ApplicationRecord
   end
 
   def exactly_one_identity
-    identities = [ booking_guest_id, hotel_corporate_account_id ].count(&:present?)
+    identities = [ booking_guest_id, hotel_corporate_account_id, booking_source_id ].count(&:present?)
     return if identities == 1
 
     errors.add(:base, "must reference exactly one billing identity")
@@ -61,9 +63,15 @@ class BookingBillingParty < ApplicationRecord
     when "guest"
       errors.add(:booking_guest, "must be present for guest billing parties") if booking_guest_id.blank?
       errors.add(:hotel_corporate_account, "must be blank for guest billing parties") if hotel_corporate_account_id.present?
+      errors.add(:booking_source, "must be blank for guest billing parties") if booking_source_id.present?
     when "company"
       errors.add(:hotel_corporate_account, "must be present for company billing parties") if hotel_corporate_account_id.blank?
       errors.add(:booking_guest, "must be blank for company billing parties") if booking_guest_id.present?
+      errors.add(:booking_source, "must be blank for company billing parties") if booking_source_id.present?
+    when "ota"
+      errors.add(:booking_source, "must be present for OTA billing parties") if booking_source_id.blank?
+      errors.add(:booking_guest, "must be blank for OTA billing parties") if booking_guest_id.present?
+      errors.add(:hotel_corporate_account, "must be blank for OTA billing parties") if hotel_corporate_account_id.present?
     end
   end
 
@@ -81,5 +89,9 @@ class BookingBillingParty < ApplicationRecord
 
   def account_type_matches_party_kind
     errors.add(:account_type, "must be blank for guest billing parties") if guest? && account_type.present?
+    errors.add(:account_type, "must be blank for OTA billing parties") if ota? && account_type.present?
+    if ota? && booking_source.present? && booking_source.kind != "ota"
+      errors.add(:booking_source, "must be an OTA booking source")
+    end
   end
 end

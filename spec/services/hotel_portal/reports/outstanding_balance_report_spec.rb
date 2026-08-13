@@ -35,6 +35,92 @@ RSpec.describe HotelPortal::Reports::OutstandingBalanceReport, type: :service do
       expect(result.totals[:outstanding_amount]).to eq(180.to_d)
     end
 
+
+    it "splits guest and OTA balances and applies receipt allocations only to OTA receivable" do
+      booking = create(
+        :booking,
+        hotel: hotel,
+        status: "confirmed",
+        payment_status: "pending",
+        check_in: start_date,
+        check_out: start_date + 1.day,
+        guest_name: "OTA Funded Guest"
+      )
+      primary_folio = create(:booking_folio, booking: booking, hotel: hotel, folio_type: "guest", payer_type: "guest", is_primary: true)
+      source = create(:booking_source, key: "ota_outstanding_test", label: "OTA Outstanding Test")
+      party = create(
+        :booking_billing_party,
+        booking: booking,
+        hotel: hotel,
+        party_kind: "ota",
+        booking_source: source,
+        booking_guest: nil,
+        hotel_corporate_account: nil
+      )
+      ota_folio = create(
+        :booking_folio,
+        booking: booking,
+        hotel: hotel,
+        folio_type: "external",
+        payer_type: "ota",
+        is_primary: false,
+        booking_billing_party: party,
+        hotel_corporate_account: nil
+      )
+      create(:folio_transaction, booking_folio: ota_folio, transaction_type: "charge", category: "accommodation", amount: 100)
+      create(
+        :folio_transaction,
+        booking_folio: ota_folio,
+        transaction_type: "payment",
+        category: "booking_payment",
+        amount: 100,
+        transaction_code: hotel.transaction_codes.find_by!(system_key: "ota_collected_payment"),
+        metadata: { posting_source: "ota_credit", receipt_policy: "none" }
+      )
+      settlement = create(
+        :channel_settlement,
+        hotel: hotel,
+        booking_source: source,
+        gross_amount: 100,
+        commission_amount: 10,
+        expected_net_amount: 90,
+        channel_manager_reference: "ota-outstanding-settlement"
+      )
+      allocation = create(
+        :channel_settlement_allocation,
+        channel_settlement: settlement,
+        booking: booking,
+        booking_folio: ota_folio,
+        gross_amount: 100,
+        commission_amount: 10,
+        expected_net_amount: 90
+      )
+      receipt = create(
+        :channel_settlement_receipt,
+        hotel: hotel,
+        booking_source: source,
+        amount: 40,
+        currency: "MYR"
+      )
+      create(
+        :channel_settlement_receipt_allocation,
+        channel_settlement_allocation: allocation,
+        channel_settlement_receipt: receipt,
+        amount: 40,
+        currency: "MYR"
+      )
+
+      result = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+      row = result.rows.find { |candidate| candidate[:booking_id] == booking.id }
+      expect(row).to include(
+        outstanding_amount: primary_folio.outstanding_balance.to_d,
+        guest_outstanding_amount: 0.to_d,
+        ota_outstanding_amount: 50.to_d
+      )
+      expect(result.totals[:outstanding_amount]).to eq(0.to_d)
+    end
+
     it "uses room snapshot/name fallback and room number fallback for grouped child bookings" do
       group = create(:group_booking, hotel: hotel)
       room_type = create(:room_type, hotel: hotel, name: "Deluxe Twin")

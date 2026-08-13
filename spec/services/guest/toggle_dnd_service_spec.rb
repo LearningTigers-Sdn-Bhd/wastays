@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Guest::ToggleDndService do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:booking) { create(:booking, hotel: hotel, status: status) }
 

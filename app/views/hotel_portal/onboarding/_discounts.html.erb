@@ -1,0 +1,106 @@
+<%# The shell already heads the page with this section's name and what it is
+    for, so the body opens straight into the work. A second heading saying the
+    same thing is what DESIGN.md §7 calls a duplicated heading. %>
+<section aria-label="Discounts">
+  <% if presenter.read_only? %>
+    <% if @discounts.any? %>
+      <%= render PanelsUI::Table.new(caption: "Discounts", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Code</th>
+            <th scope="col">Pricing</th>
+            <th scope="col">Applies to</th>
+            <th scope="col">Status</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @discounts.each do |discount| %>
+            <tr>
+              <td class="font-medium"><%= discount.name %></td>
+              <td class="text-muted-foreground"><%= discount.code %></td>
+              <td class="tabular-nums"><%= discount.pricing_label %></td>
+              <td class="text-muted-foreground"><%= discount.application_scope_label %></td>
+              <td class="text-muted-foreground"><%= discount.active? ? "Offered" : "Not offered" %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No discounts were added.</p>
+    <% end %>
+
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "discounts"),
+                  method: :patch, id: "onboarding-discounts-form" do %>
+      <%# The eligible-charge list is drawn from every charge code this property
+          posts, so it has content whether or not extra charges were set up. Say
+          so rather than leaving an owner wondering what is missing. %>
+      <% if @extra_charges_skipped %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "Extra charges were skipped") do |alert| %>
+          <% alert.with_description do %>
+            Discounts can still target this property's standard charges.
+            <%= link_to "Go back and add extra charges",
+                        hotel_onboarding_section_path(current_hotel, section_key: "extra_charges"),
+                        class: "underline underline-offset-4" %>
+            if an offer should cover something you sell.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if @discount_entries.any? && @discount_entries.none? { |entry| entry["id"].present? } %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "This is a suggestion, not saved yet") do |alert| %>
+          <% alert.with_description do %>
+            Most properties keep a general rebate for goodwill adjustments. Edit it, remove it,
+            or add your own. Nothing is created until you save.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%# Three fields fit the page, so this is a plain record table rather than
+          a spreadsheet region: nothing has to scroll sideways, no column needs
+          pinning, and the rows stack into readable editors on a phone. %>
+      <div class="mt-4">
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Discounts",
+              add_label: "Add discount",
+              empty: "No discounts yet",
+              empty_description: "If this property offers none, leave this empty and continue.",
+              empty_icon: "tag") do |table| %>
+          <%# Name and Amount are sized to what they hold; Applies to carries a
+              scope and the charges that scope can narrow to, so it takes what is
+              left rather than a share of the table. %>
+          <% table.with_column(label: "Name", required: true, class: "w-64") %>
+          <% table.with_column(label: "Amount", class: "w-80") %>
+          <% table.with_column(label: "Applies to") do %>
+            <h3 class="text-sm font-semibold text-foreground">What an offer is allowed to reduce</h3>
+            <dl class="mt-2 space-y-1.5 text-left text-xs text-muted-foreground">
+              <% [ [ "Room charges", "The room rate only, and any accommodation charge added later." ],
+                   [ "All eligible charges", "Everything posted to the folio except tax." ],
+                   [ "Only the charges I choose", "The charges you name, and nothing else." ] ].each do |option, meaning| %>
+                <div>
+                  <dt class="inline font-medium text-foreground"><%= option %>.</dt>
+                  <dd class="inline"><%= meaning %></dd>
+                </div>
+              <% end %>
+            </dl>
+          <% end %>
+
+          <% @discount_entries.each_with_index do |entry, index| %>
+            <% table.with_row(
+                 remove_label: "Remove #{entry['name'].presence || 'this discount'}",
+                 persisted: entry["id"].present?,
+                 key: entry["client_key"]) do %>
+              <%= render "discount_row", entry: entry, index: index, charge_code_choices: @charge_code_choices %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this discount") do %>
+            <%= render "discount_row", entry: {}, index: "NEW_RECORD", charge_code_choices: @charge_code_choices %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

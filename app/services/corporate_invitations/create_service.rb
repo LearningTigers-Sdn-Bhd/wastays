@@ -12,17 +12,8 @@ module CorporateInvitations
 
     def call
       email = @attributes[:email].to_s.strip.downcase
-      return failure("Email is required.") if email.blank?
-
-      user = User.find_by(email: email)
-      return failure("This email belongs to a hotel staff account. Use a separate corporate email.") if user && !user.corporate?
-      return failure("This Corporate Account is suspended.") if user&.account&.status == "suspended"
-
-      if user
-        relationship = @hotel.hotel_corporate_accounts.find_by(corporate_account: user.account)
-        return failure("This Corporate Account is already linked to this hotel.") if relationship&.active?
-        return failure("This corporate relationship is suspended. Reactivate it instead of sending a new invitation.") if relationship&.suspended?
-      end
+      eligibility = CheckEligibility.call(hotel: @hotel, email: email)
+      return failure(eligibility.error) unless eligibility.success?
 
       invitation = nil
       token = nil
@@ -55,7 +46,8 @@ module CorporateInvitations
         credit_currency: @attributes[:credit_currency].presence || @hotel.default_currency,
         payment_terms_days: @attributes[:payment_terms_days].presence,
         token_digest: Invitation.digest(token),
-        expires_at: Invitation::EXPIRY.from_now
+        expires_at: Invitation::EXPIRY.from_now,
+        last_sent_at: Time.current
       }
     end
 

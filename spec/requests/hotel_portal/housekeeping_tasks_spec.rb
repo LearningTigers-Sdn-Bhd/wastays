@@ -10,7 +10,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
   let(:user) { create(:user, account:, role: "admin") }
   let(:role) { create(:role, account:, slug: "front_desk", name: "Front Desk") }
   let!(:room_type) do
-    create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 202 303])
+    create(:room_type, hotel:, room_number_mode: "custom", quantity: 3, room_numbers: %w[101 202 303])
   end
 
   before do
@@ -124,7 +124,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
     end
 
     it "filters by room type and status and keeps sorting on export links" do
-      other_room_type = create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[401])
+      other_room_type = create(:room_type, hotel:, room_number_mode: "custom", quantity: 1, room_numbers: %w[401])
       staff = active_housekeeper
       room_status("101", status: "dirty", assigned_to: staff)
       room_status("202", status: "ready")
@@ -328,7 +328,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
 
     it "rejects a room identity outside the current hotel" do
       other_hotel = create(:hotel, account:)
-      other_type = create(:room_type, hotel: other_hotel, room_number_mode: "custom", room_numbers: %w[101])
+      other_type = create(:room_type, hotel: other_hotel, room_number_mode: "custom", quantity: 1, room_numbers: %w[101])
 
       patch hotel_housekeeping_room_status_path(hotel, room_type_id: other_type.id, room_number: "101"),
             params: { date: business_date, status: "dirty" }

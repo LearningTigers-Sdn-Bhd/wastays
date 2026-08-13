@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "HotelPortal::PaymentMethods", type: :request do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:user) { create(:user, account: account) }
   let(:role) { create(:role, account: account) }
 

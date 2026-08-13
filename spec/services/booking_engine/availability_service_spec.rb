@@ -2,7 +2,12 @@ require 'rails_helper'
 
 RSpec.describe BookingEngine::AvailabilityService do
   let!(:account) { Account.create!(name: "Test Account", slug: "test-account", status: "active") }
-  let!(:hotel) { Hotel.create!(name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved", allow_pax_pricing: true) }
+  let!(:hotel) do
+    Hotel.create!(
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room",
+      name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "live"
+    )
+  end
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:check_in) { Date.today }
@@ -55,6 +60,13 @@ RSpec.describe BookingEngine::AvailabilityService do
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
       expect(service.available_rooms_for_hotel(hotel)).to be_empty
     end
+
+    it "returns empty when the requested children exceed the room category capacity" do
+      room_type.update!(max_children: 0)
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 1, children: 1, child_ages: [ 8 ])
+
+      expect(service.available_rooms_for_hotel(hotel)).to be_empty
+    end
   end
 
   describe "#calculate_total_price" do
@@ -93,21 +105,21 @@ RSpec.describe BookingEngine::AvailabilityService do
       expect(service.available_rooms_for_hotel(hotel)).to be_empty
     end
 
-    it "ignores corporate_price even if available" do
-      RoomRate.update_all(corporate_price: 80)
+    it "does not offer Corporate plans to anonymous guests" do
+      stay_dates.each { |date| create(:room_rate, room_type:, rate_plan: room_type.corporate_rate_plan, date:, price: 80) }
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
       expect(service.calculate_total_price(room_type)).to eq(200.0) # 100 * 2 nights
     end
 
-    it "uses corporate_price when corporate_rate is true" do
-      RoomRate.update_all(corporate_price: 80)
+    it "offers the real Corporate plan when corporate_rate is true" do
+      stay_dates.each { |date| create(:room_rate, room_type:, rate_plan: room_type.corporate_rate_plan, date:, price: 80) }
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, corporate_rate: true)
       expect(service.calculate_total_price(room_type)).to eq(160.0) # 80 * 2 nights
     end
   end
 
   describe "#calculate_total_price with derived room-type pricing" do
-    let(:rate_plan) { RatePlan.create!(hotel: hotel, name: "Non-Refundable", sell_mode: "per_room", currency: "MYR") }
+    let(:rate_plan) { RatePlan.create!(hotel: hotel, name: "Non-Refundable", currency: "MYR") }
 
     it "computes a multiplier off the room type's own Standard Rate price for that date" do
       RoomTypeRatePlan.create!(room_type: room_type, rate_plan: rate_plan, pricing_mode: "multiplier", pricing_value: -10)
@@ -177,11 +189,11 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
   end
 
-  describe "#allocation_options_for_hotel (Per Person with Single Supplement)" do
-    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", sell_mode: "per_person", single_supplement: 20.0, currency: "MYR") }
+  describe "#allocation_options_for_hotel (Per Person with Single Supplement)", :per_person do
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", single_supplement: 20.0, currency: "MYR") }
 
     before do
-      hotel.update!(pax_pricing_only: true)
+      pax_rate_plan.reload
       # Link pax_rate_plan to room_type
       RoomTypeRatePlan.create!(room_type: room_type, rate_plan: pax_rate_plan)
       # Setup rates on the pax plan
@@ -218,11 +230,12 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
   end
 
-  describe "#calculate_total_price with age-banded per_person rate plan" do
+  describe "#calculate_total_price with age-banded per_person rate plan", :per_person do
     let!(:family_room) { RoomType.create!(hotel: hotel, name: "Family", quantity: 3, max_adults: 2, max_children: 3, base_price: 100, room_number_mode: "range") }
-    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", sell_mode: "per_person", child_price_multiplier: 0.6, currency: "MYR") }
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", child_price_multiplier: 0.6, currency: "MYR") }
 
     before do
+      pax_rate_plan.reload
       RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
       RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
       RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 12, max_age: 17, price_value: 20, label: "Teen")
@@ -266,21 +279,68 @@ RSpec.describe BookingEngine::AvailabilityService do
     end
 
     it "prices a flat-amount band regardless of the nightly rate" do
-      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 18, max_age: 25, pricing_mode: "amount", price_value: 15.0, label: "Young Adult")
-      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 1, child_ages: [ 20 ])
-      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 1, child_ages: [ 20 ])
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 3, pricing_mode: "amount", price_value: 15.0, label: "Infant")
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 1, child_ages: [ 2 ])
+      total = service.calculate_total_price(family_room, rate_plan: pax_rate_plan, adults: 2, children: 1, child_ages: [ 2 ])
 
       # 2 adults @ 50 + 1 flat-amount child @ 15 = 115/night, 2 nights = 230
       expect(total).to eq(230.0)
     end
   end
 
-  describe "#allocation_options_for_hotel groups rooms by child ages, not just counts" do
-    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", sell_mode: "per_person", child_price_multiplier: 1.0, currency: "MYR") }
+  describe "callers that do not name an occupancy", :per_person do
+    # Search and the room cards ask for a price without repeating the party.
+    # They must get the searched adults/children/ages, not the headcount
+    # collapsed into adults — which skips child pricing and asks the occupancy
+    # matrix for an adult row that was never configured.
+    let!(:family_room) { RoomType.create!(hotel: hotel, name: "Family", quantity: 3, max_adults: 2, max_children: 2, base_price: 200, room_number_mode: "range") }
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per-Pax Plan", child_price_multiplier: 0.5, currency: "MYR") }
+
+    before do
+      pax_rate_plan.reload
+      RoomTypeRatePlan.create!(room_type: family_room, rate_plan: pax_rate_plan)
+      RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
+
+      stay_dates.each do |date|
+        RoomInventory.create!(room_type: family_room, date: date, quantity: 3, status: "open")
+        # Every plan on a per-person room carries the matrix, so no plan has a
+        # row for 4 adults — exactly the setup that used to drop the room.
+        [ pax_rate_plan, family_room.standard_rate_plan ].compact.each do |plan|
+          RoomRate.create!(
+            room_type: family_room, rate_plan: plan, date: date,
+            price: 300.0, currency: "MYR",
+            occupancy_prices: { "1" => 180.0, "2" => 300.0 }
+          )
+        end
+      end
+    end
+
+    it "keeps a room whose matrix has no row for the collapsed headcount" do
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6, 6 ])
+
+      expect(service.available_rooms_for_hotel(hotel)).to include(family_room)
+    end
+
+    it "prices the searched family rather than 4 adults" do
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6, 6 ])
+
+      # 2 adults @ 300 + 2 children @ (300/2)*0.4 = 300 + 120 = 420/night, 2 nights
+      expect(service.pricing_summary_for(family_room)[:total_price]).to eq(840.0)
+    end
+
+    it "still honours an explicitly named occupancy" do
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6, 6 ])
+
+      expect(service.calculate_total_price(family_room, adults: 1, children: 0)).to eq(360.0)
+    end
+  end
+
+  describe "#allocation_options_for_hotel groups rooms by child ages, not just counts", :per_person do
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Age Banded Plan", child_price_multiplier: 1.0, currency: "MYR") }
     let!(:room_a) { RoomType.create!(hotel: hotel, name: "Room A", quantity: 2, max_adults: 1, max_children: 1, base_price: 100, room_number_mode: "range") }
 
     before do
-      hotel.update!(pax_pricing_only: true)
+      pax_rate_plan.reload
       RoomTypeRatePlan.create!(room_type: room_a, rate_plan: pax_rate_plan)
       RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 0, max_age: 5, price_value: 10, label: "Toddler")
       RatePlanAgeBand.create!(rate_plan: pax_rate_plan, min_age: 13, max_age: 17, price_value: 90, label: "Teen")
@@ -351,32 +411,48 @@ RSpec.describe BookingEngine::AvailabilityService do
   end
 
   describe "#candidate_rate_plans_for" do
-    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", sell_mode: "per_person", single_supplement: 20.0, currency: "MYR") }
+    let!(:pax_rate_plan) { RatePlan.create!(hotel: hotel, name: "Per Person Plan", single_supplement: 20.0, currency: "MYR") }
 
     before do
       RoomTypeRatePlan.create!(room_type: room_type, rate_plan: pax_rate_plan)
     end
 
-    context "when pax_pricing_only is disabled" do
-      it "returns nil and all associated rate plans" do
-        service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
-        plans = service.send(:candidate_rate_plans_for, room_type)
-        expect(plans).to include(nil)
-        expect(plans).not_to include(pax_rate_plan)
-        expect(plans).to include(room_type.rate_plans.first)
-      end
-    end
-
-    context "when pax_pricing_only is enabled" do
-      before do
-        hotel.update!(allow_pax_pricing: true, pax_pricing_only: true)
-      end
-
-      it "returns only per_person rate plans and excludes nil" do
+    context "when the hotel sells per room" do
+      it "returns only real bookable rate plans" do
         service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
         plans = service.send(:candidate_rate_plans_for, room_type)
         expect(plans).not_to include(nil)
-        expect(plans).to eq([ pax_rate_plan ])
+        expect(plans).to include(pax_rate_plan)
+        expect(plans).to include(room_type.rate_plans.first)
+      end
+
+      it "never offers a special tier plan" do
+        walk_in = create(:rate_plan, :walk_in_tier, hotel: hotel)
+        RoomTypeRatePlan.create!(room_type: room_type, rate_plan: walk_in)
+
+        service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
+        expect(service.send(:candidate_rate_plans_for, room_type)).not_to include(walk_in)
+      end
+    end
+
+    context "when the hotel sells per guest", :per_person do
+      before do
+        pax_rate_plan.reload
+      end
+
+      it "returns the bookable rate plans and excludes nil" do
+        service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
+        plans = service.send(:candidate_rate_plans_for, room_type)
+        expect(plans).not_to include(nil)
+        expect(plans).to include(pax_rate_plan)
+      end
+
+      it "never offers a special tier plan" do
+        walk_in = create(:rate_plan, :walk_in_tier, hotel: hotel)
+        RoomTypeRatePlan.create!(room_type: room_type, rate_plan: walk_in)
+
+        service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
+        expect(service.send(:candidate_rate_plans_for, room_type)).not_to include(walk_in)
       end
     end
   end

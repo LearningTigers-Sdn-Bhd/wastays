@@ -6,10 +6,15 @@ module HotelPortal
     before_action :set_invitation
 
     def resend
+      # A company queued during property setup with the send switch off reaches
+      # this action never having been emailed, so the notice reports a first
+      # send rather than claiming a repeat.
+      verb = @invitation.sent? ? "resent" : "sent"
+
       if CorporateInvitations::ResendService.new(invitation: @invitation, invited_by_user: current_user).call
-        respond_with_results(notice: "Invitation resent to #{@invitation.email}.")
+        respond_with_results(notice: "Invitation #{verb} to #{@invitation.email}.")
       else
-        respond_with_results(alert: "Unable to resend this invitation.")
+        respond_with_results(alert: "Unable to send this invitation.")
       end
     end
 

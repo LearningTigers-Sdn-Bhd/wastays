@@ -1,118 +1,165 @@
 <% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
-<% persisted = rate_plan.persisted? %>
-<% locked_name = persisted && (rate_plan.special_tier? || rate_plan.standard_rate?) %>
-<% form_id = persisted ? "edit-rate-plan-#{rate_plan.id}-form" : "new-rate-plan-form" %>
+<% form_id = "new-rate-plan-form" %>
+<% per_person = current_hotel.sells_per_person? %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="panels-ui--sheet-frame rate-plan-editor"
+       data-rate-plan-editor-edit-url-value="<%= new_hotel_rate_plan_path(current_hotel) %>"
+       data-rate-plan-editor-room-type-id-value="<%= @selected_room_type&.id %>">
     <%= render PanelsUI::Sheet.new(
-          id: persisted ? "edit-rate-plan-sheet" : "new-rate-plan-sheet",
+          id: "new-rate-plan-sheet",
           side: :right,
-          size: :lg,
-          title: title,
-          description: persisted ? rate_plan.name : "Set how this plan prices rooms, extra guests, and children.") do |sheet| %>
-      <% sheet.with_body do %>
-        <%= form_with model: [ current_hotel, rate_plan ],
-                      id: form_id,
-                      method: persisted ? :patch : :post,
-                      class: "space-y-6 py-2" do |f| %>
-          <% if rate_plan.errors.any? %>
-            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Rate plan could not be saved", role: :alert) do |alert| %>
-              <% alert.with_description { rate_plan.errors.full_messages.to_sentence } %>
-            <% end %>
-          <% end %>
-
-          <% unless locked_name %>
-            <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true) do |field| %>
-              <% field.with_input(placeholder: "Non-Refundable Rate", autocomplete: "off") %>
-            <% end %>
-          <% end %>
-
-          <section aria-labelledby="rate-plan-pricing-heading" class="space-y-4">
+          size: :xl,
+          variant: :edge,
+          dismissible: false,
+          aria_label: title,
+          body_class: "overflow-y-auto p-0") do |sheet| %>
+      <% sheet.with_header do %>
+        <header class="shrink-0 border-b border-border px-4 py-4">
+          <div class="flex w-full items-start justify-between gap-4">
             <div>
-              <h2 id="rate-plan-pricing-heading" class="text-base font-semibold text-foreground">Pricing</h2>
-              <p class="mt-1 text-sm text-muted-foreground">How the nightly price responds to occupancy.</p>
+              <h2 class="text-base font-semibold text-foreground" tabindex="-1" data-panels-ui--sheet-target="initialFocus"><%= title %></h2>
+              <p class="mt-1 text-sm text-muted-foreground">Configure this rate plan for one room category. Attach it to more rooms separately.</p>
             </div>
+            <button type="button"
+                    class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+                    aria-label="Close rate plan editor"
+                    data-action="rate-plan-editor#requestClose">
+              <%= app_icon "x", class: "size-4", aria: { hidden: true } %>
+            </button>
+          </div>
+        </header>
+      <% end %>
 
-            <%= render PanelsUI::FormField.new(form: f, attribute: :sell_mode, label: "How it's charged", required: true) do |field| %>
-              <% field.with_select_menu(sell_mode_choices, selected: rate_plan.sell_mode) %>
+      <% sheet.with_body do %>
+        <div class="w-full p-4 sm:p-6">
+          <%= form_with model: rate_plan, url: hotel_rate_plans_path(current_hotel), method: :post,
+                id: form_id, class: "space-y-8",
+                data: { rate_plan_editor_target: "form" } do |f| %>
+            <% if rate_plan.errors.any? || @room_pricing&.errors&.any? %>
+              <div tabindex="-1" data-rate-plan-editor-error-summary>
+                <%= render PanelsUI::Alert.new(tone: :destructive, title: "Rate plan could not be saved", role: :alert) do |alert| %>
+                  <% alert.with_description { (rate_plan.errors.full_messages + Array(@room_pricing&.errors&.full_messages)).uniq.to_sentence } %>
+                <% end %>
+              </div>
             <% end %>
 
-            <%# Every field carries a hint so the two columns stay on a shared
-                baseline — a hint on only some of them leaves the rows ragged. %>
-            <div class="grid items-start gap-4 sm:grid-cols-2">
-              <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Base occupancy", hint: "Guests included in the room price.") do |field| %>
-                <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+            <% if @room_types.any? %>
+              <% room_choices = @room_types.map { |room_type| { label: "#{room_type.name} · #{pluralize(room_type.max_adults, 'adult')}", value: room_type.id } } %>
+              <%= fields_for :rate_plan, HotelPortal::RatePlansHelper::RoomSelectionScope.new(@selected_room_type&.id) do |selector| %>
+                <%= render PanelsUI::FormField.new(form: selector, attribute: :room_type_id, label: "Room category", required: true,
+                      hint: "Changing room category replaces the pricing fields below.") do |field| %>
+                  <% field.with_select_menu(room_choices, selected: @selected_room_type&.id,
+                       data: { action: "change->rate-plan-editor#selectRoom" }) %>
+                <% end %>
               <% end %>
-
-              <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge", hint: "Per night, for each guest above base occupancy.") do |field| %>
-                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-                <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+            <% else %>
+              <%= render PanelsUI::Alert.new(tone: :warning, title: "Create a room category first", role: :status) do |alert| %>
+                <% alert.with_description { "A rate plan needs one room category to define its pricing context." } %>
               <% end %>
+            <% end %>
 
-              <%= render PanelsUI::FormField.new(form: f, attribute: :single_supplement, label: "Single supplement", hint: "Per night, when one guest occupies the room.") do |field| %>
-                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-                <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+            <%= render PanelsUI::Alert.new(tone: :info, title: "Property pricing settings", role: :status) do |alert| %>
+              <% alert.with_description { "#{per_person ? 'The property charges per guest' : 'The property charges per room'}. Prices use #{rate_plan.currency}." } %>
+            <% end %>
+
+            <section aria-labelledby="new-rate-plan-details-heading" class="space-y-4">
+              <div>
+                <h3 id="new-rate-plan-details-heading" class="text-base font-semibold text-foreground">Plan details</h3>
+                <p class="mt-1 text-sm text-muted-foreground">Choose an existing plan name or enter a new one. Existing plans keep their shared details; this sheet configures the selected room.</p>
+              </div>
+
+              <%= hidden_field_tag "rate_plan[rate_plan_id]", params.dig(:rate_plan, :rate_plan_id), data: { rate_plan_editor_target: "selectedRatePlanId" } %>
+              <div class="grid items-start gap-4">
+                <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true,
+                      hint: "Search existing plans or type a new name.") do |field| %>
+                  <% field.with_autocomplete(
+                       endpoint: autocomplete_hotel_rate_plan_attachments_path(current_hotel),
+                       placeholder: "Non-refundable",
+                       data: {
+                         rate_plan_editor_target: "ratePlanName",
+                         action: "input->rate-plan-editor#clearRatePlanSelection panels-ui:autocomplete-select->rate-plan-editor#selectRatePlan"
+                       }) %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
+                  <% field.with_text_area(rows: 3, placeholder: "Pay in full at booking. No changes or refunds.") %>
+                <% end %>
+              </div>
+
+              <% if per_person && current_hotel.preferred_channel_manager.present? %>
+                <%= render PanelsUI::Alert.new(tone: :info, title: "Per-guest channel requirements", role: :status) do |alert| %>
+                  <% alert.with_description { "Complete every adult occupancy price. If you add age groups, also enter flat child and infant fees for OTAs." } %>
+                <% end %>
               <% end %>
+            </section>
 
-              <%= render PanelsUI::FormField.new(form: f, attribute: :child_price_multiplier, label: "Child price", hint: "0.5 charges a child half the adult rate; 1.0 charges full.") do |field| %>
-                <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-              <% end %>
-            </div>
-          </section>
+            <% unless per_person %>
+              <section aria-labelledby="new-rate-plan-occupancy-heading" class="space-y-4">
+                <div>
+                  <h3 id="new-rate-plan-occupancy-heading" class="text-base font-semibold text-foreground">Occupancy pricing</h3>
+                  <p class="mt-1 text-sm text-muted-foreground">Set the shared guest rules for this plan.</p>
+                </div>
+                <div class="grid items-start gap-4 sm:grid-cols-2">
+                  <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Guests included") do |field| %>
+                    <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+                  <% end %>
+                  <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge") do |field| %>
+                    <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+                    <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+                  <% end %>
+                </div>
+              </section>
+            <% end %>
 
-          <% if rate_plan.sell_mode == "per_person" %>
-            <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan %>
+            <% if per_person %>
+              <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan %>
+            <% end %>
+
+            <% if @selected_room_type && @room_pricing %>
+              <section aria-labelledby="new-rate-plan-room-pricing-heading" class="space-y-4"
+                       data-controller="rate-plan-room-pricing"
+                       data-rate-plan-room-pricing-anchor-value="<%= @selected_room_type.base_price.to_f %>"
+                       data-rate-plan-room-pricing-max-adults-value="<%= @room_pricing.max_adults %>"
+                       data-rate-plan-room-pricing-currency-value="<%= rate_plan.currency %>"
+                       data-rate-plan-room-pricing-per-person-value="<%= @room_pricing.per_person? %>"
+                       data-action="input->rate-plan-room-pricing#refresh change->rate-plan-room-pricing#refresh">
+                <div>
+                  <h3 id="new-rate-plan-room-pricing-heading" class="text-base font-semibold text-foreground">Pricing for <%= @selected_room_type.name %></h3>
+                  <p class="mt-1 text-sm text-muted-foreground">Only this room category is configured in this sheet.</p>
+                </div>
+                <%= fields_for :room_pricing, @room_pricing do |pricing_form| %>
+                  <%= render "hotel_portal/rate_plans/room_pricing_fields",
+                        f: pricing_form, pricing: @room_pricing, room_type: @selected_room_type,
+                        currency: rate_plan.currency, form_prefix: "new_rate_plan_room_#{@selected_room_type.id}" %>
+                <% end %>
+              </section>
+            <% end %>
           <% end %>
-
-          <%= render "hotel_portal/rate_plans/room_type_pricing", rate_plan: rate_plan %>
-        <% end %>
+        </div>
       <% end %>
 
       <% sheet.with_footer do %>
-        <% if persisted && rate_plan.archived? %>
-          <%= render PanelsUI::Button.new(href: unarchive_hotel_rate_plan_path(current_hotel, rate_plan),
-                variant: :ghost, size: :sm, class: "mr-auto",
-                data: { turbo_method: :patch }) do %>
-            Unarchive
+        <div class="flex w-full items-center justify-end gap-2">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+                data: { action: "rate-plan-editor#requestClose" }) do %>
+            Cancel
           <% end %>
-        <% elsif persisted && (rate_plan.archivable? || rate_plan.deletable?) %>
-          <div class="mr-auto flex items-center gap-2">
-            <% if rate_plan.archivable? %>
-              <%= render PanelsUI::Button.new(href: archive_hotel_rate_plan_path(current_hotel, rate_plan),
-                    variant: :ghost, size: :sm,
-                    data: {
-                      turbo_method: :patch,
-                      turbo_confirm: "Archive '#{rate_plan.name}'? It will no longer be offered for new bookings, but existing bookings and history are kept. You can unarchive it anytime.",
-                      turbo_confirm_title: "Archive rate plan"
-                    }) do %>
-                Archive
-              <% end %>
-            <% end %>
-            <% if rate_plan.deletable? %>
-              <%= render PanelsUI::Button.new(href: hotel_rate_plan_path(current_hotel, rate_plan),
-                    variant: :ghost, size: :sm, class: "text-destructive",
-                    data: {
-                      turbo_method: :delete,
-                      turbo_confirm: "Delete '#{rate_plan.name}'? This permanently removes the rate plan.",
-                      turbo_confirm_title: "Delete rate plan",
-                      turbo_confirm_color: "red"
-                    }) do %>
-                Delete
-              <% end %>
-            <% end %>
-          </div>
-        <% end %>
-
-        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
-          Cancel
-        <% end %>
-        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
-              data: { turbo_submits_with: "Saving…" }) do %>
-          <%= submit_label %>
-        <% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+                disabled: @selected_room_type.blank?, data: { turbo_submits_with: "Saving…" }) do %>
+            <%= submit_label %>
+          <% end %>
+        </div>
       <% end %>
+    <% end %>
+
+    <%= render PanelsUI::AlertDialog.new(
+          id: "rate-plan-editor-discard-alert",
+          title: "Discard your changes?",
+          description: "Your unsaved changes will be lost when you switch rooms or close this sheet.",
+          tone: :warning) do |alert| %>
+      <% alert.with_icon { app_icon "triangle-alert", class: "size-5", aria: { hidden: true } } %>
+      <% alert.with_cancel(label: "Keep editing", data: { action: "rate-plan-editor#keepEditing" }) %>
+      <% alert.with_action(label: "Discard changes", data: { action: "rate-plan-editor#discardChanges" }) %>
     <% end %>
   </div>
 <% end %>

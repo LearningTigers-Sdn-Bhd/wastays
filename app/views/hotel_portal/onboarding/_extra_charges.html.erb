@@ -1,0 +1,98 @@
+<%# The shell already heads the page with this section's name and what it is
+    for, so the body opens straight into the work. A second heading saying the
+    same thing is what DESIGN.md §7 calls a duplicated heading. %>
+<section aria-label="Extra charges">
+  <% if presenter.read_only? %>
+    <% if @extra_charges.any? %>
+      <%= render PanelsUI::Table.new(caption: "Extra charges", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Code</th>
+            <th scope="col">Pricing</th>
+            <th scope="col">Status</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @extra_charges.each do |charge| %>
+            <tr>
+              <td class="font-medium"><%= charge.name %></td>
+              <td class="text-muted-foreground"><%= charge.code %></td>
+              <td class="tabular-nums"><%= charge.pricing_label %></td>
+              <td class="text-muted-foreground"><%= charge.active? ? "Offered" : "Not offered" %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No extra charges were added.</p>
+    <% end %>
+
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "extra_charges"),
+                  method: :patch, id: "onboarding-extra-charges-form" do %>
+      <%# Rows the property has not saved yet are suggestions drawn from its
+          standard revenue codes. Removing one here means it is never created —
+          nothing is written until this form is saved. %>
+      <% if @extra_charge_entries.any? && @extra_charge_entries.none? { |entry| entry["id"].present? } %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "These are suggestions, not saved yet") do |alert| %>
+          <% alert.with_description do %>
+            We have started you off with the charges most properties sell. Edit what you need,
+            remove what you do not, and add your own. Nothing is created until you save.
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%# Four fields fit the page, so this is a plain record table rather than a
+          spreadsheet region: nothing has to scroll sideways, no column needs
+          pinning, and the rows stack into readable editors on a phone. %>
+      <div class="mt-4">
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Extra charges",
+              add_label: "Add extra charge",
+              empty: "No extra charges yet",
+              empty_description: "If this property sells nothing beyond the room, leave this empty and continue.",
+              empty_icon: "concierge-bell") do |table| %>
+          <% table.with_column(label: "Name", required: true, class: "w-[34%]") %>
+          <% table.with_column(label: "Price (#{current_hotel.default_currency.presence || 'MYR'})",
+                               class: "w-[15%]",
+                               hint: "Leave it empty when staff decide the amount each time they charge for it.") %>
+          <% table.with_column(label: "Charged", class: "w-[21%]") do %>
+            <h3 class="text-sm font-semibold text-foreground">How often the charge repeats</h3>
+            <dl class="mt-2 space-y-1.5 text-left text-xs text-muted-foreground">
+              <% [ [ "Per item", "Once for each one sold." ],
+                   [ "Per stay", "Once for the whole booking, however long it runs." ],
+                   [ "Per night", "Once for every night of the stay." ],
+                   [ "Per room", "Once for each room on the booking." ],
+                   [ "Per room night", "For each room, every night — two rooms for three nights posts six times." ],
+                   [ "Per person", "Once for each guest on the booking." ],
+                   [ "Per person night", "For each guest, every night." ] ].each do |unit, meaning| %>
+                <div>
+                  <dt class="inline font-medium text-foreground"><%= unit %>.</dt>
+                  <dd class="inline"><%= meaning %></dd>
+                </div>
+              <% end %>
+            </dl>
+          <% end %>
+          <% table.with_column(label: "Taxes", class: "w-[30%]") %>
+
+          <% @extra_charge_entries.each_with_index do |entry, index| %>
+            <% table.with_row(
+                 remove_label: "Remove #{entry['name'].presence || 'this extra charge'}",
+                 persisted: entry["id"].present?,
+                 key: entry["client_key"]) do %>
+              <%= render "extra_charge_row", entry: entry, index: index, tax_rule_choices: @tax_rule_choices,
+                                             percentage_charges: @percentage_extra_charges %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this extra charge") do %>
+            <%= render "extra_charge_row", entry: {}, index: "NEW_RECORD", tax_rule_choices: @tax_rule_choices,
+                                           percentage_charges: @percentage_extra_charges %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

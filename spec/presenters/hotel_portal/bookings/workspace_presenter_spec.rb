@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
   subject(:presenter) { described_class.new(booking) }
 
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:booking) do
     create(
       :booking,

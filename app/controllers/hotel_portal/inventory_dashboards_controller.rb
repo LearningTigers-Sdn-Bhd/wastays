@@ -3,6 +3,7 @@
 class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
   INVENTORY_TABS = %w[calendar advanced channels].freeze
   INVENTORY_SUBTABS = %w[pricing overrides derived_settings availability_rules].freeze
+  SELECTION_MODES = %w[rates availability channel_rates channel_availability].freeze
 
   def index
     authorize current_hotel, :update?, policy_class: HotelPolicy
@@ -66,6 +67,38 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
                                 .order("booking_rooms.room_number ASC, bookings.guest_name ASC")
 
     @grouped_booking_rooms = @booking_rooms.group_by(&:room_type).sort_by { |room_type, _| room_type.id }
+
+    render layout: false
+  end
+
+  # Serves the cell editor into the shared sheet frame. The grid used to carry
+  # every editable value on each cell as data attributes and let JavaScript
+  # assemble the form; here the clicked cell only identifies itself and the
+  # server resolves its current values. Prefill is read in the hotel's base
+  # currency because that is the currency the form saves in — reading it in the
+  # display currency prefilled a converted figure that would then be stored as
+  # a base-currency price.
+  def edit_selection
+    authorize current_hotel, :update?, policy_class: HotelPolicy
+
+    @mode = params[:mode].presence_in(SELECTION_MODES) || "rates"
+    @date = parsed_selection_date
+    @hotel_base_currency = current_hotel.default_currency || "MYR"
+    @room_type = current_hotel.room_types.find_by(id: params[:room_type_id])
+
+    @calendar = HotelPortal::InventoryCalendarPresenter.new(
+      hotel: current_hotel,
+      start_date: @date,
+      end_date: @date,
+      display_currency: @hotel_base_currency,
+      room_type_id: params[:room_type_id]
+    )
+
+    @selected_rate_plan_id = params[:rate_plan_id].presence || default_selection_rate_plan_id
+    @selected_rate_plan_ids = [ @selected_rate_plan_id ].compact
+    @row = selected_calendar_row
+    @cell = @row ? @calendar.cell_for(@row, @date) : {}
+    @stale_selection = @row.blank?
 
     render layout: false
   end
@@ -143,7 +176,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
         :closed_to_arrival, :closed_to_departure, :stop_sell, :mode,
         :base_occupancy, :extra_pax_charge, :single_supplement,
         :channel_id, :channel_rate_plan_id,
-        room_type_ids: [], rate_plan_ids: [], modified_fields: []
+        room_type_ids: [], rate_plan_ids: [], modified_fields: [], occupancy_prices: {}
       ).to_h.symbolize_keys
     end
 
@@ -374,6 +407,38 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
   private
 
+  def parsed_selection_date
+    params[:date].presence&.to_date || Date.current
+  rescue Date::Error, ArgumentError
+    Date.current
+  end
+
+  # The clicked cell names itself with the same identifiers the grid renders, so
+  # the row it belongs to can be found again rather than reconstructed.
+  def selected_calendar_row
+    room_type_id = params[:room_type_id].to_i
+    rate_plan_id = @selected_rate_plan_id.to_s
+
+    @calendar.rows.find do |row|
+      next false unless row.room_type_id == room_type_id
+
+      case @mode
+      when "availability" then row.inventory_row?
+      when "channel_availability"
+        row.channel_availability_row? && row.channel["id"].to_s == params[:channel_id].to_s
+      when "channel_rates"
+        row.channel_rate_row? && row.channel_rate_plan_id.to_s == params[:channel_rate_plan_id].to_s
+      else row.rate_row? && row.rate_plan_id.to_s == rate_plan_id
+      end
+    end
+  end
+
+  def default_selection_rate_plan_id
+    return unless @mode == "rates"
+
+    @calendar.rows.find(&:rate_row?)&.rate_plan_id
+  end
+
   def build_calendar
     presenter = HotelPortal::InventoryCalendarPresenter.new(
       hotel: current_hotel,
@@ -449,8 +514,10 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       :channel_rate_plan_id,
       room_type_ids: [],
       rate_plan_ids: [],
+      modified_fields: [],
       view_currencies: [],
-      available_room_numbers: []
+      available_room_numbers: [],
+      occupancy_prices: {}
     )
   end
 
@@ -541,10 +608,17 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @channels = adapter.connected_channels(force_refresh: force)
       @derived_settings_by_channel_id = current_hotel.channel_derived_settings.index_by(&:channel_id)
       @availability_rules = current_hotel.channel_availability_rules.order(created_at: :desc)
+      # Walk-in and corporate plans are internal by design. Reporting them as
+      # unsupported would leave a warning the hotel can never clear.
+      @channex_plan_capabilities = current_hotel.rate_plans.active
+        .where(kind: RatePlan::DISTRIBUTABLE_KINDS)
+        .includes(:rate_plan_age_bands, room_type_rate_plans: [ :room_type, :occupancy_prices ])
+        .index_with(&:channex_capability)
     else
       @channels = []
       @derived_settings_by_channel_id = {}
       @availability_rules = []
+      @channex_plan_capabilities = {}
     end
   end
 end

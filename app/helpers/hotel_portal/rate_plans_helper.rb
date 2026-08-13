@@ -2,45 +2,137 @@
 
 module HotelPortal
   module RatePlansHelper
-    PER_ROOM = { label: "Per room — extra guest charges", value: "per_room" }.freeze
-    PER_PERSON = { label: "Per person — pax rate plus single supplement", value: "per_person" }.freeze
+    RoomSelectionScope = Struct.new(:room_type_id)
+    OnboardingFieldScope = Struct.new(:rate_mode, :derive_mode, :adjustment_mode, :status, :room_type_id)
 
-    # Pax-pricing-only hotels sell exclusively per person; hotels without the
-    # admin-granted allowance cannot offer it at all. RatePlan enforces both,
-    # so the menu only ever offers what would actually validate.
-    def sell_mode_choices(hotel = current_hotel)
-      return [ PER_PERSON ] if hotel.pax_pricing_only?
-      return [ PER_ROOM, PER_PERSON ] if hotel.allow_pax_pricing?
-
-      [ PER_ROOM ]
+    def rate_plan_rate_mode_options(pricing)
+      {
+        "manual" => {
+          label: "Set prices directly",
+          hint: pricing.per_person? ? "Type the price for each number of adults." : "Type one nightly price for the room."
+        },
+        "derived" => {
+          label: "Adjust Standard Rate",
+          hint: "Start from this category's standard rate."
+        },
+        "auto" => {
+          label: "Generate from a starting rate",
+          hint: "Start from a rate you set, then step per adult."
+        }
+      }.slice(*pricing.available_modes)
     end
 
-    # Per-room-type pricing submits as a plain hash under
-    # rate_plan[room_type_pricing][<room_type_id>] rather than a nested
-    # association, so there is no builder to hand PanelsUI. fields_for with a
-    # string scope over this stand-in produces exactly those names.
-    RoomTypePricingScope = Struct.new(:pricing_mode, :pricing_value)
-
-    def room_type_pricing_choices
+    def rate_plan_derive_choices
       [
-        { label: "I'll set the price myself", value: "fixed" },
-        { label: "% of standard rate", value: "multiplier" },
-        { label: "Standard rate ± an amount", value: "offset" }
+        { label: "Adjust standard rate by %", value: "multiplier" },
+        { label: "Adjust standard rate by amount", value: "offset" }
       ]
     end
 
-    # Backs the age-band "preview using" selector. It exists only to pick which
-    # room type the example prices are calculated against, so it is scoped
-    # outside :rate_plan and never reaches strong params — but PanelsUI selects
-    # all require a real form builder, hence the stand-in object.
-    PreviewScope = Struct.new(:room_type_id)
+    def rate_plan_step_unit_choices(currency)
+      [ { label: currency, value: "amount" }, { label: "%", value: "percent" } ]
+    end
 
-    # "Walk-in"/"Corporate"/"OTA" say what the row is; "virtual tier" is an
-    # internal notion staff have no reason to learn.
-    TIER_LABELS = { "walk_in" => "Walk-in", "corporate" => "Corporate", "ota" => "OTA" }.freeze
+    def rate_plan_money(amount, currency)
+      "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
+    end
 
-    def rate_tier_label(rate_plan)
-      TIER_LABELS[rate_plan.kind]
+    # A per-room assignment carries one figure whichever mode it is in, so
+    # presence of pricing_value is the whole test. A per-guest one is only
+    # complete when it prices every adult count the category can hold.
+    def room_pricing_complete?(assignment, room_type, per_person: current_hotel.sells_per_person?)
+      return room_type.base_price.present? if assignment&.rate_plan&.standard_rate? && !per_person
+      return false unless assignment
+      return assignment.pricing_value.present? unless per_person
+
+      assignment.occupancy_prices.map(&:adults).sort == (1..room_type.max_adults).to_a
+    end
+
+    def room_pricing_summary(assignment, room_type, currency, per_person: current_hotel.sells_per_person?)
+      return money_summary(room_type.base_price, currency) if assignment&.rate_plan&.standard_rate? && !per_person
+      return "Not priced" unless assignment
+
+      if per_person
+        rungs = assignment.occupancy_prices.sort_by(&:adults)
+        return "Not priced" if rungs.empty?
+
+        "#{currency} #{rungs.map { |rung| "#{rung.adults}p #{number_with_precision(rung.price, precision: 0, delimiter: ',')}" }.join(' · ')}"
+      else
+        return "Not priced" if assignment.pricing_value.blank?
+        return "Adjusts Standard Rate" if assignment.derives_price?
+
+        money_summary(assignment.pricing_value, currency)
+      end
+    end
+
+    def money_summary(amount, currency)
+      "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
+    end
+
+    # Onboarding submits a rate plan's assignments as either an array or the
+    # index-keyed hash a cloned row produces; both mean the same list.
+    def plan_entry_assignments(entry)
+      value = entry["assignments"]
+      value.respond_to?(:values) ? value.values : Array(value)
+    end
+
+    # Onboarding folds rate mode and derive mode into one choice. Two selects for
+    # what is really one decision — how this plan gets its prices — is the kind of
+    # split that made the old sheet hard to read.
+    def rate_plan_pricing_basis_choices
+      [
+        { label: "Set prices directly", value: "manual" },
+        { label: "Standard Rate ± %", value: "derived_multiplier" },
+        { label: "Standard Rate ± amount", value: "derived_offset" }
+      ]
+    end
+
+    def rate_plan_pricing_basis(entry)
+      return "manual" unless entry["rate_mode"].to_s == "derived"
+
+      entry["derive_mode"].to_s == "offset" ? "derived_offset" : "derived_multiplier"
+    end
+
+    # An empty money cell and a zero read the same to the save path, so the table
+    # shows the zero. A priced room next to a blank one otherwise looks like a
+    # field that has not loaded rather than one nobody has charged for yet.
+    def rate_amount_value(value) = value.to_s.presence || "0.0"
+
+    def rate_plan_derived?(entry)
+      rate_plan_pricing_basis(entry) != "manual"
+    end
+
+    # A band column is headed by its label, falling back to the ages it covers
+    # so an unnamed band is still identifiable while it is being typed.
+    def child_band_column_label(band, index)
+      band["label"].presence || begin
+        ages = [ band["min_age"], band["max_age"] ].map(&:presence)
+        ages.all? ? "Ages #{ages.first}–#{ages.last}" : "Band #{index + 1}"
+      end
+    end
+
+    def child_band_column_header(band, index, read_only: false)
+      label = child_band_column_label(band, index)
+      mode = band["pricing_mode"].presence || "amount"
+
+      tag.div(class: "flex min-w-24 items-center gap-2") do
+        safe_join([
+          tag.span(label),
+          render(PanelsUI::Switch.new(
+            name: "child_bands[#{index}][pricing_mode]",
+            value: "multiplier",
+            unchecked_value: "amount",
+            checked: mode == "multiplier",
+            disabled: read_only,
+            label: "Use percentage of the one-adult price for #{label}",
+            label_hidden: true,
+            variant: :icon,
+            size: :md,
+            off_icon: "dollar-sign",
+            on_icon: "percent"
+          ))
+        ])
+      end
     end
 
     def age_band_pricing_choices

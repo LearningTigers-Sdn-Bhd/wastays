@@ -12,7 +12,7 @@ module PanelsUI
 
       def initialize(tabs_id:, name:, label:, icon: nil, count: nil,
                      id: nil, panel_id: nil, href: nil, data: {}, aria: {},
-                     active: false, variant: :line, class: nil)
+                     active: false, disabled: false, variant: :line, class: nil)
         @tabs_id = tabs_id
         @name = name.to_s
         @label = label
@@ -24,6 +24,7 @@ module PanelsUI
         @data = data
         @aria = aria
         @active = active
+        @disabled = disabled
         @variant = variant
         @class = binding.local_variable_get(:class)
       end
@@ -33,12 +34,27 @@ module PanelsUI
       end
 
       def label = @label
+      def disabled? = @disabled
 
       def call
+        return unavailable if disabled?
+
         href.present? ? navigation_link : panel_trigger
       end
 
       private
+
+      # A disabled tab is inert in both modes: not a link, not a tablist stop.
+      # It stays in the DOM so the step remains visible and its state announced.
+      def unavailable
+        tag.span(
+          content,
+          id: @id,
+          class: tab_classes,
+          aria: { disabled: "true" }.merge(@aria),
+          data: { slot: "tabs-trigger", tab_name: @name, tab_label: @label }.merge(@data)
+        )
+      end
 
       def panel_trigger
         tag.button(
@@ -157,8 +173,11 @@ module PanelsUI
     def validate_and_configure!
       validate_basics!
 
-      href_states = tabs.map { |tab| tab.href.present? }.uniq
+      # Disabled tabs render inert in either mode, so they carry no href and must
+      # not decide (or contradict) the navigation/panel choice.
+      href_states = enabled_tabs.map { |tab| tab.href.present? }.uniq
       raise ArgumentError, "PanelsUI::Tabs cannot mix tabs with and without href" if href_states.size > 1
+      raise ArgumentError, "PanelsUI::Tabs requires at least one enabled tab" if href_states.empty?
 
       @navigation = href_states.first
       @navigation ? validate_navigation! : validate_panels!
@@ -203,10 +222,10 @@ module PanelsUI
     def configure_active_state!
       @active_name = if navigation?
         @active
-      elsif tabs.any? { |tab| tab.name == @active }
+      elsif enabled_tabs.any? { |tab| tab.name == @active }
         @active
       else
-        tabs.first.name
+        enabled_tabs.first.name
       end
 
       tabs.each { |tab| tab.active = tab.name == @active_name }
@@ -222,6 +241,8 @@ module PanelsUI
 
       @url_param = @url[:param].to_s
     end
+
+    def enabled_tabs = tabs.reject(&:disabled?)
 
     def validate_unique!(values, label)
       return if values.compact.uniq.size == values.compact.size

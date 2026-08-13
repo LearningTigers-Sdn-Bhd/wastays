@@ -4,9 +4,9 @@ module Admin::NavigationHelper
 
     dashboard_active = controller_name == "dashboard" && action_name != "analytics"
     analytics_active = controller_name == "dashboard" && action_name == "analytics"
-    hotels_active = controller_name == "hotels"
-    bookings_active = controller_name == "bookings"
     onboarding_active = controller_path == "admin/hotels/onboarding" || controller_path == "admin/hotels/onboarding_sessions"
+    hotels_active = controller_name == "hotels" || onboarding_active
+    bookings_active = controller_name == "bookings"
     salespersons_active = controller_name == "salespersons"
     margin_rules_active = controller_name == "margin_rules"
     setup_fee_rules_active = controller_name == "setup_fee_rules"
@@ -35,8 +35,7 @@ module Admin::NavigationHelper
       PanelsUI::Navigation::Section.new(
         label: "Operations",
         items: [
-          PanelsUI::Navigation::Item.new(label: "Hotels", path: admin_hotels_path, search_text: "Hotels Manage Hotels", active: hotels_active && !onboarding_active, icon: "building-2"),
-          PanelsUI::Navigation::Item.new(label: "Onboarding", path: onboarding_admin_hotels_path, search_text: "Onboarding Training Setup", active: onboarding_active, icon: "user-plus"),
+          PanelsUI::Navigation::Item.new(label: "Hotels", path: admin_hotels_path, search_text: "Hotels Manage Hotels Onboarding Training Setup", active: hotels_active, icon: "building-2"),
           PanelsUI::Navigation::Item.new(label: "Bookings", path: admin_bookings_path, search_text: "Bookings Platform Bookings", active: bookings_active, icon: "calendar-days"),
           PanelsUI::Navigation::Item.new(label: "Salespersons", path: admin_salespersons_path, search_text: "Salespersons Hotel Assignment", active: salespersons_active, icon: "users")
         ]

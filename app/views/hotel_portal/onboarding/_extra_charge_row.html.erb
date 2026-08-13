@@ -1,0 +1,70 @@
+<%# The record table owns the row and its remove control; this partial supplies
+    only the field cells. Name and code live on the transaction code, so the
+    object is built as the pair the save path writes.
+
+    Four fields, not nine: a property being set up is naming what it sells, not
+    keeping the books. The accounting code is derived from the name, and the
+    rest — reporting category, whether staff may amend the amount, whether the
+    charge is offered — either has a sound default or is what removing the row
+    already means. All of it stays editable under Settings afterwards.
+
+    Labels are plain and are not hidden here. At table widths the record table
+    hides them itself, because the column header does the naming; below 48rem
+    the header row is gone, each row becomes a stacked editor, and these labels
+    come back to carry it. %>
+<% object = HotelExtraCharge.new(transaction_code: TransactionCode.new) %>
+<% object.assign_attributes(
+     name: entry["name"],
+     rate_value: entry["rate_value"],
+     charging_unit: entry["charging_unit"].presence || "per_item"
+   ) %>
+<% percentage_charge = percentage_charges[entry["id"].to_s] %>
+<%= fields_for "extra_charge_entries[#{index}]", object do |row_form| %>
+  <td>
+    <%= row_form.hidden_field :id, value: entry["id"] %>
+    <%= hidden_field_tag "extra_charge_entries[#{index}][transaction_code_id]", entry["transaction_code_id"] %>
+    <%# Carried, not shown. A code the property already has has to stay with its
+        row so the duplicate check weighs a new row against it. %>
+    <%= hidden_field_tag "extra_charge_entries[#{index}][code]", entry["code"] %>
+    <%= hidden_field_tag "extra_charge_entries[#{index}][_destroy]", "false", data: { record_table_destroy: true } %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :name, label: "Name",
+                                       size: :sm, required: true) do |field| %>
+      <% field.with_input(placeholder: "Airport transfer") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%# Percentage pricing is set up under Settings and has no square to type it
+        in here, so such a charge reads its rate out rather than offering an
+        amount field that would misstate it. %>
+    <% if percentage_charge %>
+      <span class="text-sm text-muted-foreground"><%= percentage_charge.pricing_label %></span>
+    <% else %>
+      <%= render PanelsUI::FormField.new(form: row_form, attribute: :rate_value, label: "Price",
+                                         size: :sm) do |field| %>
+        <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal",
+                            placeholder: "Staff enters it") %>
+      <% end %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :charging_unit, label: "Charged",
+                                       size: :sm) do |field| %>
+      <% field.with_select_menu(
+           HotelExtraCharge::CHARGING_UNITS.map { |unit| { label: unit.humanize, value: unit } },
+           selected: entry["charging_unit"].presence || "per_item") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :tax_rule_keys, label: "Taxes",
+                                       size: :sm) do |field| %>
+      <% field.with_multi_select(
+           tax_rule_choices,
+           selected: Array(entry["tax_rule_keys"]),
+           prompt: "No taxes",
+           max_visible_items: 2) %>
+    <% end %>
+  </td>
+<% end %>

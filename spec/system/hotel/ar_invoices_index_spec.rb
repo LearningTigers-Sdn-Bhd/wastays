@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel AR invoices index", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:user) { create(:user, account: account, email: "ar-manager@example.com") }
   let(:role) { create(:role, account: account) }
   let(:relationship) { create(:hotel_corporate_account, :direct_bill, hotel: hotel) }

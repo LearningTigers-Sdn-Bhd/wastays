@@ -112,6 +112,10 @@ export default class extends Controller {
     this.setChoices(roomEl, [{ label: "Checking rooms…", value: "" }])
 
     const params = new URLSearchParams({ room_type_id: roomTypeId, check_in: this.checkInTarget.value, check_out: this.checkOutTarget.value })
+    // Rate options are priced for the party staying — on a per-guest property
+    // an option quoted for the wrong headcount would not match what the
+    // booking is then charged.
+    this.appendOccupancy(params, row)
     try {
       const [availabilityResponse, ratesResponse] = await Promise.all([
         fetch(`${this.availabilityUrlValue}?${params}`), fetch(`${this.rateOptionsUrlValue}?${params}`)
@@ -346,6 +350,15 @@ export default class extends Controller {
     if (this.hasCorporateTarget) this.corporateTarget.classList.toggle("hidden", event.target.value !== "corporate")
   }
 
+  // Party size for a row, if the row has the fields. Left off entirely when
+  // blank so the server keeps its own default rather than reading "".
+  appendOccupancy(params, row) {
+    const adults = this.readValue(this.roleEl(row, "adults"))
+    const children = this.readValue(this.roleEl(row, "children"))
+    if (adults) params.set("adults", adults)
+    if (children) params.set("children", children)
+  }
+
   // The [data-role] wrapper for a row cell.
   roleEl(row, role) {
     return row.querySelector(`[data-role='${role}']`)
@@ -447,6 +460,8 @@ export default class extends Controller {
       check_in: this.checkInTarget.value,
       check_out: this.checkOutTarget.value
     })
+
+    this.appendOccupancy(params, row)
 
     const ratePlanId = this.readValue(this.roleEl(row, "rate-plan"))
     if (ratePlanId) params.set("rate_plan_id", ratePlanId)

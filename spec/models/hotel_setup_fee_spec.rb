@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Hotel, "#effective_setup_fee" do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
 
   it "returns the hotel override when one exists" do
     create(:setup_fee_rule, :global_default, amount: 500.0)

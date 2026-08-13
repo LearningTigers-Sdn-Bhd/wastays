@@ -16,6 +16,13 @@
     @apply flex h-11 items-center gap-2 px-3;
   }
 
+  /* The second row sits on the same surface as the bar and is separated from it
+     by nothing — the bar's own bottom border closes both rows. */
+  .panel-navbar__secondary {
+    @apply px-3;
+    border-top: 1px solid var(--sidebar-border);
+  }
+
   .panel-navbar__navigation-trigger {
     @apply size-8 shrink-0 items-center justify-center rounded-md transition-colors;
     color: var(--sidebar-muted-foreground);

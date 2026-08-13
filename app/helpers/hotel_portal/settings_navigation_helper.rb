@@ -122,14 +122,14 @@ module HotelPortal
         [
           hotel_permission_granted?("manage_hotel_profile") ? { key: "general", label: "General", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
           hotel_permission_granted?("manage_hotel_profile") && current_hotel.allow_boat_information? ? { key: "boat", label: "Boat Settings", path: hotel_boat_settings_path(current_hotel), icon: "ship", active: controller_name.in?(%w[settings boat_schedules]) && settings_active_page == "boat" } : nil,
-          hotel_permission_granted?("manage_hotel_profile") ? { key: "rates", label: "Rate Settings", path: hotel_rates_settings_path(current_hotel), icon: "badge-dollar-sign", active: controller_name == "settings" && settings_active_page == "rates" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "notifications", label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" } : nil,
           { key: "plan", label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
         ].compact
       when :property
         [
           { key: "hotel-details", label: "Hotel Details", path: edit_hotel_profile_path(current_hotel), icon: "building-2", active: controller_name == "profiles" },
-          { key: "room-categories", label: "Room Categories", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name == "room_types" },
+          { key: "room-groups", label: "Room Groups", path: hotel_room_groups_path(current_hotel), icon: "layout-grid", active: controller_name == "room_groups" },
+          { key: "room-inventory", label: "Room Inventory", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name.in?(%w[room_types room_group_assignments rate_plan_attachments rate_plans rate_plan_room_pricings]) },
           { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" }
         ]
       when :commercial
@@ -144,6 +144,7 @@ module HotelPortal
         [
           hotel_permission_granted?("manage_account") ? { key: "banking", label: "Banking Details", path: hotel_banking_details_settings_path(current_hotel), icon: "landmark", active: controller_name == "settings" && settings_active_page == "banking" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "transaction-code-reference", label: "Transaction Code Reference", path: hotel_transaction_code_references_path(current_hotel), icon: "list", active: controller_name == "transaction_code_references" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "ota-financials", label: "OTA Financials", path: hotel_ota_financial_settings_path(current_hotel), icon: "waypoints", active: controller_name == "ota_financial_settings" } : nil,
           hotel_permission_granted?("manage_general_ledger_maps") ? { key: "general-ledger-mappings", label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), icon: "git-merge", active: controller_name == "general_ledger_maps" } : nil
         ].compact
       when :guest_content

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :business_day, type: :request do
   let(:hotel) { create(:hotel) }
-  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: [ "101" ]) }
+  let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", quantity: 1, room_numbers: [ "101" ]) }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
 

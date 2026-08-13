@@ -47,6 +47,16 @@ RSpec.describe ChannelManagers::IngestGroupBookingService do
     expect(result.bookings.map(&:group_position)).to eq([ 1, 2 ])
     expect(result.bookings.map { |booking| booking.booking_rooms.sole.room_type }).to all(eq(room_type))
     expect(result.bookings.map(&:total_amount)).to all(eq(200.0))
+    result.bookings.each do |booking|
+      expect(booking.primary_guest).to be_present
+      expect(booking.booking_billing_parties.guests.active.sole.booking_guest).to eq(booking.booking_guests.sole)
+      expect(booking.booking_folio).to have_attributes(
+        is_primary: true,
+        payer_type: "guest",
+        booking_billing_party: booking.booking_billing_parties.guests.active.sole
+      )
+      expect(booking.booking_folio.folio_forecasted_charges).not_to be_empty
+    end
     expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
   end
 

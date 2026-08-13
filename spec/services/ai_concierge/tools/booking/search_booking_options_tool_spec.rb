@@ -207,7 +207,7 @@ RSpec.describe AiConcierge::Tools::Booking::SearchBookingOptionsTool do
   end
 
   describe "pax pricing accuracy" do
-    let(:pax_hotel) { create(:hotel, allow_pax_pricing: true, pax_pricing_only: true) }
+    let(:pax_hotel) { create(:hotel) }
     let(:pax_room_type) { create(:room_type, hotel: pax_hotel, max_adults: 4, max_children: 2, base_price: 500.0) }
     let(:pax_rate_plan) do
       create(:rate_plan, :age_banded, hotel: pax_hotel, name: "Family Per-Pax", room_type: pax_room_type, base_occupancy: 2, single_supplement: 30)
@@ -239,9 +239,9 @@ RSpec.describe AiConcierge::Tools::Booking::SearchBookingOptionsTool do
     end
 
     it "applies extra_pax_charge for a per-room plan, matching the real quote engine" do
-      hotel = create(:hotel, allow_pax_pricing: false)
+      hotel = create(:hotel)
       room_type = create(:room_type, hotel: hotel, max_adults: 4, max_children: 0, base_price: 150.0)
-      rate_plan = create(:rate_plan, hotel: hotel, name: "Standard", sell_mode: "per_room", room_type: room_type, base_occupancy: 2, extra_pax_charge: 25)
+      rate_plan = create(:rate_plan, hotel: hotel, name: "Standard", room_type: room_type, base_occupancy: 2, extra_pax_charge: 25)
       create(:room_inventory, room_type: room_type, date: Date.current, quantity: 5, status: "open")
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 150.0)
 

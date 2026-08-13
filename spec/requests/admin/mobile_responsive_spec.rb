@@ -17,11 +17,18 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
     expect(response.body).to include('id="admin-dashboard-mobile-bookings"')
   end
 
-  it 'renders the hotels mobile list container' do
+  # The hotels index no longer ships a separate mobile list: the registry is one
+  # responsive table that folds columns away and surfaces the city inline on
+  # small screens. Assert that folding instead of the retired container id.
+  it 'renders the hotels registry with columns that fold away on mobile' do
+    create(:hotel, account: account)
+
     get admin_hotels_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include('id="admin-hotels-mobile-list"')
+    expect(response.body).to include('id="hotels_list"')
+    expect(response.body).to include('hidden sm:table-cell')
+    expect(response.body).to include('sm:hidden')
   end
 
   it 'uses consistent mobile page heading sizes across admin index pages' do

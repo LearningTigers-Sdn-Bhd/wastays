@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe "Public::Hotels", type: :request do
-  let(:hotel) { create(:hotel, status: 'approved') }
+  let(:hotel) { create(:hotel, status: 'live') }
   let(:easy_plan) { create(:plan, slug: "easy", name: "Easy") }
 
   describe "GET /index" do
@@ -11,7 +11,7 @@ RSpec.describe "Public::Hotels", type: :request do
     end
 
     it "links see options with today's default dates" do
-      hotel = create(:hotel, status: "approved", name: "Sunset Inn", city: "Kota Kinabalu", country: "Malaysia")
+      hotel = create(:hotel, status: "live", name: "Sunset Inn", city: "Kota Kinabalu", country: "Malaysia")
       create(:room_type, hotel: hotel, max_adults: 2)
 
       availability_service = instance_double(BookingEngine::AvailabilityService)
@@ -31,8 +31,8 @@ RSpec.describe "Public::Hotels", type: :request do
     end
 
     it "does not render easy plan hotels in public listing" do
-      easy_hotel = create(:hotel, status: "approved", name: "Easy Hidden", city: "Kota Kinabalu", country: "Malaysia", plan: easy_plan)
-      visible_hotel = create(:hotel, status: "approved", name: "Visible Stay", city: "Kota Kinabalu", country: "Malaysia")
+      easy_hotel = create(:hotel, status: "live", name: "Easy Hidden", city: "Kota Kinabalu", country: "Malaysia", plan: easy_plan)
+      visible_hotel = create(:hotel, status: "live", name: "Visible Stay", city: "Kota Kinabalu", country: "Malaysia")
       create(:room_type, hotel: easy_hotel, max_adults: 2)
       create(:room_type, hotel: visible_hotel, max_adults: 2)
 

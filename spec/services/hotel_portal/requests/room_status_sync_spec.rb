@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe HotelPortal::Requests::RoomStatusSync do
   let(:hotel) { create(:hotel) }
-  let(:room_type) { create(:room_type, hotel: hotel, room_numbers: [ "101", "102" ]) }
+  let(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ]) }
   let(:booking) { create(:booking, hotel: hotel) }
 
   def sync(request, kind:, status:)

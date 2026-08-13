@@ -1,0 +1,8 @@
+<section aria-labelledby="training-heading" class="space-y-4">
+  <div>
+    <h2 id="training-heading" class="text-base font-semibold">Training</h2>
+    <p class="mt-1 text-sm text-muted-foreground">Training is managed separately and does not block launch.</p>
+  </div>
+  <%= render "admin/hotels/onboarding_session_form", session: OnboardingSession.new %>
+  <%= render "admin/hotels/onboarding_sessions_list", sessions: @sessions, hotel: @hotel %>
+</section>

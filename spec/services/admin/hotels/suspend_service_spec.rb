@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe Admin::Hotels::SuspendService, type: :service do
   let(:account) { create(:account, status: "active") }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
 
   subject { described_class.new(hotel: hotel) }
 

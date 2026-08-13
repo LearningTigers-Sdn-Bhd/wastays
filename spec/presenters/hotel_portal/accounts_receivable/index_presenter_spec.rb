@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
   subject(:presenter) { described_class.new(hotel: hotel, params: params) }
 
-  let(:hotel) { create(:hotel, status: "approved", default_currency: "MYR") }
+  let(:hotel) { create(:hotel, status: "live", default_currency: "MYR") }
   let(:params) { {} }
   let(:business_date) { hotel.current_business_date }
 
@@ -68,7 +68,7 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
     end
 
     it "ignores invalid account, status, date, and balance filters without escaping hotel scope" do
-      other_hotel = create(:hotel, status: "approved")
+      other_hotel = create(:hotel, status: "live")
       create_invoice(hotel: other_hotel, confirmation_token: "BK-HIDDEN", folio_number: 999)
 
       invalid = presenter_for(

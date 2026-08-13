@@ -31,14 +31,14 @@
               <% end %>
               <% unless featured %>
                 <% menu.with_item(
-                     href: hotel_profile_photo_feature_path(hotel, photo.id),
+                     href: hotel_profile_photo_feature_path(hotel, photo.id, return_to: local_assigns[:return_to]),
                      method: :patch) do %>
                   <%= app_icon "star", class: "size-4", aria: { hidden: "true" } %>
                   <span>Set as featured</span>
                 <% end %>
               <% end %>
               <% menu.with_item(
-                   href: hotel_profile_photo_path(hotel, photo.id),
+                   href: hotel_profile_photo_path(hotel, photo.id, return_to: local_assigns[:return_to]),
                    method: :delete,
                    variant: :danger,
                    data: {

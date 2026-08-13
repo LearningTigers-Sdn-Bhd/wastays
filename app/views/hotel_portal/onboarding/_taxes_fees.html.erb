@@ -1,0 +1,143 @@
+<%# The shell heads the step. The taxes law requires and the property's own are
+    peer groups within it, so neither heading labels the page as a whole.
+
+    Side by side on a desktop, in thirds: the taxes law requires are two toggles
+    and a figure and take a third, while the property table is an editable grid
+    and takes the rest. Below that they stack in the order they are read. %>
+<% if presenter.read_only? %>
+  <div class="grid gap-6 lg:grid-cols-3 lg:gap-x-8">
+    <section class="space-y-3 lg:col-span-1">
+      <div>
+        <h2 class="text-base font-semibold">Taxes required by law</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Turn on the ones this property charges. They apply to every room night. You add them to room revenue on the next step.</p>
+      </div>
+
+      <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <div class="rounded-md border border-border p-3">
+          <dt class="text-sm font-medium">Service Tax (SST)</dt>
+          <dd class="text-sm text-muted-foreground"><%= current_hotel.sst_enabled? ? "Charged at 8%" : "Not charged" %></dd>
+        </div>
+        <div class="rounded-md border border-border p-3">
+          <dt class="text-sm font-medium">Tourism Tax (TTx)</dt>
+          <dd class="text-sm text-muted-foreground">
+            <%= current_hotel.tourism_tax_enabled? ? "#{current_hotel.default_currency.presence || 'MYR'} #{number_with_precision(current_hotel.tourism_tax_amount, precision: 2)} per night" : "Not charged" %>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section aria-labelledby="onboarding-property-taxes-heading" class="space-y-3 lg:col-span-2">
+      <h2 id="onboarding-property-taxes-heading" class="text-base font-semibold">Property taxes and fees</h2>
+      <% if @tax_entries.any? %>
+        <%= render PanelsUI::Table.new(caption: "Property taxes and fees", header_style: :sentence,
+                                       wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Type</th>
+              <th scope="col">Amount</th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% @tax_entries.each do |entry| %>
+              <tr>
+                <td class="font-medium"><%= entry["name"] %></td>
+                <td class="text-muted-foreground"><%= entry["charge_type"] == "tax" ? "Tax" : "Fee" %></td>
+                <td class="tabular-nums"><%= entry["rate_type"] == "percentage" ? "#{entry['amount']}%" : "#{current_hotel.default_currency.presence || 'MYR'} #{entry['amount']}" %></td>
+              </tr>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <p class="text-sm text-muted-foreground">No property taxes or fees were added.</p>
+      <% end %>
+    </section>
+  </div>
+<% else %>
+  <% currency = current_hotel.default_currency.presence || "MYR" %>
+  <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "taxes_fees"), method: :patch, id: "onboarding-taxes-fees-form" do %>
+    <div class="grid gap-6 lg:grid-cols-3 lg:gap-x-8">
+      <section class="space-y-4 lg:col-span-1">
+        <div>
+          <h2 class="text-base font-semibold">Taxes required by law</h2>
+          <p class="mt-1 text-sm text-muted-foreground">Turn on the ones this property charges. They apply to every room night. You add them to room revenue on the next step.</p>
+        </div>
+
+        <%= fields_for :hotel, current_hotel do |hotel_form| %>
+          <div class="space-y-4">
+            <%# Plain switches, not cards. There are two of them under a heading
+                that already groups them, so the boxes drew a second grouping
+                around the first. %>
+            <%= render PanelsUI::Switch.new(
+                  form: hotel_form,
+                  attribute: :sst_enabled,
+                  label: "Service Tax (SST)",
+                  description: "8% on room revenue. The law sets this rate, so you cannot change it here.",
+                  checked: current_hotel.sst_enabled?) %>
+
+            <%= render PanelsUI::Switch.new(
+                  form: hotel_form,
+                  attribute: :tourism_tax_enabled,
+                  label: "Tourism Tax (TTx)",
+                  description: "A set amount per room, per night, charged to foreign guests only.",
+                  checked: current_hotel.tourism_tax_enabled?) %>
+
+            <%# The unit rides the field rather than its label: the currency mark
+                leads the figure and the period trails it, so the input reads as
+                the amount it holds. %>
+            <%= render PanelsUI::FormField.new(
+                  form: hotel_form,
+                  attribute: :tourism_tax_amount,
+                  label: "Tourism tax amount",
+                  hint: "Needed if you charge tourism tax.") do |field| %>
+              <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
+              <% field.with_addon(align: :inline_start) { currency } %>
+              <% field.with_addon(align: :inline_end) { "per night" } %>
+            <% end %>
+          </div>
+        <% end %>
+      </section>
+
+      <section aria-labelledby="onboarding-property-taxes-heading" class="space-y-3 lg:col-span-2">
+        <div class="space-y-1">
+          <h2 id="onboarding-property-taxes-heading" class="text-base font-semibold">Property taxes and fees</h2>
+          <p class="text-sm text-muted-foreground">Add anything else guests must pay on top of the taxes above. Extras guests choose to buy come later.</p>
+        </div>
+
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Property taxes and fees",
+              add_label: "Add tax or fee",
+              empty: "No property taxes or fees yet",
+              empty_description: "Most properties charge nothing beyond the taxes above.",
+              empty_icon: "receipt-text") do |table| %>
+          <%# The table holds two thirds of the row, so its columns take what they
+              need from what is there rather than being pinned to a width. %>
+          <% table.with_column(label: "Name", required: true) %>
+          <% table.with_column(label: "Type") %>
+          <% table.with_column(label: "Amount", required: true) %>
+          <% table.with_column(label: "Foreign guests only") %>
+
+          <% @tax_entries.each_with_index do |entry, index| %>
+            <% table.with_row(remove_label: "Remove #{entry['name'].presence || 'this tax or fee'}") do %>
+              <%= render "hotel_tax_row", entry: entry, index: index %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this tax or fee") do %>
+            <%= render "hotel_tax_row", entry: {}, index: "NEW_RECORD" %>
+          <% end %>
+        <% end %>
+      </section>
+    </div>
+
+    <div class="mt-6">
+      <%= render PanelsUI::Checkbox.new(
+            name: "confirm_taxes",
+            id: "confirm-taxes",
+            value: "1",
+            checked: presenter.current_entry.record.state == "complete",
+            label: "I confirm these are the taxes and fees this property charges",
+            description: "You can change them later in Settings. If you do, you will need to check room revenue again.") %>
+    </div>
+  <% end %>
+<% end %>

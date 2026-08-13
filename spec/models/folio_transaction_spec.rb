@@ -145,6 +145,35 @@ RSpec.describe FolioTransaction, type: :model do
     end
   end
 
+  describe "#ota_collected_credit?" do
+    let(:hotel) { create(:hotel) }
+    let(:booking) { create(:booking, hotel: hotel) }
+    let(:source) { create(:booking_source, kind: "ota") }
+    let(:party) do
+      create(:booking_billing_party, booking: booking, hotel: hotel, party_kind: "ota",
+        booking_source: source, booking_guest: nil, hotel_corporate_account: nil)
+    end
+    let(:folio) do
+      create(:booking_folio, :secondary, booking: booking, hotel: hotel, payer_type: "ota",
+        booking_billing_party: party)
+    end
+
+    it "classifies a canonical OTA payment" do
+      code = hotel.transaction_codes.find_by!(system_key: "ota_collected_payment")
+      transaction = create(:folio_transaction, booking_folio: folio, transaction_type: "payment",
+        category: "booking_payment", transaction_code: code, amount: 100)
+
+      expect(transaction).to be_ota_collected_credit
+    end
+
+    it "does not classify a generic booking payment with an OTA reference" do
+      transaction = create(:folio_transaction, transaction_type: "payment", category: "booking_payment",
+        amount: 100, metadata: { ota_reference: "ota-1" })
+
+      expect(transaction).not_to be_ota_collected_credit
+    end
+  end
+
   describe "GL code assignment" do
     let(:hotel) { create(:hotel) }
     let(:booking) { create(:booking, hotel: hotel) }

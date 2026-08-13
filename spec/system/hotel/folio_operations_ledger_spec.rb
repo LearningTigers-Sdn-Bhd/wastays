@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Folio Operations ledger", type: :system, js: true do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "hotel_staff", email: "folio-operations@example.com") }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let(:booking) { create(:booking, hotel: hotel) }
 

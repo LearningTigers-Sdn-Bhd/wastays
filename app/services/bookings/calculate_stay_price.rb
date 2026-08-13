@@ -2,13 +2,11 @@
 
 module Bookings
   class CalculateStayPrice
-    def initialize(room_type:, check_in:, check_out:, rate_plan: nil, corporate_rate: false, rate_tier: :standard, pax: nil, adults: nil, children: nil, child_ages: [])
+    def initialize(room_type:, check_in:, check_out:, rate_plan:, pax: nil, adults: nil, children: nil, child_ages: [])
       @room_type = room_type
       @check_in = check_in&.to_date
       @check_out = check_out&.to_date
       @rate_plan = rate_plan
-      @corporate_rate = corporate_rate
-      @rate_tier = rate_tier.to_sym
 
       @adults = (adults || pax || 2).to_i
       @children = (children || 0).to_i
@@ -17,68 +15,35 @@ module Bookings
       @child_ages = (ages.size == @children) ? ages : []
     end
 
+    # nil means "this stay has no price", not "this stay is free". The resolver
+    # returns no amount when a night is unsellable — an occupancy the plan's
+    # matrix does not cover, or a date with nothing to derive from — and
+    # `nil.to_d` is 0, so summing the nights directly quoted those stays at
+    # zero. Callers drop the option instead.
     def call
       return 0 if @room_type.nil? || @check_in.nil? || @check_out.nil?
 
-      (@check_in..(@check_out - 1.day)).sum do |date|
-        rate = room_rate_for(date)
-        base_nightly_rate = tier_price(rate) || derived_or_fallback_rate(rate)
-
-        Bookings::NightlyPaxPrice.call(
-          base_nightly_rate: base_nightly_rate,
-          rate: rate,
+      nightly = (@check_in..(@check_out - 1.day)).map do |date|
+        Rates::ResolveEffectiveNightlyPrice.call(
+          room_type: @room_type,
           rate_plan: @rate_plan,
+          date: date,
+          currency: currency,
           adults: @adults,
           children: @children,
           child_ages: @child_ages
-        )
+        ).amount
       end
+
+      return nil if nightly.any?(&:nil?)
+
+      nightly.sum(0.to_d)
     end
 
     private
 
-    def tier_price(rate)
-      return nil if rate.blank?
-
-      case @rate_tier
-      when :corporate then rate.corporate_price
-      when :walk_in then rate.walk_in_price
-      else
-        @corporate_rate ? rate.corporate_price : nil
-      end
-    end
-
-    def room_rate_for(date)
-      scope = @room_type.room_rates.where(date: date)
-
-      plans_to_try = [ @rate_plan, @room_type.standard_rate_plan, nil ].uniq
-
-      plans_to_try.each do |plan|
-        rate = scope.find_by(rate_plan: plan)
-        return rate if rate.present?
-      end
-
-      nil
-    end
-
-    # An explicit RoomRate for @rate_plan itself always wins as-is. Otherwise
-    # `rate` (if any) is the anchor Standard Rate row we fell back to in
-    # room_rate_for; transform it through the rate plan's derived pricing
-    # (multiplier/offset) instead of copying it verbatim.
-    def derived_or_fallback_rate(rate)
-      anchor = rate&.price || @room_type.base_price
-      return anchor if rate.present? && rate.rate_plan_id == @rate_plan&.id
-
-      rtrp = room_type_rate_plan
-      return anchor unless rtrp&.derives_price?
-
-      rtrp.derive_price(anchor) || anchor
-    end
-
-    def room_type_rate_plan
-      return nil if @rate_plan.blank?
-
-      @room_type_rate_plan ||= @room_type.room_type_rate_plans.find { |rtrp| rtrp.rate_plan_id == @rate_plan.id }
+    def currency
+      @rate_plan&.currency.presence || @room_type.hotel.default_currency.presence || "MYR"
     end
   end
 end

@@ -6,7 +6,7 @@ RSpec.describe Bookings::ReleaseAssignedRooms do
   it "marks assigned rooms ready and records the operational release" do
     hotel = create(:hotel)
     user = create(:user, account: hotel.account)
-    room_type = create(:room_type, hotel: hotel, room_numbers: [ "101" ])
+    room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
     booking = create(:booking, hotel: hotel)
     create(:booking_room, booking: booking, room_type: room_type, room_number: "101")
     room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")

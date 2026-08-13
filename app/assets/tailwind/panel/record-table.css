@@ -1,0 +1,364 @@
+@layer components {
+  /* An editable table of repeating records. It is a panel-table with two extra
+     jobs: a leading control column that stays narrow, and a reflow into stacked
+     record editors at 48rem, once the columns no longer fit. */
+  /* The leading column holds one icon button. Its width is a token rather than a
+     literal because the pinned columns measure their offset from it — a control
+     column that turns out wider than the offset slides the column beside it over
+     the top of this one. The value is that column's own minimum rather than a
+     guess: a 1.75rem icon button in a cell with 0.75rem of padding either side. */
+  .panel-record-table {
+    --record-table-control-width: 3.25rem;
+  }
+
+  .panel-record-table__control {
+    width: var(--record-table-control-width);
+    white-space: nowrap;
+  }
+
+  /* The cell holds its control on one line. The hint that stands in for the
+     control when a row cannot be discarded is a sentence, and inherited that
+     rule through the bubble — which then ran off the page instead of wrapping
+     inside the width the tooltip sets for itself. */
+  .panel-record-table__control .tooltip {
+    white-space: normal;
+  }
+
+  /* The region owns the frame, not the table wrapper inside it. Two rounded boxes
+     meant two radii to keep in step — and they were not in step, so the outer box
+     clipped the inner one's corners. Rounding here also clips the header's own
+     muted ground, which is square and would otherwise fill the top corners. */
+  .panel-record-table__region {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+  }
+
+  .panel-record-table__region:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-record-table__region .panel-table__wrapper {
+    overflow-x: visible;
+  }
+
+  .panel-record-table--spreadsheet {
+    min-width: 72rem;
+  }
+
+  /* Rate headings describe compact pricing dimensions. Keep each label on one
+     line and let the spreadsheet region scroll instead of wrapping headers. */
+  .panel-record-table--rates thead th {
+    white-space: nowrap;
+  }
+
+  /* Rooms is intentionally Excel-like: these widths establish its minimum
+     working grid, but the table remains fluid and fills wider containers. The
+     labelled region above owns horizontal scrolling below that minimum. */
+  .panel-record-table--rooms {
+    min-width: 90.75rem;
+    table-layout: fixed;
+  }
+
+  .panel-record-table--rooms tr > :nth-child(1) { width: var(--record-table-control-width); }
+  .panel-record-table--rooms tr > :nth-child(2) { width: 14rem; }
+  .panel-record-table--rooms tr > :nth-child(3),
+  .panel-record-table--rooms tr > :nth-child(4),
+  .panel-record-table--rooms tr > :nth-child(5) { width: 7.5rem; }
+  .panel-record-table--rooms tr > :nth-child(6) { width: 7rem; }
+  .panel-record-table--rooms tr > :nth-child(7) { width: 6rem; }
+  .panel-record-table--rooms tr > :nth-child(8) { width: 10rem; }
+  .panel-record-table--rooms tr > :nth-child(9) { width: 16rem; }
+  .panel-record-table--rooms tr > :nth-child(10) { width: 12rem; }
+
+  /* Where the pinned columns sit. Kept free of `background`, because a pinned
+     cell's ground depends on the row it is in — muted under the header, card
+     under a record — and a single rule carrying both would put the two selectors
+     in a specificity contest that the header loses the moment an exclusion is
+     added to this one.
+     The empty state is excluded: its only cell spans the table, so pinning it
+     would stick the message to the left edge and size it to the control column.
+     The group heading's second cell is excluded too: it is the spanning label,
+     and pinning that to the room-category column would size it to one column and
+     wrap the plan's controls into a stack. It pins its own contents instead. */
+  .panel-record-table--spreadsheet :is(thead, tbody) tr:not(.panel-record-table__empty) > :first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    width: var(--record-table-control-width);
+  }
+
+  .panel-record-table--spreadsheet :is(thead, tbody) tr:not(.panel-record-table__group, .panel-record-table__empty) > :nth-child(2) {
+    position: sticky;
+    inset-inline-start: var(--record-table-control-width);
+    z-index: 2;
+    min-width: 13rem;
+    border-inline-end: 1px solid var(--border);
+  }
+
+  /* A pinned cell paints its own ground: the row's background sits behind the
+     scrolling content rather than in it, so the columns would be transparent
+     over whatever slid under them. */
+  .panel-record-table--spreadsheet tbody tr > :is(:first-child, :nth-child(2)) {
+    background: var(--card);
+  }
+
+  .panel-record-table--spreadsheet thead tr > :is(:first-child, :nth-child(2)) {
+    z-index: 4;
+    background: var(--muted);
+  }
+
+  .panel-record-table--spreadsheet .panel-record-table__actions {
+    min-width: 10rem;
+  }
+
+  /* A group heading is a rowheader, not a record: it takes the muted ground the
+     column header uses so the records under it stay the only white rows. */
+  .panel-record-table__group > * {
+    background: var(--muted);
+  }
+
+  /* The heading's contents lay out in a row inside the cell. The flex goes on a
+     wrapper rather than the <td>: `display: flex` on a cell takes it out of the
+     table layout and its colspan stops holding the columns together. */
+  .panel-record-table__group-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+  }
+
+  /* The muted ground has to beat the sticky first column, which paints itself
+     card-coloured for the records — a heading striped white at its left edge
+     stops reading as one row. */
+  .panel-record-table--spreadsheet tbody tr.panel-record-table__group > * {
+    background: var(--muted);
+  }
+
+  /* Wide enough for the plan's own fields and no wider: the heading spans a
+     table that scrolls, so its contents ride along at the left edge instead of
+     scrolling out of reach. `nowrap` is what makes that width real — a wrapping
+     flex container's max-content size is only its widest child, which would
+     stack the plan's fields into a column. */
+  .panel-record-table--spreadsheet .panel-record-table__group-content {
+    position: sticky;
+    inset-inline-start: var(--record-table-control-width);
+    flex-wrap: nowrap;
+    width: max-content;
+    max-width: 100%;
+    padding-inline-end: 0.5rem;
+  }
+
+  /* A column that explains itself. The mark sits on the header baseline beside
+     the label, quiet until it is wanted — it is an offer of help, not a state
+     the operator has to read past on every scan. */
+  .panel-record-table__hint {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-start: 0.25rem;
+    color: var(--muted-foreground);
+    vertical-align: text-bottom;
+    cursor: help;
+    border-radius: 0.25rem;
+  }
+
+  .panel-record-table__hint:is(:hover, :focus-visible) {
+    color: var(--foreground);
+  }
+
+  .panel-record-table__hint:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .panel-record-table__required {
+    margin-inline-start: 0.1875rem;
+    color: var(--destructive-on-surface);
+  }
+
+  /* An empty table holds its own height rather than collapsing to one line of
+     text: the body keeps the shape it will have once records are in it, so
+     adding the first one does not jump the page. The height lives on the content
+     block, not the cell — a `min-height` on a `td` is advisory in table layout
+     and browsers are free to ignore it. */
+  .panel-record-table__empty td {
+    color: var(--muted-foreground);
+    padding: 0;
+  }
+
+  .panel-record-table__empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 13rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+
+  .panel-record-table__empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--muted-foreground);
+    background: var(--muted);
+    border-radius: var(--radius-md);
+  }
+
+  .panel-record-table__empty-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .panel-record-table__empty-description {
+    max-width: 32rem;
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+  }
+
+  /* The state's own add button sits under the description, so it needs air
+     between the two rather than the gap that spaces the lines above it. */
+  .panel-record-table__empty-content > .panel-button {
+    margin-top: 0.5rem;
+  }
+
+  /* The empty state spans a table that may scroll far wider than the viewport.
+     Sticking its content to the start edge keeps the message and its button in
+     view instead of centring them somewhere off to the right. */
+  .panel-record-table--spreadsheet .panel-record-table__empty-content {
+    position: sticky;
+    inset-inline-start: 0;
+    width: min(100%, 42rem);
+  }
+
+  /* The add-row is an action, not a total: drop the summary weight tfoot gives
+     its rows, and move the rule above it so it reads as the end of the list. */
+  .panel-record-table tfoot {
+    background: transparent;
+    font-weight: inherit;
+  }
+
+  /* `tr:first-child` is not a filter here — there is one footer row — it matches
+     the specificity of the base table's own bottom rule, which this replaces.
+     Under it the two rules both applied and drew a 2px line. */
+  .panel-record-table[data-bordered="true"] tfoot > tr:first-child > * {
+    border-top: 1px solid var(--border);
+    border-bottom: 0;
+  }
+
+  /* Divide the records rather than border them: one rule between each pair, none
+     on the outside edges, which the region's own frame already draws.
+     `:not([hidden]) ~ :not([hidden])` is that divide, counted in rows the
+     operator can actually see. A plain `+` — or a position like
+     `:not(:first-of-type)` — counts the rows that are still in the DOM but
+     hidden: the clone template, the empty state, and a soft-removed record. Any
+     of those being first would put a rule directly under the header's own. */
+  /* `:not(:last-child)` matches the base table's bottom rule exactly — same rows,
+     same specificity — so this later import replaces it rather than landing under
+     it. Without the match the bottom border survived and stacked with the divide
+     below into a 2px line between every record. */
+  .panel-record-table[data-bordered="true"] tbody > tr:not(:last-child) > * {
+    border-bottom: 0;
+  }
+
+  .panel-record-table[data-bordered="true"] tbody > tr:not([hidden]) ~ tr:not([hidden]) > * {
+    border-top: 1px solid var(--border);
+  }
+
+  /* At table widths the column header names the field, so the field's own label
+     would only repeat it. The label stays in the DOM — it is the control's
+     accessible name — and is hidden the way sr-only hides it. */
+  @media (width >= 48rem) {
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__row :is(.panel-form-field__label, .panel-switch__label, .panel-checkbox__label) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border-width: 0;
+    }
+  }
+
+  /* Below that width the header row is gone, so each row becomes a stacked
+     record editor and the field labels come back to carry the naming. */
+  @media (width < 48rem) {
+    /* `tr:not([hidden])` because an author `display: block` outranks the user
+       agent's `[hidden] { display: none }` and would strand the empty state on
+       screen next to the records it says are missing. */
+    .panel-record-table:not(.panel-record-table--spreadsheet),
+    .panel-record-table:not(.panel-record-table--spreadsheet) > :is(thead, tbody, tfoot),
+    .panel-record-table:not(.panel-record-table--spreadsheet) > :is(tbody, tfoot) > tr:not([hidden]) {
+      display: block;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) > thead {
+      display: none;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 0.875rem 0.75rem;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__row > td {
+      display: block;
+      padding: 0;
+    }
+
+    /* Remove sits at the row's trailing top edge, clear of the fields below it. */
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__row > .panel-record-table__control {
+      order: -1;
+      align-self: flex-end;
+      width: auto;
+    }
+
+    /* Stacked cells are block-level, so a cell border would draw a line between
+       every field. The same divide moves to the row itself. */
+    .panel-record-table:not(.panel-record-table--spreadsheet)[data-bordered="true"] tbody > tr:not([hidden]) ~ tr:not([hidden]) > * {
+      border-top: 0;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet)[data-bordered="true"] tbody > tr:not([hidden]) ~ tr:not([hidden]) {
+      border-top: 1px solid var(--border);
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) :is(.panel-record-table__empty, tfoot) td {
+      display: block;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) tfoot td {
+      padding: 0.75rem;
+    }
+
+    /* The heading keeps its control and label side by side while the records
+       below it stack — it names the run, so it must stay one line of chrome. */
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__group > td {
+      display: block;
+      padding: 0;
+    }
+
+    .panel-record-table:not(.panel-record-table--spreadsheet) .panel-record-table__group > .panel-record-table__group-label {
+      flex: 1;
+    }
+  }
+}

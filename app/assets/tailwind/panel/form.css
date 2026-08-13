@@ -1,6 +1,11 @@
 @layer components {
   .panel-form-field {
     display: grid;
+    /* Pack label, control and hint at the top. Without this, a field stretched
+       by a taller sibling — two fields side by side where only one has a hint,
+       or one hint wraps to two lines — spreads the extra height across its rows
+       and pushes its control below the neighbouring one. */
+    align-content: start;
     width: 100%;
     min-width: 0;
     gap: 0.25rem;

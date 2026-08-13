@@ -21,6 +21,25 @@ class Invitation < ApplicationRecord
   scope :unaccepted, -> { where(accepted_at: nil) }
   scope :pending, -> { unaccepted.where("expires_at > ?", Time.current) }
   scope :expired, -> { unaccepted.where("expires_at <= ?", Time.current) }
+  # Created during onboarding with the send switch off: a real invitation that
+  # nobody has been told about yet.
+  scope :held, -> { unaccepted.where(last_sent_at: nil) }
+  # What the portal lists. A held invitation has no meaningful expiry — its
+  # seven days have not started — so excluding it the way `pending` does would
+  # quietly drop the person a week after the owner listed them, which is the
+  # opposite of holding them for later.
+  scope :listable, -> { unaccepted.where("expires_at > ? OR last_sent_at IS NULL", Time.current) }
+
+  # An invitation exists from the moment the property lists the person; being
+  # emailed is a separate event, so "sent" cannot be inferred from creation.
+  def sent? = last_sent_at.present?
+  def held? = !sent? && !accepted?
+
+  # An unsent invitation's expiry is meaningless — the seven days should run
+  # from when the person could first act on it, not from when the owner typed
+  # their address. `refresh!` restarts the clock, so sending is what makes the
+  # window real.
+  def mark_sent!(now = Time.current) = update!(last_sent_at: now)
 
   def self.digest(token)
     Digest::SHA256.hexdigest(token.to_s)

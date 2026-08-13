@@ -3,11 +3,10 @@
 module HotelPortal
   class SettingsPresenter
     PAGE_HEADINGS = {
-      "general" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
-      "rates" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
+      "general" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
       "boat" => [ "Boat Settings", "Configure the daily boat timetable and the meals each transfer slot carries." ],
       "ai" => [ "AI Concierge", "Configure AI concierge behavior and provider settings." ],
-      "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, rates, and plan access." ],
+      "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ]
     }.freeze
 
@@ -114,9 +113,6 @@ module HotelPortal
       hotel.hotel_taxes.build
     end
 
-    def rate_plans
-      @rate_plans ||= hotel.rate_plans.includes(:room_types).order(:id)
-    end
     def settings_summary
       return {} unless hotel
 

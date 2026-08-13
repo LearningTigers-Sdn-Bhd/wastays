@@ -11,7 +11,6 @@ class HotelPortal::PropertyPoliciesController < HotelPortal::BaseController
     authorize @hotel, policy_class: HotelPolicy
 
     if @property_policy.update(property_policy_params)
-      @hotel.complete_policies!
       redirect_to hotel_dashboard_path, notice: "Hotel policies updated successfully."
     else
       render :edit, status: :unprocessable_content

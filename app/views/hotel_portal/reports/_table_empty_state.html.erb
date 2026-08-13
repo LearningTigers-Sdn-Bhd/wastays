@@ -1,5 +1,8 @@
-<tr data-slot="report-empty-state">
+<%= tag.tr(
+      data: { slot: "report-empty-state" }.merge(local_assigns.fetch(:data, {})),
+      hidden: local_assigns.fetch(:hidden, false)
+    ) do %>
   <td colspan="<%= colspan %>" class="h-24 px-3 text-center text-sm text-muted-foreground">
     <%= message %>
   </td>
-</tr>
+<% end %>

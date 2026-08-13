@@ -519,7 +519,7 @@ RSpec.describe Bookings::CreateManualBooking do
 
     expect(result.success?).to be true
     snapshot = result.booking.booking_rooms.first.nightly_rate_snapshot
-    expect(snapshot[(Date.current + 1.day).iso8601]["source"]).to eq("base_price_fallback")
+    expect(snapshot[(Date.current + 1.day).iso8601]["source"]).to eq("room_category_default")
     expect(snapshot[(Date.current + 1.day).iso8601]["price"]).to eq(room_type.base_price.to_d.to_s("F"))
   end
 

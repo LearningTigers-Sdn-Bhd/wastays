@@ -22,6 +22,10 @@ class Booking < ApplicationRecord
   has_one :booking_folio, -> { where(is_primary: true, booking_room_id: nil) }, dependent: :destroy
   has_many :folio_routing_rules, dependent: :destroy
   has_many :booking_billing_parties, dependent: :restrict_with_error
+  has_many :channel_settlement_allocations, dependent: :restrict_with_error
+  has_many :channel_settlements, through: :channel_settlement_allocations
+  has_many :ota_financial_snapshots, dependent: :restrict_with_error
+  has_many :ota_financial_components, dependent: :restrict_with_error
   has_many :booking_billing_terms, through: :booking_billing_parties, source: :billing_terms
   has_many :booking_tax_inclusion_overrides, dependent: :destroy
   has_many :billing_route_batches, dependent: :destroy
@@ -345,7 +349,7 @@ class Booking < ApplicationRecord
   end
 
   def tax_total
-    Array(tax_lines).sum { |t| t["amount"].to_f }.round(2)
+    Array(tax_lines).sum(0.to_d) { |tax| tax["amount"].to_d }.round(2)
   end
 
   def non_tourism_tax_total

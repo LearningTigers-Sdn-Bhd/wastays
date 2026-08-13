@@ -9,9 +9,10 @@
      data-room-name="<%= room_type.name %>"
      data-room-price="<%= room_type.single_room_total_price_value %>"
      data-room-pax-price="<%= room_type.pax_rate_value %>"
+     data-room-occupancy-prices="<%= room_type.pax_occupancy_nightly_prices.to_json %>"
      data-room-single-supplement="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.single_supplement&.to_f || 0.0) : 0 %>"
      data-room-child-multiplier="<%= room_type.per_pax_billing? ? (room_type.pricing_summary[:rate_plan]&.child_price_multiplier&.to_f || 1.0) : 1.0 %>"
-     data-room-age-bands="<%= (room_type.per_pax_billing? ? room_type.pricing_summary[:rate_plan]&.rate_plan_age_bands.to_a : []).map { |b| { minAge: b.min_age, maxAge: b.max_age, pricingMode: b.pricing_mode, value: b.price_value.to_f } }.to_json %>"
+     data-room-age-bands="<%= room_type.rate_plan_age_bands.to_json %>"
      data-room-max-capacity="<%= room_type.max_capacity %>"
      data-room-max-adults="<%= room_type.max_adults %>"
      data-room-max-children="<%= room_type.max_children.to_i %>"
@@ -71,7 +72,7 @@
             <% end %>
           <% else %>
             <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">
-              <%= @hotel.pax_pricing_only? ? "Price Per Person" : "Price Per Room" %>
+              <%= @hotel.sells_per_person? ? "Price Per Person" : "Price Per Room" %>
             </p>
             <p class="text-sm font-bold text-muted-foreground">Select dates to see price</p>
           <% end %>

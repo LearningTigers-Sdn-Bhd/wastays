@@ -1,0 +1,122 @@
+<% rate_plan = assignment.rate_plan %>
+<% complete = room_pricing_complete?(assignment, room_type) %>
+
+<div id="room-inventory-rate-plan-<%= assignment.id %>" class="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,.8fr)_auto] sm:items-center sm:gap-4" role="listitem">
+  <%# Whether this plan is offered for new bookings. On is offered; off is
+      archived. The switch carries state to assistive tech through aria-checked
+      and the "Archived" badge beside it carries the same state to everyone else,
+      so nothing is conveyed by switch position alone.
+
+      The intent lives in the form's URL rather than in a submitted value, so the
+      field name only has to be unique — every row renders one of these, and a
+      shared name would collide on the generated id and mis-bind the label.
+
+      The Standard plan renders a locked switch: every other plan in the category
+      prices against it and walk-in and corporate read their restrictions off it,
+      so archiving it would leave the category unsellable. RatePlan#archivable?
+      enforces the same rule server-side — this only saves the round trip. %>
+  <div class="row-span-3 flex items-start sm:row-auto sm:items-center">
+    <% if rate_plan.archivable? %>
+      <%= form_with url: (rate_plan.archived? ?
+                            unarchive_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: room_type.id) :
+                            archive_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: room_type.id)),
+                    method: :patch,
+                    class: "inline-flex",
+                    data: {
+                      controller: "tax-registry-status",
+                      action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish panels-ui:confirm-settled->tax-registry-status#settled",
+                      turbo_frame: "_top",
+                      turbo_confirm: (rate_plan.archived? ? nil : "Archive '#{rate_plan.name}'?"),
+                      turbo_confirm_title: (rate_plan.archived? ? nil : "Archive rate plan"),
+                      turbo_confirm_text: (rate_plan.archived? ? nil : "It will no longer be offered for new bookings in #{room_type.name} or any other assigned room category. Existing bookings and history are kept."),
+                      turbo_confirm_tone: (rate_plan.archived? ? nil : "warning")
+                    } do %>
+        <%= submit_tag "Update rate plan availability", hidden: true, data: { tax_registry_status_target: "submit" } %>
+        <%= render PanelsUI::Switch.new(
+              name: "offered_#{assignment.id}",
+              label: tag.span("#{rate_plan.archived? ? 'Restore' : 'Archive'} #{rate_plan.name} for #{room_type.name}", class: "sr-only"),
+              checked: !rate_plan.archived?,
+              size: :sm,
+              data: {
+                tax_registry_status_target: "switch",
+                action: "change->tax-registry-status#change"
+              }) %>
+      <% end %>
+    <% else %>
+      <%= render PanelsUI::Switch.new(
+            name: "offered_#{assignment.id}",
+            label: tag.span("#{rate_plan.name} is the price anchor for #{room_type.name} and is always offered", class: "sr-only"),
+            checked: true,
+            size: :sm,
+            disabled: true) %>
+    <% end %>
+  </div>
+
+  <div class="min-w-0">
+    <div class="flex flex-wrap items-center gap-2">
+      <p class="truncate text-sm font-medium text-foreground"><%= rate_plan.name %></p>
+      <% if rate_plan.standard_rate? %>
+        <%= render PanelsUI::Badge.new(label: "Default", variant: :outline, size: :sm) %>
+      <% end %>
+      <% if rate_plan.archived? %>
+        <%= render PanelsUI::Badge.new(label: "Archived", variant: :neutral, size: :sm) %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="col-start-2 text-xs text-muted-foreground sm:col-auto">
+    <span class="sm:sr-only">Price: </span><%= room_pricing_summary(assignment, room_type, rate_plan.currency) %>
+  </div>
+
+  <div class="col-start-2 flex flex-wrap items-center gap-2 sm:col-auto">
+    <%= render PanelsUI::Badge.new(
+          label: complete ? "Ready" : "Needs pricing",
+          variant: complete ? :success : :warning,
+          size: :sm) %>
+    <% if current_hotel.preferred_channel_manager.present? && rate_plan.channex_syncable? %>
+      <% synced = assignment.channel_mapping.present? && !assignment.channel_mapping.external_id.to_s.start_with?("pending") %>
+      <span class="text-xs text-muted-foreground"><%= synced ? "Channel synced" : "Channel pending" %></span>
+    <% end %>
+  </div>
+
+  <div class="col-start-3 row-span-3 row-start-1 flex items-start justify-end sm:col-auto sm:row-auto sm:items-center">
+    <%= render PanelsUI::DropdownMenu.new(
+          id: "inventory-rate-plan-#{assignment.id}-actions",
+          placement: :bottom_end,
+          class: "w-48") do |menu| %>
+      <% menu.with_trigger(
+           variant: :ghost,
+           size: :icon_sm,
+           aria_label: "Actions for #{rate_plan.name} in #{room_type.name}") do %>
+        <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+      <% menu.with_item(
+           href: edit_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: room_type.id),
+           data: { turbo_frame: "settings_action_sheet" }) do %>
+        <%= app_icon "pencil", class: "size-4", aria: { hidden: true } %>
+        <span>Edit rate</span>
+      <% end %>
+      <% if rate_plan.kind == "custom" %>
+        <% menu.with_separator %>
+        <% menu.with_item(
+             href: hotel_rate_plan_room_pricing_path(
+               current_hotel,
+               rate_plan,
+               room_type,
+               return_to: hotel_room_types_path(current_hotel)
+             ),
+             method: :delete,
+             variant: :danger,
+             data: {
+               turbo_frame: "_top",
+               turbo_confirm: "Detach '#{rate_plan.name}' from #{room_type.name}? The rate plan remains available to its other room categories.",
+               turbo_confirm_title: "Detach rate plan",
+               turbo_confirm_tone: "destructive"
+             }) do %>
+          <%= app_icon "unlink", class: "size-4", aria: { hidden: true } %>
+          <span>Detach rate</span>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

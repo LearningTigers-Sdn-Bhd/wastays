@@ -112,8 +112,8 @@ RSpec.describe Bookings::UpdateStayService do
   end
 
   it "preserves a manual override for date changes and clears it for an explicit rate change" do
-    original_plan = create(:rate_plan, room_type:, name: "Original")
-    replacement_plan = create(:rate_plan, room_type:, name: "Replacement")
+    original_plan = create(:rate_plan, :custom, room_type:, name: "Original")
+    replacement_plan = create(:rate_plan, :custom, room_type:, name: "Replacement")
     booking_room.update!(rate_plan: original_plan)
     booking.update!(manual_rate_override: 175)
     current_rate_selection = Bookings::RateSelection.current(booking_room.reload).token
@@ -134,17 +134,42 @@ RSpec.describe Bookings::UpdateStayService do
     expect(booking_room.reload.rate_plan).to eq(replacement_plan)
   end
 
-  it "stores a selected rate tier in the nightly snapshot" do
-    rate_plan = create(:rate_plan, room_type:, name: "Flexible")
-    create(:room_rate, room_type:, rate_plan:, date: Date.current, price: 100, walk_in_price: 125)
+  it "stores a selected real Walk-in plan in the nightly snapshot" do
+    rate_plan = room_type.walk_in_rate_plan
+    create(:room_rate, room_type:, rate_plan:, date: Date.current, price: 125)
 
     result = described_class.new(
       booking:,
-      params: { rate_selection: Bookings::RateSelection.tier_token(:walk_in, rate_plan.id) }
+      params: { rate_selection: rate_plan.id.to_s }
     ).call
 
     expect(result.success?).to be(true)
     expect(booking_room.reload.rate_plan).to eq(rate_plan)
-    expect(booking_room.nightly_rate_snapshot.dig(Date.current.iso8601, "rate_tier")).to eq("walk_in")
+    expect(booking_room.nightly_rate_snapshot.dig(Date.current.iso8601, "rate_plan_id")).to eq(rate_plan.id)
+    expect(booking_room.nightly_rate_snapshot.fetch(Date.current.iso8601).keys).not_to include("rate_tier")
+  end
+
+  describe "a picked rate that no longer resolves" do
+    # Falling back to Standard here would report success at a total the operator
+    # never chose, against a rate they explicitly picked.
+    it "fails instead of silently repricing at the category default" do
+      archived = create(:rate_plan, :custom, room_type:, name: "Expired Promo")
+      original_plan = booking_room.rate_plan
+      original_total = booking.total_amount
+      archived.archive!
+
+      result = described_class.new(booking:, params: { rate_selection: archived.id.to_s }).call
+
+      expect(result.success?).to be(false)
+      expect(result.errors).to include(a_string_matching(/no longer available/))
+      expect(booking_room.reload.rate_plan).to eq(original_plan)
+      expect(booking.reload.total_amount).to eq(original_total)
+    end
+
+    it "still treats a blank selection as no rate picked" do
+      result = described_class.new(booking:, params: { rate_selection: "" }).call
+
+      expect(result.success?).to be(true)
+    end
   end
 end

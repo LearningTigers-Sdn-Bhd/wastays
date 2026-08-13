@@ -51,6 +51,12 @@ class Hotel < ApplicationRecord
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_many :channel_settlements, dependent: :restrict_with_error
+  has_many :channel_settlement_receipts, dependent: :restrict_with_error
+  has_many :channel_settlement_allocations, through: :channel_settlements
+  has_many :ota_financial_snapshots, dependent: :restrict_with_error
+  has_many :ota_financial_component_mappings, dependent: :restrict_with_error
+  has_one :ota_rate_variance_policy, dependent: :restrict_with_error
   has_many :guest_registration_cards, dependent: :restrict_with_error
   has_many :guest_registration_note_templates, dependent: :destroy
   has_many :group_bookings, dependent: :restrict_with_error
@@ -69,6 +75,7 @@ class Hotel < ApplicationRecord
   has_many :hotel_discounts, dependent: :destroy
   has_many :hotel_payment_methods, dependent: :destroy
   has_many :hotel_reservation_policies, dependent: :destroy
+  has_many :hotel_ota_credentials, dependent: :destroy
   has_one :hotel_transaction_configuration, dependent: :destroy
   has_one :hotel_boat_setting, dependent: :destroy
   accepts_nested_attributes_for :hotel_boat_setting
@@ -84,6 +91,11 @@ class Hotel < ApplicationRecord
   has_many :booking_quotes, dependent: :destroy
   has_many :payout_batches, dependent: :destroy
   has_many :onboarding_sessions, dependent: :destroy
+  has_many :onboarding_sections, class_name: "HotelOnboardingSection", dependent: :destroy
+  has_many :onboarding_audit_events, dependent: :destroy
+  has_many :onboarding_submissions, dependent: :destroy
+  has_many :onboarding_staff_drafts, dependent: :destroy
+  has_many :onboarding_corporate_drafts, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many :room_rates, through: :room_types
   has_many :room_locks, dependent: :destroy
@@ -105,21 +117,43 @@ class Hotel < ApplicationRecord
   validate :hotel_prefix_has_not_been_used_by_another_hotel
 
   before_validation :normalize_default_currency
-  before_validation :reset_pax_pricing_only_if_not_allowed
   before_validation :normalize_hotel_prefix
   before_validation :assign_hotel_prefix, on: :create
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
-  validates :city, presence: true
-  validates :country, presence: true
+  validates :status, inclusion: { in: ->(_) { STATUSES } }, allow_blank: true
+  validates :city, presence: true, unless: :setup?
+  validates :country, presence: true, unless: :setup?
   validates :business_starts_at, :business_ends_at, presence: true
   validates :arrival_grace_period, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
+  validates :sell_mode, presence: true
+  validates :sell_mode, inclusion: { in: ->(_) { RatePlan.sell_modes } }, allow_blank: true
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
   validate :account_must_be_hotel_kind
+  validate :sell_mode_is_immutable, on: :update, if: :will_save_change_to_sell_mode?
+
+  # Operator-facing wording for the property's sell mode. The stored values
+  # match rate_plans.sell_mode, but "per room"/"per person" is engine
+  # vocabulary — staff and admins think in terms of what the property sells.
+  def self.sell_mode_options
+    [ [ "Room — one price per room, extra guest charges on top", "per_room" ],
+      [ "Guest — one price per guest", "per_person" ] ]
+  end
+
+  def sells_per_person?
+    sell_mode == "per_person"
+  end
+
+  # Navbar badge wording. Short enough to sit beside the property name, and
+  # phrased as a statement about the property rather than as the choice itself
+  # — sell_mode_options spells out the trade-off for whoever is picking it.
+  def sell_mode_label
+    sells_per_person? ? "Sells per person" : "Sells per room"
+  end
 
   def self.const_missing(const_name)
     case const_name
@@ -158,14 +192,11 @@ class Hotel < ApplicationRecord
     where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q", q: q)
   }
 
+  # The onboarding lifecycle. A property is in `setup` until its owner submits it,
+  # `pending_review` while WAStays looks at it, and `live` once approved.
   STATUSES = %w[
-    registered
-    email_verified
-    profile_incomplete
-    rooms_incomplete
-    inventory_incomplete
+    setup
     pending_review
-    approved
     live
     suspended
   ].freeze
@@ -185,17 +216,12 @@ class Hotel < ApplicationRecord
     end
   end
 
-  def self.pending_review_onboarding
-    where(status: "pending_review").to_a.sort_by(&:onboarding_sort_key)
-  end
-
-  def onboarding_sort_key
-    duration = onboarding_duration_days
-    [ duration.present? ? duration.to_f : Float::INFINITY, created_at ]
+  def setup?
+    status == "setup"
   end
 
   def active?
-    %w[approved live].include?(status)
+    status == "live"
   end
 
   def publicly_bookable?
@@ -415,35 +441,7 @@ class Hotel < ApplicationRecord
   end
 
   def onboarding?
-    %w[registered email_verified profile_incomplete rooms_incomplete inventory_incomplete].include?(status)
-  end
-
-  def profile_completed?
-    !status.in?([ "registered", "email_verified" ])
-  end
-
-  def policies_completed?
-    !status.in?([ "registered", "email_verified", "profile_incomplete" ])
-  end
-
-  def rooms_completed?
-    !status.in?([ "registered", "email_verified", "profile_incomplete", "rooms_incomplete" ])
-  end
-
-  def ready_for_review?
-    status == "inventory_incomplete"
-  end
-
-  def complete_profile!
-    update(status: "profile_incomplete") if status == "registered"
-  end
-
-  def complete_policies!
-    update(status: "rooms_incomplete") if status == "profile_incomplete"
-  end
-
-  def complete_rooms!
-    update(status: "inventory_incomplete") if status == "rooms_incomplete"
+    status == "setup"
   end
 
   def ready_for_review?
@@ -463,14 +461,14 @@ class Hotel < ApplicationRecord
   end
 
   def inventory_ready?
-    # Check if there are rates set for at least some days in the next 30 days
-    room_rates.where(date: Date.current..30.days.from_now.to_date)
-              .where("price > 0")
-              .exists?
+    setup_coverage.complete?
   end
 
-  def submit_for_review!
-    update(status: "pending_review") if ready_for_review?
+  # Memoized because the audit walks a year of inventory per room type and the
+  # readiness views ask more than once per render. Scoped to this instance, so a
+  # save that changes rates gets a fresh audit on the next request.
+  def setup_coverage
+    @setup_coverage ||= Rates::SetupCoverage.call(hotel: self)
   end
 
   def tourism_tax_applicable_for?(country)
@@ -524,7 +522,7 @@ class Hotel < ApplicationRecord
   end
 
   def onboarding_completion_date
-    return nil unless [ "approved", "live" ].include?(status)
+    return nil unless status == "live"
     final_onboarding_session&.completed_at
   end
 
@@ -731,21 +729,12 @@ class Hotel < ApplicationRecord
     google_map_link[fallback_regex, 1]&.to_f
   end
 
-  def reset_pax_pricing_only_if_not_allowed
-    unless allow_pax_pricing?
-      self.pax_pricing_only = false
-
-      if persisted?
-        affected_ids = rate_plans.where(sell_mode: "per_person").pluck(:id)
-        if affected_ids.any?
-          rate_plans.where(id: affected_ids).update_all(sell_mode: "per_room")
-          Rails.logger.warn(
-            "[Hotel##{id}] allow_pax_pricing disabled: force-flipped #{affected_ids.size} rate plan(s) " \
-            "from per_person to per_room (rate_plan_ids=#{affected_ids})"
-          )
-        end
-      end
-    end
+  # The charging model determines the shape and meaning of every price stored
+  # for the property, so it is chosen once at creation and never transitioned in
+  # place — regardless of status, bookings, or channel connections. Correcting a
+  # mistaken choice is a data-recovery operation, not a settings change.
+  def sell_mode_is_immutable
+    errors.add(:sell_mode, "cannot be changed after the hotel is created")
   end
 
   def ensure_current_business_date

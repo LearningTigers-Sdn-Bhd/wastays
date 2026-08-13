@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Hotel boat slot editing", type: :system, js: true do
-  let(:hotel) { create(:hotel, status: "approved", allow_boat_information: true) }
+  let(:hotel) { create(:hotel, status: "live", allow_boat_information: true) }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:slot) { create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30", has_lunch: true) }

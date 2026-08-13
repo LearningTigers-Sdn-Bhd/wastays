@@ -39,10 +39,114 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(result.success?).to be(true)
     expect(result.booking.persisted?).to be(true)
     expect(result.booking.guest_name).to eq("John Doe")
-    expect(result.booking.primary_guest).to be_nil
+    expect(result.booking.primary_guest).to have_attributes(name: "John Doe", email: "john@example.com")
+    expect(result.booking.primary_guest.metadata).to include(
+      "profile_source" => "channel_manager",
+      "profile_incomplete" => true
+    )
     expect(result.booking.hotel).to eq(hotel)
+    expect(result.booking.booking_billing_parties.guests.active.sole.booking_guest).to eq(result.booking.booking_guests.sole)
+    expect(result.booking.booking_folio).to have_attributes(
+      is_primary: true,
+      payer_type: "guest",
+      booking_billing_party: result.booking.booking_billing_parties.guests.active.sole
+    )
+    expect(result.booking.booking_folio.folio_forecasted_charges).not_to be_empty
     expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 1, 1 ])
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: result.booking)
+  end
+
+  it "never mutates another hotel's booking with the same channel reference" do
+    other_hotel = create(:hotel)
+    other_booking = create(:booking, hotel: other_hotel, channel_manager_reference: "CM456", guest_name: "Other tenant")
+
+    result = described_class.new(booking_data: booking_data).call
+
+    expect(result).to be_success
+    expect(result.booking.hotel).to eq(hotel)
+    expect(result.booking).not_to eq(other_booking)
+    expect(other_booking.reload.guest_name).to eq("Other tenant")
+  end
+
+  it "rolls back the booking when required connections cannot be initialized" do
+    allow(ChannelManagers::InitializeBookingConnections).to receive(:call!).and_raise("folio initialization failed")
+
+    result = described_class.new(booking_data: booking_data).call
+
+    expect(result).not_to be_success
+    expect(result.message).to include("folio initialization failed")
+    expect(Booking.where(channel_manager_reference: "CM456")).not_to exist
+    expect(Guest.where(email: "john@example.com")).not_to exist
+    expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 2, 2 ])
+  end
+
+  it "converts OTA money into hotel currency and records the source values" do
+    hotel.update!(default_currency: "MYR")
+    create(:exchange_rate, base_currency: "USD", currency_code: "MYR", rate: 4.1)
+
+    result = described_class.new(
+      booking_data: booking_data.merge(currency: "USD", total_amount: 100, rooms: [
+        { room_type: room_type, quantity: 1, amount: 100 }
+      ])
+    ).call
+
+    expect(result).to be_success
+    expect(result.booking).to have_attributes(currency: "MYR", total_amount: 410.to_d)
+    expect(result.booking.booking_rooms.sole.subtotal).to eq(410.to_d)
+    audit = BookingAuditLog.where(auditable: result.booking, action_type: "external_creation").last
+    expect(audit.metadata.fetch("currency_conversion")).to include(
+      "source_currency" => "USD",
+      "target_currency" => "MYR",
+      "source_total_amount" => "100.0",
+      "converted_total_amount" => "410.0"
+    )
+  end
+
+  it "does not ingest or acknowledge unsafe money when its exchange rate is missing" do
+    result = described_class.new(booking_data: booking_data.merge(currency: "USD")).call
+
+    expect(result).not_to be_success
+    expect(result.message).to eq("Missing exchange rate from USD to MYR")
+    expect(Booking.where(channel_manager_reference: "CM456")).not_to exist
+  end
+
+  it "does not discard a distinct opaque revision that shares a numeric timestamp gate" do
+    existing = create(:booking,
+      hotel: hotel, channel_manager_reference: "CM456", revision_number: 10,
+      check_in: booking_data[:check_in], check_out: booking_data[:check_out], status: "confirmed", adults: 1)
+    create(:booking_room, booking: existing, room_type: room_type)
+
+    result = described_class.new(
+      booking_data: booking_data.merge(revision_id: "opaque-revision-2", revision_number: 10, adults: 3)
+    ).call
+
+    expect(result).to be_success
+    expect(existing.reload.adults).to eq(3)
+  end
+
+  it "keeps a manually assigned room when a later revision arrives" do
+    room_type.update!(quantity: 2, room_numbers: %w[101 102])
+    existing = create(:booking,
+      hotel: hotel,
+      channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in],
+      check_out: booking_data[:check_out],
+      status: "confirmed")
+    create(:booking_room, booking: existing, room_type: room_type, room_number: "102")
+
+    result = described_class.new(booking_data: booking_data.merge(revision_number: 2, adults: 3)).call
+
+    expect(result).to be_success
+    expect(result.booking.booking_rooms.sole.room_number).to eq("102")
+  end
+
+  it "automatically assigns an available physical room" do
+    room_type.update!(quantity: 2, room_numbers: %w[101 102])
+
+    result = described_class.new(booking_data: booking_data).call
+
+    expect(result).to be_success
+    expect(result.booking.booking_rooms.sole.room_number).to eq("101")
   end
 
   it "dispatches booking_updated when existing stay dates change" do
@@ -85,6 +189,27 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 2, 2 ])
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_cancelled, booking: existing)
     expect(Notifications::Dispatcher).not_to have_received(:new).with(event: :booking_confirmed, booking: existing)
+  end
+
+  it "retains financial projections for an incomplete room-shell cancellation" do
+    existing = create(:booking,
+      hotel: hotel, channel_manager_reference: "CM456",
+      check_in: booking_data[:check_in], check_out: booking_data[:check_out],
+      status: "confirmed", total_amount: 200)
+    room = create(:booking_room, booking: existing, room_type: room_type, subtotal: 200,
+      nightly_rate_snapshot: { booking_data[:check_in].iso8601 => { "price" => "100.0" } })
+    data = booking_data.merge(
+      status: "cancelled", revision_number: 2, total_amount: nil,
+      rooms: [ { room_type: room_type, quantity: 1, amount: nil } ],
+      financials: { breakdown_present: true, breakdown_complete: false, rooms: [ { amount: 0.to_d } ] }
+    )
+
+    result = described_class.new(booking_data: data).call
+
+    expect(result).to be_success
+    expect(existing.reload).to have_attributes(status: "cancelled", total_amount: 200.to_d)
+    expect(room.reload).to have_attributes(subtotal: 200.to_d)
+    expect(room.nightly_rate_snapshot).to eq(booking_data[:check_in].iso8601 => { "price" => "100.0" })
   end
 
   it "preserves an internally detected no-show when the channel still reports confirmed" do
@@ -270,6 +395,32 @@ RSpec.describe ChannelManagers::IngestBookingService do
       expect(result.bookings.map { |booking| booking.booking_rooms.count }).to eq([ 1, 1 ])
       expect(result.bookings).to all(have_attributes(channel_manager_reference: nil, external_reference: nil))
       expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
+    end
+
+    it "converts OTA money and records the source values on the group audit" do
+      hotel.update!(default_currency: "MYR")
+      create(:exchange_rate, base_currency: "USD", currency_code: "MYR", rate: 4.1)
+
+      result = described_class.new(booking_data: multi_room_data.merge(currency: "USD")).call
+
+      expect(result).to be_success
+      expect(result.bookings).to all(have_attributes(currency: "MYR", total_amount: 820.to_d))
+      audit = BookingAuditLog.where(auditable: result.group_booking).last
+      expect(audit.metadata.fetch("currency_conversion")).to include(
+        "source_currency" => "USD",
+        "target_currency" => "MYR",
+        "source_total_amount" => "400.0",
+        "converted_total_amount" => "1640.0"
+      )
+    end
+
+    it "automatically assigns a distinct physical room to each child" do
+      room_type.update!(quantity: 2, room_numbers: %w[101 102])
+
+      result = described_class.new(booking_data: multi_room_data).call
+
+      expect(result).to be_success
+      expect(result.bookings.map { |booking| booking.booking_rooms.sole.room_number }).to eq(%w[101 102])
     end
 
     it "ignores duplicate and older revisions without touching children, inventory, or audit" do

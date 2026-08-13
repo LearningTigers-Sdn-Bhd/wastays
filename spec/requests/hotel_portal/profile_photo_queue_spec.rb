@@ -5,7 +5,7 @@ require "tempfile"
 RSpec.describe "HotelPortal::ProfilePhotoQueue", type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "registered") }
+  let(:hotel) { create(:hotel, account: account, status: "setup") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
 
   before do

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe CorporatePortal::AccountsReceivable::ShowPresenter do
   subject(:presenter) { described_class.new(invoice: invoice) }
 
-  let(:hotel) { create(:hotel, status: "approved", default_currency: "MYR", time_zone: "Kuala Lumpur") }
+  let(:hotel) { create(:hotel, status: "live", default_currency: "MYR", time_zone: "Kuala Lumpur") }
   let(:account) { create(:account, :corporate, name: "Orion Capital") }
   let(:relationship) do
     create(

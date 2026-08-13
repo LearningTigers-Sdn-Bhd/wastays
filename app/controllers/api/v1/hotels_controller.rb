@@ -1,6 +1,6 @@
 class Api::V1::HotelsController < Api::V1::BaseController
   def index
-    hotels = hotel_scope.where(status: [ "approved", "live" ])
+    hotels = hotel_scope.where(status: "live")
     hotels = hotels.where("city ILIKE ?", "%#{params[:city]}%") if params[:city].present?
 
     render json: hotels.as_json(only: [ :id, :name, :city, :country, :star_rating ])

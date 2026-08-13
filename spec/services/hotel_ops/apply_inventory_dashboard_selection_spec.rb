@@ -1,7 +1,13 @@
 require "rails_helper"
 
 RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
-  let(:hotel) { create(:hotel, preferred_channel_manager: "channex") }
+  let(:hotel) do
+    create(
+      :hotel,
+      preferred_channel_manager: "channex",
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
+    )
+  end
   let(:user) { create(:user, account: hotel.account) }
   let(:start_date) { Date.current }
   let(:end_date) { Date.current + 1.day }
@@ -11,7 +17,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
   end
 
   describe "#call" do
-    it "updates inventory across multiple room types" do
+    it "updates inventory across multiple room types without a rate plan scope" do
       deluxe = create(:room_type, hotel: hotel, quantity: 5)
       twin = create(:room_type, hotel: hotel, quantity: 3)
 
@@ -55,6 +61,75 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(result[:success]).to be(true)
       expect(best_available.room_rates.find_by(date: start_date, currency: "MYR").price.to_f).to eq(333.0)
       expect(member_rate.room_rates.find_by(date: start_date, currency: "MYR").price.to_f).to eq(333.0)
+    end
+
+    it "rejects a rate update without a selected rate plan" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      create(:rate_plan, room_type: room_type)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [],
+          apply_rates: "1",
+          price: "333.00",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result).to eq(success: false, error: "Select at least one rate plan.")
+      expect(RoomRate.where(room_type: room_type)).to be_empty
+    end
+
+    it "rejects a restriction update without a selected rate plan" do
+      room_type = create(:room_type, hotel: hotel, base_price: 100)
+      create(:rate_plan, room_type: room_type)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [],
+          apply_restrictions: "1",
+          min_stay: "2",
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result).to eq(success: false, error: "Select at least one rate plan.")
+      expect(RoomRate.where(room_type: room_type)).to be_empty
+    end
+
+    it "stores date-specific prices for each supported adult occupancy", :per_person do
+      room_type = create(:room_type, hotel: hotel, max_adults: 2, base_price: 100)
+      rate_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type)
+
+      result = described_class.new(
+        hotel: hotel,
+        selection: {
+          start_date: start_date,
+          end_date: start_date,
+          room_type_ids: [ room_type.id ],
+          rate_plan_ids: [ rate_plan.id ],
+          apply_rates: "1",
+          modified_fields: [ "occupancy_prices" ],
+          occupancy_prices: { "1" => "180.00", "2" => "300.00" },
+          currency: "MYR"
+        },
+        user: user
+      ).call
+
+      expect(result[:success]).to be(true)
+      rate = rate_plan.room_rates.find_by!(room_type: room_type, date: start_date, currency: "MYR")
+      expect(rate.occupancy_prices).to eq("1" => "180.0", "2" => "300.0")
+      expect(rate.price).to eq(300.to_d)
     end
 
     it "writes rate updates in the requested currency and updates the rate plan currency" do
@@ -203,7 +278,8 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
 
     it "updates only the corporate price when only corporate tier is selected" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
-      rate_plan = room_type.rate_plans.first # Use auto-created plan
+      rate_plan = room_type.standard_rate_plan
+      corporate_plan = room_type.corporate_rate_plan
       # Pre-create a rate record with some standard price
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150)
 
@@ -213,7 +289,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
           start_date: start_date,
           end_date: start_date,
           room_type_ids: [ room_type.id ],
-          rate_plan_ids: [ "tier_corporate_#{room_type.id}" ],
+          rate_plan_ids: [ corporate_plan.id ],
           apply_rates: "1",
           price: "200.00",
           currency: "MYR"
@@ -222,16 +298,16 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       ).call
 
       expect(result[:success]).to be(true)
-      rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
-      expect(rate.corporate_price.to_f).to eq(200.0)
-      expect(rate.price.to_f).to eq(150.0) # Standard price should REMAIN unchanged
+      expect(corporate_plan.room_rates.find_by!(date: start_date, currency: "MYR").price.to_f).to eq(200.0)
+      expect(rate_plan.room_rates.find_by!(date: start_date, currency: "MYR").price.to_f).to eq(150.0)
     end
 
     it "updates only the standard price when only standard plan is selected" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
-      rate_plan = room_type.rate_plans.first # Use auto-created plan
-      # Pre-create a rate record with some corporate price
-      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150, corporate_price: 200)
+      rate_plan = room_type.standard_rate_plan
+      corporate_plan = room_type.corporate_rate_plan
+      create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: start_date, currency: "MYR", price: 150)
+      corporate_rate = create(:room_rate, room_type: room_type, rate_plan: corporate_plan, date: start_date, currency: "MYR", price: 200)
 
       result = described_class.new(
         hotel: hotel,
@@ -250,12 +326,12 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
       expect(result[:success]).to be(true)
       rate = rate_plan.room_rates.find_by(date: start_date, currency: "MYR")
       expect(rate.price.to_f).to eq(180.0)
-      expect(rate.corporate_price.to_f).to eq(200.0) # Corporate price should REMAIN unchanged
+      expect(corporate_rate.reload.price.to_f).to eq(200.0)
     end
 
 
 
-    it "updates base_occupancy, extra_pax_charge, and single_supplement when rates are modified" do
+    it "updates base occupancy and separate adult/child supplements when rates are modified" do
       room_type = create(:room_type, hotel: hotel, base_price: 100)
       rate_plan = room_type.rate_plans.first
 
@@ -432,7 +508,7 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
         expect(exec_rate.price.to_f).to eq(300.0), "Executive Room rate must NOT be changed"
       end
 
-      it "does NOT clear walk_in_price or corporate_price when updating standard rate for a single room type" do
+      it "does not change separate Walk-in or Corporate plan rows when updating Standard" do
         shared_rate_plan = create(:rate_plan, hotel: hotel, name: "Standard Rate", currency: "MYR")
         double_room = create(:room_type, hotel: hotel, base_price: 200)
         double_room.room_type_rate_plans.create!(rate_plan: shared_rate_plan)
@@ -443,10 +519,10 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
           rate_plan: shared_rate_plan,
           date: start_date,
           currency: "MYR",
-          price: 200,
-          walk_in_price: 220,
-          corporate_price: 180
+          price: 200
         )
+        walk_in_rate = create(:room_rate, room_type: double_room, rate_plan: double_room.walk_in_rate_plan, date: start_date, currency: "MYR", price: 220)
+        corporate_rate = create(:room_rate, room_type: double_room, rate_plan: double_room.corporate_rate_plan, date: start_date, currency: "MYR", price: 180)
 
         described_class.new(
           hotel: hotel,
@@ -464,8 +540,8 @@ RSpec.describe HotelOps::ApplyInventoryDashboardSelection do
 
         existing_rate.reload
         expect(existing_rate.price.to_f).to eq(250.0)
-        expect(existing_rate.walk_in_price.to_f).to eq(220.0), "Walk-in price must NOT be touched"
-        expect(existing_rate.corporate_price.to_f).to eq(180.0), "Corporate price must NOT be touched"
+        expect(walk_in_rate.reload.price.to_f).to eq(220.0)
+        expect(corporate_rate.reload.price.to_f).to eq(180.0)
       end
     end
 

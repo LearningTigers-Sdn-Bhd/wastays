@@ -1,0 +1,44 @@
+<%# One child age policy for the whole property. The bands define who counts as
+    a child; each room/plan row below supplies what that child pays. %>
+<div class="space-y-3" data-controller="onboarding-child-bands"
+     data-action="input->onboarding-child-bands#recalculate"
+     data-onboarding-child-bands-min-value="<%= RatePlanAgeBand::AGE_RANGE.min %>"
+     data-onboarding-child-bands-max-value="<%= RatePlanAgeBand::AGE_RANGE.max %>"
+     data-onboarding-child-bands-required-max-value="<%= RatePlanAgeBand::REQUIRED_AGE_RANGE.max %>"
+     data-onboarding-child-bands-limit-value="<%= Onboarding::SaveRatesAvailability::MAX_CHILD_BANDS %>">
+  <div>
+    <h2 class="text-base font-semibold">Child age bands</h2>
+    <p class="text-sm text-muted-foreground">
+      Who counts as a child, for the whole property. Each band becomes a price column in the table below.
+    </p>
+  </div>
+
+  <div class="rounded-md border border-border bg-card p-3">
+    <div class="hidden gap-2 pb-2 text-xs font-medium text-muted-foreground sm:flex">
+      <span class="w-40">Age range</span>
+      <span>Label</span>
+    </div>
+
+    <div class="space-y-2" data-onboarding-child-bands-target="rows">
+      <% Array(bands).each_with_index do |band, index| %>
+        <%= render "child_age_band_row", band: band, index: index, presenter: presenter %>
+      <% end %>
+    </div>
+
+    <% unless presenter.read_only? %>
+      <template data-onboarding-child-bands-target="template">
+        <%= render "child_age_band_row", band: {}, index: "NEW_RECORD", presenter: presenter %>
+      </template>
+
+      <div class="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3">
+        <%= render PanelsUI::Button.new(as: :button, variant: :secondary, size: :xs,
+              data: { action: "onboarding-child-bands#add", onboarding_child_bands_target: "addButton" }) do %>
+          <%= app_icon "plus", class: "size-4", aria: { hidden: "true" } %> Band
+        <% end %>
+        <p class="text-xs text-muted-foreground" data-onboarding-child-bands-target="coverage">
+          Bands must cover ages <%= RatePlanAgeBand::REQUIRED_AGE_RANGE.min %>–<%= RatePlanAgeBand::REQUIRED_AGE_RANGE.max %>. Ages 13–17 are optional.
+        </p>
+      </div>
+    <% end %>
+  </div>
+</div>

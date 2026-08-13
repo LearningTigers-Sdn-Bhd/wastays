@@ -1,0 +1,16 @@
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <% if presenter.previous_entry %>
+      <%= render PanelsUI::Button.new(label: "Back", variant: :ghost, href: onboarding_section_path_for(presenter.previous_entry)) do %>
+        <%= app_icon "arrow-left", aria: { hidden: "true" } %>
+        <span>Back</span>
+      <% end %>
+    <% end %>
+  </div>
+  <% unless presenter.read_only? %>
+    <button type="submit" form="onboarding-submission-form" class="panel-button"
+            data-variant="primary" data-size="md" <%= "disabled" unless @readiness.ready %>>
+      <%= review.submit_label %>
+    </button>
+  <% end %>
+</div>

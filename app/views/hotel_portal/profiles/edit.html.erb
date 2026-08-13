@@ -7,15 +7,6 @@
 %>
 
 <div class="w-full space-y-3.5">
-  <% if current_hotel.status == "inventory_incomplete" %>
-    <div>
-      <%= link_to hotel_dashboard_path(current_hotel), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-brand-primary/20 bg-brand-primary/5 px-3 py-1.5 text-xs font-bold text-brand-primary transition-colors hover:bg-brand-primary/10" do %>
-        <%= app_icon "chevron-left", class: "size-3.5", aria: { hidden: "true" } %>
-        Back to Onboarding
-      <% end %>
-    </div>
-  <% end %>
-
   <%= render "hotel_portal/settings/property_page_header" %>
   <%= render "hotel_portal/settings/group_tabs" %>
 

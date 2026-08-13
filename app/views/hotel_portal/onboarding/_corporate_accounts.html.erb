@@ -1,0 +1,84 @@
+<%# The setup shell already owns this section's heading and introduction. Keep
+    the body focused on the decision and the records rather than heading the
+    same page twice. %>
+<section aria-label="Corporate accounts" class="space-y-5">
+  <% if presenter.read_only? %>
+    <% if @corporate_draft_entries.any? %>
+      <%= render PanelsUI::Table.new(caption: "Corporate accounts", header_style: :sentence,
+                                     wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Company</th>
+            <th scope="col">Email</th>
+            <th scope="col">Account type</th>
+            <th scope="col">Invitation</th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% @corporate_draft_entries.each do |entry| %>
+            <tr>
+              <td class="font-medium"><%= entry["company_name"].presence || "—" %></td>
+              <td class="text-muted-foreground"><%= entry["email"] %></td>
+              <td class="text-muted-foreground"><%= entry["account_type"].to_s.humanize %></td>
+              <td class="text-muted-foreground"><%= entry["delivered"] == "true" ? "Sent" : "Queued" %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No corporate accounts were added.</p>
+    <% end %>
+
+  <% else %>
+    <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "corporate_accounts"),
+                  method: :patch, id: "onboarding-corporate-accounts-form" do %>
+      <%# The whole point of this section is that nothing leaves the building
+          during setup. Say so plainly — an owner typing a client's address needs
+          to know it will not be emailed today. %>
+      <%= render PanelsUI::Alert.new(tone: :info, title: "No invitations are sent yet") do |alert| %>
+        <% alert.with_description do %>
+          Nothing is emailed while you are setting up. Once this property is approved, only the
+          companies with <strong>Send invitation</strong> switched on are contacted — the rest stay
+          on your Corporate Accounts page for you to invite whenever you are ready.
+        <% end %>
+      <% end %>
+
+      <div class="mt-4">
+        <%= render HotelPortal::Setup::RecordTable.new(
+              caption: "Corporate accounts",
+              add_label: "Add corporate account",
+              empty: "No corporate accounts yet",
+              empty_description: "If this property bills no companies directly, leave this empty and continue.",
+              empty_icon: "building-2",
+              class: "md:min-w-[60rem]") do |table| %>
+          <% table.with_column(label: "Company") %>
+          <% table.with_column(label: "Email", required: true,
+                               hint: "Where the invitation goes after submission.") %>
+          <% table.with_column(label: "Account type") %>
+          <% table.with_column(label: "Credit limit", hint: "Leave blank for no limit.") %>
+          <% table.with_column(label: "Payment terms") %>
+          <%# Off by default, for the reason the alert above gives: adding a
+              company here is bookkeeping, not correspondence. %>
+          <% table.with_column(label: "Send invitation",
+                               hint: "Off keeps the company queued — invite them from Corporate Accounts whenever you are ready.") %>
+
+          <% @corporate_draft_entries.each_with_index do |entry, index| %>
+            <% delivered = entry["delivered"] == "true" %>
+            <% table.with_row(
+                 remove_label: "Remove #{entry['company_name'].presence || entry['email'].presence || 'this corporate account'}",
+                 persisted: entry["id"].present?,
+                 removable: !delivered,
+                 remove_disabled_reason: ("This invitation has already been sent." if delivered),
+                 key: entry["client_key"]) do %>
+              <%= render "corporate_draft_row", entry: entry, index: index %>
+            <% end %>
+          <% end %>
+
+          <% table.with_blank_row(remove_label: "Remove this corporate account") do %>
+            <%= render "corporate_draft_row", entry: {}, index: "NEW_RECORD" %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

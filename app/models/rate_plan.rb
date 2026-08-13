@@ -12,23 +12,43 @@ class RatePlan < ApplicationRecord
   accepts_nested_attributes_for :rate_plan_age_bands, allow_destroy: true, reject_if: :all_blank
 
   KINDS = %w[standard walk_in corporate ota custom].freeze
-  SPECIAL_TIER_KINDS = %w[walk_in corporate ota].freeze
+
+  # Who may be sold each kind. Walk-in is front-desk only; corporate needs a
+  # negotiated relationship; ota is distribution-only and sold by nobody here.
+  # Every caller that filters plans by audience reads this rather than spelling
+  # the list out — they drifted apart the last time they were written by hand.
+  AUDIENCE_KINDS = {
+    public: %w[standard custom],
+    corporate: %w[standard custom corporate],
+    staff: %w[standard custom walk_in corporate]
+  }.freeze
+
+  # Kinds a channel manager may carry. Not an audience: ota exists only to be
+  # distributed, and walk-in/corporate must never leave the property.
+  DISTRIBUTABLE_KINDS = %w[standard custom ota].freeze
+
+  # Kinds that carry their own price but read restrictions off the category's
+  # standard plan — stop-sell and CTA/CTD are properties of the night, not of
+  # which desk sold it.
+  ANCHORED_KINDS = %w[walk_in corporate].freeze
 
   validates :name, presence: true
   validates :kind, presence: true, inclusion: { in: KINDS }
   validates :sell_mode, presence: true, inclusion: { in: %w[per_room per_person] }
-  validate :pax_pricing_allowed_for_person_mode
-  validate :sell_mode_matches_hotel_exclusivity
   validates :currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :single_supplement, numericality: { greater_than_or_equal_to: 0 }
   validates :child_price_multiplier, numericality: { greater_than_or_equal_to: 0 }
   validates :base_occupancy, numericality: { only_integer: true, greater_than: 0 }
   validates :extra_pax_charge, numericality: { greater_than_or_equal_to: 0 }
+  validates :channex_children_fee, :channex_infant_fee,
+    numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   before_validation :normalize_currency
+  before_validation :inherit_sell_mode_from_hotel
 
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
+  scope :for_audience, ->(audience) { active.where(kind: RatePlan.kinds_for(audience)) }
 
   after_commit :sync_with_channel_manager, on: [ :create, :update ]
   after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
@@ -37,26 +57,37 @@ class RatePlan < ApplicationRecord
     %w[per_room per_person]
   end
 
-  def special_tier?
-    kind.in?(SPECIAL_TIER_KINDS)
+  def self.kinds_for(audience)
+    AUDIENCE_KINDS.fetch(audience.to_sym)
   end
 
   def standard_rate?
     kind == "standard"
   end
 
+  # Only a hotelier-created plan is deletable; every other kind is structural.
   def deletable?
-    !special_tier? && !standard_rate? && !booking_rooms.exists?
+    kind == "custom" && !booking_rooms.exists?
+  end
+
+  def anchored?
+    kind.in?(ANCHORED_KINDS)
+  end
+
+  def bookable_by?(audience)
+    !archived? && kind.in?(self.class.kinds_for(audience))
   end
 
   def archived?
     archived_at.present?
   end
 
-  # Standard Rate and special tiers (walk-in/corporate/ota) are structurally
-  # required and must always stay bookable, so they can't be archived either.
+  # Walk-in and Corporate can be archived — nothing else reads their rows. The
+  # Standard plan cannot: it is the price anchor every other plan resolves
+  # against, the restriction row walk-in/corporate read, and the only plan the
+  # booking paths fall back to. Archiving it leaves the room category unsellable.
   def archivable?
-    !special_tier? && !standard_rate?
+    !standard_rate?
   end
 
   def archive!
@@ -71,14 +102,16 @@ class RatePlan < ApplicationRecord
     sell_mode == "per_person" && rate_plan_age_bands.any?
   end
 
-  def band_for_age(age)
-    rate_plan_age_bands.find { |band| age.to_i.between?(band.min_age, band.max_age) }
+  def channex_capability(room_type: nil)
+    ChannelManagers::ChannexRatePlanCapability.call(rate_plan: self, room_type: room_type)
   end
 
-  # Symbol tier name for the pricing paths that key off it (rate_options,
-  # build_financial_snapshot); nil for standard and custom plans.
-  def special_tier_kind
-    kind.to_sym if special_tier?
+  def channex_syncable?(room_type: nil)
+    channex_capability(room_type: room_type).supported?
+  end
+
+  def band_for_age(age)
+    rate_plan_age_bands.find { |band| age.to_i.between?(band.min_age, band.max_age) }
   end
 
   private
@@ -87,31 +120,21 @@ class RatePlan < ApplicationRecord
     self.currency = CurrencyCatalog.normalize(currency)
   end
 
-  def pax_pricing_allowed_for_person_mode
-    if sell_mode == "per_person" && !hotel&.allow_pax_pricing?
-      errors.add(:sell_mode, "cannot be set to Per Person unless allowed by admin")
-    end
-  end
-
-  # Per-pax hotels sell exclusively to premium/package guests: once a hotel
-  # is flipped to pax_pricing_only, its bookable rate plans cannot mix
-  # per_room and per_person. Special tiers and standard plans are exempt
-  # because they anchor data other parts of the system read regardless of
-  # mode — room_rates.walk_in_price and .corporate_price for the tiers, and
-  # the per-room-type base price for standard.
-  def sell_mode_matches_hotel_exclusivity
-    return unless hotel&.pax_pricing_only?
-    return unless sell_mode == "per_room"
-    return if special_tier? || standard_rate?
-
-    errors.add(:sell_mode, "must be Per Person while this hotel is set to pax-pricing only")
+  # The hotel decides how it sells; a rate plan only decides how much. Nothing
+  # writes sell_mode directly any more — not the rate plan sheet, not the
+  # callers that create Standard plans — so this is the single point where the
+  # value is set, on create and on every update.
+  def inherit_sell_mode_from_hotel
+    self.sell_mode = hotel.sell_mode if hotel
   end
 
   def sync_with_channel_manager
+    return if Thread.current[:skip_ari_sync]
     return if hotel.preferred_channel_manager.blank?
-    return if sell_mode == "per_person"
+    room_ids = room_type_rate_plans.pluck(:room_type_id)
+    return if room_ids.empty?
 
-    ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
+    ChannelManagers::SyncRatePlanAri.call(rate_plan: self, room_type_ids: room_ids)
   end
 
   def delete_from_channel_manager

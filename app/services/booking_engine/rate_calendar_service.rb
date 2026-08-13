@@ -13,36 +13,33 @@ module BookingEngine
     def call
       validate!
       dates = (@start_date..@end_date).to_a
-      room_types = @hotel.room_types
+      room_types = @hotel.room_types.includes(:rate_plans, room_type_rate_plans: [ :occupancy_prices, :age_band_prices ]).to_a
       room_type_ids = room_types.pluck(:id)
 
-      # Determine if partner/corporate logic is available
-      partner = @hotel.respond_to?(:partners) && @partner_code.present? ? @hotel.partners.find_by(code: @partner_code) : nil
-
-      # MIN price only over room types that are actually available that night
-      # We prefer explicit RoomRate prices over the room_type base_price fallback
-      # if a record exists.
-      price_expression = if partner.present?
-        "LEAST(price, COALESCE(corporate_price, price))"
-      else
-        "price"
-      end
-
       rates = RoomRate
+        .joins(:rate_plan)
         .joins("INNER JOIN room_inventories ri
                 ON ri.room_type_id = room_rates.room_type_id
                AND ri.date         = room_rates.date")
         .where(room_type_id: room_type_ids, date: dates)
+        .where(rate_plans: { hotel_id: @hotel.id, archived_at: nil, kind: RatePlan.kinds_for(:public) })
         .where(ri: { status: "open" })
         .where("ri.quantity >= ?", @room_count)
         .group("room_rates.date")
-        .minimum(price_expression)
+        .minimum(:price)
 
-      inventories = RoomInventory
+      available_inventories = RoomInventory
         .where(room_type_id: room_type_ids, date: dates, status: "open")
         .where("quantity >= ?", @room_count)
+
+      inventories = available_inventories
         .group(:date)
         .sum(:quantity)
+
+      available_room_type_ids = available_inventories
+        .pluck(:date, :room_type_id)
+        .group_by(&:first)
+        .transform_values { |pairs| pairs.map(&:last) }
 
       currency = RoomRate
         .where(room_type_id: room_type_ids, date: dates)
@@ -50,26 +47,23 @@ module BookingEngine
         .pluck(:currency)
         .first || @hotel.property_policy&.currency || "MYR"
 
-      # Pre-calculate which dates have ANY available room type inventory
-      # This handles cases where a date has inventory but NO RoomRate record yet
-      dates_with_inventory = RoomInventory
-        .where(room_type_id: room_type_ids, date: dates, status: "open")
-        .where("quantity >= ?", @room_count)
-        .pluck(:date).uniq
-
-      # Find the minimum base price of room types that have inventory but NO RoomRate for specific dates
-      # This is a bit complex to do in one query, so we'll handle it during mapping.
-      base_prices_by_room_type = room_types.where("max_adults >= ?", @room_count).pluck(:id, :base_price).to_h
-
-      room_rates_data = RoomRate
+      eligible_room_rates = RoomRate
+        .joins(:rate_plan)
         .joins("INNER JOIN room_inventories ri
                 ON ri.room_type_id = room_rates.room_type_id
                AND ri.date         = room_rates.date")
         .where(room_type_id: room_type_ids, date: dates)
+        .where(rate_plans: { hotel_id: @hotel.id, archived_at: nil, kind: RatePlan.kinds_for(:public) })
         .where(ri: { status: "open" })
         .where("ri.quantity >= ?", @room_count)
+      room_rates_data = eligible_room_rates
         .select("room_rates.date, room_rates.min_stay, room_rates.max_stay")
         .to_a
+
+      rates_for_resolution = RoomRate
+        .where(room_type_id: room_type_ids, date: dates)
+        .to_a
+        .group_by(&:room_type_id)
 
       rates_by_date = room_rates_data.group_by(&:date)
 
@@ -78,13 +72,13 @@ module BookingEngine
 
         # If we have an explicit rate from RoomRate, use it (it wins over base_price)
         price = rates[d]
-
-        # If no explicit rate but we have inventory, use the min base price of available room types
-        if price.nil? && dates_with_inventory.include?(d)
-          # We need to know which room types have inventory on this date but no rate
-          # For simplicity and performance, we'll use the global min_base_price as the fallback
-          # but only if no explicit rates were found for any room type on this date.
-          price = base_prices_by_room_type.values.min
+        if price.nil?
+          price = fallback_price(
+            date: d,
+            room_types: room_types,
+            available_room_type_ids: available_room_type_ids[d],
+            room_rates_by_room_type: rates_for_resolution
+          )
         end
 
         day_rates = rates_by_date[d] || []
@@ -110,6 +104,29 @@ module BookingEngine
     end
 
     private
+
+    def fallback_price(date:, room_types:, available_room_type_ids:, room_rates_by_room_type:)
+      return if available_room_type_ids.blank?
+
+      eligible_ids = available_room_type_ids.to_set
+      room_types.filter_map do |room_type|
+        next unless eligible_ids.include?(room_type.id)
+
+        room_type.rate_plans.filter_map do |rate_plan|
+          next unless rate_plan.bookable_by?(:public)
+
+          assignment = room_type.room_type_rate_plans.find { |item| item.rate_plan_id == rate_plan.id }
+          Rates::ResolveEffectiveNightlyPrice.call(
+            room_type: room_type,
+            rate_plan: rate_plan,
+            date: date,
+            adults: 2,
+            room_rates: room_rates_by_room_type.fetch(room_type.id, []),
+            room_type_rate_plan: assignment
+          ).amount
+        end.min
+      end.min
+    end
 
     def validate!
       raise ArgumentError, "end_date before start_date" if @end_date < @start_date

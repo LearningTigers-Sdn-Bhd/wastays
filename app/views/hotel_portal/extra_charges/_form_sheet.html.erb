@@ -126,7 +126,7 @@
 
             <%= render PanelsUI::FormField.new(form: form, attribute: :tax_rule_keys, label: "Taxes applied to this charge") do |field| %>
               <% field.with_multi_select(
-                   @tax_rules.map { |tax| { label: "#{tax[:name]}#{' · Inactive' unless tax[:enabled]}", value: tax[:key] } },
+                   @tax_rule_choices,
                    selected: selected_tax_keys,
                    prompt: "Select taxes and fees") %>
             <% end %>

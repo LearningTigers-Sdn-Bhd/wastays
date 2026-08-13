@@ -1,7 +1,14 @@
 require 'rails_helper'
 
 RSpec.describe ChannelManagers::ChannexAdapter do
-  let(:hotel) { create(:hotel, name: "Test Hotel", city: "KL") }
+  let(:hotel) do
+    create(
+      :hotel,
+      name: "Test Hotel",
+      city: "KL",
+      sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room"
+    )
+  end
   let!(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2) }
   let(:adapter) { described_class.new(hotel: hotel) }
   let(:client_double) { instance_double(Channex::Client) }
@@ -33,22 +40,60 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       end
       end
 
+  describe 'per-person properties' do
+    let(:hotel) { create(:hotel, :per_person, name: "Test Hotel", city: "KL") }
+
+    it 'onboards successfully, skipping the rate plans Channex cannot represent' do
+      expect(client_double).to receive(:post).with("/properties", anything)
+        .and_return({ "data" => { "id" => "ch_prop_123" } })
+      expect(client_double).to receive(:post).with("/room_types", anything)
+        .and_return({ "data" => { "id" => "ch_rt_123" } })
+      expect(client_double).not_to receive(:post).with("/rate_plans", anything)
+
+      result = adapter.onboard_hotel
+
+      expect(result.success?).to be true
+      expect(hotel.reload.channel_mapping.external_id).to eq("ch_prop_123")
+    end
+
+    it 'reports unsupported pricing rather than a successful ARI sync' do
+      hotel.create_channel_mapping(provider: "channex", external_id: "ch_prop_123")
+      create(:rate_plan, hotel: hotel, room_type: room_type)
+
+      result = adapter.push_ari(date_range: Date.current..(Date.current + 2.days), sync_availability: false)
+
+      expect(result.success?).to be false
+      expect(result.status).to eq(:unsupported_pricing)
+      expect(result.warnings.first[:rate_plan_id]).to be_present
+    end
+  end
+
   describe '#sync_rate_plan' do
     let!(:hotel_mapping) { create(:channel_mapping, mappable: hotel, external_id: "ch_prop_123") }
     let!(:room_type_mapping) { create(:channel_mapping, mappable: room_type, external_id: "ch_rt_123") }
 
-    it 'does not call Channex and returns nil for a per_person rate plan' do
-      hotel.update!(allow_pax_pricing: true)
-      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type, sell_mode: "per_person")
+    it 'creates manual occupancy options for a complete per-person rate plan', :per_person do
+      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
+      assignment = rate_plan.room_type_rate_plans.find_by!(room_type: room_type)
+      assignment.occupancy_prices.create!(adults: 1, price: 123.45)
+      assignment.occupancy_prices.create!(adults: 2, price: 200.67)
 
-      expect(client_double).not_to receive(:post)
-      expect(client_double).not_to receive(:put)
-      expect(adapter.sync_rate_plan(rate_plan)).to be_nil
+      expect(client_double).to receive(:post).with("/rate_plans", {
+        rate_plan: hash_including(
+          sell_mode: "per_person",
+          rate_mode: "manual",
+          options: [
+            { occupancy: 1, is_primary: false, rate: "123.45" },
+            { occupancy: 2, is_primary: true, rate: "200.67" }
+          ]
+        )
+      }).and_return({ "data" => { "id" => "ch_rp_person" } })
+
+      expect(adapter.sync_rate_plan(rate_plan)).to eq("ch_rp_person")
     end
 
     it 'still syncs a per_room rate plan (regression guard)' do
-      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type, sell_mode: "per_room")
-      create(:room_type_rate_plan, room_type: room_type, rate_plan: rate_plan)
+      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
 
       allow(client_double).to receive(:post).and_return({ "data" => { "id" => "ch_rp_999" } })
 
@@ -56,6 +101,17 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
       expect(result).not_to be_nil
       expect(client_double).to have_received(:post).with("/rate_plans", hash_including(rate_plan: hash_including(sell_mode: "per_room")))
+    end
+
+    it 'rejects a structure response containing Channex warnings' do
+      rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
+      allow(client_double).to receive(:post).and_return(
+        "data" => { "id" => "ch_rp_warned" },
+        "meta" => { "warnings" => [ { "message" => "invalid option" } ] }
+      )
+
+      expect(adapter.sync_rate_plan(rate_plan)).to be_nil
+      expect(rate_plan.room_type_rate_plans.find_by!(room_type: room_type).channel_mapping.external_id).to start_with("pending")
     end
   end
 
@@ -106,7 +162,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             date_to: end_date.to_s,
             rate: "200.00",
             min_stay_arrival: 1,
-            max_stay_arrival: 999,
+            max_stay: 0,
             closed_to_arrival: 0,
             closed_to_departure: 0,
             stop_sell: 0
@@ -116,6 +172,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
       result = adapter.push_ari(date_range: (start_date..end_date))
       expect(result.success?).to be true
+      expect(result.task_ids).to eq(availability: "task_1", restrictions: "task_2")
     end
 
     it 'creates multiple ranges for non-contiguous dates or different values' do
@@ -179,7 +236,7 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             date_to: start_date.to_s,
             rate: "250.00",
             min_stay_arrival: 1,
-            max_stay_arrival: 999,
+            max_stay: 0,
             closed_to_arrival: 0,
             closed_to_departure: 0,
             stop_sell: 1
@@ -189,8 +246,9 @@ RSpec.describe ChannelManagers::ChannexAdapter do
             rate_plan_id: "ch_rp_123",
             date_from: (start_date + 1.day).to_s,
             date_to: (start_date + 1.day).to_s,
+            rate: "99.99",
             min_stay_arrival: 1,
-            max_stay_arrival: 999,
+            max_stay: 0,
             closed_to_arrival: 0,
             closed_to_departure: 0,
             stop_sell: 0
@@ -203,6 +261,37 @@ RSpec.describe ChannelManagers::ChannexAdapter do
   end
 
   describe '#ingest_booking' do
+    it "requires property identity at the revision-job trust boundary" do
+      payload = {
+        "data" => {
+          "booking_id" => "missing-property",
+          "status" => "new", "amount" => "10", "currency" => "MYR", "rooms" => []
+        }
+      }
+
+      expect { adapter.ingest_booking(payload: payload) }
+        .to raise_error(ArgumentError, "Channex booking revision is missing property identity")
+    end
+
+    it "rejects a revision bound to another Channex property" do
+      hotel.create_channel_mapping!(provider: "channex", external_id: "property-for-this-hotel")
+      payload = {
+        "data" => {
+          "property_id" => "property-for-another-hotel",
+          "booking_id" => "cross-tenant-booking",
+          "status" => "new",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "amount" => "100.00",
+          "currency" => "MYR",
+          "rooms" => []
+        }
+      }
+
+      expect { adapter.ingest_booking(payload: payload) }
+        .to raise_error(ArgumentError, "Channex booking revision does not belong to the target hotel")
+    end
+
     it 'builds full guest name from PersonName fields when available' do
       payload = {
         "data" => {
@@ -224,9 +313,141 @@ RSpec.describe ChannelManagers::ChannexAdapter do
         }
       }
 
-      result = adapter.ingest_booking(payload: payload)
+      result = adapter.ingest_booking(payload: payload, require_property_binding: false)
 
       expect(result[:guest_details][:name]).to eq("John Doe")
+    end
+  end
+
+  describe "#settlement mapping" do
+    let!(:booking_source) do
+      BookingSource.find_or_initialize_by(key: "booking_com").tap { |record| record.update!(label: "Booking.com", kind: "ota", active: true) }
+    end
+
+    it "maps collection, payment, amounts, revision identity and safe virtual-card fields" do
+      payload = {
+        "data" => {
+          "id" => "revision-12",
+          "booking_id" => "cm-booking-1",
+          "revision_id" => 12,
+          "ota_reservation_id" => "ota-reservation-1",
+          "ota_name" => "Booking.com",
+          "status" => "new",
+          "amount" => "120.00",
+          "commission_amount" => "20.00",
+          "currency" => "EUR",
+          "payment_collect" => "ota",
+          "payment_type" => "credit_card",
+          "guarantee" => {
+            "is_virtual" => true,
+            "currency" => "EUR",
+            "available_balance" => "120.00",
+            "effective_date" => Date.current.to_s,
+            "expiration_date" => (Date.current + 30.days).to_s,
+            "card_number" => "4111111111111111",
+            "cvv" => "123",
+            "token" => "secret-token"
+          },
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "customer" => { "name" => "Guest" },
+          "rooms" => []
+        }
+      }
+
+      settlement = adapter.ingest_booking(payload: payload, require_property_binding: false).fetch(:settlement)
+
+      expect(settlement).to include(
+        provider: "channex",
+        booking_source_key: "booking_com",
+        channel_manager_reference: "cm-booking-1",
+        external_reference: "ota-reservation-1",
+        revision_id: 12,
+        collection_by: "ota",
+        settlement_method: "virtual_card",
+        currency: "EUR",
+        gross_amount: 120.to_d,
+        commission_amount: 20.to_d,
+        expected_net_amount: 100.to_d,
+        status: "ready_to_charge",
+        virtual_card: hash_including(
+          is_virtual: true,
+          currency: "EUR",
+          available_balance: 120.to_d,
+          effective_date: Date.current,
+          expiration_date: Date.current + 30.days
+        )
+      )
+      expect(settlement.to_json).not_to include("4111111111111111", "123", "secret-token", "card_number", "cvv")
+    end
+
+    it "does not invent a source currency for settlement money" do
+      payload = {
+        "data" => {
+          "id" => "revision-no-currency", "booking_id" => "cm-no-currency", "revision_id" => 1,
+          "ota_name" => "Booking.com", "amount" => "50.00", "payment_collect" => "ota",
+          "payment_type" => "credit_card", "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s, "customer" => { "name" => "Guest" }, "rooms" => []
+        }
+      }
+
+      settlement = adapter.ingest_booking(payload: payload, require_property_binding: false).fetch(:settlement)
+
+      expect(settlement[:currency]).to be_nil
+    end
+
+    it "marks property collection as requiring collection without treating it as paid" do
+      payload = {
+        "data" => {
+          "id" => "revision-property",
+          "booking_id" => "cm-property",
+          "revision_id" => 1,
+          "ota_name" => "Booking.com",
+          "amount" => "50.00",
+          "currency" => "MYR",
+          "payment_collect" => "property",
+          "payment_type" => "credit_card",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "customer" => { "name" => "Guest" },
+          "rooms" => []
+        }
+      }
+
+      settlement = adapter.ingest_booking(payload: payload, require_property_binding: false).fetch(:settlement)
+
+      expect(settlement).to include(
+        collection_by: "property",
+        settlement_method: "guest_card",
+        status: "property_collection_required"
+      )
+    end
+
+    it "marks an unknown source for attention instead of resolving it as an OTA" do
+      payload = {
+        "data" => {
+          "id" => "revision-unknown",
+          "booking_id" => "cm-unknown",
+          "revision_id" => 1,
+          "ota_name" => "Unrecognized Marketplace",
+          "amount" => "50.00",
+          "currency" => "MYR",
+          "payment_collect" => "ota",
+          "payment_type" => "credit_card",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "customer" => { "name" => "Guest" },
+          "rooms" => []
+        }
+      }
+
+      settlement = adapter.ingest_booking(payload: payload, require_property_binding: false).fetch(:settlement)
+
+      expect(settlement).to include(
+        booking_source_key: nil,
+        status: "needs_attention",
+        metadata: include("source_resolution" => "unknown")
+      )
     end
   end
 

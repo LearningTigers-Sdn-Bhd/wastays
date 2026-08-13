@@ -1,38 +1,39 @@
 import { Controller } from "@hotwired/stimulus"
+import { syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
+
+// Staged-change field name -> the Stimulus target holding it in the editor.
+const FIELD_TARGETS = {
+  quantity: "quantityField",
+  status: "statusField",
+  price: "priceField",
+  base_occupancy: "baseOccupancyField",
+  extra_pax_charge: "extraPaxChargeField",
+  single_supplement: "singleSupplementField",
+  min_stay: "minStayField",
+  max_stay: "maxStayField",
+  closed_to_arrival: "ctaField",
+  closed_to_departure: "ctdField",
+  stop_sell: "stopSellField"
+}
 
 export default class extends Controller {
+  // The cell editor is server-rendered into #inventory_selection_sheet, so every
+  // form target below is absent until that frame loads and gone again once the
+  // sheet closes. Read them through the `has…Target` guards, never directly.
   static targets = [
-    "dialog",
-    "confirmDialog",
-    "confirmMessage",
     "form",
-    "title",
-    "subtitle",
     "mode",
-    "startDate",
-    "endDate",
-    "roomTypeOption",
-    "roomTypeCheckbox",
-    "roomTypeSearch",
-    "ratePlanOption",
-    "ratePlanCheckbox",
-    "ratePlanSearch",
     "applyInventory",
     "applyRates",
     "applyRestrictions",
-    "inventoryFields",
-    "rateFields",
-    "restrictionFields",
-    "ratePlanFields",
     "quantityField",
     "statusField",
-    "currentQuantityHint",
-    "currentStatusHint",
     "priceField",
-    "priceLabel",
     "baseOccupancyField",
     "extraPaxChargeField",
     "singleSupplementField",
+    "occupancyPriceField",
+    "occupancyPriceRow",
     "currencyField",
     "minStayField",
     "maxStayField",
@@ -50,7 +51,6 @@ export default class extends Controller {
     "navMonth",
     "navRoomType",
     "successDialog",
-    "info",
     "channelIdField",
     "channelRatePlanIdField",
     "paxFields",
@@ -68,25 +68,36 @@ export default class extends Controller {
     defaultStart: String,
     defaultEnd: String,
     defaultCurrency: String,
-    baseCurrency: String,
-    allowPaxPricing: Boolean
+    chargingModel: String,
+    baseCurrency: String
   }
 
   initialize() {
     this.stagedChanges = []
     this.initialValues = {}
+    this.initialFormSnapshot = ""
     this.touchedFields = new Set()
   }
 
   connect() {
     this.skipConfirm = false
-    this.setMode(this.defaultModeValue || "availability")
-    this.filterRoomTypes()
-    this.filterRatePlans()
-    this.syncRatePlans()
-    this.toggleSections()
     this.loadStagedChanges()
     this.updateSyncButton()
+
+    // The editor arrives over Turbo. Capture its pristine values then, so the
+    // staging step can tell an edited field from an untouched one, and replay
+    // any change already staged for this cell over the server's saved values.
+    this.sheetFrame = document.getElementById("inventory_selection_sheet")
+    if (this.sheetFrame) {
+      this.sheetLoadHandler = () => {
+        if (!this.hasFormTarget) return
+        this.touchedFields.clear()
+        this.applyStagedValuesToForm()
+        this.initialValues = this.getFormValues()
+        this.initialFormSnapshot = this.formSnapshot()
+      }
+      this.sheetFrame.addEventListener("turbo:frame-load", this.sheetLoadHandler)
+    }
 
     // Restore OTAs mode
     const storedOtasMode = localStorage.getItem(`ari_otas_mode_${this.hotelIdValue}`) || "hidden"
@@ -119,14 +130,21 @@ export default class extends Controller {
     document.addEventListener("click", this.closeAllTooltipsHandler)
   }
 
+  // A second disconnect() further down used to shadow this one, so neither the
+  // frame listener nor the document listener was ever removed. Both cleanups
+  // live here now.
   disconnect() {
     const frame = document.getElementById("inventory_calendar_frame")
     if (frame && this.reapplyHighlightsHandler) {
       frame.removeEventListener("turbo:frame-load", this.reapplyHighlightsHandler)
     }
+    if (this.sheetFrame && this.sheetLoadHandler) {
+      this.sheetFrame.removeEventListener("turbo:frame-load", this.sheetLoadHandler)
+    }
     if (this.closeAllTooltipsHandler) {
       document.removeEventListener("click", this.closeAllTooltipsHandler)
     }
+    document.body.classList.remove("hotel-portal-focus-mode")
   }
 
   toggleOtas(event) {
@@ -176,10 +194,6 @@ export default class extends Controller {
     }
   }
 
-  disconnect() {
-    document.body.classList.remove("hotel-portal-focus-mode")
-  }
-
   loadStagedChanges() {
     const key = `ari_staged_${this.hotelIdValue}`
     const stored = localStorage.getItem(key)
@@ -217,220 +231,158 @@ export default class extends Controller {
     localStorage.removeItem(key)
   }
 
-  openBulk(event) {
-    if (event) event.preventDefault()
-    this.resetForm()
-    this.touchedFields.clear()
-    this.titleTarget.textContent = "Bulk Edit"
-    this.subtitleTarget.textContent = "Updates will be detected automatically as you change fields."
-    this.submitButtonTarget.value = "Stage Changes"
-    if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
-    
-    // In bulk mode, we treat all fields as 'empty' initially
-    this.initialValues = {
-      quantity: "", status: "", price: "", 
-      base_occupancy: "", extra_pax_charge: "", single_supplement: "",
-      min_stay: "", max_stay: "", 
-      closed_to_arrival: false, closed_to_departure: false, stop_sell: false
-    }
 
-    this.openDialog()
-  }
-
-  openCell(event) {
-    const data = event.currentTarget.dataset
-
-    this.resetForm()
-    this.touchedFields.clear()
-    
-    // Set channel-specific fields if present
-    if (this.hasChannelIdFieldTarget) {
-      this.channelIdFieldTarget.value = data.channelId || ""
-    }
-    if (this.hasChannelRatePlanIdFieldTarget) {
-      this.channelRatePlanIdFieldTarget.value = data.channelRatePlanId || ""
-    }
-    this.activeChannelName = data.channelName || ""
-
-    // Set mode based on data attribute (rates, availability, etc.)
-    let mode = data.mode
-    if (mode === "channel_availability") {
-      mode = "availability"
-    } else if (mode === "channel_rates" || mode === "rates") {
-      mode = "combined"
-    } else {
-      mode = mode || this.currentMode()
-    }
-    this.setMode(mode)
-    
-    this.startDateTarget.value = data.date
-    this.endDateTarget.value = data.date
-    
-    // Select the specific room type
-    this.roomTypeCheckboxTargets.forEach(cb => {
-      cb.checked = (cb.value === data.roomTypeId)
-      if (data.channelId) {
-        cb.disabled = (cb.value !== data.roomTypeId)
-      } else {
-        cb.disabled = false
-      }
-    })
-
-    this.syncRatePlans()
-
-    // Select the specific rate plan OR virtual tier checkbox
-    if (data.ratePlanId) {
-      this.ratePlanCheckboxTargets.forEach(cb => {
-        cb.checked = (cb.value === data.ratePlanId)
-        if (data.channelId) {
-          cb.disabled = (cb.value !== data.ratePlanId)
-        } else {
-          cb.disabled = false
-        }
-      })
-    } else {
-      if (data.mode === "channel_availability") {
-        this.ratePlanCheckboxTargets.forEach(cb => {
-          cb.checked = false
-          cb.disabled = true
-        })
-      } else {
-        this.ratePlanCheckboxTargets.forEach(cb => {
-          cb.disabled = false
-        })
-      }
-    }
-
-    if (data.mode === "channel_availability" || data.mode === "availability") {
-      this.quantityFieldTarget.value = data.quantity || ""
-      this.statusFieldTarget.value = ""
-      
-      const current = data.status || "open"
-      if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = `Currently: ${current.toUpperCase()}`
-      if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = `Current: ${data.quantity || 0}`
-    } else {
-      if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
-      if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = ""
-      this.priceFieldTarget.value = data.price || ""
-      if (this.hasBaseOccupancyFieldTarget) this.baseOccupancyFieldTarget.value = data.baseOccupancy || ""
-      if (this.hasExtraPaxChargeFieldTarget) this.extraPaxChargeFieldTarget.value = data.extraPaxCharge || ""
-      if (this.hasSingleSupplementFieldTarget) this.singleSupplementFieldTarget.value = data.singleSupplement || ""
-      
-      const currency = data.currency || this.baseCurrencyValue || this.defaultCurrencyValue || "MYR"
-      this.syncCurrencySelect(currency)
-
-      this.minStayFieldTarget.value = data.minStay || ""
-      this.maxStayFieldTarget.value = data.maxStay || ""
-      this.ctaFieldTarget.checked = data.closedToArrival === "true"
-      this.ctdFieldTarget.checked = data.closedToDeparture === "true"
-      this.stopSellFieldTarget.checked = data.stopSell === "true"
-    }
-
-    if (data.channelName) {
-      this.titleTarget.textContent = `Update ${data.channelName}`
-    } else {
-      this.titleTarget.textContent = this.titleForMode(data.mode || this.currentMode())
-    }
-    this.subtitleTarget.textContent = `Staging update for ${data.date}`
-    this.submitButtonTarget.value = "Stage Update"
-
-    // Capture initial values for automatic change detection
-    this.initialValues = this.getFormValues()
-
-    this.openDialog()
-  }
-
+  // The editor renders only the fields its mode needs, so every read is guarded.
   getFormValues() {
     return {
-      quantity: this.quantityFieldTarget.value,
-      status: this.statusFieldTarget.value,
-      price: this.priceFieldTarget.value,
-      base_occupancy: this.hasBaseOccupancyFieldTarget ? this.baseOccupancyFieldTarget.value : "",
-      extra_pax_charge: this.hasExtraPaxChargeFieldTarget ? this.extraPaxChargeFieldTarget.value : "",
-      single_supplement: this.hasSingleSupplementFieldTarget ? this.singleSupplementFieldTarget.value : "",
-      min_stay: this.minStayFieldTarget.value,
-      max_stay: this.maxStayFieldTarget.value,
-      closed_to_arrival: this.ctaFieldTarget.checked,
-      closed_to_departure: this.ctdFieldTarget.checked,
-      stop_sell: this.stopSellFieldTarget.checked
+      quantity: this.fieldValue("quantityField"),
+      status: this.fieldValue("statusField"),
+      price: this.fieldValue("priceField"),
+      base_occupancy: this.fieldValue("baseOccupancyField"),
+      extra_pax_charge: this.fieldValue("extraPaxChargeField"),
+      single_supplement: this.fieldValue("singleSupplementField"),
+      occupancy_prices: this.occupancyPricesFromForm(),
+      min_stay: this.fieldValue("minStayField"),
+      max_stay: this.fieldValue("maxStayField"),
+      closed_to_arrival: this.fieldChecked("ctaField"),
+      closed_to_departure: this.fieldChecked("ctdField"),
+      stop_sell: this.fieldChecked("stopSellField")
     }
   }
 
-  toggleInfo(event) {
-    if (event) event.preventDefault()
-    const infoId = event.currentTarget.dataset.infoId
-    const infoBox = this.infoTargets.find(el => el.dataset.infoId === infoId)
-    if (infoBox) {
-      infoBox.classList.toggle("hidden")
-    }
+  fieldValue(name) {
+    const capitalized = name.charAt(0).toUpperCase() + name.slice(1)
+    return this[`has${capitalized}Target`] ? this[`${name}Target`].value : ""
   }
 
-  close(event) {
-    if (event) event.preventDefault()
-    this.dialogTarget.close()
-    this.skipConfirm = false
+  // MultiSelect enhances a native <select multiple> that stays the source of
+  // truth for the form post, so the staged summary reads the same element.
+  // Its data attributes land on the component's wrapper, not the select, so
+  // find it by the parameter name it submits under.
+  selectedOptions(param) {
+    const select = this.hasFormTarget &&
+      this.formTarget.querySelector(`select[name="selection_update[${param}][]"]`)
+    if (!select) return []
+
+    return Array.from(select.selectedOptions).map(option => ({
+      id: option.value,
+      name: option.textContent.trim()
+    }))
+  }
+
+  // DatePicker and MultiSelect both put caller-supplied data attributes on their
+  // wrapper rather than on the control, so these are found by submitted name.
+  formInput(param) {
+    if (!this.hasFormTarget) return null
+
+    return this.formTarget.querySelector(`[name="selection_update[${param}]"]`)
+  }
+
+  formInputValue(param) {
+    return this.formInput(param)?.value || ""
+  }
+
+  fieldChecked(name) {
+    const capitalized = name.charAt(0).toUpperCase() + name.slice(1)
+    return this[`has${capitalized}Target`] ? this[`${name}Target`].checked : false
+  }
+
+  // Reopening a cell shows what the server has saved. A change staged earlier in
+  // this session is not saved yet, so replay it over the form — otherwise the
+  // editor would silently offer to overwrite the draft with the old values.
+  applyStagedValuesToForm() {
+    if (!this.hasFormTarget) return
+
+    const { roomTypeId, ratePlanId, date } = this.formTarget.dataset
+    const staged = this.stagedChanges.filter(change =>
+      change.room_type_ids.map(String).includes(String(roomTypeId)) &&
+      (!ratePlanId || change.rate_plan_ids.map(String).includes(String(ratePlanId))) &&
+      change.start_date <= date && date <= change.end_date
+    )
+    if (staged.length === 0) return
+
+    // Later stages win, matching the order the batch endpoint applies them in.
+    staged.forEach(change => {
+      change.modified_fields.forEach(field => {
+        if (field === "occupancy_prices") {
+          this.occupancyPriceFieldTargets.forEach(input => {
+            const staged = change.occupancy_prices?.[input.dataset.adults]
+            if (staged !== undefined) input.value = staged
+          })
+          return
+        }
+
+        const targetName = FIELD_TARGETS[field]
+        const capitalized = targetName && targetName.charAt(0).toUpperCase() + targetName.slice(1)
+        if (!targetName || !this[`has${capitalized}Target`]) return
+
+        const input = this[`${targetName}Target`]
+        if (input.type === "checkbox") {
+          input.checked = Boolean(change[field])
+        } else {
+          input.value = change[field] ?? ""
+        }
+      })
+    })
+  }
+
+  closeSheet() {
+    const dialog = this.sheetFrame?.querySelector("dialog")
+    if (!dialog) return
+
+    const sheet = this.application.getControllerForElementAndIdentifier(dialog, "panels-ui--sheet")
+    if (sheet) sheet.close()
+    else dialog.close()
   }
 
   confirmSubmit(event) {
-    // We are overriding the direct submission to stage the change
+    // Submitting stages the change locally; nothing is written until Sync.
     event.preventDefault()
-    this.stageCurrentSelection()
-    this.close()
+    if (this.stageCurrentSelection()) this.closeSheet()
+    this.skipConfirm = false
   }
 
   stageCurrentSelection() {
-    const selectedRoomTypes = this.roomTypeCheckboxTargets
-      .filter(cb => cb.checked)
-      .map(cb => ({ id: cb.value, name: cb.closest("label").querySelector("span").textContent.trim() }))
-    
-    const selectedRatePlans = this.ratePlanCheckboxTargets
-      .filter(cb => cb.checked)
-      .map(cb => ({ id: cb.value, name: cb.closest("label").querySelector("span").textContent.trim() }))
-    
+    const selectedRoomTypes = this.fixedRoomTypeScope()
+    const selectedRatePlans = this.selectedOptions("rate_plan_ids")
+
     const currentValues = this.getFormValues()
     const modifiedFields = []
-    
-    // Automatic field change detection + Touched detection
+
+    // A field counts as modified when the operator touched it, or when its value
+    // differs from what the server rendered.
     Object.keys(currentValues).forEach(key => {
-      const current = currentValues[key]
-      const initial = this.initialValues[key]
-      
-      // If user touched/clicked/typed in the field, count it!
       if (this.touchedFields.has(key)) {
         modifiedFields.push(key)
         return
       }
 
-      // For bulk mode, if field is not empty, it's considered a change
-      const isBulk = this.titleTarget.textContent === "Bulk Edit"
-      
-      if (isBulk) {
-        if (current !== "" && current !== false) modifiedFields.push(key)
-      } else {
-        // Single cell: check for actual diff
-        // We use string conversion for numbers to be safe
-        if (current.toString() !== initial.toString()) {
-          modifiedFields.push(key)
-        }
+      if (JSON.stringify(currentValues[key]) !== JSON.stringify(this.initialValues[key])) {
+        modifiedFields.push(key)
       }
     })
 
     if (modifiedFields.length === 0) {
       alert("No changes detected. Please update at least one field.")
-      return
+      return false
     }
 
     const applyInventory = modifiedFields.some(f => ["quantity", "status"].includes(f))
-    const applyRates = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement"].includes(f))
+    const applyRates = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement", "occupancy_prices"].includes(f))
     const applyRestrictions = modifiedFields.some(f => ["min_stay", "max_stay", "closed_to_arrival", "closed_to_departure", "stop_sell"].includes(f))
+
+    if ((applyRates || applyRestrictions) && selectedRatePlans.length === 0) {
+      alert("Select at least one rate plan to update.")
+      return false
+    }
 
     const channelId = this.hasChannelIdFieldTarget ? this.channelIdFieldTarget.value : ""
     const channelRatePlanId = this.hasChannelRatePlanIdFieldTarget ? this.channelRatePlanIdFieldTarget.value : ""
 
     const change = {
       id: Math.random().toString(36).substr(2, 9),
-      start_date: this.startDateTarget.value,
-      end_date: this.endDateTarget.value,
+      start_date: this.formInputValue("start_date"),
+      end_date: this.formInputValue("end_date"),
       room_type_ids: selectedRoomTypes.map(rt => rt.id),
       rate_plan_ids: selectedRatePlans.map(rp => rp.id),
       apply_inventory: applyInventory,
@@ -443,6 +395,7 @@ export default class extends Controller {
       base_occupancy: currentValues.base_occupancy,
       extra_pax_charge: currentValues.extra_pax_charge,
       single_supplement: currentValues.single_supplement,
+      occupancy_prices: currentValues.occupancy_prices,
       currency: this.baseCurrencyValue || this.defaultCurrencyValue || "MYR",
       min_stay: currentValues.min_stay,
       max_stay: currentValues.max_stay,
@@ -459,6 +412,50 @@ export default class extends Controller {
     this.saveStagedChanges()
     this.updateSyncButton()
     this.highlightStagedCells(change)
+    return true
+  }
+
+  fixedRoomTypeScope() {
+    if (!this.hasFormTarget) return []
+
+    const { roomTypeId, roomTypeName } = this.formTarget.dataset
+    if (!roomTypeId) return []
+
+    return [{ id: roomTypeId, name: roomTypeName || "Room category" }]
+  }
+
+  switchRoomType(event) {
+    if (!this.hasFormTarget) return
+
+    const select = event.target.closest("select")
+    const roomTypeId = select?.value
+    if (!roomTypeId || !this.formTarget.dataset.contextUrl) return
+
+    if (this.formSnapshot() !== this.initialFormSnapshot && !window.confirm("Switch room categories and discard the unstaged changes in this sheet?")) {
+      this.restoreRoomTypeContext(select)
+      return
+    }
+
+    const destination = new URL(this.formTarget.dataset.contextUrl, window.location.origin)
+    destination.searchParams.set("room_type_id", roomTypeId)
+    destination.searchParams.delete("rate_plan_id")
+
+    if (this.sheetFrame) this.sheetFrame.src = destination.toString()
+  }
+
+  formSnapshot() {
+    if (!this.hasFormTarget) return ""
+
+    return Array.from(new FormData(this.formTarget).entries())
+      .filter(([key]) => key !== "selection_update[room_type_context_id]")
+      .map(([key, value]) => `${key}=${value instanceof File ? `${value.name}:${value.size}` : value}`)
+      .sort()
+      .join("&")
+  }
+
+  restoreRoomTypeContext(select) {
+    select.value = this.formTarget.dataset.roomTypeId
+    syncSelectMenu(this.application, select)
   }
 
   buildSummary(selectedRoomTypes, selectedRatePlans, modifiedFields, values) {
@@ -473,7 +470,7 @@ export default class extends Controller {
       if (invParts.length > 0) details.push(invParts.join(", "))
     }
     
-    const rateModified = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement"].includes(f))
+    const rateModified = modifiedFields.some(f => ["price", "base_occupancy", "extra_pax_charge", "single_supplement", "occupancy_prices"].includes(f))
     if (rateModified) {
       actions.push("Rates")
       const rateParts = []
@@ -484,10 +481,15 @@ export default class extends Controller {
         rateParts.push(`Base Occ: ${values.base_occupancy}`)
       }
       if (modifiedFields.includes("extra_pax_charge") && values.extra_pax_charge !== "") {
-        rateParts.push(`Extra Pax: ${this.baseCurrencyValue || "MYR"} ${values.extra_pax_charge}`)
+        rateParts.push(`Extra guest: ${this.baseCurrencyValue || "MYR"} ${values.extra_pax_charge}`)
       }
       if (modifiedFields.includes("single_supplement") && values.single_supplement !== "") {
         rateParts.push(`Single Supp: ${this.baseCurrencyValue || "MYR"} ${values.single_supplement}`)
+      }
+      if (modifiedFields.includes("occupancy_prices")) {
+        Object.entries(values.occupancy_prices).forEach(([adults, amount]) => {
+          rateParts.push(`${adults} adult${adults === "1" ? "" : "s"}: ${this.baseCurrencyValue || "MYR"} ${amount}`)
+        })
       }
       if (rateParts.length > 0) details.push(rateParts.join(", "))
     }
@@ -506,9 +508,9 @@ export default class extends Controller {
       }
     }
     
-    const start = this.formatDate(this.startDateTarget.value)
-    const end = this.formatDate(this.endDateTarget.value)
-    const dates = this.startDateTarget.value === this.endDateTarget.value 
+    const start = this.formatDate(this.formInputValue("start_date"))
+    const end = this.formatDate(this.formInputValue("end_date"))
+    const dates = this.formInputValue("start_date") === this.formInputValue("end_date") 
       ? start 
       : `${start} to ${end}`
 
@@ -560,6 +562,7 @@ export default class extends Controller {
                 base_occupancy: change.apply_rates ? change.base_occupancy : undefined,
                 extra_pax_charge: change.apply_rates ? change.extra_pax_charge : undefined,
                 single_supplement: change.apply_rates ? change.single_supplement : undefined,
+                occupancy_prices: change.apply_rates ? change.occupancy_prices : undefined,
                 currency: change.currency,
                 min_stay: change.apply_restrictions ? change.min_stay : undefined,
                 max_stay: change.apply_restrictions ? change.max_stay : undefined,
@@ -581,17 +584,12 @@ export default class extends Controller {
             change.rate_plan_ids.forEach(ratePlanId => {
               let testid = `rate-cell-${roomTypeId}-${ratePlanId}-${date}`
 
-              // Handle virtual tiers (e.g. tier_walk_in_123)
-              if (typeof ratePlanId === 'string' && ratePlanId.startsWith('tier_')) {
-                const tierName = ratePlanId.split('_')[1].replace('_', '-')
-                testid = `${tierName}-cell-${roomTypeId}-${date}`
-              }
-
               this.markCellDirty(testid, {
                 price: change.apply_rates ? change.price : undefined,
                 base_occupancy: change.apply_rates ? change.base_occupancy : undefined,
                 extra_pax_charge: change.apply_rates ? change.extra_pax_charge : undefined,
                 single_supplement: change.apply_rates ? change.single_supplement : undefined,
+                occupancy_prices: change.apply_rates ? change.occupancy_prices : undefined,
                 currency: change.currency,
                 min_stay: change.apply_restrictions ? change.min_stay : undefined,
                 max_stay: change.apply_restrictions ? change.max_stay : undefined,
@@ -686,6 +684,11 @@ export default class extends Controller {
         if (data.base_occupancy !== undefined && data.base_occupancy !== "") cell.dataset.baseOccupancy = data.base_occupancy
         if (data.extra_pax_charge !== undefined && data.extra_pax_charge !== "") cell.dataset.extraPaxCharge = data.extra_pax_charge
         if (data.single_supplement !== undefined && data.single_supplement !== "") cell.dataset.singleSupplement = data.single_supplement
+        if (data.occupancy_prices && Object.keys(data.occupancy_prices).length > 0) {
+          cell.dataset.occupancyPrices = JSON.stringify(data.occupancy_prices)
+          const displayPrice = data.occupancy_prices[cell.dataset.maxAdults]
+          if (displayPrice !== undefined) cell.dataset.price = displayPrice
+        }
       }
     }
   }
@@ -853,202 +856,6 @@ export default class extends Controller {
     }
   }
 
-  syncRatePlans() {
-    const selectedRoomTypeIds = this.roomTypeCheckboxTargets
-      .filter(cb => cb.checked)
-      .map(cb => cb.value)
-
-    this.ratePlanOptionTargets.forEach(option => {
-      const roomTypeId = option.dataset.roomTypeId
-      const isVisible = selectedRoomTypeIds.includes(roomTypeId)
-      
-      option.classList.toggle("hidden", !isVisible)
-      
-      if (!isVisible) {
-        const cb = option.querySelector('input[type="checkbox"]')
-        if (cb) cb.checked = false
-      }
-    })
-  }
-
-  setMode(mode) {
-    const normalizedMode = ["availability", "rates", "restrictions", "combined"].includes(mode) ? mode : "availability"
-    if (this.hasModeTarget) this.modeTarget.value = normalizedMode
-    
-    if (normalizedMode === "availability") {
-      this.applyInventoryTarget.value = "1"
-      this.applyRatesTarget.value = "0"
-      this.applyRestrictionsTarget.value = "0"
-    } else if (normalizedMode === "rates") {
-      this.applyInventoryTarget.value = "0"
-      this.applyRatesTarget.value = "1"
-      this.applyRestrictionsTarget.value = "0"
-    } else if (normalizedMode === "restrictions") {
-      this.applyInventoryTarget.value = "0"
-      this.applyRatesTarget.value = "0"
-      this.applyRestrictionsTarget.value = "1"
-    } else if (normalizedMode === "combined") {
-      this.applyInventoryTarget.value = "0"
-      this.applyRatesTarget.value = "1"
-      this.applyRestrictionsTarget.value = "1"
-    }
-
-    this.toggleSections()
-  }
-
-  currentMode() {
-    return this.modeTarget.value || this.defaultModeValue || "availability"
-  }
-
-  toggleSections() {
-    const mode = this.currentMode()
-    const isChannelOverride = this.hasChannelIdFieldTarget && this.channelIdFieldTarget.value !== ""
-    
-    // In Combined or Rates mode, we show everything except Inventory
-    // In Availability mode, we show only Inventory
-    if (this.hasInventoryFieldsTarget) {
-      this.inventoryFieldsTarget.classList.toggle("hidden", mode !== "availability")
-    }
-    
-    if (this.hasRateFieldsTarget) {
-      this.rateFieldsTarget.classList.toggle("hidden", mode === "availability")
-    }
-    
-    if (this.hasRestrictionFieldsTarget) {
-      this.restrictionFieldsTarget.classList.toggle("hidden", mode === "availability")
-    }
-    
-    if (this.hasRatePlanFieldsTarget) {
-      this.ratePlanFieldsTarget.classList.toggle("hidden", mode === "availability")
-    }
-
-    if (this.hasPaxFieldsTarget) {
-      this.paxFieldsTarget.classList.toggle("hidden", mode === "availability" || isChannelOverride)
-    }
-  }
-
-  filterRoomTypes() {
-    if (!this.hasRoomTypeSearchTarget) return
-    const query = this.roomTypeSearchTarget.value.toLowerCase()
-    
-    this.roomTypeOptionTargets.forEach(option => {
-      const match = option.dataset.searchText.includes(query)
-      option.classList.toggle("hidden", !match)
-    })
-  }
-
-  filterRatePlans() {
-    if (!this.hasRatePlanSearchTarget) return
-    const query = this.ratePlanSearchTarget.value.toLowerCase()
-
-    this.ratePlanOptionTargets.forEach(option => {
-      const match = option.dataset.searchText.includes(query)
-      option.classList.toggle("hidden", !match)
-    })
-  }
-
-  selectAllRoomTypes(event) {
-    if (event) event.preventDefault()
-    this.roomTypeCheckboxTargets.forEach(cb => {
-      const option = cb.closest("[data-inventory-calendar-target='roomTypeOption']")
-      if (option && !option.classList.contains("hidden")) {
-        cb.checked = true
-      }
-    })
-    this.syncRatePlans()
-  }
-
-  clearRoomTypes(event) {
-    if (event) event.preventDefault()
-    this.roomTypeCheckboxTargets.forEach(cb => cb.checked = false)
-    this.syncRatePlans()
-  }
-
-  selectAllRatePlans(event) {
-    if (event) event.preventDefault()
-    this.ratePlanCheckboxTargets.forEach(cb => {
-      const option = cb.closest("[data-inventory-calendar-target='ratePlanOption']")
-      if (option && !option.classList.contains("hidden")) {
-        cb.checked = true
-      }
-    })
-  }
-
-  clearRatePlans(event) {
-    if (event) event.preventDefault()
-    this.ratePlanCheckboxTargets.forEach(cb => cb.checked = false)
-  }
-
-  resetForm() {
-    this.skipConfirm = false
-    this.startDateTarget.value = this.defaultStartValue
-    this.endDateTarget.value = this.defaultEndValue
-    this.roomTypeCheckboxTargets.forEach(cb => cb.checked = true)
-    this.ratePlanCheckboxTargets.forEach(cb => cb.checked = true)
-    if (this.hasRoomTypeSearchTarget) this.roomTypeSearchTarget.value = ""
-    if (this.hasRatePlanSearchTarget) this.ratePlanSearchTarget.value = ""
-    this.filterRoomTypes()
-    this.filterRatePlans()
-    this.syncRatePlans()
-    this.quantityFieldTarget.value = ""
-    this.statusFieldTarget.value = ""
-    this.priceFieldTarget.value = ""
-    if (this.hasPriceLabelTarget) {
-      this.priceLabelTarget.textContent = `Price (${this.baseCurrencyValue || "MYR"})`
-    }
-    if (this.hasBaseOccupancyFieldTarget) this.baseOccupancyFieldTarget.value = ""
-    if (this.hasExtraPaxChargeFieldTarget) this.extraPaxChargeFieldTarget.value = ""
-    if (this.hasSingleSupplementFieldTarget) this.singleSupplementFieldTarget.value = ""
-    if (this.hasCurrentStatusHintTarget) this.currentStatusHintTarget.textContent = ""
-    if (this.hasCurrentQuantityHintTarget) this.currentQuantityHintTarget.textContent = ""
-    
-    // Reset hidden fields
-    if (this.hasCurrencyFieldTarget) {
-      this.currencyFieldTarget.value = this.baseCurrencyValue || "MYR"
-    }
-
-    this.minStayFieldTarget.value = ""
-    this.maxStayFieldTarget.value = ""
-    this.ctaFieldTarget.checked = false
-    this.ctdFieldTarget.checked = false
-    this.stopSellFieldTarget.checked = false
-    
-    // Reset Tiered Logic
-    if (this.hasRateTierFieldTarget) this.rateTierFieldTarget.value = ""
-    if (this.hasMasterPlanStaticTarget) this.masterPlanStaticTarget.classList.add("hidden")
-
-    this.toggleSections()
-  }
-
-  syncCurrencySelect(currency) {
-    if (!this.hasCurrencyFieldTarget) return
-
-    this.currencyFieldTarget.value = currency
-    
-    const searchableSelect = this.currencyFieldTarget.closest('[data-controller="searchable-select"]')
-    if (searchableSelect) {
-      const input = searchableSelect.querySelector('[data-searchable-select-target="input"]')
-      const option = searchableSelect.querySelector(`[data-value="${currency}"]`)
-      if (input) {
-        input.value = option ? option.dataset.label : currency
-      }
-    }
-  }
-
-  openDialog() {
-    if (typeof this.dialogTarget.showModal === "function") {
-      this.dialogTarget.showModal()
-    } else {
-      this.dialogTarget.setAttribute("open", "open")
-    }
-  }
-
-  titleForMode(mode) {
-    if (mode === "rates") return "Update Rates"
-    if (mode === "restrictions") return "Update Restrictions"
-    return "Update Availability"
-  }
-
   navigate(event) {
     if (event) event.preventDefault()
 
@@ -1129,8 +936,17 @@ export default class extends Controller {
 
   markTouched(event) {
     const target = event.currentTarget
-    const fieldName = target.name.split("[").pop().replace("]", "")
+    const fieldName = target.dataset.fieldName || target.name.split("[").pop().replace("]", "")
     this.touchedFields.add(fieldName)
+  }
+
+  // The editor renders one input per adult count the clicked category can take,
+  // so every rendered field is in scope — no visibility filtering needed.
+  occupancyPricesFromForm() {
+    return this.occupancyPriceFieldTargets.reduce((prices, field) => {
+      if (field.value !== "") prices[field.dataset.adults] = field.value
+      return prices
+    }, {})
   }
 
   showTooltip(event) {

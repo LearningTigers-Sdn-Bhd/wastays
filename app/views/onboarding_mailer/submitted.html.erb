@@ -1,0 +1,3 @@
+<h1><%= @hotel.name %> is ready for review</h1>
+<p><%= @submission.submitted_by.name %> submitted the property setup on <%= l(@submission.submitted_at, format: :long) %>.</p>
+<p><%= link_to "Review property setup", onboarding_admin_hotel_url(@hotel) %></p>

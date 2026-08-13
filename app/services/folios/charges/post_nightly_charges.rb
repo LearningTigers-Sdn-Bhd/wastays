@@ -30,8 +30,7 @@ module Folios
 
           begin
             booking.with_lock do
-              post_accommodation_charges(booking)
-              post_tax_charges(booking)
+              post_expected_nightly_charges(booking)
               post_extra_charge_forecasts(booking)
             end
           rescue StandardError => e
@@ -50,6 +49,23 @@ module Folios
           .includes(:booking_rooms, :booking_folio)
           .checked_in
           .occupying_night_on(@business_date, @hotel.hotel_time_zone)
+      end
+
+      def post_expected_nightly_charges(booking)
+        Folios::Reads::ForecastedChargeLines.call(booking: booking, dates: [ @business_date ]).each do |line|
+          insert_transaction!(
+            booking: booking,
+            amount: line[:amount],
+            transaction_type: line[:transaction_type] || "charge",
+            category: line[:category],
+            description: line[:description],
+            transaction_code: line[:transaction_code],
+            fallback_transaction_code: line[:fallback_transaction_code],
+            metadata: nightly_metadata(booking, line[:charge_kind], line[:identity]).merge(line[:metadata].to_h).merge(
+              tax_line: line[:tax_line]
+            ).compact
+          )
+        end
       end
 
       def post_accommodation_charges(booking)
@@ -134,7 +150,7 @@ module Folios
           .order(Arel.sql("CASE charge_kind WHEN 'extra_charge' THEN 0 ELSE 1 END"), :id)
       end
 
-      def insert_transaction!(booking:, amount:, category:, description:, transaction_code:, fallback_transaction_code:, metadata:, target_folio: nil, parent_transaction: nil)
+      def insert_transaction!(booking:, amount:, category:, description:, transaction_code:, fallback_transaction_code:, metadata:, transaction_type: "charge", target_folio: nil, parent_transaction: nil)
         existing_transaction = posted_transaction(booking, metadata[:nightly_charge_key])
         if existing_transaction
           actualize_forecast!(booking, existing_transaction, metadata)
@@ -159,7 +175,7 @@ module Folios
         result = Folios::Transactions::InsertTransaction.new(
           booking_folio: route.folio,
           amount: amount,
-          transaction_type: :charge,
+          transaction_type: transaction_type,
           category: category,
           user: @user,
           description: description,
@@ -193,7 +209,6 @@ module Folios
       def posted_transaction(booking, nightly_charge_key)
         FolioTransaction.joins(:booking_folio)
           .where(booking_folios: { booking_id: booking.id })
-          .charge
           .where(voided_by_transaction_id: nil)
           .find_by(
             "metadata->>'nightly_charge_key' = :key OR metadata->>'reconciles_nightly_charge_key' = :key",

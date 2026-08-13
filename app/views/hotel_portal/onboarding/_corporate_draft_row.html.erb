@@ -1,0 +1,61 @@
+<%# The record table owns the row and its remove control; this partial supplies
+    only the field cells. %>
+<% object = OnboardingCorporateDraft.new(
+     email: entry["email"],
+     company_name: entry["company_name"],
+     account_type: entry["account_type"].presence || "company",
+     credit_limit: entry["credit_limit"],
+     payment_terms_days: entry["payment_terms_days"],
+     send_invitation: entry["send_invitation"] == "true"
+   ) %>
+<% delivered = entry["delivered"] == "true" %>
+<%= fields_for "corporate_draft_entries[#{index}]", object do |row_form| %>
+  <td>
+    <%= row_form.hidden_field :id, value: entry["id"] %>
+    <%= hidden_field_tag "corporate_draft_entries[#{index}][_destroy]", "false", data: { record_table_destroy: true } %>
+    <%= hidden_field_tag "corporate_draft_entries[#{index}][credit_currency]",
+                         entry["credit_currency"].presence || current_hotel.default_currency %>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :company_name, label: "Company", size: :sm) do |field| %>
+      <% field.with_input(placeholder: "Acme Sdn Bhd") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :email, label: "Email", size: :sm, required: true) do |field| %>
+      <% field.with_input(type: :email, placeholder: "accounts@acme.com", autocomplete: "off") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :account_type, label: "Account type", size: :sm) do |field| %>
+      <% field.with_select_menu(
+           HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } },
+           selected: entry["account_type"].presence || "company") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :credit_limit,
+                                       label: "Credit limit (#{current_hotel.default_currency})", size: :sm) do |field| %>
+      <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal", placeholder: "e.g. 5000.00") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: row_form, attribute: :payment_terms_days, label: "Payment terms (days)", size: :sm) do |field| %>
+      <% field.with_input(type: :number, step: "1", min: "0", inputmode: "numeric", placeholder: "e.g. 30") %>
+    <% end %>
+  </td>
+
+  <%# A row that has already been delivered has nothing left to decide, and a
+      live switch would imply the send could be taken back. %>
+  <td>
+    <%= render PanelsUI::Switch.new(
+          form: row_form,
+          attribute: :send_invitation,
+          label: "Send invitation",
+          size: :sm,
+          checked: delivered || entry["send_invitation"] == "true",
+          disabled: delivered) %>
+  </td>
+<% end %>

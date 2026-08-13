@@ -1,0 +1,59 @@
+<nav aria-label="Onboarding progress" class="hidden py-2 md:block">
+  <ol class="panel-step-bar">
+    <% phases.each_with_index do |phase, index| %>
+      <li class="panel-step-bar__item">
+        <% content = capture do %>
+          <% if (icon = icon_for(phase)) %>
+            <%= helpers.app_icon icon, **ICON_LIBRARY, data: { marker: marker_kind(phase) }, aria: { hidden: "true" } %>
+          <% else %>
+            <span data-marker="number" aria-hidden="true"><%= index + 1 %>.</span>
+          <% end %>
+          <span class="panel-step-bar__label"><%= phase.label %></span>
+          <span class="sr-only"><%= state_label(phase) %></span>
+        <% end %>
+
+        <% if available?(phase) %>
+          <%= link_to path(phase),
+                      class: "panel-step-bar__step",
+                      data: { state: segment_state(phase) },
+                      aria: (phase.current ? { current: "step" } : {}) do %>
+            <%= content %>
+          <% end %>
+        <% else %>
+          <span class="panel-step-bar__step"
+                data-state="<%= segment_state(phase) %>"
+                aria-disabled="true"
+                title="Complete the earlier phases first">
+            <%= content %>
+          </span>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+</nav>
+
+<details class="py-2 md:hidden">
+  <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring">
+    <span><%= presenter.phase_label %> · Phase <%= presenter.phase_position %> of <%= phases.length %></span>
+    <%= helpers.app_icon "caret-down", **ICON_LIBRARY, class: "size-4 text-sidebar-muted-foreground", aria: { hidden: "true" } %>
+  </summary>
+  <ol class="mt-1 space-y-0.5 border-t border-sidebar-border pt-2">
+    <% phases.each_with_index do |phase, index| %>
+      <li>
+        <% if available?(phase) %>
+          <%= link_to path(phase),
+                      class: "flex min-h-10 items-center justify-between gap-2 rounded-md px-2 text-sm hover:bg-sidebar-accent focus-visible:outline-2 focus-visible:outline-sidebar-ring",
+                      aria: (phase.current ? { current: "step" } : {}) do %>
+            <span><%= index + 1 %>. <%= phase.label %></span>
+            <span class="text-xs text-sidebar-muted-foreground"><%= state_label(phase) %></span>
+          <% end %>
+        <% else %>
+          <span class="flex min-h-10 items-center justify-between gap-2 rounded-md px-2 text-sm text-sidebar-muted-foreground" aria-disabled="true">
+            <span><%= index + 1 %>. <%= phase.label %></span>
+            <span class="text-xs">Locked</span>
+          </span>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+</details>

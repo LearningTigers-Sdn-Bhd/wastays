@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "HotelPortal::TaxesFees", type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "registered", tourism_tax_enabled: true, tourism_tax_amount: 10.0, sst_enabled: true) }
+  let(:hotel) { create(:hotel, account: account, status: "setup", tourism_tax_enabled: true, tourism_tax_amount: 10.0, sst_enabled: true) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:manage_profile_permission) do
     Permission.find_or_create_by!(slug: "manage_hotel_profile") { |permission| permission.name = "Manage Hotel Profile" }
