@@ -37,7 +37,10 @@ module Onboarding
     def call
       return failure(foreign_reference_error) if foreign_reference_error.present?
       return failure(duplicate_email_error) if duplicate_email_error.present?
-      return failure("Add at least one corporate account, or choose no corporate accounts for now.") if complete && retained_rows.empty?
+      # Continuing with an empty table is the same statement as pressing the skip
+      # button: this property bills no companies directly. Making the owner press
+      # a particular button to say it would be asking twice.
+      return decide_no_accounts if complete && retained_rows.empty?
 
       transition = nil
 
@@ -59,6 +62,16 @@ module Onboarding
     private
 
     attr_reader :hotel, :actor, :complete
+
+    # The same decision the skip button records, including discarding queued
+    # drafts, so an owner who empties the table does not leave invitations behind
+    # waiting to be sent.
+    def decide_no_accounts
+      result = DecideNoCorporateAccounts.call(hotel: hotel, actor: actor)
+      return failure(result.error, section: result.section) unless result.success?
+
+      Result.success(section: result.section, entries: persisted_entries)
+    end
 
     def destroy_rows!
       discarded_rows.each do |row|
