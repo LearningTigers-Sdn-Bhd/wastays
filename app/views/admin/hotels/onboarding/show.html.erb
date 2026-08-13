@@ -36,7 +36,7 @@
         <%= app_icon "calendar", class: "size-4 shrink-0", aria: { hidden: "true" } %>
         <span>Edit onboarding period</span>
       <% end %>
-      <% if @hotel.status == "setup" %>
+      <% if @hotel.status.in?(%w[setup pending_review]) %>
         <% menu.with_item(
              href: toggle_setup_lock_admin_hotel_path(@hotel),
              method: :post,

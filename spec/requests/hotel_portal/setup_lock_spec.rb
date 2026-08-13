@@ -19,9 +19,27 @@ RSpec.describe "Hotel portal setup lock", type: :request do
     before { sign_in_as(owner) }
 
     it "leaves the portal reachable" do
-      get hotel_dashboard_path(hotel)
+      get edit_hotel_profile_path(hotel)
 
       expect(response).to have_http_status(:ok)
+    end
+
+    # The dashboard is not a portal page for a property that is not open yet — it used
+    # to render a dead-end "Pending Review" panel. Onboarding is the real page.
+    it "still sends the dashboard to onboarding" do
+      get hotel_dashboard_path(hotel)
+
+      expect(response).to redirect_to(
+        hotel_onboarding_section_path(hotel, section_key: "property_profile")
+      )
+    end
+
+    it "sends the dashboard to the review section once submitted" do
+      hotel.update!(status: "pending_review")
+
+      get hotel_dashboard_path(hotel)
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
     end
   end
 
@@ -32,7 +50,7 @@ RSpec.describe "Hotel portal setup lock", type: :request do
       before { sign_in_as(owner) }
 
       it "redirects portal pages to where onboarding left off" do
-        get hotel_dashboard_path(hotel)
+        get edit_hotel_profile_path(hotel)
 
         expect(response).to redirect_to(
           hotel_onboarding_section_path(hotel, section_key: "property_profile")
@@ -43,7 +61,7 @@ RSpec.describe "Hotel portal setup lock", type: :request do
         hotel.onboarding_sections.find_by!(section_key: "property_profile")
              .update!(state: "complete", completed_at: Time.current)
 
-        get hotel_dashboard_path(hotel)
+        get edit_hotel_profile_path(hotel)
 
         expect(response).to redirect_to(
           hotel_onboarding_section_path(hotel, section_key: Onboarding::ResumePageResolver.new(hotel:).call.key)
@@ -79,7 +97,7 @@ RSpec.describe "Hotel portal setup lock", type: :request do
       end
 
       it "sends them to the explainer rather than into onboarding" do
-        get hotel_dashboard_path(hotel)
+        get edit_hotel_profile_path(hotel)
 
         expect(response).to redirect_to(hotel_setup_lock_path(hotel))
       end
@@ -104,17 +122,39 @@ RSpec.describe "Hotel portal setup lock", type: :request do
       before { sign_in_as(create(:user, :superadmin)) }
 
       it "is unaffected" do
-        get hotel_dashboard_path(hotel)
+        get edit_hotel_profile_path(hotel)
 
         expect(response).to have_http_status(:ok)
       end
     end
 
-    it "does not fire once the hotel has been submitted" do
-      hotel.update!(status: "pending_review")
+    context "once the property has been submitted" do
+      before do
+        hotel.update!(status: "pending_review")
+        sign_in_as(owner)
+      end
+
+      it "sends portal pages to the review section, not back into the wizard" do
+        get edit_hotel_profile_path(hotel)
+
+        expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+      end
+    end
+
+    it "stops once the property is live" do
+      hotel.update!(status: "live")
       sign_in_as(owner)
 
-      get hotel_dashboard_path(hotel)
+      get edit_hotel_profile_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "stops while the property is suspended" do
+      hotel.update!(status: "suspended")
+      sign_in_as(owner)
+
+      get edit_hotel_profile_path(hotel)
 
       expect(response).to have_http_status(:ok)
     end

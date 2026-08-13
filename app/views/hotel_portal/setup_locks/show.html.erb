@@ -6,7 +6,11 @@
 
     <h1 class="text-3xl font-bold text-foreground"><%= current_hotel.name %> is still being set up</h1>
     <p class="mt-3 text-sm text-muted-foreground">
-      The property owner is working through onboarding. The rest of the hotel system opens once WAStays has reviewed and approved the setup.
+      <% if current_hotel.status == "pending_review" %>
+        The setup has been submitted and WAStays is reviewing it. The rest of the hotel system opens once the property is approved.
+      <% else %>
+        The property owner is working through onboarding. The rest of the hotel system opens once WAStays has reviewed and approved the setup.
+      <% end %>
     </p>
     <p class="mt-2 text-sm text-muted-foreground">
       You do not need to do anything. We will let you know when your account is ready.

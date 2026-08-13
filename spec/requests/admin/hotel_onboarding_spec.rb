@@ -551,8 +551,16 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       expect(response.body).to include("Enable setup lock")
     end
 
-    it "does not offer the toggle once the hotel has been submitted" do
+    it "still offers the toggle while the hotel is awaiting review" do
       hotel.update!(status: "pending_review")
+
+      get onboarding_admin_hotel_path(hotel)
+
+      expect(response.body).to include("Enable setup lock")
+    end
+
+    it "does not offer the toggle once the hotel is live" do
+      hotel.update!(status: "live")
 
       get onboarding_admin_hotel_path(hotel)
 

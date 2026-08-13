@@ -8,8 +8,10 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
       return
     end
 
-    if @current_hotel.status == "pending_review"
-      render :pending_review and return
+    # The onboarding review section already says the property is with WAStays, and says
+    # it against the submitted setup. A second page repeating that was a dead end.
+    if @current_hotel.status.in?(%w[setup pending_review])
+      redirect_to hotel_onboarding_section_path(@current_hotel, section_key: onboarding_lock_section) and return
     end
 
     # Role-based redirection
