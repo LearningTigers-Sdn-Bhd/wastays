@@ -40,7 +40,7 @@ module Onboarding
     def property_snapshot
       hotel.attributes.slice(
         "name", "address", "city", "country", "star_rating", "time_zone",
-        "default_currency", "contact_email", "contact_phone", "whatsapp_number",
+        "default_currency", "contact_email", "contact_phone", "fixed_line_number", "whatsapp_number",
         "sell_mode", "preferred_channel_manager"
       ).merge(
         "amenities" => Array(hotel.amenities).sort,

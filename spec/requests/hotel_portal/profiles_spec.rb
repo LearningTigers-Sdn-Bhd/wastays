@@ -66,6 +66,16 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(hotel.google_map_link).to eq('https://www.google.com/maps/place/Updated+Hotel')
     end
 
+    it 'updates the contact numbers guests call, including the front desk landline' do
+      patch hotel_profile_path(hotel), params: {
+        hotel: { contact_phone: '012-8273581', fixed_line_number: '03-2144 1234' }
+      }
+
+      hotel.reload
+      expect(hotel.contact_phone).to eq('012-8273581')
+      expect(hotel.fixed_line_number).to eq('03-2144 1234')
+    end
+
     it 'stores normalized business registration numbers' do
       patch hotel_profile_path(hotel), params: {
         hotel: { tin: ' c1234567890 ', ssm_number: '202301012345 (1234567-a)' }

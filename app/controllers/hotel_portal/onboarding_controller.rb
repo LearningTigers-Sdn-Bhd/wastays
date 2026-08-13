@@ -505,7 +505,7 @@ module HotelPortal
 
       params.require(:hotel).permit(
         :name, :description, :address, :city, :country, :star_rating,
-        :google_map_link, :contact_email, :contact_phone, :whatsapp_number,
+        :google_map_link, :contact_email, :contact_phone, :fixed_line_number, :whatsapp_number,
         :time_zone, :default_currency, :tin, :ssm_number, amenities: []
       )
     end

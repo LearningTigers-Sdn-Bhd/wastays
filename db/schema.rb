@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_14_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_100001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1583,6 +1583,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_100000) do
     t.string "default_currency", default: "MYR", null: false
     t.text "description"
     t.bigint "featured_photo_attachment_id"
+    t.string "fixed_line_number"
     t.boolean "geolocation_enabled", default: true, null: false
     t.string "google_map_link"
     t.jsonb "guest_registration_card_fields"
