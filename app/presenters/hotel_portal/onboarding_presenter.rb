@@ -92,9 +92,21 @@ module HotelPortal
 
     def form_id = read_only? ? nil : SECTION_FORMS[current_entry.definition.key]
 
-    # A read-only first page has neither save actions nor a Back target, so the
-    # shell should skip the footer rather than draw an empty bordered strip.
-    def actions? = !read_only? || previous_entry.present?
+    # The review page has no action once submitted or approved. Other read-only
+    # sections retain Back so the submitted setup can still be inspected.
+    def actions?
+      return false if review? && read_only?
+
+      !read_only? || previous_entry.present?
+    end
+
+    def read_only_alert
+      if Onboarding::LifecycleCompatibility.canonical_status(hotel.status) == "live"
+        { tone: :success, title: "Setup approved", description: "This approved setup is read-only because the property is live." }
+      else
+        { tone: :info, title: "Setup submitted for review", description: "Your onboarding details are read-only while the WAStays team reviews this property." }
+      end
+    end
 
     def previous_entry = navigation.previous_entry(current_entry.definition.key)
     def next_entry = navigation.next_entry(current_entry.definition.key)

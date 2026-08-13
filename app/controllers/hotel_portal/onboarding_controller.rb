@@ -157,17 +157,20 @@ module HotelPortal
         # See staff_setup: no trailing blank row, because empty is an answer.
         @ota_credential_entries = entries || persisted_ota_credential_entries
       when "review"
-        @readiness = Onboarding::Readiness.new(hotel: current_hotel).call
-        @submission = current_hotel.onboarding_submissions.includes(:submitted_by).newest_first.first
-        @review_findings = (@readiness.blocking_issues + @readiness.warnings).index_by(&:section_key)
-        @invitation_totals = {
-          staff: current_hotel.onboarding_staff_drafts.count,
-          corporate: current_hotel.onboarding_corporate_drafts.count,
-          sending: current_hotel.onboarding_staff_drafts.where(send_invitation: true).count +
-            current_hotel.onboarding_corporate_drafts.where(send_invitation: true).count,
-          held: current_hotel.onboarding_staff_drafts.where(send_invitation: false).count +
-            current_hotel.onboarding_corporate_drafts.where(send_invitation: false).count
-        }
+        rates_coverage = Rates::SetupCoverage.call(hotel: current_hotel)
+        @readiness = Onboarding::Readiness.new(hotel: current_hotel, rates_coverage:).call
+        @submission = current_hotel.onboarding_submissions
+                                   .includes(:submitted_by, :reviewed_by, :deliveries)
+                                   .newest_first.first
+        snapshot = if @presenter.read_only? && @submission.present?
+          @submission.snapshot
+        else
+          Onboarding::SubmissionSnapshot.call(hotel: current_hotel, rates_coverage:).data
+        end
+        @review_presenter = OnboardingReviewPresenter.new(
+          hotel: current_hotel, navigation: @navigation, readiness: @readiness,
+          submission: @submission, snapshot:
+        )
         @submission_idempotency_key = SecureRandom.uuid unless @presenter.read_only?
       end
     end

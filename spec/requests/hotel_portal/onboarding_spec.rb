@@ -201,7 +201,8 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(hotel.onboarding_sections).to be_empty
 
     follow_redirect!
-    expect(response.body).to include("Setup submitted for review")
+    expect(response.body).to include("Awaiting WAStays review")
+    expect(response.body).not_to include("Setup submitted for review")
     expect(response.body).not_to include("Save draft")
   end
 

@@ -1,63 +1,79 @@
-<section aria-label="Property setup readiness" class="space-y-6">
-  <% if presenter.read_only? && @submission.present? %>
-    <%= render PanelsUI::Alert.new(
-          tone: (@submission.approved? ? :success : :info),
-          title: (@submission.approved? ? "Property setup approved" : "Submitted for review")) do |alert| %>
-      <% alert.with_description do %>
-        Submitted by <%= @submission.submitted_by.name %> on <%= l(@submission.submitted_at, format: :long) %>.
-        <%= @submission.approved? ? "This is the setup WAStays approved." : "Editing resumes only if WAStays requests changes." %>
-      <% end %>
-    <% end %>
-  <% elsif @readiness.ready %>
-    <%= render PanelsUI::Alert.new(tone: :success, title: "Ready for submission") do |alert| %>
-      <% alert.with_description { "All required setup is complete. Review the choices below, then send the property to WAStays." } %>
-    <% end %>
-  <% else %>
-    <%= render PanelsUI::Alert.new(tone: :warning, title: "Setup needs attention") do |alert| %>
-      <% alert.with_description { "Resolve #{@readiness.blocking_issues.size} blocking #{'issue'.pluralize(@readiness.blocking_issues.size)} before submitting." } %>
-    <% end %>
+<section aria-label="Property setup readiness" class="space-y-5">
+  <%= render PanelsUI::Alert.new(tone: @review_presenter.status_tone, title: @review_presenter.status_title) do |alert| %>
+    <% alert.with_description { @review_presenter.status_description } %>
   <% end %>
 
-  <% presenter.phases.reject { |phase| phase.key == "review" }.each do |phase| %>
-    <section aria-labelledby="review-phase-<%= phase.key %>" class="space-y-2">
-      <h2 id="review-phase-<%= phase.key %>" class="text-base font-semibold"><%= phase.label %></h2>
-      <div class="divide-y divide-border border-y border-border">
-        <% phase.entries.each do |entry| %>
-          <% finding = @review_findings[entry.definition.key] %>
-          <div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="min-w-0 space-y-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-sm font-medium"><%= presenter.section_title(entry) %></span>
-                <%= render PanelsUI::Badge.new(
-                      label: finding ? (finding.severity == :blocking ? "Needs attention" : "Deferred") : onboarding_state_label(entry.record.state),
-                      variant: finding&.severity == :blocking ? :destructive : onboarding_state_variant(entry.record.state),
-                      size: :sm) %>
-              </div>
-              <% if finding %><p class="text-xs text-muted-foreground"><%= finding.message %></p><% end %>
-            </div>
-            <% unless presenter.read_only? %>
-              <%= render PanelsUI::Button.new(
-                    label: finding&.severity == :blocking ? "Fix" : "View",
-                    href: hotel_onboarding_section_path(current_hotel, section_key: entry.definition.route_name),
-                    variant: :ghost, size: :sm) %>
-            <% end %>
-          </div>
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Setup statistics">
+    <% @review_presenter.metrics.each do |metric| %>
+      <%= render PanelsUI::MetricCard.new(**metric.to_h) %>
+    <% end %>
+  </div>
+
+  <section aria-labelledby="setup-summary-heading" class="space-y-3">
+    <h2 id="setup-summary-heading" class="text-base font-semibold">Setup summary</h2>
+
+    <div class="hidden md:block">
+      <%= render PanelsUI::Table.new(
+            caption: "Property setup summary", density: :compact,
+            header_style: :sentence, hoverable: true,
+            wrapper_class: "rounded-md border border-border") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Section</th>
+            <th scope="col">Setup</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="sr-only">Action</span></th>
+          </tr>
         <% end %>
-      </div>
-    </section>
-  <% end %>
-
-  <section aria-labelledby="invitation-summary-heading" class="space-y-3">
-    <div>
-      <h2 id="invitation-summary-heading" class="text-base font-semibold">Invitations after submission</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Invitations marked to send are processed after the submission succeeds. Held invitations are created without sending email.</p>
+        <% table.with_body do %>
+          <% @review_presenter.groups.each do |group| %>
+            <tr class="bg-muted/50">
+              <th scope="rowgroup" colspan="4" class="font-semibold"><%= group.label %></th>
+            </tr>
+            <% group.rows.each do |row| %>
+              <tr>
+                <th scope="row" class="font-medium"><%= row.title %></th>
+                <td class="text-muted-foreground"><%= row.summary %></td>
+                <td>
+                  <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm) %>
+                </td>
+                <td class="text-right">
+                  <%= render PanelsUI::Button.new(
+                        label: row.action_label,
+                        href: hotel_onboarding_section_path(current_hotel, section_key: row.entry.definition.route_name),
+                        variant: :ghost, size: :sm) %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
     </div>
-    <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-      <div><dt class="text-muted-foreground">Staff</dt><dd class="font-medium"><%= @invitation_totals[:staff] %></dd></div>
-      <div><dt class="text-muted-foreground">Corporate</dt><dd class="font-medium"><%= @invitation_totals[:corporate] %></dd></div>
-      <div><dt class="text-muted-foreground">Sending</dt><dd class="font-medium"><%= @invitation_totals[:sending] %></dd></div>
-      <div><dt class="text-muted-foreground">Held</dt><dd class="font-medium"><%= @invitation_totals[:held] %></dd></div>
-    </dl>
+
+    <div class="space-y-4 md:hidden" aria-label="Property setup summary for small screens">
+      <% @review_presenter.groups.each do |group| %>
+        <section aria-labelledby="review-mobile-phase-<%= group.key %>" class="space-y-1">
+          <h3 id="review-mobile-phase-<%= group.key %>" class="text-sm font-semibold"><%= group.label %></h3>
+          <ul class="divide-y divide-border border-y border-border">
+            <% group.rows.each do |row| %>
+              <li class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-2">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium"><%= row.title %></p>
+                  <p class="truncate text-xs text-muted-foreground"><%= row.summary %></p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm) %>
+                  <%= render PanelsUI::Button.new(
+                        label: row.action_label,
+                        href: hotel_onboarding_section_path(current_hotel, section_key: row.entry.definition.route_name),
+                        variant: :ghost, size: :sm) %>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+    </div>
   </section>
 
   <% unless presenter.read_only? %>

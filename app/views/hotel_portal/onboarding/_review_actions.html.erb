@@ -10,7 +10,7 @@
   <% unless presenter.read_only? %>
     <button type="submit" form="onboarding-submission-form" class="panel-button"
             data-variant="primary" data-size="md" <%= "disabled" unless @readiness.ready %>>
-      Submit for review
+      <%= review.submit_label %>
     </button>
   <% end %>
 </div>
