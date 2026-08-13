@@ -52,7 +52,7 @@
   <% if @presenter.actions? %>
     <% shell.with_footer do %>
       <% if @presenter.form_id %>
-        <%= render "form_actions", presenter: @presenter, form_id: @presenter.form_id, skip_label: @presenter.skip_label %>
+        <%= render "form_actions", presenter: @presenter, form_id: @presenter.form_id %>
       <% else %>
         <%= render "actions", presenter: @presenter %>
       <% end %>

@@ -172,11 +172,15 @@ RSpec.describe "Onboarding commercial setup" do
       expect(result.error).to include("do not belong to this property")
     end
 
-    it "will not complete with nothing to sell" do
+    # An emptied table is the answer, not an error: this property sells nothing
+    # beyond the room. The prefilled suggestions are what make clearing it
+    # deliberate, so no separate button is needed to say it.
+    it "reads an emptied table as the no-extra-charges decision" do
       result = save(entries: {}, complete: true)
 
-      expect(result.success?).to be(false)
-      expect(result.error).to include("no extra charges for now")
+      expect(result.success?).to be(true)
+      expect(result.section.state).to eq("skipped")
+      expect(result.section.decision_metadata).to include("decision" => "no_extra_charges")
     end
 
     it "saves a draft without completing the section" do
@@ -339,11 +343,12 @@ RSpec.describe "Onboarding commercial setup" do
       expect(hotel.hotel_discounts).to be_empty
     end
 
-    it "will not complete with nothing offered" do
+    it "reads an emptied table as the no-discounts decision" do
       result = save(entries: {}, complete: true)
 
-      expect(result.success?).to be(false)
-      expect(result.error).to include("no discounts for now")
+      expect(result.success?).to be(true)
+      expect(result.section.state).to eq("skipped")
+      expect(result.section.decision_metadata).to include("decision" => "no_discounts")
     end
   end
 

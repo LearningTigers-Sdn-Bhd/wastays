@@ -52,7 +52,7 @@
               caption: "Extra charges",
               add_label: "Add extra charge",
               empty: "No extra charges yet",
-              empty_description: "If this property sells nothing beyond the room, choose no extra charges for now.",
+              empty_description: "If this property sells nothing beyond the room, leave this empty and continue.",
               empty_icon: "concierge-bell") do |table| %>
           <% table.with_column(label: "Name", required: true, class: "w-[34%]") %>
           <% table.with_column(label: "Price (#{current_hotel.default_currency.presence || 'MYR'})",

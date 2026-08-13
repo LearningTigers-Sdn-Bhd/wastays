@@ -44,7 +44,6 @@ module Onboarding
     def call
       return failure(foreign_reference_error) if foreign_reference_error.present?
       return failure(duplicate_code_error) if duplicate_code_error.present?
-      return failure("Add at least one extra charge, or choose no extra charges for now.") if complete && retained_rows.empty?
 
       transition = nil
       before_signature = material_signature
@@ -53,7 +52,7 @@ module Onboarding
         destroy_rows!
         save_rows!
 
-        transition = transition_section
+        transition = complete && retained_rows.empty? ? decide_no_extra_charges : transition_section
         fail_transaction!(transition.error) unless transition.success?
 
         if material_signature != before_signature
@@ -191,6 +190,17 @@ module Onboarding
     end
 
     # --- section transition -------------------------------------------------
+
+    # Continuing with an empty table is itself the answer: this property sells
+    # nothing on top of the room. The prefilled suggestions make emptying it a
+    # deliberate act — the owner had to clear each one — so there is nothing left
+    # for a separate skip button to say.
+    #
+    # Recorded after the removals above, so the decision's record count reflects
+    # what the property is actually left with.
+    def decide_no_extra_charges
+      SkipOptionalSection.call(hotel: hotel, actor: actor, section_key: "extra_charges")
+    end
 
     def transition_section
       UpdateSection.new(

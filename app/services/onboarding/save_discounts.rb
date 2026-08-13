@@ -36,7 +36,6 @@ module Onboarding
     def call
       return failure(foreign_reference_error) if foreign_reference_error.present?
       return failure(duplicate_code_error) if duplicate_code_error.present?
-      return failure("Add at least one discount, or choose no discounts for now.") if complete && retained_rows.empty?
 
       transition = nil
 
@@ -44,7 +43,7 @@ module Onboarding
         destroy_rows!
         save_rows!
 
-        transition = transition_section
+        transition = complete && retained_rows.empty? ? decide_no_discounts : transition_section
         fail_transaction!(transition.error) unless transition.success?
       end
 
@@ -128,6 +127,12 @@ module Onboarding
            submitted_codes.any? { |id| !adoptable_codes.key?(id) }
           "One or more submitted discounts do not belong to this property."
         end
+    end
+
+    # An empty table is the answer here too: this property offers nothing off.
+    # See SaveExtraCharges#decide_no_extra_charges for why that needs no button.
+    def decide_no_discounts
+      SkipOptionalSection.call(hotel: hotel, actor: actor, section_key: "discounts")
     end
 
     def transition_section

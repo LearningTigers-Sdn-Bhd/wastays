@@ -24,6 +24,14 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     end
   end
 
+  # How an owner says "none of these": clear the prefilled suggestions and
+  # continue. There is no skip button — the empty table is the answer.
+  def answer_none!
+    all("tbody button[aria-label^='Remove ']").each(&:click)
+    expect(page).to have_css("tr.panel-record-table__empty")
+    click_button "Save & continue"
+  end
+
   it "offers compact progress details on a narrow screen" do
     page.current_window.resize_to(390, 844)
 
@@ -286,7 +294,7 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     reach_commercial_phase!
 
     visit hotel_onboarding_section_path(hotel, section_key: "extra_charges")
-    click_button "No extra charges for now"
+    answer_none!
 
     expect(page).to have_css("h1", text: "Discounts")
     click_button "Add discount"
@@ -306,7 +314,7 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     reach_commercial_phase!
 
     visit hotel_onboarding_section_path(hotel, section_key: "extra_charges")
-    click_button "No extra charges for now"
+    answer_none!
 
     expect(page).to have_css("h1", text: "Discounts")
     expect(page).to have_no_css("h2", text: "What can reduce a guest's bill?")
@@ -347,14 +355,12 @@ RSpec.describe "Hotel onboarding shell", type: :system do
 
     expect(page).to have_css("h1", text: "Extra charges")
     expect(page).to have_text("These are suggestions, not saved yet")
-    click_button "No extra charges for now"
+    answer_none!
 
     expect(page).to have_css("h1", text: "Discounts")
-    click_button "No discounts for now"
+    answer_none!
 
     expect(page).to have_css("h1", text: "Payment methods")
-    # Required: no skip is offered here at all.
-    expect(page).to have_no_button("No payment methods for now")
     # Headed once, by the shell, and asking two things: a surcharge is a fee
     # decision the property makes under Settings. The standard codes read as
     # text and say, where their remove control would be, why they stay.

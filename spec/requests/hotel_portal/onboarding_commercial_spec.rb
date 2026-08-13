@@ -81,9 +81,12 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
         expect(hotel.hotel_extra_charges.sole.code).to eq("AIRPORT_TR")
       end
 
-      it "records an explicit skip decision" do
+      it "reads an emptied table as the decision, without a skip button" do
+        get hotel_onboarding_section_path(hotel, section_key: "extra_charges")
+        expect(response.body).not_to include("navigation_action\" value=\"skip\"")
+
         patch hotel_onboarding_section_path(hotel, section_key: "extra_charges"),
-              params: { navigation_action: "skip" }
+              params: { navigation_action: "save_continue", extra_charge_entries: {} }
 
         expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "discounts"))
         section = hotel.onboarding_sections.find_by(section_key: "extra_charges")
@@ -183,9 +186,12 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
         expect(hotel.hotel_discounts.sole).to have_attributes(pricing_type: "manual", rate_value: nil)
       end
 
-      it "records an explicit skip decision" do
+      it "reads an emptied table as the decision, without a skip button" do
+        get hotel_onboarding_section_path(hotel, section_key: "discounts")
+        expect(response.body).not_to include("navigation_action\" value=\"skip\"")
+
         patch hotel_onboarding_section_path(hotel, section_key: "discounts"),
-              params: { navigation_action: "skip" }
+              params: { navigation_action: "save_continue", discount_entries: {} }
 
         expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "payment_methods"))
         section = hotel.onboarding_sections.find_by(section_key: "discounts")
@@ -444,9 +450,11 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
     it "no longer reports the commercial sections as blocking" do
       resolve_through!("rates_availability")
 
-      # In catalog order: each skip needs its own prerequisite resolved first.
+      # In catalog order: each answer needs its own prerequisite resolved first.
+      # No section takes a skip action — an emptied table is the answer.
       %w[extra_charges discounts].each do |key|
-        patch hotel_onboarding_section_path(hotel, section_key: key), params: { navigation_action: "skip" }
+        patch hotel_onboarding_section_path(hotel, section_key: key),
+              params: { navigation_action: "save_continue", "#{key.singularize}_entries" => {} }
       end
       patch hotel_onboarding_section_path(hotel, section_key: "payment_methods"),
             params: {

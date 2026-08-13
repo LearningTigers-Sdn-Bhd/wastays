@@ -32,25 +32,23 @@ module HotelPortal
     # The shell renders the action footer outside the section body, so it needs
     # to know which form each section's buttons submit. Sections absent here have
     # no form of their own and fall back to the standalone action buttons.
+    # No section carries a skip button any more. An optional section either
+    # answers itself — an empty table is the decision, and continuing from one
+    # records it — or is required and cannot be skipped at all. See
+    # docs/onboarding/DESIGN_DECISIONS.md.
     SECTION_FORMS = {
-      "property_profile" => { form_id: "onboarding-property-profile-form" },
-      "roles_permissions" => { form_id: "onboarding-role-presets-form" },
-      # No skip_label: an empty table already says there is nobody else to invite,
-      # and continuing from it records that answer.
-      "staff_setup" => { form_id: "onboarding-staff-drafts-form" },
-      "taxes_fees" => { form_id: "onboarding-taxes-fees-form" },
-      "room_revenue" => { form_id: "onboarding-room-revenue-form" },
-      "rooms" => { form_id: "onboarding-rooms-form" },
-      "rates_availability" => { form_id: "onboarding-rates-availability-form" },
-      "extra_charges" => { form_id: "onboarding-extra-charges-form", skip_label: "No extra charges for now" },
-      "discounts" => { form_id: "onboarding-discounts-form", skip_label: "No discounts for now" },
-      # No skip_label: a property with no way to take money cannot open.
-      "payment_methods" => { form_id: "onboarding-payment-methods-form" },
-      # No skip_label, for the same reason as staff above.
-      "corporate_accounts" => { form_id: "onboarding-corporate-accounts-form" },
-      # No skip_label: an empty table already says there is nothing to connect,
-      # and continuing from it records that answer.
-      "channel_manager" => { form_id: "onboarding-channel-manager-form" }
+      "property_profile" => "onboarding-property-profile-form",
+      "roles_permissions" => "onboarding-role-presets-form",
+      "staff_setup" => "onboarding-staff-drafts-form",
+      "taxes_fees" => "onboarding-taxes-fees-form",
+      "room_revenue" => "onboarding-room-revenue-form",
+      "rooms" => "onboarding-rooms-form",
+      "rates_availability" => "onboarding-rates-availability-form",
+      "extra_charges" => "onboarding-extra-charges-form",
+      "discounts" => "onboarding-discounts-form",
+      "payment_methods" => "onboarding-payment-methods-form",
+      "corporate_accounts" => "onboarding-corporate-accounts-form",
+      "channel_manager" => "onboarding-channel-manager-form"
     }.freeze
 
     def initialize(hotel:, navigation:, current_entry:)
@@ -90,8 +88,7 @@ module HotelPortal
       phases.index { |phase| phase.current } + 1
     end
 
-    def form_id = read_only? ? nil : SECTION_FORMS.dig(current_entry.definition.key, :form_id)
-    def skip_label = SECTION_FORMS.dig(current_entry.definition.key, :skip_label)
+    def form_id = read_only? ? nil : SECTION_FORMS[current_entry.definition.key]
 
     # A read-only first page has neither save actions nor a Back target, so the
     # shell should skip the footer rather than draw an empty bordered strip.

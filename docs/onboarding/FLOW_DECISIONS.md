@@ -297,7 +297,8 @@ Required launch-readiness checks include:
 - One year of initial rate and inventory coverage
 - At least one active usable payment method
 
-Optional sections must be configured or explicitly skipped.
+Optional sections must be configured or answered. Continuing from an empty table
+is that answer — it records the same decision an explicit skip once did.
 
 On successful submission:
 

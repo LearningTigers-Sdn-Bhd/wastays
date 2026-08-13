@@ -23,19 +23,10 @@ module HotelPortal
       channel_manager
     ].freeze
 
-    # Skipping an implemented section is a recorded decision, not a silent
-    # omission, so each one names the service that makes that decision and what
-    # to tell the owner afterwards. Sections absent here cannot be skipped.
-    #
-    # The record-table sections — staff, corporate accounts, channel manager —
-    # are absent on purpose: their empty table already states the decision, and
-    # continuing from it records the same thing a skip button would. A second
-    # control saying it again would be asking twice.
-    SECTION_SKIPS = {
-      "extra_charges" => "No extra charges will be offered for now.",
-      "discounts" => "No discounts will be offered for now."
-    }.freeze
-
+    # No implemented section takes a skip action. Each optional one answers
+    # itself: an empty table states the decision, and the section's own save
+    # service records it — see Onboarding::SkipOptionalSection for the decisions
+    # they write. A separate skip control would only ask the same thing twice.
     before_action :authorize_onboarding!
     before_action :build_navigation
     before_action :set_current_entry, except: :index
@@ -360,7 +351,6 @@ module HotelPortal
 
     def update_implemented_section
       action = params.require(:navigation_action)
-      return skip_implemented_section if action == "skip" && SECTION_SKIPS.key?(@current_entry.definition.key)
       return head :unprocessable_entity unless action.in?(%w[save_draft save_continue])
 
       complete = action == "save_continue"
@@ -662,16 +652,6 @@ module HotelPortal
 
     def submitted_collection(value)
       (value.respond_to?(:to_unsafe_h) ? value.to_unsafe_h.values : value.to_h.values).map(&:deep_stringify_keys)
-    end
-
-    def skip_implemented_section
-      key = @current_entry.definition.key
-      result = Onboarding::SkipOptionalSection.call(hotel: current_hotel, actor: current_user, section_key: key)
-      return render_section_error(result) unless result.success?
-
-      build_navigation
-      destination = @navigation.next_entry(key) || @navigation.fetch(key)
-      redirect_to onboarding_path(destination), notice: SECTION_SKIPS.fetch(key)
     end
 
     def update_placeholder_section

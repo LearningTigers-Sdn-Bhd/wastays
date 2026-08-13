@@ -144,10 +144,11 @@ Required page:
 Back | Save draft | Save & continue
 ```
 
-Optional page:
+Optional page — the same controls. Leaving the page's table empty is what says
+"none for now", so there is no skip button:
 
 ```text
-Back | Skip for now | Save & continue
+Back | Save draft | Save & continue
 ```
 
 Final page:
@@ -303,13 +304,16 @@ An optional section is not silently completed. It requires one of:
 
 A skipped section remains visible in progress and in final review.
 
-For a section whose whole body is a record table — staff, corporate accounts,
-channel manager — the empty table *is* the equivalent decision: pressing
+The equivalent decision is the empty table itself. For every optional section —
+staff, extra charges, discounts, corporate accounts, channel manager — pressing
 `Save & continue` with no records records the same "none for now" answer a skip
-button would, including discarding any drafts left behind. Those sections carry
-no skip button, because a second control saying what the empty table already
-says is asking twice. Sections whose body is not a table of records (extra
-charges, discounts) keep their explicit `Skip for now`.
+button would, including discarding any drafts left behind. None of them carries
+a skip button: a second control saying what the empty table already says is
+asking twice.
+
+Extra charges and discounts still open prefilled with the seeded codes as
+unsaved suggestions. That is what makes an emptied table deliberate — the owner
+had to clear each row — rather than the state a page happens to load in.
 
 ## Errors, warnings, and readiness
 

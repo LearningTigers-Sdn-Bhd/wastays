@@ -10,9 +10,8 @@
   </div>
 
   <div class="flex flex-wrap items-center justify-end gap-2">
-    <% if local_assigns[:skip_label] %>
-      <button type="submit" form="<%= form_id %>" name="navigation_action" value="skip" formnovalidate class="panel-button" data-variant="ghost" data-size="md"><%= skip_label %></button>
-    <% end %>
+    <%# No skip button: an optional section says "none for now" by being left
+        empty, and Save & continue records that. %>
     <button type="submit" form="<%= form_id %>" name="navigation_action" value="save_draft" formnovalidate class="panel-button" data-variant="neutral" data-size="md">Save draft</button>
     <button type="submit" form="<%= form_id %>" name="navigation_action" value="save_continue" class="panel-button" data-variant="primary" data-size="md">
       Save &amp; continue
