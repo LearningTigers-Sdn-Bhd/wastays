@@ -162,6 +162,44 @@ RSpec.describe 'Admin::Hotels', type: :request do
       }.to have_enqueued_mail(OwnerActivationMailer, :activate)
     end
 
+    it 'provisions a usable owner account instead of an invitation when asked to verify' do
+      verified_params = hotel_params.deep_dup
+      verified_params[:admin_hotels_create_form][:verify_owner_account] = '1'
+
+      expect {
+        post admin_hotels_path, params: verified_params
+      }.to change(User, :count).by(1)
+        .and change(StaffInvitation, :count).by(0)
+
+      hotel = Hotel.order(:created_at).last
+      owner = hotel.account.users.last
+
+      expect(response).to redirect_to(admin_hotel_path(hotel))
+      expect(owner.email).to eq("owner-#{token}@lumastay.test")
+      expect(owner.user_hotel_accesses.first.role.slug).to eq('hotel_owner')
+    end
+
+    it 'lets the provisioned owner sign in with the generated password' do
+      verified_params = hotel_params.deep_dup
+      verified_params[:admin_hotels_create_form][:verify_owner_account] = '1'
+      post admin_hotels_path, params: verified_params
+
+      password = flash[:owner_credentials]["password"]
+      expect(password).to be_present
+
+      owner = User.find_by(email: "owner-#{token}@lumastay.test")
+      expect(owner.authenticate(password)).to eq(owner)
+    end
+
+    it 'does not send the owner activation email when the account is provisioned directly' do
+      verified_params = hotel_params.deep_dup
+      verified_params[:admin_hotels_create_form][:verify_owner_account] = '1'
+
+      expect {
+        post admin_hotels_path, params: verified_params
+      }.not_to have_enqueued_mail(OwnerActivationMailer, :activate)
+    end
+
     it 'requires the immutable charging model without creating partial records' do
       params_without_sell_mode = hotel_params.deep_dup
       params_without_sell_mode[:admin_hotels_create_form].delete(:sell_mode)

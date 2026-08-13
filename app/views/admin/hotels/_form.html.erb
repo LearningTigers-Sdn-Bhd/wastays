@@ -204,37 +204,6 @@
         </div>
       </section>
 
-      <% unless hotel.persisted? %>
-        <section class="space-y-5 border-t border-border pt-8">
-          <div>
-            <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Account Credentials</h2>
-            <p class="mt-1 text-sm font-medium text-muted-foreground">A dedicated account will be created for this hotel.</p>
-          </div>
-
-          <div class="grid gap-5 sm:grid-cols-2">
-            <div class="sm:col-span-2">
-              <label for="account_name" class="mb-2 block text-sm font-medium text-foreground">Company / Group Name</label>
-              <%= text_field_tag "account[name]", params.dig(:account, :name), id: "account_name", required: true, class: input_classes %>
-            </div>
-
-            <div>
-              <label for="user_name" class="mb-2 block text-sm font-medium text-foreground">Owner Full Name</label>
-              <%= text_field_tag "user[name]", params.dig(:user, :name), id: "user_name", required: true, class: input_classes %>
-            </div>
-
-            <div>
-              <label for="user_email" class="mb-2 block text-sm font-medium text-foreground">Account Email</label>
-              <%= email_field_tag "user[email]", params.dig(:user, :email), id: "user_email", required: true, class: input_classes %>
-            </div>
-
-            <div class="sm:col-span-2">
-              <label for="default_password" class="mb-2 block text-sm font-medium text-foreground">Default Password</label>
-              <%= password_field_tag :default_password, HotelOps::CreateHotel::DEFAULT_PASSWORD, id: "default_password", readonly: true, class: "w-full rounded-xl border border-border bg-muted px-4 py-2.5 text-sm font-medium text-muted-foreground" %>
-              <p class="mt-2 text-sm text-muted-foreground">This password is assigned automatically when the hotel account is created.</p>
-            </div>
-          </div>
-        </section>
-      <% end %>
     </div>
   </div>
 

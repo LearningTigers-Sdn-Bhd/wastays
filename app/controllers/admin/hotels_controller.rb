@@ -29,11 +29,14 @@ class Admin::HotelsController < Admin::BaseController
     @form = Admin::Hotels::CreateForm.new(create_params)
 
     if @form.save(actor: current_user)
-      message = if @form.create_and_onboard?
+      message = if @form.verify_owner_account?
+        "Hotel created and the owner account is ready to use."
+      elsif @form.create_and_onboard?
         "Hotel created and the owner invitation was queued."
       else
         "Hotel created without sending the owner invitation."
       end
+      stash_owner_credentials
       complete_create(destination: admin_hotel_path(@form.hotel), notice: message)
     else
       render :new, status: :unprocessable_content
@@ -91,8 +94,21 @@ class Admin::HotelsController < Admin::BaseController
       :plan_id,
       :preferred_channel_manager,
       :salesperson_id,
-      :creation_action
+      :creation_action,
+      :verify_owner_account
     )
+  end
+
+  # The generated password is never persisted in readable form, so the only
+  # chance to hand it over is the redirect that follows creation. Flash rides
+  # in the encrypted session cookie and clears itself after one render.
+  def stash_owner_credentials
+    return if @form.generated_password.blank?
+
+    flash[:owner_credentials] = {
+      "email" => @form.owner&.email,
+      "password" => @form.generated_password
+    }
   end
 
   def complete_create(destination:, notice:)

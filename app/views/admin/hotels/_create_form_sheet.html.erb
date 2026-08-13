@@ -2,7 +2,7 @@
 <% form_id = "create-hotel-form" %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="panels-ui--sheet-frame admin--owner-provisioning">
     <%= render PanelsUI::Sheet.new(
           id: "create-hotel-sheet",
           side: :right,
@@ -41,6 +41,14 @@
                 <% field.with_input(type: :email, autocomplete: "email") %>
               <% end %>
             </div>
+
+            <%= render PanelsUI::Switch.new(
+                  form: builder,
+                  attribute: :verify_owner_account,
+                  variant: :card,
+                  label: "Create and verify owner account",
+                  description: "Use this when the owner asked us to set the property up for them. The account is created straight away with a one-time password shown after creation — no activation email is sent.",
+                  data: { admin__owner_provisioning_target: "switch", action: "change->admin--owner-provisioning#refresh" }) %>
           </section>
 
           <section class="space-y-4 border-t border-border pt-5" aria-labelledby="hotel-platform-heading">
@@ -98,27 +106,43 @@
               data: { action: "click->panels-ui--sheet#close" }) do %>
           Cancel
         <% end %>
-        <%= render PanelsUI::Button.new(
-              as: :button,
-              type: :submit,
-              form: form_id,
-              name: "admin_hotels_create_form[creation_action]",
-              value: "create_only",
-              variant: :secondary,
-              size: :sm,
-              data: { turbo_submits_with: "Creating…" }) do %>
-          Create only
-        <% end %>
-        <%= render PanelsUI::Button.new(
-              as: :button,
-              type: :submit,
-              form: form_id,
-              name: "admin_hotels_create_form[creation_action]",
-              value: "create_and_onboard",
-              size: :sm,
-              data: { turbo_submits_with: "Creating…" }) do %>
-          Create & onboard
-        <% end %>
+        <div style="display: contents" data-admin--owner-provisioning-target="inviteActions">
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                form: form_id,
+                name: "admin_hotels_create_form[creation_action]",
+                value: "create_only",
+                variant: :secondary,
+                size: :sm,
+                data: { turbo_submits_with: "Creating…" }) do %>
+            Create only
+          <% end %>
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                form: form_id,
+                name: "admin_hotels_create_form[creation_action]",
+                value: "create_and_onboard",
+                size: :sm,
+                data: { turbo_submits_with: "Creating…" }) do %>
+            Create & onboard
+          <% end %>
+        </div>
+        <%# Shown instead of the pair above when the verify-owner switch is on: %>
+        <%# there is no invitation to send, so the two-way choice does not apply. %>
+        <div style="display: none" data-admin--owner-provisioning-target="verifiedActions">
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                form: form_id,
+                name: "admin_hotels_create_form[creation_action]",
+                value: "create_only",
+                size: :sm,
+                data: { turbo_submits_with: "Creating…" }) do %>
+            Create & activate owner
+          <% end %>
+        </div>
       <% end %>
     <% end %>
   </div>
