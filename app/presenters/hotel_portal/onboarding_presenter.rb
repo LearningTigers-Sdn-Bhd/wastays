@@ -64,7 +64,7 @@ module HotelPortal
     def description = SECTION_CONTENT.fetch(current_entry.definition.key).last
     def phase_label = PHASE_LABELS.fetch(current_entry.definition.phase)
     def required? = current_entry.definition.required
-    def read_only? = Onboarding::LifecycleCompatibility.canonical_status(hotel.status).in?(%w[pending_review live])
+    def read_only? = hotel.status.in?(%w[pending_review live])
     def review? = current_entry.definition.key == "review"
     def current_position = navigation.entries.index(current_entry) + 1
     def total_sections = navigation.entries.length
@@ -101,7 +101,7 @@ module HotelPortal
     end
 
     def read_only_alert
-      if Onboarding::LifecycleCompatibility.canonical_status(hotel.status) == "live"
+      if hotel.status == "live"
         { tone: :success, title: "Setup approved", description: "This approved setup is read-only because the property is live." }
       else
         { tone: :info, title: "Setup submitted for review", description: "Your onboarding details are read-only while the WAStays team reviews this property." }

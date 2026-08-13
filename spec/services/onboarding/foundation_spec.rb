@@ -61,11 +61,6 @@ RSpec.describe "Onboarding foundation" do
     expect(readiness.blocking_issues.map(&:section_key)).to include("property_profile", "staff_setup")
   end
 
-  it "maps legacy statuses into the target lifecycle" do
-    expect(Onboarding::LifecycleCompatibility.canonical_status("registered")).to eq("setup")
-    expect(Onboarding::LifecycleCompatibility.canonical_status("approved")).to eq("live")
-  end
-
   it "does not count shell placeholder completion as launch-ready" do
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.update_all(

@@ -741,7 +741,7 @@ module HotelPortal
     end
 
     def pending_review?
-      Onboarding::LifecycleCompatibility.canonical_status(current_hotel.status) == "pending_review"
+      current_hotel.status == "pending_review"
     end
 
     def onboarding_path(entry)

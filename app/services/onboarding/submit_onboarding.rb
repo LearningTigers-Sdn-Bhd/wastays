@@ -28,7 +28,7 @@ module Onboarding
           submission = pending
           next
         end
-        unless LifecycleCompatibility.canonical_status(@hotel.status) == "setup"
+        unless @hotel.status == "setup"
           error = "This property cannot be submitted from its current status."
           raise ActiveRecord::Rollback
         end

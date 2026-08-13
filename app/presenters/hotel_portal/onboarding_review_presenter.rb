@@ -96,9 +96,9 @@ module HotelPortal
     private
 
     def page_state
-      @page_state ||= if submission&.approved? || Onboarding::LifecycleCompatibility.canonical_status(hotel.status) == "live"
+      @page_state ||= if submission&.approved? || hotel.status == "live"
         :approved
-      elsif Onboarding::LifecycleCompatibility.canonical_status(hotel.status) == "pending_review"
+      elsif hotel.status == "pending_review"
         :pending
       elsif changes_requested?
         :changes_requested

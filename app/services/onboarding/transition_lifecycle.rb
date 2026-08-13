@@ -27,7 +27,7 @@ module Onboarding
     def call
       result = nil
       @hotel.with_lock do
-        from = LifecycleCompatibility.canonical_status(@hotel.reload.status)
+        from = @hotel.reload.status
         unless TRANSITIONS.fetch(from, []).include?(@to)
           result = Result.failure("Hotel cannot transition from #{from} to #{@to}.", hotel: @hotel)
           next

@@ -54,7 +54,7 @@ module Public
 
     def invitation_destination
       if @invitation.role.slug == "hotel_owner" &&
-         Onboarding::LifecycleCompatibility.canonical_status(@invitation.hotel.status) == "setup"
+         @invitation.hotel.status == "setup"
         hotel_onboarding_path(@invitation.hotel)
       else
         hotel_dashboard_path(@invitation.hotel)

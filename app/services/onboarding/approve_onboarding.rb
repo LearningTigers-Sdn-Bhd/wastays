@@ -19,7 +19,7 @@ module Onboarding
       Hotel.transaction do
         @hotel.lock!
         submission = @hotel.onboarding_submissions.find_by(status: "pending_review")
-        unless submission && LifecycleCompatibility.canonical_status(@hotel.status) == "pending_review"
+        unless submission && @hotel.status == "pending_review"
           error = "This property is not awaiting onboarding review."
           raise ActiveRecord::Rollback
         end
