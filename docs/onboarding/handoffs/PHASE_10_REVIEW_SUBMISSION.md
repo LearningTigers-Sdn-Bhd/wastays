@@ -1,6 +1,15 @@
 # Phase 10 — Review, submission, and invitations
 
-Read `docs/onboarding/handoffs/README.md` first for the shared pattern and rules.
+Read `docs/onboarding/handoffs/README.md` first for the shared pattern and rules, then
+`REMAINING_WORK.md` for the verified state of the branch.
+
+> **Partly built since this brief was written.** `Onboarding::DeliverInvitations` now
+> exists and solves the idempotency requirement below for **both** staff and corporate
+> drafts (`invitation_id` + `delivered_at` per draft, `undelivered` scope, one transaction
+> per draft, mail enqueued outside it). It has no production caller yet. Read it before
+> designing anything in the "Idempotency" section — that problem is solved, only the wiring
+> is left. What remains is the `review` section itself, a submission service joining
+> `TransitionLifecycle` to `DeliverInvitations`, and admin notification.
 
 ## Goal
 

@@ -262,20 +262,17 @@ The owner may prepare corporate account invitations and initial credit terms or 
 
 External acceptance does not block onboarding or launch. Any invitation requested during onboarding is queued until submission.
 
-#### 12. Channel manager — optional or undecided
+#### 12. Channel manager — optional
 
-Supported decisions include:
+Rescoped during delivery to credential intake, because that is how the client already works: they collect OTA extranet logins on a spreadsheet and connect the channels themselves afterwards.
 
-- Decision pending
-- No channel manager
-- Skip for now
-- Ready to connect
-- Connected
-- Connection failed
+The owner hands over the logins their channels need — channel, property ID, username, password, and market manager contact — and nothing is connected or sent from this page. Usernames and passwords are encrypted at rest and are write-only from the portal: never rendered back into a field, and redacted from a failed submission. Only the WAStays team reads them, which the page says on the page where they are typed.
 
-Preferred provider and connection status are separate. Skipping connection does not erase the admin's preferred provider.
+The owner's two answers are therefore "here are my logins" and "none for now". Continuing from an empty table is the second answer.
 
-Provisioning occurs only after rooms, rate plans, rates, and inventory are ready. The connection flow provisions the property, synchronizes and maps room types and rate plans, pushes rates and availability, and reports failures clearly.
+The admin's preferred provider is displayed and never written here, so an owner who hands over nothing still keeps the provider choice made at creation.
+
+Connection itself — provisioning, room and rate-plan mapping, the initial rate and availability push, retry, and diagnostics — is deferred superadmin work, and provisioning still occurs only after rooms, rate plans, rates, and inventory are ready. Until that lands, no UI reads the stored rows.
 
 The higher-level product decision about whether a channel manager will eventually become mandatory remains open.
 

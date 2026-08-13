@@ -14,10 +14,13 @@ Authoritative sources, in order:
 `CLAUDE.md` rules apply throughout: business logic in `app/services/<domain>/`, one
 verb-named class per file; reuse before adding; align on approach before writing code.
 
-## Status as of 2026-08-12
+## Status as of 2026-08-13
 
-Phases 0–8 are complete. Phase 9 is the next slice — do not start a phase whose
+Phases 0–9 are complete. Phase 10 is the next slice — do not start a phase whose
 prerequisite section is still a placeholder.
+
+**Start at `REMAINING_WORK.md`** — it is the verified state of the branch and the scope of
+phases 10–13, and it supersedes any phase file it disagrees with.
 
 | Phase | Sections | State |
 |---|---|---|
@@ -26,8 +29,9 @@ prerequisite section is still a placeholder.
 | 6 | `rooms` | Complete |
 | 7 | `rates_availability` | Complete |
 | 8 | `extra_charges`, `discounts`, `payment_methods`, `corporate_accounts` | Complete |
-| 9 | `channel_manager` | Handoff: `PHASE_09_CHANNEL_MANAGER.md` |
-| 10 | `review` + submission | Handoff: `PHASE_10_REVIEW_SUBMISSION.md` |
+| 9 | `channel_manager` | Complete as rescoped — credential intake only |
+| 10 | `review` + submission | Next. `REMAINING_WORK.md`, then `PHASE_10_REVIEW_SUBMISSION.md` |
+| 11–13 | admin launch, enforcement, legacy cleanup | `REMAINING_WORK.md` |
 
 Phases are strictly sequential: `section_catalog.rb` encodes a prerequisite chain, and
 `UpdateSection` refuses any transition whose prerequisites are unresolved. Do not attempt

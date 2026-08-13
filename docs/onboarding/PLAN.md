@@ -12,7 +12,9 @@ The authoritative product and presentation decisions are:
 
 Existing hotel, tax, room, rate, financial, staff, corporate account, and channel-manager services remain the source of domain behaviour. The onboarding domain orchestrates and presents those capabilities; it must not fork their business rules.
 
-Per-phase handoff briefs for phases 6-10 live in `docs/onboarding/handoffs/`, starting with `docs/onboarding/handoffs/README.md`. They exist so a session with no prior context can pick up a single phase.
+Per-phase handoff briefs live in `docs/onboarding/handoffs/`, starting with `docs/onboarding/handoffs/README.md`. They exist so a session with no prior context can pick up a single phase.
+
+**Current position (2026-08-13): phases 0-9 complete, phase 10 next.** `docs/onboarding/handoffs/REMAINING_WORK.md` holds the verified state of the branch and the scope of phases 10-13; where it disagrees with a phase brief, it is right.
 
 ## Delivery principles
 
@@ -93,7 +95,7 @@ Build the dedicated experience before adding all forms:
 - Backward navigation
 - Locked future-step handling
 - Save draft and Save & continue contracts
-- Optional Skip for now contract
+- Optional-section decision contract (delivered as a Skip for now button, since retired — an optional section now answers itself when the owner continues from an empty table)
 - Pending-review read-only state
 - Changes-requested presentation
 - Responsive and accessible navigation behaviour
@@ -139,7 +141,7 @@ Requirements:
 
 Deliverable: a hotel can establish its financial foundation before configuring products.
 
-## Phase 6: Rooms slice
+## Phase 6: Rooms slice — Complete (2026-08-12)
 
 Deliver room setup:
 
@@ -157,7 +159,7 @@ onboarding pricing, while optional descriptive details remain in regular Setting
 
 Deliverable: at least one operationally valid room type can be completed through onboarding.
 
-## Phase 7: Pricing and one-year availability slice
+## Phase 7: Pricing and one-year availability slice — Complete (2026-08-12)
 
 Deliver separate sell-mode experiences.
 
@@ -189,7 +191,7 @@ Use existing rate-plan and inventory services, extending their shared domain API
 
 Deliverable: a configured room has valid sell-mode pricing and one year of sellable rates and inventory.
 
-## Phase 8: Commercial configuration slices
+## Phase 8: Commercial configuration slices — Complete (2026-08-13)
 
 Deliver these as separate, independently reviewable pages or sub-phases:
 
@@ -204,30 +206,41 @@ Requirements:
 - Discounts can target established eligible charge codes.
 - Payment surcharges can reference existing extra charges.
 - At least one usable payment method is required.
-- Extra charges, discounts, and corporate accounts support explicit skip decisions.
+- Extra charges, discounts, and corporate accounts record an explicit decision when left empty. Delivered without a skip button: continuing from an empty table is the answer, and the section's own save service records it. A separate control would ask the same question twice.
 - Corporate invitations remain queued until submission and do not block on acceptance.
 - Dependency invalidation warns instead of silently deleting references.
 
 Deliverable: the hotel's commercial and payment setup can be completed without entering the normal settings portal.
 
-## Phase 9: Channel manager slice
+## Phase 9: Channel manager slice — Complete as rescoped (2026-08-13)
 
-Deliver after local rooms, rates, and inventory are stable:
+Rescoped during delivery to **credential intake only**, matching how the client already works: they collect OTA extranet logins on a spreadsheet and connect the channels themselves afterwards. The owner-facing connection flow was cut.
 
-- Preferred provider display
-- Decision pending, none, skip, connect, connected, and failed states
-- Prerequisite checks
-- Property provisioning
-- Room and rate-plan mapping
-- Initial rate and availability push
-- Retry and diagnostics
-- Clear distinction between local readiness and external synchronization readiness
+Delivered:
 
-Do not block launch while the agreed policy remains optional. Preserve the preferred provider when connection is skipped.
+- Preferred provider display, never written — the admin's choice is read-only here
+- OTA extranet credential intake (`hotel_ota_credentials`): channel, property ID, username, password, market manager contact, with username and password encrypted at rest and passwords write-only from the portal
+- Continuing from an empty table records `no_channel_manager_now`, so the section resolves either way
+- Clear distinction between local readiness and external synchronization readiness — the section never blocks launch
 
-Deliverable: optional channel onboarding can safely run last without corrupting local setup.
+Deferred to a later superadmin slice, not delivered here:
 
-## Phase 10: Review, submission, and invitations
+- Property provisioning, room and rate-plan mapping, initial rate and availability push
+- Connection states, retry, and diagnostics
+- Plan gating for `manage_40_otas`
+- Any admin-side view of the credential rows — until that lands the table is write-only and no UI reads it
+
+Carry-forward defect: every sync guard tests `hotel.preferred_channel_manager.blank?` (`app/models/room_type.rb:174` and others), but Phase 2 stores explicit `"undecided"` / `"none"` values, both of which are `present?`. Hotels wanting no channel manager therefore enqueue sync jobs that die downstream on a missing mapping. Fix the guards to test connectedness when the superadmin slice is built.
+
+Deliverable: an owner hands over the logins their channels need and reaches review either way, with local setup unaffected.
+
+## Phase 10: Review, submission, and invitations — Next
+
+Three services already exist with no production caller, landed early by the phases that owned their data. Wire them; do not rebuild them:
+
+- `Onboarding::Readiness` — findings, plus the `decision_metadata["placeholder"]` rule that blocks submission while a stub section remains
+- `Onboarding::TransitionLifecycle` — `setup -> pending_review`, re-running readiness server-side inside the guard, status change and `submitted` audit event in one transaction
+- `Onboarding::DeliverInvitations` — staff and corporate drafts to real invitations, one transaction per draft, `invitation_id` + `delivered_at` as the idempotent marker, mail enqueued outside the transaction
 
 Build the full readiness review:
 
@@ -246,6 +259,8 @@ Delivery must be idempotent so retries do not send duplicate invitations or dupl
 Deliverable: an owner can complete and submit onboarding safely.
 
 ## Phase 11: Admin review and launch
+
+An admin onboarding surface already exists, and it is the **legacy** one: `Admin::Hotels::OnboardingController` drives training-session scheduling and `Admin::CompleteOnboarding`, the old approval path. Its index already reads `Hotel.pending_review_onboarding`, so a hotel submitted through Phase 10 appears there with none of the new readiness detail. Decide before coding whether this phase extends that controller or replaces it — two parallel paths reaching `live` is the failure mode.
 
 Deliver:
 
@@ -276,6 +291,10 @@ Deliverable: the onboarding path becomes the enforced default for setup hotels.
 
 ## Phase 13: Legacy cleanup
 
+`Onboarding::LifecycleCompatibility` is what makes this possible: it folds five legacy setup statuses (`registered`, `email_verified`, `profile_incomplete`, `rooms_incomplete`, `inventory_incomplete`) into `setup`, and `approved` into `live`. `Hotel::STATUSES` still declares all of them.
+
+Scope trap: roughly twenty files reference `approved`, but many are `RefundRequest` and `ArPaymentSubmission` approvals — an unrelated meaning of the word. Separate the two before any find-and-replace.
+
 After rollout is stable:
 
 - Remove legacy onboarding-stage status transitions.
@@ -305,12 +324,20 @@ Run the relevant project test domain and RuboCop for each implementation slice. 
 
 ## Open decisions
 
-The following remain intentionally unresolved:
+The following remain intentionally unresolved. None of them blocks Phase 10's review page.
 
-1. Whether a channel manager will eventually become mandatory for some plans or properties.
-2. Whether one-year availability remains a one-time initial population or becomes a maintained rolling horizon.
-3. Whether existing admin training sessions remain a launch prerequisite, a warning, or an independent operational process.
-4. How existing non-live hotels map to `setup` versus `pending_review` during migration.
-5. Whether live hotels retain a read-only onboarding summary indefinitely or only an audit record.
+| Decision | Blocks |
+|---|---|
+| 1. Whether a channel manager will eventually become mandatory for some plans or properties. | The deferred superadmin channel slice |
+| 2. Whether one-year availability remains a one-time initial population or becomes a maintained rolling horizon. | 13, and any coverage-expiry work |
+| 3. Whether existing admin training sessions remain a launch prerequisite, a warning, or an independent operational process. | 10, 11 |
+| 4. How existing non-live hotels map to `setup` versus `pending_review` during migration. | 12 |
+| 5. Whether live hotels retain a read-only onboarding summary indefinitely or only an audit record. | 10, 11 |
+| 6. Whether old `pending_review` submissions are grandfathered, returned to setup, or revalidated under the target checks. | 12 |
 
-Resolve each decision before its dependent delivery phase; do not block unrelated earlier slices.
+Resolved during delivery:
+
+- **Corporate and staff invitation queueing and submission idempotency** (was unresolved in `IMPLEMENTATION_MAP.md` §8 item 11). Both draft tables carry `invitation_id` plus `delivered_at`; `Onboarding::DeliverInvitations` delivers resumably and sends nothing twice.
+- **Owner-facing channel-manager connection states.** Phase 9's rescope removed the question: the owner hands over credentials, and connection states belong to the deferred superadmin slice.
+
+Resolve each open decision before its dependent delivery phase; do not block unrelated earlier slices.

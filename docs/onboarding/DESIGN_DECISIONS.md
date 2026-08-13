@@ -208,6 +208,7 @@ Good table candidates:
 - Discounts
 - Payment methods
 - Corporate accounts
+- OTA extranet logins
 
 Use standard forms, detail pages, or contextual sheets for:
 
@@ -217,7 +218,7 @@ Use standard forms, detail pages, or contextual sheets for:
 - Detailed room information
 - Child age-band setup
 - Bulk rate and availability rules
-- Channel manager connection and diagnostics
+- Channel manager connection and diagnostics (deferred superadmin work — the owner-facing section is a credential table)
 
 ### Editable table pattern
 
