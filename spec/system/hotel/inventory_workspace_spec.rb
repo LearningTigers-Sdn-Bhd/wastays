@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Hotel inventory calendar", type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin", email: "inventory@example.com") }
-  let(:hotel) { create(:hotel, account: account, status: "approved", default_currency: "MYR") }
+  let(:hotel) { create(:hotel, account: account, status: "live", default_currency: "MYR") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:room_type) { create(:room_type, hotel: hotel, name: "Twin Room", quantity: 4, base_price: 180, room_numbers: %w[201 202 203 204]) }
   let!(:rate_plan) { create(:rate_plan, room_type: room_type, name: "Best Available Rate") }

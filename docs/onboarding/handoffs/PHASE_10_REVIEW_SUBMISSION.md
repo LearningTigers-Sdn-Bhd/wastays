@@ -72,11 +72,7 @@ read-only and remains reachable even though earlier steps are locked.
 
 ## Validation completed
 
-- Focused onboarding group: 230 examples, 0 failures.
-- `bin/test hotel_management`: 353 examples, 0 failures.
-- RuboCop: no offenses.
-- Brakeman, Bundle Audit, Importmap Audit, and Tailwind build passed.
-- A later full parallel suite was stopped at the user's request after unrelated existing
-  room-number factory and legacy expectation failures; system/browser coverage was not run.
+See the validation record in `REMAINING_WORK.md`. It is re-measured at the tip of the
+branch; the counts once listed here were taken mid-phase and no longer hold.
 
 Phase 11 is described in `PHASE_11_ADMIN_REVIEW.md`.

@@ -6,7 +6,7 @@ RSpec.describe 'Admin::Bookings', type: :request do
   let(:admin_account) { create(:account, name: "Admin Bookings #{token}") }
   let(:superadmin) { create(:user, :superadmin, account: admin_account, email: "admin-bookings-#{token}@example.com") }
   let(:hotel_account) { create(:account, name: "Kinabalu Rainforest Group #{token}") }
-  let(:hotel) { create(:hotel, account: hotel_account, name: "Kinabalu Rainforest Lodge #{token}", city: 'Kota Kinabalu', country: 'Malaysia', status: 'approved') }
+  let(:hotel) { create(:hotel, account: hotel_account, name: "Kinabalu Rainforest Lodge #{token}", city: 'Kota Kinabalu', country: 'Malaysia', status: 'live') }
   let(:booking) do
     create(
       :booking,

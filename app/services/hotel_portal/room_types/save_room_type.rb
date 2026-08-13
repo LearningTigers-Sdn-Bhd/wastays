@@ -18,11 +18,8 @@ module HotelPortal
         photos = @params.delete(:photos)
         @room_type.assign_attributes(@params)
 
-        is_new_record = @room_type.new_record?
-
         if @room_type.save
           @room_type.attach_photos_with_limit(photos) if photos.present?
-          @hotel.complete_rooms! if is_new_record
           sync_with_channel_manager
           OpenStruct.new(success?: true, room_type: @room_type)
         else

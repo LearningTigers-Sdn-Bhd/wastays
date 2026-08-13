@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Public::PreCheckins", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:booking) do
     create(
       :booking,

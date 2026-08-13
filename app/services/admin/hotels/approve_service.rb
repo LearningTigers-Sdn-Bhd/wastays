@@ -20,7 +20,10 @@ module Admin
             "active"
           end
 
-          target_hotel_status = if @hotel.pre_suspension_status.present?
+          # A row suspended before the lifecycle was normalized can still be carrying a
+          # status that no longer exists. Reactivate it as live rather than restoring
+          # something the model would now reject.
+          target_hotel_status = if @hotel.pre_suspension_status.in?(Hotel::STATUSES)
             @hotel.pre_suspension_status
           else
             "live"

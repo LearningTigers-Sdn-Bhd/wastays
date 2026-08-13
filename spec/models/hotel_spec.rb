@@ -49,35 +49,50 @@ RSpec.describe Hotel, type: :model do
 
   describe 'constants' do
     it 'defines allowed statuses' do
-      expect(Hotel::STATUSES).to match_array(%w[
-        setup
-        registered
-        email_verified
-        profile_incomplete
-        rooms_incomplete
-        inventory_incomplete
-        pending_review
-        approved
-        live
-        suspended
-      ])
+      expect(Hotel::STATUSES).to match_array(%w[setup pending_review live suspended])
+    end
+  end
+
+  describe 'lifecycle status' do
+    it 'rejects a status outside the canonical lifecycle' do
+      hotel = build(:hotel, status: 'approved')
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:status]).to be_present
+    end
+
+    it 'accepts every canonical status' do
+      Hotel::STATUSES.each do |status|
+        hotel = build(:hotel, status: status)
+        hotel.valid?
+
+        expect(hotel.errors[:status]).to be_empty, "expected #{status} to be a valid hotel status"
+      end
     end
   end
 
   describe '#active?' do
-    it 'returns true if status is approved' do
-      hotel = build(:hotel, status: 'approved')
-      expect(hotel.active?).to be true
-    end
-
     it 'returns true if status is live' do
       hotel = build(:hotel, status: 'live')
       expect(hotel.active?).to be true
     end
 
-    it 'returns false if status is registered' do
-      hotel = build(:hotel, status: 'registered')
+    it 'returns false while the hotel is still in setup' do
+      hotel = build(:hotel, status: 'setup')
       expect(hotel.active?).to be false
+    end
+
+    it 'returns false while the hotel is awaiting review' do
+      hotel = build(:hotel, status: 'pending_review')
+      expect(hotel.active?).to be false
+    end
+  end
+
+  describe '#onboarding?' do
+    it 'is true only in setup' do
+      expect(build(:hotel, status: 'setup')).to be_onboarding
+      expect(build(:hotel, status: 'pending_review')).not_to be_onboarding
+      expect(build(:hotel, status: 'live')).not_to be_onboarding
     end
   end
 

@@ -3,7 +3,7 @@ require "pdf/reader"
 require "stringio"
 
 RSpec.describe "Public::Bookings invoice", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Standard Room") }
   let(:booking) do
     create(:booking,

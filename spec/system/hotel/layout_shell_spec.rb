@@ -11,7 +11,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
       account: account,
       plan: plan,
       name: "O'Conner Hotel",
-      status: 'approved',
+      status: 'live',
       sell_mode: RSpec.current_example.metadata[:per_person] ? 'per_person' : 'per_room'
     )
   end

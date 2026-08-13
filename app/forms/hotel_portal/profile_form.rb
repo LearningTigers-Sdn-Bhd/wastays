@@ -22,9 +22,7 @@ module HotelPortal
           end
         end
 
-        photo_upload_result = hotel.attach_photos_with_limit(profile_params[:photos])
-        hotel.complete_profile!
-        photo_upload_result
+        hotel.attach_photos_with_limit(profile_params[:photos])
       else
         false
       end

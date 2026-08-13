@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe BookingEngine::RateCalendarService do
   let!(:account)   { Account.create!(name: "Test", slug: "test-rc", status: "active") }
-  let!(:hotel)     { Hotel.create!(sell_mode: "per_room", name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "approved") }
+  let!(:hotel)     { Hotel.create!(sell_mode: "per_room", name: "RC Hotel", city: "KL", country: "Malaysia", account: account, status: "live") }
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Standard", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }
 
   let(:today) { Date.current }

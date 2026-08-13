@@ -21,7 +21,7 @@ RSpec.describe "Guest::Bookings invoice", type: :request do
       government_id: "B1234567"
     )
   end
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Standard Room") }
   let(:booking) do
     create(:booking,

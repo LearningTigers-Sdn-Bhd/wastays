@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :business_day, type: :request do
-  let(:hotel) { create(:hotel, status: "approved", tourism_tax_enabled: true, tourism_tax_amount: 10.0) }
-  let(:other_hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live", tourism_tax_enabled: true, tourism_tax_amount: 10.0) }
+  let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:room_type) { create(:room_type, hotel: hotel, room_number_mode: "custom", room_numbers: %w[101 102 103]) }

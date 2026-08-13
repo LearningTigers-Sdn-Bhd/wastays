@@ -101,7 +101,7 @@ Onboarding should orchestrate these existing records/APIs, not create parallel d
 
 - `onboarding_sessions` store hotel, trainer, scheduled/completed times, meeting link, notes, and one of scheduled/completed/cancelled (`db/schema.rb:1872-1883`; `app/models/onboarding_session.rb`).
 - Admin CRUD explicitly describes these as training sessions and stamps `notes = "TRAINING_SESSION"` (`app/controllers/admin/hotels/onboarding_sessions_controller.rb:1-145`).
-- The tracker lists only `pending_review` hotels, permits arbitrary onboarding start/end dates, and uses a `FINAL_ONBOARDING_COMPLETION` session to calculate duration (`app/controllers/admin/hotels/onboarding_controller.rb`; `app/views/admin/hotels/_onboarding_tracker_table.html.erb`).
+- The tracker listed only `pending_review` hotels, permitted arbitrary onboarding start/end dates, and used a `FINAL_ONBOARDING_COMPLETION` session to calculate duration. **Removed in Phase 11:** `app/views/admin/hotels/_onboarding_tracker_table.html.erb` and the tracker index no longer exist; see `handoffs/PHASE_11_ADMIN_REVIEW.md`.
 - `Admin::CompleteOnboarding` conflates training completion and hotel approval (`app/services/admin/complete_onboarding.rb`). No readiness check is run there.
 
 **Recommended separation:** retain sessions as independent training/history records and stop using them as page progress or lifecycle authority. Whether completed training is a launch blocker, warning, or unrelated operation remains an explicit product decision.

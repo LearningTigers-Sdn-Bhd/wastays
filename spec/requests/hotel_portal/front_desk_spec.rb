@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::FrontDesk", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
-  let(:other_hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
+  let(:other_hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
 

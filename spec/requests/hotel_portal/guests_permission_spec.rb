@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "HotelPortal::Guests Permissions", type: :request do
   let!(:account) { create(:account) }
   let!(:plan) { create(:plan) }
-  let!(:hotel) { create(:hotel, status: "approved", account: account, plan: plan) }
+  let!(:hotel) { create(:hotel, status: "live", account: account, plan: plan) }
   let!(:user) { create(:user, account: account) }
   let!(:guest) { create(:guest, created_by_hotel: hotel) }
 

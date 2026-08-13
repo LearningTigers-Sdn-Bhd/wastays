@@ -6,7 +6,7 @@ RSpec.describe "Hotel stay view sidebar", type: :system do
   let(:account) { create(:account) }
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
-  let(:hotel) { create(:hotel, account: account, plan: plan, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, plan: plan, status: "live") }
 
   def grant_permission(role, slug)
     permission = Permission.find_by(slug: slug) || create(:permission, slug: slug, name: slug.tr("_", " ").titleize)

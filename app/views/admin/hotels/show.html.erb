@@ -14,7 +14,7 @@
                 title: safe_join([
                   @hotel.name,
                   tag.span(@hotel.status.titleize, class: "inline-flex items-center gap-x-1.5 rounded-full px-3 py-1.5 text-xs font-semibold #{case @hotel.status
-                  when 'approved', 'live' then 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
+                  when 'live' then 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
                   when 'pending_review' then 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
                   when 'suspended' then 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200'
                   else 'bg-muted text-foreground ring-1 ring-inset ring-ring'

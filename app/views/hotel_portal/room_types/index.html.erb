@@ -1,14 +1,4 @@
 <div class="w-full space-y-6">
-  <% if onboarding_incomplete?(current_hotel) %>
-    <%= render PanelsUI::Button.new(
-          href: hotel_dashboard_path(current_hotel),
-          variant: :ghost,
-          size: :sm) do %>
-      <%= app_icon "chevron-left", class: "size-4", aria: { hidden: true } %>
-      Back to onboarding
-    <% end %>
-  <% end %>
-
   <%= render "hotel_portal/settings/property_page_header" %>
   <%= render "hotel_portal/settings/group_tabs" %>
 

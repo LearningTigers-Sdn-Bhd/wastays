@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Public quote guest details", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe Twin") }
   let(:guest) do
     create(

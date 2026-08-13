@@ -59,11 +59,11 @@ RSpec.describe HotelOps::CreateHotel do
         result = described_class.new(
           account_params: account_params,
           user_params: user_params,
-          hotel_params: hotel_params.merge(status: 'approved')
+          hotel_params: hotel_params.merge(status: 'live')
         ).call
 
         expect(result[:success]).to be true
-        expect(result[:hotel].status).to eq('approved')
+        expect(result[:hotel].status).to eq('live')
       end
     end
 

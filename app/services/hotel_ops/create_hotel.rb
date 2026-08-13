@@ -15,7 +15,7 @@ module HotelOps
         SeedAccountRoles.call(account)
 
         sanitize_amenities
-        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "registered", amenities: []).merge(account: account))
+        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "setup", amenities: []).merge(account: account))
         owner_role = Role.find_by!(account: account, slug: "hotel_owner")
 
         user = nil

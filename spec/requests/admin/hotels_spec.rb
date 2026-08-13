@@ -177,7 +177,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
   describe 'GET /admin/hotels/:id' do
     let(:hotel_account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
-    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'approved') }
+    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'live') }
     let!(:owner) { create(:user, :admin, account: hotel_account, name: 'Rose Yeo', email: "rose-#{token}@luma.test") }
     let!(:banking_detail) do
       create(
@@ -270,7 +270,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
   describe 'GET /admin/hotels/:id/edit' do
     let(:edit_hotel_account) { create(:account, name: "Edit Hotel #{token}") }
-    let(:hotel) { create(:hotel, account: edit_hotel_account, status: 'approved', name: "Urielle Preston #{token}") }
+    let(:hotel) { create(:hotel, account: edit_hotel_account, status: 'live', name: "Urielle Preston #{token}") }
 
     it 'shows the redesigned hotel edit workspace and keeps cancel on the details page' do
       get edit_admin_hotel_path(hotel)
@@ -295,7 +295,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
   describe 'POST /admin/hotels/:id/suspend' do
     let(:suspend_account) { create(:account, name: "Suspend Hotel #{token}", status: 'active') }
-    let(:hotel) { create(:hotel, account: suspend_account, status: 'approved') }
+    let(:hotel) { create(:hotel, account: suspend_account, status: 'live') }
 
     it 'suspends both the hotel and its account' do
       post suspend_admin_hotel_path(hotel)
@@ -323,7 +323,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
   describe 'PATCH /admin/hotels/:id' do
     let(:hotel_account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
-    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'inventory_incomplete', sell_mode: "per_room") }
+    let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'setup', sell_mode: "per_room") }
 
     it 'refuses a tampered charging-model change and rolls back other attributes' do
       patch admin_hotel_path(hotel), params: { hotel: { name: 'Changed name', sell_mode: 'per_person' } }

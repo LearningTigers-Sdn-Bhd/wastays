@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "Group billing routes", type: :system do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "hotel_staff", email: "group-routes@example.com") }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:role) { create(:role, account: account, slug: "front_desk", name: "Front Desk") }
   let(:group) { create(:group_booking, hotel: hotel) }
 

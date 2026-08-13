@@ -7,7 +7,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     create(
       :hotel,
       account: account,
-      status: 'registered',
+      status: 'setup',
       sell_mode: RSpec.current_example.metadata[:per_person] ? 'per_person' : 'per_room'
     )
   end

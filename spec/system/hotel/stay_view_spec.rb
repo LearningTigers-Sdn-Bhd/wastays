@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zone.local(2026, 7, 16, 10) do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account:, status: "approved", accounting_business_date: Date.current) }
+  let(:hotel) { create(:hotel, account:, status: "live", accounting_business_date: Date.current) }
   let(:user) { create(:user, account:, role: "hotel_staff") }
   let(:role) { create(:role, account:, slug: "front_desk", name: "Front Desk") }
   let(:room_type) { create(:room_type, hotel:, room_number_mode: "custom", room_numbers: %w[101 102]) }

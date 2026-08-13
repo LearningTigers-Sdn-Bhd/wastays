@@ -27,7 +27,7 @@ RSpec.describe 'Admin::Dashboard', type: :request, frozen_time: Time.zone.local(
 
     it 'shows the created date for recent bookings' do
       hotel_account = create(:account, name: "Recent Booking Account #{token}", status: 'active')
-      hotel = create(:hotel, account: hotel_account, name: "Recent Booking Hotel #{token}", status: 'approved')
+      hotel = create(:hotel, account: hotel_account, name: "Recent Booking Hotel #{token}", status: 'live')
       created_at = Time.zone.local(2021, 1, 7, 14, 30)
 
       create(
@@ -51,9 +51,9 @@ RSpec.describe 'Admin::Dashboard', type: :request, frozen_time: Time.zone.local(
 
   describe 'GET /admin/analytics' do
     let(:account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
-    let(:hotel) { create(:hotel, account: account, name: "Luma Stay #{token}", status: 'approved') }
+    let(:hotel) { create(:hotel, account: account, name: "Luma Stay #{token}", status: 'live') }
     let(:other_hotel_account) { create(:account, name: "Ocean Breeze Group #{token}", status: 'active') }
-    let(:other_hotel) { create(:hotel, account: other_hotel_account, name: "Ocean Breeze #{token}", status: 'approved') }
+    let(:other_hotel) { create(:hotel, account: other_hotel_account, name: "Ocean Breeze #{token}", status: 'live') }
 
     let!(:first_current_month_booking) do
       booking = create(

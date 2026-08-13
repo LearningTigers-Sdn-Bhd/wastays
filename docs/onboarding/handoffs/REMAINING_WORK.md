@@ -1,8 +1,9 @@
 # Onboarding — remaining work handover
 
-Verified against the code on `feat/onboarding-shell` on 2026-08-13 after the Phase 10–11
-implementation. The implementation is currently uncommitted. This is the current handoff;
-older phase proposals are historical when they disagree with it.
+Verified against the code on `feat/onboarding-shell` on 2026-08-13, after the Phase 10–11
+implementation and the four review-workspace commits that followed it
+(`870834310` … `34ce37fbb`). This is the current handoff; older phase proposals are
+historical when they disagree with it.
 
 ## Current status
 
@@ -34,9 +35,13 @@ Read `PHASE_10_REVIEW_SUBMISSION.md` and `PHASE_11_ADMIN_REVIEW.md` for full con
 - `Onboarding::SubmitOnboarding` and the singular owner submission route are the only owner
   submission path.
 - `Onboarding::RequestChanges` and `Onboarding::ApproveOnboarding` are the only onboarding
-  review mutations. `/admin/hotels/:id/onboarding` is the canonical admin page.
-- Pending review is write-protected in the hotel portal. Safe reads, account/security,
-  support, logout, and the idempotent response remain reachable.
+  review mutations. `/admin/hotels/:id/onboarding` is the canonical admin page, and the
+  review queue is the `pending_review` filter on the admin hotels list. The separate
+  onboarding tracker page is gone.
+- Pending review is write-protected in the hotel portal. `protect_pending_review_writes!`
+  blocks every non-GET request except `HotelPortal::UserProfilesController` and
+  `HotelPortal::OnboardingSubmissionsController`. Reads stay reachable; so does logout,
+  which is not a hotel-portal controller.
 - Training is visible but independent and never blocks launch.
 - The approved snapshot remains immutable after launch.
 - `Admin::CompleteOnboarding`, dashboard direct submission, tracker completion, and legacy
@@ -87,10 +92,19 @@ present. Test actual connectedness when building the superadmin slice.
 
 ## Validation record
 
-- Focused onboarding group: 230 examples, 0 failures.
-- Roles fingerprint regression: 18 focused examples, 0 failures.
-- `bin/test hotel_management`: 353 examples, 0 failures.
-- RuboCop passed; Brakeman, Bundle Audit, Importmap Audit, and Tailwind build passed.
+Re-measured on 2026-08-13 at `34ce37fbb`, the tip of the branch:
+
+- Onboarding-focused group — `spec/services/onboarding`, `spec/jobs/onboarding`, the two
+  onboarding models, the two onboarding presenters, the four hotel-portal and admin
+  onboarding request specs, and `spec/requests/admin/hotels_spec.rb`: 257 examples,
+  0 failures.
+
+Measured earlier, during Phase 10–11 implementation, and not re-run since the
+review-workspace commits:
+
+- RuboCop, Brakeman, Bundle Audit, Importmap Audit, and Tailwind build passed.
+- `bin/test hotel_management`: 353 examples, 0 failures. Note that this domain contains no
+  onboarding specs; it was run as a regression check, not as onboarding coverage.
 - The broad parallel suite was stopped at the user's request after unrelated existing
   room-number factory and legacy expectation failures. System/browser tests were not run.
 

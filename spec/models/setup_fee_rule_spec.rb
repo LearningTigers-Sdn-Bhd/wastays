@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe SetupFeeRule, type: :model do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
 
   describe "validations" do
     it "accepts a valid global default" do

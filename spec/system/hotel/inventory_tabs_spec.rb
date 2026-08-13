@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Hotel inventory tabs", type: :system, js: true do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "approved", default_currency: "MYR") }
+  let(:hotel) { create(:hotel, account: account, status: "live", default_currency: "MYR") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:room_type) { create(:room_type, hotel: hotel, name: "Twin Room", quantity: 4) }
 

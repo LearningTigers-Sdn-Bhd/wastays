@@ -10,7 +10,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
   let(:plan) { create(:plan) }
   let(:feature_group) { create(:feature_group) }
   let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
-  let(:hotel) { create(:hotel, account: account, status: "approved", plan: plan) }
+  let(:hotel) { create(:hotel, account: account, status: "live", plan: plan) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
 
   before do

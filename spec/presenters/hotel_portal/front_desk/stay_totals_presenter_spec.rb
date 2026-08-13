@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::FrontDesk::StayTotalsPresenter do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:booking) { create(:booking, hotel:, total_amount: 540, check_in: Date.current, check_out: Date.current + 3) }
   let(:folio) { booking.booking_folios.first || create(:booking_folio, booking:, hotel:) }
 

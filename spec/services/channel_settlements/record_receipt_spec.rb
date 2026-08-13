@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe ChannelSettlements::RecordReceipt, type: :service do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:user) { create(:user, account: hotel.account) }
   let(:source) { create(:booking_source, kind: "ota") }
   let(:payment_method) { create(:hotel_payment_method, hotel:) }

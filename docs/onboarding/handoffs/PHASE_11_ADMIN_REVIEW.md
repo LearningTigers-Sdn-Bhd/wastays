@@ -1,18 +1,40 @@
 # Phase 11 — Admin review and launch
 
-Implemented on `feat/onboarding-shell` on 2026-08-13 together with Phase 10.
+Implemented on `feat/onboarding-shell` on 2026-08-13 together with Phase 10, then
+reorganized into the current workspace by `4717dceec`, `773508d71`, `7f868efd5`, and
+`34ce37fbb`. This file describes the delivered page, not the first cut.
+
+## Where the queue lives
+
+There is no onboarding tracker page. `4717dceec` deleted `onboarding#index`, its table
+partial, and its two Stimulus controllers. Hotels awaiting review are the `pending_review`
+filter on the admin hotels list: `Admin::Hotels::IndexPresenter` supplies the status tab
+counts, the extra pending-review columns, and each row's `review_path`.
 
 ## Canonical review path
 
-`/admin/hotels/:id/onboarding` is the only onboarding review page. It shows:
+`/admin/hotels/:id/onboarding` is the only onboarding review page. It is a full-height
+workspace with one scroller around the tab content.
 
-- immutable submitted property, room/rate, and commercial data;
-- current readiness and whether the current configuration digest still matches;
-- submission time and submitter;
-- invitation delivery counts;
-- OTA channel names and credential presence only;
-- onboarding audit history;
-- training sessions, clearly informational and non-blocking.
+The header carries the hotel name, lifecycle badge, location, onboarding period, and an
+Actions menu: Edit onboarding period always, plus Request changes and Approve and go live
+when a pending submission exists and the hotel is still `pending_review`.
+
+Three tabs are declared in `Admin::Hotels::OnboardingController::TAB_LABELS` and reached
+through `GET onboarding` (Overview) and `GET onboarding/:tab`. Each tab loads only its own
+data:
+
+- **Overview** — a launch-readiness alert, metric cards, the Setup review table, and the
+  submitted-snapshot tables (Property submitted, Rooms submitted, Commercial setup,
+  Handover). Handover covers invitation delivery counts and OTA channel names with
+  credential presence only. Built by `Admin::Hotels::OnboardingOverviewPresenter` over
+  `Onboarding::SnapshotSummaryPresenter`, plus current readiness and whether the current
+  configuration digest still matches the submitted one.
+- **History** — onboarding audit events, newest first.
+- **Training** — training sessions, clearly informational and non-blocking.
+
+The onboarding period is editable here: `POST save_onboarding_period` validates both dates
+and returns to the tab it was invoked from.
 
 ## Request changes
 
@@ -45,7 +67,9 @@ Implemented on `feat/onboarding-shell` on 2026-08-13 together with Phase 10.
 ## Removed parallel paths
 
 - `Admin::CompleteOnboarding` and its route were removed.
-- The tracker no longer has a direct Complete action; it links to Review.
+- The onboarding tracker page and its Complete action were removed entirely, along with
+  `spec/requests/admin/onboarding_tracker_spec.rb`. Admins reach review from the hotels
+  list instead.
 - Generic admin approval redirects `pending_review` hotels to the canonical review page.
 - `Admin::Hotels::ApproveService` is now only for suspended-property reactivation and
   restores/falls back to `live`, never a new onboarding `approved` hotel status.

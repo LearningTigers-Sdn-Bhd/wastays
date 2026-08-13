@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "Checkout deposit settlements", type: :request do
-  let(:hotel) { create(:hotel, status: "approved") }
+  let(:hotel) { create(:hotel, status: "live") }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in") }
   let(:folio) { create(:booking_folio, booking: booking, hotel: hotel, currency: booking.currency) }
   let(:deposit) { create(:deposit, booking: booking, hotel: hotel, amount: 100, currency: folio.currency) }

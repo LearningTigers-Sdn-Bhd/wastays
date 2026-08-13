@@ -25,9 +25,8 @@ RSpec.describe HotelPortal::RoomTypes::SaveRoomType do
         expect(result.room_type).to be_persisted
       end
 
-      it "triggers complete_rooms! on the hotel" do
-        expect(hotel).to receive(:complete_rooms!)
-        subject.call
+      it "leaves the hotel's lifecycle status alone" do
+        expect { subject.call }.not_to change { hotel.reload.status }
       end
     end
 
@@ -39,11 +38,6 @@ RSpec.describe HotelPortal::RoomTypes::SaveRoomType do
         result = subject.call
         expect(result.success?).to be true
         expect(room_type.reload.name).to eq("Deluxe Room")
-      end
-
-      it "does not trigger complete_rooms! on update" do
-        expect(hotel).not_to receive(:complete_rooms!)
-        subject.call
       end
     end
 

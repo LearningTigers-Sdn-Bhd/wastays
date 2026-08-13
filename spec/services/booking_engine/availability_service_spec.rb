@@ -5,7 +5,7 @@ RSpec.describe BookingEngine::AvailabilityService do
   let!(:hotel) do
     Hotel.create!(
       sell_mode: RSpec.current_example.metadata[:per_person] ? "per_person" : "per_room",
-      name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "approved"
+      name: "Test Hotel", city: "Kuala Lumpur", country: "Malaysia", account: account, status: "live"
     )
   end
   let!(:room_type) { RoomType.create!(hotel: hotel, name: "Deluxe", quantity: 5, max_adults: 2, base_price: 100, room_number_mode: "range") }

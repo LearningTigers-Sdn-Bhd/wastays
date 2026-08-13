@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, name: "O'Conner Hotel", status: "approved") }
+  let(:hotel) { create(:hotel, account: account, name: "O'Conner Hotel", status: "live") }
   let(:user) { create(:user, account: account, role: "admin") }
   let(:role) { create(:role, account: account) }
 

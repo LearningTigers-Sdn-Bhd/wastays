@@ -30,7 +30,7 @@ module BookingEngine
 
     def find_available_hotels
       # 1. Base query: active hotels
-      hotels = Hotel.where(status: [ "approved", "live" ])
+      hotels = Hotel.where(status: "live")
       hotels = hotels.where("city ILIKE ?", "%#{@city}%") if @city.present?
 
       # 2. Filter by availability using find_each to avoid memory bloat

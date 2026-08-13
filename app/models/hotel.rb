@@ -122,6 +122,7 @@ class Hotel < ApplicationRecord
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
+  validates :status, inclusion: { in: ->(_) { STATUSES } }, allow_blank: true
   validates :city, presence: true, unless: :setup?
   validates :country, presence: true, unless: :setup?
   validates :business_starts_at, :business_ends_at, presence: true
@@ -191,15 +192,11 @@ class Hotel < ApplicationRecord
     where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q", q: q)
   }
 
+  # The onboarding lifecycle. A property is in `setup` until its owner submits it,
+  # `pending_review` while WAStays looks at it, and `live` once approved.
   STATUSES = %w[
     setup
-    registered
-    email_verified
-    profile_incomplete
-    rooms_incomplete
-    inventory_incomplete
     pending_review
-    approved
     live
     suspended
   ].freeze
@@ -224,7 +221,7 @@ class Hotel < ApplicationRecord
   end
 
   def active?
-    %w[approved live].include?(status)
+    status == "live"
   end
 
   def publicly_bookable?
@@ -444,35 +441,7 @@ class Hotel < ApplicationRecord
   end
 
   def onboarding?
-    %w[setup registered email_verified profile_incomplete rooms_incomplete inventory_incomplete].include?(status)
-  end
-
-  def profile_completed?
-    !status.in?([ "setup", "registered", "email_verified" ])
-  end
-
-  def policies_completed?
-    !status.in?([ "setup", "registered", "email_verified", "profile_incomplete" ])
-  end
-
-  def rooms_completed?
-    !status.in?([ "setup", "registered", "email_verified", "profile_incomplete", "rooms_incomplete" ])
-  end
-
-  def ready_for_review?
-    status == "inventory_incomplete"
-  end
-
-  def complete_profile!
-    update(status: "profile_incomplete") if status == "registered"
-  end
-
-  def complete_policies!
-    update(status: "rooms_incomplete") if status == "profile_incomplete"
-  end
-
-  def complete_rooms!
-    update(status: "inventory_incomplete") if status == "rooms_incomplete"
+    status == "setup"
   end
 
   def ready_for_review?
@@ -553,7 +522,7 @@ class Hotel < ApplicationRecord
   end
 
   def onboarding_completion_date
-    return nil unless [ "approved", "live" ].include?(status)
+    return nil unless status == "live"
     final_onboarding_session&.completed_at
   end
 

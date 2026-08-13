@@ -21,13 +21,7 @@ module Admin
 
       STATUS_PRESENTATION = {
         "setup" => [ "Setup", :neutral, "Waiting for the owner to complete onboarding." ],
-        "registered" => [ "Setup", :neutral, "Complete the hotel profile." ],
-        "email_verified" => [ "Setup", :neutral, "Complete the hotel profile." ],
-        "profile_incomplete" => [ "Setup", :neutral, "Complete the property policies." ],
-        "rooms_incomplete" => [ "Setup", :neutral, "Add the hotel's room types." ],
-        "inventory_incomplete" => [ "Setup", :neutral, "Add rates and inventory, then submit for review." ],
         "pending_review" => [ "Pending review", :warning, "Waiting for an administrator to approve this hotel." ],
-        "approved" => [ "Active", :success, "Available for hotel operations and public booking." ],
         "live" => [ "Active", :success, "Available for hotel operations and public booking." ],
         "suspended" => [ "Suspended", :destructive, "Hotel and account access are currently disabled." ]
       }.freeze

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Hotel notification log filters", type: :system, js: true do
   let(:account) { create(:account) }
-  let(:hotel) { create(:hotel, account: account, status: "approved") }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:user) { create(:user, account: account, email: "notification-manager@example.com") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel owner") }
 
