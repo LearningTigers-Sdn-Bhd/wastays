@@ -242,7 +242,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       document = response.parsed_body
       expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Taxes and fees" ])
       expect(document.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
-        .to eq([ "Statutory taxes", "Property taxes and fees" ])
+        .to eq([ "Taxes required by law", "Property taxes and fees" ])
     end
 
     it "refuses to complete taxes without the confirmation" do
@@ -283,7 +283,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       document = response.parsed_body
       expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Room revenue" ])
       expect(document.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
-        .to eq([ "Taxes on a room night", "How far a later change reaches", "Stay-event policies" ])
+        .to eq([ "Taxes on a room night", "If you change these later", "Stay-event policies" ])
 
       patch hotel_onboarding_section_path(hotel, section_key: "room_revenue"),
             params: {
