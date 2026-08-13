@@ -1,8 +1,7 @@
 # Onboarding — remaining work handover
 
-Verified against the code on `feat/onboarding-shell` on 2026-08-13, after the Phase 10–11
-implementation and the four review-workspace commits that followed it
-(`870834310` … `34ce37fbb`). This is the current handoff; older phase proposals are
+Verified against the code on `feat/onboarding-shell` on 2026-08-13, after phases 12–13
+(`af9a06a1b` … `d43c8b914`). This is the current handoff; older phase proposals are
 historical when they disagree with it.
 
 ## Current status
@@ -18,8 +17,8 @@ historical when they disagree with it.
 | 9 | OTA credential intake | Complete as rescoped |
 | 10 | Review, submission, snapshot, durable deliveries | Complete |
 | 11 | Admin review, targeted changes, launch | Complete |
-| 12 | Setup-hotel portal enforcement and rollout | Not started |
-| 13 | Legacy lifecycle cleanup | Not started |
+| 12 | Setup-hotel portal enforcement and rollout | Complete, rollout pending |
+| 13 | Legacy lifecycle cleanup | Complete |
 
 All thirteen section keys are real entries in `OnboardingController::IMPLEMENTED_SECTIONS`.
 Review is not a placeholder and never blocks itself.
@@ -53,32 +52,59 @@ order is `hotel_owner`, `general_manager`, `front_desk`, `housekeeper`; independ
 sorting the roles alphabetically caused a successfully saved section to remain falsely
 stale.
 
-## Phase 12 — portal enforcement and rollout
+## Phase 13 — legacy cleanup (done)
 
-The current guard protects writes only while `pending_review`. Phase 12 still needs the
-broader setup-hotel experience:
+`Hotel::STATUSES` is now exactly `setup`, `pending_review`, `live`, `suspended`, and the
+model validates against it, so the legacy vocabulary cannot come back.
+`NormalizeHotelLifecycleStatuses` backfilled `hotels.status` and
+`hotels.pre_suspension_status` together — the suspend/reactivate round trip stashes a raw
+status in the latter. It reports its row counts, is idempotent, and is deliberately
+irreversible: `live` cannot be told apart from a row that was already live.
 
-- Redirect setup-hotel owners from normal portal HTML pages to the earliest setup section.
-- Keep onboarding, safe reads, security/profile, support, uploads/form actions, and logout
-  reachable.
-- Define intentional superadmin, multi-hotel, and non-owner behaviour.
-- Decide how existing non-live hotels map to `setup` versus `pending_review`.
-- Decide whether legacy pending-review rows are grandfathered or revalidated.
-- Roll out progressively after production data verification.
+Public bookability moved from `["approved", "live"]` to `"live"` in the same commit as the
+backfill. The two are only correct together; never split them.
 
-Do not add broad setup redirects without this rollout work.
+`Onboarding::LifecycleCompatibility` is gone. Its nine call sites compare status directly.
 
-## Phase 13 — legacy cleanup
+Also removed: the wizard-era `complete_profile!` / `complete_policies!` / `complete_rooms!`
+writers, the three `*_completed?` predicates they fed, and the "Back to onboarding" nudges
+those drove on room types, profile, and inventory.
 
-`Onboarding::LifecycleCompatibility` still reads legacy setup statuses and maps hotel
-`approved` to canonical `live`. Phase 13 must:
+Still open from the original Phase 13 list: whether one-year setup coverage becomes a
+maintained rolling horizon.
 
-- migrate/remove legacy setup status writes;
-- migrate hotel `approved` to `live` without touching unrelated approval domains;
-- update factories, seeds, queries, jobs, reports, APIs, and booking eligibility;
-- retire remaining obsolete onboarding URLs/messages;
-- preserve submission, audit, invitation, and training history;
-- decide whether one-year setup coverage becomes a maintained rolling horizon.
+## Phase 12 — portal enforcement (built, not rolled out)
+
+`enforce_setup_lock!` in `HotelPortal::BaseController` keeps a `setup` hotel inside
+onboarding. It runs before `protect_pending_review_writes!`, which is unchanged — one guard
+per status, no overlap.
+
+- Whoever passes `HotelPolicy#update?` is redirected to
+  `Onboarding::ResumePageResolver`'s section. That resolver is the single source of "where
+  did they leave off"; do not add a second rule.
+- Everyone else lands on `HotelPortal::SetupLocksController#show`. That path is close to
+  unreachable now that invitations wait for approval; it exists for staff accounts that
+  predate the change.
+- Superadmins are exempt so they can inspect a property mid-setup.
+- `SETUP_LOCK_EXEMPT` lists what stays reachable: onboarding, submissions, sessions, the
+  user's own profile, and the explainer. Logout is not a hotel-portal controller.
+
+**Rollout is the remaining work.** `hotels.setup_lock_enabled` defaults to false, so nothing
+changed on deploy. An admin turns it on per property from the Actions menu on
+`/admin/hotels/:id/onboarding`. Enable it on a real setup property, confirm the owner and a
+staff member land where they should, then widen.
+
+Two decisions from the original Phase 12 list were answered by Phase 13 rather than by the
+guard: existing non-live hotels map to `setup` or `pending_review` by the backfill, and
+pending-review rows were normalized rather than grandfathered.
+
+## Invitation timing
+
+Staff and corporate invitations are created on **approval**, not submission
+(`CreateDeliveries.for_approval`). Submitting notifies administrators only. Inviting at
+submission meant a reviewer who requested changes had already introduced people to a
+property that was not open. Draft-level idempotency is unchanged, so a resubmitted property
+still invites each contact exactly once.
 
 ## Deferred channel-manager work
 
@@ -92,15 +118,25 @@ present. Test actual connectedness when building the superadmin slice.
 
 ## Validation record
 
-Re-measured on 2026-08-13 at `34ce37fbb`, the tip of the branch:
+Measured on 2026-08-13 at `d43c8b914`, after phases 12–13. Scoped runs only, at the user's
+instruction — no full-suite run:
 
-- Onboarding-focused group — `spec/services/onboarding`, `spec/jobs/onboarding`, the two
-  onboarding models, the two onboarding presenters, the four hotel-portal and admin
-  onboarding request specs, and `spec/requests/admin/hotels_spec.rb`: 257 examples,
-  0 failures.
+- Onboarding group plus the new setup-lock and migration specs: 278 examples, 0 failures.
+- Lifecycle group — `spec/models/hotel_spec.rb`, both hotel queries, booking availability
+  and quoting, the public hotels API, room-type saving, hotel creation, and
+  `spec/migrations/normalize_hotel_lifecycle_statuses_spec.rb`: 129 examples, 0 failures.
+- RuboCop clean on the diff.
 
-Measured earlier, during Phase 10–11 implementation, and not re-run since the
-review-workspace commits:
+**Not verified:** the Phase 13 sweep rewrote `status: "approved"` to `status: "live"` across
+75 spec files in domains the scoped runs above do not touch. Run `bin/test all` before
+merging if that matters.
+
+Brakeman reports one Medium "Dynamic Render Path" on
+`app/views/admin/hotels/onboarding/show.html.erb`. It predates this work — the flagged
+render line is unchanged since `34ce37fbb` — and the tab param is route-constrained to
+`history|training`.
+
+Measured earlier, during Phase 10–11 implementation, and not re-run since:
 
 - RuboCop, Brakeman, Bundle Audit, Importmap Audit, and Tailwind build passed.
 - `bin/test hotel_management`: 353 examples, 0 failures. Note that this domain contains no
