@@ -2,6 +2,35 @@
 
 Read `docs/onboarding/handoffs/README.md` first for the shared pattern and rules.
 
+## Rescoped, 2026-08-13 — what shipped
+
+The owner-facing slice below was cut down to **credential intake only**, matching
+how the client already works: they collect OTA extranet logins on a spreadsheet
+and connect the channels themselves afterwards.
+
+What shipped: `hotel_ota_credentials` (channel, property ID, username, password,
+market manager contact — username and password encrypted at rest),
+`Onboarding::SaveOtaCredentials`, and the section's record table. Continuing from
+an empty table records `no_channel_manager_now`; there is no separate skip
+button. The admin's `preferred_channel_manager` is only ever displayed, never
+written. Passwords are write-only from the hotel portal — never rendered back
+into a field, and redacted from a failed submission.
+
+What did **not** ship, and is superadmin work for later: provisioning, room and
+rate-plan mapping, the initial ARI push, diagnostics, retry, connection states,
+plan gating, and any admin-side view of these rows. Until that lands the table is
+write-only — no UI reads it.
+
+One defect found and deliberately left alone: every sync guard tests
+`hotel.preferred_channel_manager.blank?` (`app/models/room_type.rb:174` and
+others), but Phase 2 stores explicit `"undecided"` / `"none"` values, both of
+which are `present?`. Hotels that want no channel manager therefore enqueue sync
+jobs that die downstream on a missing mapping. Fix the guards to test
+connectedness when the superadmin slice is built.
+
+The rest of this brief is the original, larger scope. Treat it as the plan for
+that later work, not as a description of what exists.
+
 ## Goal
 
 Make the `channel_manager` section real. It runs **last** among configuration phases,

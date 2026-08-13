@@ -615,11 +615,18 @@ RSpec.describe "Onboarding commercial setup" do
       expect(delivered.reload).to be_persisted
     end
 
-    it "will not complete with nobody to invite" do
+    # Continuing past an empty table is how most properties will leave this
+    # section, so it records the same decision as the skip button rather than
+    # blocking on a button the owner did not press.
+    it "records no corporate accounts when completing an empty table" do
+      queued = create(:onboarding_corporate_draft, hotel: hotel, email: "queued@acme.com")
+
       result = save(entries: {}, complete: true)
 
-      expect(result.success?).to be(false)
-      expect(result.error).to include("no corporate accounts for now")
+      expect(result.success?).to be(true)
+      expect(result.section).to have_attributes(state: "skipped")
+      expect(result.section.decision_metadata).to include("decision" => "no_corporate_accounts")
+      expect(OnboardingCorporateDraft.where(id: queued.id)).to be_empty
     end
   end
 
@@ -636,6 +643,114 @@ RSpec.describe "Onboarding commercial setup" do
       expect(result.success?).to be(true)
       expect(result.section).to have_attributes(state: "skipped")
       expect(hotel.onboarding_corporate_drafts.reload).to contain_exactly(delivered)
+    end
+  end
+
+  describe Onboarding::SaveOtaCredentials do
+    before { resolve_through!("corporate_accounts") }
+
+    def entry(overrides = {})
+      {
+        "channel_name" => "Booking.com", "property_code" => "623847",
+        "username" => "acme-hotel", "password" => "extranet-secret",
+        "market_manager_email" => "dana@booking.com", "_destroy" => "false"
+      }.merge(overrides)
+    end
+
+    def save(entries, complete: true)
+      described_class.call(hotel: hotel, actor: actor, entries: entries, complete: complete)
+    end
+
+    it "stores a login and completes the section" do
+      result = save({ "0" => entry })
+
+      expect(result.success?).to be(true)
+      expect(result.section).to have_attributes(state: "complete")
+      expect(hotel.hotel_ota_credentials.sole)
+        .to have_attributes(channel_name: "Booking.com", password: "extranet-secret", status: "pending")
+    end
+
+    it "leaves the password out of what it hands back" do
+      result = save({ "0" => entry })
+
+      expect(result.entries.sole).to include("password_saved" => "true")
+      expect(result.entries.sole).not_to have_key("password")
+    end
+
+    it "keeps a stored password when the row is saved again without one" do
+      save({ "0" => entry })
+      credential = hotel.hotel_ota_credentials.sole
+
+      save({ "0" => entry("id" => credential.id.to_s, "password" => "", "property_code" => "111111") })
+
+      expect(credential.reload).to have_attributes(password: "extranet-secret", property_code: "111111")
+    end
+
+    it "rejects two rows naming the same channel" do
+      result = save({ "0" => entry, "1" => entry("property_code" => "999999") })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("Booking.com is listed more than once")
+      expect(hotel.hotel_ota_credentials).to be_empty
+    end
+
+    it "redacts the password from a failed submission" do
+      result = save({ "0" => entry, "1" => entry })
+
+      expect(result.entries.first).not_to have_key("password")
+      expect(result.entries.first).to include("password_typed" => "true")
+    end
+
+    it "ignores the trailing blank row the table renders" do
+      result = save({ "0" => entry, "1" => { "channel_name" => "", "_destroy" => "false" } })
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_ota_credentials.count).to eq(1)
+    end
+
+    it "reads continuing from an empty table as no channel manager for now" do
+      result = save({ "0" => { "channel_name" => "", "_destroy" => "false" } })
+
+      expect(result.success?).to be(true)
+      expect(result.section).to have_attributes(state: "skipped")
+      expect(result.section.decision_metadata).to include("decision" => "no_channel_manager_now")
+    end
+
+    it "honours a row the owner removed before continuing from the emptied table" do
+      save({ "0" => entry })
+      credential = hotel.hotel_ota_credentials.sole
+
+      result = save({ "0" => entry("id" => credential.id.to_s, "_destroy" => "true") })
+
+      expect(result.success?).to be(true)
+      expect(result.section).to have_attributes(state: "skipped")
+      expect(hotel.hotel_ota_credentials.reload).to be_empty
+    end
+
+    it "saves a draft with nothing entered" do
+      result = save({}, complete: false)
+
+      expect(result.success?).to be(true)
+      expect(result.section).to have_attributes(state: "in_progress")
+    end
+
+    it "removes a discarded row" do
+      save({ "0" => entry })
+      credential = hotel.hotel_ota_credentials.sole
+
+      result = save({ "0" => entry("id" => credential.id.to_s, "_destroy" => "true") }, complete: false)
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_ota_credentials.reload).to be_empty
+    end
+
+    it "refuses a row belonging to another property" do
+      other = create(:hotel_ota_credential)
+
+      result = save({ "0" => entry("id" => other.id.to_s) })
+
+      expect(result.success?).to be(false)
+      expect(result.error).to include("do not belong to this property")
     end
   end
 

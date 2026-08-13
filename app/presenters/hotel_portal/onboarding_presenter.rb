@@ -25,7 +25,7 @@ module HotelPortal
       "discounts" => [ "Discounts", "Offers staff apply to a folio — an early bird rate, a staff rate, a goodwill rebate. Each one names the charges it is allowed to reduce." ],
       "payment_methods" => [ "Payment methods", "The ways guests can hand over money. At least one is needed before this property can open; card surcharges are set under Settings." ],
       "corporate_accounts" => [ "Corporate accounts", "Add corporate clients, travel agents, and airlines that book with this property. Each will be invited to set up an account after approval." ],
-      "channel_manager" => [ "Channel manager", "Review the preferred provider and decide whether to connect now." ],
+      "channel_manager" => [ "Channel manager", "Hand over the extranet logins for the OTAs this property sells on. The WAStays team connects each channel after approval — nothing is connected from here." ],
       "review" => [ "Review and submit", "Resolve blocking issues, review your choices, and submit the property for approval." ]
     }.freeze
 
@@ -44,7 +44,10 @@ module HotelPortal
       "discounts" => { form_id: "onboarding-discounts-form", skip_label: "No discounts for now" },
       # No skip_label: a property with no way to take money cannot open.
       "payment_methods" => { form_id: "onboarding-payment-methods-form" },
-      "corporate_accounts" => { form_id: "onboarding-corporate-accounts-form", skip_label: "No corporate accounts for now" }
+      "corporate_accounts" => { form_id: "onboarding-corporate-accounts-form", skip_label: "No corporate accounts for now" },
+      # No skip_label: an empty table already says there is nothing to connect,
+      # and continuing from it records that answer.
+      "channel_manager" => { form_id: "onboarding-channel-manager-form" }
     }.freeze
 
     def initialize(hotel:, navigation:, current_entry:)

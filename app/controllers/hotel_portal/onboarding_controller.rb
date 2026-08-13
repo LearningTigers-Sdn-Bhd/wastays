@@ -20,6 +20,7 @@ module HotelPortal
       discounts
       payment_methods
       corporate_accounts
+      channel_manager
     ].freeze
 
     # Skipping an implemented section is a recorded decision, not a silent
@@ -153,6 +154,28 @@ module HotelPortal
       when "corporate_accounts"
         @corporate_draft_entries = entries || persisted_corporate_draft_entries
         @corporate_draft_entries += [ {} ] unless @presenter.read_only?
+      when "channel_manager"
+        @ota_credential_entries = entries || persisted_ota_credential_entries
+        @ota_credential_entries += [ {} ] unless @presenter.read_only?
+      end
+    end
+
+    # The stored password is never among these. It is write-only from the hotel
+    # portal: the owner replaces it or leaves it alone, and only the WAStays team
+    # ever reads it back.
+    def persisted_ota_credential_entries
+      current_hotel.hotel_ota_credentials.ordered.map do |record|
+        {
+          "id" => record.id.to_s,
+          "client_key" => "ota-credential-#{record.id}",
+          "channel_name" => record.channel_name,
+          "property_code" => record.property_code,
+          "username" => record.username,
+          "password_saved" => record.password_saved?.to_s,
+          "market_manager_name" => record.market_manager_name,
+          "market_manager_phone" => record.market_manager_phone,
+          "market_manager_email" => record.market_manager_email
+        }
       end
     end
 
@@ -409,6 +432,13 @@ module HotelPortal
             hotel: current_hotel,
             actor: current_user,
             entries: params[:corporate_draft_entries] || {},
+            complete: complete
+          )
+        when "channel_manager"
+          Onboarding::SaveOtaCredentials.call(
+            hotel: current_hotel,
+            actor: current_user,
+            entries: params[:ota_credential_entries] || {},
             complete: complete
           )
         end

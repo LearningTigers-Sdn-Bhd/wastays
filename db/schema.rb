@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_12_100003) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1424,6 +1424,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100003) do
     t.check_constraint "state::text = ANY (ARRAY['not_started'::character varying, 'in_progress'::character varying, 'complete'::character varying, 'skipped'::character varying, 'needs_attention'::character varying]::text[])", name: "hotel_onboarding_sections_state_allowed"
   end
 
+  create_table "hotel_ota_credentials", force: :cascade do |t|
+    t.string "channel_name", null: false
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.string "market_manager_email"
+    t.string "market_manager_name"
+    t.string "market_manager_phone"
+    t.text "password"
+    t.string "property_code"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.text "username"
+    t.index "hotel_id, lower((channel_name)::text)", name: "index_hotel_ota_credentials_on_hotel_and_lower_channel", unique: true
+    t.index ["hotel_id"], name: "index_hotel_ota_credentials_on_hotel_id"
+  end
+
   create_table "hotel_payment_methods", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "default_cash", default: false, null: false
@@ -2781,6 +2797,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_100003) do
   add_foreign_key "hotel_knowledge_diagnostics", "prospects"
   add_foreign_key "hotel_knowledge_documents", "hotels"
   add_foreign_key "hotel_onboarding_sections", "hotels"
+  add_foreign_key "hotel_ota_credentials", "hotels"
   add_foreign_key "hotel_payment_methods", "hotel_extra_charges", column: "surcharge_extra_charge_id"
   add_foreign_key "hotel_payment_methods", "hotels"
   add_foreign_key "hotel_payment_methods", "transaction_codes"

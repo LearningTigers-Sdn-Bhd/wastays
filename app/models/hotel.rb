@@ -75,6 +75,7 @@ class Hotel < ApplicationRecord
   has_many :hotel_discounts, dependent: :destroy
   has_many :hotel_payment_methods, dependent: :destroy
   has_many :hotel_reservation_policies, dependent: :destroy
+  has_many :hotel_ota_credentials, dependent: :destroy
   has_one :hotel_transaction_configuration, dependent: :destroy
   has_one :hotel_boat_setting, dependent: :destroy
   accepts_nested_attributes_for :hotel_boat_setting

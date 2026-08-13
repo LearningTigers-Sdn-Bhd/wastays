@@ -300,7 +300,141 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
     end
   end
 
-  # The point of the phase: four resolved sections stop blocking submission.
+  describe "channel manager" do
+    before { resolve_through!("corporate_accounts") }
+
+    def credential_entry(overrides = {})
+      {
+        "channel_name" => "Booking.com", "property_code" => "623847",
+        "username" => "acme-hotel", "password" => "extranet-secret",
+        "market_manager_name" => "Dana Lim", "market_manager_phone" => "+60 12 345 6789",
+        "market_manager_email" => "dana@booking.com", "_destroy" => "false"
+      }.merge(overrides)
+    end
+
+    it "says who reads the credentials and that nothing connects from here" do
+      get hotel_onboarding_section_path(hotel, section_key: "channel_manager")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Only the WAStays team reads these")
+      expect(response.body).to include("Nothing is connected from this page")
+    end
+
+    it "uses the page heading once and explains repeated fields from their column headers" do
+      get hotel_onboarding_section_path(hotel, section_key: "channel_manager")
+
+      document = Nokogiri::HTML(response.body)
+
+      expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Channel manager" ])
+      expect(document.at_css("section[aria-label='Channel manager']")).to be_present
+      expect(document.at_css("thead th button[aria-label=\"Channel: The extranet these details sign in to, such as Booking.com.\"]")).to be_present
+      expect(document.css("tbody .panel-form-field__hint")).to be_empty
+    end
+
+    it "names the provider WAStays chose for this property" do
+      hotel.update!(preferred_channel_manager: "channex")
+
+      get hotel_onboarding_section_path(hotel, section_key: "channel_manager")
+
+      expect(response.body).to include("WAStays set this property up for Channex")
+    end
+
+    it "says nothing about a provider when the choice was left open" do
+      hotel.update!(preferred_channel_manager: "undecided")
+
+      get hotel_onboarding_section_path(hotel, section_key: "channel_manager")
+
+      expect(response.body).not_to include("WAStays set this property up for")
+      expect(response.body).to include("connect each channel after approval")
+    end
+
+    it "stores the login encrypted and advances to review" do
+      patch hotel_onboarding_section_path(hotel, section_key: "channel_manager"),
+            params: { navigation_action: "save_continue", ota_credential_entries: { "0" => credential_entry } }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+      credential = hotel.hotel_ota_credentials.sole
+      expect(credential).to have_attributes(
+        channel_name: "Booking.com", property_code: "623847",
+        username: "acme-hotel", password: "extranet-secret",
+        market_manager_email: "dana@booking.com", status: "pending"
+      )
+
+      # The columns hold ciphertext, not what was typed.
+      raw = HotelOtaCredential.connection.select_one(
+        "SELECT username, password FROM hotel_ota_credentials WHERE id = #{credential.id}"
+      )
+      expect(raw["password"]).not_to include("extranet-secret")
+      expect(raw["username"]).not_to include("acme-hotel")
+    end
+
+    it "never renders a stored password back into the form" do
+      patch hotel_onboarding_section_path(hotel, section_key: "channel_manager"),
+            params: { navigation_action: "save_draft", ota_credential_entries: { "0" => credential_entry } }
+
+      get hotel_onboarding_section_path(hotel, section_key: "channel_manager")
+
+      expect(response.body).not_to include("extranet-secret")
+      document = Nokogiri::HTML(response.body)
+      password_field = document.at_css("input[type='password'][name*='[password]']")
+      expect(password_field["value"]).to be_blank
+      expect(password_field["placeholder"]).to eq("Saved — leave blank to keep")
+    end
+
+    it "keeps the stored password when the owner saves the row without retyping it" do
+      patch hotel_onboarding_section_path(hotel, section_key: "channel_manager"),
+            params: { navigation_action: "save_draft", ota_credential_entries: { "0" => credential_entry } }
+      credential = hotel.hotel_ota_credentials.sole
+
+      patch hotel_onboarding_section_path(hotel, section_key: "channel_manager"),
+            params: {
+              navigation_action: "save_continue",
+              ota_credential_entries: { "0" => credential_entry(
+                "id" => credential.id.to_s, "password" => "", "market_manager_phone" => "+60 12 000 1111"
+              ) }
+            }
+
+      expect(credential.reload).to have_attributes(
+        password: "extranet-secret", market_manager_phone: "+60 12 000 1111"
+      )
+    end
+
+    it "rejects two rows for the same channel without echoing the password back" do
+      patch hotel_onboarding_section_path(hotel, section_key: "channel_manager"),
+            params: {
+              navigation_action: "save_continue",
+              ota_credential_entries: {
+                "0" => credential_entry,
+                "1" => credential_entry("property_code" => "999999")
+              }
+            }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Each channel needs its own row")
+      expect(response.body).not_to include("extranet-secret")
+      expect(response.body).to include("Re-enter to save")
+      expect(hotel.hotel_ota_credentials).to be_empty
+    end
+
+    it "takes continuing from an empty table as the answer, with no separate skip button" do
+      hotel.update!(preferred_channel_manager: "channex")
+
+      get hotel_onboarding_section_path(hotel, section_key: "channel_manager")
+      expect(response.body).not_to include("No channel manager for now")
+
+      patch hotel_onboarding_section_path(hotel, section_key: "channel_manager"),
+            params: { navigation_action: "save_continue", ota_credential_entries: {} }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+      section = hotel.onboarding_sections.find_by(section_key: "channel_manager")
+      expect(section.state).to eq("skipped")
+      expect(section.decision_metadata).to include("decision" => "no_channel_manager_now")
+      # Skipping the connection must not throw away the admin's provider choice.
+      expect(hotel.reload.preferred_channel_manager).to eq("channex")
+    end
+  end
+
+  # The point of the phase: five resolved sections stop blocking submission.
   describe "readiness" do
     it "no longer reports the commercial sections as blocking" do
       resolve_through!("rates_availability")
@@ -320,9 +454,13 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
             }
       patch hotel_onboarding_section_path(hotel, section_key: "corporate_accounts"),
             params: { navigation_action: "skip" }
+      # The channel manager has no skip button: an empty table, continued from,
+      # is the same answer.
+      patch hotel_onboarding_section_path(hotel, section_key: "channel_manager"),
+            params: { navigation_action: "save_continue", ota_credential_entries: {} }
 
       blocking = Onboarding::Readiness.new(hotel: hotel.reload).call.blocking_issues.map(&:section_key)
-      expect(blocking).not_to include("extra_charges", "discounts", "payment_methods", "corporate_accounts")
+      expect(blocking).not_to include("extra_charges", "discounts", "payment_methods", "corporate_accounts", "channel_manager")
     end
   end
 end
