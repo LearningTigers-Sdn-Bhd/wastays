@@ -49,6 +49,7 @@ module Onboarding
         @hotel.account.update!(status: "active") unless @hotel.account.status == "active"
         submission.update!(status: "approved", reviewed_by: @actor, reviewed_at: Time.current)
         CreateDeliveries.for_owners(submission, "owner_approved")
+        CreateDeliveries.for_approval(submission)
       end
 
       return Result.failure(error, submission:, readiness:) if error

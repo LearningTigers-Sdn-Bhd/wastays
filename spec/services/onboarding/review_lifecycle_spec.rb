@@ -79,4 +79,44 @@ RSpec.describe "Onboarding review lifecycle" do
     expect(submission.reload).to have_attributes(status: "approved", reviewed_by: reviewer, snapshot: snapshot.data)
     expect(hotel.onboarding_audit_events.where(event_type: "approved")).to exist
   end
+
+  describe "when the property has invitations waiting" do
+    let(:role) { create(:role, account: hotel.account, slug: "front_desk", name: "Front Desk") }
+    let!(:staff_draft) { create(:onboarding_staff_draft, hotel:, role:, email: "front@hotel.test") }
+    let!(:corporate_draft) { create(:onboarding_corporate_draft, hotel:, email: "billing@acme.test") }
+
+    def invitation_deliveries(submission)
+      submission.deliveries.where(delivery_type: %w[staff_invitation corporate_invitation])
+    end
+
+    it "tells nobody outside the property at submission" do
+      create(:user, :superadmin)
+
+      submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
+
+      expect(invitation_deliveries(submission)).to be_empty
+      expect(submission.deliveries.pluck(:delivery_type).uniq).to eq([ "admin_submitted" ])
+    end
+
+    it "creates the invitations only once the property is approved" do
+      submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
+
+      Onboarding::ApproveOnboarding.call(hotel:, actor: create(:user, :superadmin))
+
+      expect(invitation_deliveries(submission).pluck(:delivery_type, :source_id)).to contain_exactly(
+        [ "staff_invitation", staff_draft.id ],
+        [ "corporate_invitation", corporate_draft.id ]
+      )
+    end
+
+    it "leaves no invitations behind when the reviewer requests changes instead" do
+      submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
+
+      Onboarding::RequestChanges.call(
+        hotel:, actor: create(:user, :superadmin), section_keys: %w[rooms], explanation: "Fix the rooms."
+      )
+
+      expect(invitation_deliveries(submission)).to be_empty
+    end
+  end
 end
