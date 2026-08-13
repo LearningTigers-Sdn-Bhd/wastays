@@ -39,7 +39,10 @@ module PanelsUI
     # its off state must therefore submit explicitly as well.
     def tag_control
       safe_join([
-        hidden_field_tag(@name, @unchecked_value, disabled: @disabled, autocomplete: "off"),
+        # id: nil so the companion does not claim the id the visible control
+        # needs — hidden_field_tag would otherwise derive the same one from the
+        # shared name and duplicate it on the page.
+        hidden_field_tag(@name, @unchecked_value, id: nil, disabled: @disabled, autocomplete: "off"),
         super
       ])
     end

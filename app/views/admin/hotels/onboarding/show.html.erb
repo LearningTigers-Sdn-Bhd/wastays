@@ -75,7 +75,7 @@
   <% end %>
 
   <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar" data-testid="admin-onboarding-tab-content">
-    <%= render "admin/hotels/onboarding/#{@active_tab.tr('-', '_')}" %>
+    <%= render "admin/hotels/onboarding/#{@active_tab}" %>
   </div>
 
   <%= render PanelsUI::Sheet.new(

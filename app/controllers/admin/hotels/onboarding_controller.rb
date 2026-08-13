@@ -8,7 +8,7 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
   before_action :set_hotel, only: [ :show, :request_changes, :approve, :save_period, :toggle_setup_lock ]
 
   def show
-    @active_tab = params[:tab].presence || "overview"
+    @active_tab = TAB_LABELS.keys.find { |tab| tab == params[:tab] } || "overview"
     @submission = submission_scope.newest_first.first
 
     case @active_tab

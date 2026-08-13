@@ -428,7 +428,11 @@ module Onboarding
       collection.map { |item| (item.respond_to?(:to_unsafe_h) ? item.to_unsafe_h : item.to_h).deep_stringify_keys }
     end
 
-    def rooms = @rooms ||= hotel.room_types.includes(room_type_rate_plans: [ :occupancy_prices, :rate_plan ]).order(:id).to_a
+    def rooms
+      @rooms ||= hotel.room_types.includes(
+        room_type_rate_plans: [ :occupancy_prices, { rate_plan: :rate_plan_age_bands } ]
+      ).order(:id).to_a
+    end
     def rooms_by_id = @rooms_by_id ||= rooms.index_by { |room| room.id.to_s }
     def custom_plans = hotel.rate_plans.active.where(kind: "custom")
     def start_date = @start_date ||= parse_date(params["start_date"]) || Date.current

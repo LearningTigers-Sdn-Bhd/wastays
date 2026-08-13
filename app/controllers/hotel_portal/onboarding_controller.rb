@@ -531,6 +531,7 @@ module HotelPortal
     def prepare_rates_availability(entries: nil)
       @rate_rooms = current_hotel.room_types.includes(
         :room_inventories,
+        :rate_plans,
         room_type_rate_plans: [ :occupancy_prices, :age_band_prices, { rate_plan: :rate_plan_age_bands } ]
       ).order(:created_at, :id).to_a
       @custom_rate_plans = current_hotel.rate_plans.active.where(kind: "custom").includes(
