@@ -193,7 +193,7 @@ module Onboarding
           charge_type: charge_type_for(entry, tax),
           rate_type: HotelTax::RATE_TYPES.include?(entry["rate_type"]) ? entry["rate_type"] : "flat",
           amount: entry["amount"],
-          enabled: boolean(entry["enabled"]),
+          enabled: enabled_for(entry, tax),
           foreign_guests_only: boolean(entry["foreign_guests_only"])
         )
 
@@ -202,6 +202,17 @@ module Onboarding
         @error = "Row #{index + 1}: #{tax.errors.full_messages.to_sentence}"
         return false
       end
+
+      true
+    end
+
+    # Onboarding does not ask whether a tax is levied — listing it is the answer,
+    # and removing the row is how it is unlisted. A row that reaches here is
+    # charged. Settings still owns the toggle, so a tax retired there keeps its
+    # state when onboarding is revisited rather than being switched back on.
+    def enabled_for(entry, tax)
+      return boolean(entry["enabled"]) if entry.key?("enabled")
+      return tax.enabled? if tax.persisted?
 
       true
     end

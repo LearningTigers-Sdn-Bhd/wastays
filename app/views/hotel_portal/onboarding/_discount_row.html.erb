@@ -42,9 +42,9 @@
 
   <td>
     <%# One column while the row is a stacked editor, two once it is a table row. %>
-    <div class="grid grid-cols-1 gap-2 md:grid-cols-2" data-controller="discount-row"
-         data-action="change->discount-row#update">
-      <div data-discount-row-target="typeField">
+    <div class="grid grid-cols-1 gap-2 md:grid-cols-2" data-controller="record-row"
+         data-action="change->record-row#update">
+      <div data-record-row-target="typeField">
         <%= render PanelsUI::FormField.new(form: row_form, attribute: :pricing_type, label: "Pricing",
                                            size: :sm) do |field| %>
           <% field.with_select_menu(
@@ -59,12 +59,12 @@
           rate, so the field reads as the figure it holds either way. Both are
           rendered and one is hidden: an addon is passive text, and swapping
           which side it sits on means swapping which one shows. %>
-      <div data-discount-row-target="rateField">
+      <div data-record-row-target="rateField">
         <%= render PanelsUI::FormField.new(form: row_form, attribute: :rate_value, label: "Rate",
                                            size: :sm) do |field| %>
           <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
-          <% field.with_addon(align: :inline_start, data: { discount_row_target: "currencyAddon" }) { currency } %>
-          <% field.with_addon(align: :inline_end, data: { discount_row_target: "percentAddon" }) { "%" } %>
+          <% field.with_addon(align: :inline_start, data: { record_row_target: "currencyAddon" }) { currency } %>
+          <% field.with_addon(align: :inline_end, data: { record_row_target: "percentAddon" }) { "%" } %>
         <% end %>
       </div>
     </div>
@@ -75,8 +75,8 @@
         than following from it, and a hidden picker takes no width, so the scope
         fills the cell on its own until it is asked to share. %>
     <div class="flex flex-col gap-2 md:flex-row md:items-start"
-         data-controller="discount-row" data-action="change->discount-row#update">
-      <div class="min-w-0 flex-1" data-discount-row-target="scope">
+         data-controller="record-row" data-action="change->record-row#update">
+      <div class="min-w-0 flex-1" data-record-row-target="scope">
         <%= render PanelsUI::FormField.new(form: row_form, attribute: :application_scope,
                                            label: "Applies to", size: :sm) do |field| %>
           <% field.with_select_menu(
@@ -87,7 +87,7 @@
         <% end %>
       </div>
 
-      <div class="min-w-0 flex-1" data-discount-row-target="codesField">
+      <div class="min-w-0 flex-1" data-record-row-target="codesField">
         <%= render PanelsUI::FormField.new(form: row_form, attribute: :applicable_transaction_code_ids,
                                            label: "Charges", size: :sm) do |field| %>
           <% field.with_multi_select(

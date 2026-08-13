@@ -89,6 +89,31 @@ RSpec.describe "Onboarding taxes and room revenue services" do
       expect(hotel.hotel_taxes.pluck(:name)).to eq([ "Heritage levy" ])
     end
 
+    # The step no longer asks whether a tax is levied — listing it is the answer.
+    it "charges a tax the form listed without being asked" do
+      result = save_taxes(params: tax_params(tax_entries: {
+        "0" => { name: "Heritage levy", charge_type: "charge", rate_type: "flat", amount: "5.00" }
+      }))
+
+      expect(result.success?).to be(true)
+      expect(hotel.hotel_taxes.sole.enabled).to be(true)
+    end
+
+    # Settings still owns the toggle, and revisiting onboarding must not undo it.
+    it "leaves a tax retired under Settings retired" do
+      save_taxes(params: tax_params(tax_entries: {
+        "0" => { name: "Heritage levy", charge_type: "charge", rate_type: "flat", amount: "5.00" }
+      }))
+      tax = hotel.hotel_taxes.sole
+      tax.update!(enabled: false)
+
+      save_taxes(params: tax_params(tax_entries: {
+        "0" => { id: tax.id.to_s, name: "Heritage levy", charge_type: "charge", rate_type: "flat", amount: "6.00" }
+      }))
+
+      expect(tax.reload).to have_attributes(enabled: false, amount: 6.00)
+    end
+
     it "reports which row failed validation and saves nothing" do
       result = save_taxes(params: tax_params(tax_entries: {
         "0" => { name: "Valid fee", charge_type: "charge", rate_type: "flat", amount: "5.00", enabled: "1" },

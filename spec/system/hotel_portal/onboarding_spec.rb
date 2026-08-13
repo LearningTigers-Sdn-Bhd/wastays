@@ -32,6 +32,55 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     click_button "Save & continue"
   end
 
+  def reach_taxes_fees!
+    Financials::EnsureDefaultTransactionCodes.call(hotel)
+    Onboarding::InitializeProgress.new(hotel: hotel).call
+    %w[property_profile roles_permissions staff_setup].each do |key|
+      hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
+    end
+  end
+
+  # A property tax is named, typed, priced and scoped — not switched on. Listing
+  # it is what says the property charges it, and the rate type marks the figure
+  # it governs rather than taking a column of its own.
+  it "marks a property tax's amount with the rate type it carries" do
+    reach_taxes_fees!
+
+    visit hotel_onboarding_section_path(hotel, section_key: "taxes_fees")
+
+    expect(page).to have_css("h1", text: "Taxes and fees")
+    expect(page).to have_no_css("th", text: "Charge now")
+    expect(page).to have_no_css("th", text: "Rate type")
+
+    # Most properties charge nothing here, so the table starts empty.
+    click_button "Add tax or fee"
+    row = first("tr.panel-record-table__row")
+
+    # Fixed by default: the currency leads the figure, the percent sign is away.
+    expect(row).to have_css("[data-record-row-target='currencyAddon']", text: "MYR")
+    expect(row).to have_no_css("[data-record-row-target='percentAddon']")
+
+    within(row) do
+      find("[data-record-row-target='typeField'] .panel-select-menu__trigger").click
+      find("[role='option']", text: "Percentage").click
+    end
+
+    expect(row).to have_css("[data-record-row-target='percentAddon']", text: "%")
+    expect(row).to have_no_css("[data-record-row-target='currencyAddon']")
+
+    within(row) do
+      fill_in "Name", with: "Heritage levy"
+      fill_in "Amount", with: "2.5"
+    end
+    check "I confirm these are the taxes and fees this property charges"
+    click_button "Save & continue"
+
+    expect(page).to have_css("h1", text: "Room revenue")
+    expect(hotel.hotel_taxes.sole).to have_attributes(
+      name: "Heritage levy", rate_type: "percentage", amount: 2.5, enabled: true
+    )
+  end
+
   it "offers compact progress details on a narrow screen" do
     page.current_window.resize_to(390, 844)
 
@@ -322,28 +371,28 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     row = first("tr.panel-record-table__row")
 
     # Staff-priced by default: there is no amount to type at all.
-    expect(row).to have_no_css("[data-discount-row-target='rateField']")
-    expect(row).to have_no_css("[data-discount-row-target='codesField']")
+    expect(row).to have_no_css("[data-record-row-target='rateField']")
+    expect(row).to have_no_css("[data-record-row-target='codesField']")
 
     within(row) do
-      find("[data-discount-row-target='typeField'] .panel-select-menu__trigger").click
+      find("[data-record-row-target='typeField'] .panel-select-menu__trigger").click
       find("[role='option']", text: "Percentage").click
     end
 
     # The percent sign trails the rate; the currency mark that would lead a fixed
     # amount stays out of the way.
-    expect(row).to have_css("[data-discount-row-target='percentAddon']", text: "%")
-    expect(row).to have_no_css("[data-discount-row-target='currencyAddon']")
+    expect(row).to have_css("[data-record-row-target='percentAddon']", text: "%")
+    expect(row).to have_no_css("[data-record-row-target='currencyAddon']")
 
     within(row) do
-      find("[data-discount-row-target='scope'] .panel-select-menu__trigger").click
+      find("[data-record-row-target='scope'] .panel-select-menu__trigger").click
       find("[role='option']", text: "Only the charges I choose").click
     end
 
-    expect(row).to have_css("[data-discount-row-target='codesField']")
-    expect(row).to have_css("[data-discount-row-target='codesField'] select:not(:disabled)", visible: :all)
-    expect(row).to have_css("[data-discount-row-target='codesField'] .ts-control")
-    expect(row).to have_no_css("[data-discount-row-target='codesField'] .ts-wrapper.disabled")
+    expect(row).to have_css("[data-record-row-target='codesField']")
+    expect(row).to have_css("[data-record-row-target='codesField'] select:not(:disabled)", visible: :all)
+    expect(row).to have_css("[data-record-row-target='codesField'] .ts-control")
+    expect(row).to have_no_css("[data-record-row-target='codesField'] .ts-wrapper.disabled")
   end
 
   # The commercial phase's owner path: one way to take money is required, the

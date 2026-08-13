@@ -1,6 +1,17 @@
 <%# The record table owns the row and its remove control; this partial supplies
-    only the field cells. %>
+    only the field cells.
+
+    Four fields, not six. Whether the charge is levied is not one of them: the
+    step ends by confirming these are the taxes this property charges, so a row
+    that is present but switched off contradicts what is being signed, and
+    removing the row already says the same thing. It stays a toggle under
+    Settings, where a tax has posting history worth keeping.
+
+    The rate type and its figure share one cell: the type governs how the figure
+    reads rather than standing beside it, so it marks the field — a currency
+    leading a fixed amount, a percent sign trailing a rate. %>
 <% object = HotelTax.new(entry.slice("name", "charge_type", "rate_type", "amount")) %>
+<% currency = current_hotel.default_currency.presence || "MYR" %>
 <%= fields_for "tax_entries[#{index}]", object do |tax_form| %>
   <td>
     <%= tax_form.hidden_field :id, value: entry["id"] %>
@@ -18,26 +29,26 @@
   </td>
 
   <td>
-    <%= render PanelsUI::FormField.new(form: tax_form, attribute: :rate_type, label: "Rate type", size: :sm) do |field| %>
-      <% field.with_select_menu(
-           [ { label: "Fixed amount", value: "flat" }, { label: "Percentage", value: "percentage" } ],
-           selected: (entry["rate_type"].presence || "flat")) %>
-    <% end %>
-  </td>
+    <%# One column while the row is a stacked editor, two once it is a table row.
+        A tax always has an amount, so nothing here hides; the marks swap. %>
+    <div class="grid grid-cols-1 gap-2 md:grid-cols-2" data-controller="record-row"
+         data-action="change->record-row#update" data-record-row-unpriced-value="">
+      <div data-record-row-target="typeField">
+        <%= render PanelsUI::FormField.new(form: tax_form, attribute: :rate_type, label: "Rate type", size: :sm) do |field| %>
+          <% field.with_select_menu(
+               [ { label: "Fixed amount", value: "flat" }, { label: "Percentage", value: "percentage" } ],
+               selected: (entry["rate_type"].presence || "flat")) %>
+        <% end %>
+      </div>
 
-  <td>
-    <%= render PanelsUI::FormField.new(form: tax_form, attribute: :amount, label: "Amount", size: :sm, required: true) do |field| %>
-      <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
-    <% end %>
-  </td>
-
-  <td>
-    <%= render PanelsUI::Switch.new(
-          form: tax_form,
-          attribute: :enabled,
-          label: "Charge this now",
-          size: :sm,
-          checked: entry.fetch("enabled", "true") != "false") %>
+      <div data-record-row-target="rateField">
+        <%= render PanelsUI::FormField.new(form: tax_form, attribute: :amount, label: "Amount", size: :sm, required: true) do |field| %>
+          <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
+          <% field.with_addon(align: :inline_start, data: { record_row_target: "currencyAddon" }) { currency } %>
+          <% field.with_addon(align: :inline_end, data: { record_row_target: "percentAddon" }) { "%" } %>
+        <% end %>
+      </div>
+    </div>
   </td>
 
   <td>

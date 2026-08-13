@@ -30,7 +30,6 @@
               <th scope="col">Name</th>
               <th scope="col">Type</th>
               <th scope="col">Amount</th>
-              <th scope="col">Status</th>
             </tr>
           <% end %>
           <% table.with_body do %>
@@ -39,7 +38,6 @@
                 <td class="font-medium"><%= entry["name"] %></td>
                 <td class="text-muted-foreground"><%= entry["charge_type"] == "tax" ? "Tax" : "Fee" %></td>
                 <td class="tabular-nums"><%= entry["rate_type"] == "percentage" ? "#{entry['amount']}%" : "#{current_hotel.default_currency.presence || 'MYR'} #{entry['amount']}" %></td>
-                <td class="text-muted-foreground"><%= entry["enabled"] == "false" ? "Not charged" : "Charged" %></td>
               </tr>
             <% end %>
           <% end %>
@@ -91,13 +89,12 @@
               add_label: "Add tax or fee",
               empty: "No property taxes or fees yet",
               empty_description: "Most properties charge none beyond the statutory taxes above.",
-              empty_icon: "receipt-text",
-              class: "md:min-w-[60rem]") do |table| %>
-          <% table.with_column(label: "Name", required: true) %>
+              empty_icon: "receipt-text") do |table| %>
+          <%# Name and Amount are sized to what they hold — Amount carries a rate
+              type and the figure it marks — and the rest take what is left. %>
+          <% table.with_column(label: "Name", required: true, class: "w-64") %>
           <% table.with_column(label: "Type") %>
-          <% table.with_column(label: "Rate type") %>
-          <% table.with_column(label: "Amount", required: true) %>
-          <% table.with_column(label: "Charge now") %>
+          <% table.with_column(label: "Amount", required: true, class: "w-80") %>
           <% table.with_column(label: "Foreign guests only") %>
 
           <% @tax_entries.each_with_index do |entry, index| %>
