@@ -1,38 +1,73 @@
-<div class="w-full space-y-8">
-  <div>
-    <%= render PanelsUI::Button.new(label: "Back to pending review", href: admin_hotels_path(status: "pending_review"), variant: :ghost, size: :sm) do %>
-      <%= app_icon "arrow-left", aria: { hidden: "true" } %>
-      <span>Back to pending review</span>
-    <% end %>
-  </div>
+<% content_for :full_height_page, true %>
 
-  <%= render PanelsUI::PageHeader.new(
-        title: @hotel.name,
-        description: [ @hotel.city, @hotel.country ].compact_blank.join(", ")) do |header| %>
-    <% header.with_actions do %>
-      <%= render PanelsUI::Badge.new(label: @hotel.status.humanize, variant: @hotel.status == "live" ? :success : :warning) %>
-    <% end %>
-  <% end %>
-
+<div class="flex min-h-0 w-full flex-1 flex-col gap-8 overflow-hidden">
   <% period_start = @hotel.onboarding_start_date %>
   <% period_end = @hotel.onboarding_end_date %>
   <% period_days = (period_end - period_start).to_i %>
-  <section aria-labelledby="onboarding-period-heading" class="flex flex-col gap-4 border-y border-border py-4 sm:flex-row sm:items-center sm:justify-between">
-    <div class="space-y-1">
-      <h2 id="onboarding-period-heading" class="text-base font-semibold">Onboarding period</h2>
-      <p class="text-sm text-foreground">
-        <span class="font-medium"><%= period_days.zero? ? "< 1 day" : "#{period_days} #{'day'.pluralize(period_days)}" %></span>
-        <span class="text-muted-foreground"> · <%= l(period_start, format: "%d %b %Y") %> – <%= l(period_end, format: "%d %b %Y") %></span>
-      </p>
-      <p class="text-xs text-muted-foreground">These dates are used to measure how long property setup took.</p>
+  <% review_actions_available = @submission&.pending_review? && @hotel.status == "pending_review" %>
+
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between" data-testid="admin-onboarding-header">
+    <div class="flex min-w-0 items-start gap-3">
+      <%= link_to admin_hotels_path(status: "pending_review"),
+            class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            aria: { label: "Back to pending review" } do %>
+        <%= app_icon "arrow-left", class: "size-4", aria: { hidden: "true" } %>
+      <% end %>
+
+      <div class="min-w-0 space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="min-w-0 truncate text-base font-semibold tracking-tight text-foreground"><%= @hotel.name %></h1>
+          <%= render PanelsUI::Badge.new(label: @hotel.status.humanize, variant: @hotel.status == "live" ? :success : :warning, size: :sm) %>
+        </div>
+        <p class="text-xs text-muted-foreground"><%= [ @hotel.city, @hotel.country ].compact_blank.join(", ") %></p>
+        <p class="text-xs text-muted-foreground">
+          <%= l(period_start, format: "%d %b") %> – <%= l(period_end, format: "%d %b %Y") %>
+          · <%= period_days.zero? ? "< 1 day" : "#{period_days} #{'day'.pluralize(period_days)}" %>
+        </p>
+      </div>
     </div>
-    <%= render PanelsUI::Button.new(
-          label: "Edit period",
-          variant: :secondary,
-          size: :sm,
-          command: "show-modal",
-          commandfor: "edit-onboarding-period-sheet") %>
-  </section>
+
+    <%= render PanelsUI::DropdownMenu.new(id: "admin-onboarding-actions", placement: :bottom_end, class: "w-56") do |menu| %>
+      <% menu.with_trigger(variant: :primary, size: :md, aria_label: "Onboarding actions") do %>
+        Actions
+        <%= app_icon "chevron-down", class: "size-4", aria: { hidden: "true" } %>
+      <% end %>
+      <% menu.with_item(command: "show-modal", commandfor: "edit-onboarding-period-sheet", aria: { haspopup: "dialog" }) do %>
+        <%= app_icon "calendar", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+        <span>Edit onboarding period</span>
+      <% end %>
+      <% if review_actions_available %>
+        <% menu.with_separator %>
+        <% menu.with_item(command: "show-modal", commandfor: "request-onboarding-changes-sheet", aria: { haspopup: "dialog" }) do %>
+          <%= app_icon "message-square", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+          <span>Request changes</span>
+        <% end %>
+        <% menu.with_item(
+             href: approve_onboarding_admin_hotel_path(@hotel),
+             method: :post,
+             variant: :success,
+             form: { data: { turbo_confirm: "Approve #{@hotel.name} and make it live?" } }) do %>
+          <%= app_icon "circle-check", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+          <span>Approve and go live</span>
+        <% end %>
+      <% end %>
+    <% end %>
+  </header>
+
+  <%= render PanelsUI::Tabs.new(
+        id: "admin-onboarding-tabs",
+        active: @active_tab,
+        variant: :line,
+        aria_label: "Onboarding review sections") do |tabs| %>
+    <% Admin::Hotels::OnboardingController::TAB_LABELS.each do |tab, label| %>
+      <% tab_path = tab == "overview" ? onboarding_admin_hotel_path(@hotel) : onboarding_tab_admin_hotel_path(@hotel, tab:) %>
+      <% tabs.with_tab(name: tab, label:, href: tab_path) %>
+    <% end %>
+  <% end %>
+
+  <div class="h-[75dvh] max-h-full min-h-0 shrink overflow-y-auto" data-testid="admin-onboarding-tab-content">
+    <%= render "admin/hotels/onboarding/#{@active_tab.tr('-', '_')}" %>
+  </div>
 
   <%= render PanelsUI::Sheet.new(
         id: "edit-onboarding-period-sheet",
@@ -43,6 +78,7 @@
     <% sheet.with_body do %>
       <%= form_with url: save_onboarding_period_admin_hotel_path(@hotel), method: :post,
                     id: "edit-onboarding-period-form", class: "space-y-5 py-2" do |form| %>
+        <%= form.hidden_field :tab, value: @active_tab %>
         <%= render PanelsUI::FormField.new(form:, attribute: :start_date, label: "Start date", required: true) do |field| %>
           <% field.with_date_picker(value: period_start, linked_to: :end_date) %>
         <% end %>
@@ -59,155 +95,7 @@
     <% end %>
   <% end %>
 
-  <% if @submission.blank? %>
-    <%= render PanelsUI::Alert.new(tone: :warning, title: "No new onboarding submission") do |alert| %>
-      <% alert.with_description { "This property reached the legacy review queue without a versioned setup submission." } %>
-    <% end %>
-  <% else %>
-    <%= render PanelsUI::Alert.new(
-          tone: (@readiness.ready && @configuration_unchanged ? :success : :warning),
-          title: (@readiness.ready && @configuration_unchanged ? "Ready to launch" : "Review before launch")) do |alert| %>
-      <% alert.with_description do %>
-        Submitted by <%= @submission.submitted_by.name %> on <%= l(@submission.submitted_at, format: :long) %>.
-        <%= @configuration_unchanged ? "The current setup matches this submission." : "The property setup changed after submission." %>
-      <% end %>
-    <% end %>
-
-    <section aria-labelledby="setup-summary-heading" class="space-y-3">
-      <div>
-        <h2 id="setup-summary-heading" class="text-base font-semibold">Setup summary</h2>
-        <p class="mt-1 text-sm text-muted-foreground">The version submitted by the property owner.</p>
-      </div>
-      <div class="divide-y divide-border border-y border-border">
-        <% HotelPortal::OnboardingPresenter::PHASE_LABELS.except("review").each do |phase_key, phase_label| %>
-          <% definitions = Onboarding::SectionCatalog.all.select { |section| section.phase == phase_key } %>
-          <div class="grid gap-2 py-3 sm:grid-cols-[10rem_1fr]">
-            <h3 class="text-sm font-medium"><%= phase_label %></h3>
-            <div class="flex flex-wrap gap-2">
-              <% definitions.each do |definition| %>
-                <% state = @submission.snapshot.dig("sections", definition.key, "state") || "not_started" %>
-                <% variant = { "completed" => :success, "needs_attention" => :warning, "in_progress" => :information }.fetch(state, :neutral) %>
-                <%= render PanelsUI::Badge.new(label: "#{HotelPortal::OnboardingPresenter::SECTION_CONTENT.fetch(definition.key).first}: #{state.humanize}", variant:, size: :sm) %>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    </section>
-
-    <div class="grid gap-8 lg:grid-cols-2">
-      <section aria-labelledby="property-snapshot-heading" class="space-y-3">
-        <h2 id="property-snapshot-heading" class="text-base font-semibold">Property submitted</h2>
-        <% property = @submission.snapshot.fetch("property", {}) %>
-        <dl class="divide-y divide-border border-y border-border text-sm">
-          <% {
-               "Name" => property["name"], "Address" => property["address"],
-               "City" => property["city"], "Country" => property["country"],
-               "Currency" => property["default_currency"], "Sell mode" => property["sell_mode"]&.humanize,
-               "Photos" => property["photo_count"]
-             }.each do |label, value| %>
-            <div class="grid grid-cols-[8rem_1fr] gap-3 py-2">
-              <dt class="text-muted-foreground"><%= label %></dt><dd class="font-medium"><%= value.presence || "Not supplied" %></dd>
-            </div>
-          <% end %>
-        </dl>
-      </section>
-
-      <section aria-labelledby="rates-snapshot-heading" class="space-y-3">
-        <h2 id="rates-snapshot-heading" class="text-base font-semibold">Rooms and rates submitted</h2>
-        <% rooms = Array(@submission.snapshot["rooms"]) %>
-        <% coverage = @submission.snapshot.dig("rates", "coverage") || {} %>
-        <dl class="divide-y divide-border border-y border-border text-sm">
-          <div class="grid grid-cols-[8rem_1fr] gap-3 py-2"><dt class="text-muted-foreground">Room types</dt><dd class="font-medium"><%= rooms.size %></dd></div>
-          <div class="grid grid-cols-[8rem_1fr] gap-3 py-2"><dt class="text-muted-foreground">Coverage</dt><dd class="font-medium"><%= coverage["configured_percentage"].presence || "Not supplied" %><%= "%" if coverage["configured_percentage"].present? %></dd></div>
-          <div class="grid grid-cols-[8rem_1fr] gap-3 py-2"><dt class="text-muted-foreground">Through</dt><dd class="font-medium"><%= coverage["end_date"].presence || "Not supplied" %></dd></div>
-        </dl>
-        <% if rooms.any? %>
-          <ul class="divide-y divide-border border-y border-border text-sm">
-            <% rooms.each do |room| %>
-              <li class="flex items-center justify-between gap-3 py-2"><span class="font-medium"><%= room["name"] %></span><span class="text-muted-foreground"><%= room["quantity"] %> rooms</span></li>
-            <% end %>
-          </ul>
-        <% end %>
-      </section>
-    </div>
-
-    <section aria-labelledby="commercial-snapshot-heading" class="space-y-3">
-      <h2 id="commercial-snapshot-heading" class="text-base font-semibold">Commercial setup submitted</h2>
-      <% commercial = @submission.snapshot.fetch("commercial", {}) %>
-      <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-        <div><dt class="text-muted-foreground">Extra charges</dt><dd class="font-medium"><%= Array(commercial["extra_charges"]).size %></dd></div>
-        <div><dt class="text-muted-foreground">Discounts</dt><dd class="font-medium"><%= Array(commercial["discounts"]).size %></dd></div>
-        <div><dt class="text-muted-foreground">Payment methods</dt><dd class="font-medium"><%= Array(commercial["payment_methods"]).size %></dd></div>
-        <div><dt class="text-muted-foreground">Corporate accounts</dt><dd class="font-medium"><%= Array(commercial["corporate_accounts"]).size %></dd></div>
-      </dl>
-    </section>
-
-    <div class="grid gap-8 lg:grid-cols-2">
-      <section aria-labelledby="delivery-heading" class="space-y-3">
-        <h2 id="delivery-heading" class="text-base font-semibold">Invitation delivery</h2>
-        <% counts = @submission.deliveries.group_by(&:status).transform_values(&:size) %>
-        <dl class="grid grid-cols-2 gap-3 text-sm">
-          <div><dt class="text-muted-foreground">Sent</dt><dd class="font-medium"><%= counts.fetch("sent", 0) %></dd></div>
-          <div><dt class="text-muted-foreground">Held</dt><dd class="font-medium"><%= counts.fetch("held", 0) %></dd></div>
-          <div><dt class="text-muted-foreground">Pending</dt><dd class="font-medium"><%= counts.fetch("pending", 0) + counts.fetch("processing", 0) %></dd></div>
-          <div><dt class="text-muted-foreground">Failed</dt><dd class="font-medium"><%= counts.fetch("failed", 0) %></dd></div>
-        </dl>
-      </section>
-
-      <section aria-labelledby="ota-heading" class="space-y-3">
-        <h2 id="ota-heading" class="text-base font-semibold">OTA handover</h2>
-        <% ota_rows = Array(@submission.snapshot["ota_handover"]) %>
-        <% if ota_rows.any? %>
-          <ul class="divide-y divide-border border-y border-border">
-            <% ota_rows.each do |row| %>
-              <li class="flex items-center justify-between gap-3 py-2 text-sm"><span><%= row["channel_name"] %></span><span class="text-muted-foreground">Credentials supplied</span></li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="text-sm text-muted-foreground">No OTA credentials were supplied.</p>
-        <% end %>
-        <p class="text-xs text-muted-foreground">Usernames and passwords are not shown in onboarding review.</p>
-      </section>
-    </div>
-  <% end %>
-
-  <section aria-labelledby="audit-history-heading" class="space-y-3 border-t border-border pt-6">
-    <div>
-      <h2 id="audit-history-heading" class="text-base font-semibold">Onboarding history</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Submission, review, and section changes in newest-first order.</p>
-    </div>
-    <% if @audit_events.any? %>
-      <ol class="divide-y divide-border border-y border-border">
-        <% @audit_events.each do |event| %>
-          <li class="grid gap-1 py-3 text-sm sm:grid-cols-[11rem_1fr_auto] sm:items-center">
-            <span class="font-medium"><%= event.event_type.humanize %></span>
-            <span class="text-muted-foreground"><%= event.section_key&.humanize || "Property lifecycle" %><%= " · #{event.user.name}" if event.user %></span>
-            <time class="text-xs text-muted-foreground" datetime="<%= event.occurred_at.iso8601 %>"><%= l(event.occurred_at, format: :short) %></time>
-          </li>
-        <% end %>
-      </ol>
-    <% else %>
-      <p class="text-sm text-muted-foreground">No onboarding history has been recorded yet.</p>
-    <% end %>
-  </section>
-
-  <section aria-labelledby="training-heading" class="space-y-4 border-t border-border pt-6">
-    <div>
-      <h2 id="training-heading" class="text-base font-semibold">Training</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Training is managed separately and does not block launch.</p>
-    </div>
-    <%= render "admin/hotels/onboarding_session_form", session: OnboardingSession.new %>
-    <%= render "admin/hotels/onboarding_sessions_list", sessions: @sessions, hotel: @hotel %>
-  </section>
-
-  <% if @submission&.pending_review? && @hotel.status == "pending_review" %>
-    <div class="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-5">
-      <%= render PanelsUI::Button.new(label: "Request changes", variant: :neutral, command: "show-modal", commandfor: "request-onboarding-changes-sheet") %>
-      <%= button_to "Approve & go live", approve_onboarding_admin_hotel_path(@hotel), class: "panel-button",
-                    data: { variant: "success", size: "md", turbo_confirm: "Approve #{@hotel.name} and make it live?" } %>
-    </div>
-
+  <% if review_actions_available %>
     <%= render PanelsUI::Sheet.new(
           id: "request-onboarding-changes-sheet", side: :right, size: :md,
           title: "Request changes", description: "Choose what the property owner must review before submitting again.") do |sheet| %>

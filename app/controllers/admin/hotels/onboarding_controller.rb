@@ -1,14 +1,27 @@
 class Admin::Hotels::OnboardingController < Admin::BaseController
+  TAB_LABELS = {
+    "overview" => "Overview",
+    "history" => "History",
+    "training" => "Training"
+  }.freeze
+
   before_action :set_hotel, only: [ :show, :request_changes, :approve, :save_period ]
 
   def show
-    @sessions = @hotel.onboarding_sessions
-                      .order(scheduled_at: :asc, created_at: :asc)
-    @submission = @hotel.onboarding_submissions.includes(:submitted_by, :reviewed_by, :deliveries).newest_first.first
-    rates_coverage = Rates::SetupCoverage.call(hotel: @hotel)
-    @readiness = Onboarding::Readiness.new(hotel: @hotel, rates_coverage:).call
-    @configuration_unchanged = configuration_unchanged?(rates_coverage:)
-    @audit_events = @hotel.onboarding_audit_events.includes(:user).order(occurred_at: :desc, id: :desc)
+    @active_tab = params[:tab].presence || "overview"
+    @submission = submission_scope.newest_first.first
+
+    case @active_tab
+    when "overview"
+      rates_coverage = Rates::SetupCoverage.call(hotel: @hotel)
+      @readiness = Onboarding::Readiness.new(hotel: @hotel, rates_coverage:).call
+      @configuration_unchanged = configuration_unchanged?(rates_coverage:)
+      @overview_presenter = Admin::Hotels::OnboardingOverviewPresenter.new(submission: @submission) if @submission
+    when "history"
+      @audit_events = @hotel.onboarding_audit_events.includes(:user).order(occurred_at: :desc, id: :desc)
+    when "training"
+      @sessions = @hotel.onboarding_sessions.order(scheduled_at: :asc, created_at: :asc)
+    end
   end
 
   def request_changes
@@ -33,21 +46,22 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
   def save_period
     start_date = parse_period_date(params[:start_date])
     end_date = parse_period_date(params[:end_date])
+    return_path = onboarding_path_for(params[:tab])
 
     if start_date.nil? || end_date.nil?
-      redirect_to onboarding_admin_hotel_path(@hotel), alert: "Enter a valid start and end date."
+      redirect_to return_path, alert: "Enter a valid start and end date."
       return
     end
 
     if end_date < start_date
-      redirect_to onboarding_admin_hotel_path(@hotel), alert: "The end date must be on or after the start date."
+      redirect_to return_path, alert: "The end date must be on or after the start date."
       return
     end
 
     if @hotel.update(onboarding_start_date: start_date, onboarding_end_date: end_date)
-      redirect_to onboarding_admin_hotel_path(@hotel), notice: "Onboarding period updated."
+      redirect_to return_path, notice: "Onboarding period updated."
     else
-      redirect_to onboarding_admin_hotel_path(@hotel), alert: @hotel.errors.full_messages.to_sentence
+      redirect_to return_path, alert: @hotel.errors.full_messages.to_sentence
     end
   end
 
@@ -61,6 +75,19 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
     Date.iso8601(value.to_s)
   rescue Date::Error
     nil
+  end
+
+  def submission_scope
+    scope = @hotel.onboarding_submissions
+    return scope.includes(:submitted_by, :deliveries) if @active_tab == "overview"
+
+    scope
+  end
+
+  def onboarding_path_for(tab)
+    return onboarding_admin_hotel_path(@hotel) unless TAB_LABELS.key?(tab) && tab != "overview"
+
+    onboarding_tab_admin_hotel_path(@hotel, tab:)
   end
 
   def configuration_unchanged?(rates_coverage:)

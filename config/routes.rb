@@ -182,6 +182,8 @@ Rails.application.routes.draw do
     resources :hotels do
       member do
         get :onboarding, to: "hotels/onboarding#show"
+        get "onboarding/:tab", to: "hotels/onboarding#show", as: :onboarding_tab,
+                               constraints: { tab: /history|training/ }
         post "onboarding/request_changes", to: "hotels/onboarding#request_changes", as: :request_onboarding_changes
         post "onboarding/approve", to: "hotels/onboarding#approve", as: :approve_onboarding
         post :save_onboarding_period, to: "hotels/onboarding#save_period"

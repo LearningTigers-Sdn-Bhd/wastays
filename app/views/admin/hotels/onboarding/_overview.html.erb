@@ -1,0 +1,134 @@
+<% if @submission.blank? %>
+  <%= render PanelsUI::Alert.new(tone: :warning, title: "No new onboarding submission") do |alert| %>
+    <% alert.with_description { "This property reached the legacy review queue without a versioned setup submission." } %>
+  <% end %>
+<% else %>
+  <div class="space-y-8">
+    <%= render PanelsUI::Alert.new(
+          tone: (@readiness.ready && @configuration_unchanged ? :success : :warning),
+          title: (@readiness.ready && @configuration_unchanged ? "Ready to launch" : "Review before launch")) do |alert| %>
+      <% alert.with_description do %>
+        Submitted by <%= @submission.submitted_by.name %> on <%= l(@submission.submitted_at, format: :long) %>.
+        <%= @configuration_unchanged ? "The current setup matches this submission." : "The property setup changed after submission." %>
+      <% end %>
+    <% end %>
+
+    <section aria-label="Submitted setup statistics" class="grid grid-cols-2 gap-3">
+      <% @overview_presenter.metrics.each do |metric| %>
+        <%= render PanelsUI::MetricCard.new(**metric.to_h) %>
+      <% end %>
+    </section>
+
+    <div id="admin-onboarding-overview" class="grid gap-6 lg:grid-cols-2 lg:items-start">
+      <section aria-labelledby="setup-review-heading" class="min-w-0 space-y-3">
+        <div>
+          <h2 id="setup-review-heading" class="text-base font-semibold">Setup review</h2>
+          <p class="mt-1 text-sm text-muted-foreground">The version submitted by the property owner.</p>
+        </div>
+        <%= render PanelsUI::Table.new(
+              caption: "Submitted property setup summary",
+              density: :compact,
+              header_style: :sentence,
+              hoverable: true,
+              class: "min-w-[40rem]",
+              wrapper_class: "rounded-md border border-border") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Section</th>
+              <th scope="col">Submitted setup</th>
+              <th scope="col">Status</th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% @overview_presenter.groups.each do |group| %>
+              <tr class="bg-muted/50">
+                <th scope="rowgroup" colspan="3" class="font-semibold"><%= group.label %></th>
+              </tr>
+              <% group.rows.each do |row| %>
+                <tr>
+                  <th scope="row" class="font-medium"><%= row.title %></th>
+                  <td class="text-muted-foreground"><%= row.summary %></td>
+                  <td><%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm) %></td>
+                </tr>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </section>
+
+      <div class="min-w-0 space-y-6">
+        <section aria-labelledby="property-submitted-heading" class="space-y-3">
+          <h2 id="property-submitted-heading" class="text-base font-semibold">Property submitted</h2>
+          <%= render PanelsUI::Table.new(
+                caption: "Submitted property details", density: :compact,
+                header_style: :sentence,
+                wrapper_class: "rounded-md border border-border") do |table| %>
+            <% table.with_header do %>
+              <tr><th scope="col">Field</th><th scope="col">Submitted value</th></tr>
+            <% end %>
+            <% table.with_body do %>
+              <% @overview_presenter.property_rows.each do |row| %>
+                <tr><th scope="row" class="font-medium"><%= row.label %></th><td class="text-muted-foreground"><%= row.value %></td></tr>
+              <% end %>
+            <% end %>
+          <% end %>
+        </section>
+
+        <section aria-labelledby="rooms-submitted-heading" class="space-y-3">
+          <h2 id="rooms-submitted-heading" class="text-base font-semibold">Rooms submitted</h2>
+          <%= render PanelsUI::Table.new(
+                caption: "Submitted room types", density: :compact,
+                header_style: :sentence,
+                wrapper_class: "rounded-md border border-border") do |table| %>
+            <% table.with_header do %>
+              <tr><th scope="col">Room type</th><th scope="col">Quantity</th></tr>
+            <% end %>
+            <% table.with_body do %>
+              <% if @overview_presenter.room_rows.any? %>
+                <% @overview_presenter.room_rows.each do |row| %>
+                  <tr><th scope="row" class="font-medium"><%= row.name %></th><td class="text-muted-foreground"><%= row.quantity %></td></tr>
+                <% end %>
+              <% else %>
+                <tr><td colspan="2" class="text-muted-foreground">No rooms submitted.</td></tr>
+              <% end %>
+            <% end %>
+          <% end %>
+        </section>
+
+        <section aria-labelledby="commercial-submitted-heading" class="space-y-3">
+          <h2 id="commercial-submitted-heading" class="text-base font-semibold">Commercial setup</h2>
+          <%= render PanelsUI::Table.new(
+                caption: "Submitted commercial setup", density: :compact,
+                header_style: :sentence,
+                wrapper_class: "rounded-md border border-border") do |table| %>
+            <% table.with_header do %>
+              <tr><th scope="col">Setup</th><th scope="col">Count</th></tr>
+            <% end %>
+            <% table.with_body do %>
+              <% @overview_presenter.commercial_rows.each do |row| %>
+                <tr><th scope="row" class="font-medium"><%= row.label %></th><td class="text-muted-foreground"><%= row.value %></td></tr>
+              <% end %>
+            <% end %>
+          <% end %>
+        </section>
+
+        <section aria-labelledby="handover-heading" class="space-y-3">
+          <h2 id="handover-heading" class="text-base font-semibold">Handover</h2>
+          <%= render PanelsUI::Table.new(
+                caption: "Submitted handover details", density: :compact,
+                header_style: :sentence,
+                wrapper_class: "rounded-md border border-border") do |table| %>
+            <% table.with_header do %>
+              <tr><th scope="col">Item</th><th scope="col">Submitted status</th></tr>
+            <% end %>
+            <% table.with_body do %>
+              <% @overview_presenter.handover_rows.each do |row| %>
+                <tr><th scope="row" class="font-medium"><%= row.label %></th><td class="text-muted-foreground"><%= row.value %></td></tr>
+              <% end %>
+            <% end %>
+          <% end %>
+        </section>
+      </div>
+    </div>
+  </div>
+<% end %>
