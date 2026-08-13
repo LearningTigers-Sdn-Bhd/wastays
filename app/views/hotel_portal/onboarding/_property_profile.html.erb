@@ -5,6 +5,8 @@
       <% {
         "Legal account" => current_hotel.account.name,
         "Property name" => current_hotel.name,
+        "TIN" => current_hotel.tin,
+        "SSM No." => current_hotel.ssm_number,
         "Address" => [current_hotel.address, current_hotel.city, current_hotel.country].compact_blank.join(", "),
         "Timezone" => current_hotel.time_zone,
         "Default currency" => current_hotel.default_currency,
@@ -46,6 +48,15 @@
         <% end %>
         <%= render PanelsUI::FormField.new(form: form, attribute: :amenities, label: "Property amenities", class: "sm:col-span-2") do |field| %>
           <% field.with_multi_select(amenity_choices, selected: current_hotel.amenities, prompt: "Search amenities", empty_text: "No amenities found") %>
+        <% end %>
+        <%# The company's own numbers, so they belong with its identity rather than
+            on the taxes step. Both optional — a property is perfectly usable before
+            its registrations come through, and neither gates finishing setup. %>
+        <%= render PanelsUI::FormField.new(form: form, attribute: :tin, label: "TIN", hint: "Tax Identification Number issued by LHDN. You can add this later.") do |field| %>
+          <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: form, attribute: :ssm_number, label: "SSM No.", hint: "Company registration number.") do |field| %>
+          <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
         <% end %>
       </div>
     </section>

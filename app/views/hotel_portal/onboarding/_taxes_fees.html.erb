@@ -16,11 +16,17 @@
         <div class="rounded-md border border-border p-3">
           <dt class="text-sm font-medium">Service Tax (SST)</dt>
           <dd class="text-sm text-muted-foreground"><%= current_hotel.sst_enabled? ? "Charged at 8%" : "Not charged" %></dd>
+          <dd class="mt-0.5 text-xs text-muted-foreground">
+            <%= current_hotel.sst_registration_number.presence ? "Tax number #{current_hotel.sst_registration_number}" : "No tax number" %>
+          </dd>
         </div>
         <div class="rounded-md border border-border p-3">
           <dt class="text-sm font-medium">Tourism Tax (TTx)</dt>
           <dd class="text-sm text-muted-foreground">
             <%= current_hotel.tourism_tax_enabled? ? "#{current_hotel.default_currency.presence || 'MYR'} #{number_with_precision(current_hotel.tourism_tax_amount, precision: 2)} per night" : "Not charged" %>
+          </dd>
+          <dd class="mt-0.5 text-xs text-muted-foreground">
+            <%= current_hotel.tourism_tax_registration_number.presence ? "Tax number #{current_hotel.tourism_tax_registration_number}" : "No tax number" %>
           </dd>
         </div>
       </dl>
@@ -75,12 +81,30 @@
                   description: "8% on room revenue. The law sets this rate, so you cannot change it here.",
                   checked: current_hotel.sst_enabled?) %>
 
+            <%# Always shown rather than revealed by the switch, matching the
+                tourism tax amount below: the hint carries the condition. %>
+            <%= render PanelsUI::FormField.new(
+                  form: hotel_form,
+                  attribute: :sst_registration_number,
+                  label: "SST number",
+                  hint: "Needed if you charge SST.") do |field| %>
+              <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
+            <% end %>
+
             <%= render PanelsUI::Switch.new(
                   form: hotel_form,
                   attribute: :tourism_tax_enabled,
                   label: "Tourism Tax (TTx)",
                   description: "A set amount per room, per night, charged to foreign guests only.",
                   checked: current_hotel.tourism_tax_enabled?) %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: hotel_form,
+                  attribute: :tourism_tax_registration_number,
+                  label: "Tourism tax number",
+                  hint: "Needed if you charge tourism tax.") do |field| %>
+              <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
+            <% end %>
 
             <%# The unit rides the field rather than its label: the currency mark
                 leads the figure and the period trails it, so the input reads as

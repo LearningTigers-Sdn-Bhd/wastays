@@ -18,6 +18,7 @@ class HotelTax < ApplicationRecord
   scope :enabled, -> { where(enabled: true) }
 
   before_validation :normalize_code
+  before_validation :normalize_registration_number
   after_create :ensure_transaction_code
   after_update :sync_transaction_code, if: :saved_change_to_transaction_code_fields?
 
@@ -88,6 +89,12 @@ class HotelTax < ApplicationRecord
   def normalize_code
     normalized = normalized_code(code.presence || code_abbreviation_from_name)
     self.code = hotel.present? ? unique_code(normalized) : normalized.presence
+  end
+
+  # The licence or registration number the issuing authority put on the levy. Tidied
+  # but never validated for shape — every council words its own differently.
+  def normalize_registration_number
+    self.registration_number = registration_number.to_s.strip.upcase.gsub(/\s+/, " ").presence
   end
 
   def unique_code(base_code)

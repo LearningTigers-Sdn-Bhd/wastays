@@ -25,7 +25,10 @@ module HotelPortal
     private
 
     def tax_params
-      params.require(:hotel).permit(:tourism_tax_enabled, :tourism_tax_amount, :sst_enabled)
+      params.require(:hotel).permit(
+        :tourism_tax_enabled, :tourism_tax_amount, :tourism_tax_registration_number,
+        :sst_enabled, :sst_registration_number
+      )
     end
   end
 end

@@ -142,6 +142,34 @@
         </div>
       </section>
 
+      <%# The numbers that identify the business itself, kept apart from the taxes
+          page: those settings say what the property charges, these say who it is.
+          The registration number for an individual tax lives with that tax. %>
+      <section aria-labelledby="business-registration-heading">
+        <div>
+          <h2 id="business-registration-heading" class="text-base font-semibold text-foreground">Business Registration</h2>
+          <p class="mt-2 text-sm text-muted-foreground">The company numbers that appear on the property’s invoices and receipts.</p>
+        </div>
+
+        <div class="mt-5 grid gap-4 sm:grid-cols-2">
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :tin,
+                label: "TIN",
+                hint: "Tax Identification Number issued by LHDN.") do |field| %>
+            <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :ssm_number,
+                label: "SSM No.",
+                hint: "Company registration number.") do |field| %>
+            <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
+          <% end %>
+        </div>
+      </section>
+
       <div class="flex justify-end lg:col-span-2">
         <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :md) do %>
           Save Settings

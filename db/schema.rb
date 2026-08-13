@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1533,6 +1533,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_170000) do
     t.bigint "hotel_id", null: false
     t.string "name", null: false
     t.string "rate_type", default: "flat", null: false
+    t.string "registration_number"
     t.bigint "transaction_code_id"
     t.datetime "updated_at", null: false
     t.index ["hotel_id", "code"], name: "index_hotel_taxes_on_hotel_id_and_code", unique: true, where: "(code IS NOT NULL)"
@@ -1596,12 +1597,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_170000) do
     t.string "sell_mode", null: false
     t.boolean "setup_lock_enabled", default: false, null: false
     t.string "slug", null: false
+    t.string "ssm_number"
     t.boolean "sst_enabled", default: false, null: false
+    t.string "sst_registration_number"
     t.integer "star_rating"
     t.string "status"
     t.string "time_zone"
+    t.string "tin"
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
     t.boolean "tourism_tax_enabled", default: false, null: false
+    t.string "tourism_tax_registration_number"
     t.string "unique_id", null: false
     t.datetime "updated_at", null: false
     t.decimal "usd_conversion_rate", precision: 10, scale: 4, default: "4.5", null: false

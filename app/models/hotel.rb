@@ -121,6 +121,7 @@ class Hotel < ApplicationRecord
 
   before_validation :normalize_default_currency
   before_validation :normalize_hotel_prefix
+  before_validation :normalize_registration_numbers
   before_validation :assign_hotel_prefix, on: :create
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
   validates :slug, presence: true, uniqueness: true
@@ -209,6 +210,15 @@ class Hotel < ApplicationRecord
   # charset — no I, O, L, 0 or 1 — so a code survives being read down a phone line.
   UNIQUE_ID_LENGTH = 5
   UNIQUE_ID_CHARSET = DocumentIdentifiers::HotelReferences::TOKEN_CHARSET
+
+  # The numbers a hotel quotes on its documents. The first two identify the business
+  # itself; the other two identify it to the authority behind each statutory tax.
+  REGISTRATION_NUMBER_ATTRIBUTES = %i[
+    tin
+    ssm_number
+    sst_registration_number
+    tourism_tax_registration_number
+  ].freeze
 
   # Resolves the identifier that appears in URLs. `unique_id` is canonical; `slug` is
   # kept as a permanent legacy read path so bookmarks and printed concierge QR codes
@@ -695,6 +705,16 @@ class Hotel < ApplicationRecord
 
   def normalize_hotel_prefix
     self.hotel_prefix = nil if hotel_prefix.blank?
+  end
+
+  # Tidied, never validated for shape. SST numbers have already changed format
+  # once and the state levies follow no convention at all, so a regex here would
+  # only lock properties out of recording a number they legitimately hold.
+  def normalize_registration_numbers
+    REGISTRATION_NUMBER_ATTRIBUTES.each do |attribute|
+      value = self[attribute].to_s.strip.upcase.gsub(/\s+/, " ")
+      self[attribute] = value.presence
+    end
   end
 
   PREFIX_MIN_LENGTH = 3

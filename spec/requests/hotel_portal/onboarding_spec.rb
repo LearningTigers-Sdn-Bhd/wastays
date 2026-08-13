@@ -76,6 +76,18 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("in_progress")
   end
 
+  # The value has to clear three separate permit lists on this path — the save
+  # service, the profile form it delegates to, and the controller's re-render list
+  # — so it is worth asserting it actually lands.
+  it "stores normalized business registration numbers without gating completion" do
+    patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
+          params: { navigation_action: "save_draft", hotel: property_params.merge(tin: " c1234567890 ", ssm_number: "202301012345") }
+
+    expect(hotel.reload.tin).to eq("C1234567890")
+    expect(hotel.ssm_number).to eq("202301012345")
+    expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("in_progress")
+  end
+
   it "requires the property completion contract before advancing" do
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
           params: {
@@ -286,6 +298,24 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "room_revenue"))
       expect(hotel.onboarding_sections.find_by!(section_key: "taxes_fees").state).to eq("complete")
       expect(hotel.hotel_taxes.pluck(:name)).to eq([ "Heritage levy" ])
+    end
+
+    it "stores the statutory tax numbers and leaves an omitted one alone" do
+      patch hotel_onboarding_section_path(hotel, section_key: "taxes_fees"),
+            params: {
+              navigation_action: "save_draft",
+              hotel: { sst_enabled: "1", tourism_tax_enabled: "1", tourism_tax_amount: "10.0",
+                       sst_registration_number: " w10-1808-31000000 ", tourism_tax_registration_number: "ttx-99887766" }
+            }
+
+      expect(hotel.reload.sst_registration_number).to eq("W10-1808-31000000")
+      expect(hotel.tourism_tax_registration_number).to eq("TTX-99887766")
+
+      patch hotel_onboarding_section_path(hotel, section_key: "taxes_fees"),
+            params: { navigation_action: "save_draft", hotel: { sst_enabled: "1", tourism_tax_enabled: "1", tourism_tax_amount: "12.0" } }
+
+      expect(hotel.reload.sst_registration_number).to eq("W10-1808-31000000")
+      expect(hotel.tourism_tax_registration_number).to eq("TTX-99887766")
     end
 
     it "locks room revenue until taxes are resolved" do

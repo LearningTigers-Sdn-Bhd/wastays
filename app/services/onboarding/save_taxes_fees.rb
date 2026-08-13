@@ -93,10 +93,14 @@ module Onboarding
       source = source.to_unsafe_h if source.respond_to?(:to_unsafe_h)
       source = source.to_h.stringify_keys
 
+      # `fetch` with the current value, not `[]`: a step submitted without one of
+      # these keys must leave what is already stored alone rather than blank it.
       {
         "sst_enabled" => boolean(source["sst_enabled"]),
+        "sst_registration_number" => source.fetch("sst_registration_number", @hotel.sst_registration_number),
         "tourism_tax_enabled" => boolean(source["tourism_tax_enabled"]),
-        "tourism_tax_amount" => source.fetch("tourism_tax_amount", @hotel.tourism_tax_amount)
+        "tourism_tax_amount" => source.fetch("tourism_tax_amount", @hotel.tourism_tax_amount),
+        "tourism_tax_registration_number" => source.fetch("tourism_tax_registration_number", @hotel.tourism_tax_registration_number)
       }
     end
 
