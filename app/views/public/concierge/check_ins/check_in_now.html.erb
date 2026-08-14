@@ -2,7 +2,7 @@
 <%= render layout: "public/concierge/shared/page_shell" do %>
   <% subtitle = @presenter.subtitle %>
   <%= render "public/concierge/shared/page_header",
-             back_path: concierge_check_in_path(@hotel.slug),
+             back_path: concierge_check_in_path(@hotel),
              back_label: "Back to Check In",
              eyebrow: "Check In",
              title_prefix: "Ready to",
@@ -48,7 +48,7 @@
 
 
 
-  <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, data: @presenter.form_data(self) do |f| %>
+  <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel), method: :post, multipart: true, data: @presenter.form_data(self) do |f| %>
     <%= hidden_field_tag :latitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "latitude" } : {} %>
     <%= hidden_field_tag :longitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "longitude" } : {} %>
     <% if @presenter.registration_required? %>

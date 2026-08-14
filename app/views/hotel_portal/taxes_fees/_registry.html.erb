@@ -24,7 +24,7 @@
         hoverable: true,
         bordered: true,
         wrapper_class: "rounded-md border border-border bg-card",
-        class: "min-w-[920px]",
+        class: "min-w-[1000px]",
         data: { testid: "taxes-fees-registry" }) do |table| %>
     <% table.with_header do %>
       <tr>
@@ -32,8 +32,8 @@
         <th scope="col">Charge</th>
         <th scope="col">Code</th>
         <th scope="col">Applies To</th>
-        <th scope="col">Charge Rule</th>
-        <th scope="col">Charge Amount</th>
+        <th scope="col">Rate</th>
+        <th scope="col">Tax number</th>
         <th scope="col" class="text-right">Action</th>
       </tr>
     <% end %>
@@ -79,8 +79,16 @@
           </td>
           <td class="align-middle font-mono text-xs text-foreground" translate="no"><%= row.code %></td>
           <td class="align-middle text-muted-foreground"><%= row.applies_to %></td>
-          <td class="align-middle text-muted-foreground"><%= row.charge_rule %></td>
-          <td class="align-middle font-medium tabular-nums text-foreground"><%= row.charge_amount %></td>
+          <td class="align-middle font-medium tabular-nums text-foreground"><%= row.rate %></td>
+          <%# Spelled out rather than dashed: a dash reads as nothing to a screen
+              reader, and plenty of levies genuinely carry no number. %>
+          <td class="align-middle" translate="no">
+            <% if row.tax_number.present? %>
+              <span class="font-mono text-xs text-foreground"><%= row.tax_number %></span>
+            <% else %>
+              <span class="text-xs text-muted-foreground">Not set</span>
+            <% end %>
+          </td>
           <td class="text-right align-middle">
             <%= render PanelsUI::Button.new(
                   href: row.manage_path,

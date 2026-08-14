@@ -2,10 +2,12 @@
 
 class Api::V1::QuotesController < Api::V1::BaseController
   def create
-    authorize_hotel!(params[:hotel_id])
+    hotel = authorize_hotel!(params[:hotel_id])
     return if performed?
 
-    result = BookingEngine::CreateQuote.new(quote_params).call
+    # Hand the quote builder the canonical identifier: the API still accepts a
+    # numeric id, which no longer resolves anywhere downstream.
+    result = BookingEngine::CreateQuote.new(quote_params.merge(hotel_id: hotel.to_param)).call
 
     if result.success?
       presenter = Public::QuotePresenter.new(result.quote, view_context)

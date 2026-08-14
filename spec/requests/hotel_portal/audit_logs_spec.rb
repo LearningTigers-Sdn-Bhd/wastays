@@ -15,7 +15,7 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.
 
   describe "GET /index" do
     it "returns http success" do
-      get "/hotel/#{hotel.id}/audit_logs"
+      get "/hotel/#{hotel.to_param}/audit_logs"
 
       page = Capybara.string(response.body)
       expect(response).to have_http_status(:success)
@@ -46,7 +46,7 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.
         metadata: { "start_date" => "2026-04-01", "end_date" => "2026-04-03" }
       )
 
-      get "/hotel/#{hotel.id}/audit_logs"
+      get "/hotel/#{hotel.to_param}/audit_logs"
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Value")
@@ -175,16 +175,16 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.
         new_value: { "date" => "2026-04-01", "quantity" => 5, "status" => "closed" }
       )
 
-      get "/hotel/#{hotel.id}/audit_logs.csv"
+      get "/hotel/#{hotel.to_param}/audit_logs.csv"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
 
-      get "/hotel/#{hotel.id}/audit_logs.xlsx"
+      get "/hotel/#{hotel.to_param}/audit_logs.xlsx"
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
       expect(response.body).to start_with("PK")
 
-      get "/hotel/#{hotel.id}/audit_logs.pdf"
+      get "/hotel/#{hotel.to_param}/audit_logs.pdf"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
     end

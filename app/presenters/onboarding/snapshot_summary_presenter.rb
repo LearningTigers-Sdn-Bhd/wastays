@@ -51,6 +51,7 @@ module Onboarding
     def summary_for(section_key)
       case section_key
       when "property_profile" then property_summary
+      when "property_photos" then photos_summary
       when "roles_permissions" then "#{ConfirmRolePresets::PRESET_SLUGS.size} standard roles confirmed"
       when "staff_setup" then count_summary(snapshot["staff"], "staff member", "No additional staff")
       when "taxes_fees"
@@ -70,6 +71,13 @@ module Onboarding
       property = snapshot.fetch("property", {})
       location = [ property["city"], property["country"] ].compact_blank.join(", ")
       [ location.presence, property["default_currency"].presence ].compact.join(" · ").presence || "Property details saved"
+    end
+
+    def photos_summary
+      count = snapshot.dig("property", "photo_count").to_i
+      return "No photos uploaded" if count.zero?
+
+      "#{count} #{'photo'.pluralize(count)}"
     end
 
     def rooms_summary

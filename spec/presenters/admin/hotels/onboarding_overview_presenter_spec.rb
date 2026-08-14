@@ -89,7 +89,7 @@ RSpec.describe Admin::Hotels::OnboardingOverviewPresenter do
 
   it "builds submitted setup and inventory metrics without using current hotel records" do
     expect(presenter.metrics.map(&:to_h)).to eq([
-      { label: "Required setup", value: "5 of 7", detail: "2 remaining", detail_variant: :warning },
+      { label: "Required setup", value: "6 of 8", detail: "2 remaining", detail_variant: :warning },
       { label: "Optional decisions", value: "5 of 5", detail: "1 deferred", detail_variant: :success },
       { label: "Rooms", value: "6", detail: "2 room types", detail_variant: :neutral },
       { label: "Rate coverage", value: "100%", detail: "Through 12 Aug 2027", detail_variant: :success }
@@ -131,7 +131,7 @@ RSpec.describe Admin::Hotels::OnboardingOverviewPresenter do
     expect(rows.fetch("rates_availability").summary).to eq("Rate coverage saved")
     expect(rows.fetch("channel_manager").summary).to eq("No channel handover")
     expect(fallback.metrics.map(&:to_h)).to eq([
-      { label: "Required setup", value: "0 of 7", detail: "7 remaining", detail_variant: :warning },
+      { label: "Required setup", value: "0 of 8", detail: "8 remaining", detail_variant: :warning },
       { label: "Optional decisions", value: "0 of 5", detail: "0 deferred", detail_variant: :warning },
       { label: "Rooms", value: "0", detail: "0 room types", detail_variant: :neutral },
       { label: "Rate coverage", value: "Not supplied", detail: "No coverage date", detail_variant: :warning }

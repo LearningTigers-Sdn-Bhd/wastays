@@ -14,7 +14,7 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
 
   describe "GET /h/:hotel_slug/concierge/requests/new" do
     it "renders the lookup form" do
-      get concierge_new_request_path(hotel.slug)
+      get concierge_new_request_path(hotel)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Confirmation Code")
     end
@@ -22,12 +22,12 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
 
   describe "POST /h/:hotel_slug/concierge/requests" do
     it "redirects to submit stage after confirmation lookup" do
-      post concierge_requests_path(hotel.slug), params: {
+      post concierge_requests_path(hotel), params: {
         confirmation_token: booking.confirmation_token,
         stage: "lookup"
       }
 
-      expect(response).to redirect_to(concierge_new_request_path(hotel.slug, stage: "submit"))
+      expect(response).to redirect_to(concierge_new_request_path(hotel, stage: "submit"))
 
       follow_redirect!
       expect(response).to have_http_status(:ok)
@@ -37,20 +37,20 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
 
     it "creates a housekeeping request and shows success on submit stage" do
       expect {
-        post concierge_requests_path(hotel.slug), params: {
+        post concierge_requests_path(hotel), params: {
           confirmation_token: booking.confirmation_token,
           stage: "submit",
           kind: "housekeeping",
           details: "Please bring extra towels"
         }
       }.to change(HousekeepingRequest, :count).by(1)
-      expect(response).to redirect_to(concierge_request_success_path(hotel.slug))
+      expect(response).to redirect_to(concierge_request_success_path(hotel))
     end
 
     it "blocks lookup stage for completed booking" do
       completed = create(:booking, hotel: hotel, guest_name: "Ahmad Zulkifli", status: "completed")
 
-      post concierge_requests_path(hotel.slug), params: {
+      post concierge_requests_path(hotel), params: {
         confirmation_token: completed.confirmation_token,
         stage: "lookup"
       }
@@ -61,7 +61,7 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
 
     it "creates a complaint request" do
       expect {
-        post concierge_requests_path(hotel.slug), params: {
+        post concierge_requests_path(hotel), params: {
           confirmation_token: booking.confirmation_token,
           stage: "submit",
           kind: "complaint",
@@ -71,7 +71,7 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
     end
 
     it "tags the request with concierge_page source" do
-      post concierge_requests_path(hotel.slug), params: {
+      post concierge_requests_path(hotel), params: {
         confirmation_token: booking.confirmation_token,
         stage: "submit",
         kind: "housekeeping",
@@ -81,7 +81,7 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
     end
 
     it "fails when details are blank" do
-      post concierge_requests_path(hotel.slug), params: {
+      post concierge_requests_path(hotel), params: {
         confirmation_token: booking.confirmation_token,
         stage: "submit",
         kind: "housekeeping",
@@ -91,7 +91,7 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
     end
 
     it "re-renders the form when no booking can be resolved" do
-      post concierge_requests_path(hotel.slug), params: {
+      post concierge_requests_path(hotel), params: {
         kind: "housekeeping",
         stage: "submit",
         details: "Extra pillows please"
@@ -102,7 +102,7 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
     end
 
     it "renders a clean success page after a successful submission" do
-      post concierge_requests_path(hotel.slug), params: {
+      post concierge_requests_path(hotel), params: {
         confirmation_token: booking.confirmation_token,
         stage: "submit",
         kind: "housekeeping",

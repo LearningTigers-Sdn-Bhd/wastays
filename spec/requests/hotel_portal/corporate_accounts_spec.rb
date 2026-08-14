@@ -237,7 +237,7 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
   end
 
   it "does not expose the legacy corporate accounts path" do
-    get "/hotel/#{hotel.slug}/corporate-accounts"
+    get "/hotel/#{hotel.to_param}/corporate-accounts"
 
     expect(response).to have_http_status(:not_found)
   end

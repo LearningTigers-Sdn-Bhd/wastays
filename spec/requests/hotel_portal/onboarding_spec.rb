@@ -31,7 +31,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     get hotel_onboarding_path(hotel)
 
     expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "property_profile"))
-    expect(hotel.onboarding_sections.count).to eq(13)
+    expect(hotel.onboarding_sections.count).to eq(14)
   end
 
   it "renders the dedicated shell with accessible phase navigation" do
@@ -45,6 +45,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(document.at_css("section[aria-label='Identity and guest details']")).to be_present
     expect(document.css("h2").map { |heading| heading.text.strip }).not_to include("Identity and guest details")
     expect(response.body).not_to include("The legal account was created by WAStays")
+    expect(document.at_css("input[name='hotel[fixed_line_number]']")&.[]("placeholder")).to eq("e.g., 088-234 567")
     expect(response.body).to include("Save draft")
     expect(response.body).not_to include("Open navigation")
   end
@@ -76,27 +77,32 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("in_progress")
   end
 
+  # The value has to clear three separate permit lists on this path — the save
+  # service, the profile form it delegates to, and the controller's re-render list
+  # — so it is worth asserting it actually lands.
+  it "stores normalized business registration numbers without gating completion" do
+    patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
+          params: { navigation_action: "save_draft", hotel: property_params.merge(tin: " c1234567890 ", ssm_number: "202301012345") }
+
+    expect(hotel.reload.tin).to eq("C1234567890")
+    expect(hotel.ssm_number).to eq("202301012345")
+    expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("in_progress")
+  end
+
   it "requires the property completion contract before advancing" do
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
           params: {
             navigation_action: "save_continue",
-            hotel: property_params,
+            hotel: property_params.except(:contact_email),
             property_policy: { check_in_time: "15:00", check_out_time: "11:00" }
           }
 
     expect(response).to have_http_status(:unprocessable_content)
-    expect(response.body).to include("Featured photo")
+    expect(response.body).to include("Contact email")
     expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("not_started")
   end
 
   it "saves a complete property profile and advances without placeholder metadata" do
-    hotel.photos.attach(
-      io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")),
-      filename: "property.jpg",
-      content_type: "image/jpeg"
-    )
-    hotel.update!(featured_photo_attachment_id: hotel.photos.attachments.last.id)
-
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
           params: {
             navigation_action: "save_continue",
@@ -104,14 +110,87 @@ RSpec.describe "Hotel onboarding shell", type: :request do
             property_policy: { check_in_time: "15:00", check_out_time: "11:00" }
           }
 
-    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "roles_permissions"))
+    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "property_photos"))
     section = hotel.onboarding_sections.find_by!(section_key: "property_profile")
     expect(section).to have_attributes(state: "complete", decision_metadata: include("source" => "property_profile"))
     expect(section.decision_metadata).not_to have_key("placeholder")
   end
 
+  describe "the property photos step" do
+    before { hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete") }
+
+    # Both real upload paths — the profile form and the onboarding upload queue —
+    # attach through this method, which is where a first photo becomes featured.
+    def attach_photo(filename = "property.jpg")
+      blob = ActiveStorage::Blob.create_and_upload!(
+        io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")),
+        filename: filename,
+        content_type: "image/jpeg"
+      )
+      hotel.attach_photos_with_limit([ blob ])
+    end
+
+    it "opens on an empty state that carries the upload action alone" do
+      get hotel_onboarding_section_path(hotel, section_key: "property_photos")
+
+      document = response.parsed_body
+      expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Property photos" ])
+      expect(document.at_css(".panel-empty-state__title").text.squish).to eq("No photos yet")
+      # The step heading is the shell's, and the empty state owns the only
+      # upload button on the page while the album is empty.
+      expect(document.css("h2").map { |heading| heading.text.strip }).not_to include("Property photos")
+      expect(document.css("button[commandfor='hotel-photo-upload-sheet']").size).to eq(1)
+    end
+
+    it "will not advance until the property has a photo" do
+      patch hotel_onboarding_section_path(hotel, section_key: "property_photos"),
+            params: { navigation_action: "save_continue" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Upload at least one photo")
+      expect(hotel.onboarding_sections.find_by!(section_key: "property_photos").state).to eq("not_started")
+    end
+
+    # The owner is never asked to nominate a featured photo, so one photo has to
+    # be enough on its own to satisfy the step.
+    it "advances on a single photo, which features itself" do
+      attach_photo
+
+      patch hotel_onboarding_section_path(hotel, section_key: "property_photos"),
+            params: { navigation_action: "save_continue" }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "roles_permissions"))
+      expect(hotel.reload.featured_photo_attachment_id).to eq(hotel.photos.attachments.sole.id)
+      expect(hotel.onboarding_sections.find_by!(section_key: "property_photos"))
+        .to have_attributes(state: "complete", decision_metadata: include("source" => "property_photos"))
+    end
+
+    it "keeps a featured photo when the featured one is removed" do
+      attach_photo("first.jpg")
+      attach_photo("second.jpg")
+      first, second = hotel.photos.attachments.order(:id).to_a
+      expect(hotel.reload.featured_photo_attachment_id).to eq(first.id)
+
+      delete hotel_profile_photo_path(hotel, first.id, return_to: "onboarding")
+
+      expect(hotel.reload.featured_photo_attachment_id).to eq(second.id)
+      expect(hotel).to be_property_photos_ready
+    end
+
+    it "leaves no featured photo once the last one is removed" do
+      attach_photo
+      photo = hotel.photos.attachments.sole
+
+      delete hotel_profile_photo_path(hotel, photo.id, return_to: "onboarding")
+
+      expect(hotel.reload.featured_photo_attachment_id).to be_nil
+      expect(hotel).not_to be_property_photos_ready
+    end
+  end
+
   it "shows and confirms the four seeded role presets regardless of plan feature access" do
     hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
+    hotel.onboarding_sections.create!(section_key: "property_photos", state: "complete")
 
     get hotel_onboarding_section_path(hotel, section_key: "roles_permissions")
     expect(response).to have_http_status(:ok)
@@ -246,7 +325,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   describe "finance phase" do
     def resolve_team_phase!
       Onboarding::InitializeProgress.new(hotel: hotel).call
-      %w[property_profile roles_permissions staff_setup].each do |key|
+      %w[property_profile property_photos roles_permissions staff_setup].each do |key|
         hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
       end
     end
@@ -263,6 +342,48 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Taxes and fees" ])
       expect(document.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
         .to eq([ "Taxes required by law", "Property taxes and fees" ])
+
+      layout = document.at_css("#onboarding-taxes-fees-form > div")
+      expect(layout["class"].split).to include("space-y-6")
+      expect(layout.element_children.map(&:name)).to eq(%w[section section])
+
+      sst_fields = document.at_css("#onboarding-sst-fields")
+      expect(sst_fields["class"].split).to include("flex", "lg:flex-row", "lg:flex-wrap", "lg:justify-start")
+      expect(sst_fields["class"].split).not_to include("grid", "lg:grid-cols-2")
+      expect(sst_fields.element_children.size).to eq(2)
+      expect(sst_fields.element_children.first["class"].split).to include("flex", "items-start", "justify-start")
+      expect(sst_fields.element_children.first.at_xpath(".//input[@name='hotel[sst_enabled]']")).to be_present
+      expect(sst_fields.element_children[1].at_xpath(".//input[@name='hotel[sst_registration_number]']")).to be_present
+
+      tourism_tax_fields = document.at_css("#onboarding-tourism-tax-fields")
+      expect(tourism_tax_fields["class"].split).to include("flex", "lg:flex-row", "lg:flex-wrap", "lg:justify-start")
+      expect(tourism_tax_fields["class"].split).not_to include("grid", "lg:grid-cols-3")
+      expect(tourism_tax_fields.element_children.size).to eq(3)
+      expect(tourism_tax_fields.element_children[0]["class"].split).to include("flex", "items-start", "justify-start")
+      expect(tourism_tax_fields.element_children[0].at_xpath(".//input[@name='hotel[tourism_tax_enabled]']")).to be_present
+      expect(tourism_tax_fields.element_children[1].at_xpath(".//input[@name='hotel[tourism_tax_registration_number]']")).to be_present
+      expect(tourism_tax_fields.element_children[2].at_xpath(".//input[@name='hotel[tourism_tax_amount]']")).to be_present
+
+      table = document.at_css("section[aria-labelledby='onboarding-property-taxes-heading'] table")
+      expect(table.css("thead th").map { |header| header.text.squish })
+        .to eq([ "Remove", "Name*", "Tax number", "Type", "Amount*", "Foreign guests only" ])
+    end
+
+    it "shows property tax numbers in the read-only table" do
+      create(:hotel_tax, hotel: hotel, name: "DBKK levy", registration_number: "DBKK/2026/00123")
+      create(:hotel_tax, hotel: hotel, name: "Heritage fee", charge_type: "charge", registration_number: nil)
+      hotel.update!(status: "pending_review")
+
+      get hotel_onboarding_section_path(hotel, section_key: "taxes_fees")
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      expect(document.at_css("#onboarding-taxes-fees-form")).to be_nil
+      table = document.at_css("section[aria-labelledby='onboarding-property-taxes-heading'] table")
+      expect(table.css("thead th").map { |header| header.text.squish })
+        .to eq([ "Name", "Tax number", "Type", "Amount" ])
+      expect(table.css("tbody tr").map { |row| row.css("td")[1].text.strip })
+        .to eq([ "DBKK/2026/00123", "—" ])
     end
 
     it "refuses to complete taxes without the confirmation" do
@@ -280,12 +401,39 @@ RSpec.describe "Hotel onboarding shell", type: :request do
               navigation_action: "save_continue",
               confirm_taxes: "1",
               hotel: { sst_enabled: "1", tourism_tax_enabled: "0", tourism_tax_amount: "10.0" },
-              tax_entries: { "0" => { name: "Heritage levy", charge_type: "charge", rate_type: "flat", amount: "5.00", enabled: "1" } }
+              tax_entries: {
+                "0" => {
+                  name: "Heritage levy", registration_number: " council-2026-001 ", charge_type: "charge",
+                  rate_type: "flat", amount: "5.00", enabled: "1"
+                }
+              }
             }
 
       expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "room_revenue"))
       expect(hotel.onboarding_sections.find_by!(section_key: "taxes_fees").state).to eq("complete")
-      expect(hotel.hotel_taxes.pluck(:name)).to eq([ "Heritage levy" ])
+      expect(hotel.hotel_taxes.sole).to have_attributes(name: "Heritage levy", registration_number: "COUNCIL-2026-001")
+
+      get hotel_onboarding_section_path(hotel, section_key: "taxes_fees")
+      expect(response.parsed_body.at_css("input[name='tax_entries[0][registration_number]']")["value"])
+        .to eq("COUNCIL-2026-001")
+    end
+
+    it "stores the statutory tax numbers and leaves an omitted one alone" do
+      patch hotel_onboarding_section_path(hotel, section_key: "taxes_fees"),
+            params: {
+              navigation_action: "save_draft",
+              hotel: { sst_enabled: "1", tourism_tax_enabled: "1", tourism_tax_amount: "10.0",
+                       sst_registration_number: " w10-1808-31000000 ", tourism_tax_registration_number: "ttx-99887766" }
+            }
+
+      expect(hotel.reload.sst_registration_number).to eq("W10-1808-31000000")
+      expect(hotel.tourism_tax_registration_number).to eq("TTX-99887766")
+
+      patch hotel_onboarding_section_path(hotel, section_key: "taxes_fees"),
+            params: { navigation_action: "save_draft", hotel: { sst_enabled: "1", tourism_tax_enabled: "1", tourism_tax_amount: "12.0" } }
+
+      expect(hotel.reload.sst_registration_number).to eq("W10-1808-31000000")
+      expect(hotel.tourism_tax_registration_number).to eq("TTX-99887766")
     end
 
     it "locks room revenue until taxes are resolved" do
@@ -351,7 +499,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   describe "rooms phase" do
     def resolve_finance_phase!
       Onboarding::InitializeProgress.new(hotel: hotel).call
-      %w[property_profile roles_permissions staff_setup taxes_fees room_revenue].each do |key|
+      %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue].each do |key|
         hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
       end
     end

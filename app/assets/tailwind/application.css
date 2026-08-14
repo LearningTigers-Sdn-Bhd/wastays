@@ -53,6 +53,7 @@
 @import "./panel/sidebar.css";
 @import "./panel/navbar.css";
 @import "./panel/step-bar.css";
+@import "./panel/empty-state.css";
 @import "./panel/record-table.css";
 @import "./observation_deck.css";
 

@@ -35,7 +35,11 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(document.css(".panel-form-field .panel-multi-select")).not_to be_empty
       expect(document.css(".panel-dropzone")).not_to be_empty
       expect(document.at_css("button[command='show-modal'][commandfor='hotel-photo-upload-sheet']").text.squish).to eq("Upload Photos")
-      expect(document.at_css("#hotel-published-photos.min-h-40 p.min-h-40").text.squish).to include("No published photos yet")
+      empty_album = document.at_css("#hotel-published-photos .panel-empty-state")
+      expect(empty_album.at_css(".panel-empty-state__title").text.squish).to eq("No photos yet")
+      # The state offers the upload itself rather than pointing at the section header.
+      expect(empty_album.at_css("button[command='show-modal'][commandfor='hotel-photo-upload-sheet']").text.squish)
+        .to eq("Upload photos")
       upload_sheet = document.at_css("dialog#hotel-photo-upload-sheet[data-panels-ui-sheet-side='right']")
       expect(upload_sheet.at_css("h2").text.squish).to eq("Upload Photos")
       expect(upload_sheet.at_css("footer").text.squish).to include("Discard All", "Confirm Upload")
@@ -64,6 +68,26 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(hotel.description).to eq('A peaceful city retreat with locally inspired hospitality.')
       expect(hotel.star_rating).to eq(5)
       expect(hotel.google_map_link).to eq('https://www.google.com/maps/place/Updated+Hotel')
+    end
+
+    it 'updates the contact numbers guests call, including the front desk landline' do
+      patch hotel_profile_path(hotel), params: {
+        hotel: { contact_phone: '012-8273581', fixed_line_number: '03-2144 1234' }
+      }
+
+      hotel.reload
+      expect(hotel.contact_phone).to eq('012-8273581')
+      expect(hotel.fixed_line_number).to eq('03-2144 1234')
+    end
+
+    it 'stores normalized business registration numbers' do
+      patch hotel_profile_path(hotel), params: {
+        hotel: { tin: ' c1234567890 ', ssm_number: '202301012345 (1234567-a)' }
+      }
+
+      hotel.reload
+      expect(hotel.tin).to eq('C1234567890')
+      expect(hotel.ssm_number).to eq('202301012345 (1234567-A)')
     end
 
     it "redirects Turbo submissions to an HTML page with a success toast" do

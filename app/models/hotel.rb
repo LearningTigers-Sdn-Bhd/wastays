@@ -109,6 +109,9 @@ class Hotel < ApplicationRecord
 
 
   validates :name, presence: true
+  validates :unique_id, presence: true, uniqueness: { case_sensitive: false }
+  validate :unique_id_is_immutable, on: :update, if: :will_save_change_to_unique_id?
+  before_validation :assign_unique_id, on: :create
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
                            length: { in: 3..6 },
                            format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
@@ -118,6 +121,7 @@ class Hotel < ApplicationRecord
 
   before_validation :normalize_default_currency
   before_validation :normalize_hotel_prefix
+  before_validation :normalize_registration_numbers
   before_validation :assign_hotel_prefix, on: :create
   after_save :record_hotel_prefix_history, if: :saved_change_to_hotel_prefix?
   validates :slug, presence: true, uniqueness: true
@@ -189,7 +193,7 @@ class Hotel < ApplicationRecord
   scope :search, ->(query) {
     return all if query.blank?
     q = "%#{sanitize_sql_like(query.to_s.downcase)}%"
-    where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q", q: q)
+    where("LOWER(hotels.name) LIKE :q OR LOWER(hotels.city) LIKE :q OR LOWER(hotels.unique_id) LIKE :q", q: q)
   }
 
   # The onboarding lifecycle. A property is in `setup` until its owner submits it,
@@ -201,6 +205,58 @@ class Hotel < ApplicationRecord
     suspended
   ].freeze
   MAX_PHOTOS = 20
+
+  # The public identifier: a plain number, issued in order, starting here. Hotels quote
+  # it down a phone line and sort by it in spreadsheets, which is what earned it the
+  # switch from a random token. It has no fixed width — it grows past five digits.
+  UNIQUE_ID_FLOOR = 10_101
+
+  # Arbitrary but fixed: the advisory-lock key that serialises code issuance. Nothing
+  # else in the app takes it, so it never contends with anything but itself.
+  UNIQUE_ID_LOCK_KEY = 8_231_101
+
+  # The numbers a hotel quotes on its documents. The first two identify the business
+  # itself; the other two identify it to the authority behind each statutory tax.
+  REGISTRATION_NUMBER_ATTRIBUTES = %i[
+    tin
+    ssm_number
+    sst_registration_number
+    tourism_tax_registration_number
+  ].freeze
+
+  # Resolves the identifier that appears in URLs. `unique_id` is canonical; `slug` is
+  # kept as a permanent legacy read path so bookmarks and printed concierge QR codes
+  # issued before the codes existed keep resolving. There is deliberately no `id`
+  # branch: a hotel is addressed by the code it was issued, never by its row id.
+  def self.locate(key, scope: all)
+    key = key.to_s.strip
+    return nil if key.blank?
+
+    scope.find_by(unique_id: key.upcase) || scope.find_by(slug: key)
+  end
+
+  def self.locate!(key, scope: all)
+    locate(key, scope: scope) || raise(ActiveRecord::RecordNotFound, "Couldn't find Hotel with identifier #{key.inspect}")
+  end
+
+  # Codes are issued in order, so the next one is the highest already issued plus one.
+  # The advisory lock is what makes that safe when two hotels are created at once —
+  # without it both reads see the same maximum and the unique index rejects the loser.
+  # It is transaction-scoped and released on commit, and the only caller runs inside the
+  # transaction `save` opens. The regexp guard keeps the cast away from any row still
+  # holding a pre-numbering code.
+  def self.next_unique_id
+    # `execute`, not `select_value`: the lock function returns void, and asking the
+    # result for a typed value only earns an "unknown OID" warning on every create.
+    connection.execute("SELECT pg_advisory_xact_lock(#{connection.quote(UNIQUE_ID_LOCK_KEY)})")
+    highest = connection.select_value("SELECT MAX(unique_id::bigint) FROM hotels WHERE unique_id ~ '^[0-9]+$'").to_i
+
+    [ highest, UNIQUE_ID_FLOOR - 1 ].max.succ.to_s
+  end
+
+  def to_param
+    unique_id
+  end
 
   PhotoUploadResult = Struct.new(:attached_count, :trimmed_count, keyword_init: true) do
     def trimmed?
@@ -445,15 +501,20 @@ class Hotel < ApplicationRecord
   end
 
   def ready_for_review?
-    property_profile_ready? && rooms_ready? && inventory_ready?
+    property_profile_ready? && property_photos_ready? && rooms_ready? && inventory_ready?
   end
 
   def property_profile_ready?
     name.present? &&
       city.present? &&
       country.present? &&
-      address.present? &&
-      featured_photo_attachment_id.present?
+      address.present?
+  end
+
+  # Photos are their own setup step, so they answer for themselves. One photo is
+  # enough; it is featured automatically, so there is nothing else to check.
+  def property_photos_ready?
+    featured_photo_attachment_id.present?
   end
 
   def rooms_ready?
@@ -506,11 +567,25 @@ class Hotel < ApplicationRecord
     photos_to_attach = photo_files.first(remaining_slots)
 
     photos.attach(photos_to_attach) if photos_to_attach.any?
+    feature_first_photo
 
     PhotoUploadResult.new(
       attached_count: photos_to_attach.size,
       trimmed_count: photo_files.size - photos_to_attach.size
     )
+  end
+
+  # A property with photos always has a featured one. Nobody has to think about
+  # choosing the first one, and the setup step can ask for a photo rather than
+  # for a photo plus a separate decision about it. Picking a different featured
+  # photo later still works — this only fills a gap, it never overrides a choice.
+  def feature_first_photo
+    return if featured_photo_attachment_id.present?
+
+    first_photo = photos.attachments.order(:id).first
+    return if first_photo.blank?
+
+    update_column(:featured_photo_attachment_id, first_photo.id)
   end
 
   def payout_batches_for_reports(start_date: nil, end_date: nil)
@@ -619,12 +694,25 @@ class Hotel < ApplicationRecord
     extract_coordinate("4d", /@(?:-?\d+\.\d+),(-?\d+\.\d+)/)
   end
 
+  # Only ever on create. A slug that followed the hotel name would invalidate every
+  # link to the property each time it was renamed; `unique_id` is the canonical param
+  # now, so the slug's one remaining job is to keep old URLs alive forever.
   def should_generate_new_friendly_id?
-    name_changed? || slug.blank?
+    slug.blank?
   end
 
 
   private
+
+  def assign_unique_id
+    return if unique_id.present?
+
+    self.unique_id = self.class.next_unique_id
+  end
+
+  def unique_id_is_immutable
+    errors.add(:unique_id, "cannot be changed after the hotel is created")
+  end
 
   def hotel_prefix_has_not_been_used_by_another_hotel
     return if hotel_prefix.blank?
@@ -649,6 +737,16 @@ class Hotel < ApplicationRecord
 
   def normalize_hotel_prefix
     self.hotel_prefix = nil if hotel_prefix.blank?
+  end
+
+  # Tidied, never validated for shape. SST numbers have already changed format
+  # once and the state levies follow no convention at all, so a regex here would
+  # only lock properties out of recording a number they legitimately hold.
+  def normalize_registration_numbers
+    REGISTRATION_NUMBER_ATTRIBUTES.each do |attribute|
+      value = self[attribute].to_s.strip.upcase.gsub(/\s+/, " ")
+      self[attribute] = value.presence
+    end
   end
 
   PREFIX_MIN_LENGTH = 3

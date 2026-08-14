@@ -45,6 +45,14 @@
             <p class="text-xs text-muted-foreground">The SST rate is system-defined and cannot be changed here.</p>
           <% end %>
 
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: (@system_tax == "sst" ? :sst_registration_number : :tourism_tax_registration_number),
+                label: "Tax number",
+                hint: "The registration number issued for this tax. It appears on the property’s invoices.") do |field| %>
+            <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
+          <% end %>
+
           <%= render PanelsUI::Switch.new(
                 form: form,
                 attribute: (@system_tax == "sst" ? :sst_enabled : :tourism_tax_enabled),

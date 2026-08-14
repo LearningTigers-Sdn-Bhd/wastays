@@ -6,7 +6,7 @@ RSpec.describe "Onboarding foundation" do
   it "initializes the stable ordered journey idempotently" do
     expect {
       Onboarding::InitializeProgress.new(hotel: hotel).call
-    }.to change(HotelOnboardingSection, :count).by(13)
+    }.to change(HotelOnboardingSection, :count).by(14)
       .and change(OnboardingAuditEvent, :count).by(1)
 
     expect {

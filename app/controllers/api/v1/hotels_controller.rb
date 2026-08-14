@@ -3,7 +3,7 @@ class Api::V1::HotelsController < Api::V1::BaseController
     hotels = hotel_scope.where(status: "live")
     hotels = hotels.where("city ILIKE ?", "%#{params[:city]}%") if params[:city].present?
 
-    render json: hotels.as_json(only: [ :id, :name, :city, :country, :star_rating ])
+    render json: hotels.as_json(only: [ :id, :unique_id, :name, :city, :country, :star_rating ])
   end
 
   def show
@@ -42,6 +42,7 @@ class Api::V1::HotelsController < Api::V1::BaseController
 
     render json: {
       hotel_id: hotel.id,
+      hotel_code: hotel.unique_id,
       hotel_name: hotel.name,
       check_in: params[:check_in],
       check_out: params[:check_out],
@@ -52,7 +53,7 @@ class Api::V1::HotelsController < Api::V1::BaseController
   private
 
   def find_hotel_in_scope!(identifier)
-    hotel = hotel_scope.where(slug: identifier.to_s).first || hotel_scope.find_by(id: identifier)
+    hotel = find_api_hotel(identifier)
     return hotel if hotel
 
     render json: { error: "Forbidden: You do not have access to this hotel" }, status: :forbidden

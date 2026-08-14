@@ -22,10 +22,25 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
   describe 'GET /hotel/settings with legacy hotel_id param' do
     it 'redirects to the canonical hotel-scoped path' do
-      get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
+      get legacy_hotel_settings_path, params: { hotel_id: hotel.to_param }
       follow_redirect!
 
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
+    end
+
+    it 'canonicalises a legacy slug param onto the hotel code' do
+      get legacy_hotel_settings_path, params: { hotel_id: hotel.slug }
+      follow_redirect!
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+    end
+
+    # A row id names nothing in the portal, even though hotel codes are numbers too:
+    # the identifier is matched against codes and legacy slugs, never against ids.
+    it 'refuses a row id' do
+      get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
+
+      expect(response).to redirect_to(root_path)
     end
   end
 

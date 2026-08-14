@@ -266,7 +266,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
     it "returns available room numbers" do
       room_type.update!(quantity: 3, room_numbers: [ "101", "102", "103" ])
 
-      get "/hotel/#{hotel.id}/bookings/availability", params: {
+      get "/hotel/#{hotel.to_param}/bookings/availability", params: {
         check_in: Date.current,
         check_out: Date.current + 1.day,
         room_type_id: room_type.id
@@ -289,7 +289,7 @@ RSpec.describe "HotelPortal::ManualBookings", type: :request do
 
       old_inventory = room_type.room_inventories.find_by(date: Date.current).quantity # Should be 9
 
-      patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: {
+      patch "/hotel/#{hotel.to_param}/bookings/#{booking.id}", params: {
         booking: {
           check_in: Date.current + 1.day,
           check_out: Date.current + 2.days

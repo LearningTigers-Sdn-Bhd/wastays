@@ -20,11 +20,24 @@ RSpec.describe HotelPortal::TaxesFeesPresenter do
       rows = described_class.new(hotel: hotel, current_user: user).registry_rows
 
       expect(rows.map(&:name)).to eq([ "Service Tax (SST)", "Tourism Tax (TTx)", "Alpha Tax", "Legacy Other", "Zulu Fee" ])
-      expect(rows.first).to have_attributes(system: true, code: "TAX_SST", applies_to: "All guests", charge_rule: "Percentage", charge_amount: "8.00%", enabled: true)
-      expect(rows.second).to have_attributes(system: true, code: "TAX_TTX", applies_to: "Foreign guests only", charge_rule: "Fixed", charge_amount: "RM 12.50 / room / night", enabled: false)
-      expect(rows.third).to have_attributes(system: false, type_label: "Tax", code: "TAX_AT", charge_amount: "RM 2.00")
+      expect(rows.first).to have_attributes(system: true, code: "TAX_SST", applies_to: "All guests", rate: "8.00%", enabled: true)
+      expect(rows.second).to have_attributes(system: true, code: "TAX_TTX", applies_to: "Foreign guests only", rate: "RM 12.50 / room / night", enabled: false)
+      expect(rows.third).to have_attributes(system: false, type_label: "Tax", code: "TAX_AT", rate: "RM 2.00")
       expect(rows.fourth).to have_attributes(type_label: "Fee", code: "LO")
-      expect(rows.fifth).to have_attributes(type_label: "Fee", code: "ZF", applies_to: "Foreign guests only", charge_amount: "10.00%")
+      expect(rows.fifth).to have_attributes(type_label: "Fee", code: "ZF", applies_to: "Foreign guests only", rate: "10.00%")
+    end
+
+    it "carries each tax's registration number, leaving it nil when unset" do
+      hotel.update!(sst_registration_number: "W10-1808-31000000", tourism_tax_registration_number: "TTX-99887766")
+      HotelTax.create!(hotel: hotel, name: "DBKK Levy", code: "DBKK", charge_type: "tax", rate_type: "flat", amount: 3.0, registration_number: "dbkk/2026/00123")
+      HotelTax.create!(hotel: hotel, name: "Unregistered Fee", code: "UF", charge_type: "charge", rate_type: "flat", amount: 1.0)
+
+      rows = described_class.new(hotel: hotel, current_user: user).registry_rows.index_by(&:name)
+
+      expect(rows["Service Tax (SST)"].tax_number).to eq("W10-1808-31000000")
+      expect(rows["Tourism Tax (TTx)"].tax_number).to eq("TTX-99887766")
+      expect(rows["DBKK Levy"].tax_number).to eq("DBKK/2026/00123")
+      expect(rows["Unregistered Fee"].tax_number).to be_nil
     end
   end
 end

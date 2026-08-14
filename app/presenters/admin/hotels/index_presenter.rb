@@ -6,6 +6,7 @@ module Admin
       Row = Data.define(
         :hotel,
         :name,
+        :unique_id,
         :city,
         :status_label,
         :status_variant,
@@ -76,6 +77,7 @@ module Admin
           Row.new(
             hotel: hotel,
             name: hotel.name,
+            unique_id: hotel.unique_id,
             city: hotel.city.presence || "City not set",
             status_label: status_label,
             status_variant: status_variant,

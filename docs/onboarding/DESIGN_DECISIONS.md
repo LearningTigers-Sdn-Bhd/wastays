@@ -60,7 +60,7 @@ It does not expose normal hotel operations or the hotel portal sidebar.
 
 ## Information architecture
 
-Thirteen pages are too many for a single horizontal stepper. Present six phases:
+Fourteen pages are too many for a single horizontal stepper. Present six phases:
 
 1. Property
 2. Team
@@ -315,6 +315,23 @@ asking twice.
 Extra charges and discounts still open prefilled with the seeded codes as
 unsaved suggestions. That is what makes an emptied table deliberate — the owner
 had to clear each row — rather than the state a page happens to load in.
+
+## Property profile and property photos
+
+The Property phase is two steps, not one. Everything on the profile step is
+saved by one form when the owner presses `Save & continue`; photos are not —
+they upload as soon as they are chosen. Holding both on one page meant a step
+with two different save contracts, and a completion error ("add a featured
+photo") that named something no field on the form controlled.
+
+Photos are required: a property cannot be reviewed without one. One is enough,
+and the first photo uploaded becomes the featured photo automatically, so the
+step asks for a photo rather than for a photo plus a decision about it. Removing
+the featured photo promotes the next one rather than leaving the property with
+photos but no featured photo, and the owner can still nominate a different one
+whenever they like. The rule lives in `Hotel#attach_photos_with_limit`, which
+both upload paths — the profile form and the onboarding upload queue — run
+through.
 
 ## Errors, warnings, and readiness
 

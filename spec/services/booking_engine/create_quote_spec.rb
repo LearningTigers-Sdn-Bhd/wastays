@@ -22,7 +22,7 @@ RSpec.describe BookingEngine::CreateQuote do
   end
 
   describe "#call" do
-    let(:params) { { hotel_id: hotel.id, room_type_id: room_type.id, check_in: check_in, check_out: check_out, adults: 2 } }
+    let(:params) { { hotel_id: hotel.to_param, room_type_id: room_type.id, check_in: check_in, check_out: check_out, adults: 2 } }
 
     it "creates a quote and holds inventory" do
       service = described_class.new(params)
@@ -82,7 +82,7 @@ RSpec.describe BookingEngine::CreateQuote do
 
     it "fails with clear error when dates are missing" do
       service = described_class.new(
-        hotel_id: hotel.id,
+        hotel_id: hotel.to_param,
         room_type_id: room_type.id,
         check_in: "",
         check_out: "",
@@ -186,7 +186,7 @@ RSpec.describe BookingEngine::CreateQuote do
         # Room 2: 30 * 1 + 15 = 45/night.
         # Total nightly = 105. For 2 nights = 210.
         service = described_class.new(
-          hotel_id: hotel.id,
+          hotel_id: hotel.to_param,
           allocations: [ { room_type_id: room_type.id, quantity: 2 } ],
           check_in: check_in,
           check_out: check_out,
@@ -206,7 +206,7 @@ RSpec.describe BookingEngine::CreateQuote do
       it "fails if there are not enough adults to supervise each room (at least 1 adult per room)" do
         # Requests 2 rooms, but only 1 adult is provided
         service = described_class.new(
-          hotel_id: hotel.id,
+          hotel_id: hotel.to_param,
           allocations: [ { room_type_id: room_type.id, quantity: 2 } ],
           check_in: check_in,
           check_out: check_out,
@@ -222,7 +222,7 @@ RSpec.describe BookingEngine::CreateQuote do
       it "respects explicit room count for flexible guest layouts (e.g. 3 guests in 3 rooms)" do
         # 3 adults requesting room_count: 3. Should distribute as [1, 1, 1] instead of [2, 1]
         service = described_class.new(
-          hotel_id: hotel.id,
+          hotel_id: hotel.to_param,
           allocations: [ { room_type_id: room_type.id, quantity: 3 } ],
           check_in: check_in,
           check_out: check_out,
@@ -259,7 +259,7 @@ RSpec.describe BookingEngine::CreateQuote do
       it "freezes the resolved age -> band -> multiplier mapping into occupancy_snapshot at quote time" do
         # 2 adults @ 50 + 1 child(6) @ 50*0.4 + 1 child(15) @ 50*0.2 = 100 + 20 + 10 = 130/night, 2 nights = 260
         service = described_class.new(
-          hotel_id: hotel.id,
+          hotel_id: hotel.to_param,
           allocations: [ { room_type_id: family_room.id, quantity: 1 } ],
           check_in: check_in,
           check_out: check_out,
@@ -302,7 +302,7 @@ RSpec.describe BookingEngine::CreateQuote do
         standard_assignment.age_band_prices.create!(rate_plan_age_band: teen_band, price: 45)
 
         result = described_class.new(
-          hotel_id: hotel.id,
+          hotel_id: hotel.to_param,
           allocations: [ { room_type_id: family_room.id, quantity: 1 } ],
           check_in: check_in,
           check_out: check_out,
@@ -322,7 +322,7 @@ RSpec.describe BookingEngine::CreateQuote do
 
       it "falls back to the flat child_price_multiplier and empty child_ages when no ages are supplied" do
         service = described_class.new(
-          hotel_id: hotel.id,
+          hotel_id: hotel.to_param,
           allocations: [ { room_type_id: family_room.id, quantity: 1 } ],
           check_in: check_in,
           check_out: check_out,

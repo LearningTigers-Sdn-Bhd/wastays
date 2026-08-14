@@ -9,7 +9,7 @@ RSpec.describe Onboarding::SaveRatesAvailability do
 
   def complete_prerequisites(target, target_actor)
     Onboarding::InitializeProgress.new(hotel: target, actor: target_actor).call
-    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
+    %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
       target.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
   end
