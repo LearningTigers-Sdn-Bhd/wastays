@@ -96,4 +96,53 @@ RSpec.describe "Onboarding foundation" do
     expect(hotel.reload.status).to eq("pending_review")
     expect(hotel.onboarding_audit_events.last.event_type).to eq("submitted")
   end
+
+
+  it "moves an approved hotel through the launch-decision lifecycle" do
+    actor = create(:user, account: hotel.account)
+    hotel.update_column(:status, "pending_review")
+    allow(Onboarding::Readiness).to receive(:new).with(hotel: hotel)
+      .and_return(instance_double(Onboarding::Readiness, call: Onboarding::Readiness::Result.new(ready: true, blocking_issues: [], warnings: [])))
+
+    approved = Onboarding::TransitionLifecycle.new(hotel:, to: "ready_to_launch").call
+    create(
+      :onboarding_submission,
+      hotel:,
+      status: "approved",
+      submitted_by: actor,
+      reviewed_by: actor,
+      reviewed_at: Time.current
+    )
+    hotel.update!(
+      training_data_decision: "keep",
+      training_completed_at: Time.current,
+      training_completed_by: actor
+    )
+    launched = Onboarding::TransitionLifecycle.new(hotel:, to: "live").call
+
+    expect(approved).to be_success
+    expect(launched).to be_success
+    expect(hotel.reload.status).to eq("live")
+    expect(hotel.onboarding_audit_events.order(:id).last(2).map(&:event_type)).to eq(%w[approved launched])
+  end
+
+  it "does not launch from ready-to-launch without a persisted owner decision" do
+    hotel.update_column(:status, "ready_to_launch")
+
+    result = Onboarding::TransitionLifecycle.new(hotel:, to: "live").call
+
+    expect(result).not_to be_success
+    expect(result.error).to include("launch decision")
+    expect(hotel.reload.status).to eq("ready_to_launch")
+  end
+
+
+  it "does not allow review approval to skip the launch decision" do
+    hotel.update_column(:status, "pending_review")
+
+    result = Onboarding::TransitionLifecycle.new(hotel:, to: "live").call
+
+    expect(result).not_to be_success
+    expect(hotel.reload.status).to eq("pending_review")
+  end
 end

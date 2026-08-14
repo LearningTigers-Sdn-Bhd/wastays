@@ -12,6 +12,7 @@ class HotelsSummaryQuery
       total: counts.values.sum,
       setup: HotelsQuery::STATUS_FILTERS.fetch("setup").sum { |status| counts.fetch(status, 0) },
       pending_review: counts.fetch("pending_review", 0),
+      ready_to_launch: counts.fetch("ready_to_launch", 0),
       active: HotelsQuery::STATUS_FILTERS.fetch("active").sum { |status| counts.fetch(status, 0) },
       suspended: counts.fetch("suspended", 0)
     }

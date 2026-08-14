@@ -8,9 +8,9 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
       return
     end
 
-    # The onboarding review section already says the property is with WAStays, and says
-    # it against the submitted setup. A second page repeating that was a dead end.
-    if @current_hotel.status.in?(%w[setup pending_review])
+    # Setup still belongs to the sequential onboarding flow. Once submitted, the
+    # dashboard becomes the hotel's training workspace while review continues.
+    if @current_hotel.status == "setup"
       redirect_to non_live_hotel_destination and return
     end
 

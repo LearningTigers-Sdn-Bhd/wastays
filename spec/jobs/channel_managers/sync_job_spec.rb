@@ -43,4 +43,12 @@ RSpec.describe ChannelManagers::SyncJob, type: :job do
       expect { perform }.not_to raise_error
     end
   end
+
+  it "does not contact the adapter while the property is in training" do
+    hotel.update!(status: "ready_to_launch", training_started_at: Time.current)
+
+    perform
+
+    expect(ChannelManagers::SyncOrchestrator).not_to have_received(:adapter_for)
+  end
 end

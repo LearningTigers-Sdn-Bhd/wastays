@@ -13,8 +13,8 @@ module HotelPortal
       )
 
       if result.success?
-        redirect_to hotel_onboarding_section_path(current_hotel, section_key: "review"),
-                    notice: "Property setup submitted for review."
+        redirect_to hotel_dashboard_path(current_hotel),
+                    notice: "Property setup submitted. You can continue using the PMS while WAStays reviews it."
       else
         redirect_to hotel_onboarding_section_path(current_hotel, section_key: "review"), alert: result.error
       end

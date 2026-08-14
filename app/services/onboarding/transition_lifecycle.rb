@@ -5,14 +5,16 @@ module Onboarding
     Result = ApplicationResult.define(:hotel)
     TRANSITIONS = {
       "setup" => %w[pending_review],
-      "pending_review" => %w[setup live],
+      "pending_review" => %w[setup ready_to_launch],
+      "ready_to_launch" => %w[live],
       "live" => %w[suspended],
       "suspended" => %w[live]
     }.freeze
     EVENTS = {
       [ "setup", "pending_review" ] => "submitted",
       [ "pending_review", "setup" ] => "changes_requested",
-      [ "pending_review", "live" ] => "approved",
+      [ "pending_review", "ready_to_launch" ] => "approved",
+      [ "ready_to_launch", "live" ] => "launched",
       [ "live", "suspended" ] => "suspended",
       [ "suspended", "live" ] => "reactivated"
     }.freeze
@@ -32,8 +34,13 @@ module Onboarding
           result = Result.failure("Hotel cannot transition from #{from} to #{@to}.", hotel: @hotel)
           next
         end
+        if from == "ready_to_launch" && @to == "live" && !launch_decision_recorded?
+          result = Result.failure("Hotel cannot launch until the owner completes the launch decision.", hotel: @hotel)
+          next
+        end
         if readiness_required?(from) && !Readiness.new(hotel: @hotel).call.ready
-          result = Result.failure("Hotel onboarding is not ready for #{@to == 'live' ? 'approval' : 'submission'}.", hotel: @hotel)
+          destination = @to == "ready_to_launch" ? "approval" : (@to == "live" ? "launch" : "submission")
+          result = Result.failure("Hotel onboarding is not ready for #{destination}.", hotel: @hotel)
           next
         end
 
@@ -55,7 +62,16 @@ module Onboarding
     private
 
     def readiness_required?(from)
-      (from == "setup" && @to == "pending_review") || (from == "pending_review" && @to == "live")
+      (from == "setup" && @to == "pending_review") ||
+        (from == "pending_review" && @to == "ready_to_launch") ||
+        (from == "ready_to_launch" && @to == "live")
+    end
+
+    def launch_decision_recorded?
+      @hotel.training_data_decision.in?(%w[keep reset]) &&
+        @hotel.training_completed_at.present? &&
+        @hotel.training_completed_by_id.present? &&
+        @hotel.onboarding_submissions.where(status: "approved").exists?
     end
   end
 end

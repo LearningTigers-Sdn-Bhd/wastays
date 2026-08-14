@@ -125,6 +125,7 @@ RSpec.describe "Hotel onboarding review page", type: :request do
     expect(document.css("article.panel-metric-card").map { |card| card.text.squish })
       .to include(match(/Sent\s+1\s+Invitations/), match(/Failed\s+0\s+Invitations/))
     expect(document.css("a").any? { |link| link.text.strip == "View" }).to be(true)
+    expect(document.at_css("a[href='#{hotel_dashboard_path(hotel)}']").text.squish).to eq("Open PMS")
     expect(document.at_css("footer[data-slot='setup-actions']")).to be_nil
     expect(document.at_css("#onboarding-submission-form")).to be_nil
   end

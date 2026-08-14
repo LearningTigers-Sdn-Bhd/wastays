@@ -285,6 +285,11 @@ Rails.application.routes.draw do
   get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings
   get "/hotel/:hotel_id/settings/property/hotel-details", to: "hotel_portal/profiles#edit", as: :edit_hotel_profile
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
+    resource :training_decision, only: [] do
+      post :keep
+      post :reset
+    end
+
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
     get "onboarding", to: "onboarding#index", as: :onboarding
     get "onboarding/:section_key", to: "onboarding#show", as: :onboarding_section

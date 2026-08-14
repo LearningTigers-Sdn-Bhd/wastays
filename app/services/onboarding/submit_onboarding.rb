@@ -68,6 +68,8 @@ module Onboarding
           raise ActiveRecord::Rollback
         end
 
+        @hotel.update!(training_started_at: Time.current)
+
         CreateDeliveries.for_submission(submission)
       end
 

@@ -26,6 +26,10 @@ module Folios
       end
 
       def call!
+        if @folio.hotel.training_mode?
+          raise ArgumentError, "Final invoices are unavailable while this property is in training."
+        end
+
         if @settlement_method == DIRECT_BILL_SETTLEMENT
           if @folio.invoice.present? || @folio.invoice_number.present?
             raise ArgumentError, "Direct Bill folios cannot also have a folio invoice."

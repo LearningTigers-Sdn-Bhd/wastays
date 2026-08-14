@@ -4,6 +4,7 @@ RSpec.describe "Service spec coverage" do
   GROUPED_SERVICE_SPECS = {
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
+    "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/confirm_role_presets" => "onboarding/property_and_team_spec.rb",
     "onboarding/create_deliveries" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/decide_no_additional_staff" => "onboarding/property_and_team_spec.rb",

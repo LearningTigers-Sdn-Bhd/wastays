@@ -25,6 +25,7 @@ module ChannelManagers
 
     def call
       return if room_type_ids.empty?
+      return if rate_plan.hotel.training_mode?
       return unless ChannelManagers::ConnectionState.provisioned?(rate_plan.hotel)
 
       enqueue_structure_syncs

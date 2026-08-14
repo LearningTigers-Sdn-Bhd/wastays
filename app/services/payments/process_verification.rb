@@ -14,6 +14,8 @@ module Payments
     end
 
     def call
+      return failure("Real payments are unavailable while this property is in training.") if quote.hotel.training_mode?
+
       setting = quote.hotel.effective_payment_setting(gateway)
       if setting.blank? && gateway == "cute_mock"
         setting = OpenStruct.new(gateway: "cute_mock", api_key: "mock", secret_key: "mock")

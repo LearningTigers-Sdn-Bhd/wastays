@@ -9,6 +9,10 @@ module Notifications
       return unless delivery
       return if delivery.status == "sent"
       return if stale_schedule?(delivery, expected_scheduled_for)
+      if delivery.hotel.training_mode?
+        delivery.update!(status: "skipped", failed_at: nil, error_message: "Guest messaging is unavailable while this property is in training.")
+        return
+      end
 
       adapter_for(delivery).call
       delivery.update!(status: "sent", sent_at: Time.current, failed_at: nil, error_message: nil)
