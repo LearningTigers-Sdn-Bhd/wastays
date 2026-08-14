@@ -16,7 +16,7 @@ module Onboarding
   class SaveTaxesFees
     Result = ApplicationResult.define(:section, :entries)
 
-    ENTRY_FIELDS = %w[id name charge_type rate_type amount enabled foreign_guests_only].freeze
+    ENTRY_FIELDS = %w[id name registration_number charge_type rate_type amount enabled foreign_guests_only].freeze
 
     def initialize(hotel:, actor:, params:, confirmed:, complete:)
       @hotel = hotel
@@ -151,6 +151,7 @@ module Onboarding
         {
           "id" => tax.id.to_s,
           "name" => tax.name,
+          "registration_number" => tax.registration_number,
           "charge_type" => tax.charge_type,
           "rate_type" => tax.rate_type,
           "amount" => tax.amount.to_s,
@@ -194,6 +195,7 @@ module Onboarding
 
         tax.assign_attributes(
           name: entry["name"],
+          registration_number: entry["registration_number"],
           charge_type: charge_type_for(entry, tax),
           rate_type: HotelTax::RATE_TYPES.include?(entry["rate_type"]) ? entry["rate_type"] : "flat",
           amount: entry["amount"],

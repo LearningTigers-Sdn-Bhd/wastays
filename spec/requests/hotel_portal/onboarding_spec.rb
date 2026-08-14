@@ -342,6 +342,48 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Taxes and fees" ])
       expect(document.css("div.overflow-y-auto h2").map { |heading| heading.text.strip })
         .to eq([ "Taxes required by law", "Property taxes and fees" ])
+
+      layout = document.at_css("#onboarding-taxes-fees-form > div")
+      expect(layout["class"].split).to include("space-y-6")
+      expect(layout.element_children.map(&:name)).to eq(%w[section section])
+
+      sst_fields = document.at_css("#onboarding-sst-fields")
+      expect(sst_fields["class"].split).to include("flex", "lg:flex-row", "lg:flex-wrap", "lg:justify-start")
+      expect(sst_fields["class"].split).not_to include("grid", "lg:grid-cols-2")
+      expect(sst_fields.element_children.size).to eq(2)
+      expect(sst_fields.element_children.first["class"].split).to include("flex", "items-start", "justify-start")
+      expect(sst_fields.element_children.first.at_xpath(".//input[@name='hotel[sst_enabled]']")).to be_present
+      expect(sst_fields.element_children[1].at_xpath(".//input[@name='hotel[sst_registration_number]']")).to be_present
+
+      tourism_tax_fields = document.at_css("#onboarding-tourism-tax-fields")
+      expect(tourism_tax_fields["class"].split).to include("flex", "lg:flex-row", "lg:flex-wrap", "lg:justify-start")
+      expect(tourism_tax_fields["class"].split).not_to include("grid", "lg:grid-cols-3")
+      expect(tourism_tax_fields.element_children.size).to eq(3)
+      expect(tourism_tax_fields.element_children[0]["class"].split).to include("flex", "items-start", "justify-start")
+      expect(tourism_tax_fields.element_children[0].at_xpath(".//input[@name='hotel[tourism_tax_enabled]']")).to be_present
+      expect(tourism_tax_fields.element_children[1].at_xpath(".//input[@name='hotel[tourism_tax_registration_number]']")).to be_present
+      expect(tourism_tax_fields.element_children[2].at_xpath(".//input[@name='hotel[tourism_tax_amount]']")).to be_present
+
+      table = document.at_css("section[aria-labelledby='onboarding-property-taxes-heading'] table")
+      expect(table.css("thead th").map { |header| header.text.squish })
+        .to eq([ "Remove", "Name*", "Tax number", "Type", "Amount*", "Foreign guests only" ])
+    end
+
+    it "shows property tax numbers in the read-only table" do
+      create(:hotel_tax, hotel: hotel, name: "DBKK levy", registration_number: "DBKK/2026/00123")
+      create(:hotel_tax, hotel: hotel, name: "Heritage fee", charge_type: "charge", registration_number: nil)
+      hotel.update!(status: "pending_review")
+
+      get hotel_onboarding_section_path(hotel, section_key: "taxes_fees")
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      expect(document.at_css("#onboarding-taxes-fees-form")).to be_nil
+      table = document.at_css("section[aria-labelledby='onboarding-property-taxes-heading'] table")
+      expect(table.css("thead th").map { |header| header.text.squish })
+        .to eq([ "Name", "Tax number", "Type", "Amount" ])
+      expect(table.css("tbody tr").map { |row| row.css("td")[1].text.strip })
+        .to eq([ "DBKK/2026/00123", "—" ])
     end
 
     it "refuses to complete taxes without the confirmation" do
@@ -359,12 +401,21 @@ RSpec.describe "Hotel onboarding shell", type: :request do
               navigation_action: "save_continue",
               confirm_taxes: "1",
               hotel: { sst_enabled: "1", tourism_tax_enabled: "0", tourism_tax_amount: "10.0" },
-              tax_entries: { "0" => { name: "Heritage levy", charge_type: "charge", rate_type: "flat", amount: "5.00", enabled: "1" } }
+              tax_entries: {
+                "0" => {
+                  name: "Heritage levy", registration_number: " council-2026-001 ", charge_type: "charge",
+                  rate_type: "flat", amount: "5.00", enabled: "1"
+                }
+              }
             }
 
       expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "room_revenue"))
       expect(hotel.onboarding_sections.find_by!(section_key: "taxes_fees").state).to eq("complete")
-      expect(hotel.hotel_taxes.pluck(:name)).to eq([ "Heritage levy" ])
+      expect(hotel.hotel_taxes.sole).to have_attributes(name: "Heritage levy", registration_number: "COUNCIL-2026-001")
+
+      get hotel_onboarding_section_path(hotel, section_key: "taxes_fees")
+      expect(response.parsed_body.at_css("input[name='tax_entries[0][registration_number]']")["value"])
+        .to eq("COUNCIL-2026-001")
     end
 
     it "stores the statutory tax numbers and leaves an omitted one alone" do

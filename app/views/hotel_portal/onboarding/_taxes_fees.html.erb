@@ -1,12 +1,10 @@
 <%# The shell heads the step. The taxes law requires and the property's own are
-    peer groups within it, so neither heading labels the page as a whole.
-
-    Side by side on a desktop, in thirds: the taxes law requires are two toggles
-    and a figure and take a third, while the property table is an editable grid
-    and takes the rest. Below that they stack in the order they are read. %>
+    peer groups within it, so neither heading labels the page as a whole. They
+    take the full width in one reading order; only the related fields within each
+    statutory tax form a row on larger screens. %>
 <% if presenter.read_only? %>
-  <div class="grid gap-6 lg:grid-cols-3 lg:gap-x-8">
-    <section class="space-y-3 lg:col-span-1">
+  <div class="space-y-6">
+    <section class="space-y-3">
       <div>
         <h2 class="text-base font-semibold">Taxes required by law</h2>
         <p class="mt-1 text-sm text-muted-foreground">Turn on the ones this property charges. They apply to every room night. You add them to room revenue on the next step.</p>
@@ -32,7 +30,7 @@
       </dl>
     </section>
 
-    <section aria-labelledby="onboarding-property-taxes-heading" class="space-y-3 lg:col-span-2">
+    <section aria-labelledby="onboarding-property-taxes-heading" class="space-y-3">
       <h2 id="onboarding-property-taxes-heading" class="text-base font-semibold">Property taxes and fees</h2>
       <% if @tax_entries.any? %>
         <%= render PanelsUI::Table.new(caption: "Property taxes and fees", header_style: :sentence,
@@ -40,6 +38,7 @@
           <% table.with_header do %>
             <tr>
               <th scope="col">Name</th>
+              <th scope="col">Tax number</th>
               <th scope="col">Type</th>
               <th scope="col">Amount</th>
             </tr>
@@ -48,6 +47,7 @@
             <% @tax_entries.each do |entry| %>
               <tr>
                 <td class="font-medium"><%= entry["name"] %></td>
+                <td class="font-mono text-muted-foreground"><%= entry["registration_number"].presence || "—" %></td>
                 <td class="text-muted-foreground"><%= entry["charge_type"] == "tax" ? "Tax" : "Fee" %></td>
                 <td class="tabular-nums"><%= entry["rate_type"] == "percentage" ? "#{entry['amount']}%" : "#{current_hotel.default_currency.presence || 'MYR'} #{entry['amount']}" %></td>
               </tr>
@@ -62,8 +62,8 @@
 <% else %>
   <% currency = current_hotel.default_currency.presence || "MYR" %>
   <%= form_with url: hotel_onboarding_section_path(current_hotel, section_key: "taxes_fees"), method: :patch, id: "onboarding-taxes-fees-form" do %>
-    <div class="grid gap-6 lg:grid-cols-3 lg:gap-x-8">
-      <section class="space-y-4 lg:col-span-1">
+    <div class="space-y-6">
+      <section class="space-y-4">
         <div>
           <h2 class="text-base font-semibold">Taxes required by law</h2>
           <p class="mt-1 text-sm text-muted-foreground">Turn on the ones this property charges. They apply to every room night. You add them to room revenue on the next step.</p>
@@ -71,58 +71,67 @@
 
         <%= fields_for :hotel, current_hotel do |hotel_form| %>
           <div class="space-y-4">
-            <%# Plain switches, not cards. There are two of them under a heading
-                that already groups them, so the boxes drew a second grouping
-                around the first. %>
-            <%= render PanelsUI::Switch.new(
-                  form: hotel_form,
-                  attribute: :sst_enabled,
-                  label: "Service Tax (SST)",
-                  description: "8% on room revenue. The law sets this rate, so you cannot change it here.",
-                  checked: current_hotel.sst_enabled?) %>
+            <div id="onboarding-sst-fields" class="flex flex-col items-start gap-4 lg:flex-row lg:flex-wrap lg:justify-start">
+              <%# Plain switches, not cards. The heading already groups the
+                  statutory taxes, so another boundary would duplicate it. %>
+              <div class="flex w-full items-start justify-start lg:w-auto lg:max-w-sm">
+                <%= render PanelsUI::Switch.new(
+                      form: hotel_form,
+                      attribute: :sst_enabled,
+                      label: "Service Tax (SST)",
+                      description: "8% on room revenue. The law sets this rate, so you cannot change it here.",
+                      checked: current_hotel.sst_enabled?) %>
+              </div>
 
-            <%# Always shown rather than revealed by the switch, matching the
-                tourism tax amount below: the hint carries the condition. %>
-            <%= render PanelsUI::FormField.new(
-                  form: hotel_form,
-                  attribute: :sst_registration_number,
-                  label: "SST number",
-                  hint: "Needed if you charge SST.") do |field| %>
-              <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
-            <% end %>
+              <%# Always shown rather than revealed by the switch: the hint
+                  carries the condition without moving the rest of the form. %>
+              <%= render PanelsUI::FormField.new(
+                    form: hotel_form,
+                    attribute: :sst_registration_number,
+                    label: "SST number",
+                    hint: "Needed if you charge SST.",
+                    class: "lg:w-64") do |field| %>
+                <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
+              <% end %>
+            </div>
 
-            <%= render PanelsUI::Switch.new(
-                  form: hotel_form,
-                  attribute: :tourism_tax_enabled,
-                  label: "Tourism Tax (TTx)",
-                  description: "A set amount per room, per night, charged to foreign guests only.",
-                  checked: current_hotel.tourism_tax_enabled?) %>
+            <div id="onboarding-tourism-tax-fields" class="flex flex-col items-start gap-4 lg:flex-row lg:flex-wrap lg:justify-start">
+              <div class="flex w-full items-start justify-start lg:w-auto lg:max-w-sm">
+                <%= render PanelsUI::Switch.new(
+                      form: hotel_form,
+                      attribute: :tourism_tax_enabled,
+                      label: "Tourism Tax (TTx)",
+                      description: "A set amount per room, per night, charged to foreign guests only.",
+                      checked: current_hotel.tourism_tax_enabled?) %>
+              </div>
 
-            <%= render PanelsUI::FormField.new(
-                  form: hotel_form,
-                  attribute: :tourism_tax_registration_number,
-                  label: "Tourism tax number",
-                  hint: "Needed if you charge tourism tax.") do |field| %>
-              <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
-            <% end %>
+              <%= render PanelsUI::FormField.new(
+                    form: hotel_form,
+                    attribute: :tourism_tax_registration_number,
+                    label: "Tourism tax number",
+                    hint: "Needed if you charge tourism tax.",
+                    class: "lg:w-64") do |field| %>
+                <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase") %>
+              <% end %>
 
-            <%# The unit rides the field rather than its label: the currency mark
-                leads the figure and the period trails it, so the input reads as
-                the amount it holds. %>
-            <%= render PanelsUI::FormField.new(
-                  form: hotel_form,
-                  attribute: :tourism_tax_amount,
-                  label: "Tourism tax amount",
-                  hint: "Needed if you charge tourism tax.") do |field| %>
-              <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
-              <% field.with_addon(align: :inline_start) { currency } %>
-              <% field.with_addon(align: :inline_end) { "per night" } %>
-            <% end %>
+              <%# The unit rides the field rather than its label: the currency
+                  leads the figure and the period trails it. %>
+              <%= render PanelsUI::FormField.new(
+                    form: hotel_form,
+                    attribute: :tourism_tax_amount,
+                    label: "Tourism tax amount",
+                    hint: "Needed if you charge tourism tax.",
+                    class: "lg:w-72") do |field| %>
+                <% field.with_input(type: :number, step: "0.01", min: "0", inputmode: "decimal") %>
+                <% field.with_addon(align: :inline_start) { currency } %>
+                <% field.with_addon(align: :inline_end) { "per night" } %>
+              <% end %>
+            </div>
           </div>
         <% end %>
       </section>
 
-      <section aria-labelledby="onboarding-property-taxes-heading" class="space-y-3 lg:col-span-2">
+      <section aria-labelledby="onboarding-property-taxes-heading" class="space-y-3">
         <div class="space-y-1">
           <h2 id="onboarding-property-taxes-heading" class="text-base font-semibold">Property taxes and fees</h2>
           <p class="text-sm text-muted-foreground">Add anything else guests must pay on top of the taxes above. Extras guests choose to buy come later.</p>
@@ -134,9 +143,8 @@
               empty: "No property taxes or fees yet",
               empty_description: "Most properties charge nothing beyond the taxes above.",
               empty_icon: "receipt-text") do |table| %>
-          <%# The table holds two thirds of the row, so its columns take what they
-              need from what is there rather than being pinned to a width. %>
           <% table.with_column(label: "Name", required: true) %>
+          <% table.with_column(label: "Tax number") %>
           <% table.with_column(label: "Type") %>
           <% table.with_column(label: "Amount", required: true) %>
           <% table.with_column(label: "Foreign guests only") %>

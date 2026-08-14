@@ -374,6 +374,7 @@ module HotelPortal
         {
           "id" => tax.id.to_s,
           "name" => tax.name,
+          "registration_number" => tax.registration_number,
           "charge_type" => tax.charge_type,
           "rate_type" => tax.rate_type,
           "amount" => tax.amount.to_s,
