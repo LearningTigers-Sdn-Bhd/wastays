@@ -44,6 +44,15 @@
 
           <%= render PanelsUI::FormField.new(
                 form: form,
+                attribute: :unique_id,
+                label: "Hotel Code",
+                hint: "Quote this code when contacting WAStays support. It never changes.",
+                readonly: true) do |field| %>
+            <% field.with_input(value: @hotel.unique_id) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
                 attribute: :star_rating,
                 label: "Star Rating") do |field| %>
             <% field.with_select_menu(
@@ -103,7 +112,7 @@
                 attribute: :address,
                 label: "Address",
                 class: "sm:col-span-2") do |field| %>
-            <% field.with_text_area(rows: 4) %>
+            <% field.with_text_area(rows: 4, placeholder: "e.g., 12 Jalan Sultan Ismail\n50250 Kuala Lumpur") %>
           <% end %>
 
           <%= render PanelsUI::FormField.new(
@@ -111,7 +120,7 @@
                 attribute: :city,
                 label: "City",
                 required: true) do |field| %>
-            <% field.with_input %>
+            <% field.with_input(placeholder: "e.g., Kuala Lumpur") %>
           <% end %>
 
           <%= render PanelsUI::FormField.new(
@@ -129,6 +138,75 @@
                 hint: "Paste the property’s public Google Maps place link.",
                 class: "sm:col-span-2") do |field| %>
             <% field.with_input(type: :url, placeholder: "https://www.google.com/maps/place/…") %>
+          <% end %>
+        </div>
+      </section>
+
+      <%# Collected during onboarding but never editable afterwards until now, so
+          the same four numbers are kept together here. %>
+      <section aria-labelledby="hotel-contact-heading">
+        <div>
+          <h2 id="hotel-contact-heading" class="text-base font-semibold text-foreground">Property Contact</h2>
+          <p class="mt-2 text-sm text-muted-foreground">How guests and WAStays reach the property.</p>
+        </div>
+
+        <div class="mt-5 grid gap-4 sm:grid-cols-2">
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :contact_email,
+                label: "Contact Email") do |field| %>
+            <% field.with_input(type: :email, placeholder: "e.g., frontdesk@yourhotel.com") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :contact_phone,
+                label: "Contact Phone") do |field| %>
+            <% field.with_input(type: :tel, placeholder: "e.g., 012-827 3581") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :fixed_line_number,
+                label: "Fixed Line Number",
+                hint: "The landline answered at the front desk.") do |field| %>
+            <% field.with_input(type: :tel, placeholder: "e.g., 03-2144 1234") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :whatsapp_number,
+                label: "WhatsApp Number",
+                hint: "Include the international dialling code.") do |field| %>
+            <% field.with_input(type: :tel, placeholder: "e.g., +60 12-827 3581") %>
+          <% end %>
+        </div>
+      </section>
+
+      <%# The numbers that identify the business itself, kept apart from the taxes
+          page: those settings say what the property charges, these say who it is.
+          The registration number for an individual tax lives with that tax. %>
+      <section aria-labelledby="business-registration-heading">
+        <div>
+          <h2 id="business-registration-heading" class="text-base font-semibold text-foreground">Business Registration</h2>
+          <p class="mt-2 text-sm text-muted-foreground">The company numbers that appear on the property’s invoices and receipts.</p>
+        </div>
+
+        <div class="mt-5 grid gap-4 sm:grid-cols-2">
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :tin,
+                label: "TIN",
+                hint: "Tax Identification Number issued by LHDN.") do |field| %>
+            <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., C1234567890", class: "font-mono uppercase") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :ssm_number,
+                label: "SSM No.",
+                hint: "Company registration number.") do |field| %>
+            <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., 202301012345 (1234567-A)", class: "font-mono uppercase") %>
           <% end %>
         </div>
       </section>

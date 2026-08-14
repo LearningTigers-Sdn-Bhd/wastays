@@ -72,12 +72,13 @@ module HotelPortal
       return if current_user&.superadmin?
       return if ONBOARDING_LOCK_EXEMPT.include?(self.class.name)
 
-      unless HotelPolicy.new(current_user, current_hotel).update?
-        redirect_to hotel_setup_lock_path(current_hotel)
-        return
-      end
+      redirect_to non_live_hotel_destination
+    end
 
-      redirect_to hotel_onboarding_section_path(current_hotel, section_key: onboarding_lock_section)
+    def non_live_hotel_destination
+      return hotel_setup_lock_path(current_hotel) unless HotelPolicy.new(current_user, current_hotel).update?
+
+      hotel_onboarding_section_path(current_hotel, section_key: onboarding_lock_section)
     end
 
     def onboarding_lock_section

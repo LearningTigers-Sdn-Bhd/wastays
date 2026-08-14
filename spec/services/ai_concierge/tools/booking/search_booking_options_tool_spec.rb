@@ -215,7 +215,7 @@ RSpec.describe AiConcierge::Tools::Booking::SearchBookingOptionsTool do
 
     def real_quote_total(hotel:, room_type:, rate_plan:, adults:, children:, child_ages: [])
       BookingEngine::CreateQuote.new(
-        hotel_id: hotel.id,
+        hotel_id: hotel.to_param,
         allocations: { "0" => { room_type_id: room_type.id, quantity: 1 } },
         check_in: Date.current, check_out: Date.current + 1,
         adults: adults, children: children, child_ages: child_ages,

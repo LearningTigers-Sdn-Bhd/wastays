@@ -34,7 +34,7 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
     expect(banking_detail.account_holder_name).to eq('Syarikat Maju Jaya Sdn Bhd')
     expect(banking_detail.bank_name).to eq('Maybank')
     expect(banking_detail.account_number).to eq('5142 1234 5678')
-    expect(hotel.reload.status).to eq('approved')
+    expect(hotel.reload.status).to eq('live')
   end
 
   it 'saves banking details independently of the display-only settings card' do
@@ -48,7 +48,7 @@ RSpec.describe 'Hotel Settings Banking Details', type: :system do
 
     expect(page).to have_content('Settings updated successfully.')
     expect(account.reload.banking_detail.account_holder_name).to eq('Kejayaan Hotel Sdn Bhd')
-    expect(hotel.reload.status).to eq('approved')
+    expect(hotel.reload.status).to eq('live')
   end
 
   it 'shows validation errors when banking details are invalid' do

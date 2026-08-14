@@ -30,7 +30,7 @@
       <% field.with_input(
            type: :search,
            value: params[:q],
-           placeholder: "Search by hotel or city",
+           placeholder: "Search by hotel, city or code",
            data: { action: "input->auto-submit#submit" }) %>
     <% end %>
   <% end %>
@@ -62,6 +62,7 @@
           <tr>
             <td class="font-medium">
               <%= link_to row.name, admin_hotel_path(row.hotel), class: "text-foreground underline decoration-border-interactive underline-offset-2 hover:text-primary", data: { turbo_frame: "_top" } %>
+              <code class="ms-2 rounded-sm bg-muted px-1.5 py-0.5 font-mono text-xs font-normal tracking-wider text-muted-foreground" title="Hotel code"><%= row.unique_id %></code>
               <span class="mt-0.5 block text-xs font-normal text-muted-foreground sm:hidden"><%= row.city %></span>
             </td>
             <td class="hidden text-muted-foreground sm:table-cell"><%= row.city %></td>

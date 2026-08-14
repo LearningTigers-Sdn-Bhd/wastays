@@ -1,7 +1,7 @@
 <% content_for :title, "Contact | #{@hotel.name}" %>
 <%= render layout: "public/concierge/shared/page_shell" do %>
   <%= render "public/concierge/shared/page_header",
-             back_path: concierge_home_path(@hotel.slug),
+             back_path: concierge_home_path(@hotel),
              back_label: "Back to Concierge",
              eyebrow: "Contact Us",
              title_prefix: "Get in",

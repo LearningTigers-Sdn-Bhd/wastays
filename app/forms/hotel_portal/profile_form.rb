@@ -34,7 +34,8 @@ module HotelPortal
       permitted = params.require(:hotel).permit(
         :name, :description, :address, :city, :country, :star_rating,
         :featured_photo_attachment_id, :google_map_link, :contact_email,
-        :contact_phone, :whatsapp_number, :time_zone, :default_currency,
+        :contact_phone, :fixed_line_number, :whatsapp_number, :time_zone, :default_currency,
+        :tin, :ssm_number,
         photos: [], amenities: []
       )
 

@@ -14,7 +14,7 @@ module Public
           return render_request_lookup_error(booking) unless booking.checked_in?
 
           set_concierge_booking_cookie(booking)
-          return redirect_to concierge_new_request_path(@hotel.slug, stage: "submit")
+          return redirect_to concierge_new_request_path(@hotel, stage: "submit")
         end
 
         result = ::Concierge::SubmitGuestRequest.new(
@@ -27,7 +27,7 @@ module Public
           set_concierge_booking_cookie(booking)
           flash[:concierge_request_kind] = params[:kind].to_s
           flash[:concierge_request_details] = params[:details].to_s.strip
-          redirect_to concierge_request_success_path(@hotel.slug)
+          redirect_to concierge_request_success_path(@hotel)
         else
           @error = result.message
           @booking = booking
@@ -37,7 +37,7 @@ module Public
 
       def success
         @booking = current_concierge_booking
-        return redirect_to concierge_home_path(@hotel.slug) unless @booking
+        return redirect_to concierge_home_path(@hotel) unless @booking
         render "success_mobile" if mobile_request?
       end
 

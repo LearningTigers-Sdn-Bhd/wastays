@@ -16,7 +16,7 @@ module AiConcierge
           return validation_error if validation_error
 
           result = BookingEngine::CreateQuote.new(
-            hotel_id: hotel.id,
+            hotel_id: hotel.to_param,
             room_type_id: selected_option.fetch("room_type_id"),
             check_in: selected_option.fetch("check_in"),
             check_out: selected_option.fetch("check_out"),

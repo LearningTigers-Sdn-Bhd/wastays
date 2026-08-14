@@ -265,13 +265,13 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
     it "does not expose old AR invoice and payment paths" do
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-REDIR", folio_number: 902, amount: 100)
 
-      get "/hotel/#{hotel.slug}/ar-invoices"
+      get "/hotel/#{hotel.to_param}/ar-invoices"
       expect(response).to have_http_status(:not_found)
 
-      get "/hotel/#{hotel.slug}/ar-invoices/#{invoice.id}"
+      get "/hotel/#{hotel.to_param}/ar-invoices/#{invoice.id}"
       expect(response).to have_http_status(:not_found)
 
-      get "/hotel/#{hotel.slug}/ar-payments/new"
+      get "/hotel/#{hotel.to_param}/ar-payments/new"
       expect(response).to have_http_status(:not_found)
     end
   end

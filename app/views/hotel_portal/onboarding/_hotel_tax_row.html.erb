@@ -1,7 +1,7 @@
 <%# The record table owns the row and its remove control; this partial supplies
     only the field cells.
 
-    Four fields, not six. Whether the charge is levied is not one of them: the
+    Whether the charge is levied is not one of the fields: the
     step ends by confirming these are the taxes this property charges, so a row
     that is present but switched off contradicts what is being signed, and
     removing the row already says the same thing. It stays a toggle under
@@ -10,13 +10,19 @@
     The rate type and its figure share one cell: the type governs how the figure
     reads rather than standing beside it, so it marks the field — a currency
     leading a fixed amount, a percent sign trailing a rate. %>
-<% object = HotelTax.new(entry.slice("name", "charge_type", "rate_type", "amount")) %>
+<% object = HotelTax.new(entry.slice("name", "registration_number", "charge_type", "rate_type", "amount")) %>
 <% currency = current_hotel.default_currency.presence || "MYR" %>
 <%= fields_for "tax_entries[#{index}]", object do |tax_form| %>
   <td>
     <%= tax_form.hidden_field :id, value: entry["id"] %>
     <%= render PanelsUI::FormField.new(form: tax_form, attribute: :name, label: "Name", size: :sm, required: true) do |field| %>
       <% field.with_input(placeholder: "Heritage levy") %>
+    <% end %>
+  </td>
+
+  <td>
+    <%= render PanelsUI::FormField.new(form: tax_form, attribute: :registration_number, label: "Tax number", size: :sm) do |field| %>
+      <% field.with_input(autocomplete: "off", spellcheck: false, class: "font-mono uppercase", placeholder: "DBKK/2026/00123") %>
     <% end %>
   </td>
 

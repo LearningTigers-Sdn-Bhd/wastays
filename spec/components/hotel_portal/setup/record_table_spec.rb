@@ -100,9 +100,9 @@ RSpec.describe HotelPortal::Setup::RecordTable, type: :component do
                    empty_icon: "concierge-bell")
 
       state = page.find("tr.panel-record-table__empty")
-      expect(state).to have_css(".panel-record-table__empty-icon svg")
-      expect(state).to have_css(".panel-record-table__empty-title", text: "No extra charges yet")
-      expect(state).to have_css(".panel-record-table__empty-description",
+      expect(state).to have_css(".panel-empty-state__icon svg")
+      expect(state).to have_css(".panel-empty-state__title", text: "No extra charges yet")
+      expect(state).to have_css(".panel-empty-state__description",
                                 text: "If this property sells nothing beyond the room, continue.")
       expect(state).to have_button("Add extra charge")
     end

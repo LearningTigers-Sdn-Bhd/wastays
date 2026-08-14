@@ -43,7 +43,8 @@ module Onboarding
     end
 
     def add_domain_findings(blocking, states)
-      add_once(blocking, "property_profile", :property_invalid, "Add the required property details and featured photo.") unless @hotel.property_profile_ready?
+      add_once(blocking, "property_profile", :property_invalid, "Add the required property details.") unless @hotel.property_profile_ready?
+      add_once(blocking, "property_photos", :photos_missing, "Upload at least one photo of the property.") unless @hotel.property_photos_ready?
       add_once(blocking, "roles_permissions", :roles_changed, "Review and confirm all four standard roles again.") unless role_confirmation_current?(states)
       add_once(blocking, "staff_setup", :staff_decision_missing, "Confirm the staff to invite, or record that there are no additional staff.") unless explicit_decision?(states, "staff_setup", "staff_draft_setup")
       add_once(blocking, "taxes_fees", :tax_confirmation_stale, "Review and confirm the property's current taxes and fees.") unless taxes_ready?(states)

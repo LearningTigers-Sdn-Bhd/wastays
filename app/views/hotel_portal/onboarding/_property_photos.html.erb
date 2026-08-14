@@ -1,0 +1,32 @@
+<% if presenter.read_only? %>
+  <section aria-labelledby="property-photos-summary-heading" class="space-y-4">
+    <h2 id="property-photos-summary-heading" class="text-base font-semibold">Property photos</h2>
+    <p class="text-sm text-muted-foreground"><%= pluralize(current_hotel.photos.count, "photo") %> uploaded.</p>
+    <%= render "hotel_portal/profiles/published_photos", hotel: current_hotel, return_to: "onboarding" %>
+  </section>
+<% else %>
+  <%# The shell owns the step heading, so this opens straight into the upload
+      control. Photos commit as they are chosen rather than on Save & continue,
+      so this step has no form of its own. %>
+  <section class="space-y-4"
+           data-controller="hotel-photo-queue"
+           data-hotel-photo-queue-upload-url-value="<%= hotel_profile_photo_queue_path(current_hotel) %>"
+           data-hotel-photo-queue-clear-url-value="<%= hotel_clear_profile_photo_queue_path(current_hotel) %>"
+           data-hotel-photo-queue-commit-url-value="<%= hotel_commit_profile_photo_queue_path(current_hotel) %>"
+           data-hotel-photo-queue-remove-url-template-value="<%= hotel_profile_photo_queue_item_path(current_hotel, "__SIGNED_ID__") %>"
+           data-hotel-photo-queue-existing-count-value="<%= current_hotel.photos.count %>"
+           data-hotel-photo-queue-max-count-value="<%= Hotel::MAX_PHOTOS %>"
+           data-action="change->hotel-photo-queue#queueSelectedFiles">
+    <%# The empty state carries the upload action itself, so this one stands down
+        while it shows rather than offering the same thing twice. %>
+    <% if current_hotel.photos.attached? %>
+      <div class="flex flex-wrap items-center justify-end gap-3">
+        <%= render PanelsUI::Button.new(as: :button, command: "show-modal", commandfor: "hotel-photo-upload-sheet", size: :sm) do %>
+          <%= app_icon "upload", class: "size-4", aria: { hidden: "true" } %><span>Upload photos</span>
+        <% end %>
+      </div>
+    <% end %>
+    <%= render "hotel_portal/profiles/published_photos", hotel: current_hotel, return_to: "onboarding" %>
+    <%= render "hotel_portal/profiles/photo_upload_sheet", hotel: current_hotel, queued_photo_items: @profile_presenter.queued_photo_items %>
+  </section>
+<% end %>

@@ -16,30 +16,56 @@ RSpec.describe "Hotel portal setup lock", type: :request do
   end
 
   context "when the hotel has not opted in" do
-    before { sign_in_as(owner) }
+    context "as someone who can finish setup" do
+      before { sign_in_as(owner) }
 
-    it "leaves the portal reachable" do
-      get edit_hotel_profile_path(hotel)
+      it "leaves the portal reachable" do
+        get edit_hotel_profile_path(hotel)
 
-      expect(response).to have_http_status(:ok)
+        expect(response).to have_http_status(:ok)
+      end
+
+      # The dashboard is not a portal page for a property that is not open yet — it used
+      # to render a dead-end "Pending Review" panel. Onboarding is the real page.
+      it "still sends the dashboard to onboarding" do
+        get hotel_dashboard_path(hotel)
+
+        expect(response).to redirect_to(
+          hotel_onboarding_section_path(hotel, section_key: "property_profile")
+        )
+      end
+
+      it "sends the dashboard to the review section once submitted" do
+        hotel.update!(status: "pending_review")
+
+        get hotel_dashboard_path(hotel)
+
+        expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+      end
     end
 
-    # The dashboard is not a portal page for a property that is not open yet — it used
-    # to render a dead-end "Pending Review" panel. Onboarding is the real page.
-    it "still sends the dashboard to onboarding" do
-      get hotel_dashboard_path(hotel)
+    context "as staff who cannot finish setup" do
+      let(:staff_role) { create(:role, account:) }
+      let(:staff) { create(:user, account:) }
 
-      expect(response).to redirect_to(
-        hotel_onboarding_section_path(hotel, section_key: "property_profile")
-      )
-    end
+      before do
+        create(:user_hotel_access, user: staff, hotel:, role: staff_role)
+        sign_in_as(staff)
+      end
 
-    it "sends the dashboard to the review section once submitted" do
-      hotel.update!(status: "pending_review")
+      it "sends the setup dashboard to the explainer" do
+        get hotel_dashboard_path(hotel)
 
-      get hotel_dashboard_path(hotel)
+        expect(response).to redirect_to(hotel_setup_lock_path(hotel))
+      end
 
-      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+      it "sends the pending-review dashboard to the explainer" do
+        hotel.update!(status: "pending_review")
+
+        get hotel_dashboard_path(hotel)
+
+        expect(response).to redirect_to(hotel_setup_lock_path(hotel))
+      end
     end
   end
 

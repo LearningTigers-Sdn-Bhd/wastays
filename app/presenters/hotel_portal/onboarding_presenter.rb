@@ -14,7 +14,8 @@ module HotelPortal
     }.freeze
 
     SECTION_CONTENT = {
-      "property_profile" => [ "Property profile", "Add the identity, location, contact details, amenities, photos, and policies guests need." ],
+      "property_profile" => [ "Property profile", "Add the identity, location, contact details, amenities, and policies guests need." ],
+      "property_photos" => [ "Property photos", "Upload the photos guests will see. At least one is needed; the first becomes the featured photo, and you can change which one that is at any time." ],
       "roles_permissions" => [ "Roles and permissions", "Review the preset access levels your team will use after launch. They are read-only during onboarding; custom role management opens after launch when the property’s plan includes it." ],
       "staff_setup" => [ "Staff setup", "Prepare team members and their roles. Nothing is sent now — invitations are created only after onboarding is successfully submitted." ],
       "taxes_fees" => [ "Taxes and fees", "Confirm statutory taxes and configure any mandatory property fees." ],

@@ -54,8 +54,20 @@
       <% end %>
     <% end %>
   <% else %>
-    <p class="flex min-h-40 items-center border-t border-border text-sm text-muted-foreground">
-      No published photos yet. Queue photos and confirm the upload to add them to the album.
-    </p>
+    <%# The state carries the upload action itself, so nobody looking at an empty
+        album has to go find the button. Both places that render this partial
+        also render the upload sheet it opens. %>
+    <%= render PanelsUI::EmptyState.new(
+          title: "No photos yet",
+          description: "Photos are how guests decide. Add the ones that show the property best — the first becomes the featured photo, and you can change that later.",
+          icon: "image") do |state| %>
+      <% state.with_action do %>
+        <%= render PanelsUI::Button.new(as: :button, variant: :neutral, size: :sm,
+              command: "show-modal", commandfor: "hotel-photo-upload-sheet") do %>
+          <%= app_icon "upload", class: "size-4", aria: { hidden: "true" } %>
+          <span>Upload photos</span>
+        <% end %>
+      <% end %>
+    <% end %>
   <% end %>
 </div>

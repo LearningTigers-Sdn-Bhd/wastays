@@ -38,7 +38,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
     end
 
     it "permanently redirects to Reservations" do
-      get "/hotel/#{hotel.id}/bookings"
+      get "/hotel/#{hotel.to_param}/bookings"
       expect(response).to have_http_status(:moved_permanently)
       expect(response).to redirect_to(hotel_front_desk_path(hotel, tab: "bookings", view: "list"))
     end
@@ -55,7 +55,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
     end
 
     it "renders dashboard page without stale hotel booking path helpers" do
-      get "/hotel/#{hotel.id}/dashboard"
+      get "/hotel/#{hotel.to_param}/dashboard"
 
       expect(response).to have_http_status(:success)
     end
@@ -67,8 +67,8 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/front-desk"))
-      expect(response.body).to include(%(href="/hotel/#{hotel.slug}/settings/general"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.to_param}/front-desk"))
+      expect(response.body).to include(%(href="/hotel/#{hotel.to_param}/settings/general"))
     end
   end
 
@@ -223,12 +223,12 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
 
   describe "PATCH /update" do
     it "redirects within the hotel path" do
-      patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "confirmed" } }
+      patch "/hotel/#{hotel.to_param}/bookings/#{booking.id}", params: { booking: { status: "confirmed" } }
       expect(response).to redirect_to(booking_details_path(booking))
     end
 
     it "does not change lifecycle status through booking params" do
-      patch "/hotel/#{hotel.id}/bookings/#{booking.id}", params: { booking: { status: "checked_in", guest_name: "Updated Guest" } }
+      patch "/hotel/#{hotel.to_param}/bookings/#{booking.id}", params: { booking: { status: "checked_in", guest_name: "Updated Guest" } }
 
       expect(response).to redirect_to(booking_details_path(booking))
       expect(booking.reload.status).to eq("confirmed")
@@ -238,7 +238,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
     it "updates the booking source from the manual/OTA dropdown, even when channel-managed" do
       channel_managed_booking = create(:booking, hotel: hotel, source: "internal", channel_manager_reference: "channex-123")
 
-      patch "/hotel/#{hotel.id}/bookings/#{channel_managed_booking.id}", params: { booking: { source: "booking_com" } }
+      patch "/hotel/#{hotel.to_param}/bookings/#{channel_managed_booking.id}", params: { booking: { source: "booking_com" } }
 
       expect(response).to redirect_to(booking_details_path(channel_managed_booking))
       expect(channel_managed_booking.reload.source).to eq("booking_com")
@@ -288,7 +288,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
     let(:room_type) { create(:room_type, hotel: hotel, base_price: 100) }
 
     it "returns the total amount for the stay" do
-      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+      get "/hotel/#{hotel.to_param}/bookings/stay_price", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,
         check_out: (Date.current + 2.days).to_s
@@ -310,7 +310,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
       room_code.transaction_code_taxes.create!(primary_tax_key: "tourism_tax")
 
-      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+      get "/hotel/#{hotel.to_param}/bookings/stay_price", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,
         check_out: (Date.current + 2.days).to_s,
@@ -327,7 +327,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
     end
 
     it "returns 0 if params are missing" do
-      get "/hotel/#{hotel.id}/bookings/stay_price"
+      get "/hotel/#{hotel.to_param}/bookings/stay_price"
 
       expect(response).to have_http_status(:success)
       expect(JSON.parse(response.body)).to eq({ "total_amount" => 0 })
@@ -337,7 +337,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       rate_plan = create(:rate_plan, room_type: room_type)
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 150)
 
-      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+      get "/hotel/#{hotel.to_param}/bookings/stay_price", params: {
         room_type_id: room_type.id,
         rate_plan_id: rate_plan.id,
         check_in: Date.current.to_s,
@@ -349,7 +349,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
     end
 
     it "rejects a stale selected rate plan" do
-      get "/hotel/#{hotel.id}/bookings/stay_price", params: {
+      get "/hotel/#{hotel.to_param}/bookings/stay_price", params: {
         room_type_id: room_type.id,
         rate_plan_id: 999_999,
         check_in: Date.current.to_s,
@@ -402,7 +402,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       rate_plan = create(:rate_plan, room_type: room_type, name: "Flexible Rate")
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 125)
 
-      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+      get "/hotel/#{hotel.to_param}/bookings/rate_options", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,
         check_out: (Date.current + 1.day).to_s
@@ -418,7 +418,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       rate_plan = create(:rate_plan, room_type: room_type, name: "Premium Rate")
       create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: Date.current, price: 125, stop_sell: true)
 
-      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+      get "/hotel/#{hotel.to_param}/bookings/rate_options", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,
         check_out: (Date.current + 1.day).to_s
@@ -426,7 +426,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
 
       expect(JSON.parse(response.body)["rate_options"].map { |option| option["id"] }).to include(rate_plan.id)
 
-      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+      get "/hotel/#{hotel.to_param}/bookings/rate_options", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,
         check_out: (Date.current + 1.day).to_s,
@@ -438,7 +438,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
 
     it "returns no options when no rate plans exist" do
       room_type.rate_plans.destroy_all
-      get "/hotel/#{hotel.id}/bookings/rate_options", params: {
+      get "/hotel/#{hotel.to_param}/bookings/rate_options", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,
         check_out: (Date.current + 2.days).to_s
@@ -454,7 +454,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
     it "returns room options including disabled non-ready rooms" do
       create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
-      get "/hotel/#{hotel.id}/bookings/availability", params: {
+      get "/hotel/#{hotel.to_param}/bookings/availability", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,
         check_out: (Date.current + 1.day).to_s
@@ -477,7 +477,7 @@ RSpec.describe "HotelPortal::Bookings", type: :request, frozen_time: Time.zone.l
       other_booking = create(:booking, hotel: hotel, check_in: Date.current, check_out: Date.current + 2.days, status: "confirmed")
       create(:booking_room, booking: other_booking, room_type: room_type, room_number: "102")
 
-      get "/hotel/#{hotel.id}/bookings/availability", params: {
+      get "/hotel/#{hotel.to_param}/bookings/availability", params: {
         room_type_id: room_type.id,
         check_in: Date.current.to_s,
         check_out: (Date.current + 2.days).to_s,

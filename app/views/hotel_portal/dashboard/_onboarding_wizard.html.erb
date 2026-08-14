@@ -1,5 +1,9 @@
 <%# app/views/hotel_portal/dashboard/_onboarding_wizard.html.erb %>
 
+<%# Setup splits the property profile and its photos across two steps; this tile
+    summarises both, so it only turns green once each one is done. %>
+<% profile_ready = @current_hotel.property_profile_ready? && @current_hotel.property_photos_ready? %>
+
 <div class="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-6 shadow-sm mb-8">
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
     <div class="space-y-1">
@@ -17,9 +21,9 @@
 
   <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
     <%# Step 1: Profile %>
-    <div class="flex items-start gap-x-4 p-4 rounded-xl border <%= @current_hotel.property_profile_ready? ? 'border-emerald-100 bg-emerald-50/50' : 'border-border bg-card' %> transition-colors">
+    <div class="flex items-start gap-x-4 p-4 rounded-xl border <%= profile_ready ? 'border-emerald-100 bg-emerald-50/50' : 'border-border bg-card' %> transition-colors">
       <div class="flex-none mt-0.5">
-        <% if @current_hotel.property_profile_ready? %>
+        <% if profile_ready %>
           <div class="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-primary-foreground">
             <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
@@ -28,8 +32,8 @@
         <% end %>
       </div>
       <div>
-        <p class="text-sm font-bold <%= @current_hotel.property_profile_ready? ? 'text-emerald-900' : 'text-foreground' %>">Property Profile</p>
-        <p class="text-xs text-muted-foreground mb-2">Address, contact, and featured photo.</p>
+        <p class="text-sm font-bold <%= profile_ready ? 'text-emerald-900' : 'text-foreground' %>">Property Profile</p>
+        <p class="text-xs text-muted-foreground mb-2">Address, contact, and photos.</p>
         <%= link_to "Edit Profile", edit_hotel_profile_path(@current_hotel), class: "text-xs font-bold text-brand-primary hover:underline" %>
       </div>
     </div>

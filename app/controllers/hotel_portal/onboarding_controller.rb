@@ -10,6 +10,7 @@ module HotelPortal
     # same list, so the two cannot drift.
     IMPLEMENTED_SECTIONS = %w[
       property_profile
+      property_photos
       roles_permissions
       staff_setup
       taxes_fees
@@ -94,7 +95,9 @@ module HotelPortal
       )
 
       case @current_entry.definition.key
-      when "property_profile"
+      # The profile step reads star ratings off the presenter; the photos step
+      # also reads the upload queue from it.
+      when "property_profile", "property_photos"
         @photo_queue = HotelPortal::PhotoQueue.new(current_hotel, session)
         @profile_presenter = HotelPortal::ProfilePresenter.new(current_hotel, @photo_queue, view_context)
       when "roles_permissions"
@@ -371,6 +374,7 @@ module HotelPortal
         {
           "id" => tax.id.to_s,
           "name" => tax.name,
+          "registration_number" => tax.registration_number,
           "charge_type" => tax.charge_type,
           "rate_type" => tax.rate_type,
           "amount" => tax.amount.to_s,
@@ -393,6 +397,12 @@ module HotelPortal
           Onboarding::SavePropertyProfile.new(
             hotel: current_hotel,
             params: params,
+            actor: current_user,
+            complete: complete
+          ).call
+        when "property_photos"
+          Onboarding::SavePropertyPhotos.new(
+            hotel: current_hotel,
             actor: current_user,
             complete: complete
           ).call
@@ -505,8 +515,8 @@ module HotelPortal
 
       params.require(:hotel).permit(
         :name, :description, :address, :city, :country, :star_rating,
-        :google_map_link, :contact_email, :contact_phone, :whatsapp_number,
-        :time_zone, :default_currency, amenities: []
+        :google_map_link, :contact_email, :contact_phone, :fixed_line_number, :whatsapp_number,
+        :time_zone, :default_currency, :tin, :ssm_number, amenities: []
       )
     end
 
