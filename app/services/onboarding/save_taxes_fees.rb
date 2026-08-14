@@ -16,7 +16,7 @@ module Onboarding
   class SaveTaxesFees
     Result = ApplicationResult.define(:section, :entries)
 
-    ENTRY_FIELDS = %w[id name charge_type rate_type amount enabled foreign_guests_only].freeze
+    ENTRY_FIELDS = %w[id name registration_number charge_type rate_type amount enabled foreign_guests_only].freeze
 
     def initialize(hotel:, actor:, params:, confirmed:, complete:)
       @hotel = hotel
@@ -93,10 +93,14 @@ module Onboarding
       source = source.to_unsafe_h if source.respond_to?(:to_unsafe_h)
       source = source.to_h.stringify_keys
 
+      # `fetch` with the current value, not `[]`: a step submitted without one of
+      # these keys must leave what is already stored alone rather than blank it.
       {
         "sst_enabled" => boolean(source["sst_enabled"]),
+        "sst_registration_number" => source.fetch("sst_registration_number", @hotel.sst_registration_number),
         "tourism_tax_enabled" => boolean(source["tourism_tax_enabled"]),
-        "tourism_tax_amount" => source.fetch("tourism_tax_amount", @hotel.tourism_tax_amount)
+        "tourism_tax_amount" => source.fetch("tourism_tax_amount", @hotel.tourism_tax_amount),
+        "tourism_tax_registration_number" => source.fetch("tourism_tax_registration_number", @hotel.tourism_tax_registration_number)
       }
     end
 
@@ -147,6 +151,7 @@ module Onboarding
         {
           "id" => tax.id.to_s,
           "name" => tax.name,
+          "registration_number" => tax.registration_number,
           "charge_type" => tax.charge_type,
           "rate_type" => tax.rate_type,
           "amount" => tax.amount.to_s,
@@ -190,6 +195,7 @@ module Onboarding
 
         tax.assign_attributes(
           name: entry["name"],
+          registration_number: entry["registration_number"],
           charge_type: charge_type_for(entry, tax),
           rate_type: HotelTax::RATE_TYPES.include?(entry["rate_type"]) ? entry["rate_type"] : "flat",
           amount: entry["amount"],

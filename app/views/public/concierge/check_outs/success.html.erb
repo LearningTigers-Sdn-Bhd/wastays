@@ -2,7 +2,7 @@
 <%= render layout: "public/concierge/shared/page_shell",
            locals: { container_class: "w-full max-w-3xl text-center" } do %>
   <%= render "public/concierge/shared/page_header",
-             back_path: concierge_home_path(@hotel.slug),
+             back_path: concierge_home_path(@hotel),
              back_label: "Back to Concierge",
              eyebrow: "Request Sent",
              title_prefix: "Checkout",

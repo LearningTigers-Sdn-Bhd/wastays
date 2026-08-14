@@ -52,7 +52,7 @@ RSpec.describe HotelPortal::OnboardingReviewPresenter do
       submit_label: "Submit for review"
     )
     expect(review.metrics.map { |metric| [ metric.label, metric.value, metric.detail ] }).to eq([
-      [ "Required setup", "7 of 7", "Complete" ],
+      [ "Required setup", "8 of 8", "Complete" ],
       [ "Optional decisions", "5 of 5", "1 deferred" ],
       [ "Needs attention", "0", "No sections" ],
       [ "Invitations", "2", "1 send · 1 hold" ]

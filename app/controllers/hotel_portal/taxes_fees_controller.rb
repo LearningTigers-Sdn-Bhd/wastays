@@ -71,7 +71,11 @@ module HotelPortal
     end
 
     def scoped_system_tax_params
-      allowed = @system_tax == "sst" ? [ :sst_enabled ] : %i[tourism_tax_enabled tourism_tax_amount]
+      allowed = if @system_tax == "sst"
+        %i[sst_enabled sst_registration_number]
+      else
+        %i[tourism_tax_enabled tourism_tax_amount tourism_tax_registration_number]
+      end
       ActionController::Parameters.new(hotel: params.require(:hotel).permit(*allowed).to_h)
     end
 

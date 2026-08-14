@@ -21,6 +21,7 @@ RSpec.describe "Service spec coverage" do
     "onboarding/save_extra_charges" => "onboarding/commercial_setup_spec.rb",
     "onboarding/save_ota_credentials" => "onboarding/commercial_setup_spec.rb",
     "onboarding/save_payment_methods" => "onboarding/commercial_setup_spec.rb",
+    "onboarding/save_property_photos" => "onboarding/property_and_team_spec.rb",
     "onboarding/save_property_profile" => "onboarding/property_and_team_spec.rb",
     "onboarding/save_rates_availability" => "onboarding/rates_availability_spec.rb",
     "onboarding/save_room_revenue" => "onboarding/taxes_and_room_revenue_spec.rb",

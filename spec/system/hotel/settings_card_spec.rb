@@ -26,7 +26,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     within("form[action='#{hotel_general_settings_path(hotel)}']") do
       expect(page).to have_css('.panel-metric-card__label', text: 'Hotel Status')
-      expect(page).to have_css('.panel-metric-card__value', text: 'Registered')
+      expect(page).to have_css('.panel-metric-card__value', text: 'Setup')
       expect(page).to have_css('.panel-metric-card__label', text: 'Onboarding Stage')
       expect(page).to have_css('.panel-metric-card__value', text: 'Building profile')
       expect(page).to have_select('Default Currency', selected: 'MYR - Malaysian Ringgit')
@@ -52,7 +52,7 @@ RSpec.describe 'Hotel Settings Card', type: :system do
 
     within('section', text: 'General Setup') do
       expect(page).to have_css('.panel-metric-card__label', text: 'Hotel Status')
-      expect(page).to have_css('.panel-metric-card__value', text: 'Registered')
+      expect(page).to have_css('.panel-metric-card__value', text: 'Setup')
       expect(page).to have_css('.panel-metric-card__label', text: 'Onboarding Stage')
       expect(page).to have_css('.panel-metric-card__value', text: 'Building profile')
       expect(page).to have_no_field('Hotel Status', type: 'text')

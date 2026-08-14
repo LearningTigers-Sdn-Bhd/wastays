@@ -28,7 +28,9 @@
             <div class="flex items-center gap-2">
               <a href="<%= hotel_dashboard_path(current_hotel) %>" class="panel-navbar__identity" aria-label="<%= current_hotel.name %>">
                 <span class="panel-navbar__identity-name"><%= current_hotel.name %></span>
-                <span class="panel-navbar__identity-meta">#<%= current_hotel.id %></span>
+                <%# Labelled, unlike the admin registry and the profile field: a bare
+                    number under a hotel name reads as anything at all. %>
+                <span class="panel-navbar__identity-meta">Code <%= current_hotel.unique_id %></span>
               </a>
               <%= render PanelsUI::Badge.new(
                     label: current_hotel.sell_mode_label,

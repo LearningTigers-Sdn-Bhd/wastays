@@ -31,7 +31,7 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
         "panel-table__wrapper", "rounded-md", "border", "border-border"
       )
       expect(document.css("[data-testid='taxes-fees-registry'] th").map { |heading| heading.text.squish }).to eq(
-        [ "Status", "Charge", "Code", "Applies To", "Charge Rule", "Charge Amount", "Action" ]
+        [ "Status", "Charge", "Code", "Applies To", "Rate", "Tax number", "Action" ]
       )
       expect(document.css("[data-testid='taxes-fees-registry'] tbody tr").map { |row| row["id"] }).to eq(
         [ "tax-registry-row-sst", "tax-registry-row-tourism_tax", "tax-registry-row-hotel_tax_#{hotel.hotel_taxes.find_by!(name: 'Heritage Fee').id}", "tax-registry-row-hotel_tax_#{hotel.hotel_taxes.find_by!(name: 'Service Charge').id}" ]
@@ -42,6 +42,21 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
       expect(response.body).not_to include("Primary Tax Settings", "Additional Taxes &amp; Fees")
       expect(document.css("[data-testid='taxes-fees-registry'] tbody a[data-turbo-frame='settings_action_sheet']").count).to eq(4)
       expect(document.at_css("turbo-frame#settings_action_sheet")).to be_present
+    end
+
+    it "shows each tax's registration number and names the gap when there is none" do
+      hotel.update!(sst_registration_number: "W10-1808-31000000")
+      HotelTax.create!(hotel: hotel, name: "DBKK Levy", code: "DBKK", charge_type: "tax", rate_type: "flat", amount: 3.0, registration_number: "DBKK/2026/00123")
+
+      get hotel_taxes_fees_path(hotel)
+
+      document = response.parsed_body
+      sst_cells = document.css("#tax-registry-row-sst td").map { |cell| cell.text.squish }
+      ttx_cells = document.css("#tax-registry-row-tourism_tax td").map { |cell| cell.text.squish }
+
+      expect(sst_cells).to include("W10-1808-31000000")
+      expect(ttx_cells).to include("Not set")
+      expect(response.body).to include("DBKK/2026/00123")
     end
 
     it "uses Registry by default and supports a URL-synced reference tab" do
@@ -124,6 +139,25 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
 
       expect(hotel.reload.tourism_tax_amount).to eq(10.0)
     end
+
+    it "stores a normalized registration number for each system tax" do
+      patch hotel_system_tax_path(hotel, "sst"), params: { hotel: { sst_enabled: "1", sst_registration_number: " w10-1808-31000000 " } }
+      patch hotel_system_tax_path(hotel, "tourism_tax"), params: { hotel: { tourism_tax_enabled: "1", tourism_tax_amount: "10.0", tourism_tax_registration_number: "ttx-99887766" } }
+
+      expect(hotel.reload.sst_registration_number).to eq("W10-1808-31000000")
+      expect(hotel.tourism_tax_registration_number).to eq("TTX-99887766")
+    end
+
+    it "does not accept the TTx registration number through the SST endpoint" do
+      hotel.update!(tourism_tax_registration_number: "TTX-99887766")
+
+      patch hotel_system_tax_path(hotel, "sst"), params: {
+        registry_status: "1",
+        hotel: { sst_enabled: "0", tourism_tax_registration_number: "HIJACKED" }
+      }
+
+      expect(hotel.reload.tourism_tax_registration_number).to eq("TTX-99887766")
+    end
   end
 
   describe "custom tax and fee action sheets" do
@@ -192,6 +226,19 @@ RSpec.describe "HotelPortal::TaxesFees", type: :request do
 
       expect(response.body).to include('action="complete_sheet"', 'target="settings_action_sheet"', "tab=registry")
       expect(hotel.hotel_taxes.find_by!(name: "Heritage Fee").transaction_code.code).to eq("TAX_DBKK")
+    end
+
+    it "stores a normalized registration number on a custom levy" do
+      post hotel_hotel_taxes_path(hotel),
+        params: {
+          hotel_tax: {
+            name: "DBKK Levy", code: "DBKK", charge_type: "tax", rate_type: "flat",
+            amount: "3.00", enabled: "1", foreign_guests_only: "false",
+            registration_number: " dbkk/2026/00123 "
+          }
+        }
+
+      expect(hotel.hotel_taxes.find_by!(name: "DBKK Levy").registration_number).to eq("DBKK/2026/00123")
     end
 
     it "keeps validation errors inside the add sheet" do

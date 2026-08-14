@@ -60,7 +60,7 @@ RSpec.describe "Platform Smoke Tests", type: :request do
     end
 
     it "can also access hotel portal pages" do
-      get "/hotel/#{hotel.id}/dashboard"
+      get "/hotel/#{hotel.to_param}/dashboard"
       expect(response).to have_http_status(:ok)
     end
   end
@@ -79,14 +79,14 @@ RSpec.describe "Platform Smoke Tests", type: :request do
       "audit_logs"
     ].each do |subpath|
       it "renders hotel portal #{subpath} successfully" do
-        path = "/hotel/#{hotel.id}/#{subpath}"
+        path = "/hotel/#{hotel.to_param}/#{subpath}"
         get path
         expect(response).to have_http_status(:ok), "Expected #{path} to render 200 OK, but got #{response.status}. This usually means a missing instance variable or association in the controller/view."
       end
     end
 
     it "renders inventory dashboard successfully" do
-      path = "/hotel/#{hotel.id}/inventory"
+      path = "/hotel/#{hotel.to_param}/inventory"
       get path
       expect(response).to have_http_status(:ok)
     end

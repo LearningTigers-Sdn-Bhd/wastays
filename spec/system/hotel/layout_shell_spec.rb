@@ -69,7 +69,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_css(".panel-navbar__center [data-controller='panels-ui--command-palette']")
     within(".panel-navbar__brand") do
       identity = find_link(hotel.name, href: hotel_dashboard_path(hotel))
-      expect(identity).to have_css(".panel-navbar__identity-meta", text: "##{hotel.id}")
+      expect(identity).to have_css(".panel-navbar__identity-meta", text: hotel.unique_id)
       expect(page).to have_css("[data-testid='hotel-sell-mode-badge']", text: "Sells per room")
     end
     expect(page).to have_css("#hotel-profile a[href='#{help_center_path}']", text: "Help")
@@ -93,14 +93,14 @@ RSpec.describe 'Hotel layout shell', type: :system do
     end
   end
 
-  it "renders the reduced Navbar while the hotel shell is locked" do
+  it "renders the onboarding Navbar while the hotel is pending review" do
     hotel.update!(status: "pending_review")
 
     visit hotel_dashboard_path(hotel)
 
     expect(page).to have_css("header.panel-navbar")
     expect(page).to have_no_css(".panel-navbar__center", visible: :all)
-    expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("#onboarding-profile[data-controller='panels-ui--dropdown-menu']")
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
     expect(page).to have_no_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']", visible: :all)
     expect(page).to have_no_css("[data-controller='panels-ui--sidebar-toggle']", visible: :all)

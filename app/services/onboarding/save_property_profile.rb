@@ -47,6 +47,14 @@ module Onboarding
           raise ActiveRecord::Rollback
         end
 
+        if operating_attributes.present?
+          @hotel.assign_attributes(operating_attributes)
+          unless @hotel.save
+            @save_profile_error = @hotel.errors.full_messages.to_sentence
+            raise ActiveRecord::Rollback
+          end
+        end
+
         if policy_attributes.present?
           policy = @hotel.property_policy || @hotel.build_property_policy
           policy.assign_attributes(policy_attributes)
@@ -67,9 +75,15 @@ module Onboarding
     def profile_attributes
       @params.require(:hotel).permit(
         :name, :description, :address, :city, :country, :star_rating,
-        :google_map_link, :contact_email, :contact_phone, :whatsapp_number,
-        :time_zone, :default_currency, amenities: []
+        :google_map_link, :contact_email, :contact_phone, :fixed_line_number, :whatsapp_number,
+        :time_zone, :default_currency, :tin, :ssm_number, amenities: []
       )
+    end
+
+    # The business day window lives on the hotel itself, so it is saved beside the
+    # profile rather than through ProfileForm, which only owns guest-facing details.
+    def operating_attributes
+      @params.require(:hotel).permit(:business_starts_at, :business_ends_at).compact_blank
     end
 
     def policy_attributes
@@ -90,7 +104,6 @@ module Onboarding
 
     def missing_requirements
       missing = REQUIRED_FIELDS.filter_map { |attribute, label| label if @hotel.public_send(attribute).blank? }
-      missing << "Featured photo" if @hotel.featured_photo_attachment_id.blank?
       policy = @hotel.property_policy
       missing << "Check-in time" if policy&.check_in_time.blank?
       missing << "Check-out time" if policy&.check_out_time.blank?

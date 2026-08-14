@@ -1,4 +1,8 @@
 module ApplicationHelper
+  # Flash keys that carry structured payloads for a specific view to render,
+  # rather than a message meant for the generic toast stack.
+  NON_TOAST_FLASH_KEYS = %i[toast owner_credentials].freeze
+
   def toast_flash_messages(flash)
     messages = []
     toast_data = flash[:toast]
@@ -19,7 +23,7 @@ module ApplicationHelper
     end
 
     flash.each do |key, value|
-      next if key.to_sym == :toast || value.blank?
+      next if key.to_sym.in?(NON_TOAST_FLASH_KEYS) || value.blank?
 
       messages << { message: value.to_s, options: { type: Toast.type_for_flash(key) } }
     end

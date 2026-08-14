@@ -5,7 +5,7 @@
 
   <%# Top nav %>
   <div class="px-6 pt-8 pb-6">
-    <%= link_to concierge_check_in_path(@hotel.slug),
+    <%= link_to concierge_check_in_path(@hotel),
           class: "w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20 active:scale-90 transition-transform" do %>
       <%= cached_icon "chevron-left", stroke_width: 3, class: "w-5 h-5 text-white" %>
     <% end %>
@@ -76,7 +76,7 @@
       </div>
     </div>
 
-    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.slug), method: :post, multipart: true, class: "space-y-6", data: @presenter.form_data(self, is_mobile: true) do |f| %>
+    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel), method: :post, multipart: true, class: "space-y-6", data: @presenter.form_data(self, is_mobile: true) do |f| %>
       <%= hidden_field_tag :latitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "latitude" } : {} %>
       <%= hidden_field_tag :longitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "longitude" } : {} %>
       <% if @presenter.registration_required? %>

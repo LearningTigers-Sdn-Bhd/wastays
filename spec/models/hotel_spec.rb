@@ -286,4 +286,96 @@ RSpec.describe Hotel, type: :model do
       expect(hotel.inventory_ready?).to be true
     end
   end
+
+  describe 'unique_id' do
+    it 'assigns a numeric code on create' do
+      hotel = create(:hotel)
+
+      expect(hotel.unique_id).to match(/\A\d+\z/)
+      expect(hotel.unique_id.to_i).to be >= Hotel::UNIQUE_ID_FLOOR
+    end
+
+    it 'starts at the floor when no hotel has been issued a code' do
+      expect(create(:hotel).unique_id).to eq('10101')
+    end
+
+    it 'issues the next number to the hotel created after it' do
+      first = create(:hotel)
+      second = create(:hotel)
+
+      expect(second.unique_id.to_i).to eq(first.unique_id.to_i + 1)
+    end
+
+    it 'counts from the highest code already issued, not the row count' do
+      create(:hotel, unique_id: '20500')
+
+      expect(create(:hotel).unique_id).to eq('20501')
+    end
+
+    it 'is the URL parameter' do
+      hotel = create(:hotel)
+
+      expect(hotel.to_param).to eq(hotel.unique_id)
+    end
+
+    it 'cannot be changed once the hotel exists' do
+      hotel = create(:hotel)
+      hotel.unique_id = '99999'
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:unique_id]).to include('cannot be changed after the hotel is created')
+    end
+
+    it 'rejects a code already taken by another hotel' do
+      taken = create(:hotel).unique_id
+
+      expect(build(:hotel, unique_id: taken)).not_to be_valid
+    end
+  end
+
+  describe 'slug' do
+    it 'survives a rename so links issued before it keep resolving' do
+      hotel = create(:hotel)
+      original = hotel.slug
+
+      hotel.update!(name: 'Completely Different Name')
+
+      expect(hotel.reload.slug).to eq(original)
+    end
+  end
+
+  describe '.locate' do
+    let!(:hotel) { create(:hotel) }
+
+    it 'finds by unique_id regardless of case' do
+      expect(Hotel.locate(hotel.unique_id)).to eq(hotel)
+      expect(Hotel.locate(hotel.unique_id.downcase)).to eq(hotel)
+    end
+
+    it 'still finds by the legacy slug' do
+      expect(Hotel.locate(hotel.slug)).to eq(hotel)
+    end
+
+    # A hotel is addressed by the code it was issued, never by its row id — even now
+    # that both are numbers.
+    it 'refuses a row id' do
+      expect(Hotel.locate(hotel.id.to_s)).to be_nil
+    end
+
+    it 'returns nil for a blank or unknown key' do
+      expect(Hotel.locate(nil)).to be_nil
+      expect(Hotel.locate('')).to be_nil
+      expect(Hotel.locate('90909')).to be_nil
+    end
+
+    it 'honours the given scope' do
+      other = create(:hotel)
+
+      expect(Hotel.locate(hotel.unique_id, scope: Hotel.where(id: other.id))).to be_nil
+    end
+
+    it 'raises from locate! when nothing matches' do
+      expect { Hotel.locate!('90909') }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+  end
 end

@@ -24,7 +24,7 @@ RSpec.describe "Public::Hotels", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("See Options")
-      expect(response.body).to include(%(href="/hotels/#{hotel.slug}?))
+      expect(response.body).to include(%(href="/hotels/#{hotel.to_param}?))
       today = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
       expect(response.body).to include("check_in=#{today}")
       expect(response.body).to include("check_out=#{today + 1.day}")
@@ -52,12 +52,12 @@ RSpec.describe "Public::Hotels", type: :request do
 
   describe "GET /show" do
     it "returns http success" do
-      get "/hotels/#{hotel.id}"
+      get "/hotels/#{hotel.to_param}"
       expect(response).to have_http_status(:success)
     end
 
     it "shows the search bar header with date pill" do
-      get "/hotels/#{hotel.id}", params: {
+      get "/hotels/#{hotel.to_param}", params: {
         check_in: Date.current.to_s,
         check_out: Date.tomorrow.to_s,
         adults: 2,
@@ -86,7 +86,7 @@ RSpec.describe "Public::Hotels", type: :request do
 
       RoomRate.where(room_type: restricted_rt, date: check_in).update_all(min_stay: 3)
 
-      get "/hotels/#{hotel.id}", params: {
+      get "/hotels/#{hotel.to_param}", params: {
         check_in: check_in.to_s,
         check_out: check_out.to_s,
         adults: 2,
@@ -107,7 +107,7 @@ RSpec.describe "Public::Hotels", type: :request do
     it "redirects when hotel is on easy plan" do
       hotel.update!(plan: easy_plan)
 
-      get "/hotels/#{hotel.id}"
+      get "/hotels/#{hotel.to_param}"
 
       expect(response).to redirect_to(hotels_path)
       expect(flash[:alert]).to eq("Hotel not found")
