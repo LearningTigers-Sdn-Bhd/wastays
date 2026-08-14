@@ -206,10 +206,14 @@ class Hotel < ApplicationRecord
   ].freeze
   MAX_PHOTOS = 20
 
-  # The public identifier. Five characters over the ambiguity-free confirmation-token
-  # charset — no I, O, L, 0 or 1 — so a code survives being read down a phone line.
-  UNIQUE_ID_LENGTH = 5
-  UNIQUE_ID_CHARSET = DocumentIdentifiers::HotelReferences::TOKEN_CHARSET
+  # The public identifier: a plain number, issued in order, starting here. Hotels quote
+  # it down a phone line and sort by it in spreadsheets, which is what earned it the
+  # switch from a random token. It has no fixed width — it grows past five digits.
+  UNIQUE_ID_FLOOR = 10_101
+
+  # Arbitrary but fixed: the advisory-lock key that serialises code issuance. Nothing
+  # else in the app takes it, so it never contends with anything but itself.
+  UNIQUE_ID_LOCK_KEY = 8_231_101
 
   # The numbers a hotel quotes on its documents. The first two identify the business
   # itself; the other two identify it to the authority behind each statutory tax.
@@ -223,7 +227,7 @@ class Hotel < ApplicationRecord
   # Resolves the identifier that appears in URLs. `unique_id` is canonical; `slug` is
   # kept as a permanent legacy read path so bookmarks and printed concierge QR codes
   # issued before the codes existed keep resolving. There is deliberately no `id`
-  # branch — numeric ids are enumerable, and that is the point of the change.
+  # branch: a hotel is addressed by the code it was issued, never by its row id.
   def self.locate(key, scope: all)
     key = key.to_s.strip
     return nil if key.blank?
@@ -233,6 +237,21 @@ class Hotel < ApplicationRecord
 
   def self.locate!(key, scope: all)
     locate(key, scope: scope) || raise(ActiveRecord::RecordNotFound, "Couldn't find Hotel with identifier #{key.inspect}")
+  end
+
+  # Codes are issued in order, so the next one is the highest already issued plus one.
+  # The advisory lock is what makes that safe when two hotels are created at once —
+  # without it both reads see the same maximum and the unique index rejects the loser.
+  # It is transaction-scoped and released on commit, and the only caller runs inside the
+  # transaction `save` opens. The regexp guard keeps the cast away from any row still
+  # holding a pre-numbering code.
+  def self.next_unique_id
+    # `execute`, not `select_value`: the lock function returns void, and asking the
+    # result for a typed value only earns an "unknown OID" warning on every create.
+    connection.execute("SELECT pg_advisory_xact_lock(#{connection.quote(UNIQUE_ID_LOCK_KEY)})")
+    highest = connection.select_value("SELECT MAX(unique_id::bigint) FROM hotels WHERE unique_id ~ '^[0-9]+$'").to_i
+
+    [ highest, UNIQUE_ID_FLOOR - 1 ].max.succ.to_s
   end
 
   def to_param
@@ -688,13 +707,7 @@ class Hotel < ApplicationRecord
   def assign_unique_id
     return if unique_id.present?
 
-    candidate = generate_unique_id
-    candidate = generate_unique_id while Hotel.exists?(unique_id: candidate)
-    self.unique_id = candidate
-  end
-
-  def generate_unique_id
-    Array.new(UNIQUE_ID_LENGTH) { UNIQUE_ID_CHARSET.sample }.join
+    self.unique_id = self.class.next_unique_id
   end
 
   def unique_id_is_immutable

@@ -35,9 +35,9 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
     end
 
-    # Numeric ids are deliberately unresolvable now — that is what stops hotels
-    # being enumerated from the URL.
-    it 'refuses a numeric id' do
+    # A row id names nothing in the portal, even though hotel codes are numbers too:
+    # the identifier is matched against codes and legacy slugs, never against ids.
+    it 'refuses a row id' do
       get legacy_hotel_settings_path, params: { hotel_id: hotel.id }
 
       expect(response).to redirect_to(root_path)

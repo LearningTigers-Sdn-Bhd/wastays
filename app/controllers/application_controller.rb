@@ -117,8 +117,8 @@ class ApplicationController < ActionController::Base
     return unless request.get? || request.head?
     return unless params[:hotel_id].present?
     return unless request.path.match?(%r{\A/hotel/(dashboard|profile|faq|policy|property_policy|user_profile|bookings|arrivals|audit_logs|reports|inventory|guests|settings)})
-    # Nothing to canonicalise onto if the identifier does not resolve — a numeric id,
-    # say, which no longer names a hotel. Fall through and let access control answer.
+    # Nothing to canonicalise onto if the identifier does not name a hotel. Fall through
+    # and let access control answer.
     return if current_hotel.blank?
     return if request.path.start_with?("/hotel/#{current_hotel.to_param}/")
 
