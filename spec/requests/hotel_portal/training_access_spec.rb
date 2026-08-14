@@ -23,6 +23,7 @@ RSpec.describe "Hotel portal training access", type: :request do
     expect(response.body).to include("Property under review")
     expect(response.body).not_to include("Training mode")
     expect(response.body).to include("Search dashboard pages")
+    expect(response.parsed_body.at_css(".panel-navbar__identity-meta").text.squish).to eq("ID #{hotel.unique_id}")
   end
 
   it "blocks submitted configuration writes by default" do
