@@ -110,7 +110,7 @@
           <% field.with_input(type: :tel, placeholder: "e.g., 012-827 3581") %>
         <% end %>
         <%= render PanelsUI::FormField.new(form: form, attribute: :fixed_line_number, label: "Fixed line number", hint: "Optional; the landline answered at the front desk.") do |field| %>
-          <% field.with_input(type: :tel, placeholder: "e.g., 03-2144 1234") %>
+          <% field.with_input(type: :tel, placeholder: "e.g., 088-234 567") %>
         <% end %>
         <%= render PanelsUI::FormField.new(form: form, attribute: :whatsapp_number, label: "WhatsApp number", hint: "Optional; include the international dialling code.") do |field| %>
           <% field.with_input(type: :tel, placeholder: "e.g., +60 12-827 3581") %>
