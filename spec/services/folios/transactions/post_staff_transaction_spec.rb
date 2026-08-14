@@ -559,6 +559,23 @@ RSpec.describe Folios::Transactions::PostStaffTransaction, frozen_time: Time.zon
     expect(result.transaction.metadata["refund_source"]).to eq("bank_transfer")
   end
 
+  it "does not post a refund while the property is in training" do
+    folio.hotel.update!(status: "pending_review", training_started_at: Time.current)
+
+    result = described_class.call(
+      folio:,
+      user:,
+      transaction_type: "payment",
+      category: "refund",
+      amount: 25,
+      description: "Training refund",
+      options: { metadata: { refund_source: "bank_transfer" } }
+    )
+
+    expect(result).not_to be_success
+    expect(result.error).to eq("Refunds are unavailable while this property is in training.")
+  end
+
   it "rejects manual refunds without a refund source" do
     result = described_class.call(
       folio: folio,

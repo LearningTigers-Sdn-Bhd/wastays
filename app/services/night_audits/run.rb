@@ -20,6 +20,9 @@ module NightAudits
 
     def call
       night_audit = @hotel.night_audits.find_or_initialize_by(business_date: @business_date)
+      if @hotel.training_mode?
+        return Result.new(success?: false, error: "Night Audit is unavailable while this property is in training.", night_audit: night_audit)
+      end
       return Result.new(success?: false, error: "Night audit has already been completed for this date.", night_audit: night_audit) if night_audit.completed?
 
       unless @allow_unclosable_date || @hotel.can_audit_date?(@business_date)

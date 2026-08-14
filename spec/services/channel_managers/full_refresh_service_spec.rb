@@ -18,5 +18,15 @@ RSpec.describe ChannelManagers::FullRefreshService do
       )
       service.call
     end
+
+    it 'does not publish channel data while the property is in training' do
+      hotel.update!(status: "pending_review", training_started_at: Time.current)
+
+      expect(ChannelManagers::SyncJob).not_to receive(:perform_later)
+      result = service.call
+
+      expect(result).not_to be_success
+      expect(result.message).to eq("Channel publishing is unavailable while this property is in training.")
+    end
   end
 end

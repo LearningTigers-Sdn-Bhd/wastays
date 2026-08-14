@@ -44,6 +44,16 @@ RSpec.describe NightAudits::Run do
     create_balanced_folio(completed_booking)
   end
 
+  it "does not run Night Audit while the property is in training" do
+    hotel.update!(status: "pending_review", training_started_at: Time.current)
+
+    result = run_audit
+
+    expect(result).not_to be_success
+    expect(result.error).to eq("Night Audit is unavailable while this property is in training.")
+    expect(result.night_audit).to be_new_record
+  end
+
   it "creates a completed night audit with payment summary and logs milestones" do
     expect { run_audit }.to change(NightAudit, :count).by(1)
                       .and change(NightAuditLog, :count).by(2) # process_started, completed

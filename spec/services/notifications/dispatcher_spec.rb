@@ -23,6 +23,14 @@ RSpec.describe Notifications::Dispatcher do
       .and have_enqueued_job(Notifications::DeliverJob).exactly(2).times
   end
 
+  it "does not create guest deliveries while the property is in training" do
+    hotel.update!(status: "pending_review", training_started_at: Time.current)
+
+    expect {
+      described_class.new(event: :booking_checked_in, booking: booking).call
+    }.not_to change(NotificationDelivery, :count)
+  end
+
   it "does not create duplicate deliveries for the same booking event" do
     dispatcher = described_class.new(event: :booking_checked_in, booking: booking)
 

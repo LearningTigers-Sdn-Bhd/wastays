@@ -14,6 +14,8 @@ module CorporateArPayments
     end
 
     def call
+      return failure("Corporate settlement is unavailable while this property is in training.") if @intent.hotel.training_mode?
+
       setting = @intent.hotel.effective_payment_setting(@intent.gateway)
       return failure("Payment gateway is not configured.") unless setting
 
