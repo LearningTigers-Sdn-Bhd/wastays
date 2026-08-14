@@ -1,0 +1,46 @@
+@layer components {
+  /* A region with nothing in it yet. Deep enough to read as a state rather than
+     as a stray line of text, and centred so the eye lands on the action.
+     RecordTable renders this inside its empty row, which is why the block owns
+     the height rather than any containing cell. */
+  .panel-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 13rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    color: var(--muted-foreground);
+  }
+
+  .panel-empty-state__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--muted-foreground);
+    background: var(--muted);
+    border-radius: var(--radius-md);
+  }
+
+  .panel-empty-state__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .panel-empty-state__description {
+    max-width: 32rem;
+    font-size: 0.8125rem;
+    color: var(--muted-foreground);
+  }
+
+  /* The action sits under the description, so it needs air between the two
+     rather than the gap that spaces the lines above it. */
+  .panel-empty-state__action {
+    margin-top: 0.5rem;
+  }
+}

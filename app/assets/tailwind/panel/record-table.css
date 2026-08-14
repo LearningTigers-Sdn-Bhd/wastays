@@ -190,50 +190,13 @@
     padding: 0;
   }
 
-  .panel-record-table__empty-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    min-height: 13rem;
-    padding: 2rem 1.5rem;
-    text-align: center;
-  }
-
-  .panel-record-table__empty-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    color: var(--muted-foreground);
-    background: var(--muted);
-    border-radius: var(--radius-md);
-  }
-
-  .panel-record-table__empty-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--foreground);
-  }
-
-  .panel-record-table__empty-description {
-    max-width: 32rem;
-    font-size: 0.8125rem;
-    color: var(--muted-foreground);
-  }
-
-  /* The state's own add button sits under the description, so it needs air
-     between the two rather than the gap that spaces the lines above it. */
-  .panel-record-table__empty-content > .panel-button {
-    margin-top: 0.5rem;
-  }
+  /* The empty row renders PanelsUI::EmptyState, which owns the block's shape.
+     Only what is specific to living inside a table belongs here. */
 
   /* The empty state spans a table that may scroll far wider than the viewport.
      Sticking its content to the start edge keeps the message and its button in
      view instead of centring them somewhere off to the right. */
-  .panel-record-table--spreadsheet .panel-record-table__empty-content {
+  .panel-record-table--spreadsheet .panel-empty-state {
     position: sticky;
     inset-inline-start: 0;
     width: min(100%, 42rem);

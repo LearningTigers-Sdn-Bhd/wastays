@@ -35,7 +35,11 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(document.css(".panel-form-field .panel-multi-select")).not_to be_empty
       expect(document.css(".panel-dropzone")).not_to be_empty
       expect(document.at_css("button[command='show-modal'][commandfor='hotel-photo-upload-sheet']").text.squish).to eq("Upload Photos")
-      expect(document.at_css("#hotel-published-photos.min-h-40 p.min-h-40").text.squish).to include("No published photos yet")
+      empty_album = document.at_css("#hotel-published-photos .panel-empty-state")
+      expect(empty_album.at_css(".panel-empty-state__title").text.squish).to eq("No photos yet")
+      # The state offers the upload itself rather than pointing at the section header.
+      expect(empty_album.at_css("button[command='show-modal'][commandfor='hotel-photo-upload-sheet']").text.squish)
+        .to eq("Upload photos")
       upload_sheet = document.at_css("dialog#hotel-photo-upload-sheet[data-panels-ui-sheet-side='right']")
       expect(upload_sheet.at_css("h2").text.squish).to eq("Upload Photos")
       expect(upload_sheet.at_css("footer").text.squish).to include("Discard All", "Confirm Upload")

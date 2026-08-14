@@ -1,0 +1,14 @@
+<%= tag.div(**root_attributes) do %>
+  <% if icon.present? %>
+    <span class="panel-empty-state__icon" aria-hidden="true">
+      <%= helpers.app_icon icon, class: "size-5" %>
+    </span>
+  <% end %>
+  <p class="panel-empty-state__title"><%= title %></p>
+  <% if description.present? %>
+    <p class="panel-empty-state__description"><%= description %></p>
+  <% end %>
+  <% if action? %>
+    <div class="panel-empty-state__action"><%= action %></div>
+  <% end %>
+<% end %>
