@@ -44,7 +44,7 @@ module HotelPortal
     end
 
     def update
-      return redirect_read_only if pending_review?
+      return redirect_read_only if onboarding_read_only?
 
       if implemented_section?
         update_implemented_section
@@ -80,7 +80,7 @@ module HotelPortal
     end
 
     def redirect_locked_section
-      return if pending_review? && @current_entry.definition.key == "review"
+      return if onboarding_read_only? && @current_entry.definition.key == "review"
       return if @current_entry.available
 
       redirect_to onboarding_path(@navigation.resume_entry),
@@ -759,11 +759,11 @@ module HotelPortal
     end
 
     def redirect_read_only
-      redirect_to onboarding_path(@current_entry), alert: "Onboarding is read-only while this property is pending review."
+      redirect_to onboarding_path(@current_entry), alert: "Onboarding is read-only after this property has been submitted for review."
     end
 
-    def pending_review?
-      current_hotel.status == "pending_review"
+    def onboarding_read_only?
+      current_hotel.status.in?(%w[pending_review ready_to_launch])
     end
 
     def onboarding_path(entry)

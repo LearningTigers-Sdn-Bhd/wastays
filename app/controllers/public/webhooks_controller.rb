@@ -29,6 +29,10 @@ class Public::WebhooksController < ApplicationController
 
     quote = BookingQuote.find_by!(token: quote_token)
     hotel = quote.hotel
+    if hotel.training_mode?
+      event.update!(status: "failed", error_message: "Real payments are unavailable while this property is in training.")
+      return head :forbidden
+    end
     setting = hotel.effective_payment_setting(gateway)
 
     unless setting
@@ -117,6 +121,10 @@ class Public::WebhooksController < ApplicationController
   def handle_corporate_ar_webhook(gateway, raw_payload, temp_payload, event)
     notes = temp_payload.dig(:payload, :payment, :entity, :notes) || {}
     intent = CorporateArPaymentIntent.find(notes[:corporate_ar_payment_intent_id])
+    if intent.hotel.training_mode?
+      event.update!(status: "failed", error_message: "Corporate settlement is unavailable while this property is in training.")
+      return head :forbidden
+    end
     setting = intent.hotel.effective_payment_setting(gateway)
 
     unless setting

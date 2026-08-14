@@ -47,6 +47,16 @@ RSpec.describe 'Admin::Dashboard', type: :request, frozen_time: Time.zone.local(
       expect(response.body).to include('Created Date')
       expect(response.body).to include(created_at.strftime('%d %b %Y'))
     end
+
+    it 'does not count or list training bookings as platform activity' do
+      hotel = create(:hotel, status: "pending_review", training_started_at: Time.current)
+      booking = create(:booking, hotel:, status: "confirmed", guest_name: "Training Guest #{token}")
+
+      get admin_dashboard_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include(booking.guest_name)
+    end
   end
 
   describe 'GET /admin/analytics' do

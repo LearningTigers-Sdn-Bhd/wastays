@@ -20,4 +20,13 @@ RSpec.describe Folios::Lifecycle::IssueClosingDocument do
     expect(outcome.invoice).to be_kind_direct_bill
     expect(outcome.receivable.invoice).to eq(outcome.invoice)
   end
+
+  it "does not issue a final document while the property is in training" do
+    folio = create(:booking_folio, status: "closed")
+    folio.hotel.update!(status: "ready_to_launch", training_started_at: Time.current)
+
+    expect {
+      described_class.call!(folio:, settlement_method: "cash", balance: 0, user: nil)
+    }.to raise_error(ArgumentError, "Final invoices are unavailable while this property is in training.")
+  end
 end

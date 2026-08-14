@@ -14,6 +14,7 @@ module CorporateArPayments
     end
 
     def call
+      return failure("Corporate settlement is unavailable while this property is in training.") if @intent.hotel.training_mode?
       return failure("Corporate relationship is not available for payment.") unless @intent.hotel_corporate_account.active?
       return failure("Payment request has expired.") if @intent.expired_for_checkout?
       return failure("Only Razorpay is available for corporate AR payments.") unless @intent.gateway == "razorpay"

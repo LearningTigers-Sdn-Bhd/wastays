@@ -16,6 +16,11 @@ class OnboardingMailer < ApplicationMailer
     mail(to: delivery.recipient_email, subject: "#{@hotel.name} is now live on WAStays")
   end
 
+  def launch_decision_required(delivery)
+    prepare(delivery)
+    mail(to: delivery.recipient_email, subject: "#{@hotel.name} is approved and ready to launch")
+  end
+
   private
 
   def prepare(delivery)

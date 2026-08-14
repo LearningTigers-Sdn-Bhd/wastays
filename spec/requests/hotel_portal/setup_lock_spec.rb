@@ -25,8 +25,6 @@ RSpec.describe "Hotel portal setup lock", type: :request do
         expect(response).to have_http_status(:ok)
       end
 
-      # The dashboard is not a portal page for a property that is not open yet — it used
-      # to render a dead-end "Pending Review" panel. Onboarding is the real page.
       it "still sends the dashboard to onboarding" do
         get hotel_dashboard_path(hotel)
 
@@ -35,12 +33,14 @@ RSpec.describe "Hotel portal setup lock", type: :request do
         )
       end
 
-      it "sends the dashboard to the review section once submitted" do
+      it "opens the dashboard with the training banner once submitted" do
         hotel.update!(status: "pending_review")
 
         get hotel_dashboard_path(hotel)
 
-        expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include('data-testid="training-mode-banner"')
+        expect(response.body).to include("Property under review")
       end
     end
 
@@ -59,12 +59,13 @@ RSpec.describe "Hotel portal setup lock", type: :request do
         expect(response).to redirect_to(hotel_setup_lock_path(hotel))
       end
 
-      it "sends the pending-review dashboard to the explainer" do
+      it "opens the pending-review dashboard for staff" do
         hotel.update!(status: "pending_review")
 
         get hotel_dashboard_path(hotel)
 
-        expect(response).to redirect_to(hotel_setup_lock_path(hotel))
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include('data-testid="training-mode-banner"')
       end
     end
   end
@@ -160,10 +161,10 @@ RSpec.describe "Hotel portal setup lock", type: :request do
         sign_in_as(owner)
       end
 
-      it "sends portal pages to the review section, not back into the wizard" do
+      it "ignores the setup lock and opens the PMS" do
         get edit_hotel_profile_path(hotel)
 
-        expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+        expect(response).to have_http_status(:ok)
       end
     end
 

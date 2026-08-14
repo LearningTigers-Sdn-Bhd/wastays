@@ -79,6 +79,16 @@ RSpec.describe Payments::InitializeCheckout do
     expect(result.error).to eq("Payment gateway is not configured.")
   end
 
+  it "does not initialize a real gateway while the property is in training" do
+    hotel.update!(status: "pending_review", training_started_at: Time.current)
+
+    result = subject.call
+
+    expect(result).not_to be_success
+    expect(result.error).to eq("Real payments are unavailable while this property is in training.")
+    expect(Payments::GatewayRegistry).not_to have_received(:fetch)
+  end
+
   it "returns failure when gateway is unsupported" do
     allow(Payments::GatewayRegistry).to receive(:fetch).and_raise(Payments::GatewayRegistry::UnsupportedGatewayError, "Unsupported gateway")
 

@@ -126,4 +126,19 @@ RSpec.describe HotelPortal::OnboardingReviewPresenter do
     expect(review.status_description).to include("Approved by Platform Admin", "This property is live")
     expect(review.status_description).not_to include("review")
   end
+
+  it "uses launch-decision wording after approval but before go-live" do
+    hotel.update!(status: "ready_to_launch")
+    submission = create(
+      :onboarding_submission, hotel:, submitted_by: user, status: "approved", snapshot:,
+      reviewed_by: user, reviewed_at: Time.current
+    )
+
+    review = presenter(submission:)
+
+    expect(review).to have_attributes(title: "Setup approved", status_title: "Ready to launch")
+    expect(review.description).to include("PMS dashboard")
+    expect(review.status_description).to include("Approved by Platform Admin", "before launch")
+    expect(review.status_description).not_to include("property is live")
+  end
 end

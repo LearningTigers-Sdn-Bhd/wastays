@@ -40,6 +40,10 @@ module Folios
       end
 
       def call
+        if @folio.hotel.training_mode? && refund_payment?
+          return failure("Refunds are unavailable while this property is in training.")
+        end
+
         payment_source_error = apply_payment_source
         return failure(payment_source_error) if payment_source_error.present?
 

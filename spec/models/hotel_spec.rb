@@ -49,7 +49,7 @@ RSpec.describe Hotel, type: :model do
 
   describe 'constants' do
     it 'defines allowed statuses' do
-      expect(Hotel::STATUSES).to match_array(%w[setup pending_review live suspended])
+      expect(Hotel::STATUSES).to match_array(%w[setup pending_review ready_to_launch live suspended])
     end
   end
 
@@ -69,6 +69,21 @@ RSpec.describe Hotel, type: :model do
         expect(hotel.errors[:status]).to be_empty, "expected #{status} to be a valid hotel status"
       end
     end
+
+
+    it "accepts only canonical training decisions and reset states" do
+      hotel = create(:hotel)
+      hotel.assign_attributes(training_data_decision: "discard", training_reset_state: "done")
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:training_data_decision]).to be_present
+      expect(hotel.errors[:training_reset_state]).to be_present
+
+      hotel.training_data_decision = "keep"
+      hotel.training_reset_state = "processing"
+
+      expect(hotel).to be_valid
+    end
   end
 
   describe '#active?' do
@@ -85,6 +100,26 @@ RSpec.describe Hotel, type: :model do
     it 'returns false while the hotel is awaiting review' do
       hotel = build(:hotel, status: 'pending_review')
       expect(hotel.active?).to be false
+    end
+  end
+
+  describe "#training_mode?" do
+    it "is true only during a started pending-review or launch-decision session" do
+      started_at = Time.current
+
+      expect(build(:hotel, status: "pending_review", training_started_at: started_at)).to be_training_mode
+      expect(build(:hotel, status: "ready_to_launch", training_started_at: started_at)).to be_training_mode
+      expect(build(:hotel, status: "pending_review", training_started_at: nil)).not_to be_training_mode
+      expect(build(:hotel, status: "live", training_started_at: started_at)).not_to be_training_mode
+    end
+  end
+
+  describe "#training_reset_in_progress?" do
+    it "covers queued and processing reset work" do
+      expect(build(:hotel, training_reset_state: "queued")).to be_training_reset_in_progress
+      expect(build(:hotel, training_reset_state: "processing")).to be_training_reset_in_progress
+      expect(build(:hotel, training_reset_state: "failed")).not_to be_training_reset_in_progress
+      expect(build(:hotel, training_reset_state: nil)).not_to be_training_reset_in_progress
     end
   end
 

@@ -37,4 +37,20 @@ RSpec.describe Onboarding::DeliverJob, type: :job do
 
     expect(delivery.reload).to have_attributes(status: "sent", attempt_count: 1, completed_at: be_present)
   end
+
+  it "delivers the owner launch-decision email" do
+    delivery = create(
+      :onboarding_delivery, onboarding_submission: submission,
+      delivery_type: "owner_launch_decision_required", recipient_email: "owner@example.com"
+    )
+
+    expect {
+      described_class.perform_now(delivery.id)
+    }.to change { ActionMailer::Base.deliveries.size }.by(1)
+
+    email = ActionMailer::Base.deliveries.last
+    expect(email.to).to eq([ "owner@example.com" ])
+    expect(email.subject).to eq("#{hotel.name} is approved and ready to launch")
+    expect(delivery.reload).to have_attributes(status: "sent", attempt_count: 1, completed_at: be_present)
+  end
 end

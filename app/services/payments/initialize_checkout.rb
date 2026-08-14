@@ -19,6 +19,7 @@ module Payments
 
     def call
       return failure("Invalid parameters") unless valid?
+      return failure("Real payments are unavailable while this property is in training.") if quote.hotel.training_mode?
 
       if (restriction_msg = quote.stay_restriction_error_message).present?
         return failure(restriction_msg)

@@ -38,6 +38,7 @@ class Hotel < ApplicationRecord
   has_many :corporate_accounts, through: :hotel_corporate_accounts
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
+  belongs_to :training_completed_by, class_name: "User", optional: true
   belongs_to :plan, optional: true
   has_one :property_policy, dependent: :destroy
   accepts_nested_attributes_for :property_policy
@@ -127,6 +128,8 @@ class Hotel < ApplicationRecord
   validates :slug, presence: true, uniqueness: true
   validates :status, presence: true
   validates :status, inclusion: { in: ->(_) { STATUSES } }, allow_blank: true
+  validates :training_data_decision, inclusion: { in: %w[keep reset] }, allow_nil: true
+  validates :training_reset_state, inclusion: { in: %w[queued processing failed] }, allow_nil: true
   validates :city, presence: true, unless: :setup?
   validates :country, presence: true, unless: :setup?
   validates :business_starts_at, :business_ends_at, presence: true
@@ -197,10 +200,12 @@ class Hotel < ApplicationRecord
   }
 
   # The onboarding lifecycle. A property is in `setup` until its owner submits it,
-  # `pending_review` while WAStays looks at it, and `live` once approved.
+  # `pending_review` while WAStays looks at it, `ready_to_launch` once approved,
+  # and `live` after the owner decides what to do with training activity.
   STATUSES = %w[
     setup
     pending_review
+    ready_to_launch
     live
     suspended
   ].freeze
@@ -278,6 +283,14 @@ class Hotel < ApplicationRecord
 
   def active?
     status == "live"
+  end
+
+  def training_mode?
+    status.in?(%w[pending_review ready_to_launch]) && training_started_at.present?
+  end
+
+  def training_reset_in_progress?
+    training_reset_state.in?(%w[queued processing])
   end
 
   def publicly_bookable?

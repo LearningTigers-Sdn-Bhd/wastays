@@ -70,6 +70,17 @@ RSpec.describe ChannelManagers::SyncRatePlanAri do
     expect(enqueued_jobs).to be_empty
   end
 
+  it "does nothing while the property is in training" do
+    room_type = create(:room_type, hotel: hotel)
+    link(room_type)
+    hotel.update!(status: "pending_review", training_started_at: Time.current)
+    clear_enqueued_jobs
+
+    described_class.call(rate_plan: rate_plan, room_type_ids: [ room_type.id ])
+
+    expect(enqueued_jobs).to be_empty
+  end
+
   it "queues one terminal reconciliation push but no structure sync for unsupported pricing", :per_person do
     room_type = create(:room_type, hotel: hotel)
     link(room_type)
