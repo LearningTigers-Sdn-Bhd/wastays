@@ -93,14 +93,14 @@ RSpec.describe 'Hotel layout shell', type: :system do
     end
   end
 
-  it "renders the reduced Navbar while the hotel shell is locked" do
+  it "renders the onboarding Navbar while the hotel is pending review" do
     hotel.update!(status: "pending_review")
 
     visit hotel_dashboard_path(hotel)
 
     expect(page).to have_css("header.panel-navbar")
     expect(page).to have_no_css(".panel-navbar__center", visible: :all)
-    expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("#onboarding-profile[data-controller='panels-ui--dropdown-menu']")
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
     expect(page).to have_no_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']", visible: :all)
     expect(page).to have_no_css("[data-controller='panels-ui--sidebar-toggle']", visible: :all)
