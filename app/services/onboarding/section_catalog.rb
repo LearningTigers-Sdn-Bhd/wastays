@@ -6,7 +6,10 @@ module Onboarding
 
     SECTIONS = [
       Section.new(key: "property_profile", phase: "property", required: true, route_name: "property_profile", prerequisites: []),
-      Section.new(key: "roles_permissions", phase: "team", required: true, route_name: "roles_permissions", prerequisites: [ "property_profile" ]),
+      # Photos stand apart from the profile fields: they upload on their own as
+      # soon as they are chosen, rather than being saved by the profile form.
+      Section.new(key: "property_photos", phase: "property", required: true, route_name: "property_photos", prerequisites: [ "property_profile" ]),
+      Section.new(key: "roles_permissions", phase: "team", required: true, route_name: "roles_permissions", prerequisites: [ "property_photos" ]),
       Section.new(key: "staff_setup", phase: "team", required: false, route_name: "staff_setup", prerequisites: [ "roles_permissions" ]),
       Section.new(key: "taxes_fees", phase: "finance", required: true, route_name: "taxes_fees", prerequisites: [ "staff_setup" ]),
       Section.new(key: "room_revenue", phase: "finance", required: true, route_name: "room_revenue", prerequisites: [ "taxes_fees" ]),

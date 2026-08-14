@@ -177,17 +177,25 @@ module HotelPortal
 
     def photo_return_path
       if params[:return_to] == "onboarding"
-        hotel_onboarding_section_path(@hotel, section_key: "property_profile")
+        hotel_onboarding_section_path(@hotel, section_key: "property_photos")
       else
         edit_hotel_profile_path(@hotel)
       end
     end
 
+    # Removing the featured photo does not leave the property without one. The
+    # remaining photos promote their own replacement, so "has photos" and "has a
+    # featured photo" never come apart — which is what lets the photos setup step
+    # ask only for a photo. Callers purge after this runs, so the promoted
+    # attachment is chosen from what will still be there.
     def clear_featured_photo_if_needed(photo_ids)
       return unless @hotel.featured_photo_attachment_id.present?
-      return unless Array(photo_ids).map(&:to_i).include?(@hotel.featured_photo_attachment_id.to_i)
 
-      @hotel.update_column(:featured_photo_attachment_id, nil)
+      removed_ids = Array(photo_ids).map(&:to_i)
+      return unless removed_ids.include?(@hotel.featured_photo_attachment_id.to_i)
+
+      successor = @hotel.photos.attachments.where.not(id: removed_ids).order(:id).first
+      @hotel.update_column(:featured_photo_attachment_id, successor&.id)
     end
   end
 end

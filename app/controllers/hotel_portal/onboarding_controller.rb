@@ -10,6 +10,7 @@ module HotelPortal
     # same list, so the two cannot drift.
     IMPLEMENTED_SECTIONS = %w[
       property_profile
+      property_photos
       roles_permissions
       staff_setup
       taxes_fees
@@ -94,7 +95,9 @@ module HotelPortal
       )
 
       case @current_entry.definition.key
-      when "property_profile"
+      # The profile step reads star ratings off the presenter; the photos step
+      # also reads the upload queue from it.
+      when "property_profile", "property_photos"
         @photo_queue = HotelPortal::PhotoQueue.new(current_hotel, session)
         @profile_presenter = HotelPortal::ProfilePresenter.new(current_hotel, @photo_queue, view_context)
       when "roles_permissions"
@@ -393,6 +396,12 @@ module HotelPortal
           Onboarding::SavePropertyProfile.new(
             hotel: current_hotel,
             params: params,
+            actor: current_user,
+            complete: complete
+          ).call
+        when "property_photos"
+          Onboarding::SavePropertyPhotos.new(
+            hotel: current_hotel,
             actor: current_user,
             complete: complete
           ).call

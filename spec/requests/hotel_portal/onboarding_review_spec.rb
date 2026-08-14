@@ -60,8 +60,8 @@ RSpec.describe "Hotel onboarding review page", type: :request do
     expect(document.css("table caption").text).to include("Property setup summary")
     expect(document.css("table tbody th[scope='rowgroup']").map { |cell| cell.text.strip })
       .to eq([ "Property", "Team", "Finance", "Rooms & rates", "Commercial" ])
-    expect(document.css("table tbody th[scope='row']").size).to eq(12)
-    expect(document.css("div.md\\:hidden[aria-label='Property setup summary for small screens'] li").size).to eq(12)
+    expect(document.css("table tbody th[scope='row']").size).to eq(13)
+    expect(document.css("div.md\\:hidden[aria-label='Property setup summary for small screens'] li").size).to eq(13)
     expect(response.body).to include(
       "Kota Belud, Malaysia · MYR", "Coverage through 12 Aug 2027",
       "No additional staff", "Deferred", "0 send · 0 hold"

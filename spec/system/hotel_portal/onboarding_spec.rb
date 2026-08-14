@@ -35,7 +35,7 @@ RSpec.describe "Hotel onboarding shell", type: :system do
   def reach_taxes_fees!
     Financials::EnsureDefaultTransactionCodes.call(hotel)
     Onboarding::InitializeProgress.new(hotel: hotel).call
-    %w[property_profile roles_permissions staff_setup].each do |key|
+    %w[property_profile property_photos roles_permissions staff_setup].each do |key|
       hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
   end
@@ -114,9 +114,15 @@ RSpec.describe "Hotel onboarding shell", type: :system do
 
     click_button "Save & continue"
 
+    # Photos are a step of their own; this property already has one, so it only
+    # has to be carried past.
+    expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "property_photos"))
+    expect(page).to have_css("h1", text: "Property photos")
+    click_button "Save & continue"
+
     expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "roles_permissions"))
     expect(page).to have_css("h1", text: "Roles and permissions")
-    expect(page).to have_link("Back", href: hotel_onboarding_section_path(hotel, section_key: "property_profile"))
+    expect(page).to have_link("Back", href: hotel_onboarding_section_path(hotel, section_key: "property_photos"))
 
     check "I reviewed the Hotel Owner, General Manager, Front Desk, and Housekeeper presets"
     click_button "Save & continue"
@@ -149,6 +155,7 @@ RSpec.describe "Hotel onboarding shell", type: :system do
   it "adds and removes records in an editable table" do
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
+    hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
     # The preset roles the staff rows choose from are created by this step, so
     # run it rather than only marking its section complete.
     Onboarding::ConfirmRolePresets.new(hotel: hotel, actor: user, confirmed: true).call
@@ -179,7 +186,7 @@ RSpec.describe "Hotel onboarding shell", type: :system do
 
   it "configures rooms in the spreadsheet and stages amenities and numbering in one sheet" do
     Onboarding::InitializeProgress.new(hotel: hotel).call
-    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue].each do |key|
+    %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue].each do |key|
       hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
     amenity = Hotel::CATEGORIZED_ROOM_AMENITIES.first[:items].first
@@ -229,7 +236,7 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     suite = create(:room_type, hotel: hotel, name: "Suite", quantity: 1, max_adults: 2, base_price: 200)
     create(:room_type, hotel: hotel, name: "Deluxe", quantity: 1, max_adults: 2, base_price: 150)
     Onboarding::InitializeProgress.new(hotel: hotel, actor: user).call
-    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
+    %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
       hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
     plan = create(:rate_plan, :custom, hotel: hotel, name: "Corporate")
@@ -279,7 +286,7 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     create(:user_hotel_access, user: user, hotel: pax_hotel, role: role)
     create(:room_type, hotel: pax_hotel, name: "Suite", quantity: 1, max_adults: 4, base_price: 200)
     Onboarding::InitializeProgress.new(hotel: pax_hotel, actor: user).call
-    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
+    %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
       pax_hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
     plan = create(:rate_plan, :custom, hotel: pax_hotel, name: "Corporate")

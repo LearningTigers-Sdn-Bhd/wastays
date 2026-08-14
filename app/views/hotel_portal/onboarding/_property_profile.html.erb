@@ -12,8 +12,7 @@
         "Default currency" => current_hotel.default_currency,
         "Contact" => [current_hotel.contact_email, current_hotel.contact_phone, current_hotel.fixed_line_number].compact_blank.join(" · "),
         "Stay times" => [current_hotel.property_policy&.check_in_time, current_hotel.property_policy&.check_out_time].compact_blank.join(" – "),
-        "Business day" => [current_hotel.business_starts_at, current_hotel.business_ends_at].compact.map { |time| time.strftime("%H:%M") }.join(" – "),
-        "Photos" => pluralize(current_hotel.photos.count, "photo")
+        "Business day" => [current_hotel.business_starts_at, current_hotel.business_ends_at].compact.map { |time| time.strftime("%H:%M") }.join(" – ")
       }.each do |label, value| %>
         <div class="space-y-1">
           <dt class="text-xs text-muted-foreground"><%= label %></dt>
@@ -146,27 +145,4 @@
       </div>
     </section>
   <% end %>
-
-  <section class="space-y-4" aria-labelledby="property-photos-heading"
-           data-controller="hotel-photo-queue"
-           data-hotel-photo-queue-upload-url-value="<%= hotel_profile_photo_queue_path(current_hotel) %>"
-           data-hotel-photo-queue-clear-url-value="<%= hotel_clear_profile_photo_queue_path(current_hotel) %>"
-           data-hotel-photo-queue-commit-url-value="<%= hotel_commit_profile_photo_queue_path(current_hotel) %>"
-           data-hotel-photo-queue-remove-url-template-value="<%= hotel_profile_photo_queue_item_path(current_hotel, "__SIGNED_ID__") %>"
-           data-hotel-photo-queue-existing-count-value="<%= current_hotel.photos.count %>"
-           data-hotel-photo-queue-max-count-value="<%= Hotel::MAX_PHOTOS %>"
-           data-action="change->hotel-photo-queue#queueSelectedFiles">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h2 id="property-photos-heading" class="text-base font-semibold">Property photos</h2>
-        <p class="mt-1 text-sm text-muted-foreground">Upload guest-facing photos and choose one featured photo before continuing.</p>
-      </div>
-      <%= render PanelsUI::Button.new(as: :button, command: "show-modal", commandfor: "hotel-photo-upload-sheet", size: :sm) do %>
-        <%= app_icon "upload", class: "size-4", aria: { hidden: "true" } %><span>Upload photos</span>
-      <% end %>
-    </div>
-    <%= render "hotel_portal/profiles/published_photos", hotel: current_hotel, return_to: "onboarding" %>
-    <%= render "hotel_portal/profiles/photo_upload_sheet", hotel: current_hotel, queued_photo_items: @profile_presenter.queued_photo_items %>
-  </section>
-
 <% end %>

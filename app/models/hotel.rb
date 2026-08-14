@@ -482,15 +482,20 @@ class Hotel < ApplicationRecord
   end
 
   def ready_for_review?
-    property_profile_ready? && rooms_ready? && inventory_ready?
+    property_profile_ready? && property_photos_ready? && rooms_ready? && inventory_ready?
   end
 
   def property_profile_ready?
     name.present? &&
       city.present? &&
       country.present? &&
-      address.present? &&
-      featured_photo_attachment_id.present?
+      address.present?
+  end
+
+  # Photos are their own setup step, so they answer for themselves. One photo is
+  # enough; it is featured automatically, so there is nothing else to check.
+  def property_photos_ready?
+    featured_photo_attachment_id.present?
   end
 
   def rooms_ready?
@@ -543,11 +548,25 @@ class Hotel < ApplicationRecord
     photos_to_attach = photo_files.first(remaining_slots)
 
     photos.attach(photos_to_attach) if photos_to_attach.any?
+    feature_first_photo
 
     PhotoUploadResult.new(
       attached_count: photos_to_attach.size,
       trimmed_count: photo_files.size - photos_to_attach.size
     )
+  end
+
+  # A property with photos always has a featured one. Nobody has to think about
+  # choosing the first one, and the setup step can ask for a photo rather than
+  # for a photo plus a separate decision about it. Picking a different featured
+  # photo later still works — this only fills a gap, it never overrides a choice.
+  def feature_first_photo
+    return if featured_photo_attachment_id.present?
+
+    first_photo = photos.attachments.order(:id).first
+    return if first_photo.blank?
+
+    update_column(:featured_photo_attachment_id, first_photo.id)
   end
 
   def payout_batches_for_reports(start_date: nil, end_date: nil)

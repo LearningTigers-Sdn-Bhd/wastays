@@ -15,7 +15,7 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
     sign_in_as(user)
     Onboarding::InitializeProgress.new(hotel: hotel, actor: user).call
-    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
+    %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
       hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
   end
@@ -24,7 +24,7 @@ RSpec.describe "Onboarding rates and availability", type: :request do
     pax_hotel = create(:hotel, :per_person, account: account, status: "setup")
     create(:user_hotel_access, user: user, hotel: pax_hotel, role: role)
     Onboarding::InitializeProgress.new(hotel: pax_hotel, actor: user).call
-    %w[property_profile roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
+    %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue rooms].each do |key|
       pax_hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
     pax_hotel

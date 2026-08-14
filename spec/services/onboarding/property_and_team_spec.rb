@@ -6,7 +6,7 @@ RSpec.describe "Onboarding property and team services" do
   let(:hotel) { create(:hotel, status: "setup") }
   let(:actor) { create(:user, account: hotel.account) }
 
-  it "does not complete a property profile without its photo and required details" do
+  it "does not complete a property profile without its required details" do
     result = Onboarding::SavePropertyProfile.new(
       hotel: hotel,
       actor: actor,
@@ -18,7 +18,7 @@ RSpec.describe "Onboarding property and team services" do
     ).call
 
     expect(result.success?).to be(false)
-    expect(result.error).to include("Featured photo", "Contact email", "Timezone")
+    expect(result.error).to include("Contact email", "Timezone")
   end
 
   it "saves the front desk landline and the business day window alongside the profile" do
@@ -41,6 +41,7 @@ RSpec.describe "Onboarding property and team services" do
   it "requires explicit role confirmation and records a permission snapshot" do
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
+    hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
 
     refused = Onboarding::ConfirmRolePresets.new(hotel: hotel, actor: actor, confirmed: false).call
     expect(refused.success?).to be(false)
@@ -59,6 +60,7 @@ RSpec.describe "Onboarding property and team services" do
     HotelOps::SeedAccountRoles.call(hotel.account)
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
+    hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
     hotel.onboarding_sections.find_by!(section_key: "roles_permissions").update!(state: "complete")
 
     result = Onboarding::SaveStaffDrafts.new(
@@ -78,6 +80,7 @@ RSpec.describe "Onboarding property and team services" do
       HotelOps::SeedAccountRoles.call(hotel.account)
       Onboarding::InitializeProgress.new(hotel: hotel).call
       hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
+      hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
       hotel.onboarding_sections.find_by!(section_key: "roles_permissions").update!(state: "complete")
     end
 
@@ -144,6 +147,7 @@ RSpec.describe "Onboarding property and team services" do
     HotelOps::SeedAccountRoles.call(hotel.account)
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
+    hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
     hotel.onboarding_sections.find_by!(section_key: "roles_permissions").update!(state: "complete")
     existing_user = create(:user, account: hotel.account, email: "existing@example.com")
     create(:user_hotel_access, hotel: hotel, user: existing_user, role: hotel.account.roles.find_by!(slug: "front_desk"))

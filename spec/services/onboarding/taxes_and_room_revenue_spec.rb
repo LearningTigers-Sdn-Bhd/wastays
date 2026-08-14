@@ -8,7 +8,7 @@ RSpec.describe "Onboarding taxes and room revenue services" do
 
   def resolve_prerequisites!
     Onboarding::InitializeProgress.new(hotel: hotel).call
-    %w[property_profile roles_permissions staff_setup].each do |key|
+    %w[property_profile property_photos roles_permissions staff_setup].each do |key|
       hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
   end

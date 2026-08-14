@@ -31,7 +31,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     get hotel_onboarding_path(hotel)
 
     expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "property_profile"))
-    expect(hotel.onboarding_sections.count).to eq(13)
+    expect(hotel.onboarding_sections.count).to eq(14)
   end
 
   it "renders the dedicated shell with accessible phase navigation" do
@@ -92,23 +92,16 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
           params: {
             navigation_action: "save_continue",
-            hotel: property_params,
+            hotel: property_params.except(:contact_email),
             property_policy: { check_in_time: "15:00", check_out_time: "11:00" }
           }
 
     expect(response).to have_http_status(:unprocessable_content)
-    expect(response.body).to include("Featured photo")
+    expect(response.body).to include("Contact email")
     expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("not_started")
   end
 
   it "saves a complete property profile and advances without placeholder metadata" do
-    hotel.photos.attach(
-      io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")),
-      filename: "property.jpg",
-      content_type: "image/jpeg"
-    )
-    hotel.update!(featured_photo_attachment_id: hotel.photos.attachments.last.id)
-
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
           params: {
             navigation_action: "save_continue",
@@ -116,14 +109,87 @@ RSpec.describe "Hotel onboarding shell", type: :request do
             property_policy: { check_in_time: "15:00", check_out_time: "11:00" }
           }
 
-    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "roles_permissions"))
+    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "property_photos"))
     section = hotel.onboarding_sections.find_by!(section_key: "property_profile")
     expect(section).to have_attributes(state: "complete", decision_metadata: include("source" => "property_profile"))
     expect(section.decision_metadata).not_to have_key("placeholder")
   end
 
+  describe "the property photos step" do
+    before { hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete") }
+
+    # Both real upload paths — the profile form and the onboarding upload queue —
+    # attach through this method, which is where a first photo becomes featured.
+    def attach_photo(filename = "property.jpg")
+      blob = ActiveStorage::Blob.create_and_upload!(
+        io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")),
+        filename: filename,
+        content_type: "image/jpeg"
+      )
+      hotel.attach_photos_with_limit([ blob ])
+    end
+
+    it "opens on an empty state that carries the upload action alone" do
+      get hotel_onboarding_section_path(hotel, section_key: "property_photos")
+
+      document = response.parsed_body
+      expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Property photos" ])
+      expect(document.at_css(".panel-empty-state__title").text.squish).to eq("No photos yet")
+      # The step heading is the shell's, and the empty state owns the only
+      # upload button on the page while the album is empty.
+      expect(document.css("h2").map { |heading| heading.text.strip }).not_to include("Property photos")
+      expect(document.css("button[commandfor='hotel-photo-upload-sheet']").size).to eq(1)
+    end
+
+    it "will not advance until the property has a photo" do
+      patch hotel_onboarding_section_path(hotel, section_key: "property_photos"),
+            params: { navigation_action: "save_continue" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Upload at least one photo")
+      expect(hotel.onboarding_sections.find_by!(section_key: "property_photos").state).to eq("not_started")
+    end
+
+    # The owner is never asked to nominate a featured photo, so one photo has to
+    # be enough on its own to satisfy the step.
+    it "advances on a single photo, which features itself" do
+      attach_photo
+
+      patch hotel_onboarding_section_path(hotel, section_key: "property_photos"),
+            params: { navigation_action: "save_continue" }
+
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "roles_permissions"))
+      expect(hotel.reload.featured_photo_attachment_id).to eq(hotel.photos.attachments.sole.id)
+      expect(hotel.onboarding_sections.find_by!(section_key: "property_photos"))
+        .to have_attributes(state: "complete", decision_metadata: include("source" => "property_photos"))
+    end
+
+    it "keeps a featured photo when the featured one is removed" do
+      attach_photo("first.jpg")
+      attach_photo("second.jpg")
+      first, second = hotel.photos.attachments.order(:id).to_a
+      expect(hotel.reload.featured_photo_attachment_id).to eq(first.id)
+
+      delete hotel_profile_photo_path(hotel, first.id, return_to: "onboarding")
+
+      expect(hotel.reload.featured_photo_attachment_id).to eq(second.id)
+      expect(hotel).to be_property_photos_ready
+    end
+
+    it "leaves no featured photo once the last one is removed" do
+      attach_photo
+      photo = hotel.photos.attachments.sole
+
+      delete hotel_profile_photo_path(hotel, photo.id, return_to: "onboarding")
+
+      expect(hotel.reload.featured_photo_attachment_id).to be_nil
+      expect(hotel).not_to be_property_photos_ready
+    end
+  end
+
   it "shows and confirms the four seeded role presets regardless of plan feature access" do
     hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
+    hotel.onboarding_sections.create!(section_key: "property_photos", state: "complete")
 
     get hotel_onboarding_section_path(hotel, section_key: "roles_permissions")
     expect(response).to have_http_status(:ok)
@@ -258,7 +324,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   describe "finance phase" do
     def resolve_team_phase!
       Onboarding::InitializeProgress.new(hotel: hotel).call
-      %w[property_profile roles_permissions staff_setup].each do |key|
+      %w[property_profile property_photos roles_permissions staff_setup].each do |key|
         hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
       end
     end
@@ -381,7 +447,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   describe "rooms phase" do
     def resolve_finance_phase!
       Onboarding::InitializeProgress.new(hotel: hotel).call
-      %w[property_profile roles_permissions staff_setup taxes_fees room_revenue].each do |key|
+      %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue].each do |key|
         hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
       end
     end

@@ -104,7 +104,6 @@ module Onboarding
 
     def missing_requirements
       missing = REQUIRED_FIELDS.filter_map { |attribute, label| label if @hotel.public_send(attribute).blank? }
-      missing << "Featured photo" if @hotel.featured_photo_attachment_id.blank?
       policy = @hotel.property_policy
       missing << "Check-in time" if policy&.check_in_time.blank?
       missing << "Check-out time" if policy&.check_out_time.blank?
