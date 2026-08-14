@@ -13,6 +13,8 @@ RSpec.describe "Onboarding review lifecycle" do
   end
 
   before do
+    owner_role = create(:role, account: hotel.account, slug: "hotel_owner", name: "Hotel Owner")
+    create(:user_hotel_access, hotel:, user: actor, role: owner_role)
     Onboarding::InitializeProgress.new(hotel:).call
     hotel.onboarding_sections.update_all(state: "complete", completed_at: Time.current, decision_metadata: {})
     allow(Rates::SetupCoverage).to receive(:call).with(hotel:).and_return(rates_coverage)
@@ -32,6 +34,7 @@ RSpec.describe "Onboarding review lifecycle" do
     expect(repeated.submission).to eq(first.submission)
     expect(another_key.submission).to eq(first.submission)
     expect(hotel.reload.status).to eq("pending_review")
+    expect(hotel.training_started_at).to be_present
     expect(hotel.onboarding_submissions.count).to eq(1)
     expect(hotel.onboarding_audit_events.where(event_type: "submitted")).to exist
   end
@@ -67,17 +70,105 @@ RSpec.describe "Onboarding review lifecycle" do
     expect(submission.reload.status).to eq("pending_review")
   end
 
-  it "approves directly to live and retains the approved snapshot" do
+  it "approves into the launch decision state without activating the account" do
+    hotel.account.update!(status: "pending_review")
     submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
     reviewer = create(:user, :superadmin)
 
     result = Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer)
 
     expect(result).to be_success
-    expect(hotel.reload.status).to eq("live")
-    expect(hotel.account.reload.status).to eq("active")
+    expect(hotel.reload.status).to eq("ready_to_launch")
+    expect(hotel.account.reload.status).to eq("pending_review")
     expect(submission.reload).to have_attributes(status: "approved", reviewed_by: reviewer, snapshot: snapshot.data)
     expect(hotel.onboarding_audit_events.where(event_type: "approved")).to exist
+    expect(submission.deliveries.pluck(:delivery_type)).to contain_exactly("owner_launch_decision_required")
+  end
+
+
+  it "keeps training activity and launches exactly once" do
+    hotel.account.update!(status: "pending_review")
+    submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
+    Onboarding::ApproveOnboarding.call(hotel:, actor: create(:user, :superadmin))
+
+    first = Onboarding::CompleteTraining.call(hotel:, actor:, decision: "keep")
+    repeated = Onboarding::CompleteTraining.call(hotel:, actor:, decision: "keep")
+
+    expect(first).to be_success
+    expect(repeated).to be_success
+    expect(hotel.reload).to have_attributes(
+      status: "live", training_data_decision: "keep", training_completed_by: actor,
+      training_completed_at: be_present, training_reset_state: nil
+    )
+    expect(hotel.account.reload.status).to eq("active")
+    expect(hotel.onboarding_audit_events.where(event_type: "training_keep_selected").count).to eq(1)
+    expect(hotel.onboarding_audit_events.where(event_type: "launched").count).to eq(1)
+    expect(Onboarding::DispatchPendingDeliveriesJob).to have_received(:perform_later).with(submission.id).exactly(3).times
+  end
+
+
+  it "rejects a conflicting launch decision after launch" do
+    submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
+    Onboarding::ApproveOnboarding.call(hotel:, actor: create(:user, :superadmin))
+    Onboarding::CompleteTraining.call(hotel:, actor:, decision: "keep")
+
+    result = Onboarding::CompleteTraining.call(hotel:, actor:, decision: "reset")
+
+    expect(result).not_to be_success
+    expect(result.error).to include("different launch decision")
+    expect(hotel.reload).to have_attributes(status: "live", training_data_decision: "keep")
+    expect(submission.reload.status).to eq("approved")
+  end
+
+
+  it "finalizes reset only after cleanup has claimed the reset" do
+    submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
+    Onboarding::ApproveOnboarding.call(hotel:, actor: create(:user, :superadmin))
+
+    premature = Onboarding::CompleteTraining.call(hotel:, actor:, decision: "reset")
+    hotel.update!(training_reset_state: "processing")
+    completed = Onboarding::CompleteTraining.call(hotel:, actor:, decision: "reset")
+
+    expect(premature).not_to be_success
+    expect(completed).to be_success
+    expect(hotel.reload).to have_attributes(
+      status: "live", training_data_decision: "reset", training_reset_state: nil,
+      training_completed_by: actor, training_completed_at: be_present
+    )
+    expect(hotel.onboarding_audit_events.where(event_type: "training_reset_completed")).to exist
+    expect(submission.reload.deliveries.where(delivery_type: "owner_approved")).to exist
+  end
+
+
+  it "leaves the property awaiting launch when readiness changes after approval" do
+    Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt")
+    Onboarding::ApproveOnboarding.call(hotel:, actor: create(:user, :superadmin))
+    not_ready = Onboarding::Readiness::Result.new(ready: false, blocking_issues: [], warnings: [])
+    allow(Onboarding::Readiness).to receive(:new).with(hotel:, rates_coverage:)
+      .and_return(instance_double(Onboarding::Readiness, call: not_ready))
+
+    result = Onboarding::CompleteTraining.call(hotel:, actor:, decision: "keep")
+
+    expect(result).not_to be_success
+    expect(result.error).to include("no longer ready")
+    expect(hotel.reload).to have_attributes(status: "ready_to_launch", training_data_decision: nil)
+  end
+
+
+  it "leaves the property awaiting launch when approved configuration changes" do
+    hotel.account.update!(status: "pending_review")
+    Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt")
+    Onboarding::ApproveOnboarding.call(hotel:, actor: create(:user, :superadmin))
+    allow(Onboarding::SubmissionSnapshot).to receive(:call).with(hotel:, rates_coverage:).and_return(
+      Onboarding::SubmissionSnapshot::Result.new(data: {}, digest: Digest::SHA256.hexdigest("changed-after-approval"))
+    )
+
+    result = Onboarding::CompleteTraining.call(hotel:, actor:, decision: "keep")
+
+    expect(result).not_to be_success
+    expect(result.error).to include("changed after approval")
+    expect(hotel.reload).to have_attributes(status: "ready_to_launch", training_data_decision: nil)
+    expect(hotel.account.reload.status).not_to eq("active")
   end
 
   describe "when the property has invitations waiting" do
@@ -98,10 +189,14 @@ RSpec.describe "Onboarding review lifecycle" do
       expect(submission.deliveries.pluck(:delivery_type).uniq).to eq([ "admin_submitted" ])
     end
 
-    it "creates the invitations only once the property is approved" do
+    it "creates the invitations only once the property is launched" do
       submission = Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "owner-attempt").submission
 
       Onboarding::ApproveOnboarding.call(hotel:, actor: create(:user, :superadmin))
+
+      expect(invitation_deliveries(submission)).to be_empty
+
+      Onboarding::CompleteTraining.call(hotel:, actor:, decision: "keep")
 
       expect(invitation_deliveries(submission).pluck(:delivery_type, :source_id)).to contain_exactly(
         [ "staff_invitation", staff_draft.id ],

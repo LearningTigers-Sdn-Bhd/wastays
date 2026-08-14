@@ -49,13 +49,32 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response).to have_http_status(:ok)
       expect(document.css('.panel-metric-card')).to be_empty
       expect(document.at_css('table.panel-table')).to be_present
-      expect(document.css('#hotel-status-tabs .tabs-tab').size).to eq(5)
+      expect(document.css('#hotel-status-tabs .tabs-tab').size).to eq(6)
       expect(document.css('.panel-select-menu').size).to eq(1)
       expect(document.at_css("select[name='per_page'] option[selected]").text).to eq('15')
       expect(document.css('turbo-frame#hotels_list .panel-badge').size).to eq(2)
       expect(document.at_css("turbo-frame#hotels_list")).to be_present
       expect(document.at_css('table.panel-table').text).not_to include("Onboarding period", "Scheduled session")
       expect(response.body).not_to include('href="/admin/hotels/onboarding"')
+    end
+
+
+    it 'separates hotels waiting for the owner launch decision' do
+      ready_hotel = create(
+        :hotel,
+        name: "Ready Stay #{token}",
+        status: "ready_to_launch",
+        onboarding_start_date: Date.new(2026, 4, 15),
+        onboarding_end_date: Date.new(2026, 4, 20)
+      )
+
+      get admin_hotels_path, params: { status: 'ready_to_launch' }
+
+      document = Nokogiri::HTML(response.body)
+      table = document.at_css('table.panel-table')
+      expect(table.text).to include(ready_hotel.name, 'Ready to launch', 'View launch status')
+      expect(table.text).not_to include(pending_hotel.name)
+      expect(document.at_css('#hotel-status-tabs-tab-ready_to_launch')['aria-current']).to eq('page')
     end
 
     it 'turns the pending-review filter into the onboarding queue' do

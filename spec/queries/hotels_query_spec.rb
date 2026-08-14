@@ -24,5 +24,12 @@ RSpec.describe HotelsQuery do
 
       expect(described_class.new.call(status: "pending_review")).to contain_exactly(pending)
     end
+
+    it "filters hotels approved and awaiting their launch decision" do
+      ready = create(:hotel, status: "ready_to_launch")
+      create(:hotel, status: "pending_review")
+
+      expect(described_class.new.call(status: "ready_to_launch")).to contain_exactly(ready)
+    end
   end
 end

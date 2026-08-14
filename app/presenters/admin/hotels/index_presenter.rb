@@ -23,6 +23,7 @@ module Admin
       STATUS_PRESENTATION = {
         "setup" => [ "Setup", :neutral, "Waiting for the owner to complete onboarding." ],
         "pending_review" => [ "Pending review", :warning, "Waiting for an administrator to approve this hotel." ],
+        "ready_to_launch" => [ "Ready to launch", :success, "Approved and waiting for the owner to keep or clear training activity." ],
         "live" => [ "Active", :success, "Available for hotel operations and public booking." ],
         "suspended" => [ "Suspended", :destructive, "Hotel and account access are currently disabled." ]
       }.freeze
@@ -31,6 +32,7 @@ module Admin
         [ "all", "All", "hotel", :total ],
         [ "setup", "Setup", "settings-2", :setup ],
         [ "pending_review", "Pending review", "clock", :pending_review ],
+        [ "ready_to_launch", "Ready to launch", "rocket", :ready_to_launch ],
         [ "active", "Active", "circle-check", :active ],
         [ "suspended", "Suspended", "circle-pause", :suspended ]
       ].freeze
@@ -55,7 +57,8 @@ module Admin
         @status.presence_in(HotelsQuery::STATUS_FILTERS.keys) || "all"
       end
 
-      def pending_review? = active_status == "pending_review"
+      def onboarding_queue? = active_status.in?(%w[pending_review ready_to_launch])
+      def ready_to_launch? = active_status == "ready_to_launch"
 
       def status_tabs
         STATUS_TABS.map do |name, label, icon, count_key|
@@ -72,7 +75,7 @@ module Admin
       def rows
         @rows ||= hotels.map do |hotel|
           status_label, status_variant, status_detail = STATUS_PRESENTATION.fetch(hotel.status)
-          onboarding_details = pending_review? ? onboarding_details_for(hotel) : {}
+          onboarding_details = onboarding_queue? ? onboarding_details_for(hotel) : {}
 
           Row.new(
             hotel: hotel,

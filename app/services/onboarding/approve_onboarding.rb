@@ -38,7 +38,7 @@ module Onboarding
         end
 
         transition = TransitionLifecycle.new(
-          hotel: @hotel, to: "live", actor: @actor,
+          hotel: @hotel, to: "ready_to_launch", actor: @actor,
           metadata: { submission_id: submission.id }
         ).call
         unless transition.success?
@@ -46,15 +46,13 @@ module Onboarding
           raise ActiveRecord::Rollback
         end
 
-        @hotel.account.update!(status: "active") unless @hotel.account.status == "active"
         submission.update!(status: "approved", reviewed_by: @actor, reviewed_at: Time.current)
-        CreateDeliveries.for_owners(submission, "owner_approved")
-        CreateDeliveries.for_approval(submission)
+        CreateDeliveries.for_owners(submission, "owner_launch_decision_required")
       end
 
       return Result.failure(error, submission:, readiness:) if error
 
-      DispatchPendingDeliveriesJob.perform_later(submission.id)
+      DispatchPendingDeliveriesJob.perform_later(submission.id) if submission
       Result.success(submission:, readiness:)
     rescue ActiveRecord::RecordInvalid => e
       Result.failure(e.record.errors.full_messages.to_sentence, submission:, readiness:)

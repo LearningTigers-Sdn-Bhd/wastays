@@ -26,6 +26,7 @@ module HotelPortal
         blocked: "Review & submit",
         changes_requested: "Changes requested",
         pending: "Setup submitted",
+        launch_pending: "Setup approved",
         approved: "Setup approved"
       }.fetch(page_state)
     end
@@ -36,6 +37,7 @@ module HotelPortal
         blocked: "Resolve the items that need attention before sending the setup to WAStays.",
         changes_requested: "Update the requested sections, then send the setup back to WAStays.",
         pending: "WAStays is reviewing the submitted property setup.",
+        launch_pending: "Choose whether to continue with your current PMS activity or start fresh from the PMS dashboard before going live.",
         approved: "This property is live. The approved setup remains available for reference."
       }.fetch(page_state)
     end
@@ -46,6 +48,7 @@ module HotelPortal
         blocked: "Setup needs attention",
         changes_requested: "WAStays requested changes",
         pending: "Awaiting WAStays review",
+        launch_pending: "Ready to launch",
         approved: "Property is live"
       }.fetch(page_state)
     end
@@ -56,6 +59,7 @@ module HotelPortal
         blocked: :warning,
         changes_requested: :warning,
         pending: :info,
+        launch_pending: :success,
         approved: :success
       }.fetch(page_state)
     end
@@ -74,6 +78,9 @@ module HotelPortal
       when :approved
         reviewer = submission&.reviewed_by&.name || "WAStays"
         "Approved by #{reviewer}#{event_time(submission&.reviewed_at)}. This property is live."
+      when :launch_pending
+        reviewer = submission&.reviewed_by&.name || "WAStays"
+        "Approved by #{reviewer}#{event_time(submission&.reviewed_at)}. Choose whether to continue with your current PMS activity or start fresh from the PMS dashboard before launch."
       end
     end
 
@@ -96,7 +103,9 @@ module HotelPortal
     private
 
     def page_state
-      @page_state ||= if submission&.approved? || hotel.status == "live"
+      @page_state ||= if hotel.status == "ready_to_launch" && submission&.approved?
+        :launch_pending
+      elsif submission&.approved? || hotel.status == "live"
         :approved
       elsif hotel.status == "pending_review"
         :pending
@@ -109,7 +118,7 @@ module HotelPortal
       end
     end
 
-    def submitted? = page_state.in?(%i[pending approved])
+    def submitted? = page_state.in?(%i[pending launch_pending approved])
 
     def changes_requested?
       submission&.changes_requested? || navigation.fetch("review").record.state == "needs_attention"

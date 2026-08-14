@@ -65,7 +65,7 @@ module HotelPortal
     def description = SECTION_CONTENT.fetch(current_entry.definition.key).last
     def phase_label = PHASE_LABELS.fetch(current_entry.definition.phase)
     def required? = current_entry.definition.required
-    def read_only? = hotel.status.in?(%w[pending_review live])
+    def read_only? = hotel.status.in?(%w[pending_review ready_to_launch live])
     def review? = current_entry.definition.key == "review"
     def current_position = navigation.entries.index(current_entry) + 1
     def total_sections = navigation.entries.length
@@ -104,6 +104,8 @@ module HotelPortal
     def read_only_alert
       if hotel.status == "live"
         { tone: :success, title: "Setup approved", description: "This approved setup is read-only because the property is live." }
+      elsif hotel.status == "ready_to_launch"
+        { tone: :success, title: "Setup approved", description: "Choose whether to continue with your current PMS activity or start fresh from the PMS dashboard before going live." }
       else
         { tone: :info, title: "Setup submitted for review", description: "Your onboarding details are read-only while the WAStays team reviews this property." }
       end

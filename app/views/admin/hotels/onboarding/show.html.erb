@@ -5,19 +5,21 @@
   <% period_end = @hotel.onboarding_end_date %>
   <% period_days = (period_end - period_start).to_i %>
   <% review_actions_available = @submission&.pending_review? && @hotel.status == "pending_review" %>
+  <% queue_status = @hotel.status == "ready_to_launch" ? "ready_to_launch" : "pending_review" %>
+  <% queue_label = @hotel.status == "ready_to_launch" ? "ready to launch" : "pending review" %>
 
   <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between" data-testid="admin-onboarding-header">
     <div class="flex min-w-0 items-start gap-3">
-      <%= link_to admin_hotels_path(status: "pending_review"),
+      <%= link_to admin_hotels_path(status: queue_status),
             class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            aria: { label: "Back to pending review" } do %>
+            aria: { label: "Back to #{queue_label}" } do %>
         <%= app_icon "arrow-left", class: "size-4", aria: { hidden: "true" } %>
       <% end %>
 
       <div class="min-w-0 space-y-1">
         <div class="flex flex-wrap items-center gap-2">
           <h1 class="min-w-0 truncate text-base font-semibold tracking-tight text-foreground"><%= @hotel.name %></h1>
-          <%= render PanelsUI::Badge.new(label: @hotel.status.humanize, variant: @hotel.status == "live" ? :success : :warning, size: :sm) %>
+          <%= render PanelsUI::Badge.new(label: @hotel.status.humanize, variant: @hotel.status.in?(%w[ready_to_launch live]) ? :success : :warning, size: :sm) %>
         </div>
         <p class="text-xs text-muted-foreground"><%= [ @hotel.city, @hotel.country ].compact_blank.join(", ") %></p>
         <p class="text-xs text-muted-foreground">
@@ -36,7 +38,7 @@
         <%= app_icon "calendar", class: "size-4 shrink-0", aria: { hidden: "true" } %>
         <span>Edit onboarding period</span>
       <% end %>
-      <% if @hotel.status.in?(%w[setup pending_review]) %>
+      <% if @hotel.status == "setup" %>
         <% menu.with_item(
              href: toggle_setup_lock_admin_hotel_path(@hotel),
              method: :post,

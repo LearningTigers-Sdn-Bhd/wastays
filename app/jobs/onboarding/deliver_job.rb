@@ -38,6 +38,9 @@ module Onboarding
       when "owner_changes_requested"
         OnboardingMailer.changes_requested(delivery).deliver_now
         delivery.complete!
+      when "owner_launch_decision_required"
+        OnboardingMailer.launch_decision_required(delivery).deliver_now
+        delivery.complete!
       when "owner_approved"
         OnboardingMailer.approved(delivery).deliver_now
         delivery.complete!
