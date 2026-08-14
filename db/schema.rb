@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_130001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1608,6 +1608,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
     t.decimal "tourism_tax_amount", precision: 10, scale: 2, default: "10.0", null: false
     t.boolean "tourism_tax_enabled", default: false, null: false
     t.string "tourism_tax_registration_number"
+    t.datetime "training_completed_at"
+    t.bigint "training_completed_by_id"
+    t.string "training_data_decision"
+    t.string "training_reset_state"
+    t.datetime "training_started_at"
     t.string "unique_id", null: false
     t.datetime "updated_at", null: false
     t.decimal "usd_conversion_rate", precision: 10, scale: 4, default: "4.5", null: false
@@ -1618,6 +1623,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
     t.index ["plan_id"], name: "index_hotels_on_plan_id"
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
+    t.index ["training_completed_by_id"], name: "index_hotels_on_training_completed_by_id"
     t.index ["unique_id"], name: "index_hotels_on_unique_id", unique: true
   end
 
@@ -1963,7 +1969,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
     t.index ["onboarding_submission_id"], name: "index_onboarding_deliveries_on_onboarding_submission_id"
     t.index ["source_type", "source_id"], name: "index_onboarding_deliveries_on_source_type_and_source_id"
     t.index ["status", "updated_at"], name: "index_onboarding_deliveries_on_status_and_updated_at"
-    t.check_constraint "delivery_type::text = ANY (ARRAY['staff_invitation'::character varying, 'corporate_invitation'::character varying, 'admin_submitted'::character varying, 'owner_changes_requested'::character varying, 'owner_approved'::character varying]::text[])", name: "onboarding_deliveries_type_allowed"
+    t.check_constraint "delivery_type::text = ANY (ARRAY['staff_invitation'::character varying, 'corporate_invitation'::character varying, 'admin_submitted'::character varying, 'owner_changes_requested'::character varying, 'owner_approved'::character varying, 'owner_launch_decision_required'::character varying]::text[])", name: "onboarding_deliveries_type_allowed"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'sent'::character varying, 'held'::character varying, 'failed'::character varying]::text[])", name: "onboarding_deliveries_status_allowed"
   end
 
@@ -2874,6 +2880,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_14_120000) do
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "plans"
   add_foreign_key "hotels", "users", column: "salesperson_id"
+  add_foreign_key "hotels", "users", column: "training_completed_by_id"
   add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "housekeeping_requests", "hotels"
   add_foreign_key "housekeeping_requests", "room_types"

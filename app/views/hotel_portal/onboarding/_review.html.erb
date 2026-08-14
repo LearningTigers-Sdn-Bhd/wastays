@@ -1,6 +1,15 @@
 <section aria-label="Property setup readiness" class="space-y-5">
   <%= render PanelsUI::Alert.new(tone: @review_presenter.status_tone, title: @review_presenter.status_title) do |alert| %>
     <% alert.with_description { @review_presenter.status_description } %>
+    <% if presenter.read_only? %>
+      <% alert.with_actions do %>
+        <%= render PanelsUI::Button.new(
+              label: "Open PMS",
+              href: hotel_dashboard_path(current_hotel),
+              variant: :primary,
+              size: :sm) %>
+      <% end %>
+    <% end %>
   <% end %>
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Setup statistics">

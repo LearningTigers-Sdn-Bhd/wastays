@@ -25,4 +25,13 @@ RSpec.describe CorporateArPayments::InitializeCheckout do
     expect(result).not_to be_success
     expect(result.error).to eq("Only Razorpay is available for corporate AR payments.")
   end
+
+  it "does not initialize corporate settlement while the property is in training" do
+    hotel.update!(status: "ready_to_launch", training_started_at: Time.current)
+
+    result = described_class.call(intent: intent, callback_url: "https://example.com/callback")
+
+    expect(result).not_to be_success
+    expect(result.error).to eq("Corporate settlement is unavailable while this property is in training.")
+  end
 end

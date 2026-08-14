@@ -30,6 +30,8 @@ module Notifications
         return []
       end
 
+      return [] if @booking.hotel.training_mode?
+
       notification_types = Array(EVENT_TO_NOTIFICATION_TYPE.fetch(@event))
       notification_types = notification_types.select { |type| feature_enabled_for_type?(type) }
       return dispatch_scheduled_notifications(notification_types) if scheduled_only_events?

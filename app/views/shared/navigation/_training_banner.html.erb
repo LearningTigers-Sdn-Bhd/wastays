@@ -1,0 +1,71 @@
+<% if training_mode? %>
+  <%= render PanelsUI::Banner.new(
+        tone: :warning,
+        title: "Property under review",
+        dismissible: false,
+        data: { testid: "training-mode-banner" }) do |banner| %>
+    <% banner.with_description do %>
+      You can continue using the PMS while WAStays reviews your property.
+    <% end %>
+  <% end %>
+<% elsif awaiting_training_decision? && training_reset_in_progress? %>
+  <%= render PanelsUI::Banner.new(
+        tone: :info,
+        title: "Clearing PMS activity",
+        dismissible: false,
+        role: :status,
+        data: { testid: "training-reset-progress-banner" }) do |banner| %>
+    <% banner.with_description do %>
+      The PMS is read-only while we prepare your property for a fresh start. You can leave this page and return later.
+    <% end %>
+  <% end %>
+<% elsif awaiting_training_decision? && current_hotel.training_reset_state == "failed" %>
+  <%= render PanelsUI::Banner.new(
+        tone: :destructive,
+        title: "PMS activity could not be cleared",
+        dismissible: false,
+        role: :alert,
+        data: { testid: "training-reset-failed-banner" }) do |banner| %>
+    <% banner.with_description do %>
+      Your data was not changed. Retry the reset or continue with your current PMS activity.
+    <% end %>
+    <% banner.with_actions do %>
+      <div class="flex flex-wrap gap-2">
+        <%= render PanelsUI::Button.new(as: :a, href: reset_hotel_training_decision_path(current_hotel), data: { turbo_method: :post }, variant: :secondary, size: :sm) do %>
+          Retry reset
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :a, href: keep_hotel_training_decision_path(current_hotel), data: { turbo_method: :post }, variant: :primary, size: :sm) do %>
+          Continue with current data
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% elsif awaiting_training_decision? %>
+  <%= render PanelsUI::Banner.new(
+        tone: :success,
+        title: "Your property is approved",
+        dismissible: false,
+        data: { testid: "training-decision-banner" }) do |banner| %>
+    <% banner.with_description do %>
+      Choose whether to continue with your current PMS activity or clear it and start fresh before going live.
+    <% end %>
+    <% banner.with_actions do %>
+      <div class="flex flex-wrap gap-2">
+        <%= render PanelsUI::Button.new(as: :a, href: keep_hotel_training_decision_path(current_hotel), data: { turbo_method: :post }, variant: :primary, size: :sm) do %>
+          Continue with current data
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :a,
+              href: reset_hotel_training_decision_path(current_hotel),
+              variant: :destructive,
+              size: :sm,
+              data: {
+                turbo_method: :post,
+                turbo_confirm: "Clear all PMS activity and start fresh? Your submitted property setup will be kept."
+              }) do %>
+          Clear activity and start fresh
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

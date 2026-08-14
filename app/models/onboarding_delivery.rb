@@ -3,7 +3,7 @@
 class OnboardingDelivery < ApplicationRecord
   DELIVERY_TYPES = %w[
     staff_invitation corporate_invitation admin_submitted
-    owner_changes_requested owner_approved
+    owner_changes_requested owner_launch_decision_required owner_approved
   ].freeze
   STATUSES = %w[pending processing sent held failed].freeze
 

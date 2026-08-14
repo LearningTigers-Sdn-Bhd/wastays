@@ -180,6 +180,8 @@ module HotelPortal
     def onboarding_stage
       if hotel.status == "live"
         "Live"
+      elsif hotel.status == "ready_to_launch"
+        "Ready to launch"
       elsif hotel.status == "pending_review"
         "Pending Review"
       else

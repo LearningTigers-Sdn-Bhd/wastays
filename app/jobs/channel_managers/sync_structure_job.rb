@@ -10,7 +10,7 @@ module ChannelManagers
         hotel_id = options[:hotel_id] || options["hotel_id"]
         external_id = options[:external_id] || options["external_id"]
         hotel = Hotel.find_by(id: hotel_id)
-        return if hotel.nil? || hotel.preferred_channel_manager.blank?
+        return if hotel.nil? || hotel.training_mode? || hotel.preferred_channel_manager.blank?
 
         adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
         case mappable_type
@@ -31,7 +31,7 @@ module ChannelManagers
       when "Hotel" then mappable
       end
 
-      return if hotel.nil? || hotel.preferred_channel_manager.blank?
+      return if hotel.nil? || hotel.training_mode? || hotel.preferred_channel_manager.blank?
 
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
 

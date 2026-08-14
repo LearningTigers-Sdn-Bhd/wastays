@@ -276,11 +276,11 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
           params: { navigation_action: "save_draft" }
 
-    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+    expect(response).to redirect_to(hotel_dashboard_path(hotel))
     expect(hotel.onboarding_sections).to be_empty
 
     follow_redirect!
-    expect(response.body).to include("Awaiting WAStays review")
+    expect(response.body).to include("Property under review")
     expect(response.body).not_to include("Setup submitted for review")
     expect(response.body).not_to include("Save draft")
   end
@@ -295,7 +295,10 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(Onboarding::SubmitOnboarding).to have_received(:call).with(
       hotel:, actor: user, idempotency_key: "browser-attempt-1"
     )
-    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "review"))
+    expect(response).to redirect_to(hotel_dashboard_path(hotel))
+    expect(flash[:notice]).to eq(
+      "Property setup submitted. You can continue using the PMS while WAStays reviews it."
+    )
   end
 
   it "removes the legacy dashboard submission path" do
