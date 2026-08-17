@@ -30,6 +30,23 @@ RSpec.describe GuestRegistrationCardPdfService do
     PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
   end
 
+  # Text extraction reads Prawn's ToUnicode map, which stays correct even when
+  # the glyphs themselves cannot be rendered — so asserting on extracted text
+  # says nothing about what a reader actually draws. These look at the font
+  # objects instead.
+  def pdf_fonts(pdf)
+    reader = PDF::Reader.new(StringIO.new(pdf))
+    names = []
+    embedded = []
+    reader.objects.each do |_ref, object|
+      next unless object.is_a?(Hash)
+
+      names << object[:BaseFont].to_s if object[:Type] == :Font
+      embedded.concat([ :FontFile, :FontFile2, :FontFile3 ].select { |key| object.key?(key) }) if object[:Type] == :FontDescriptor
+    end
+    { names: names.uniq, embedded: embedded.uniq }
+  end
+
   it "generates a valid PDF binary" do
     pdf = described_class.new(card, booking, presenter).generate
 
@@ -113,6 +130,28 @@ RSpec.describe GuestRegistrationCardPdfService do
     pdf = described_class.new(card, booking, presenter).generate
 
     expect(pdf.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
+  end
+
+  describe "font embedding" do
+    # Prawn can only embed a TrueType font as a Mac Roman subset, which iOS
+    # refuses to read — every glyph comes out an empty box. A card that stays
+    # inside Windows-1252 must therefore avoid embedding a font at all.
+    it "uses a non-embedded base-14 font for an ordinary card" do
+      booking.update!(special_requests: "Late checkout requested — Café Zürich")
+
+      fonts = pdf_fonts(described_class.new(card, booking, presenter).generate)
+
+      expect(fonts[:embedded]).to be_empty
+      expect(fonts[:names]).to all(include("Helvetica"))
+    end
+
+    it "falls back to the embedded Unicode font only when the card needs it" do
+      booking.update!(special_requests: "入住时间下午2点")
+
+      fonts = pdf_fonts(described_class.new(card, booking, presenter).generate)
+
+      expect(fonts[:embedded]).to include(:FontFile2)
+    end
   end
 
   it "renders signer name and does not blow up on an undecodable signature image" do

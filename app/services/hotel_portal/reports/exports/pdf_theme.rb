@@ -9,6 +9,12 @@ module HotelPortal
           muted: "667772", border: "D9E4DF", stripe: "F5F8F7", white: "FFFFFF"
         }.freeze
         FONT_FAMILY = "WAStays Unicode"
+        # One of the PDF base-14 fonts: never embedded, and every reader can
+        # render it. Prawn can only embed a TrueType font as a subset whose
+        # character map is Mac Roman, which iOS refuses to read — every glyph
+        # comes out as an empty box. Documents that stay inside Windows-1252
+        # should use this instead and avoid the problem entirely.
+        STANDARD_FONT = "Helvetica"
         FONT_CANDIDATES = [
           {
             normal: "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
@@ -19,6 +25,13 @@ module HotelPortal
             bold: "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
           }
         ].freeze
+
+        # Readable on every device, but only covers Windows-1252. Callers that
+        # may hold text beyond it should rescue Prawn::Errors::IncompatibleStringEncoding
+        # and rebuild with configure_font, which reaches the rest of Unicode.
+        def self.configure_standard_font(pdf)
+          pdf.font(STANDARD_FONT)
+        end
 
         def self.configure_font(pdf)
           paths = font_paths

@@ -18,7 +18,25 @@ class GuestRegistrationCardPdfService
     @presenter = presenter
   end
 
+  # Drawn with a base-14 font first, which every reader can render, and redrawn
+  # with the embedded Unicode font only when the card holds text that font
+  # cannot express. Prawn raises on the first unrepresentable character rather
+  # than substituting, so the attempt is safe to make blind — no need to guess
+  # up front which of the card's many fields might carry a CJK name.
+  #
+  # The Unicode font is the fallback rather than the default because Prawn can
+  # only embed it as a Mac Roman subset, which iOS will not read: every glyph
+  # renders as an empty box. Cards that need it still hit that on iPhone, but
+  # ordinary Latin cards no longer do.
   def generate
+    build_pdf(unicode: false)
+  rescue Prawn::Errors::IncompatibleStringEncoding
+    build_pdf(unicode: true)
+  end
+
+  private
+
+  def build_pdf(unicode:)
     pdf = Prawn::Document.new(
       page_size: "A4",
       margin: [ 40, 40, 40, 40 ],
@@ -29,7 +47,11 @@ class GuestRegistrationCardPdfService
         CreationDate: Time.now
       }
     )
-    HotelPortal::Reports::Exports::PdfTheme.configure_font(pdf)
+    if unicode
+      HotelPortal::Reports::Exports::PdfTheme.configure_font(pdf)
+    else
+      HotelPortal::Reports::Exports::PdfTheme.configure_standard_font(pdf)
+    end
 
     draw_header(pdf)
     draw_bordered_section(pdf, bottom_margin: 2) { draw_guest_section(pdf) }
@@ -45,8 +67,6 @@ class GuestRegistrationCardPdfService
 
     pdf.render
   end
-
-  private
 
   def draw_header(pdf)
     logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
