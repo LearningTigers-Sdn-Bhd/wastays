@@ -56,7 +56,13 @@ module HotelPortal
         end
 
         def stay_params
-          params.fetch(:booking, {}).permit(:rate_selection)
+          permitted = params.fetch(:booking, {}).permit(:rate_selection, :manual_rate_override)
+          return permitted.except(:manual_rate_override) unless rate_override_allowed?
+
+          # An emptied box means "go back to the rate plan's price", which is a
+          # real instruction — keep the key so the service clears the override
+          # rather than reading a blank as "leave it alone".
+          permitted
         end
 
         def render_failure

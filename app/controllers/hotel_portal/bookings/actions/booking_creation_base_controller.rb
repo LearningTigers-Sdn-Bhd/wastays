@@ -103,10 +103,20 @@ module HotelPortal
 
         def staff_room_rows
           rows = booking_params[:rooms]
-          return rows.values if rows.respond_to?(:values) && !rows.is_a?(Array)
-          return rows if rows.present?
+          rows =
+            if rows.respond_to?(:values) && !rows.is_a?(Array)
+              rows.values
+            elsif rows.present?
+              rows
+            else
+              [ booking_params.slice(:room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override) ]
+            end
 
-          [ booking_params.slice(:room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override) ]
+          return rows if rate_override_allowed?
+
+          # The field is hidden from staff who may not price a stay by hand, so a
+          # value arriving here was not typed into the form we rendered.
+          rows.map { |row| row.except(:manual_rate_override) }
         end
 
         def staff_booking_common_params

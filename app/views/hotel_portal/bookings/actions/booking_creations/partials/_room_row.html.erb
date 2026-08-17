@@ -33,8 +33,9 @@
     </div>
     <div class="min-w-0" data-role="room-number">
       <%= render PanelsUI::FormField.new(form: rf, attribute: :room_number, label: "Room", label_hidden: true, class: "min-w-0") do |field| %>
+        <% room_placeholder = allow_deferred_room ? (current_hotel.auto_assign_rooms_enabled? ? "Auto-assign" : "Select room later") : "Select room" %>
         <% field.with_select_menu(
-             [[allow_deferred_room ? "Select room later" : "Select room", ""]],
+             [[room_placeholder, ""]],
              selected: "",
              class: "min-w-0") %>
       <% end %>
@@ -44,18 +45,35 @@
     <div class="min-w-0" data-role="adults">
       <%= render PanelsUI::FormField.new(form: rf, attribute: :adults, label: "Adults", label_hidden: true, required: true, class: "min-w-0") do |field| %>
         <% field.with_input(type: :number, value: values[:adults] || 1, min: 1,
-                            data: { action: "change->booking-room-rows#rateChanged" }) %>
+                            data: { action: "change->booking-room-rows#occupancyChanged" }) %>
       <% end %>
     </div>
     <div class="min-w-0" data-role="children">
       <%= render PanelsUI::FormField.new(form: rf, attribute: :children, label: "Children", label_hidden: true, required: true, class: "min-w-0") do |field| %>
         <% field.with_input(type: :number, value: values[:children] || 0, min: 0,
-                            data: { action: "change->booking-room-rows#rateChanged" }) %>
+                            data: { action: "change->booking-room-rows#occupancyChanged" }) %>
       <% end %>
     </div>
   <% end %>
+  <%# Room net (excl. tax) is never typed directly — it is solved from the Rate
+      cell below whenever that is priced by hand, and carried here only so the
+      form submits it. %>
+  <% if rate_override_allowed? %>
+    <%= hidden_field_tag "booking[rooms][#{index}][manual_rate_override]", values[:manual_rate_override],
+          data: { role: "manual-rate-override" } %>
+  <% end %>
   <div class="flex items-center justify-end gap-1 text-right text-sm font-semibold tabular-nums text-foreground">
-    <span data-role="rate">0.00</span>
+    <%# For stays sold at a price the rate plan does not produce — an OTA that
+        quotes the hotel its net payout, most often — staff type the final total
+        directly and the room charge and tax are worked out from it. %>
+    <% if rate_override_allowed? %>
+      <input type="number" step="0.01" min="0" data-role="rate"
+             aria-label="Total, tax included — click to edit"
+             class="w-20 rounded border border-transparent bg-transparent px-1 py-0.5 text-right tabular-nums text-foreground hover:border-border-interactive focus:border-border-interactive focus:outline-none focus:ring-0"
+             data-action="input->booking-room-rows#totalOverrideChanged" value="0.00" />
+    <% else %>
+      <span data-role="rate">0.00</span>
+    <% end %>
     <%= render PanelsUI::Popover.new(
           id: "booking-room-rate-breakdown-#{popover_index}",
           placement: :left,
@@ -75,6 +93,7 @@
           <p class="mt-0.5 text-xs text-muted-foreground" data-role="breakdown-status">Select a room type, dates, and rate plan.</p>
         </div>
         <div class="hidden space-y-3 px-3 py-2.5 text-xs" data-role="breakdown-details">
+          <p class="hidden rounded-md bg-muted px-2 py-1.5 text-[11px] font-medium text-muted-foreground" data-role="manual-note">Priced manually — room charge and tax are calculated back from this total.</p>
           <div class="space-y-1" data-role="nightly-breakdown"></div>
           <div class="space-y-1 border-t border-border pt-2" data-role="tax-breakdown"></div>
           <div class="flex items-center justify-between gap-3 border-t border-border pt-2 text-sm font-semibold text-foreground">

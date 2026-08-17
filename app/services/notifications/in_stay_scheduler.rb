@@ -63,7 +63,12 @@ module Notifications
 
     def channels(config)
       configured = Array(config.channels).map(&:to_s).presence
-      configured || DEFAULT_CHANNELS
+      channels = configured || DEFAULT_CHANNELS
+      # A desk booking may carry only a phone number; scheduling mail against it
+      # would just fail when the rule comes due.
+      return channels if @booking.guest_email.present?
+
+      channels - [ "email" ]
     end
 
     def enabled_rules(config)

@@ -15,6 +15,7 @@ module Bookings
       "undo_check_in" => "status",
       "room_assignment" => "room",
       "room_removed" => "room",
+      "rate_override" => "financial",
       "charge_added" => "financial",
       "payment_recorded" => "financial",
       "refund_completed" => "financial",

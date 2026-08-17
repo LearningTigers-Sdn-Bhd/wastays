@@ -8,7 +8,7 @@ module HotelOps
     GENERAL_MANAGER_EXCLUSIONS = %w[manage_account].freeze
 
     STAFF_TEMPLATES = [
-      { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings view_financial_status manage_bookings view_guest_records manage_guest_arrival view_room_readiness manage_room_status post_charges post_folio_charges post_folio_payments manage_requests manage_night_audit manage_concierge perform_housekeeping_tasks dispatch_housekeeping_tasks] },
+      { name: "Front Desk", slug: "front_desk", permissions: %w[view_bookings view_financial_status manage_bookings override_booking_rate view_guest_records manage_guest_arrival view_room_readiness manage_room_status post_charges post_folio_charges post_folio_payments manage_requests manage_night_audit manage_concierge perform_housekeeping_tasks dispatch_housekeeping_tasks] },
       { name: "Housekeeper", slug: "housekeeper", permissions: %w[manage_room_status manage_requests perform_housekeeping_tasks] }
     ].freeze
 

@@ -18,6 +18,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
     role = create(:role, account: hotel.account, name: "Admin", slug: "admin")
     role.permissions << (Permission.find_by(slug: 'view_bookings') || create(:permission, slug: 'view_bookings', name: 'View Bookings'))
     role.permissions << (Permission.find_by(slug: 'manage_bookings') || create(:permission, slug: 'manage_bookings', name: 'Manage Bookings'))
+    role.permissions << (Permission.find_by(slug: 'override_booking_rate') || create(:permission, slug: 'override_booking_rate', name: 'Override Booking Rate'))
     user.user_hotel_accesses.create!(hotel: hotel, role: role)
     create(:plan_feature, plan: plan, feature: create(:feature, feature_group: feature_group, slug: "unified_guest_profile"), enabled: true)
     sign_in_as(user)

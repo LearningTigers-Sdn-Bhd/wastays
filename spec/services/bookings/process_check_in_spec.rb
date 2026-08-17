@@ -54,7 +54,29 @@ RSpec.describe Bookings::ProcessCheckIn, frozen_time: :business_day do
     expect(result.error).to eq("Selected bookings are no longer eligible for check-in.")
   end
 
-  it "fails when a room is left unassigned" do
+  it "assigns a clean room itself when the desk picked none" do
+    result = described_class.new(bookings: [ booking ], details: details(room_number: ""), user: user).call
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.status).to eq("checked_in")
+    expect(booking.booking_rooms.first.reload.room_number).to eq("101")
+  end
+
+  it "fails when a room is left unassigned and none can be found" do
+    room_type.room_numbers.each do |number|
+      RoomStatus.find_or_create_by!(hotel: hotel, room_type: room_type, room_number: number).update!(status: "dirty")
+    end
+
+    result = described_class.new(bookings: [ booking ], details: details(room_number: ""), user: user).call
+
+    expect(result.success?).to be(false)
+    expect(result.error).to match(/Assign every room/)
+    expect(booking.reload.status).to eq("confirmed")
+  end
+
+  it "fails when a room is left unassigned and the property assigns manually" do
+    hotel.update!(auto_assign_rooms_enabled: false)
+
     result = described_class.new(bookings: [ booking ], details: details(room_number: ""), user: user).call
 
     expect(result.success?).to be(false)
