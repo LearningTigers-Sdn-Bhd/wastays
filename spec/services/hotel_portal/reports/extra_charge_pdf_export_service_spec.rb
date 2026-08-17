@@ -5,7 +5,17 @@ require "pdf-reader"
 
 RSpec.describe HotelPortal::Reports::ExtraChargePdfExportService do
   describe "#generate" do
-    let(:hotel) { double("hotel", name: "Sample Hotel", default_currency: "MYR") }
+    let(:hotel) do
+      double(
+        "hotel",
+        name: "Sample Hotel",
+        address: "1 Jalan Pantai",
+        city: "Kota Kinabalu",
+        country: "Malaysia",
+        default_currency: "MYR",
+        hotel_time_zone: "Asia/Kuching"
+      )
+    end
 
     def report(rows:, totals:)
       double(
@@ -39,16 +49,17 @@ RSpec.describe HotelPortal::Reports::ExtraChargePdfExportService do
         totals: { transaction_count: 1, total_amount: 25 }
       )
 
-      pdf = described_class.new(hotel: hotel, report: report).generate
+      pdf = described_class.new(hotel: hotel, report: report, prepared_by: "Aina Salleh").generate
       text = extracted_text(pdf)
 
       expect(pdf).to start_with("%PDF")
       expect(pdf.bytesize).to be > 500
       expect(text).to include(
-        "EXTRA CHARGE REPORT", "F&B", "Sample Hotel", "01 Jul 2026 - 02 Jul 2026",
-        "Generated:", "Transactions", "1", "Total Amount", "MYR 25.00",
+        "Extra Charge Report", "F&B", "Sample Hotel", "1 Jalan Pantai, Kota Kinabalu, Malaysia",
+        "Period", "01 Jul 2026 - 02 Jul 2026", "Generated", "Prepared by", "Aina Salleh",
+        "Transactions", "1", "Total Amount", "MYR 25.00",
         "Posting Date", "Booking Ref", "Folio Ref", "Guest", "Description", "Category", "Currency", "Amount",
-        "BK-001", "FOL-001", "Jane Doe", "Mini bar", "Total"
+        "BK-001", "FOL-001", "Jane Doe", "Mini bar", "Total", "Confidential"
       )
       expect(text).to match(/Page 1 of \d+/)
     end
@@ -56,7 +67,8 @@ RSpec.describe HotelPortal::Reports::ExtraChargePdfExportService do
     it "renders an empty-state message and zero-value summary" do
       pdf = described_class.new(
         hotel: hotel,
-        report: report(rows: [], totals: { transaction_count: 0, total_amount: 0 })
+        report: report(rows: [], totals: { transaction_count: 0, total_amount: 0 }),
+        prepared_by: "Aina Salleh"
       ).generate
       text = extracted_text(pdf)
 
@@ -67,7 +79,15 @@ RSpec.describe HotelPortal::Reports::ExtraChargePdfExportService do
     end
 
     it "renders accented and CJK hotel, guest, and description text" do
-      unicode_hotel = double("hotel", name: "Hôtel 東京", default_currency: "MYR")
+      unicode_hotel = double(
+        "hotel",
+        name: "Hôtel 東京",
+        address: nil,
+        city: nil,
+        country: nil,
+        default_currency: "MYR",
+        hotel_time_zone: "Asia/Kuching"
+      )
       unicode_report = report(
         rows: [
           {
@@ -83,7 +103,9 @@ RSpec.describe HotelPortal::Reports::ExtraChargePdfExportService do
         totals: { transaction_count: 1, total_amount: 25 }
       )
 
-      text = extracted_text(described_class.new(hotel: unicode_hotel, report: unicode_report).generate)
+      text = extracted_text(
+        described_class.new(hotel: unicode_hotel, report: unicode_report, prepared_by: "Aina Salleh").generate
+      )
 
       expect(text).to include("Hôtel 東京", "José 张伟", "Crème brûlée 東京")
     end
@@ -106,7 +128,7 @@ RSpec.describe HotelPortal::Reports::ExtraChargePdfExportService do
         totals: { transaction_count: 1, total_amount: 25 }
       )
 
-      pdf = described_class.new(hotel: hotel, report: long_report).generate
+      pdf = described_class.new(hotel: hotel, report: long_report, prepared_by: "Aina Salleh").generate
       reader = PDF::Reader.new(StringIO.new(pdf))
       text = reader.pages.map(&:text).join("\n")
 

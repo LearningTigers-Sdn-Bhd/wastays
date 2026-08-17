@@ -61,6 +61,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
       tab: "cashier",
       revenue_report: revenue_report,
       cashier_report: cashier_report,
+      prepared_by: "Aina Salleh",
       charge_register: charge_register
     )
     cashier_row = pdf_service.send(:cashier_transaction_row, advance_payment)
@@ -75,6 +76,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
         tab: tab,
         revenue_report: revenue_report,
         cashier_report: cashier_report,
+        prepared_by: "Aina Salleh",
         charge_register: charge_register
       )
       if tab == "revenue"
@@ -94,7 +96,10 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
 
     expect(overview).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "Net Revenue", "Net Cash")
     expect(overview).not_to include("Daily Breakdown", "Cashier Summary")
-    expect(overview).to include("Overview", "Page 1 of")
+    expect(overview).to include(
+      "Daily Report", "Overview", "Period", "Generated", "Prepared by", "Aina Salleh",
+      "Confidential", "Page 1 of"
+    )
 
     expect(revenue).to include(
       "Revenue", "Revenue Summary", "Daily Breakdown", "Revenue by Source", "Revenue Register",

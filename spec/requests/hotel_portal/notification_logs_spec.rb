@@ -1,4 +1,5 @@
 require "rails_helper"
+require "pdf-reader"
 
 RSpec.describe "HotelPortal::NotificationLogs", type: :request do
   let(:account) { create(:account) }
@@ -281,6 +282,7 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/pdf")
       expect(response.body).to start_with("%PDF")
+      expect(PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")).to include(user.name)
     end
   end
 

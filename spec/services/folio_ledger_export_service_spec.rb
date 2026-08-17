@@ -29,11 +29,11 @@ RSpec.describe FolioLedgerExportService do
 
   describe "#generate_pdf" do
     it "returns a branded PDF with page numbering" do
-      content = service.generate_pdf
+      content = service.generate_pdf(prepared_by: "Sarah Lim")
       text = PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join("\n")
 
       expect(content).to start_with("%PDF")
-      expect(text).to include("FOLIO LEDGER", hotel.name, "Page 1 of 1")
+      expect(text).to include("Folio Ledger", hotel.name, "Sarah Lim", "Page 1 of 1")
     end
 
     it "uses a reduced accounting-focused table that remains legible" do
@@ -45,7 +45,7 @@ RSpec.describe FolioLedgerExportService do
         posting_date: start_date,
         gl_code: "0010")
 
-      text = PDF::Reader.new(StringIO.new(service.generate_pdf)).pages.map(&:text).join("\n")
+      text = PDF::Reader.new(StringIO.new(service.generate_pdf(prepared_by: "Sarah Lim"))).pages.map(&:text).join("\n")
 
       expect(text).to include("Invoice", "Folio", "Booking Ref", "GL Code", "Amount", "Currency")
       expect(text).not_to include("Night Audit ID", "Posting Source", "Posted At")

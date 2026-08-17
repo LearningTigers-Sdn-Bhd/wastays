@@ -6,71 +6,38 @@ require "prawn/table"
 module HotelPortal
   module Reports
     class ExtraChargePdfExportService
-      COLORS = {
-        ink: "18332F",
-        primary: "205B4E",
-        primary_light: "E7F1ED",
-        muted: "667772",
-        border: "D9E4DF",
-        stripe: "F5F8F7",
-        white: "FFFFFF"
-      }.freeze
+      COLORS = Exports::PdfTheme::COLORS
 
       DETAIL_HEADERS = [
         "Posting Date", "Booking Ref", "Folio Ref", "Guest",
         "Description", "Category", "Currency", "Amount"
       ].freeze
       DESCRIPTION_CHUNK_SIZE = 500
-      UNICODE_FONT_FAMILY = "WAStays Unicode"
-      UNICODE_FONT_CANDIDATES = [
-        {
-          normal: "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-          bold: "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
-        },
-        {
-          normal: "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-          bold: "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
-        }
-      ].freeze
-
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, prepared_by:)
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
       end
 
       def generate
         pdf = Prawn::Document.new(page_size: "A4", page_layout: :landscape, margin: [ 40, 32, 42, 32 ])
-        configure_unicode_font(pdf)
-        draw_header(pdf)
+        Exports::PdfTheme.configure_font(pdf)
+        frame = Exports::PdfReportFrame.new(
+          pdf: pdf,
+          hotel: @hotel,
+          report_name: "Extra Charge Report",
+          subtitle: tab_label,
+          period_label: period_label,
+          prepared_by: @prepared_by
+        )
+        frame.draw_header
         draw_summary(pdf)
         draw_detail(pdf)
-        draw_footer(pdf)
+        frame.stamp_footer
         pdf.render
       end
 
       private
-
-      def draw_header(pdf)
-        top = pdf.cursor
-        pdf.fill_color COLORS[:primary]
-        pdf.fill_rectangle([ 0, top ], pdf.bounds.width, 58)
-        pdf.fill_color COLORS[:white]
-        pdf.text_box "EXTRA CHARGE REPORT", at: [ 16, top - 14 ], width: 250, height: 20, size: 16, style: :bold
-        pdf.text_box tab_label, at: [ 16, top - 36 ], width: 250, height: 16, size: 9
-
-        logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-        pdf.image logo_path, at: [ pdf.bounds.right - 145, top - 10 ], width: 125 if File.exist?(logo_path)
-
-        pdf.move_down 70
-        pdf.fill_color COLORS[:ink]
-        pdf.text @hotel.name.to_s, size: 12, style: :bold
-        pdf.move_down 2
-        pdf.fill_color COLORS[:muted]
-        pdf.text "Reporting period: #{period_label}", size: 9
-        pdf.text "Generated: #{Time.current.strftime('%d %b %Y, %H:%M %Z')}", size: 8
-        pdf.fill_color COLORS[:ink]
-        pdf.move_down 14
-      end
 
       def draw_summary(pdf)
         table = pdf.make_table(
@@ -194,34 +161,6 @@ module HotelPortal
         pdf.fill_color COLORS[:muted]
         pdf.text "No extra charge transactions found for this period.", size: 9, style: :italic
         pdf.fill_color COLORS[:ink]
-      end
-
-      def draw_footer(pdf)
-        pdf.number_pages "Page <page> of <total>",
-          at: [ 0, -8 ], width: pdf.bounds.width, align: :center, size: 8, color: COLORS[:muted]
-      end
-
-      def configure_unicode_font(pdf)
-        paths = unicode_font_paths
-        pdf.font_families.update(
-          UNICODE_FONT_FAMILY => {
-            normal: paths[:normal],
-            bold: paths[:bold],
-            italic: paths[:normal],
-            bold_italic: paths[:bold]
-          }
-        )
-        pdf.font(UNICODE_FONT_FAMILY)
-      end
-
-      def unicode_font_paths
-        override = ENV["WASTAYS_PDF_UNICODE_FONT_PATH"].presence
-        candidates = []
-        candidates << { normal: override, bold: ENV["WASTAYS_PDF_UNICODE_BOLD_FONT_PATH"].presence || override } if override
-        candidates.concat(UNICODE_FONT_CANDIDATES)
-
-        candidates.find { |paths| paths.values.all? { |path| File.file?(path) } } ||
-          raise("Unicode PDF font not found. Install fonts-noto-cjk or set WASTAYS_PDF_UNICODE_FONT_PATH.")
       end
 
       def tab_label

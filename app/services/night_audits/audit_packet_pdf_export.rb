@@ -2,8 +2,8 @@
 
 module NightAudits
   class AuditPacketPdfExport
-    def initialize(night_audit:)
-      @implementation = Reporting::AuditPacketPdfExport.new(night_audit: night_audit)
+    def initialize(night_audit:, prepared_by:)
+      @implementation = Reporting::AuditPacketPdfExport.new(night_audit: night_audit, prepared_by: prepared_by)
     end
 
     delegate :generate, to: :@implementation

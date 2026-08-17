@@ -3,14 +3,15 @@
 module HotelPortal
   module Reports
     class TaxCompliancePdfExportService
-      def initialize(hotel:, report:, type:)
+      def initialize(hotel:, report:, type:, prepared_by:)
         @hotel = hotel
         @report = report
         @table = TaxComplianceExportTable.new(report: report, type: type)
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: @table.title, period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: @table.title, period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
         builder.add_header
         builder.add_summary(@table.summary_metrics.map { |label, value, unit| [ label, unit == :currency ? "#{currency} #{money(value)}" : value.to_s ] })
         builder.add_table(section_title: @table.section_title, headers: @table.headers,

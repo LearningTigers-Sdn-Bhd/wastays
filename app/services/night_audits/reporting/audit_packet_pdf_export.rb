@@ -6,59 +6,50 @@ require "prawn/table"
 module NightAudits
   module Reporting
   class AuditPacketPdfExport
-    def initialize(night_audit:)
+    def initialize(night_audit:, prepared_by:, generated_at: Time.current)
       @night_audit = night_audit
       @hotel = night_audit.hotel
       @business_date = night_audit.business_date
       @summary = night_audit.financial_summary
+      @prepared_by = prepared_by
+      @generated_at = generated_at
     end
 
     def generate
-      pdf = Prawn::Document.new(page_size: "A4", margin: [ 40, 48, 40, 48 ])
+      pdf = Prawn::Document.new(page_size: "A4", margin: [ 40, 48, 42, 48 ])
+      HotelPortal::Reports::Exports::PdfTheme.configure_font(pdf)
+      frame = HotelPortal::Reports::Exports::PdfReportFrame.new(
+        pdf: pdf,
+        hotel: @hotel,
+        report_name: "Night Audit Packet",
+        period_label: @business_date.strftime("%d %b %Y"),
+        period_label_title: "Business date",
+        prepared_by: @prepared_by,
+        generated_at: @generated_at
+      ).freeze
 
       # Page 1: Daily Summary
-      draw_header(pdf)
+      frame.draw_header
       draw_daily_summary(pdf)
 
       # Page 2: Manual Adjustments
       pdf.start_new_page
-      draw_header(pdf)
       draw_adjustments(pdf)
 
       # Page 3: Audit Exceptions & Blockers
       pdf.start_new_page
-      draw_header(pdf)
       draw_exceptions(pdf)
 
-      pdf.number_pages "Page <page> of <total>", at: [ pdf.bounds.right - 100, -10 ], size: 8, color: "94A3B8"
+      frame.stamp_footer
 
       pdf.render
     end
 
     private
 
-    def draw_header(pdf)
-      logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-
-      pdf.bounding_box([ 0, pdf.cursor ], width: pdf.bounds.width) do
-        if File.exist?(logo_path)
-          pdf.image logo_path, at: [ pdf.bounds.right - 140, pdf.bounds.top ], width: 140
-        else
-          pdf.text_box "WAStays", at: [ pdf.bounds.right - 140, pdf.bounds.top ], width: 140, align: :right, size: 14, style: :bold, color: "0F172A"
-        end
-
-        pdf.text "Night Audit Packet", size: 24, style: :bold, color: "0F172A"
-        pdf.move_down 6
-        pdf.text @hotel.name, size: 12, style: :bold, color: "334155"
-        pdf.move_down 4
-        pdf.text "Business Date: #{@business_date.strftime('%d %b %Y')}", size: 10, color: "64748B"
-        pdf.text "Audit Completed: #{@night_audit.completed_at&.strftime('%d %b %Y %H:%M:%S %Z') || 'N/A'}", size: 9, color: "94A3B8"
-      end
-
-      pdf.move_down 36
-    end
-
     def draw_daily_summary(pdf)
+      pdf.text "Audit Completed: #{audit_completed_label}", size: 9, color: "64748B"
+      pdf.move_down 16
       pdf.text "1. Daily Financial Summary", size: 14, style: :bold, color: "0F172A"
       pdf.move_down 12
 
@@ -216,6 +207,10 @@ module NightAudits
 
     def money(value)
       format("MYR %.2f", value.to_d)
+    end
+
+    def audit_completed_label
+      @night_audit.completed_at&.strftime("%d %b %Y %H:%M:%S %Z") || "N/A"
     end
   end
   end

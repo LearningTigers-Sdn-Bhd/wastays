@@ -3,14 +3,21 @@
 module HotelPortal
   module Reports
     class AuditLogPdfExportService
-      def initialize(hotel:, logs:, period_label:)
+      def initialize(hotel:, logs:, period_label:, prepared_by:)
         @hotel = hotel
         @table = AuditLogExportTable.new(logs: logs)
         @period_label = period_label
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Operation Audit Logs", period_label: @period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(
+          hotel: @hotel,
+          title: "Operation Audit Logs",
+          period_label: @period_label,
+          prepared_by: @prepared_by,
+          page_layout: :landscape
+        )
         builder.add_header
         builder.add_summary([ [ "Records", @table.record_count.to_s ] ])
         builder.add_table(

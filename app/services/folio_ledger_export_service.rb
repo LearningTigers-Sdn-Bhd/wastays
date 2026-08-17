@@ -67,9 +67,10 @@ class FolioLedgerExportService
     end
   end
 
-  def generate_pdf
+  def generate_pdf(prepared_by:)
     builder = HotelPortal::Reports::Exports::PdfReportBuilder.new(
-      hotel: @hotel, title: "Folio Ledger", period_label: period_label, page_layout: :landscape
+      hotel: @hotel, title: "Folio Ledger", period_label: period_label,
+      prepared_by: prepared_by, page_layout: :landscape
     )
     builder.add_header
     builder.add_summary(summary_metrics.map { |label, value, currency| [ label, currency ? "#{currency} #{format_money(value)}" : value.to_s ] })

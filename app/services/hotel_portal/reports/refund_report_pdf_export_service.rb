@@ -3,13 +3,14 @@
 module HotelPortal
   module Reports
     class RefundReportPdfExportService
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, prepared_by:)
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Refund Report", period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Refund Report", period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
         builder.add_header
         builder.add_summary([ [ "Refund Count", @report.totals[:refund_count].to_s ], [ "Total Refund", "#{currency} #{money(@report.totals[:total_amount])}" ] ])
         builder.add_table(

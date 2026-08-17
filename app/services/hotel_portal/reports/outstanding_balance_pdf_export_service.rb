@@ -3,13 +3,14 @@
 module HotelPortal
   module Reports
     class OutstandingBalancePdfExportService
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, prepared_by:)
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Outstanding Balance Report", period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Outstanding Balance Report", period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
         builder.add_header
         builder.add_summary([ [ "Outstanding Bookings", @report.totals[:booking_count].to_s ], [ "Outstanding Amount", "#{currency} #{money(@report.totals[:outstanding_amount])}" ] ])
         builder.add_table(

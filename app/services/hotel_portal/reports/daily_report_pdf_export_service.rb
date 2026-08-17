@@ -6,22 +6,14 @@ require "prawn/table"
 module HotelPortal
   module Reports
     class DailyReportPdfExportService
-      COLORS = {
-        ink: "18332F",
-        primary: "205B4E",
-        primary_light: "E7F1ED",
-        muted: "667772",
-        border: "D9E4DF",
-        stripe: "F5F8F7",
-        white: "FFFFFF",
-        negative: "A33636"
-      }.freeze
+      COLORS = Exports::PdfTheme::COLORS.merge(negative: "A33636").freeze
 
-      def initialize(hotel:, tab:, revenue_report:, cashier_report:, charge_register: [])
+      def initialize(hotel:, tab:, revenue_report:, cashier_report:, prepared_by:, charge_register: [])
         @hotel = hotel
         @tab = tab
         @revenue_report = revenue_report
         @cashier_report = cashier_report
+        @prepared_by = prepared_by
         @charge_register = charge_register
       end
 
@@ -31,46 +23,28 @@ module HotelPortal
           page_layout: @tab == "overview" ? :portrait : :landscape,
           margin: [ 40, 32, 42, 32 ]
         )
+        Exports::PdfTheme.configure_font(pdf)
+        frame = Exports::PdfReportFrame.new(
+          pdf: pdf,
+          hotel: @hotel,
+          report_name: "Daily Report",
+          subtitle: tab_title,
+          period_label: period_label,
+          prepared_by: @prepared_by
+        )
 
-        draw_header(pdf)
+        frame.draw_header
         case @tab
         when "revenue" then draw_revenue_report(pdf)
         when "cashier" then draw_cashier_report(pdf)
         else draw_overview_report(pdf)
         end
-        draw_footer(pdf)
+        frame.stamp_footer
 
         pdf.render
       end
 
       private
-
-      def draw_header(pdf)
-        top = pdf.cursor
-        pdf.fill_color COLORS[:primary]
-        pdf.fill_rectangle([ 0, top ], pdf.bounds.width, 58)
-        pdf.fill_color COLORS[:white]
-        pdf.text_box "DAILY REPORT", at: [ 16, top - 14 ], width: 250, height: 20, size: 16, style: :bold
-        pdf.text_box tab_title, at: [ 16, top - 36 ], width: 250, height: 16, size: 9
-
-        logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-        pdf.image logo_path, at: [ pdf.bounds.right - 145, top - 10 ], width: 125 if File.exist?(logo_path)
-
-        pdf.move_down 70
-        pdf.fill_color COLORS[:ink]
-        pdf.text @hotel.name.to_s, size: 12, style: :bold
-        pdf.move_down 2
-        pdf.fill_color COLORS[:muted]
-        pdf.text "Reporting period: #{period_label}", size: 9
-        pdf.text "Generated: #{Time.current.strftime('%d %b %Y, %H:%M %Z')}", size: 8
-        pdf.fill_color COLORS[:ink]
-        pdf.move_down 14
-      end
-
-      def draw_footer(pdf)
-        pdf.number_pages "Page <page> of <total>",
-          at: [ 0, -8 ], width: pdf.bounds.width, align: :center, size: 7, color: COLORS[:muted]
-      end
 
       def draw_overview_report(pdf)
         draw_kpi_section(pdf, "Revenue (Accrual)", revenue_kpis)

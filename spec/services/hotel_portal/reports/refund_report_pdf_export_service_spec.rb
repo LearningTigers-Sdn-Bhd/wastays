@@ -16,7 +16,7 @@ RSpec.describe HotelPortal::Reports::RefundReportPdfExportService do
   end
 
   it "generates PDF" do
-    pdf = described_class.new(hotel: hotel, report: report).generate
+    pdf = described_class.new(hotel: hotel, report: report, prepared_by: "Sarah Lim").generate
     expect(pdf).to be_a(String)
     expect(pdf).to start_with("%PDF")
   end

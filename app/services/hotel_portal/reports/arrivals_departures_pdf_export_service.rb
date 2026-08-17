@@ -11,15 +11,16 @@ module HotelPortal
       MEAL_PREP_FIXED_COLUMN_WIDTHS = { "Pax" => 60, "Room Number" => 110, "Transfer" => 110,
                                         "Transfer Date" => 120, "Transfer Time" => 110 }.freeze
 
-      def initialize(hotel:, report:, tab: "arrivals")
+      def initialize(hotel:, report:, prepared_by:, tab: "arrivals")
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
         @tab = tab.to_s
         @table = ArrivalsDeparturesCsvExportService.new(report: report, tab: tab)
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Guest Reports", subtitle: section_name, period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Guest Reports", subtitle: section_name, period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
 
         case @tab
         when "meal_prep" then add_meal_prep_pages(builder)
@@ -48,8 +49,8 @@ module HotelPortal
         )
       end
 
-      # A kitchen works one meal at a time, so each meal gets its own printed page,
-      # header and pax total.
+      # A kitchen works one meal at a time, so each meal gets its own printed page
+      # and pax total. The complete report frame belongs on the first page only.
       def add_meal_prep_pages(builder)
         headers = ArrivalsDeparturesCsvExportService::MEAL_PREP_COLUMNS
         widths = meal_prep_column_widths(builder, headers)
@@ -57,7 +58,7 @@ module HotelPortal
 
         @report.sections.each_with_index do |section, index|
           builder.start_new_page unless index.zero?
-          builder.add_header
+          builder.add_header if index.zero?
           builder.add_summary([ [ "Transfers", section[:rows].size.to_s ], [ "Total Pax", section[:total_pax].to_s ] ])
           builder.add_table(
             section_title: section[:title], headers: headers,

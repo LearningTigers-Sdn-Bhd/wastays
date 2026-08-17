@@ -5,9 +5,10 @@ module HotelPortal
     class FinancialPerformancePdfExportService
       HEADERS = FinancialPerformanceCsvExportService::HEADERS
 
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, prepared_by:)
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
       end
 
       def generate
@@ -15,6 +16,7 @@ module HotelPortal
           hotel: @hotel,
           title: "Financial Summary Report",
           period_label: period_label,
+          prepared_by: @prepared_by,
           page_layout: :landscape
         )
         builder.add_header

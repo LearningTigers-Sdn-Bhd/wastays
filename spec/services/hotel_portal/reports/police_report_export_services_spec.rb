@@ -26,7 +26,7 @@ RSpec.describe "Police report exports" do
 
   it "exports a valid PDF titled Daily Police Report" do
     table = HotelPortal::Reports::PoliceReportExportTable.new(report: report)
-    pdf = HotelPortal::Reports::PoliceReportPdfExportService.new(hotel:, report:).generate
+    pdf = HotelPortal::Reports::PoliceReportPdfExportService.new(hotel:, report:, prepared_by: "Sarah Lim").generate
 
     expect(table.pdf_headers).to eq([ "Guest", "Room", "Nights stayed", "Guest details", "Contact", "Scheduled check-in", "Actual check-in", "Scheduled check-out", "Actual check-out", "Status" ])
     expect(HotelPortal::Reports::PoliceReportPdfExportService::COLUMN_WIDTHS).to eq([ 110, 46, 45, 115, 110, 70, 77, 70, 75, 59 ])

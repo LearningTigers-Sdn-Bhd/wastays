@@ -32,6 +32,10 @@ RSpec.describe "HotelPortal::Reports", type: :request do
     end
   end
 
+  def extracted_pdf_text(content)
+    PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join("\n")
+  end
+
   before do
     [ "view_reports", "view_payouts" ].each do |slug|
       permission = Permission.find_by(slug: slug) || create(:permission, name: slug.titleize, slug: slug)
@@ -189,6 +193,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get "/hotel/#{hotel.to_param}/reports.pdf"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
 
     it "does not offer a financial-only export from the cross-report summary" do
@@ -572,6 +577,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       expect(response.content_type).to eq("application/pdf")
       expect(response.body).to start_with("%PDF")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
 
     it "separates police report rows by month for This Year" do
@@ -818,6 +824,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
       expect(response.headers["Content-Disposition"]).to include(".pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
 
     it "exports Excel for the default arrivals tab" do
@@ -964,6 +971,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
   end
 
@@ -1141,6 +1149,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.headers["Content-Disposition"]).to include("extra-charge-report-fb-2026-06-15-2026-06-15.pdf")
       expect(pdf_text(response.body)).to include("F&B export charge")
       expect(pdf_text(response.body)).not_to include("Non-F&B export charge")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
   end
 
@@ -1278,6 +1287,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
       expect(response.headers["Content-Disposition"]).to include(".pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
 
     it "exports XLSX" do
@@ -1363,6 +1373,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
       expect(response.headers["Content-Disposition"]).to include(".pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
 
     it "exports XLSX" do
@@ -1452,6 +1463,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
       expect(response.headers["Content-Disposition"]).to include(".pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
 
     it "requires view_reports permission" do
@@ -2046,6 +2058,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get breakdown_hotel_reports_path(hotel, format: :pdf), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
   end
 
@@ -2121,6 +2134,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get payouts_hotel_reports_path(hotel, format: :pdf), params: { tab: "upcoming" }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
 
     it "exports paid history when the paid tab is requested" do
@@ -2303,6 +2317,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get journal_batches_hotel_reports_path(hotel, format: :pdf), params: { start_date: "2026-05-01", end_date: "2026-05-31" }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
   end
 
@@ -2325,6 +2340,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
       expect(response.body).to start_with("%PDF")
+      expect(extracted_pdf_text(response.body)).to include(user.name)
     end
   end
 end

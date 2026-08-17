@@ -6,7 +6,12 @@ require "zip"
 require "pdf-reader"
 
 RSpec.describe "Financial Performance export services" do
-  let(:hotel) { instance_double(Hotel, name: "Sample Hôtel", default_currency: "MYR") }
+  let(:hotel) do
+    instance_double(
+      Hotel, name: "Sample Hôtel", default_currency: "MYR",
+      hotel_time_zone: ActiveSupport::TimeZone["Kuala Lumpur"]
+    )
+  end
   let(:report) do
     HotelPortal::Reports::FinancialPerformanceExportResult.new(
       start_date: Date.new(2026, 5, 6),
@@ -41,11 +46,11 @@ RSpec.describe "Financial Performance export services" do
   end
 
   it "generates a branded PDF with reconciled totals" do
-    content = HotelPortal::Reports::FinancialPerformancePdfExportService.new(hotel: hotel, report: report).generate
+    content = HotelPortal::Reports::FinancialPerformancePdfExportService.new(hotel: hotel, report: report, prepared_by: "Sarah Lim").generate
     text = PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join("\n")
 
     expect(content).to start_with("%PDF")
-    expect(text).to include("FINANCIAL SUMMARY REPORT", "Sample Hôtel", "Gross Bookings", "MYR 400.00")
+    expect(text).to include("Financial Summary Report", "Sample Hôtel", "Sarah Lim", "Gross Bookings", "MYR 400.00")
     expect(text).to include("Daily Performance", "06 May 2026", "MYR", "360.00", "Page 1 of 1")
   end
 
@@ -58,7 +63,7 @@ RSpec.describe "Financial Performance export services" do
     )
 
     xlsx = HotelPortal::Reports::FinancialPerformanceExcelExportService.new(hotel: hotel, report: empty_report).generate
-    pdf = HotelPortal::Reports::FinancialPerformancePdfExportService.new(hotel: hotel, report: empty_report).generate
+    pdf = HotelPortal::Reports::FinancialPerformancePdfExportService.new(hotel: hotel, report: empty_report, prepared_by: "Sarah Lim").generate
 
     expect(xlsx).to include("PK")
     expect(PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join).to include("No financial activity found for this period.")

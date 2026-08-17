@@ -2,10 +2,11 @@
 
 module Reports
   class HousekeepingTasksPdfGenerator
-    def initialize(hotel:, room_groups:, selected_date:)
+    def initialize(hotel:, room_groups:, selected_date:, prepared_by:)
       @hotel = hotel
       @table = HousekeepingTasksExportTable.new(room_groups: room_groups)
       @selected_date = selected_date
+      @prepared_by = prepared_by
     end
 
     def call
@@ -13,6 +14,8 @@ module Reports
         hotel: @hotel,
         title: "Housekeeping Tasks",
         period_label: @selected_date.strftime("%d %b %Y"),
+        period_label_title: "Selected date",
+        prepared_by: @prepared_by,
         page_layout: :landscape
       )
       builder.add_header

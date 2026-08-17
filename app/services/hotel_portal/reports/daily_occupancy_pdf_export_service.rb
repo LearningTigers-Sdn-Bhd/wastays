@@ -3,13 +3,14 @@
 module HotelPortal
   module Reports
     class DailyOccupancyPdfExportService
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, prepared_by:)
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Daily Occupancy Report", period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Daily Occupancy Report", period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
         builder.add_header
         builder.add_summary([
           [ "Rooms Sold", @report.totals[:rooms_sold].to_s ], [ "Rooms Available", @report.totals[:rooms_available].to_s ],
