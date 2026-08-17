@@ -80,7 +80,7 @@ RSpec.describe "Housekeeping task export services" do
     expect(pdf).to start_with("%PDF")
     expect(pdf_text).to include(
       "Housekeeping Tasks", "SELECTED DATE", "21 Jul 2026", "PREPARED BY", "Housekeeping Manager",
-      "Rooms", "2", "José 陈", "002", "Vacant", "Confidential", "Page 1 of 1"
+      "ROOMS", "2", "José 陈", "002", "Vacant", "Confidential", "Page 1 of 1"
     )
   end
 end

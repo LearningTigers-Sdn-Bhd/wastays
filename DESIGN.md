@@ -250,12 +250,12 @@ rather than fatal.
 
 Use `PdfTheme` tokens. Never a raw number:
 
-- `TYPE`: `display` 20 (title, display face), `subhead` 12 (hotel name),
-  `heading` 11 (section titles, metric values), `body` 9 (table cells),
-  `small` 8 (table headers, labels, address), `micro` 7 (metadata labels, footer)
+- `TYPE`: `display` 20 (title, display face), `stat` 14 (stat strip values),
+  `subhead` 12 (hotel name), `heading` 11 (section titles), `body` 9 (table cells),
+  `small` 8 (table headers, address), `micro` 7 (metadata and stat labels, footer)
 - `SPACE`: 4pt grid — `xs` 4, `sm` 8, `md` 12, `lg` 16, `xl` 20
 - `COLORS`, `RULE_WIDTH`, `PAGE_MARGIN`, `TABLE_CELL_PADDING`,
-  `SUMMARY_CELL_PADDING`
+  `SUMMARY_CELL_PADDING`, `LABEL_TRACKING`
 - `format_date` / `format_time` for every date and time
 
 Unlike screen UI, uppercase and tracking are correct for print at `micro`: they
@@ -279,6 +279,13 @@ Rules that exist because breaking them has already caused bugs:
   that `cell_style` also sets will be overridden.
 - **prawn-table cells reject `character_spacing`.** Tracked text must be drawn
   with measured text boxes.
+
+Summary metrics are `PdfStatStrip` — label above value, columns divided by hairlines,
+never filled. A tint behind short values reads as an empty table header, which is why
+the metadata strip dropped its own fill. The strip fits its column count to the page
+(four across needs landscape, portrait takes three) because the value size is fixed by
+its role and must not shrink to fit. Reach for it through
+`PdfReportBuilder#add_summary`, or directly in a document that draws its own body.
 
 Build reports with `PdfReportBuilder`, which owns the frame, tables, and page
 furniture. Reach for `PdfReportFrame` directly only when a document draws its own

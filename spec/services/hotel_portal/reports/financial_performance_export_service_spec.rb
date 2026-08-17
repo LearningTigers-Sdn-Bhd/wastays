@@ -50,7 +50,7 @@ RSpec.describe "Financial Performance export services" do
     text = PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join("\n")
 
     expect(content).to start_with("%PDF")
-    expect(text).to include("Financial Summary Report", "Sample Hôtel", "Sarah Lim", "Gross Bookings", "MYR 400.00")
+    expect(text).to include("Financial Summary Report", "Sample Hôtel", "Sarah Lim", "GROSS BOOKINGS", "MYR 400.00")
     expect(text).to include("Daily Performance", "06 May 2026", "MYR", "360.00", "Page 1 of 1")
   end
 

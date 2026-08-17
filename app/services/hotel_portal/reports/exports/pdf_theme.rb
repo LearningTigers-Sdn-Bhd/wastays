@@ -17,12 +17,18 @@ module HotelPortal
         # the same size on every report regardless of how long its content is.
         TYPE = {
           display: 20,  # report title, set in DISPLAY_FAMILY
+          stat: 14,     # stat strip values
           subhead: 12,  # hotel name
-          heading: 11,  # section titles, summary metric values
+          heading: 11,  # section titles
           body: 9,      # table cells, subtitles
-          small: 8,     # table headers, summary labels, hotel address, metadata values
-          micro: 7      # metadata labels, footer
+          small: 8,     # table headers, hotel address, metadata values
+          micro: 7      # metadata and stat labels, footer
         }.freeze
+
+        # Small labels need tracking to stay legible, and print is where uppercase plus
+        # tracking is the right way to mark a label tier — Prawn cannot reach OpenType
+        # small caps, so case and spacing carry the distinction instead.
+        LABEL_TRACKING = 0.6
 
         # Vertical rhythm on a 4pt grid.
         SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20 }.freeze

@@ -25,35 +25,7 @@ module HotelPortal
 
         def add_header = @frame.draw_header
 
-        # Sizes are set per cell rather than via column(n).style afterwards, because
-        # prawn-table measures row heights when the table is built and would otherwise
-        # size every row for the document's default font.
-        def add_summary(metrics)
-          return if metrics.empty?
-
-          rows = metrics.map do |label, value|
-            [
-              {
-                content: label.to_s, size: PdfTheme::TYPE[:small], font_style: :bold,
-                background_color: PdfTheme::COLORS[:primary_light], text_color: PdfTheme::COLORS[:muted]
-              },
-              {
-                content: value.to_s, size: PdfTheme::TYPE[:heading], font_style: :bold,
-                text_color: PdfTheme::COLORS[:ink], align: :right
-              }
-            ]
-          end
-          table = @pdf.make_table(
-            rows,
-            width: @pdf.bounds.width,
-            cell_style: {
-              padding: PdfTheme::SUMMARY_CELL_PADDING, border_color: PdfTheme::COLORS[:border],
-              borders: [ :bottom ]
-            }
-          )
-          table.draw
-          @pdf.move_down PdfTheme::SPACE[:lg]
-        end
+        def add_summary(metrics) = PdfStatStrip.new(pdf: @pdf).draw(metrics)
 
         def add_table(section_title:, headers:, rows:, numeric_columns:, total_row:, empty_message:, column_widths: nil)
           @pdf.fill_color PdfTheme::COLORS[:ink]

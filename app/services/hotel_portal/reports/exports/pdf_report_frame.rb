@@ -23,9 +23,8 @@ module HotelPortal
         METADATA_LABEL_GAP = PdfTheme::SPACE[:xs]
         METADATA_GUTTER = PdfTheme::SPACE[:xl]
         METADATA_GAP_BELOW = PdfTheme::SPACE[:xl]
-        # Small labels need tracking to stay legible; Prawn cannot reach OpenType small
-        # caps, so the distinction from values is carried by case and spacing instead.
-        METADATA_LABEL_TRACKING = 0.6
+        # Shared with the stat strip, which marks its label tier the same way.
+        METADATA_LABEL_TRACKING = PdfTheme::LABEL_TRACKING
         EYEBROW_GAP = PdfTheme::SPACE[:xs]
         # Sits in the top margin, mirroring how the footer sits below the content box.
         RUNNING_HEAD_Y = 18
