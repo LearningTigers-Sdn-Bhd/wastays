@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 class NotificationDelivery < ApplicationRecord
-  NOTIFICATION_TYPES = (NotificationConfig::NOTIFICATION_TYPES + %w[invoice_package]).freeze
+  # Both extras are sent on demand by staff rather than from a NotificationConfig
+  # schedule, so they have no counterpart in the configurable set.
+  NOTIFICATION_TYPES = (NotificationConfig::NOTIFICATION_TYPES + %w[invoice_package guest_registration_card]).freeze
   CHANNELS = NotificationConfig::CHANNELS
   STATUSES = %w[pending sent failed skipped].freeze
 
