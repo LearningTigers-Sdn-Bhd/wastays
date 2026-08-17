@@ -35,7 +35,7 @@ module HotelPortal
         :name, :description, :address, :city, :country, :star_rating,
         :featured_photo_attachment_id, :google_map_link, :contact_email,
         :contact_phone, :fixed_line_number, :whatsapp_number, :time_zone, :default_currency,
-        :tin, :ssm_number,
+        :tin, :ssm_number, :local_government_name, :local_government_license_number,
         photos: [], amenities: []
       )
 

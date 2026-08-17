@@ -17,6 +17,12 @@ module Admin
           sanitize_amenities
           @hotel.update!(@hotel_params)
 
+          # Boat features can be switched on long after creation. The service is
+          # idempotent and no-ops while the toggle is off, so calling it on every
+          # update is enough -- the hotel gets its timetable the first time the
+          # toggle goes on, and nothing happens on any other save.
+          Boats::EnsureDefaults.call(@hotel)
+
           Admin::SyncHotelSalesperson.new(
             hotel: @hotel,
             name: @salesperson_params[:name],

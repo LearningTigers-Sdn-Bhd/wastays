@@ -221,10 +221,12 @@ class Hotel < ApplicationRecord
   UNIQUE_ID_LOCK_KEY = 8_231_101
 
   # The numbers a hotel quotes on its documents. The first two identify the business
-  # itself; the other two identify it to the authority behind each statutory tax.
+  # itself, the next its licence with the local council, and the last two identify it
+  # to the authority behind each statutory tax.
   REGISTRATION_NUMBER_ATTRIBUTES = %i[
     tin
     ssm_number
+    local_government_license_number
     sst_registration_number
     tourism_tax_registration_number
   ].freeze
@@ -760,6 +762,10 @@ class Hotel < ApplicationRecord
       value = self[attribute].to_s.strip.upcase.gsub(/\s+/, " ")
       self[attribute] = value.presence
     end
+
+    # The council is named, not numbered: properties write either the acronym
+    # (DBKK) or the full name, so tidy the spacing and leave the casing alone.
+    self.local_government_name = local_government_name.to_s.strip.gsub(/\s+/, " ").presence
   end
 
   PREFIX_MIN_LENGTH = 3
