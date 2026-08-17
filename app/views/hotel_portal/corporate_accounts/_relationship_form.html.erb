@@ -30,7 +30,7 @@
             <% end %>
 
             <%= render PanelsUI::FormField.new(form: form, attribute: :contact_email, label: "Contact email") do |field| %>
-              <% field.with_input(type: :email, autocomplete: "email") %>
+              <% field.with_input(type: :email, value: @relationship.contact_email.presence || @relationship.corporate_account&.users&.min_by(&:id)&.email, autocomplete: "email") %>
             <% end %>
 
             <%= render PanelsUI::FormField.new(form: form, attribute: :contact_phone, label: "Contact phone") do |field| %>

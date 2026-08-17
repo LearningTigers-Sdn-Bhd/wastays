@@ -265,8 +265,8 @@ module HotelPortal
 
     def done_action(card)
       {
-        url: status_path(card),
-        params: { status: card.kind == "complaint" ? "resolved" : "completed" },
+        url: move_path(Requests::Column.find(:completed)),
+        params: move_params(card),
         css: primary_action_css,
         icon: "check",
         icon_opts: { stroke_width: 3 },

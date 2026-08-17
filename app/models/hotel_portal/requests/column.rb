@@ -61,7 +61,7 @@ module HotelPortal
 
       # The lane a request belongs in as it stands, which is where restoring one
       # from the archive puts it back.
-      def self.for_record(kind:, status:, archived:)
+      def self.for_record(kind:, status:, archived: false)
         return find(:archived) if archived
         return find(:completed) if FINISHED_STATUSES.include?(status.to_s)
 
