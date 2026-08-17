@@ -2,7 +2,7 @@ require "rails_helper"
 require "cgi"
 
 RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request do
-  let(:hotel) { create(:hotel, status: "live") }
+  let(:hotel) { create(:hotel, status: "live", guest_registration_card_terms: "Valid photo ID is required at check-in.") }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
   let(:booking) { create(:booking, hotel: hotel) }
@@ -152,7 +152,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(card.reload.display_fields_snapshot).to eq(%w[email room_type])
     end
 
-    it "renders the booking's special requests as Remark and internal notes as Please Note, with check-in/check-out times combined into the date" do
+    it "renders the booking's special requests as Remark, with check-in/check-out times combined into the date" do
       create(:property_policy, hotel: hotel, check_in_time: "3:00 PM", check_out_time: "11:00 AM")
       booking.update!(special_requests: "Please provide a quiet room.", internal_notes: "VIP guest, prioritize service.")
 
@@ -161,31 +161,36 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Remark")
       expect(response.body).to include("Please provide a quiet room.")
-      expect(response.body).to include("Please Note")
-      expect(response.body).to include("VIP guest, prioritize service.")
       expect(response.body).not_to include("Check-in time")
       expect(response.body).not_to include("Check-out time")
       expect(response.body).to include("3:00 PM")
       expect(response.body).to include("11:00 AM")
 
       document = Nokogiri::HTML(response.body)
-      # Check interactive textareas
       remark_textarea = document.at_css("textarea[data-registration-card-target='remarkInput']")
       expect(remark_textarea).to be_present
       expect(remark_textarea.text.strip).to eq("Please provide a quiet room.")
 
-      notes_textarea = document.at_css("textarea[data-registration-card-target='notesInput']")
-      expect(notes_textarea).to be_present
-      expect(notes_textarea.text.strip).to eq("VIP guest, prioritize service.")
-
-      # Check print targets
       remark_print = document.at_css("div[data-registration-card-target='remarkPrint']")
       expect(remark_print).to be_present
       expect(remark_print.text.strip).to eq("Please provide a quiet room.")
+    end
 
-      notes_print = document.at_css("div[data-registration-card-target='notesPrint']")
-      expect(notes_print).to be_present
-      expect(notes_print.text.strip).to eq("VIP guest, prioritize service.")
+    it "does not render Please Note or a way to manage note templates" do
+      booking.update!(internal_notes: "VIP guest, prioritize service.")
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).not_to include("Please Note")
+      expect(response.body).not_to include("VIP guest, prioritize service.")
+      expect(response.body).not_to include("Manage note templates")
+    end
+
+    it "renders the hotel's fixed Terms & Conditions" do
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).to include("Terms &amp; Conditions")
+      expect(response.body).to include("Valid photo ID is required at check-in.")
     end
   end
 
@@ -358,6 +363,26 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
         expect(labels).to include("Phone", "Check-in")
         expect(labels).not_to include("Email")
       end
+    end
+  end
+
+  describe "when the hotel has not set its Terms & Conditions" do
+    let(:hotel) { create(:hotel, status: "live", guest_registration_card_terms: nil) }
+
+    it "shows the setup banner and hides signing and sending" do
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).to include("Terms &amp; Conditions required")
+      expect(response.body).not_to include("Save Signature")
+      expect(response.body.scan("Print official form").size).to eq(0)
+    end
+
+    it "refuses to print" do
+      get hotel_booking_guest_registration_card_pdf_path(hotel, booking)
+
+      expect(response).to redirect_to(hotel_booking_guest_registration_card_path(hotel, booking))
+      follow_redirect!
+      expect(response.body).to include("before printing this card")
     end
   end
 

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Bookings::SendGuestRegistrationCard do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, guest_registration_card_terms: "Valid photo ID is required at check-in.") }
   let(:booking) { create(:booking, hotel: hotel, guest_email: "guest@example.com") }
   let(:user) { create(:user) }
 
@@ -50,6 +50,16 @@ RSpec.describe Bookings::SendGuestRegistrationCard do
 
       expect(result.success?).to be(false)
       expect(result.error).to eq("The registration card has not been created yet.")
+    end
+
+    it "fails when the hotel has not set its Terms & Conditions" do
+      hotel.update!(guest_registration_card_terms: nil)
+      booking.create_guest_registration_card!(hotel: hotel)
+
+      result = described_class.call(booking: booking, user: user)
+
+      expect(result.success?).to be(false)
+      expect(result.error).to eq("Set a Terms & Conditions policy in Settings before sending this card.")
     end
   end
 end

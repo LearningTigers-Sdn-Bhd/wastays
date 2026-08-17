@@ -23,7 +23,7 @@
                 <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0f4a43;text-transform:uppercase;letter-spacing:0.1em;">Guest Registration Card</p>
                 <p style="margin:0 0 24px;font-size:26px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;">Here is your registration card, <%= @guest_first_name %>.</p>
                 <p style="margin:0 0 32px;font-size:15px;color:#475569;line-height:1.7;">
-                  Your registration card for <strong style="color:#0f172a;"><%= @payload[:hotel_name] %></strong> is attached to this email.
+                  Your registration card for <strong style="color:#0f172a;"><%= @payload[:hotel_name] %></strong> is ready to view online.
                 </p>
 
                 <!-- Stay Summary Card -->
@@ -74,7 +74,7 @@
                     <tr>
                       <td style="padding:16px 20px;">
                         <p style="margin:0;font-size:14px;color:#166534;line-height:1.6;">
-                          <strong>Signed</strong> — This card was signed by <%= @card.signer_name %>. Keep the attached copy for your records.
+                          <strong>Signed</strong> — This card was signed by <%= @card.signer_name %>. You can download a PDF copy any time from the link below.
                         </p>
                       </td>
                     </tr>
@@ -84,12 +84,23 @@
                     <tr>
                       <td style="padding:16px 20px;">
                         <p style="margin:0;font-size:14px;color:#92400e;line-height:1.6;">
-                          <strong>Signature needed</strong> — Please review the attached card and sign it on arrival.
+                          <strong>Signature needed</strong> — Please review and sign your registration card before arrival.
                         </p>
                       </td>
                     </tr>
                   </table>
                 <% end %>
+
+                <!-- CTA -->
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+                  <tr>
+                    <td align="center">
+                      <a href="<%= @card_url %>" style="display:inline-block;background-color:#0f4a43;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:10px;">
+                        <%= @card&.signed? ? "View & download your card" : "View & sign your card" %>
+                      </a>
+                    </td>
+                  </tr>
+                </table>
 
                 <hr style="border:none;border-top:1px solid #f1f5f9;margin:0 0 32px;">
 

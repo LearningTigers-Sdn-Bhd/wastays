@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Bookings::GuestRegistrationCardEmails", type: :request do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, guest_registration_card_terms: "Valid photo ID is required at check-in.") }
   let(:booking) { create(:booking, hotel: hotel, guest_email: "guest@example.com") }
   let(:user) { create(:user) }
   let(:role) { create(:role, account: hotel.account) }
@@ -49,17 +49,27 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCardEmails", type: :requ
     expect(flash[:alert]).to eq("This booking has no guest email address to send to.")
   end
 
-  it "renders the card as a PDF attachment when the delivery runs" do
+  it "refuses to send when the hotel has not set its Terms & Conditions" do
+    hotel.update!(guest_registration_card_terms: nil)
+
+    expect {
+      post hotel_booking_guest_registration_card_email_path(hotel, booking)
+    }.not_to change(NotificationDelivery, :count)
+
+    expect(flash[:alert]).to eq("Set a Terms & Conditions policy in Settings before sending this card.")
+  end
+
+  it "links to the guest's own public copy of the card instead of attaching a PDF" do
     post hotel_booking_guest_registration_card_email_path(hotel, booking)
 
     perform_enqueued_jobs
     mail = ActionMailer::Base.deliveries.last
+    card = booking.reload.guest_registration_card
 
     expect(mail.to).to eq([ "guest@example.com" ])
     expect(mail.subject).to include(booking.confirmation_token)
-    pdf = mail.attachments.find { |attachment| attachment.mime_type == "application/pdf" }
-    expect(pdf).to be_present
-    expect(pdf.body.decoded).to start_with("%PDF")
+    expect(mail.attachments.map(&:mime_type)).not_to include("application/pdf")
+    expect(mail.html_part.body.decoded).to include("/guest-registration-card/#{card.public_token}")
     expect(NotificationDelivery.last.reload.status).to eq("sent")
   end
 end
