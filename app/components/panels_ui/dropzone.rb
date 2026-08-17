@@ -3,9 +3,12 @@
 module PanelsUI
   class Dropzone < PanelsUI::BaseComponent
     PREVIEWS = %i[auto icon image].freeze
+    PRESENTATIONS = %i[files single_image].freeze
 
     def initialize(form:, attribute:, id: nil, accept: nil, multiple: false,
                    max_files: nil, max_size: nil, existing_count: 0, preview: :auto,
+                   presentation: :files, existing_image_url: nil, existing_image_alt: nil,
+                   remove_attribute: nil,
                    prompt: "Drop files here or", description: nil,
                    described_by: nil, labelled_by: nil, invalid: false, required: false,
                    disabled: false, size: :md, class: nil, **input_attributes)
@@ -18,6 +21,12 @@ module PanelsUI
       @max_size = normalize_non_negative_integer(max_size, :max_size)
       @existing_count = normalize_non_negative_integer(existing_count, :existing_count)
       @preview = PREVIEWS.include?(preview) ? preview : :auto
+      @presentation = PRESENTATIONS.include?(presentation) ? presentation : :files
+      raise ArgumentError, "Single-image dropzones do not support multiple files" if single_image? && @multiple
+
+      @existing_image_url = existing_image_url
+      @existing_image_alt = existing_image_alt.presence || "Current image"
+      @remove_attribute = remove_attribute
       @prompt = prompt
       @description = description
       @described_by = described_by
@@ -42,6 +51,7 @@ module PanelsUI
           panels_ui__dropzone_max_size_value: @max_size,
           panels_ui__dropzone_existing_count_value: @existing_count,
           panels_ui__dropzone_preview_value: @preview,
+          panels_ui__dropzone_presentation_value: @presentation,
           size: @size,
           invalid: @invalid.to_s,
           disabled: @disabled.to_s
@@ -74,6 +84,19 @@ module PanelsUI
     end
 
     def client_error_id = "#{@id}-dropzone-error"
+    def single_image? = @presentation == :single_image
+
+    def remove_input_attributes
+      return unless @remove_attribute
+
+      {
+        type: "hidden",
+        id: @form.field_id(@remove_attribute),
+        name: @form.field_name(@remove_attribute),
+        value: "0",
+        data: { panels_ui__dropzone_target: "removeInput" }
+      }
+    end
 
     private
 

@@ -1,0 +1,37 @@
+<%
+  readonly = local_assigns.fetch(:readonly, false)
+  persisted_icon = hotel.icon if hotel.icon.attachment&.persisted?
+  icon_alt = "#{hotel.name} hotel icon"
+%>
+
+<% if readonly %>
+  <div class="space-y-2">
+    <p class="text-sm font-medium text-foreground">Hotel icon</p>
+    <% if persisted_icon %>
+      <div class="flex size-32 items-center justify-center overflow-hidden rounded-md border border-border bg-card">
+        <%= image_tag persisted_icon.variant(:thumbnail), alt: icon_alt, class: "size-full object-cover" %>
+      </div>
+    <% else %>
+      <p class="text-sm text-muted-foreground">Not provided</p>
+    <% end %>
+  </div>
+<% else %>
+  <%= render PanelsUI::FormField.new(
+        form: form,
+        attribute: :icon,
+        label: "Hotel icon",
+        hint: "Recommended aspect ratio 1:1. PNG, JPG, or WebP, up to 2 MB.",
+        class: "sm:col-span-2",
+        data: { testid: "hotel-icon-field" }) do |field| %>
+    <% field.with_dropzone(
+         accept: Hotel::ICON_CONTENT_TYPES.join(","),
+         max_size: Hotel::ICON_MAX_SIZE,
+         preview: :image,
+         presentation: :single_image,
+         existing_image_url: (url_for(persisted_icon.variant(:thumbnail)) if persisted_icon),
+         existing_image_alt: icon_alt,
+         remove_attribute: :remove_icon,
+         prompt: "Drop hotel icon here or",
+         description: "1:1 aspect ratio · PNG, JPG, or WebP · maximum 2 MB") %>
+  <% end %>
+<% end %>

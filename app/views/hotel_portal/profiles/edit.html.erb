@@ -27,6 +27,8 @@
       </div>
 
       <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <%= render "hotel_icon_field", form: form, hotel: @hotel %>
+
         <%= render PanelsUI::FormField.new(
               form: form,
               attribute: :name,
