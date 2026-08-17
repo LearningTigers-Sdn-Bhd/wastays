@@ -78,6 +78,7 @@ module HotelPortal
         "void" => "Booking voided",
         "reinstate" => "No-show booking reinstated",
         "no_show" => automatic? ? "Booking automatically marked as no-show" : "Booking marked as no-show",
+        "rate_override" => "Room rate overridden",
         "room_assignment" => "Room assignment updated",
         "room_removed" => "Room assignment removed",
         "note_added" => "Internal note added",
@@ -113,6 +114,10 @@ module HotelPortal
         automatic? ? "The system finalized the booking as a no-show." : "#{actor_name} marked the booking as a no-show."
       when "room_assignment"
         "#{actor_name} assigned #{room_label}."
+      when "rate_override"
+        quoted = old_values["room_total"]
+        booked = format_money(new_values["room_total"])
+        quoted.present? ? "#{actor_name} priced the room at #{booked} instead of the quoted #{format_money(quoted)}." : "#{actor_name} priced the room at #{booked} by hand."
       when "status_change"
         "Booking moved from #{status_label(from_status)} to #{status_label(to_status)}."
       when "external_creation"
@@ -274,7 +279,7 @@ module HotelPortal
       return status_label(value) if field == "status"
       return value ? "Yes" : "No" if value.in?([ true, false ])
       return format_time(value) if field.in?(%w[check_in check_out checked_in_at checked_out_at])
-      return format_money(value) if field.in?(%w[total_amount])
+      return format_money(value) if field.in?(%w[total_amount room_total])
       return value.join(", ") if field == "rooms" && value.is_a?(Array)
       return "#{value.size} items" if value.is_a?(Array)
       return "Updated details" if value.is_a?(Hash)

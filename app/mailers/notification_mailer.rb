@@ -80,6 +80,23 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  def guest_registration_card(delivery)
+    assign_delivery(delivery)
+    @card = @booking.guest_registration_card
+    @nights = (@booking.check_out.to_date - @booking.check_in.to_date).to_i
+    attachments["wastays-guest-registration-card-#{@booking.confirmation_token}.pdf"] = {
+      mime_type: "application/pdf",
+      content: GuestRegistrationCardPdfService.new(
+        @card, @booking, HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking)
+      ).generate
+    }
+
+    mail(
+      to: @payload.fetch(:recipient_email),
+      subject: "Your guest registration card — #{@booking.confirmation_token}"
+    )
+  end
+
   private
 
   def load_delivery_context

@@ -46,7 +46,7 @@ module ChannelManagers
         children = reconcile_children!(group, children, units, effective_check_in, effective_check_out, incoming_status)
         persist_financial_snapshot!(group)
         children.each do |booking|
-          ChannelManagers::AutoAssignRoom.new(booking: booking).call if inventory_held_status?(booking.status)
+          Bookings::AutoAssignRoom.new(booking: booking, source: "channel_manager").call if inventory_held_status?(booking.status)
         end
         children.each { |booking| Bookings::InventoryManager.new(booking).deduct if inventory_held_status?(booking.status) }
 

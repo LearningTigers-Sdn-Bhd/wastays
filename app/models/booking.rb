@@ -115,7 +115,11 @@ class Booking < ApplicationRecord
     primary_guest&.repeat? || false
   end
 
-  validates :guest_name, :guest_email, :guest_phone, presence: true
+  validates :guest_name, :guest_phone, presence: true
+  # The desk usually takes only a phone number, so a booking entered by staff may
+  # go without an address. Everything else — the public funnel, OTA ingestion —
+  # reaches us with one and still has to.
+  validates :guest_email, presence: true, unless: :created_by_staff?
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true
   validates :folio_account_reference, uniqueness: { scope: :hotel_id, allow_blank: true }
@@ -549,7 +553,8 @@ class Booking < ApplicationRecord
   end
 
   def normalize_guest_data
-    self.guest_email = guest_email&.downcase&.strip
+    # An emptied box must land as NULL, not "", so "has no address" is one state.
+    self.guest_email = guest_email&.downcase&.strip.presence
     self.guest_country = guest_country&.split&.map(&:capitalize)&.join(" ") if guest_country.present?
   end
 

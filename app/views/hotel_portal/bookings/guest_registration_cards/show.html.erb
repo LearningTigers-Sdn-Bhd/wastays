@@ -12,6 +12,10 @@
     <div class="grc-no-print mb-4 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700"><%= flash[:notice] %></div>
   <% end %>
 
+  <% if flash[:alert].present? %>
+    <div class="grc-no-print mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700"><%= flash[:alert] %></div>
+  <% end %>
+
   <% if @card.errors.any? %>
     <div class="grc-no-print mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700"><%= @card.errors.full_messages.to_sentence %></div>
   <% end %>
@@ -215,6 +219,16 @@
       <section class="rounded-lg border border-border bg-card p-5 shadow-sm">
         <h2 class="text-lg font-bold text-foreground">Actions</h2>
         <%= link_to "Print official form", hotel_booking_guest_registration_card_pdf_path(current_hotel, @booking), target: "_blank", rel: "noopener", class: "mt-4 flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90" %>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+          <% if @booking.guest_email.present? %>
+            <%= button_to "Email to guest", hotel_booking_guest_registration_card_email_path(current_hotel, @booking),
+                  method: :post,
+                  class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted",
+                  form: { data: { turbo_confirm: "Email this registration card to #{@booking.guest_email}?" } } %>
+          <% else %>
+            <p class="mt-2 rounded-md border border-dashed border-border-interactive px-4 py-2.5 text-center text-xs text-muted-foreground">Add a guest email to send this card.</p>
+          <% end %>
+        <% end %>
         <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
           <%= link_to "Configure displayed details", "#{hotel_settings_path(current_hotel, tab: "general")}#guest-registration-card", class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted" %>
         <% end %>
@@ -246,7 +260,7 @@
 
             <div>
               <label class="mb-1 block text-sm font-medium text-foreground">Signature</label>
-              <canvas data-signature-target="canvas" class="h-44 w-full rounded-md border border-border-interactive bg-card"></canvas>
+              <canvas data-signature-target="canvas" class="h-44 w-full touch-none rounded-md border border-border-interactive bg-card"></canvas>
               <%= form.hidden_field :signature_data_url, data: { signature_target: "input" }, required: true %>
               <div class="mt-2 grid gap-2 sm:flex">
                 <button type="button" data-action="signature#clear" class="rounded-md border border-border-interactive px-3 py-2 text-sm font-medium text-foreground hover:bg-muted">Clear</button>

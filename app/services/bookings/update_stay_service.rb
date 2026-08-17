@@ -13,6 +13,7 @@ module Bookings
       @rate_plan_id = @params.delete(:rate_plan_id)
       @rate_selection_provided = @params.key?(:rate_selection)
       @rate_selection_value = @params.delete(:rate_selection)
+      @manual_rate_override_provided = @params.key?(:manual_rate_override)
       @user = user
       @override = override
       @override_reason = override_reason
@@ -36,6 +37,7 @@ module Bookings
         current_room = @booking.booking_rooms.first
         old_room_type_id = current_room&.room_type_id
         old_rate_plan_id = current_room&.rate_plan_id
+        old_manual_rate_override = @booking.manual_rate_override
         current_rate_selection = RateSelection.current(current_room)
 
         # 2. Update Booking attributes (including dates and any other params)
@@ -50,8 +52,13 @@ module Bookings
           else
             @rate_plan_id.present? && @rate_plan_id.to_i != old_rate_plan_id
           end
+          # A hand-set price moves the total on its own, with the dates, room and
+          # rate all unchanged, so it has to open the repricing branch too —
+          # otherwise the override persists against a stale total.
+          override_changing = @booking.manual_rate_override != old_manual_rate_override
+
           # 3. Handle Financial and Inventory Changes if anything relevant changed
-          if dates_changing || room_type_changing || rate_plan_changing
+          if dates_changing || room_type_changing || rate_plan_changing || override_changing
             # Release old inventory using old dates and old room type
             InventoryManager.new(@booking).release_by_dates(old_check_in, old_check_out)
 
@@ -270,7 +277,9 @@ module Bookings
       end
       @rate_selection_changed = @resolved_rate_selection.token != current_selection.token
 
-      if @rate_selection_provided && @rate_selection_changed && @booking.manual_rate_override.present?
+      # Picking a different rate drops a stale hand-set price — unless this same
+      # update is setting one, in which case the operator's figure is the intent.
+      if @rate_selection_provided && @rate_selection_changed && @booking.manual_rate_override.present? && !@manual_rate_override_provided
         @params[:manual_rate_override] = nil
       end
     end

@@ -100,7 +100,7 @@ module ChannelManagers
 
           # 5. Deduct New Inventory: If the new state is active, deduct the rooms
           if inventory_held_status?(booking.status)
-            ChannelManagers::AutoAssignRoom.new(booking: booking).call
+            Bookings::AutoAssignRoom.new(booking: booking, source: "channel_manager").call
             Bookings::InventoryManager.new(booking).deduct
           end
 

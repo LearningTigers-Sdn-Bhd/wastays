@@ -78,8 +78,16 @@ module HotelPortal
     ].freeze
 
     helper_method :locked_hotel_portal_shell?, :training_mode?, :awaiting_training_decision?, :training_reset_in_progress?
+    helper_method :rate_override_allowed?
 
     private
+
+    # Pricing a stay by hand is its own privilege, separate from taking the
+    # booking. Both the creation sheet and the on-demand room row render the
+    # field, so the check lives where every portal controller can reach it.
+    def rate_override_allowed?
+      current_user.has_permission?("override_booking_rate", hotel: current_hotel)
+    end
 
     # The retired arrivals/in-house/checked-out/bookings index pages were tables,
     # so their bookmarks keep landing on the list view. An explicit ?view= still

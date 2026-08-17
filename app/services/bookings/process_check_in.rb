@@ -24,6 +24,7 @@ module Bookings
         @bookings.sort_by(&:id).each(&:lock!)
         validate_current_statuses!
         transitioned = @bookings.select { |booking| booking.status == "confirmed" }
+        auto_assign_missing_rooms!
         lock_requested_rooms!
         @bookings.each { |booking| validate_details!(booking) }
         @bookings.each do |booking|
@@ -114,6 +115,18 @@ module Bookings
       end
     end
 
+    # Last chance before "Assign every room before checking in." stops the desk:
+    # a reservation that never had a room picked gets one now. Only rooms still
+    # unnamed by this request are touched, so an explicit choice always wins, and
+    # a failure to find one leaves validate_rooms! to report it as before.
+    def auto_assign_missing_rooms!
+      @bookings.each do |booking|
+        next unless booking.booking_rooms.any? { |booking_room| submitted_room_number(booking, booking_room).blank? }
+
+        AutoAssignRoom.new(booking: booking, source: "staff").call
+      end
+    end
+
     def lock_requested_rooms!
       room_keys = @bookings.flat_map do |booking|
         booking.booking_rooms.map do |booking_room|
@@ -132,11 +145,15 @@ module Bookings
       end
     end
 
+    # An empty box means the desk picked nothing, not that the room should be
+    # cleared — blanking was never a way to unassign, since validate_rooms!
+    # rejects it either way. So fall back to whatever the booking already holds,
+    # which is how an automatic assignment made moments ago is picked up.
     def submitted_room_number(booking, booking_room)
       assignments = details_for(booking)[:room_assignments].to_h
-      return booking_room.room_number.to_s.strip unless assignments.key?(booking_room.id.to_s)
+      submitted = assignments[booking_room.id.to_s].to_s.strip
 
-      assignments[booking_room.id.to_s].to_s.strip
+      submitted.presence || booking_room.room_number.to_s.strip
     end
 
     def transition(booking)
