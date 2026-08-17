@@ -10,7 +10,7 @@ export default class extends Controller {
     "surchargeRow", "surchargeTotal", "surchargeTaxRow", "surchargeTaxTotal", "depositRow", "depositTotal",
     "collectedLabel", "collectedTotal", "grandTotal"
   ]
-  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String }
+  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean }
 
   connect() {
     this.nextIndex = this.rowTargets.length
@@ -461,7 +461,7 @@ export default class extends Controller {
 
       const emptyOption = Array.from(native.options).find((option) => option.value === "")
       const placeholder = this.roomPlaceholderLabel()
-      const deferredLabels = ["Select room", "Select room later"]
+      const deferredLabels = ["Select room", "Select room later", "Auto-assign"]
       if (emptyOption && deferredLabels.includes(emptyOption.textContent) && emptyOption.textContent !== placeholder) {
         const selectedValue = native.value
         const choices = Array.from(native.options).map((option) => ({
@@ -480,8 +480,13 @@ export default class extends Controller {
     return !this.hasBookingTypeTarget || this.readValue(this.bookingTypeTarget) === "reservation"
   }
 
+  // "Auto-assign" is a description of what leaving this blank does, not a
+  // request staff make — the hotel's toggle decides it. Manual assignment is
+  // still one click away by picking a room from the list underneath it.
   roomPlaceholderLabel() {
-    return this.deferredRoomSelectionAllowed() ? "Select room later" : "Select room"
+    if (!this.deferredRoomSelectionAllowed()) return "Select room"
+
+    return this.autoAssignEnabledValue ? "Auto-assign" : "Select room later"
   }
 
   toggleCorporate(event) {

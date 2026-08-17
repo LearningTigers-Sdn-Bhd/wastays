@@ -33,8 +33,9 @@
     </div>
     <div class="min-w-0" data-role="room-number">
       <%= render PanelsUI::FormField.new(form: rf, attribute: :room_number, label: "Room", label_hidden: true, class: "min-w-0") do |field| %>
+        <% room_placeholder = allow_deferred_room ? (current_hotel.auto_assign_rooms_enabled? ? "Auto-assign" : "Select room later") : "Select room" %>
         <% field.with_select_menu(
-             [[allow_deferred_room ? "Select room later" : "Select room", ""]],
+             [[room_placeholder, ""]],
              selected: "",
              class: "min-w-0") %>
       <% end %>
@@ -67,7 +68,7 @@
         directly and the room charge and tax are worked out from it. %>
     <% if rate_override_allowed? %>
       <input type="number" step="0.01" min="0" data-role="rate"
-             aria-label="Total, tax included — edit to price by hand"
+             aria-label="Total, tax included — click to edit"
              class="w-20 rounded border border-transparent bg-transparent px-1 py-0.5 text-right tabular-nums text-foreground hover:border-border-interactive focus:border-border-interactive focus:outline-none focus:ring-0"
              data-action="input->booking-room-rows#totalOverrideChanged" value="0.00" />
     <% else %>

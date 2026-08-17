@@ -73,7 +73,7 @@
                 <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2, delimiter: ",") %></span></dd></div>
                 <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2, delimiter: ",") %></span></dd></div>
                 <div class="flex items-center justify-between gap-4 px-4 py-3">
-                  <dt class="font-medium text-foreground">Total<% if rate_override_allowed? %> <span class="font-normal text-muted-foreground">(tax incl. — edit to price by hand)</span><% end %></dt>
+                  <dt class="font-medium text-foreground">Total<% if rate_override_allowed? %> <span class="font-normal text-muted-foreground">(tax incl. — click to edit)</span><% end %></dt>
                   <dd class="font-semibold text-foreground">
                     <% if rate_override_allowed? %>
                       <span class="inline-flex items-center gap-1">

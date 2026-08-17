@@ -26,6 +26,15 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
   end
 
   describe "GET the creation forms into the booking_action_sheet" do
+    it "labels a deferred room 'Select room later' when the property assigns rooms manually" do
+      hotel.update!(auto_assign_rooms_enabled: false)
+
+      get hotel_booking_action_new_booking_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
+    end
+
     it "renders the full New Booking sheet" do
       get hotel_booking_action_new_booking_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
 
@@ -65,7 +74,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(dialog.at_css('input[name="booking[existing_guest_id]"]')).to be_present
       expect(dialog.at_css('input[name="booking[guest_update_intent]"][value="update_existing"]')).to be_present
       expect(dialog.at_css('[data-booking-guest-autofill-target="profileRow"]')["hidden"]).not_to be_nil
-      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Auto-assign")
       expect(dialog.at_css('input[name="booking[payment_method_type]"][value="cash"]')).to be_present
       expect(dialog.at_css('input[name="booking[payment_method_type]"][value="bank_gateway"]')).to be_present
       expect(dialog.at_css('select[name="booking[hotel_payment_method_id]"]')).to be_present
@@ -94,7 +103,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       profile_row = dialog.at_css('[data-booking-guest-autofill-target="profileRow"]')
       expect(profile_row["hidden"]).not_to be_nil
       expect(profile_row["class"]).not_to include("md:flex-row")
-      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Auto-assign")
       more_options = dialog.at_css('a[data-controller="booking-form-transfer"]')
       expect(more_options.text.squish).to eq("More options")
       expect(more_options["data-action"]).to eq("booking-form-transfer#open")

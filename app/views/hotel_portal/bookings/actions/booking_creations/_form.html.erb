@@ -41,6 +41,7 @@ end %>
            data-booking-room-rows-availability-url-value="<%= availability_hotel_bookings_path(current_hotel) %>"
            data-booking-room-rows-rate-options-url-value="<%= rate_options_hotel_bookings_path(current_hotel) %>"
            data-booking-room-rows-price-url-value="<%= stay_price_hotel_bookings_path(current_hotel) %>"
+           data-booking-room-rows-auto-assign-enabled-value="<%= current_hotel.auto_assign_rooms_enabled? %>"
            data-booking-room-rows-room-row-url-value="<%= room_row_hotel_bookings_path(current_hotel) %>">
         <%= form_with model: @booking, url: form_url, local: true, class: "flex min-h-0 flex-1 flex-col", id: "manual_booking_form",
               data: { controller: "booking-guest-autofill", action: "panels-ui:autocomplete-select->booking-guest-autofill#selectGuest" } do |f| %>
@@ -124,7 +125,7 @@ end %>
                     <div class="<%= quick ? "contents" : "grid gap-x-3 gap-y-4 md:grid-cols-2" %>" data-role="guest-contact-fields">
                       <%# The desk often has only a phone number, so the address is
                           optional here. Phone carries the contact requirement. %>
-                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_email, label: "Email", hint: "Optional") do |field| %>
+                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_email, label: "Email") do |field| %>
                         <% field.with_autocomplete(
                              endpoint: search_hotel_guests_path(current_hotel),
                              type: :email,
@@ -142,7 +143,7 @@ end %>
                     </div>
                   </div>
                   <div class="grid gap-x-3 gap-y-4 md:grid-cols-3" data-role="guest-demographic-fields">
-                    <%= render PanelsUI::FormField.new(form: f, attribute: :guest_date_of_birth, label: "Date of birth", required: true) do |field| %>
+                    <%= render PanelsUI::FormField.new(form: f, attribute: :guest_date_of_birth, label: "Date of birth") do |field| %>
                       <% field.with_date_picker(
                            value: @booking.guest_date_of_birth.to_s.presence,
                            max: Date.yesterday,
