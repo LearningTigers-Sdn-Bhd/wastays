@@ -53,10 +53,7 @@ module NightAudits
       pdf.fill_color THEME::COLORS[:muted]
       pdf.text "Audit Completed: #{audit_completed_label}", size: THEME::TYPE[:body]
       pdf.move_down THEME::SPACE[:lg]
-      draw_section_heading(pdf, "1. Daily Financial Summary")
-
-      data = [
-        [ "Metric", "Amount" ],
+      rows = [
         [ "Room Revenue", money(@summary.room_revenue) ],
         [ "Tax Revenue", money(@summary.tax_revenue) ],
         [ "No-Show Charges", money(@summary.no_show_charges) ],
@@ -69,22 +66,17 @@ module NightAudits
         [ "Total Manual Adjustments", money(@summary.adjustments_total) ]
       ]
 
-      table = build_table(pdf, data)
-      table.column(1).align = :right
-      [ 4, 8 ].each do |subtotal|
-        table.row(subtotal).font_style = :bold
-        table.row(subtotal).background_color = THEME::COLORS[:primary_light]
-      end
-      [ 5, 9 ].each do |spacer|
-        table.row(spacer).borders = []
-        table.row(spacer).height = THEME::SPACE[:md]
-      end
-      table.row(10).style(
-        font_style: :bold, text_color: THEME::COLORS[:warning],
-        background_color: THEME::COLORS[:warning_light],
-        borders: [ :top, :bottom ], border_color: THEME::COLORS[:warning]
+      # Grouping is the point of this table: revenue and money flow each close on their own
+      # subtotal, and the adjustments line is flagged because it is what the audit is for.
+      HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+        section_title: "1. Daily Financial Summary",
+        headers: [ "Metric", "Amount" ],
+        rows: rows,
+        numeric_columns: [ 1 ],
+        total_row: nil,
+        empty_message: "No financial activity recorded for this business date.",
+        row_variants: { 3 => :subtotal, 4 => :spacer, 7 => :subtotal, 8 => :spacer, 9 => :alert }
       )
-      table.draw
     end
 
     def draw_adjustments(pdf)
