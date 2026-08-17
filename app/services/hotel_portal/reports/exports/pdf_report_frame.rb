@@ -29,7 +29,7 @@ module HotelPortal
         # Sits in the top margin, mirroring how the footer sits below the content box.
         RUNNING_HEAD_Y = 18
 
-        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current)
+        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true)
           @pdf = pdf
           @hotel = hotel
           @report_name = report_name
@@ -40,6 +40,7 @@ module HotelPortal
           @prepared_by = prepared_by
           @metadata = metadata
           @generated_at = generated_at
+          @confidential = confidential
         end
 
         def draw_header
@@ -71,7 +72,8 @@ module HotelPortal
             @pdf.line_width PdfTheme::RULE_WIDTH
             @pdf.stroke_horizontal_line 0, @pdf.bounds.width, at: 2
             @pdf.fill_color PdfTheme::COLORS[:muted]
-            @pdf.draw_text "Confidential", at: [ 0, FOOTER_Y ], size: PdfTheme::TYPE[:micro]
+            # Internal reports are marked; a document that goes to the guest is not.
+            @pdf.draw_text "Confidential", at: [ 0, FOOTER_Y ], size: PdfTheme::TYPE[:micro] if @confidential
             draw_wastays_attribution
           end
           @pdf.number_pages(

@@ -292,6 +292,8 @@ furniture. Reach for `PdfReportFrame` directly only when a document draws its ow
 body, and call `stamp_page_furniture` once at the end so continuation pages get a
 running head. A document whose title is an identifier passes `eyebrow:` to name
 what it is; a document that is not period-based passes its own `metadata:` pairs.
+The footer marks every document `Confidential` because most are internal; a
+document that goes to the guest or the payer passes `confidential: false`.
 
 ## Source of truth
 
