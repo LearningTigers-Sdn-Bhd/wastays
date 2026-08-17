@@ -175,15 +175,12 @@
           </div>
 
           <div>
-            <span class="mb-2 block text-sm font-medium text-slate-700">Boat Information Feature</span>
-            <label class="flex h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 cursor-pointer">
-              <span class="text-xs text-slate-600">Allow Boat Information Record</span>
-              <span class="relative inline-flex items-center">
-                <%= f.check_box :allow_boat_information, class: "sr-only peer" %>
-                <span class="peer h-6 w-11 rounded-full bg-gray-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full"></span>
-              </span>
-            </label>
-            <p class="mt-1 text-xs text-slate-400">If enabled, the hotel can record boat arrivals and departures for stayed guests.</p>
+            <%= render PanelsUI::Switch.new(
+                  form: f,
+                  attribute: :allow_boat_information,
+                  variant: :card,
+                  label: "Boat features",
+                  description: "For island and jetty-served properties: boat schedules, boat in/out times on bookings, and the BIBO and meal prep reports.") %>
           </div>
 
           <% if hotel.persisted? %>
