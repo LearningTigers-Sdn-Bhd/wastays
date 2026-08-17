@@ -1,20 +1,27 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input", "surface", "error", "selection", "attachments", "template", "count"]
+  static targets = [
+    "input", "surface", "error", "selection", "attachments", "template", "count",
+    "emptyState", "imageState", "previewImage", "pendingRemoval", "removeInput"
+  ]
   static values = {
     accept: String,
     multiple: Boolean,
     maxFiles: Number,
     maxSize: Number,
     existingCount: Number,
-    preview: { type: String, default: "auto" }
+    preview: { type: String, default: "auto" },
+    presentation: { type: String, default: "files" }
   }
 
   connect() {
     this.selectedFiles = Array.from(this.inputTarget.files || [])
     this.previewUrls = new Map()
     this.dragDepth = 0
+    this.removalPending = this.hasRemoveInputTarget && this.removeInputTarget.value === "1"
+    this.existingImageUrl = this.hasPreviewImageTarget ? this.previewImageTarget.dataset.existingSrc : ""
+    this.existingImageAlt = this.hasPreviewImageTarget ? this.previewImageTarget.dataset.existingAlt : "Current image"
     this.render()
   }
 
@@ -27,6 +34,13 @@ export default class extends Controller {
 
     const incoming = Array.from(event.currentTarget.files || [])
     this.acceptFiles(incoming, { replace: !this.multipleValue })
+  }
+
+  browse(event) {
+    event.preventDefault()
+    if (this.disabled) return
+
+    this.inputTarget.click()
   }
 
   dragenter(event) {
@@ -74,6 +88,26 @@ export default class extends Controller {
     this.render()
   }
 
+  removeImage(event) {
+    event.preventDefault()
+    if (this.disabled) return
+
+    this.selectedFiles = []
+    this.syncInput()
+    this.setRemovalPending(this.existingImageUrl !== "")
+    this.clearError()
+    this.render()
+  }
+
+  undoRemoveImage(event) {
+    event.preventDefault()
+    if (this.disabled) return
+
+    this.setRemovalPending(false)
+    this.clearError()
+    this.render()
+  }
+
   clear(event) {
     event?.preventDefault()
     this.selectedFiles = []
@@ -87,6 +121,7 @@ export default class extends Controller {
 
     requestAnimationFrame(() => {
       this.selectedFiles = Array.from(this.inputTarget.files || [])
+      this.setRemovalPending(false, { notify: false })
       this.clearError()
       this.render()
     })
@@ -125,12 +160,18 @@ export default class extends Controller {
     }
 
     this.selectedFiles = this.multipleValue ? [...base, ...valid] : valid.slice(0, 1)
+    if (this.selectedFiles.length > 0) this.setRemovalPending(false, { notify: false })
     this.syncInput()
     this.render()
     if (errors.length > 0) this.showError(errors.join(" "))
   }
 
   render() {
+    if (this.presentationValue === "single_image") {
+      this.renderSingleImage()
+      return
+    }
+
     this.revokePreviewUrls()
     this.attachmentsTarget.replaceChildren()
 
@@ -169,6 +210,38 @@ export default class extends Controller {
     const count = this.selectedFiles.length
     this.selectionTarget.hidden = count === 0
     this.countTarget.textContent = `${count} selected ${count === 1 ? "file" : "files"}`
+  }
+
+  renderSingleImage() {
+    this.revokePreviewUrls()
+
+    const file = this.selectedFiles[0]
+    let source = ""
+    let alt = this.existingImageAlt
+
+    if (file && this.shouldPreviewImage(file)) {
+      source = URL.createObjectURL(file)
+      this.previewUrls.set(this.fileKey(file), source)
+      alt = `Preview of ${file.name}`
+    } else if (!this.removalPending) {
+      source = this.existingImageUrl
+    }
+
+    const hasImage = source !== ""
+    this.imageStateTarget.hidden = !hasImage
+    this.emptyStateTarget.hidden = hasImage
+    this.pendingRemovalTarget.hidden = !this.removalPending
+    this.previewImageTarget.hidden = !hasImage
+    this.previewImageTarget.src = source
+    this.previewImageTarget.alt = alt
+  }
+
+  setRemovalPending(value, { notify = true } = {}) {
+    this.removalPending = value
+    if (!this.hasRemoveInputTarget) return
+
+    this.removeInputTarget.value = value ? "1" : "0"
+    if (notify) this.removeInputTarget.dispatchEvent(new Event("input", { bubbles: true }))
   }
 
   syncInput() {

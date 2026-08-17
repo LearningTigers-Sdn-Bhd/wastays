@@ -92,6 +92,18 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(page).to have_css("details[open]", text: "Locked")
   end
 
+  it "previews and saves an optional hotel icon from the property profile" do
+    visit hotel_onboarding_path(hotel)
+
+    attach_file "hotel_icon", Rails.root.join("public/icon.png"), make_visible: true
+    expect(page).to have_css("img[alt='Preview of icon.png']")
+    click_button "Save draft"
+
+    expect(page).to have_current_path(hotel_onboarding_section_path(hotel, section_key: "property_profile"))
+    expect(hotel.reload.icon).to be_attached
+    expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("in_progress")
+  end
+
   it "resumes setup and advances through a completed property profile" do
     hotel.update!(
       contact_email: "stay@example.com",

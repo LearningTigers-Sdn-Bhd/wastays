@@ -39,6 +39,18 @@ export default class extends Controller {
   }
 
   serialize() {
-    return JSON.stringify(Array.from(new FormData(this.element)))
+    const entries = Array.from(new FormData(this.element), ([name, value]) => {
+      if (!(value instanceof File)) return [name, value]
+      if (value.name === "" && value.size === 0) return [name, null]
+
+      return [name, {
+        name: value.name,
+        size: value.size,
+        type: value.type,
+        lastModified: value.lastModified
+      }]
+    })
+
+    return JSON.stringify(entries)
   }
 }
