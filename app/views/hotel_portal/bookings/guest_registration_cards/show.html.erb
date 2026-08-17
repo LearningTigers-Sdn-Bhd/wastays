@@ -246,7 +246,7 @@
 
             <div>
               <label class="mb-1 block text-sm font-medium text-foreground">Signature</label>
-              <canvas data-signature-target="canvas" class="h-44 w-full rounded-md border border-border-interactive bg-card"></canvas>
+              <canvas data-signature-target="canvas" class="h-44 w-full touch-none rounded-md border border-border-interactive bg-card"></canvas>
               <%= form.hidden_field :signature_data_url, data: { signature_target: "input" }, required: true %>
               <div class="mt-2 grid gap-2 sm:flex">
                 <button type="button" data-action="signature#clear" class="rounded-md border border-border-interactive px-3 py-2 text-sm font-medium text-foreground hover:bg-muted">Clear</button>
