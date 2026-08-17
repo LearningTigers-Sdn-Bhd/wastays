@@ -19,6 +19,7 @@ export default class extends Controller {
     this.surcharge = 0
     this.surchargeTax = 0
     this.onQuoteChanged = this.onQuoteChanged.bind(this)
+    this.overrideTimeouts = new Map()
     window.addEventListener("booking:quote-changed", this.onQuoteChanged)
     if (this.rowTargets.length === 0) {
       this.add()
@@ -37,6 +38,8 @@ export default class extends Controller {
 
   disconnect() {
     window.removeEventListener("booking:quote-changed", this.onQuoteChanged)
+    this.overrideTimeouts.forEach((timeout) => clearTimeout(timeout))
+    this.overrideTimeouts.clear()
   }
 
   async add() {
@@ -179,11 +182,37 @@ export default class extends Controller {
     this.recalcRow(event.target.closest("[data-booking-room-rows-target~='row']"))
   }
 
+  // Typing a net amount re-quotes the row: the server applies tax on top of it,
+  // so the tax-inclusive Rate column and the billing summary both have to be
+  // refreshed rather than left showing the rate plan's own price.
+  overrideChanged(event) {
+    const row = event.target.closest("[data-booking-room-rows-target~='row']")
+    if (!row) return
+
+    clearTimeout(this.overrideTimeouts.get(row))
+    this.overrideTimeouts.set(row, setTimeout(() => {
+      this.overrideTimeouts.delete(row)
+      this.recalcRow(row)
+    }, 400))
+  }
+
+  // The typed room net for a row, or null when the row prices itself. A blank,
+  // negative or unparseable entry counts as no override so the row falls back
+  // to its quote instead of pricing the stay at zero.
+  rowOverride(row) {
+    const raw = String(this.readValue(this.roleEl(row, "rate-override")) || "").trim()
+    if (raw === "") return null
+
+    const amount = Number(raw)
+    return Number.isFinite(amount) && amount >= 0 ? amount : null
+  }
+
   recalcRow(row) {
     if (!row) return
     const value = this.readValue(this.roleEl(row, "rate-plan"))
     const totals = row.dataset.rateTotals ? JSON.parse(row.dataset.rateTotals) : {}
-    const fallbackTotal = Number(totals[value] || 0)
+    const override = this.rowOverride(row)
+    const fallbackTotal = override === null ? Number(totals[value] || 0) : override
     row.dataset.roomTotal = fallbackTotal.toFixed(2)
     row.dataset.taxTotal = "0.00"
     row.dataset.tourismTaxTotal = "0.00"
@@ -467,6 +496,8 @@ export default class extends Controller {
     if (ratePlanId) params.set("rate_plan_id", ratePlanId)
     const guestCountry = this.hasGuestCountryTarget ? this.readValue(this.guestCountryTarget) : ""
     if (guestCountry) params.set("guest_country", guestCountry)
+    const override = this.rowOverride(row)
+    if (override !== null) params.set("manual_rate_override", override)
 
     const requestKey = params.toString()
     row.dataset.priceRequestKey = requestKey

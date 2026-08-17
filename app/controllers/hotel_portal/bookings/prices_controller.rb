@@ -19,7 +19,8 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
       check_out: Date.parse(params[:check_out]),
       guest_country: params[:guest_country].presence || current_hotel.country,
       adults: params[:adults].presence,
-      children: params[:children].presence
+      children: params[:children].presence,
+      manual_total_amount: manual_rate_override
     ).call
     tourism_tax_total = Booking.tourism_tax_total_for(snapshot.tax_lines)
     payable_tax_total = Booking.non_tourism_tax_total_for(snapshot.tax_lines)
@@ -57,6 +58,15 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
   end
 
   private
+
+  # The preview has to quote the same way the booking will be created, so an
+  # override is honoured here too — but only for staff allowed to set one,
+  # otherwise the preview would show a price the create path refuses.
+  def manual_rate_override
+    return unless current_user.has_permission?("override_booking_rate", hotel: current_hotel)
+
+    params[:manual_rate_override].presence
+  end
 
   def parse_rate_selection(room_type, rate_plan_id)
     return room_type.standard_rate_plan if rate_plan_id.blank?

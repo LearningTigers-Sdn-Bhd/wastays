@@ -6,7 +6,7 @@
 <% allow_deferred_room = local_assigns.fetch(:allow_deferred_room, true) %>
 <% room_type_choices = @room_types.map { |room_type| [ room_type.name, room_type.id ] }.presence || [ [ "No room types available", "" ] ] %>
 <% popover_index = index.to_s.parameterize(separator: "-").presence || "0" %>
-<div class="grid grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px] items-center gap-1.5 border-b border-border px-3 py-3 last:border-b-0"
+<div class="grid <%= rate_override_allowed? ? "grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_.9fr_1fr_36px]" : "grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px]" %> items-center gap-1.5 border-b border-border px-3 py-3 last:border-b-0"
      data-booking-room-rows-target="row"
      data-preserved-room-type="<%= values[:room_type_id] %>"
      data-preserved-rate-plan="<%= values[:rate_plan_id] %>"
@@ -52,6 +52,22 @@
         <% field.with_input(type: :number, value: values[:children] || 0, min: 0,
                             data: { action: "change->booking-room-rows#rateChanged" }) %>
       <% end %>
+    </div>
+  <% end %>
+  <%# The room amount before tax, for stays sold at a price the rate plan does
+      not produce — an OTA that quotes the hotel its net payout, most often.
+      Left blank the row quotes itself; filled it drives the booking total and
+      taxes are applied on top of it. %>
+  <% if rate_override_allowed? %>
+    <div class="min-w-0" data-role="rate-override">
+      <%= number_field_tag "booking[rooms][#{index}][manual_rate_override]",
+            values[:manual_rate_override],
+            step: "0.01",
+            min: "0",
+            placeholder: "Auto",
+            "aria-label": "Room net amount excluding tax",
+            class: "panel-input text-right tabular-nums",
+            data: { action: "input->booking-room-rows#overrideChanged" } %>
     </div>
   <% end %>
   <div class="flex items-center justify-end gap-1 text-right text-sm font-semibold tabular-nums text-foreground">

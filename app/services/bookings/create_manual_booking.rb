@@ -160,6 +160,7 @@ module Bookings
               action_type: "create",
               source: "staff"
             )
+            record_rate_override_log!(booking, room_type, rate_plan)
 
             # Trigger Webhooks
             Bookings::WebhookTriggerService.new(booking).trigger(:booking_confirmed)
@@ -183,6 +184,41 @@ module Bookings
     end
 
     private
+
+    # A stay sold below (or above) what the rate plan produces is a pricing
+    # decision someone has to be able to answer for later, so record what the
+    # rate plan would have charged alongside what was actually booked.
+    def record_rate_override_log!(booking, room_type, rate_plan)
+      return if booking.manual_rate_override.blank?
+
+      Bookings::RecordAuditLog.call!(
+        auditable: booking,
+        user: @user,
+        action_type: "rate_override",
+        source: "staff",
+        old_value: { "room_total" => quoted_room_total(booking, room_type, rate_plan)&.to_s },
+        new_value: { "room_total" => booking.manual_rate_override.to_d.to_s },
+        metadata: { "rate_plan_id" => rate_plan&.id, "at_creation" => true }
+      )
+    end
+
+    def quoted_room_total(booking, room_type, rate_plan)
+      BuildFinancialSnapshot.new(
+        hotel: @hotel,
+        room_type: room_type,
+        rate_plan: rate_plan,
+        check_in: booking.check_in,
+        check_out: booking.check_out,
+        guest_country: booking.guest_country,
+        adults: booking.adults,
+        children: booking.children
+      ).call.room_total
+    rescue ArgumentError => e
+      # The booking is already valid; a failed counterfactual quote must not
+      # take it down, so log the override without the comparison.
+      Rails.logger.warn("Rate override audit could not quote booking_id=#{booking.id}: #{e.message}")
+      nil
+    end
 
     def record_prepayment!(booking)
       result = Deposits::ConfiguredPrepayment.call(

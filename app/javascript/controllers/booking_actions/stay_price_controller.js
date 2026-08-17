@@ -27,6 +27,10 @@ export default class extends Controller {
       check_out: this.field("booking_check_out"),
       guest_country: this.guestCountryValue || ""
     })
+    // Only sent when the sheet offers the field and it holds a figure, so the
+    // preview quotes the rate plan whenever the stay is not priced by hand.
+    const manualRateOverride = this.field("booking_manual_rate_override")
+    if (manualRateOverride) params.set("manual_rate_override", manualRateOverride)
     try {
       const response = await fetch(`${this.urlValue}?${params}`)
       const price = await response.json()
@@ -51,7 +55,7 @@ export default class extends Controller {
   }
 
   get recalculationFieldIds() {
-    return ["booking_check_in", "booking_check_out", "booking_room_type_id", "booking_rate_selection"]
+    return ["booking_check_in", "booking_check_out", "booking_room_type_id", "booking_rate_selection", "booking_manual_rate_override"]
   }
 }
 

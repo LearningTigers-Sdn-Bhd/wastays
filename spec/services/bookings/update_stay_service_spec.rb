@@ -134,6 +134,39 @@ RSpec.describe Bookings::UpdateStayService do
     expect(booking_room.reload.rate_plan).to eq(replacement_plan)
   end
 
+  it "reprices the stay when only the hand-set price changes" do
+    result = described_class.new(booking:, params: { manual_rate_override: "380.00" }).call
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.manual_rate_override).to eq(380)
+    expect(booking_room.reload.subtotal).to eq(380)
+    expect(booking.total_amount).to eq(380 + Booking.non_tourism_tax_total_for(booking.tax_lines))
+  end
+
+  it "returns to the rate plan's price when the hand-set price is cleared" do
+    described_class.new(booking:, params: { manual_rate_override: "380.00" }).call
+
+    result = described_class.new(booking:, params: { manual_rate_override: "" }).call
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.manual_rate_override).to be_nil
+    expect(booking_room.reload.subtotal).not_to eq(380)
+  end
+
+  it "keeps a price set in the same update that changes the rate" do
+    replacement_plan = create(:rate_plan, :custom, room_type:, name: "Replacement")
+    booking.update!(manual_rate_override: 175)
+
+    result = described_class.new(
+      booking:,
+      params: { rate_selection: replacement_plan.id.to_s, manual_rate_override: "290.00" }
+    ).call
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.manual_rate_override).to eq(290)
+    expect(booking_room.reload.rate_plan).to eq(replacement_plan)
+  end
+
   it "stores a selected real Walk-in plan in the nightly snapshot" do
     rate_plan = room_type.walk_in_rate_plan
     create(:room_rate, room_type:, rate_plan:, date: Date.current, price: 125)

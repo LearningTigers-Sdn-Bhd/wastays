@@ -154,6 +154,7 @@ platform_permissions = [
   { name: 'View Room Readiness', slug: 'view_room_readiness' },
   { name: 'Manage Room Status', slug: 'manage_room_status' },
   { name: 'Override Room Status Assignment', slug: 'override_room_status_assignment' },
+  { name: 'Override Booking Rate', slug: 'override_booking_rate' },
   { name: 'Post Charges', slug: 'post_charges' },
   { name: 'Post Folio Charges', slug: 'post_folio_charges' },
   { name: 'Post Folio Payments', slug: 'post_folio_payments' },

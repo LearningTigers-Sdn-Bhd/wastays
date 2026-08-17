@@ -293,6 +293,41 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(Booking.last.guest_gender).to eq("female")
     end
 
+    context "when the stay is priced by hand" do
+      it "books the typed room net and taxes it, for staff holding the permission" do
+        grant_permission(role, "override_booking_rate")
+
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(manual_rate_override: "380.00") }
+
+        booking = Booking.last
+        expect(booking.manual_rate_override).to eq(380.00)
+        expect(booking.booking_rooms.first.subtotal).to eq(380.00)
+        expect(booking.total_amount).to eq(380.00 + Booking.non_tourism_tax_total_for(booking.tax_lines))
+      end
+
+      it "records what the rate plan would have charged alongside the booked price" do
+        grant_permission(role, "override_booking_rate")
+
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(manual_rate_override: "380.00") }
+
+        log = BookingAuditLog.find_by(auditable: Booking.last, action_type: "rate_override")
+        expect(log).to be_present
+        expect(log.category).to eq("financial")
+        expect(log.new_value["room_total"].to_d).to eq(380.00)
+      end
+
+      it "ignores a price posted by staff without the permission" do
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(manual_rate_override: "380.00") }
+
+        booking = Booking.last
+        expect(booking.manual_rate_override).to be_nil
+        expect(BookingAuditLog.where(auditable: booking, action_type: "rate_override")).to be_empty
+      end
+    end
+
     it "creates and immediately checks in a walk-in booking" do
       expect {
         post hotel_booking_action_walk_in_check_in_path(hotel), params: { booking: booking_params }

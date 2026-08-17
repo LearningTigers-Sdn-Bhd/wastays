@@ -57,7 +57,17 @@
               <% end %>
             </section>
 
-            <% if @booking.manual_rate_override.present? %>
+            <% if rate_override_allowed? %>
+              <section aria-labelledby="rate-override-heading" class="space-y-3">
+                <div>
+                  <h3 id="rate-override-heading" class="text-base font-semibold">Price by hand</h3>
+                  <p class="mt-1 text-sm text-muted-foreground">Room amount before tax, for a stay sold at a price the rate plan does not produce. Leave empty to charge the selected rate.</p>
+                </div>
+                <%= render PanelsUI::FormField.new(form:, attribute: :manual_rate_override, label: "Room net (#{currency}, excl. tax)") do |field| %>
+                  <% field.with_input(type: :number, value: @booking.manual_rate_override, step: "0.01", min: "0", placeholder: "Auto") %>
+                <% end %>
+              </section>
+            <% elsif @booking.manual_rate_override.present? %>
               <div class="rounded-md border border-border bg-muted p-4 text-sm">
                 <p class="font-medium text-foreground">Manual rate override: <%= currency %> <%= number_with_precision(@booking.manual_rate_override, precision: 2, delimiter: ",") %></p>
                 <p class="mt-1 text-muted-foreground">It stays in place for date or room changes and is cleared only when you choose a different rate.</p>
