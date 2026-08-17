@@ -34,7 +34,8 @@
             <td class="text-muted-foreground"><%= transaction_code.active? ? "Active" : "Inactive" %></td>
             <td>
               <% if owner %>
-                <%= link_to owner[:path], class: "inline-flex items-center gap-1 text-sm text-foreground underline underline-offset-2 hover:no-underline" do %>
+                <% is_sheet_action = owner[:path].to_s.include?("/edit") %>
+                <%= link_to owner[:path], class: "inline-flex items-center gap-1 text-sm text-foreground underline underline-offset-2 hover:no-underline", data: (is_sheet_action ? { turbo_frame: "settings_action_sheet" } : {}) do %>
                   <%= owner[:label] %>
                   <%= app_icon "arrow-right", class: "size-3.5", aria: { hidden: true } %>
                 <% end %>

@@ -1,8 +1,6 @@
 class Admin::MarginRulesController < Admin::BaseController
   def index
-    @all_margin_rules = MarginRule.all.order(created_at: :desc)
-    @margin_rules = @all_margin_rules.page(params[:page]).per(25)
-    @new_rule = MarginRule.new
+    prepare_view_data
   end
 
   def create
@@ -12,8 +10,7 @@ class Admin::MarginRulesController < Admin::BaseController
     if @new_rule.save
       redirect_to admin_margin_rules_path, notice: "Margin rule created successfully."
     else
-      @all_margin_rules = MarginRule.all.order(created_at: :desc)
-      @margin_rules = @all_margin_rules.page(params[:page]).per(25)
+      prepare_view_data
       render :index, status: :unprocessable_content
     end
   end
@@ -25,6 +22,14 @@ class Admin::MarginRulesController < Admin::BaseController
   end
 
   private
+
+  def prepare_view_data
+    @all_margin_rules = MarginRule.includes(:settable).order(created_at: :desc)
+    @margin_rules = @all_margin_rules.page(params[:page]).per(25)
+    @new_rule ||= MarginRule.new
+    @hotels = Hotel.order(:name)
+    @room_types = RoomType.includes(:hotel).order(:name)
+  end
 
   def margin_rule_params
     params.require(:margin_rule).permit(:rate, :settable_type, :settable_id)

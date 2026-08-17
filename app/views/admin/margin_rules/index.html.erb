@@ -72,10 +72,26 @@
             <%= f.select :settable_type, [["Global Default", nil], ["Specific Hotel", "Hotel"], ["Specific Room Type", "RoomType"]], {}, class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { margin_rule_form_target: "appliesTo", action: "change->margin-rule-form#toggle" } %>
           </div>
 
-          <div data-margin-rule-form-target="targetField" class="<%= @new_rule.settable_type.blank? ? 'hidden' : '' %>">
-            <label class="mb-2 block text-sm font-medium text-muted-foreground">Target ID</label>
-            <%= f.number_field :settable_id, class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { margin_rule_form_target: "targetInput" }, disabled: @new_rule.settable_type.blank? %>
-            <p class="mt-2 text-xs font-medium text-muted-foreground">Required when the rule applies only to one hotel or room type.</p>
+          <div data-margin-rule-form-target="hotelField" class="<%= @new_rule.settable_type == 'Hotel' ? '' : 'hidden' %>">
+            <label class="mb-2 block text-sm font-medium text-muted-foreground">Hotel</label>
+            <%= f.select :settable_id,
+                         options_from_collection_for_select(@hotels || [], :id, :name, @new_rule.settable_type == 'Hotel' ? @new_rule.settable_id : nil),
+                         { include_blank: "Select a hotel" },
+                         class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0",
+                         data: { margin_rule_form_target: "hotelInput" },
+                         disabled: @new_rule.settable_type != 'Hotel' %>
+            <p class="mt-2 text-xs font-medium text-muted-foreground">Choose the hotel that should use a custom margin rate.</p>
+          </div>
+
+          <div data-margin-rule-form-target="roomTypeField" class="<%= @new_rule.settable_type == 'RoomType' ? '' : 'hidden' %>">
+            <label class="mb-2 block text-sm font-medium text-muted-foreground">Room Type</label>
+            <%= f.select :settable_id,
+                         (@room_types || []).map { |rt| ["#{rt.name} (#{rt.hotel&.name})", rt.id] },
+                         { include_blank: "Select a room type", selected: @new_rule.settable_type == 'RoomType' ? @new_rule.settable_id : nil },
+                         class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0",
+                         data: { margin_rule_form_target: "roomTypeInput" },
+                         disabled: @new_rule.settable_type != 'RoomType' %>
+            <p class="mt-2 text-xs font-medium text-muted-foreground">Choose the room type that should use a custom margin rate.</p>
           </div>
 
           <div class="pt-2">
@@ -102,9 +118,15 @@
             <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
                  ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
                elsif rule.settable_type == "Hotel"
-                 ["Hotel Override", rule.settable_id.present? ? "Applies to hotel ##{rule.settable_id}" : "Applies to one hotel", "text-foreground"]
+                 hotel_name = rule.settable&.name || (@hotels || []).find { |h| h.id == rule.settable_id }&.name
+                 ["Hotel Override", hotel_name.present? ? hotel_name : "Applies to hotel ##{rule.settable_id}", "text-foreground"]
                else
-                 ["Room Type Override", rule.settable_id.present? ? "Applies to room type ##{rule.settable_id}" : "Applies to one room type", "text-foreground"]
+                 room_type_name = if rule.settable.respond_to?(:name)
+                   "#{rule.settable.name} (#{rule.settable.hotel&.name})"
+                 else
+                   "Applies to room type ##{rule.settable_id}"
+                 end
+                 ["Room Type Override", room_type_name, "text-foreground"]
                end %>
 
             <div class="rounded-2xl border border-border bg-muted/60 p-4 shadow-sm">
@@ -153,9 +175,15 @@
                 <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
                      ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
                    elsif rule.settable_type == "Hotel"
-                     ["Hotel Override", rule.settable_id.present? ? "Applies to hotel ##{rule.settable_id}" : "Applies to one hotel", "text-foreground"]
+                     hotel_name = rule.settable&.name || (@hotels || []).find { |h| h.id == rule.settable_id }&.name
+                     ["Hotel Override", hotel_name.present? ? hotel_name : "Applies to hotel ##{rule.settable_id}", "text-foreground"]
                    else
-                     ["Room Type Override", rule.settable_id.present? ? "Applies to room type ##{rule.settable_id}" : "Applies to one room type", "text-foreground"]
+                     room_type_name = if rule.settable.respond_to?(:name)
+                       "#{rule.settable.name} (#{rule.settable.hotel&.name})"
+                     else
+                       "Applies to room type ##{rule.settable_id}"
+                     end
+                     ["Room Type Override", room_type_name, "text-foreground"]
                    end %>
 
                 <tr class="transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
