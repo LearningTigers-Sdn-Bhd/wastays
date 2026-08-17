@@ -16,12 +16,12 @@ RSpec.describe "HotelPortal::ProfilePhotoQueue", type: :request do
     sign_in_as(user)
   end
 
-  describe "GET /hotel/:hotel_id/profile/edit" do
-    it "renders the canonical hotel details page" do
-      get edit_hotel_profile_path(hotel)
+  describe "GET /hotel/:hotel_id/settings/property/hotel-album" do
+    it "renders the canonical hotel album page" do
+      get hotel_album_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(%(id="hotel-profile-section"))
+      expect(response.body).to include(%(id="hotel-album-section"))
       expect(response.body).to include(%(data-testid="settings-tabs"))
       expect(response.parsed_body.css(".panel-dropzone")).not_to be_empty
       expect(response.parsed_body.css(".panel-attachment-group[data-layout='list']")).not_to be_empty
@@ -34,7 +34,7 @@ RSpec.describe "HotelPortal::ProfilePhotoQueue", type: :request do
         content_type: "image/jpeg"
       )
 
-      get edit_hotel_profile_path(hotel)
+      get hotel_album_path(hotel)
 
       document = response.parsed_body
       published_attachment = document.at_css(".panel-attachment-group[data-layout='grid'] .panel-attachment[data-state='uploaded']")
@@ -58,7 +58,7 @@ RSpec.describe "HotelPortal::ProfilePhotoQueue", type: :request do
         delete hotel_profile_photo_path(hotel, photo.id)
       }.to change { hotel.reload.photos.count }.by(-1)
 
-      expect(response).to redirect_to(edit_hotel_profile_path(hotel))
+      expect(response).to redirect_to(hotel_album_path(hotel))
     end
 
     it "replaces the published album and appends a toast for Turbo Stream requests" do
@@ -112,7 +112,7 @@ RSpec.describe "HotelPortal::ProfilePhotoQueue", type: :request do
 
       patch hotel_profile_photo_feature_path(hotel, photo.id)
 
-      expect(response).to redirect_to(edit_hotel_profile_path(hotel))
+      expect(response).to redirect_to(hotel_album_path(hotel))
       expect(hotel.reload.featured_photo_attachment_id).to eq(photo.id)
     end
   end
