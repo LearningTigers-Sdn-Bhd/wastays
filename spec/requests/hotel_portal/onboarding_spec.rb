@@ -82,10 +82,20 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   # — so it is worth asserting it actually lands.
   it "stores normalized business registration numbers without gating completion" do
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
-          params: { navigation_action: "save_draft", hotel: property_params.merge(tin: " c1234567890 ", ssm_number: "202301012345") }
+          params: {
+            navigation_action: "save_draft",
+            hotel: property_params.merge(
+              tin: " c1234567890 ",
+              ssm_number: "202301012345",
+              local_government_name: " DBKK ",
+              local_government_license_number: " pl/2026/001234 "
+            )
+          }
 
     expect(hotel.reload.tin).to eq("C1234567890")
     expect(hotel.ssm_number).to eq("202301012345")
+    expect(hotel.local_government_name).to eq("DBKK")
+    expect(hotel.local_government_license_number).to eq("PL/2026/001234")
     expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("in_progress")
   end
 

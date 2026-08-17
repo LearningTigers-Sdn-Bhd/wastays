@@ -82,12 +82,19 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
 
     it 'stores normalized business registration numbers' do
       patch hotel_profile_path(hotel), params: {
-        hotel: { tin: ' c1234567890 ', ssm_number: '202301012345 (1234567-a)' }
+        hotel: {
+          tin: ' c1234567890 ',
+          ssm_number: '202301012345 (1234567-a)',
+          local_government_name: '  Dewan   Bandaraya Kota Kinabalu ',
+          local_government_license_number: ' pl/2026/001234 '
+        }
       }
 
       hotel.reload
       expect(hotel.tin).to eq('C1234567890')
       expect(hotel.ssm_number).to eq('202301012345 (1234567-A)')
+      expect(hotel.local_government_name).to eq('Dewan Bandaraya Kota Kinabalu')
+      expect(hotel.local_government_license_number).to eq('PL/2026/001234')
     end
 
     it "redirects Turbo submissions to an HTML page with a success toast" do

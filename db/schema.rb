@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1660,6 +1660,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_110000) do
     t.integer "group_booking_request_hold_hours", default: 48, null: false
     t.jsonb "guest_registration_card_fields"
     t.string "hotel_prefix"
+    t.string "local_government_license_number"
+    t.string "local_government_name"
     t.string "name"
     t.date "onboarding_end_date"
     t.date "onboarding_start_date"

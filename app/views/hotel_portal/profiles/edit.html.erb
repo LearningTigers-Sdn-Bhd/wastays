@@ -208,6 +208,25 @@
                 hint: "Company registration number.") do |field| %>
             <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., 202301012345 (1234567-A)", class: "font-mono uppercase") %>
           <% end %>
+
+          <%# The council that licenses the property to trade. Free text: every
+              local authority abbreviates itself differently and properties quote
+              the acronym their licence carries. %>
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :local_government_name,
+                label: "Local government name",
+                hint: "The local authority that issued the premises licence.") do |field| %>
+            <% field.with_input(autocomplete: "off", placeholder: "e.g., DBKK, MDP, MPSJ, DBKL") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :local_government_license_number,
+                label: "License number",
+                hint: "The licence number issued by that local authority.") do |field| %>
+            <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., PL/2026/001234", class: "font-mono uppercase") %>
+          <% end %>
         </div>
       </section>
 
