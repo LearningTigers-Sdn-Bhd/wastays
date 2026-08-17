@@ -51,8 +51,8 @@
   <% submit_label = editing ? "Save terms" : "Add account payer" %>
   <% footer = capture do %>
     <div class="flex w-full justify-end gap-2">
-      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) { "Cancel" } %>
-      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, disabled: !editing && !accounts_available, data: { turbo_submits_with: "Saving…" }) { submit_label } %>
+      <%= render PanelsUI::Button.new(label: "Cancel", as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) %>
+      <%= render PanelsUI::Button.new(label: submit_label, as: :button, type: :submit, form: form_id, disabled: !editing && !accounts_available, data: { turbo_submits_with: "Saving…" }) %>
     </div>
   <% end %>
   <%= render "hotel_portal/bookings/actions/shared/sheet",

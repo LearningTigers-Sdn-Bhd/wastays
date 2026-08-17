@@ -26,6 +26,9 @@
         <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
         <%= hidden_field_tag :source, params[:source] if params[:source].present? %>
         <%= hidden_field_tag :proposal_kind, @proposal_kind if @proposal_kind.present? %>
+        <%# Room type and rate selection are fixed on this sheet; carried so the live price preview can resolve. %>
+        <%= hidden_field_tag "booking[room_type_id]", @room_type_id, id: "booking_room_type_id" %>
+        <%= hidden_field_tag "booking[rate_selection]", @rate_selection, id: "booking_rate_selection" %>
 
         <div class="min-h-0 flex-1 <%= group ? 'grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-none' : 'overflow-y-auto' %>">
           <%= render "hotel_portal/bookings/actions/shared/group_target_selector",
