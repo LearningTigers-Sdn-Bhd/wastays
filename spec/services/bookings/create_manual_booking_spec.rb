@@ -52,6 +52,39 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: kind_of(Booking))
   end
 
+  describe "a reservation taken without a room" do
+    let(:deferred_params) { params.except(:room_number).merge(require_room_number: false) }
+
+    it "puts the booking into the first clean room free for the stay" do
+      result = described_class.new(hotel: hotel, params: deferred_params).call
+
+      expect(result.success?).to be true
+      expect(result.booking.booking_rooms.sole.room_number).to eq("101")
+    end
+
+    it "leaves the room open when the property has automatic assignment off" do
+      hotel.update!(auto_assign_rooms_enabled: false)
+
+      result = described_class.new(hotel: hotel, params: deferred_params).call
+
+      expect(result.success?).to be true
+      expect(result.booking.booking_rooms.sole.room_number).to be_nil
+    end
+
+    it "still takes the booking when no room is clean and free" do
+      hotel.room_types.each do |type|
+        type.room_numbers.each do |number|
+          RoomStatus.find_or_create_by!(hotel: hotel, room_type: type, room_number: number).update!(status: "dirty")
+        end
+      end
+
+      result = described_class.new(hotel: hotel, params: deferred_params).call
+
+      expect(result.success?).to be true
+      expect(result.booking.booking_rooms.sole.room_number).to be_nil
+    end
+  end
+
   it "returns errors when booking fails" do
     params[:guest_name] = nil
     result = subject.call

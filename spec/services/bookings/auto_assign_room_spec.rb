@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe ChannelManagers::AutoAssignRoom do
+RSpec.describe Bookings::AutoAssignRoom do
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: %w[101 102]) }
   let(:check_in) { Date.current + 2.days }
@@ -15,6 +15,16 @@ RSpec.describe ChannelManagers::AutoAssignRoom do
     (check_in...check_out).each do |date|
       create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
     end
+  end
+
+  it "leaves the booking alone when the property has the setting off" do
+    hotel.update!(auto_assign_rooms_enabled: false)
+
+    result = described_class.new(booking: booking).call
+
+    expect(result).to be_success
+    expect(result).not_to be_assigned
+    expect(booking.booking_rooms.sole.reload.room_number).to be_nil
   end
 
   it "assigns the first physical room available for the full stay" do

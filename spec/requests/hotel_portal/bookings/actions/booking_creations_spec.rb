@@ -26,6 +26,15 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
   end
 
   describe "GET the creation forms into the booking_action_sheet" do
+    it "labels a deferred room 'Select room later' when the property assigns rooms manually" do
+      hotel.update!(auto_assign_rooms_enabled: false)
+
+      get hotel_booking_action_new_booking_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
+    end
+
     it "renders the full New Booking sheet" do
       get hotel_booking_action_new_booking_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
 
@@ -65,7 +74,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(dialog.at_css('input[name="booking[existing_guest_id]"]')).to be_present
       expect(dialog.at_css('input[name="booking[guest_update_intent]"][value="update_existing"]')).to be_present
       expect(dialog.at_css('[data-booking-guest-autofill-target="profileRow"]')["hidden"]).not_to be_nil
-      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Auto-assign")
       expect(dialog.at_css('input[name="booking[payment_method_type]"][value="cash"]')).to be_present
       expect(dialog.at_css('input[name="booking[payment_method_type]"][value="bank_gateway"]')).to be_present
       expect(dialog.at_css('select[name="booking[hotel_payment_method_id]"]')).to be_present
@@ -94,7 +103,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       profile_row = dialog.at_css('[data-booking-guest-autofill-target="profileRow"]')
       expect(profile_row["hidden"]).not_to be_nil
       expect(profile_row["class"]).not_to include("md:flex-row")
-      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Select room later")
+      expect(dialog.at_css('select[name="booking[rooms][0][room_number]"] option[value=""]').text).to eq("Auto-assign")
       more_options = dialog.at_css('a[data-controller="booking-form-transfer"]')
       expect(more_options.text.squish).to eq("More options")
       expect(more_options["data-action"]).to eq("booking-form-transfer#open")
@@ -291,6 +300,60 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
       expect(flash[:notice]).to eq("Booking created successfully.")
       expect(Booking.last.guest_gender).to eq("female")
+    end
+
+    it "takes a booking from a phone number alone" do
+      expect {
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(guest_email: "") }
+      }.to change(Booking, :count).by(1)
+
+      booking = Booking.last
+      expect(booking.guest_email).to be_nil
+      expect(booking.created_by_staff).to be(true)
+      expect(booking.guest_phone).to eq("+60123456789")
+    end
+
+    it "still requires a phone number" do
+      expect {
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(guest_email: "", guest_phone: "") }
+      }.not_to change(Booking, :count)
+    end
+
+    context "when the stay is priced by hand" do
+      it "books the typed room net and taxes it, for staff holding the permission" do
+        grant_permission(role, "override_booking_rate")
+
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(manual_rate_override: "380.00") }
+
+        booking = Booking.last
+        expect(booking.manual_rate_override).to eq(380.00)
+        expect(booking.booking_rooms.first.subtotal).to eq(380.00)
+        expect(booking.total_amount).to eq(380.00 + Booking.non_tourism_tax_total_for(booking.tax_lines))
+      end
+
+      it "records what the rate plan would have charged alongside the booked price" do
+        grant_permission(role, "override_booking_rate")
+
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(manual_rate_override: "380.00") }
+
+        log = BookingAuditLog.find_by(auditable: Booking.last, action_type: "rate_override")
+        expect(log).to be_present
+        expect(log.category).to eq("financial")
+        expect(log.new_value["room_total"].to_d).to eq(380.00)
+      end
+
+      it "ignores a price posted by staff without the permission" do
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(manual_rate_override: "380.00") }
+
+        booking = Booking.last
+        expect(booking.manual_rate_override).to be_nil
+        expect(BookingAuditLog.where(auditable: booking, action_type: "rate_override")).to be_empty
+      end
     end
 
     it "creates and immediately checks in a walk-in booking" do

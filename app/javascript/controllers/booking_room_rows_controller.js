@@ -10,7 +10,7 @@ export default class extends Controller {
     "surchargeRow", "surchargeTotal", "surchargeTaxRow", "surchargeTaxTotal", "depositRow", "depositTotal",
     "collectedLabel", "collectedTotal", "grandTotal"
   ]
-  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String }
+  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean }
 
   connect() {
     this.nextIndex = this.rowTargets.length
@@ -19,6 +19,7 @@ export default class extends Controller {
     this.surcharge = 0
     this.surchargeTax = 0
     this.onQuoteChanged = this.onQuoteChanged.bind(this)
+    this.overrideTimeouts = new Map()
     window.addEventListener("booking:quote-changed", this.onQuoteChanged)
     if (this.rowTargets.length === 0) {
       this.add()
@@ -37,6 +38,8 @@ export default class extends Controller {
 
   disconnect() {
     window.removeEventListener("booking:quote-changed", this.onQuoteChanged)
+    this.overrideTimeouts.forEach((timeout) => clearTimeout(timeout))
+    this.overrideTimeouts.clear()
   }
 
   async add() {
@@ -92,6 +95,9 @@ export default class extends Controller {
 
   roomTypeChanged(event) {
     const row = event.target.closest("[data-booking-room-rows-target~='row']")
+    // A different category is a different quote entirely, so any hand-set
+    // total from the old one no longer means anything.
+    this.clearOverride(row)
     this.resetRowTotals(row)
     this.loadRow(row)
   }
@@ -175,12 +181,73 @@ export default class extends Controller {
     }
   }
 
+  // Bound to the rate-plan select only — picking a different rate is a new
+  // quote, so any hand-set total is dropped rather than silently kept against
+  // a price it no longer describes.
   rateChanged(event) {
+    const row = event.target.closest("[data-booking-room-rows-target~='row']")
+    this.clearOverride(row)
+    this.recalcRow(row)
+  }
+
+  // Bound to the adults/children fields. Occupancy can change what a rate plan
+  // quotes, but it does not invalidate a total the operator chose by hand —
+  // recalcRow re-solves against the same target rather than dropping it.
+  occupancyChanged(event) {
     this.recalcRow(event.target.closest("[data-booking-room-rows-target~='row']"))
   }
 
+  // Typing a final total (tax included) re-solves the room net on the server:
+  // BuildFinancialSnapshot's tax rules are the only place that knows how to
+  // invert them correctly, so this never duplicates that math client-side.
+  totalOverrideChanged(event) {
+    const row = event.target.closest("[data-booking-room-rows-target~='row']")
+    if (!row) return
+
+    clearTimeout(this.overrideTimeouts.get(row))
+    this.overrideTimeouts.set(row, setTimeout(() => {
+      this.overrideTimeouts.delete(row)
+      const raw = String(event.target.value || "").trim()
+      if (raw === "") {
+        this.clearOverride(row)
+        this.recalcRow(row)
+        return
+      }
+      const amount = Number(raw)
+      if (!Number.isFinite(amount) || amount < 0) return
+
+      row.dataset.targetTotal = amount
+      this.solveOverride(row)
+    }, 400))
+  }
+
+  hasOverride(row) {
+    return Boolean(row?.dataset.targetTotal)
+  }
+
+  clearOverride(row) {
+    if (!row) return
+    delete row.dataset.targetTotal
+    this.setManualOverrideField(row, "")
+    this.breakdownEl(row, "manual-note")?.classList.add("hidden")
+  }
+
+  setManualOverrideField(row, value) {
+    const field = this.roleEl(row, "manual-rate-override")
+    if (field) field.value = value ?? ""
+  }
+
+  // Everything the room row cell can set the total to funnels back through
+  // here: the rate-plan's own quote when there is no override, or a re-solve
+  // against the standing target when there is one (occupancy, dates, or guest
+  // country changing without the operator having touched the total itself).
   recalcRow(row) {
     if (!row) return
+    if (this.hasOverride(row)) {
+      this.solveOverride(row)
+      return
+    }
+
     const value = this.readValue(this.roleEl(row, "rate-plan"))
     const totals = row.dataset.rateTotals ? JSON.parse(row.dataset.rateTotals) : {}
     const fallbackTotal = Number(totals[value] || 0)
@@ -188,13 +255,66 @@ export default class extends Controller {
     row.dataset.taxTotal = "0.00"
     row.dataset.tourismTaxTotal = "0.00"
     row.dataset.grandTotal = fallbackTotal.toFixed(2)
-    this.roleEl(row, "rate").textContent = fallbackTotal.toFixed(2)
+    this.setRateDisplay(row, fallbackTotal)
     this.updateTotals()
     this.loadRowPrice(row)
   }
 
+  // Re-solves a row against its standing target total (guest country and tax
+  // eligibility can move without the operator wanting the final price to).
+  async solveOverride(row) {
+    if (!this.hasPriceUrlValue) return
+
+    const roomTypeId = this.readValue(this.roleEl(row, "room-type"))
+    if (!roomTypeId || !this.checkInTarget.value || !this.checkOutTarget.value) return
+
+    const params = new URLSearchParams({
+      room_type_id: roomTypeId,
+      check_in: this.checkInTarget.value,
+      check_out: this.checkOutTarget.value,
+      target_total: row.dataset.targetTotal
+    })
+    this.appendOccupancy(params, row)
+    const ratePlanId = this.readValue(this.roleEl(row, "rate-plan"))
+    if (ratePlanId) params.set("rate_plan_id", ratePlanId)
+    const guestCountry = this.hasGuestCountryTarget ? this.readValue(this.guestCountryTarget) : ""
+    if (guestCountry) params.set("guest_country", guestCountry)
+
+    const requestKey = params.toString()
+    row.dataset.priceRequestKey = requestKey
+    this.setPriceBreakdownStatus(row, "Calculating…")
+
+    try {
+      const response = await fetch(`${this.priceUrlValue}?${params}`)
+      if (!response.ok) throw new Error("Total could not be priced")
+
+      const data = await response.json()
+      if (row.dataset.priceRequestKey !== requestKey) return
+
+      const roomTotal = Number(data.room_total || 0)
+      const taxTotal = Number(data.tax_total || 0)
+      const tourismTaxTotal = Number(data.tourism_tax_total || 0)
+      const grandTotal = Number(data.total_amount || roomTotal + taxTotal)
+
+      row.dataset.roomTotal = roomTotal.toFixed(2)
+      row.dataset.taxTotal = taxTotal.toFixed(2)
+      row.dataset.tourismTaxTotal = tourismTaxTotal.toFixed(2)
+      row.dataset.grandTotal = grandTotal.toFixed(2)
+      this.setRateDisplay(row, grandTotal)
+      this.setManualOverrideField(row, data.manual_rate_override)
+      this.populatePriceBreakdown(row, data)
+      this.updateTotals()
+    } catch (error) {
+      if (row.dataset.priceRequestKey !== requestKey) return
+      console.error("Manual total calculation failed:", error)
+      this.setPriceBreakdownStatus(row, "Could not price this total.")
+    }
+  }
+
   guestCountryChanged() {
-    this.rowTargets.forEach((row) => this.loadRowPrice(row))
+    this.rowTargets.forEach((row) => {
+      this.hasOverride(row) ? this.solveOverride(row) : this.loadRowPrice(row)
+    })
   }
 
   resetRowTotals(row) {
@@ -203,9 +323,29 @@ export default class extends Controller {
     row.dataset.tourismTaxTotal = "0.00"
     row.dataset.grandTotal = "0.00"
     row.dataset.priceRequestKey = ""
-    this.roleEl(row, "rate").textContent = "0.00"
+    this.setRateDisplay(row, 0)
     this.resetPriceBreakdown(row)
     this.updateTotals()
+  }
+
+  // The Rate cell is a read-only span for staff without the pricing
+  // permission and an editable input for staff who have it — set whichever
+  // it is, and never fight an amount the operator is mid-typing into it.
+  setRateDisplay(row, amount) {
+    const el = this.roleEl(row, "rate")
+    if (!el) return
+    const text = Number(amount || 0).toFixed(2)
+    if (el.tagName === "INPUT") {
+      if (document.activeElement !== el) el.value = text
+    } else {
+      el.textContent = text
+    }
+  }
+
+  rateDisplayValue(row) {
+    const el = this.roleEl(row, "rate")
+    if (!el) return 0
+    return Number((el.tagName === "INPUT" ? el.value : el.textContent) || 0)
   }
 
   bookingType() {
@@ -321,7 +461,7 @@ export default class extends Controller {
 
       const emptyOption = Array.from(native.options).find((option) => option.value === "")
       const placeholder = this.roomPlaceholderLabel()
-      const deferredLabels = ["Select room", "Select room later"]
+      const deferredLabels = ["Select room", "Select room later", "Auto-assign"]
       if (emptyOption && deferredLabels.includes(emptyOption.textContent) && emptyOption.textContent !== placeholder) {
         const selectedValue = native.value
         const choices = Array.from(native.options).map((option) => ({
@@ -340,8 +480,13 @@ export default class extends Controller {
     return !this.hasBookingTypeTarget || this.readValue(this.bookingTypeTarget) === "reservation"
   }
 
+  // "Auto-assign" is a description of what leaving this blank does, not a
+  // request staff make — the hotel's toggle decides it. Manual assignment is
+  // still one click away by picking a room from the list underneath it.
   roomPlaceholderLabel() {
-    return this.deferredRoomSelectionAllowed() ? "Select room later" : "Select room"
+    if (!this.deferredRoomSelectionAllowed()) return "Select room"
+
+    return this.autoAssignEnabledValue ? "Auto-assign" : "Select room later"
   }
 
   toggleCorporate(event) {
@@ -434,7 +579,7 @@ export default class extends Controller {
     const roomTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.roomTotal || 0), 0)
     const taxTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.taxTotal || 0), 0)
     const tourismTaxTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.tourismTaxTotal || 0), 0)
-    const grandTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.grandTotal || this.roleEl(row, "rate").textContent || 0), 0)
+    const grandTotal = this.rowTargets.reduce((sum, row) => sum + Number(row.dataset.grandTotal || this.rateDisplayValue(row) || 0), 0)
 
     this.baseTotal = grandTotal
     this.tourismTax = tourismTaxTotal
@@ -488,7 +633,7 @@ export default class extends Controller {
       row.dataset.taxTotal = taxTotal.toFixed(2)
       row.dataset.tourismTaxTotal = tourismTaxTotal.toFixed(2)
       row.dataset.grandTotal = grandTotal.toFixed(2)
-      this.roleEl(row, "rate").textContent = grandTotal.toFixed(2)
+      this.setRateDisplay(row, grandTotal)
       this.populatePriceBreakdown(row, data)
       this.updateTotals()
     } catch (error) {
@@ -529,6 +674,8 @@ export default class extends Controller {
     const taxLines = data.tax_lines || []
     const firstNight = Object.values(snapshot)[0] || {}
     const currency = firstNight.currency || taxLines[0]?.currency || "MYR"
+
+    this.breakdownEl(row, "manual-note")?.classList.toggle("hidden", !this.hasOverride(row))
 
     nightly.replaceChildren(this.buildBreakdownHeading("Nightly rates"))
     Object.entries(snapshot)

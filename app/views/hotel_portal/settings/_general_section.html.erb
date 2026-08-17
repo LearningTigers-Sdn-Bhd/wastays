@@ -192,6 +192,15 @@
               variant: :card) %>
       </div>
 
+      <div class="sm:col-span-2">
+        <%= render PanelsUI::Switch.new(
+              form: f,
+              attribute: :auto_assign_rooms_enabled,
+              label: "Assign Rooms Automatically",
+              description: "Put a new booking into the first clean room free for the whole stay, when no room was chosen. Staff can still change it.",
+              variant: :card) %>
+      </div>
+
     </div>
   </section>
 

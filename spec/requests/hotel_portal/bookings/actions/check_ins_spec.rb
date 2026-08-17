@@ -356,11 +356,35 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
       expect(flash[:notice]).to eq("2 bookings checked in.")
     end
 
-    it "rolls back the group when a selected child has no assigned room" do
+    it "assigns a clean room to a selected child left unassigned and checks the group in" do
       group = create(:group_booking, hotel: hotel)
       booking.update!(group_booking: group, group_position: 1)
       sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", check_in: booking.check_in, check_out: booking.check_out)
       create(:booking_room, booking: sibling, room_type: room_type, room_number: nil)
+
+      post hotel_booking_action_check_in_path(hotel, booking),
+        params: {
+          target_scope: "group",
+          booking_ids: [ booking.id, sibling.id ],
+          check_in: {
+            checked_in_at: Time.current.strftime("%Y-%m-%dT%H:%M"),
+            room_assignments: { booking.booking_rooms.first.id.to_s => { room_number: "101" } }
+          }
+        }
+
+      expect(booking.reload.status).to eq("checked_in")
+      expect(sibling.reload.status).to eq("checked_in")
+      expect(sibling.booking_rooms.first.reload.room_number).to eq("102")
+    end
+
+    it "rolls back the group when a selected child has no assigned room and none can be found" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2, status: "confirmed", check_in: booking.check_in, check_out: booking.check_out)
+      create(:booking_room, booking: sibling, room_type: room_type, room_number: nil)
+      %w[102 103].each do |number|
+        RoomStatus.find_or_create_by!(hotel: hotel, room_type: room_type, room_number: number).update!(status: "dirty")
+      end
 
       post hotel_booking_action_check_in_path(hotel, booking),
         params: {

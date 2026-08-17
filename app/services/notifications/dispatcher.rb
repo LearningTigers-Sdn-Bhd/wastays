@@ -42,6 +42,8 @@ module Notifications
 
         payload, payload_error = payload_with_error(notification_type, config)
         Array(config.channels).map do |channel|
+          next if unreachable_channel?(channel)
+
           create_delivery(
             notification_type:,
             channel: channel.to_s,
@@ -103,6 +105,13 @@ module Notifications
       else
         raise ArgumentError, "Unsupported notification type: #{notification_type}"
       end
+    end
+
+    # A desk booking may carry only a phone number. Queuing an email for it
+    # would just fail on send, so the channel is skipped rather than recorded
+    # as a delivery that was never deliverable.
+    def unreachable_channel?(channel)
+      channel.to_s == "email" && @booking.guest_email.blank?
     end
 
     def create_delivery(notification_type:, channel:, payload:, config:, payload_error: nil)
