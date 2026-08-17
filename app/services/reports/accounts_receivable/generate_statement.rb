@@ -336,7 +336,7 @@ module Reports
       end
 
       def format_amount(amount)
-        ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", amount.to_d))
+        HotelPortal::Reports::Exports::PdfTheme.money(amount)
       end
 
       def format_date(date)

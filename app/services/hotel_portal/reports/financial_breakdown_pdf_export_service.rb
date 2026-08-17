@@ -26,7 +26,7 @@ module HotelPortal
       private
 
       def amount(key) = "#{currency} #{money(@report.totals[key])}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def date(value) = value&.strftime("%d %b %Y") || "-"
       def period_label = "#{date(@report.start_date)} - #{date(@report.end_date)}"
       def currency = @hotel.default_currency.presence || "MYR"

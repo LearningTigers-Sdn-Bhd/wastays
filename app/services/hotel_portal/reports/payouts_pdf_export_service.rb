@@ -64,7 +64,7 @@ module HotelPortal
       end
 
       def amount_label(value) = "#{currency} #{money(value)}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def date(value) = value&.strftime("%d %b %Y") || "-"
       def datetime(value) = value&.strftime("%d %b %Y %H:%M") || "-"
       def currency = @hotel.default_currency.presence || "MYR"

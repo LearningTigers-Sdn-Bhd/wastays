@@ -48,6 +48,12 @@ module HotelPortal
 
         def self.format_time(time, time_zone) = time&.in_time_zone(time_zone)&.strftime(DATE_TIME_FORMAT)
 
+        # One money format across every document on this theme, grouped so a six-figure
+        # amount can be read at a glance. Matches what the Excel exports have always done
+        # (#,##0.00) and what the invoice and statement documents already do. Currency is the
+        # caller's business: some documents put it in a column of its own, some in the label.
+        def self.money(value) = ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", value.to_d))
+
         # Horizontal cell padding stays at 6 rather than moving onto the grid: report
         # services pass column widths tuned against it, and widening it overflows the
         # denser tables.

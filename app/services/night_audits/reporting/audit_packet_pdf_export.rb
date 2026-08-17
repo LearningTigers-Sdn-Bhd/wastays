@@ -208,9 +208,7 @@ module NightAudits
       }
     end
 
-    def money(value)
-      format("MYR %.2f", value.to_d)
-    end
+    def money(value) = "MYR #{THEME.money(value)}"
 
     def audit_completed_label
       THEME.format_time(@night_audit.completed_at, @hotel.hotel_time_zone) || "N/A"

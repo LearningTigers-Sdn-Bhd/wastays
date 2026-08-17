@@ -97,7 +97,7 @@ module Reports
       end
 
       def money(value)
-        ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", value.to_d))
+        HotelPortal::Reports::Exports::PdfTheme.money(value)
       end
     end
   end

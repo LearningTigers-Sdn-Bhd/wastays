@@ -180,9 +180,7 @@ module HotelPortal
         "#{currency} #{money(value)}"
       end
 
-      def money(value)
-        format("%.2f", value.to_d)
-      end
+      def money(value) = THEME.money(value)
 
       def category_label(value)
         return "F&B" if value.to_s == "fb"

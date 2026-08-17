@@ -31,7 +31,7 @@ module HotelPortal
       def period_label = @report.start_date == @report.end_date ? date(@report.start_date) : "#{date(@report.start_date)} - #{date(@report.end_date)}"
       def percentage(value) = format("%.2f%%", value.to_d * 100)
       def amount(value) = "#{currency} #{money(value)}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def date(value) = value.strftime("%d %b %Y")
       def currency = @hotel.default_currency.presence || "MYR"
     end

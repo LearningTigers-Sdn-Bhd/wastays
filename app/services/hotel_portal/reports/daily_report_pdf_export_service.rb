@@ -141,7 +141,9 @@ module HotelPortal
           [ "Date & Time", "Service / Code", "Booking / Folio", "Guest / Room Details", "Status", "Base Amount", "Tax", "Total Amount" ],
           rows,
           numeric_columns: [ 5, 6, 7 ], negative_cells: negative_cells, total_row: rows.size,
-          column_widths: [ 65, 125, 125, 115, 60, 84, 78, 90 ]
+          # Tax takes 8pt from the page's spare measure: grouped figures are wider, and at
+          # 78 a seven-figure tax total wrapped under its currency.
+          column_widths: [ 65, 125, 125, 115, 60, 84, 86, 90 ]
         )
       end
 
@@ -160,7 +162,9 @@ module HotelPortal
           DailyReportTransactionRow::CASHIER_VISUAL_HEADERS,
           rows,
           numeric_columns: [ 8 ], total_row: rows.size,
-          column_widths: [ 68, 96, 92, 74, 55, 82, 72, 170, 69 ]
+          # This table already fills the page, so the amount column borrows its 8pt from the
+          # description beside it, which wraps freely.
+          column_widths: [ 68, 96, 92, 74, 55, 82, 72, 162, 77 ]
         )
       end
 
@@ -319,9 +323,7 @@ module HotelPortal
         "#{@revenue_report.start_date.strftime('%d %b %Y')} - #{@revenue_report.end_date.strftime('%d %b %Y')}"
       end
 
-      def money(value)
-        format("%.2f", value.to_d)
-      end
+      def money(value) = THEME.money(value)
     end
   end
 end

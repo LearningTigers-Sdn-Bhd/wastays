@@ -35,7 +35,7 @@ module HotelPortal
 
       def numeric_columns = @table.column_types.each_index.select { |index| %i[integer money].include?(@table.column_types[index]) }
       def period_label = @report.start_date == @report.end_date ? @report.start_date.strftime("%d %b %Y") : "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def currency = @hotel.default_currency.presence || "MYR"
     end
   end

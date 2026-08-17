@@ -115,7 +115,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
       rows: a_kind_of(Array),
       numeric_columns: [ 5, 6, 7 ],
       total_row: 4,
-      column_widths: [ 65, 125, 125, 115, 60, 84, 78, 90 ]
+      column_widths: [ 65, 125, 125, 115, 60, 84, 86, 90 ]
     )
     register_rows = register_table.fetch(:rows)
     room_row = register_rows.find { |row| row[5] == "MYR 480.00" }

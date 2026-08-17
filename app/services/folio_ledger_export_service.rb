@@ -177,7 +177,5 @@ class FolioLedgerExportService
 
   def period_label = @start_date == @end_date ? @start_date.strftime("%d %b %Y") : "#{@start_date.strftime('%d %b %Y')} - #{@end_date.strftime('%d %b %Y')}"
 
-  def format_money(value)
-    format("%.2f", value.to_d)
-  end
+  def format_money(value) = HotelPortal::Reports::Exports::PdfTheme.money(value)
 end

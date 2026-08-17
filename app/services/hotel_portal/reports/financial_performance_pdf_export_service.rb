@@ -69,9 +69,7 @@ module HotelPortal
         "#{currency} #{money(value)}"
       end
 
-      def money(value)
-        format("%.2f", value.to_d)
-      end
+      def money(value) = Exports::PdfTheme.money(value)
 
       def currency
         @hotel.default_currency.presence || "MYR"

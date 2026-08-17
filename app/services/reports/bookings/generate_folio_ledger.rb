@@ -364,9 +364,9 @@ module Reports
       def format_money(amount, blank_zero: false)
         amount = amount.to_d
         return "-" if blank_zero && amount.zero?
-        return "(#{ActiveSupport::NumberHelper.number_to_delimited(format('%.2f', amount.abs))})" if amount.negative?
+        return "(#{HotelPortal::Reports::Exports::PdfTheme.money(amount.abs)})" if amount.negative?
 
-        ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", amount))
+        HotelPortal::Reports::Exports::PdfTheme.money(amount)
       end
 
       def csv_money(amount)
