@@ -41,19 +41,9 @@ module HotelPortal
       private
 
       def draw_summary(pdf)
-        table = pdf.make_table(
-          [ [ "Transactions", "Total Amount" ], [ transaction_count.to_s, amount_label(total_amount) ] ],
-          width: pdf.bounds.width,
-          cell_style: { padding: THEME::SUMMARY_CELL_PADDING, border_color: COLORS[:border] }
+        Exports::PdfStatStrip.new(pdf: pdf).draw(
+          [ [ "Transactions", transaction_count.to_s ], [ "Total Amount", amount_label(total_amount) ] ]
         )
-        table.row(0).style(
-          background_color: COLORS[:primary_light], text_color: COLORS[:muted],
-          size: THEME::TYPE[:small], font_style: :bold, borders: [ :bottom ]
-        )
-        table.row(1).style(text_color: COLORS[:ink], size: THEME::TYPE[:heading], font_style: :bold, borders: [])
-        table.column(1).style(align: :right)
-        table.draw
-        pdf.move_down THEME::SPACE[:lg]
       end
 
       def draw_detail(pdf)

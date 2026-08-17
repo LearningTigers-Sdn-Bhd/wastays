@@ -57,7 +57,7 @@ RSpec.describe HotelPortal::Reports::ExtraChargePdfExportService do
       expect(text).to include(
         "Extra Charge Report", "F&B", "Sample Hotel", "1 Jalan Pantai, Kota Kinabalu, Malaysia",
         "PERIOD", "01 Jul 2026 - 02 Jul 2026", "GENERATED", "PREPARED BY", "Aina Salleh",
-        "Transactions", "1", "Total Amount", "MYR 25.00",
+        "TRANSACTIONS", "1", "TOTAL AMOUNT", "MYR 25.00",
         "Posting Date", "Booking Ref", "Folio Ref", "Guest", "Description", "Category", "Currency", "Amount",
         "BK-001", "FOL-001", "Jane Doe", "Mini bar", "Total", "Confidential"
       )
@@ -74,7 +74,7 @@ RSpec.describe HotelPortal::Reports::ExtraChargePdfExportService do
 
       expect(text).to include(
         "No extra charge transactions found for this period.",
-        "Transactions", "0", "Total Amount", "MYR 0.00", "Total"
+        "TRANSACTIONS", "0", "TOTAL AMOUNT", "MYR 0.00", "Total"
       )
     end
 

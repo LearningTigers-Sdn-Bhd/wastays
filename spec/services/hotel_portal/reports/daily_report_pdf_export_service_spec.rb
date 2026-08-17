@@ -94,7 +94,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     revenue = text_for.call("revenue")
     cashier = text_for.call("cashier")
 
-    expect(overview).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "Net Revenue", "Net Cash")
+    expect(overview).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "NET REVENUE", "NET CASH")
     expect(overview).not_to include("Daily Breakdown", "Cashier Summary")
     expect(overview).to include(
       "Daily Report", "Overview", "PERIOD", "GENERATED", "PREPARED BY", "Aina Salleh",
@@ -105,6 +105,9 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
       "Revenue", "Revenue Summary", "Daily Breakdown", "Revenue by Source", "Revenue Register",
       "Charter Boat", "Adjustments", "Net Revenue", "Total", "Page 1 of"
     )
+    # Mixed case above is the table header; the stat strip carries the same words upcased,
+    # so assert both rather than letting one stand in for the other.
+    expect(revenue).to include("BOOKINGS ENGAGED", "TOTAL CHARGES", "NET REVENUE")
     expect(revenue).not_to include("Cashier Summary", "Advance")
     register_table = charge_register_tables.sole
     expect(register_table).to include(

@@ -52,7 +52,6 @@ module HotelPortal
         # services pass column widths tuned against it, and widening it overflows the
         # denser tables.
         TABLE_CELL_PADDING = [ SPACE[:xs], 6 ].freeze
-        SUMMARY_CELL_PADDING = [ SPACE[:sm], SPACE[:sm] ].freeze
 
         # Vendored so dev and production render identically. Public Sans carries the
         # text; its tabular figures are frozen into the files so money columns line up

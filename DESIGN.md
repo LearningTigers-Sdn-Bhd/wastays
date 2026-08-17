@@ -255,7 +255,7 @@ Use `PdfTheme` tokens. Never a raw number:
   `small` 8 (table headers, address), `micro` 7 (metadata and stat labels, footer)
 - `SPACE`: 4pt grid — `xs` 4, `sm` 8, `md` 12, `lg` 16, `xl` 20
 - `COLORS`, `RULE_WIDTH`, `PAGE_MARGIN`, `TABLE_CELL_PADDING`,
-  `SUMMARY_CELL_PADDING`, `LABEL_TRACKING`
+  `LABEL_TRACKING`
 - `format_date` / `format_time` for every date and time
 
 Unlike screen UI, uppercase and tracking are correct for print at `micro`: they

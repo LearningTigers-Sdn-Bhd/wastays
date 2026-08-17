@@ -7,7 +7,7 @@ module HotelPortal
   module Reports
     class DailyReportPdfExportService
       THEME = Exports::PdfTheme
-      COLORS = THEME::COLORS.merge(negative: "A33636").freeze
+      COLORS = THEME::COLORS
 
       def initialize(hotel:, tab:, revenue_report:, cashier_report:, prepared_by:, charge_register: [])
         @hotel = hotel
@@ -49,15 +49,12 @@ module HotelPortal
 
       def draw_overview_report(pdf)
         draw_kpi_section(pdf, "Revenue (Accrual)", revenue_kpis)
-        pdf.move_down THEME::SPACE[:lg]
         draw_kpi_section(pdf, "Cashier Sales (Cash Flow)", cashier_kpis)
-        pdf.move_down THEME::SPACE[:lg]
         draw_note(pdf, "Revenue records when charges are earned. Cashier Sales records when payments or refunds move.")
       end
 
       def draw_revenue_report(pdf)
         draw_kpi_section(pdf, "Revenue Summary", revenue_kpis)
-        pdf.move_down THEME::SPACE[:lg]
         draw_revenue_table(pdf, "Daily Breakdown", @revenue_report.rows, :date)
         pdf.move_down THEME::SPACE[:lg]
         draw_revenue_table(pdf, "Revenue by Source", @revenue_report.source_rows, :source)
@@ -68,7 +65,6 @@ module HotelPortal
 
       def draw_cashier_report(pdf)
         draw_kpi_section(pdf, "Cashier Sales Summary", cashier_kpis)
-        pdf.move_down THEME::SPACE[:lg]
         draw_cashier_transaction_table(pdf, "Advance", @cashier_report.advance_scope)
         pdf.start_new_page(layout: :landscape)
         draw_cashier_transaction_table(pdf, "Settlement", @cashier_report.settlement_scope)
@@ -78,14 +74,7 @@ module HotelPortal
 
       def draw_kpi_section(pdf, title, cards)
         draw_section_heading(pdf, title)
-        data = [ cards.map(&:first), cards.map(&:last) ]
-        table = pdf.make_table(data, width: pdf.bounds.width, cell_style: { padding: THEME::SUMMARY_CELL_PADDING, border_color: COLORS[:border] })
-        table.row(0).style(
-          background_color: COLORS[:primary_light], text_color: COLORS[:muted],
-          size: THEME::TYPE[:micro], font_style: :bold, borders: [ :bottom ]
-        )
-        table.row(1).style(text_color: COLORS[:ink], size: THEME::TYPE[:heading], font_style: :bold, borders: [])
-        table.draw
+        Exports::PdfStatStrip.new(pdf: pdf).draw(cards)
       end
 
       def draw_revenue_table(pdf, title, rows, label_key)
@@ -259,7 +248,7 @@ module HotelPortal
         end
         numeric_columns.each { |column| table.column(column).style(align: :right) }
         negative_cells.each do |row, column|
-          table.row(row + 1).column(column).style(text_color: COLORS[:negative])
+          table.row(row + 1).column(column).style(text_color: COLORS[:danger])
         end
         if total_row
           table.row(total_row).style(
