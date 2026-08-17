@@ -2,6 +2,12 @@
 
 module HotelPortal
   class ProfilesController < HotelPortal::SettingsBaseController
+    # Each section of the property settings page saves on its own, so a save
+    # lands the reader back at the section they were editing rather than at the
+    # top of the page. The anchor is matched against this list: it arrives from
+    # the form, and nothing else should end up in the URL.
+    PROFILE_SECTIONS = %w[hotel-information hotel-location property-contact business-registration].freeze
+
     before_action :set_hotel
     before_action :set_photo_queue
 
@@ -9,6 +15,12 @@ module HotelPortal
       authorize @hotel
       prepare_profile_page
       render :edit, formats: :html if request.format.turbo_stream?
+    end
+
+    def album
+      authorize @hotel, :edit?
+      prepare_profile_page
+      render :album, formats: :html if request.format.turbo_stream?
     end
 
     def update
@@ -19,7 +31,7 @@ module HotelPortal
 
       if upload_result
         flash[:alert] = upload_result.alert_message if upload_result.respond_to?(:trimmed?) && upload_result.trimmed?
-        redirect_with_toast(edit_hotel_profile_path(@hotel), "Hotel profile updated successfully.", type: :success, status: :see_other)
+        redirect_with_toast(profile_return_path, "Hotel profile updated successfully.", type: :success, status: :see_other)
       else
         prepare_profile_page
         render :edit, formats: :html, status: :unprocessable_content
@@ -61,7 +73,7 @@ module HotelPortal
       photo_ids = Array(params[:photo_ids]).reject(&:blank?)
 
       if photo_ids.empty?
-        redirect_to edit_hotel_profile_path(@hotel), alert: "Please select at least one photo to remove."
+        redirect_to hotel_album_path(@hotel), alert: "Please select at least one photo to remove."
         return
       end
 
@@ -75,7 +87,7 @@ module HotelPortal
       clear_featured_photo_if_needed(photos.pluck(:id))
       photos.each(&:purge)
 
-      redirect_to edit_hotel_profile_path(@hotel), notice: "Selected hotel photos removed successfully."
+      redirect_to hotel_album_path(@hotel), notice: "Selected hotel photos removed successfully."
     end
 
     def set_featured_photo
@@ -103,7 +115,7 @@ module HotelPortal
           format.turbo_stream do
             render turbo_stream: toast_stream(message, type: :error), status: :unprocessable_content
           end
-          format.html { redirect_to edit_hotel_profile_path(@hotel), alert: message }
+          format.html { redirect_to photo_return_path, alert: message }
         end
       end
     rescue ActiveRecord::RecordNotFound
@@ -171,6 +183,11 @@ module HotelPortal
       @photo_queue = HotelPortal::PhotoQueue.new(@hotel, session)
     end
 
+    def profile_return_path
+      section = params[:section].presence_in(PROFILE_SECTIONS)
+      edit_hotel_profile_path(@hotel, anchor: section)
+    end
+
     def prepare_profile_page
       @presenter = HotelPortal::ProfilePresenter.new(@hotel, @photo_queue, view_context)
     end
@@ -179,7 +196,7 @@ module HotelPortal
       if params[:return_to] == "onboarding"
         hotel_onboarding_section_path(@hotel, section_key: "property_photos")
       else
-        edit_hotel_profile_path(@hotel)
+        hotel_album_path(@hotel)
       end
     end
 

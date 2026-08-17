@@ -35,6 +35,7 @@ module HotelPortal
         :default_currency, :time_zone, :geolocation_enabled, :auto_assign_rooms_enabled,
         :ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key,
         :business_starts_at, :business_ends_at, :arrival_grace_period_hours,
+        :guest_registration_card_terms,
         guest_registration_card_fields: [],
         hotel_boat_setting_attributes: [ :id, :breakfast_time, :lunch_time, :dinner_time ],
         property_policy_attributes: [ :id, :check_in_time, :check_out_time ]

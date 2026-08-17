@@ -93,6 +93,13 @@
               <% field.with_select_menu(
                    [ { label: "No salesperson", value: "" } ] + @salespersons.map { |person| { label: person.name, value: person.id } }) %>
             <% end %>
+
+            <%= render PanelsUI::Switch.new(
+                  form: builder,
+                  attribute: :allow_boat_information,
+                  variant: :card,
+                  label: "Boat features",
+                  description: "For island and jetty-served properties: boat schedules, boat in/out times on bookings, and the BIBO and meal prep reports. Can be changed later.") %>
           </section>
         <% end %>
       <% end %>

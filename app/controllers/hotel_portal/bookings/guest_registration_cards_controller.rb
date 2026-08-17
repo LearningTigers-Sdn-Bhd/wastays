@@ -27,7 +27,7 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
         redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), notice: "Guest registration card signed."
       end
     else
-      if result.error == :already_signed
+      if result.error.in?(%i[already_signed terms_missing])
         redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), alert: result.message
       else
         @presenter = HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking)

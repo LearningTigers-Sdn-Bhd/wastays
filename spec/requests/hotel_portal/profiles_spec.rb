@@ -23,7 +23,6 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       document = response.parsed_body
 
       expect(document.css("h1").map { |heading| heading.text.squish }).to eq([ "Property Details Settings" ])
-      expect(document.css("h2").map { |heading| heading.text.squish }).to include("Hotel Information", "Hotel Location", "Hotel Album")
       expect(response.body).to include(%(id="hotel-profile-section"))
       expect(response.body).to include(%(data-testid="settings-tabs"))
       expect(document.at_css("form[action='#{hotel_profile_path(hotel)}']")[:"data-turbo"]).to eq("false")
@@ -33,6 +32,61 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(description[:placeholder]).to eq("Describe the property’s atmosphere, highlights, and guest experience.")
       expect(document.css(".panel-form-field .panel-select-menu")).not_to be_empty
       expect(document.css(".panel-form-field .panel-multi-select")).not_to be_empty
+    end
+
+    it 'lists the sections in order with the read-only billing reference last' do
+      get edit_hotel_profile_path(hotel)
+
+      document = response.parsed_body
+      expect(document.css("#hotel-profile-section h2").map { |heading| heading.text.squish }).to eq(
+        [ "Hotel Information", "Hotel Location", "Property Contact", "Business Registration", "Billing Reference" ]
+      )
+      billing_reference = document.at_css("[data-testid='billing-reference'].panel-metric-card")
+      expect(billing_reference.text.squish).to include("Billing Reference", "Effective setup fee")
+    end
+
+    it 'gives every editable section its own form and Save' do
+      get edit_hotel_profile_path(hotel)
+
+      document = response.parsed_body
+      forms = document.css("form[action='#{hotel_profile_path(hotel)}']")
+      expect(forms.map { |form| form.at_css("input[name='section']")[:value] }).to eq(
+        %w[hotel-information hotel-location property-contact business-registration]
+      )
+      forms.each do |form|
+        save = form.at_css("button[type='submit'][data-form-dirty-target='submit']")
+        expect(save.text.squish).to eq("Save")
+        # Enabled server-side: the Stimulus controller switches it off on connect,
+        # so a page without JS is left with a Save that still works.
+        expect(save[:disabled]).to be_nil
+
+        cancel = form.at_css("button[type='reset'][data-form-dirty-target='cancel']")
+        expect(cancel.text.squish).to eq("Cancel")
+        # The mirror image: nothing to discard until something changes.
+        expect(cancel[:hidden]).to be_present
+      end
+      expect(document.at_css("section#billing-reference button[type='submit']")).to be_nil
+    end
+
+    it 'leaves the album to its own page' do
+      get edit_hotel_profile_path(hotel)
+
+      expect(response.body).not_to include("hotel-photo-upload-sheet")
+      expect(response.body).not_to include("hotel-published-photos")
+    end
+  end
+
+  describe 'GET /hotel/:hotel_id/settings/property/hotel-album' do
+    it 'renders the album page under the shared property header and tabs' do
+      get hotel_album_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+
+      expect(document.css("h1").map { |heading| heading.text.squish }).to eq([ "Property Details Settings" ])
+      expect(response.body).to include(%(data-testid="settings-tabs"))
+      expect(response.body).to include(%(id="hotel-album-section"))
+      expect(document.at_css("#hotel-album-section h2").text.squish).to eq("Hotel Album")
       expect(document.css(".panel-dropzone")).not_to be_empty
       expect(document.at_css("button[command='show-modal'][commandfor='hotel-photo-upload-sheet']").text.squish).to eq("Upload Photos")
       empty_album = document.at_css("#hotel-published-photos .panel-empty-state")
@@ -43,8 +97,14 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       upload_sheet = document.at_css("dialog#hotel-photo-upload-sheet[data-panels-ui-sheet-side='right']")
       expect(upload_sheet.at_css("h2").text.squish).to eq("Upload Photos")
       expect(upload_sheet.at_css("footer").text.squish).to include("Discard All", "Confirm Upload")
-      billing_reference = document.at_css("[data-testid='billing-reference'].panel-metric-card")
-      expect(billing_reference.text.squish).to include("Billing Reference", "Effective setup fee")
+    end
+
+    it 'marks Hotel Album as the active tab, not Hotel Details' do
+      get hotel_album_path(hotel)
+
+      tabs = response.parsed_body.at_css("[data-testid='settings-tabs']")
+      active = tabs.css("[aria-selected='true'], [aria-current='page']").map { |tab| tab.text.squish }
+      expect(active).to eq([ "Hotel Album" ])
     end
   end
 
@@ -82,12 +142,19 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
 
     it 'stores normalized business registration numbers' do
       patch hotel_profile_path(hotel), params: {
-        hotel: { tin: ' c1234567890 ', ssm_number: '202301012345 (1234567-a)' }
+        hotel: {
+          tin: ' c1234567890 ',
+          ssm_number: '202301012345 (1234567-a)',
+          local_government_name: '  Dewan   Bandaraya Kota Kinabalu ',
+          local_government_license_number: ' pl/2026/001234 '
+        }
       }
 
       hotel.reload
       expect(hotel.tin).to eq('C1234567890')
       expect(hotel.ssm_number).to eq('202301012345 (1234567-A)')
+      expect(hotel.local_government_name).to eq('Dewan Bandaraya Kota Kinabalu')
+      expect(hotel.local_government_license_number).to eq('PL/2026/001234')
     end
 
     it "redirects Turbo submissions to an HTML page with a success toast" do

@@ -25,6 +25,7 @@ module Bookings
       if @params[:signer_name].present? || @params[:signature_data_url].present?
         result = @card.with_lock do
           break :already_signed if @card.signed?
+          break :terms_missing unless @card.hotel.guest_registration_card_terms.present?
 
           if @params[:signature_data_url].blank?
             @card.errors.add(:signature_data_url, "can't be blank")
@@ -45,6 +46,8 @@ module Bookings
         case result
         when :already_signed
           return OpenStruct.new(success?: false, error: :already_signed, message: "Delete the existing signature before signing again.")
+        when :terms_missing
+          return OpenStruct.new(success?: false, error: :terms_missing, message: "This property hasn't set its Terms & Conditions yet. An admin needs to add them in Settings before this card can be signed.")
         when :invalid
           return OpenStruct.new(success?: false, error: :invalid, message: @card.errors.full_messages.to_sentence)
         end

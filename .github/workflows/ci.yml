@@ -56,13 +56,29 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
-  test:
+  # The non-browser suite, split across SHARD_COUNT runners. Every shard groups
+  # the identical file list into (SHARD_COUNT * PARALLEL_TEST_PROCESSORS) groups
+  # by filesize — a deterministic split, so each shard can pick its own slice with
+  # --only-group without coordinating. parallel_tests re-indexes the selected
+  # groups locally, so a shard still only needs PARALLEL_TEST_PROCESSORS databases.
+  test_shard:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2, 3, 4 ]
     env:
       # Browser/system specs (spec/system) are intentionally excluded from CI and
       # run locally only (bin/test system or bin/ci) — see docs/CODEBASE_MAP.md
       # ("CI" / "GitHub Actions"). This job only runs the non-browser suite.
       PARALLEL_TEST_PROCESSORS: 3
+      SHARD_COUNT: 4
+      SHARD_INDEX: ${{ matrix.shard }}
+      # Keep this list identical across shards — the grouping is computed from it.
+      SPEC_PATHS: >-
+        spec/models spec/services spec/requests spec/jobs spec/helpers
+        spec/mailers spec/presenters spec/views spec/tasks spec/seeds
+        spec/integration
 
     services:
       postgres:
@@ -115,13 +131,62 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           # REDIS_URL: redis://localhost:6379/0
-        run: >
-          bundle exec parallel_rspec
-          --exclude-pattern 'spec/migrations'
-          spec/models spec/services spec/requests spec/jobs spec/helpers
-          spec/mailers spec/presenters spec/views spec/tasks spec/seeds
-          spec/integration
-          -n "${PARALLEL_TEST_PROCESSORS}"
+        run: |
+          total_groups=$(( SHARD_COUNT * PARALLEL_TEST_PROCESSORS ))
+          first_group=$(( (SHARD_INDEX - 1) * PARALLEL_TEST_PROCESSORS + 1 ))
+          groups=()
+          for (( g = first_group; g < first_group + PARALLEL_TEST_PROCESSORS; g++ )); do
+            groups+=( "${g}" )
+          done
+          only_groups=$( IFS=,; echo "${groups[*]}" )
+          echo "Shard ${SHARD_INDEX}/${SHARD_COUNT}: groups ${only_groups} of ${total_groups}"
+          # SPEC_PATHS is deliberately unquoted — it must word-split into one
+          # argument per spec directory.
+          # shellcheck disable=SC2086
+          bundle exec parallel_rspec \
+            --exclude-pattern 'spec/migrations' \
+            ${SPEC_PATHS} \
+            -n "${total_groups}" \
+            --group-by filesize \
+            --only-group "${only_groups}"
+
+  # Migration specs each need their own RSpec process (see bin/test-migrations),
+  # so they stay serial — but in their own job they no longer sit on the critical
+  # path behind the main suite.
+  migrations:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wastays_test
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready -U postgres -d postgres" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential fonts-noto-cjk git libpq-dev libvips42 libyaml-dev pkg-config
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Prepare database
+        env:
+          RAILS_ENV: test
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bundle exec rails db:test:prepare
 
       - name: Run migration tests in isolated processes
         env:
@@ -130,3 +195,20 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
         run: bin/test-migrations
+
+  # Aggregate gate. Branch protection watches for a check named "test", which a
+  # matrix job cannot provide (it reports as "test_shard (1)", "test_shard (2)", …).
+  # This job does no work — it just fails if any shard or the migration job failed.
+  test:
+    if: always()
+    needs: [ test_shard, migrations ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check suite results
+        env:
+          SHARD_RESULT: ${{ needs.test_shard.result }}
+          MIGRATIONS_RESULT: ${{ needs.migrations.result }}
+        run: |
+          echo "test_shard: ${SHARD_RESULT}"
+          echo "migrations: ${MIGRATIONS_RESULT}"
+          [ "${SHARD_RESULT}" = "success" ] && [ "${MIGRATIONS_RESULT}" = "success" ]

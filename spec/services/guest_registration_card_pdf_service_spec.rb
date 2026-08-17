@@ -46,6 +46,36 @@ RSpec.describe GuestRegistrationCardPdfService do
     expect(text).to include("13 Jul 2026, 12:00 PM")
   end
 
+  it "renders the hotel's fixed terms and conditions when configured" do
+    hotel.update!(guest_registration_card_terms: "Valid photo ID is required at check-in.")
+
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).to include("Terms & Conditions", "Valid photo ID is required at check-in.")
+  end
+
+  it "omits the terms and conditions section when the hotel has none configured" do
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).not_to include("Terms & Conditions")
+  end
+
+  it "does not repeat the missing-terms notice under a configured Terms & Conditions block" do
+    hotel.update!(guest_registration_card_terms: "Valid photo ID is required at check-in.")
+
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).not_to include("Hotel terms are not configured.")
+  end
+
+  it "still shows the missing-terms notice when nothing is configured at all" do
+    hotel.property_policy.update!(cancellation_policy: nil)
+
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).to include("Hotel terms are not configured.")
+  end
+
   it "renders boat transfer details only when the primary guest has boat times" do
     primary_guest = booking.booking_guests.find(&:primary?)
     primary_guest.update!(boat_in_at: Time.zone.local(2026, 7, 11, 16, 30), boat_out_at: Time.zone.local(2026, 7, 13, 13, 0))
@@ -61,16 +91,24 @@ RSpec.describe GuestRegistrationCardPdfService do
     expect(text).not_to include("Boat-in")
   end
 
-  it "renders internal notes and special requests as Please Note and Remark" do
-    booking.update!(internal_notes: "VIP guest, prioritize service.", special_requests: "Late checkout requested")
+  it "renders special requests as Remark" do
+    booking.update!(special_requests: "Late checkout requested")
 
     text = pdf_text(described_class.new(card, booking, presenter).generate)
 
-    expect(text).to include("Please Note", "VIP guest, prioritize service.", "Remark", "Late checkout requested")
+    expect(text).to include("Remark", "Late checkout requested")
+  end
+
+  it "does not render internal notes as Please Note" do
+    booking.update!(internal_notes: "VIP guest, prioritize service.")
+
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).not_to include("Please Note", "VIP guest, prioritize service.")
   end
 
   it "renders CJK text without raising an encoding error" do
-    booking.update!(internal_notes: "入住时间下午2点")
+    booking.update!(special_requests: "入住时间下午2点")
 
     pdf = described_class.new(card, booking, presenter).generate
 
