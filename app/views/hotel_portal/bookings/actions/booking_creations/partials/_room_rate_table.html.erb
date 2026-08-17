@@ -12,11 +12,11 @@
     <button type="button" class="rounded-md border border-border bg-card px-3 py-2 text-xs font-bold text-foreground hover:bg-muted" data-action="booking-room-rows#add">Add room</button>
   </div>
   <div class="overflow-x-auto rounded-md border border-border">
-    <div class="<%= rate_override_allowed? ? "min-w-[1060px]" : "min-w-[920px]" %>">
-      <div class="grid <%= rate_override_allowed? ? "grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_.9fr_1fr_36px]" : "grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px]" %> gap-1.5 border-b border-border bg-muted px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+    <div class="min-w-[920px]">
+      <div class="grid grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px] gap-1.5 border-b border-border bg-muted px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         <span>Room type</span><span>Rate plan</span><span>Room</span><span>Adult</span><span>Child</span>
-        <% if rate_override_allowed? %><span>Room net (excl. tax)</span><% end %>
-        <span>Rate (MYR, tax inc.)</span><span></span>
+        <span>Rate (MYR, tax inc.)<% if rate_override_allowed? %> <span class="normal-case font-normal text-muted-foreground/80">· click to price by hand</span><% end %></span>
+        <span></span>
       </div>
       <div data-booking-room-rows-target="rows">
         <% (@initial_room_rows.presence || [ {} ]).each_with_index do |values, index| %>

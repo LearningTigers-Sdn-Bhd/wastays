@@ -6,7 +6,7 @@
 <% allow_deferred_room = local_assigns.fetch(:allow_deferred_room, true) %>
 <% room_type_choices = @room_types.map { |room_type| [ room_type.name, room_type.id ] }.presence || [ [ "No room types available", "" ] ] %>
 <% popover_index = index.to_s.parameterize(separator: "-").presence || "0" %>
-<div class="grid <%= rate_override_allowed? ? "grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_.9fr_1fr_36px]" : "grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px]" %> items-center gap-1.5 border-b border-border px-3 py-3 last:border-b-0"
+<div class="grid grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px] items-center gap-1.5 border-b border-border px-3 py-3 last:border-b-0"
      data-booking-room-rows-target="row"
      data-preserved-room-type="<%= values[:room_type_id] %>"
      data-preserved-rate-plan="<%= values[:rate_plan_id] %>"
@@ -44,34 +44,35 @@
     <div class="min-w-0" data-role="adults">
       <%= render PanelsUI::FormField.new(form: rf, attribute: :adults, label: "Adults", label_hidden: true, required: true, class: "min-w-0") do |field| %>
         <% field.with_input(type: :number, value: values[:adults] || 1, min: 1,
-                            data: { action: "change->booking-room-rows#rateChanged" }) %>
+                            data: { action: "change->booking-room-rows#occupancyChanged" }) %>
       <% end %>
     </div>
     <div class="min-w-0" data-role="children">
       <%= render PanelsUI::FormField.new(form: rf, attribute: :children, label: "Children", label_hidden: true, required: true, class: "min-w-0") do |field| %>
         <% field.with_input(type: :number, value: values[:children] || 0, min: 0,
-                            data: { action: "change->booking-room-rows#rateChanged" }) %>
+                            data: { action: "change->booking-room-rows#occupancyChanged" }) %>
       <% end %>
     </div>
   <% end %>
-  <%# The room amount before tax, for stays sold at a price the rate plan does
-      not produce — an OTA that quotes the hotel its net payout, most often.
-      Left blank the row quotes itself; filled it drives the booking total and
-      taxes are applied on top of it. %>
+  <%# Room net (excl. tax) is never typed directly — it is solved from the Rate
+      cell below whenever that is priced by hand, and carried here only so the
+      form submits it. %>
   <% if rate_override_allowed? %>
-    <div class="min-w-0" data-role="rate-override">
-      <%= number_field_tag "booking[rooms][#{index}][manual_rate_override]",
-            values[:manual_rate_override],
-            step: "0.01",
-            min: "0",
-            placeholder: "Auto",
-            "aria-label": "Room net amount excluding tax",
-            class: "panel-input text-right tabular-nums",
-            data: { action: "input->booking-room-rows#overrideChanged" } %>
-    </div>
+    <%= hidden_field_tag "booking[rooms][#{index}][manual_rate_override]", values[:manual_rate_override],
+          data: { role: "manual-rate-override" } %>
   <% end %>
   <div class="flex items-center justify-end gap-1 text-right text-sm font-semibold tabular-nums text-foreground">
-    <span data-role="rate">0.00</span>
+    <%# For stays sold at a price the rate plan does not produce — an OTA that
+        quotes the hotel its net payout, most often — staff type the final total
+        directly and the room charge and tax are worked out from it. %>
+    <% if rate_override_allowed? %>
+      <input type="number" step="0.01" min="0" data-role="rate"
+             aria-label="Total, tax included — edit to price by hand"
+             class="w-20 rounded border border-transparent bg-transparent px-1 py-0.5 text-right tabular-nums text-foreground hover:border-border-interactive focus:border-border-interactive focus:outline-none focus:ring-0"
+             data-action="input->booking-room-rows#totalOverrideChanged" value="0.00" />
+    <% else %>
+      <span data-role="rate">0.00</span>
+    <% end %>
     <%= render PanelsUI::Popover.new(
           id: "booking-room-rate-breakdown-#{popover_index}",
           placement: :left,
@@ -91,6 +92,7 @@
           <p class="mt-0.5 text-xs text-muted-foreground" data-role="breakdown-status">Select a room type, dates, and rate plan.</p>
         </div>
         <div class="hidden space-y-3 px-3 py-2.5 text-xs" data-role="breakdown-details">
+          <p class="hidden rounded-md bg-muted px-2 py-1.5 text-[11px] font-medium text-muted-foreground" data-role="manual-note">Priced manually — room charge and tax are calculated back from this total.</p>
           <div class="space-y-1" data-role="nightly-breakdown"></div>
           <div class="space-y-1 border-t border-border pt-2" data-role="tax-breakdown"></div>
           <div class="flex items-center justify-between gap-3 border-t border-border pt-2 text-sm font-semibold text-foreground">

@@ -57,19 +57,9 @@
               <% end %>
             </section>
 
-            <% if rate_override_allowed? %>
-              <section aria-labelledby="rate-override-heading" class="space-y-3">
-                <div>
-                  <h3 id="rate-override-heading" class="text-base font-semibold">Price by hand</h3>
-                  <p class="mt-1 text-sm text-muted-foreground">Room amount before tax, for a stay sold at a price the rate plan does not produce. Leave empty to charge the selected rate.</p>
-                </div>
-                <%= render PanelsUI::FormField.new(form:, attribute: :manual_rate_override, label: "Room net (#{currency}, excl. tax)") do |field| %>
-                  <% field.with_input(type: :number, value: @booking.manual_rate_override, step: "0.01", min: "0", placeholder: "Auto") %>
-                <% end %>
-              </section>
-            <% elsif @booking.manual_rate_override.present? %>
+            <% if !rate_override_allowed? && @booking.manual_rate_override.present? %>
               <div class="rounded-md border border-border bg-muted p-4 text-sm">
-                <p class="font-medium text-foreground">Manual rate override: <%= currency %> <%= number_with_precision(@booking.manual_rate_override, precision: 2, delimiter: ",") %></p>
+                <p class="font-medium text-foreground">Priced manually</p>
                 <p class="mt-1 text-muted-foreground">It stays in place for date or room changes and is cleared only when you choose a different rate.</p>
               </div>
             <% end %>
@@ -82,7 +72,24 @@
               <dl class="divide-y divide-border rounded-md border border-border text-sm">
                 <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2, delimiter: ",") %></span></dd></div>
                 <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2, delimiter: ",") %></span></dd></div>
-                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2, delimiter: ",") %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3">
+                  <dt class="font-medium text-foreground">Total<% if rate_override_allowed? %> <span class="font-normal text-muted-foreground">(tax incl. — edit to price by hand)</span><% end %></dt>
+                  <dd class="font-semibold text-foreground">
+                    <% if rate_override_allowed? %>
+                      <span class="inline-flex items-center gap-1">
+                        <span><%= currency %></span>
+                        <input type="number" step="0.01" min="0"
+                               value="<%= number_with_precision(@booking.total_amount, precision: 2, delimiter: "") %>"
+                               class="w-24 rounded-md border border-border px-2 py-1 text-right text-sm font-semibold text-foreground focus:border-border-interactive focus:outline-none focus:ring-0"
+                               data-booking-actions--stay-price-target="estimatedTotalInput"
+                               data-action="input->booking-actions--stay-price#totalChanged" />
+                      </span>
+                      <%= form.hidden_field :manual_rate_override, value: @booking.manual_rate_override, data: { booking_actions__stay_price_target: "manualOverrideField" } %>
+                    <% else %>
+                      <%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2, delimiter: ",") %></span>
+                    <% end %>
+                  </dd>
+                </div>
               </dl>
               <p class="text-xs text-muted-foreground">Future forecasted charges are recalculated. Charges already posted to a folio remain financial records.</p>
             </section>

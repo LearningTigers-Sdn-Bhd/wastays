@@ -10,30 +10,24 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
 
     room_type = current_hotel.room_types.find(params[:room_type_id])
     rate_plan = parse_rate_selection(room_type, params[:rate_plan_id])
+    check_in = Date.parse(params[:check_in])
+    check_out = Date.parse(params[:check_out])
+    guest_country = params[:guest_country].presence || current_hotel.country
 
-    snapshot = Bookings::BuildFinancialSnapshot.new(
-      hotel: current_hotel,
-      room_type: room_type,
-      rate_plan: rate_plan,
-      check_in: Date.parse(params[:check_in]),
-      check_out: Date.parse(params[:check_out]),
-      guest_country: params[:guest_country].presence || current_hotel.country,
-      adults: params[:adults].presence,
-      children: params[:children].presence,
-      manual_total_amount: manual_rate_override
-    ).call
-    tourism_tax_total = Booking.tourism_tax_total_for(snapshot.tax_lines)
-    payable_tax_total = Booking.non_tourism_tax_total_for(snapshot.tax_lines)
-    total = snapshot.room_total + payable_tax_total
-
-    render json: {
-      total_amount: total,
-      room_total: snapshot.room_total,
-      tax_total: payable_tax_total,
-      tourism_tax_total: tourism_tax_total,
-      tax_lines: snapshot.tax_lines,
-      nightly_rate_snapshot: snapshot.nightly_rate_snapshot
-    }
+    if target_total.present?
+      snapshot = Bookings::SolveRoomTotalForFinalAmount.new(
+        hotel: current_hotel, room_type:, rate_plan:, check_in:, check_out:, guest_country:,
+        adults: params[:adults].presence, children: params[:children].presence,
+        target_total: target_total
+      ).call
+      render_price(snapshot, manual_rate_override: snapshot.room_total)
+    else
+      snapshot = Bookings::BuildFinancialSnapshot.new(
+        hotel: current_hotel, room_type:, rate_plan:, check_in:, check_out:, guest_country:,
+        adults: params[:adults].presence, children: params[:children].presence
+      ).call
+      render_price(snapshot)
+    end
   rescue ArgumentError => e
     render json: { error: e.message, total_amount: 0 }, status: :unprocessable_content
   end
@@ -59,13 +53,27 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
 
   private
 
-  # The preview has to quote the same way the booking will be created, so an
-  # override is honoured here too — but only for staff allowed to set one,
-  # otherwise the preview would show a price the create path refuses.
-  def manual_rate_override
+  def render_price(snapshot, manual_rate_override: nil)
+    tourism_tax_total = Booking.tourism_tax_total_for(snapshot.tax_lines)
+    payable_tax_total = Booking.non_tourism_tax_total_for(snapshot.tax_lines)
+
+    render json: {
+      total_amount: snapshot.room_total + payable_tax_total,
+      room_total: snapshot.room_total,
+      tax_total: payable_tax_total,
+      tourism_tax_total: tourism_tax_total,
+      tax_lines: snapshot.tax_lines,
+      nightly_rate_snapshot: snapshot.nightly_rate_snapshot,
+      manual_rate_override: manual_rate_override
+    }.compact
+  end
+
+  # Editing the final total is a pricing decision, same as the net-based
+  # override it replaces — only staff allowed to set one can drive the solver.
+  def target_total
     return unless current_user.has_permission?("override_booking_rate", hotel: current_hotel)
 
-    params[:manual_rate_override].presence
+    params[:target_total].presence
   end
 
   def parse_rate_selection(room_type, rate_plan_id)
