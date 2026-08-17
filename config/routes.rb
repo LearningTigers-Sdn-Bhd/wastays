@@ -127,6 +127,9 @@ Rails.application.routes.draw do
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
       post :cancel, on: :member
     end
+    resources :guest_registration_cards, only: [ :show, :update ], param: :token, path: "guest-registration-card" do
+      get :pdf, on: :member
+    end
     post "payments/checkout_session", to: "payments#checkout_session", as: :checkout_payment_session
     get "payments/verify", to: "payments#verify"
     post "payments/verify", to: "payments#verify", as: :verify_payment
@@ -284,6 +287,10 @@ Rails.application.routes.draw do
   # Hotel admin dashboard
   get "/hotel/settings", to: "hotel_portal/settings#index", as: :legacy_hotel_settings
   get "/hotel/:hotel_id/settings/property/hotel-details", to: "hotel_portal/profiles#edit", as: :edit_hotel_profile
+  # The album is its own page but keeps the photo endpoints under
+  # `hotel-details/photos*` — those are internal to the upload controller and
+  # nothing user-facing quotes them.
+  get "/hotel/:hotel_id/settings/property/hotel-album", to: "hotel_portal/profiles#album", as: :hotel_album
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
     resource :training_decision, only: [] do
       post :keep

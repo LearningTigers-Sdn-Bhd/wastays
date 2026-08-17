@@ -18,7 +18,7 @@ module Admin
 
       attr_accessor :account_name, :owner_name, :owner_email, :hotel_name, :sell_mode,
                     :plan_id, :preferred_channel_manager, :salesperson_id, :creation_action,
-                    :verify_owner_account
+                    :verify_owner_account, :allow_boat_information
       attr_reader :hotel, :owner, :owner_invitation, :generated_password
 
       validates :account_name, :owner_name, :owner_email, :hotel_name, :sell_mode, :plan_id,
@@ -34,6 +34,9 @@ module Admin
         super
         self.preferred_channel_manager ||= "undecided"
         self.creation_action ||= "create_only"
+        # Matches the hotels column default, so an admin who ignores the switch
+        # gets the same hotel creation behaviour as before it existed.
+        self.allow_boat_information = true if allow_boat_information.nil?
       end
 
       def save(actor:)
@@ -50,7 +53,8 @@ module Admin
             sell_mode: sell_mode,
             plan_id: plan_id,
             salesperson_id: salesperson_id.presence,
-            preferred_channel_manager: preferred_channel_manager
+            preferred_channel_manager: preferred_channel_manager,
+            allow_boat_information: allow_boat_information?
           },
           # A nil invitation is what tells CreateHotel to provision the owner
           # user directly instead of waiting for an activation link.
@@ -75,6 +79,10 @@ module Admin
 
       def verify_owner_account?
         ActiveModel::Type::Boolean.new.cast(verify_owner_account).present?
+      end
+
+      def allow_boat_information?
+        ActiveModel::Type::Boolean.new.cast(allow_boat_information).present?
       end
 
       private

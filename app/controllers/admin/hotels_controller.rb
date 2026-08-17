@@ -95,7 +95,8 @@ class Admin::HotelsController < Admin::BaseController
       :preferred_channel_manager,
       :salesperson_id,
       :creation_action,
-      :verify_owner_account
+      :verify_owner_account,
+      :allow_boat_information
     )
   end
 

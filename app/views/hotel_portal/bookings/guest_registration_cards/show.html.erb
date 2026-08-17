@@ -20,6 +20,21 @@
     <div class="grc-no-print mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700"><%= @card.errors.full_messages.to_sentence %></div>
   <% end %>
 
+  <% terms_missing = !@card.ready_for_guest? %>
+  <% if terms_missing %>
+    <div class="grc-no-print mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      <p class="font-semibold">Terms &amp; Conditions required</p>
+      <p class="mt-1">
+        This card can't be signed, printed, or sent to the guest until the property's Terms &amp; Conditions are set.
+        <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
+          <%= link_to "Set it in Settings", "#{hotel_settings_path(current_hotel, tab: "general")}#guest-registration-card", class: "font-semibold underline" %>.
+        <% else %>
+          Ask a hotel admin to add it.
+        <% end %>
+      </p>
+    </div>
+  <% end %>
+
   <section class="grc-no-print grid gap-5 lg:grid-cols-[1fr_380px]">
     <div class="space-y-5">
       <section class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
@@ -165,6 +180,12 @@
       <section>
         <% if @presenter.terms.present? %>
           <div class="grid gap-3 md:grid-cols-2">
+            <% if @presenter.terms_and_conditions.present? %>
+              <div class="rounded-md border border-border p-4 md:col-span-2">
+                <p class="text-xs font-bold uppercase text-muted-foreground">Terms &amp; Conditions</p>
+                <div class="mt-2 whitespace-pre-wrap text-sm text-foreground"><%= @presenter.terms_and_conditions %></div>
+              </div>
+            <% end %>
             <% if @presenter.cancellation_summary.present? %>
               <div class="rounded-md border border-border p-4 md:col-span-2">
                 <p class="text-xs font-bold uppercase text-muted-foreground">Cancellation Policy</p>
@@ -178,26 +199,6 @@
           <p class="rounded-md border border-dashed border-border-interactive bg-muted px-4 py-6 text-sm text-muted-foreground">Hotel terms are not configured.</p>
         <% end %>
       </section>
-
-      <div class="space-y-2">
-          <label for="guest_registration_card_internal_notes" class="text-xs font-bold uppercase text-muted-foreground">Please Note</label>
-          <% if @presenter.note_templates.any? %>
-            <div class="flex flex-wrap gap-1.5 py-1">
-              <% @presenter.note_templates.each do |template| %>
-                <%= content_tag :button, template.title, type: "button",
-                                class: "inline-flex items-center rounded-md border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors cursor-pointer",
-                                data: {
-                                  action: "click->registration-card#applyTag",
-                                  registration_card_text_param: template.content
-                                } %>
-              <% end %>
-            </div>
-          <% end %>
-          <textarea id="guest_registration_card_internal_notes" 
-                    class="w-full rounded-md border border-border bg-card p-4 min-h-[6rem] text-sm font-medium text-foreground focus:border-border-interactive focus:ring-0 resize-y" 
-                    data-registration-card-target="notesInput" 
-                    data-action="input->registration-card#onInput"><%= @booking.internal_notes %></textarea>
-        </div>
 
       <div class="space-y-4">
         <div class="space-y-2">
@@ -218,9 +219,15 @@
     <aside class="space-y-5">
       <section class="rounded-lg border border-border bg-card p-5 shadow-sm">
         <h2 class="text-lg font-bold text-foreground">Actions</h2>
-        <%= link_to "Print official form", hotel_booking_guest_registration_card_pdf_path(current_hotel, @booking), target: "_blank", rel: "noopener", class: "mt-4 flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90" %>
+        <% if terms_missing %>
+          <p class="mt-4 rounded-md border border-dashed border-border-interactive px-4 py-2.5 text-center text-xs text-muted-foreground">Set Terms &amp; Conditions to enable printing.</p>
+        <% else %>
+          <%= link_to "Print official form", hotel_booking_guest_registration_card_pdf_path(current_hotel, @booking), target: "_blank", rel: "noopener", class: "mt-4 flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90" %>
+        <% end %>
         <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-          <% if @booking.guest_email.present? %>
+          <% if terms_missing %>
+            <p class="mt-2 rounded-md border border-dashed border-border-interactive px-4 py-2.5 text-center text-xs text-muted-foreground">Set Terms &amp; Conditions to enable sending.</p>
+          <% elsif @booking.guest_email.present? %>
             <%= button_to "Email to guest", hotel_booking_guest_registration_card_email_path(current_hotel, @booking),
                   method: :post,
                   class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted",
@@ -231,9 +238,6 @@
         <% end %>
         <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
           <%= link_to "Configure displayed details", "#{hotel_settings_path(current_hotel, tab: "general")}#guest-registration-card", class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted" %>
-        <% end %>
-        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-          <%= link_to "Manage note templates", hotel_booking_guest_registration_note_templates_path(current_hotel, @booking), data: { turbo_frame: "offcanvas_drawer", offcanvas_variant: "compact-right" }, class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted" %>
         <% end %>
       </section>
 
@@ -249,13 +253,14 @@
             <img src="<%= @card.signature_data_url %>" alt="Guest signature" class="h-24 max-w-full bg-card" />
           </div>
           <%= button_to "Remove signature", hotel_booking_guest_registration_card_path(current_hotel, @booking), method: :delete, class: "mt-4 w-full rounded-md border border-red-200 bg-card px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50", form: { data: { turbo_confirm: "Remove this guest signature? The guest can sign again or sign the printed form." } } %>
+        <% elsif terms_missing %>
+          <p class="mt-4 rounded-md border border-dashed border-border-interactive bg-muted px-4 py-6 text-center text-sm text-muted-foreground">Set the property's Terms &amp; Conditions before this card can be signed.</p>
         <% else %>
           <%= form_with model: @card, url: hotel_booking_guest_registration_card_path(current_hotel, @booking), method: :patch, id: "grc-signature-form", class: "mt-4 space-y-4", data: { controller: "signature" } do |form| %>
             <%= form.hidden_field :special_requests, value: @booking.special_requests, data: { registration_card_target: "remarkHidden" } %>
-            <%= form.hidden_field :internal_notes, value: @booking.internal_notes, data: { registration_card_target: "notesHidden" } %>
             <div>
               <%= form.label :signer_name, "Signer name", class: "mb-1 block text-sm font-medium text-foreground" %>
-              <%= form.text_field :signer_name, class: "block w-full rounded-md border border-border px-3 py-2 text-sm text-foreground bg-background focus:border-border-interactive focus:outline-none focus:ring-0", required: true %>
+              <%= form.text_field :signer_name, value: @card.signer_name.presence || @presenter.guest_name, class: "block w-full rounded-md border border-border px-3 py-2 text-sm text-foreground bg-background focus:border-border-interactive focus:outline-none focus:ring-0", required: true %>
             </div>
 
             <div>
@@ -339,6 +344,12 @@
     <section>
       <% if @presenter.terms.present? %>
         <div class="grid gap-2 text-xs sm:grid-cols-2">
+          <% if @presenter.terms_and_conditions.present? %>
+            <div class="rounded-md border border-border bg-muted p-2 sm:col-span-2">
+              <p class="text-[10px] font-bold uppercase text-muted-foreground">Terms &amp; Conditions</p>
+              <div class="mt-0.5 whitespace-pre-wrap text-foreground"><%= @presenter.terms_and_conditions %></div>
+            </div>
+          <% end %>
           <% if @presenter.cancellation_summary.present? %>
             <div class="rounded-md border border-border bg-muted p-2 sm:col-span-2">
               <p class="text-[10px] font-bold uppercase text-muted-foreground">Cancellation Policy</p>
@@ -353,11 +364,6 @@
       <% end %>
     </section>
 
-    <section class="border-b border-border-interactive p-2.5">
-      <p class="mb-1 text-xs font-bold uppercase text-muted-foreground">Please Note</p>
-      <div class="min-h-[5.75rem] w-full bg-card text-sm whitespace-pre-wrap text-foreground" data-registration-card-target="notesPrint"><%= @booking.internal_notes %></div>
-    </section>
- 
     <section class="border-b border-border-interactive p-2.5">
       <p class="mb-1 text-xs font-bold uppercase text-muted-foreground">Remark</p>
       <div class="min-h-[5rem] w-full bg-card text-sm whitespace-pre-wrap text-foreground" data-registration-card-target="remarkPrint"><%= @booking.special_requests %></div>

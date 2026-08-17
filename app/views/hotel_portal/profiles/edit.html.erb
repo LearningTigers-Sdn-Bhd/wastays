@@ -1,254 +1,243 @@
 <%
   profile_presenter = @presenter
-  queued_photo_items = profile_presenter.queued_photo_items
   amenity_choices = Hotel::CATEGORIZED_HOTEL_AMENITIES.to_h do |category|
     [category[:category], category[:items].map { |amenity| [amenity[:name], amenity[:id]] }]
   end
 %>
 
-<div class="w-full space-y-3.5">
+<div class="w-full space-y-6">
   <%= render "hotel_portal/settings/property_page_header" %>
   <%= render "hotel_portal/settings/group_tabs" %>
 
   <div id="hotel-profile-section" class="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2">
-    <%= form_with model: @hotel,
-                  url: hotel_profile_path,
-                  method: :patch,
-                  local: true,
-                  data: { turbo: false },
-                  class: "grid grid-cols-1 gap-x-8 gap-y-10 lg:col-span-2 lg:grid-cols-2" do |form| %>
-      <section aria-labelledby="hotel-information-heading">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 id="hotel-information-heading" class="text-base font-semibold text-foreground">Hotel Information</h2>
-            <p class="mt-2 text-sm text-muted-foreground">Manage the property’s public identity, amenities, and billing reference.</p>
-          </div>
-          <%= render PanelsUI::Button.new(
-                label: "See Hotel",
-                href: hotel_path(@hotel),
-                variant: :secondary,
-                size: :sm,
-                target: "_blank",
-                rel: "noopener",
-                class: "shrink-0") %>
-        </div>
-
-        <div class="mt-5 grid gap-4 sm:grid-cols-2">
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :name,
-                label: "Hotel Name",
-                required: true) do |field| %>
-            <% field.with_input %>
-          <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :unique_id,
-                label: "Hotel Code",
-                hint: "Quote this code when contacting WAStays support. It never changes.",
-                readonly: true) do |field| %>
-            <% field.with_input(value: @hotel.unique_id) %>
-          <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :star_rating,
-                label: "Star Rating") do |field| %>
-            <% field.with_select_menu(
-                 profile_presenter.star_rating_options,
-                 prompt: "Select rating",
-                 selected: @hotel.star_rating) %>
-          <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :description,
-                label: "Description",
-                hint: "Summarize what makes this property distinctive for guests.",
-                class: "sm:col-span-2") do |field| %>
-            <% field.with_text_area(
-                 rows: 4,
-                 placeholder: "Describe the property’s atmosphere, highlights, and guest experience.") %>
-          <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :amenities,
-                label: "Property Amenities",
-                hint: "Search and select the amenities available at this property.",
-                class: "sm:col-span-2") do |field| %>
-            <% field.with_multi_select(
-                 amenity_choices,
-                 selected: @hotel.amenities,
-                 prompt: "Search amenities",
-                 empty_text: "No amenities found",
-                 all_selected_text: "All amenities selected") %>
-          <% end %>
-
-          <%= render PanelsUI::MetricCard.new(
-                label: "Billing Reference",
-                value: number_to_currency(
-                  profile_presenter.setup_fee_amount,
-                  unit: "#{profile_presenter.setup_fee_currency} ",
-                  precision: 2),
-                detail: "Effective setup fee for this property",
-                icon: "receipt",
-                density: :loose,
-                class: "sm:col-span-2",
-                data: { testid: "billing-reference" }) %>
-        </div>
-      </section>
-
-      <section aria-labelledby="hotel-location-heading">
+    <%= render layout: "section_form", locals: { hotel: @hotel, section: "hotel-information" } do |form| %>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 id="hotel-location-heading" class="text-base font-semibold text-foreground">Hotel Location</h2>
-          <p class="mt-2 text-sm text-muted-foreground">Keep the address and map destination accurate for guests and channel distribution.</p>
+          <h2 id="hotel-information-heading" class="text-base font-semibold text-foreground">Hotel Information</h2>
+          <p class="mt-2 text-sm text-muted-foreground">Manage the property’s public identity and amenities.</p>
         </div>
+        <%= render PanelsUI::Button.new(
+              label: "See Hotel",
+              href: hotel_path(@hotel),
+              variant: :secondary,
+              size: :sm,
+              target: "_blank",
+              rel: "noopener",
+              class: "shrink-0") %>
+      </div>
 
-        <div class="mt-5 grid gap-4 sm:grid-cols-2">
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :address,
-                label: "Address",
-                class: "sm:col-span-2") do |field| %>
-            <% field.with_text_area(rows: 4, placeholder: "e.g., 12 Jalan Sultan Ismail\n50250 Kuala Lumpur") %>
-          <% end %>
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :name,
+              label: "Hotel Name",
+              required: true,
+              class: "sm:col-span-2") do |field| %>
+          <% field.with_input %>
+        <% end %>
 
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :city,
-                label: "City",
-                required: true) do |field| %>
-            <% field.with_input(placeholder: "e.g., Kuala Lumpur") %>
-          <% end %>
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :unique_id,
+              label: "Hotel Code",
+              hint: "Quote this code when contacting WAStays support. It never changes.",
+              readonly: true) do |field| %>
+          <% field.with_input(value: @hotel.unique_id) %>
+        <% end %>
 
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :country,
-                label: "Country",
-                required: true) do |field| %>
-            <% field.with_input %>
-          <% end %>
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :star_rating,
+              label: "Star Rating") do |field| %>
+          <% field.with_select_menu(
+               profile_presenter.star_rating_options,
+               prompt: "Select rating",
+               selected: @hotel.star_rating) %>
+        <% end %>
 
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :google_map_link,
-                label: "Google Maps URL",
-                hint: "Paste the property’s public Google Maps place link.",
-                class: "sm:col-span-2") do |field| %>
-            <% field.with_input(type: :url, placeholder: "https://www.google.com/maps/place/…") %>
-          <% end %>
-        </div>
-      </section>
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :description,
+              label: "Description",
+              hint: "Summarize what makes this property distinctive for guests.",
+              class: "sm:col-span-2") do |field| %>
+          <% field.with_text_area(
+               rows: 4,
+               placeholder: "Describe the property’s atmosphere, highlights, and guest experience.") %>
+        <% end %>
 
-      <%# Collected during onboarding but never editable afterwards until now, so
-          the same four numbers are kept together here. %>
-      <section aria-labelledby="hotel-contact-heading">
-        <div>
-          <h2 id="hotel-contact-heading" class="text-base font-semibold text-foreground">Property Contact</h2>
-          <p class="mt-2 text-sm text-muted-foreground">How guests and WAStays reach the property.</p>
-        </div>
-
-        <div class="mt-5 grid gap-4 sm:grid-cols-2">
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :contact_email,
-                label: "Contact Email") do |field| %>
-            <% field.with_input(type: :email, placeholder: "e.g., frontdesk@yourhotel.com") %>
-          <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :contact_phone,
-                label: "Contact Phone") do |field| %>
-            <% field.with_input(type: :tel, placeholder: "e.g., 012-827 3581") %>
-          <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :fixed_line_number,
-                label: "Fixed Line Number",
-                hint: "The landline answered at the front desk.") do |field| %>
-            <% field.with_input(type: :tel, placeholder: "e.g., 03-2144 1234") %>
-          <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :whatsapp_number,
-                label: "WhatsApp Number",
-                hint: "Include the international dialling code.") do |field| %>
-            <% field.with_input(type: :tel, placeholder: "e.g., +60 12-827 3581") %>
-          <% end %>
-        </div>
-      </section>
-
-      <%# The numbers that identify the business itself, kept apart from the taxes
-          page: those settings say what the property charges, these say who it is.
-          The registration number for an individual tax lives with that tax. %>
-      <section aria-labelledby="business-registration-heading">
-        <div>
-          <h2 id="business-registration-heading" class="text-base font-semibold text-foreground">Business Registration</h2>
-          <p class="mt-2 text-sm text-muted-foreground">The company numbers that appear on the property’s invoices and receipts.</p>
-        </div>
-
-        <div class="mt-5 grid gap-4 sm:grid-cols-2">
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :tin,
-                label: "TIN",
-                hint: "Tax Identification Number issued by LHDN.") do |field| %>
-            <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., C1234567890", class: "font-mono uppercase") %>
-          <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :ssm_number,
-                label: "SSM No.",
-                hint: "Company registration number.") do |field| %>
-            <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., 202301012345 (1234567-A)", class: "font-mono uppercase") %>
-          <% end %>
-        </div>
-      </section>
-
-      <div class="flex justify-end lg:col-span-2">
-        <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :md) do %>
-          Save Settings
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :amenities,
+              label: "Property Amenities",
+              hint: "Search and select the amenities available at this property.",
+              class: "sm:col-span-2") do |field| %>
+          <% field.with_multi_select(
+               amenity_choices,
+               selected: @hotel.amenities,
+               prompt: "Search amenities",
+               empty_text: "No amenities found",
+               all_selected_text: "All amenities selected") %>
         <% end %>
       </div>
     <% end %>
 
-    <section class="border-border lg:col-span-2 lg:border-t lg:pt-2"
-             aria-labelledby="hotel-album-heading"
-             data-controller="hotel-photo-queue"
-             data-hotel-photo-queue-upload-url-value="<%= hotel_profile_photo_queue_path(@hotel) %>"
-             data-hotel-photo-queue-clear-url-value="<%= hotel_clear_profile_photo_queue_path(@hotel) %>"
-             data-hotel-photo-queue-commit-url-value="<%= hotel_commit_profile_photo_queue_path(@hotel) %>"
-             data-hotel-photo-queue-remove-url-template-value="<%= hotel_profile_photo_queue_item_path(@hotel, "__SIGNED_ID__") %>"
-             data-hotel-photo-queue-existing-count-value="<%= @hotel.photos.count %>"
-             data-hotel-photo-queue-max-count-value="<%= Hotel::MAX_PHOTOS %>"
-             data-action="change->hotel-photo-queue#queueSelectedFiles">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 id="hotel-album-heading" class="text-base font-semibold text-foreground">Hotel Album</h2>
-          <p class="mt-2 text-sm text-muted-foreground">Upload photos, choose a featured image, and manage the album guests see for this property.</p>
-        </div>
-        <%= render PanelsUI::Button.new(
-              variant: :primary,
-              size: :sm,
-              command: "show-modal",
-              commandfor: "hotel-photo-upload-sheet",
-              class: "shrink-0") do %>
-          <%= app_icon "upload", class: "size-4", aria: { hidden: "true" } %>
-          <span>Upload Photos</span>
+    <%= render layout: "section_form", locals: { hotel: @hotel, section: "hotel-location" } do |form| %>
+      <div>
+        <h2 id="hotel-location-heading" class="text-base font-semibold text-foreground">Hotel Location</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Keep the address and map destination accurate for guests and channel distribution.</p>
+      </div>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :address,
+              label: "Address",
+              class: "sm:col-span-2") do |field| %>
+          <% field.with_text_area(rows: 4, placeholder: "e.g., 12 Jalan Sultan Ismail\n50250 Kuala Lumpur") %>
         <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :city,
+              label: "City",
+              required: true) do |field| %>
+          <% field.with_input(placeholder: "e.g., Kuala Lumpur") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :country,
+              label: "Country",
+              required: true) do |field| %>
+          <% field.with_combobox(
+               country_options.map { |country| [ country, country ] },
+               prompt: "Search and select a country",
+               selected: @hotel.country,
+               max_options: 50,
+               empty_text: "No countries found") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :google_map_link,
+              label: "Google Maps URL",
+              hint: "Paste the property’s public Google Maps place link.",
+              class: "sm:col-span-2") do |field| %>
+          <% field.with_input(type: :url, placeholder: "https://www.google.com/maps/place/…") %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# Collected during onboarding but never editable afterwards until now, so
+        the same four numbers are kept together here. %>
+    <%= render layout: "section_form", locals: { hotel: @hotel, section: "property-contact" } do |form| %>
+      <div>
+        <h2 id="property-contact-heading" class="text-base font-semibold text-foreground">Property Contact</h2>
+        <p class="mt-2 text-sm text-muted-foreground">How guests and WAStays reach the property.</p>
+      </div>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :contact_email,
+              label: "Contact Email") do |field| %>
+          <% field.with_input(type: :email, placeholder: "e.g., frontdesk@yourhotel.com") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :contact_phone,
+              label: "Contact Phone") do |field| %>
+          <% field.with_input(type: :tel, placeholder: "e.g., 012-827 3581") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :fixed_line_number,
+              label: "Fixed Line Number",
+              hint: "The landline answered at the front desk.") do |field| %>
+          <% field.with_input(type: :tel, placeholder: "e.g., 03-2144 1234") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :whatsapp_number,
+              label: "WhatsApp Number",
+              hint: "Include the international dialling code.") do |field| %>
+          <% field.with_input(type: :tel, placeholder: "e.g., +60 12-827 3581") %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# The numbers that identify the business itself, kept apart from the taxes
+        page: those settings say what the property charges, these say who it is.
+        The registration number for an individual tax lives with that tax. %>
+    <%= render layout: "section_form", locals: { hotel: @hotel, section: "business-registration" } do |form| %>
+      <div>
+        <h2 id="business-registration-heading" class="text-base font-semibold text-foreground">Business Registration</h2>
+        <p class="mt-2 text-sm text-muted-foreground">The company numbers that appear on the property’s invoices and receipts.</p>
+      </div>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :tin,
+              label: "TIN",
+              hint: "Tax Identification Number issued by LHDN.") do |field| %>
+          <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., C1234567890", class: "font-mono uppercase") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :ssm_number,
+              label: "SSM No.",
+              hint: "Company registration number.") do |field| %>
+          <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., 202301012345 (1234567-A)", class: "font-mono uppercase") %>
+        <% end %>
+
+        <%# The council that licenses the property to trade. Free text: every
+            local authority abbreviates itself differently and properties quote
+            the acronym their licence carries. %>
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :local_government_name,
+              label: "Local government name",
+              hint: "The local authority that issued the premises licence.") do |field| %>
+          <% field.with_input(autocomplete: "off", placeholder: "e.g., DBKK, MDP, MPSJ, DBKL") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+              form: form,
+              attribute: :local_government_license_number,
+              label: "License number",
+              hint: "The licence number issued by that local authority.") do |field| %>
+          <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., PL/2026/001234", class: "font-mono uppercase") %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# Read-only: what WAStays charges this property, not something the
+        property sets. It sits last so the editable fields come first, and it
+        has no Save of its own because there is nothing here to change. %>
+    <section id="billing-reference" class="lg:col-span-2" aria-labelledby="billing-reference-heading">
+      <div>
+        <h2 id="billing-reference-heading" class="text-base font-semibold text-foreground">Billing Reference</h2>
+        <p class="mt-2 text-sm text-muted-foreground">What WAStays bills this property. Contact support if this looks wrong.</p>
       </div>
 
       <div class="mt-5">
-        <%= render "published_photos", hotel: @hotel %>
+        <%= render PanelsUI::MetricCard.new(
+              label: "Billing Reference",
+              value: number_to_currency(
+                profile_presenter.setup_fee_amount,
+                unit: "#{profile_presenter.setup_fee_currency} ",
+                precision: 2),
+              detail: "Effective setup fee for this property",
+              icon: "receipt",
+              density: :loose,
+              data: { testid: "billing-reference" }) %>
       </div>
-
-      <%= render "photo_upload_sheet", hotel: @hotel, queued_photo_items: queued_photo_items %>
     </section>
   </div>
 </div>

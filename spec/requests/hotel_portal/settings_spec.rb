@@ -103,6 +103,17 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(grc_settings["class"]).not_to include("border-t", "bg-card", "shadow-sm")
     end
 
+    it "renders the guest registration card terms and conditions field" do
+      hotel.update!(guest_registration_card_terms: "Valid photo ID is required at check-in.")
+
+      get hotel_general_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      textarea = Nokogiri::HTML(response.body).at_css("textarea[name='hotel[guest_registration_card_terms]']")
+      expect(textarea).to be_present
+      expect(textarea.text).to include("Valid photo ID is required at check-in.")
+    end
+
     it "renders General as a two-column section workspace with Panels UI controls" do
       get hotel_general_settings_path(hotel)
 
@@ -396,6 +407,16 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone room_type check_in])
+    end
+
+    it "updates the guest registration card terms and conditions" do
+      patch hotel_general_settings_path(hotel), params: {
+        form_id: "hotel_settings",
+        hotel: { guest_registration_card_terms: "Valid photo ID is required at check-in." }
+      }
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(hotel.reload.guest_registration_card_terms).to eq("Valid photo ID is required at check-in.")
     end
 
     it "renders the Boat Settings tab with its slots and meal times" do

@@ -6,6 +6,11 @@ class HotelPortal::Bookings::GuestRegistrationCardPdfsController < HotelPortal::
   before_action :set_card
 
   def show
+    unless @card.ready_for_guest?
+      return redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking),
+        alert: "Set a Terms & Conditions policy in Settings before printing this card."
+    end
+
     presenter = HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking)
     pdf_bytes = GuestRegistrationCardPdfService.new(@card, @booking, presenter).generate
 

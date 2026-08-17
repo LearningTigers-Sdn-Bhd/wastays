@@ -24,6 +24,19 @@ RSpec.describe Admin::Hotels::UpdateService, type: :service do
       expect(hotel.salesperson.name).to eq("New Salesperson")
     end
 
+    context "when boat features are switched on after creation" do
+      let(:hotel) { create(:hotel, account: account, name: "Old Name", allow_boat_information: false) }
+      let(:hotel_params) { { allow_boat_information: true } }
+
+      it "seeds the default meal times and timetable" do
+        expect(subject.call.success?).to be true
+
+        expect(hotel.reload.hotel_boat_setting.lunch_time.strftime("%H:%M")).to eq("12:00")
+        expect(hotel.hotel_boat_schedules.boat_in.in_service_order.map(&:time_of_day)).to eq(%w[09:00 12:00 17:00])
+        expect(hotel.hotel_boat_schedules.boat_out.in_service_order.map(&:time_of_day)).to eq(%w[10:00 13:00 18:00])
+      end
+    end
+
     context "when hotel update fails" do
       let(:hotel_params) { { name: "" } }
 

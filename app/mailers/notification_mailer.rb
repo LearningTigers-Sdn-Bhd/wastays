@@ -80,16 +80,15 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  # Links to the guest's own copy of the card rather than attaching a
+  # generated PDF: the guest can review, sign, and download it themselves once
+  # signed, and the send no longer depends on PDF rendering succeeding inside
+  # a background job to reach the guest at all.
   def guest_registration_card(delivery)
     assign_delivery(delivery)
     @card = @booking.guest_registration_card
+    @card_url = guest_registration_card_url(@card.public_token)
     @nights = (@booking.check_out.to_date - @booking.check_in.to_date).to_i
-    attachments["wastays-guest-registration-card-#{@booking.confirmation_token}.pdf"] = {
-      mime_type: "application/pdf",
-      content: GuestRegistrationCardPdfService.new(
-        @card, @booking, HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking)
-      ).generate
-    }
 
     mail(
       to: @payload.fetch(:recipient_email),
