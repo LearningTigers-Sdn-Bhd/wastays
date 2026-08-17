@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -509,6 +509,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_090000) do
     t.integer "children", default: 0
     t.string "confirmation_token", null: false
     t.datetime "created_at", null: false
+    t.boolean "created_by_staff", default: false, null: false
     t.string "currency", default: "MYR", null: false
     t.string "deposit_status"
     t.string "external_reference"
@@ -518,7 +519,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_090000) do
     t.string "guarantee_method"
     t.string "guest_country"
     t.string "guest_document_type"
-    t.string "guest_email", null: false
+    t.string "guest_email"
     t.string "guest_gender"
     t.string "guest_home_address"
     t.string "guest_name", null: false

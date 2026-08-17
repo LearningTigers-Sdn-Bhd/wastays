@@ -37,6 +37,7 @@ module Bookings
       NightAudits::OperationalChangeGuard.call!(hotel: @hotel, action: :create_manual_booking)
       normalize_scheduled_stay!
       booking = @hotel.bookings.build(@params)
+      booking.created_by_staff = true
       selected_guest = selected_guest_from_param
       room_type = @hotel.room_types.find(@room_type_id)
       rate_plan = rate_plan_from_param(room_type)

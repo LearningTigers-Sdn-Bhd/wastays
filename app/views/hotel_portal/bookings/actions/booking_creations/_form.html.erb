@@ -122,11 +122,12 @@ end %>
                            data: { booking_guest_autofill_target: "nameField" }) %>
                     <% end %>
                     <div class="<%= quick ? "contents" : "grid gap-x-3 gap-y-4 md:grid-cols-2" %>" data-role="guest-contact-fields">
-                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_email, label: "Email") do |field| %>
+                      <%# The desk often has only a phone number, so the address is
+                          optional here. Phone carries the contact requirement. %>
+                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_email, label: "Email", hint: "Optional") do |field| %>
                         <% field.with_autocomplete(
                              endpoint: search_hotel_guests_path(current_hotel),
                              type: :email,
-                             required: true,
                              placeholder: "guest@example.com",
                              data: { booking_guest_autofill_target: "emailField" }) %>
                       <% end %>

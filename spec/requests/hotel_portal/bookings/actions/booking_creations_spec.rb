@@ -293,6 +293,25 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(Booking.last.guest_gender).to eq("female")
     end
 
+    it "takes a booking from a phone number alone" do
+      expect {
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(guest_email: "") }
+      }.to change(Booking, :count).by(1)
+
+      booking = Booking.last
+      expect(booking.guest_email).to be_nil
+      expect(booking.created_by_staff).to be(true)
+      expect(booking.guest_phone).to eq("+60123456789")
+    end
+
+    it "still requires a phone number" do
+      expect {
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(guest_email: "", guest_phone: "") }
+      }.not_to change(Booking, :count)
+    end
+
     context "when the stay is priced by hand" do
       it "books the typed room net and taxes it, for staff holding the permission" do
         grant_permission(role, "override_booking_rate")
