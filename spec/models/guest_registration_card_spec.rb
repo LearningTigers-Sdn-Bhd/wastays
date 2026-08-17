@@ -64,6 +64,52 @@ RSpec.describe GuestRegistrationCard, type: :model do
     end
   end
 
+  describe "public_token" do
+    it "is generated on create and never blank" do
+      card = create(:guest_registration_card)
+
+      expect(card.public_token).to be_present
+      expect(card.public_token.length).to eq(40)
+    end
+
+    it "is not regenerated once assigned" do
+      card = create(:guest_registration_card)
+      original = card.public_token
+
+      card.update!(display_fields_snapshot: %w[email])
+
+      expect(card.reload.public_token).to eq(original)
+    end
+  end
+
+  describe "#capture_terms_snapshot_preview" do
+    it "freezes the hotel's fixed terms and conditions alongside the cancellation policy" do
+      hotel = create(:hotel, guest_registration_card_terms: "Valid ID required at check-in.")
+      card = create(:guest_registration_card, hotel: hotel, booking: create(:booking, hotel: hotel))
+
+      snapshot = card.capture_terms_snapshot!
+
+      expect(snapshot["terms_and_conditions"]).to eq("Valid ID required at check-in.")
+    end
+
+    it "omits the key when the hotel has not set one" do
+      hotel = create(:hotel, guest_registration_card_terms: nil)
+      card = create(:guest_registration_card, hotel: hotel, booking: create(:booking, hotel: hotel))
+
+      expect(card.capture_terms_snapshot_preview).not_to have_key("terms_and_conditions")
+    end
+
+    it "keeps a signed card's terms unchanged after the hotel edits its policy" do
+      hotel = create(:hotel, guest_registration_card_terms: "Original terms.")
+      card = create(:guest_registration_card, :signed, hotel: hotel, booking: create(:booking, hotel: hotel))
+      card.capture_terms_snapshot!
+
+      hotel.update!(guest_registration_card_terms: "Updated terms.")
+
+      expect(card.reload.terms_snapshot["terms_and_conditions"]).to eq("Original terms.")
+    end
+  end
+
   describe "display fields" do
     it "uses every supported field by default" do
       card = build(:guest_registration_card)

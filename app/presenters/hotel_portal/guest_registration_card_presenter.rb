@@ -14,6 +14,13 @@ module HotelPortal
       @terms ||= @card.signed? ? @card.terms_snapshot : @card.capture_terms_snapshot_preview
     end
 
+    # The hotel's own fixed wording, set once in Settings rather than picked or
+    # typed per booking. Snapshotted the same way the cancellation policy is, so
+    # a later edit in Settings never changes what an already-signed guest agreed to.
+    def terms_and_conditions
+      terms&.dig("terms_and_conditions")
+    end
+
     # Tier table first, the hotel's own wording beneath it. Cards signed before the
     # policy became structured still carry prose, and fall back to it.
     def cancellation_summary

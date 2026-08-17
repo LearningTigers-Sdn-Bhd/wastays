@@ -127,6 +127,9 @@ Rails.application.routes.draw do
     resources :pre_checkins, only: [ :show, :update ], param: :token, path: "pre-checkin" do
       post :cancel, on: :member
     end
+    resources :guest_registration_cards, only: [ :show, :update ], param: :token, path: "guest-registration-card" do
+      get :pdf, on: :member
+    end
     post "payments/checkout_session", to: "payments#checkout_session", as: :checkout_payment_session
     get "payments/verify", to: "payments#verify"
     post "payments/verify", to: "payments#verify", as: :verify_payment

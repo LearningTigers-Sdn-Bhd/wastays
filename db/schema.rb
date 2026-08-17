@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1130,6 +1130,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
     t.datetime "created_at", null: false
     t.jsonb "display_fields_snapshot"
     t.bigint "hotel_id", null: false
+    t.string "public_token"
     t.text "signature_data_url"
     t.datetime "signed_at"
     t.string "signer_name"
@@ -1138,6 +1139,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
     t.datetime "updated_at", null: false
     t.index ["booking_id"], name: "index_guest_registration_cards_on_booking_id", unique: true
     t.index ["hotel_id"], name: "index_guest_registration_cards_on_hotel_id"
+    t.index ["public_token"], name: "index_guest_registration_cards_on_public_token", unique: true
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'signed'::character varying]::text[])", name: "guest_registration_cards_status_allowed"
   end
 
@@ -1593,6 +1595,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
     t.integer "group_booking_deposit_percentage", default: 100, null: false
     t.integer "group_booking_request_hold_hours", default: 48, null: false
     t.jsonb "guest_registration_card_fields"
+    t.text "guest_registration_card_terms"
     t.string "hotel_prefix"
     t.string "local_government_license_number"
     t.string "local_government_name"
