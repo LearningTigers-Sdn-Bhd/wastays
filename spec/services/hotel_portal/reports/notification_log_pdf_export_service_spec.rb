@@ -16,8 +16,8 @@ RSpec.describe HotelPortal::Reports::NotificationLogPdfExportService do
 
     expect(pdf).to start_with("%PDF")
     expect(text).to include(
-      "Harbour View Hotel", "Notification Logs", "Period", "01 Aug 2026 - 17 Aug 2026",
-      "Prepared by", "Operations Manager", "Delivery Attempts", "Confidential", "Page 1 of 1"
+      "Harbour View Hotel", "Notification Logs", "PERIOD", "01 Aug 2026 - 17 Aug 2026",
+      "PREPARED BY", "Operations Manager", "Delivery Attempts", "Confidential", "Page 1 of 1"
     )
   end
 end

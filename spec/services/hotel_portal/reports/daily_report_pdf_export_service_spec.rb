@@ -97,7 +97,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     expect(overview).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "Net Revenue", "Net Cash")
     expect(overview).not_to include("Daily Breakdown", "Cashier Summary")
     expect(overview).to include(
-      "Daily Report", "Overview", "Period", "Generated", "Prepared by", "Aina Salleh",
+      "Daily Report", "Overview", "PERIOD", "GENERATED", "PREPARED BY", "Aina Salleh",
       "Confidential", "Page 1 of"
     )
 

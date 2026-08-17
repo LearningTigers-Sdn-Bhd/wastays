@@ -6,7 +6,8 @@ require "prawn/table"
 module HotelPortal
   module Reports
     class ExtraChargePdfExportService
-      COLORS = Exports::PdfTheme::COLORS
+      THEME = Exports::PdfTheme
+      COLORS = THEME::COLORS
 
       DETAIL_HEADERS = [
         "Posting Date", "Booking Ref", "Folio Ref", "Guest",
@@ -20,7 +21,7 @@ module HotelPortal
       end
 
       def generate
-        pdf = Prawn::Document.new(page_size: "A4", page_layout: :landscape, margin: [ 40, 32, 42, 32 ])
+        pdf = Prawn::Document.new(page_size: "A4", page_layout: :landscape, margin: THEME::PAGE_MARGIN)
         Exports::PdfTheme.configure_font(pdf)
         frame = Exports::PdfReportFrame.new(
           pdf: pdf,
@@ -33,7 +34,7 @@ module HotelPortal
         frame.draw_header
         draw_summary(pdf)
         draw_detail(pdf)
-        frame.stamp_footer
+        frame.stamp_page_furniture
         pdf.render
       end
 
@@ -43,23 +44,23 @@ module HotelPortal
         table = pdf.make_table(
           [ [ "Transactions", "Total Amount" ], [ transaction_count.to_s, amount_label(total_amount) ] ],
           width: pdf.bounds.width,
-          cell_style: { padding: [ 8, 9 ], border_color: COLORS[:border] }
+          cell_style: { padding: THEME::SUMMARY_CELL_PADDING, border_color: COLORS[:border] }
         )
         table.row(0).style(
           background_color: COLORS[:primary_light], text_color: COLORS[:muted],
-          size: 8, font_style: :bold, borders: [ :bottom ]
+          size: THEME::TYPE[:small], font_style: :bold, borders: [ :bottom ]
         )
-        table.row(1).style(text_color: COLORS[:ink], size: 12, font_style: :bold, borders: [])
+        table.row(1).style(text_color: COLORS[:ink], size: THEME::TYPE[:heading], font_style: :bold, borders: [])
         table.column(1).style(align: :right)
         table.draw
-        pdf.move_down 16
+        pdf.move_down THEME::SPACE[:lg]
       end
 
       def draw_detail(pdf)
         draw_section_heading(pdf, "Charge Details")
         if @report.rows.empty?
           draw_empty_state(pdf)
-          pdf.move_down 10
+          pdf.move_down THEME::SPACE[:sm]
           draw_total_table(pdf)
           return
         end
@@ -76,8 +77,8 @@ module HotelPortal
           width: pdf.bounds.width,
           column_widths: detail_column_widths(pdf),
           cell_style: {
-            size: 8.5,
-            padding: [ 5, 6 ],
+            size: THEME::TYPE[:small],
+            padding: THEME::TABLE_CELL_PADDING,
             border_color: COLORS[:border],
             borders: [ :bottom ],
             text_color: COLORS[:ink],
@@ -86,7 +87,7 @@ module HotelPortal
         )
         table.row(0).style(
           background_color: COLORS[:ink], text_color: COLORS[:white],
-          font_style: :bold, size: 8, borders: []
+          font_style: :bold, size: THEME::TYPE[:small], borders: []
         )
         (rows.size - 1).times do |index|
           table.row(index + 1).background_color = COLORS[:stripe] if index.odd?
@@ -105,8 +106,8 @@ module HotelPortal
           width: pdf.bounds.width,
           column_widths: detail_column_widths(pdf),
           cell_style: {
-            size: 8.5,
-            padding: [ 5, 6 ],
+            size: THEME::TYPE[:small],
+            padding: THEME::TABLE_CELL_PADDING,
             border_color: COLORS[:primary],
             borders: [ :top ],
             text_color: COLORS[:ink],
@@ -153,13 +154,13 @@ module HotelPortal
 
       def draw_section_heading(pdf, title)
         pdf.fill_color COLORS[:ink]
-        pdf.text title, size: 11, style: :bold
-        pdf.move_down 6
+        pdf.text title, size: THEME::TYPE[:heading], style: :bold
+        pdf.move_down THEME::SPACE[:sm]
       end
 
       def draw_empty_state(pdf)
         pdf.fill_color COLORS[:muted]
-        pdf.text "No extra charge transactions found for this period.", size: 9, style: :italic
+        pdf.text "No extra charge transactions found for this period.", size: THEME::TYPE[:small], style: :italic
         pdf.fill_color COLORS[:ink]
       end
 

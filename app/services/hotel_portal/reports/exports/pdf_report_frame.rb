@@ -9,95 +9,203 @@ module HotelPortal
         FOOTER_Y = -9
         HOTEL_LOGO_SIZE = 44
         WASTAYS_LOGO_WIDTH = 50
+        LOGO_GUTTER = PdfTheme::SPACE[:md]
+        NAME_ADDRESS_GAP = PdfTheme::SPACE[:xs]
+        # The title binds to the metadata strip it describes, so it sits closer to
+        # what follows it than to the masthead rule above.
+        MASTHEAD_RULE_GAP = PdfTheme::SPACE[:md]
+        # Tight to the masthead rule: the font's own leading carries most of the air above
+        # the title, so this only needs the smallest step on the grid.
+        TITLE_GAP_ABOVE = PdfTheme::SPACE[:xs]
+        TITLE_SUBTITLE_GAP = PdfTheme::SPACE[:xs]
+        TITLE_GAP_BELOW = PdfTheme::SPACE[:xs]
+        METADATA_RULE_GAP = PdfTheme::SPACE[:sm]
+        METADATA_LABEL_GAP = PdfTheme::SPACE[:xs]
+        METADATA_GUTTER = PdfTheme::SPACE[:xl]
+        METADATA_GAP_BELOW = PdfTheme::SPACE[:xl]
+        # Small labels need tracking to stay legible; Prawn cannot reach OpenType small
+        # caps, so the distinction from values is carried by case and spacing instead.
+        METADATA_LABEL_TRACKING = 0.6
+        EYEBROW_GAP = PdfTheme::SPACE[:xs]
+        # Sits in the top margin, mirroring how the footer sits below the content box.
+        RUNNING_HEAD_Y = 18
 
-        def initialize(pdf:, hotel:, report_name:, period_label:, prepared_by:, period_label_title: "Period", subtitle: nil, generated_at: Time.current)
+        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current)
           @pdf = pdf
           @hotel = hotel
           @report_name = report_name
           @subtitle = subtitle
+          @eyebrow = eyebrow
           @period_label_title = period_label_title
           @period_label = period_label
           @prepared_by = prepared_by
+          @metadata = metadata
           @generated_at = generated_at
         end
 
         def draw_header
+          @pdf.line_width PdfTheme::RULE_WIDTH
           draw_hotel_identity
           draw_report_identity
           draw_metadata
         end
 
+        # Call once, after all content is drawn.
+        def stamp_page_furniture
+          stamp_running_head
+          stamp_footer
+        end
+
+        # Continuation pages carry no masthead, so on their own they identify neither the
+        # hotel nor the report. A detached page 2 needs to say what it belongs to.
+        def stamp_running_head
+          label = [ @hotel.name, @eyebrow.presence || @report_name, @period_label ].compact_blank.join("  ·  ")
+          @pdf.repeat(->(page) { page > 1 }) do
+            @pdf.fill_color PdfTheme::COLORS[:muted]
+            @pdf.draw_text label, at: [ 0, @pdf.bounds.top + RUNNING_HEAD_Y ], size: PdfTheme::TYPE[:micro]
+          end
+        end
+
         def stamp_footer
           @pdf.repeat(:all) do
             @pdf.stroke_color PdfTheme::COLORS[:border]
-            @pdf.line_width 0.5
+            @pdf.line_width PdfTheme::RULE_WIDTH
             @pdf.stroke_horizontal_line 0, @pdf.bounds.width, at: 2
             @pdf.fill_color PdfTheme::COLORS[:muted]
-            @pdf.draw_text "Confidential", at: [ 0, FOOTER_Y ], size: 7
+            @pdf.draw_text "Confidential", at: [ 0, FOOTER_Y ], size: PdfTheme::TYPE[:micro]
             draw_wastays_attribution
           end
           @pdf.number_pages(
             "Page <page> of <total>",
-            at: [ @pdf.bounds.width - 90, FOOTER_Y ], width: 90, align: :right, size: 7,
+            at: [ @pdf.bounds.width - 90, FOOTER_Y ], width: 90, align: :right, size: PdfTheme::TYPE[:micro],
             color: PdfTheme::COLORS[:muted]
           )
         end
 
         private
 
+        # Advances by what the text actually occupies rather than a fixed constant, so a
+        # two-line hotel name or address can never collide with the rule below it.
         def draw_hotel_identity
           top = @pdf.cursor
           logo = hotel_logo
-          text_left = logo ? HOTEL_LOGO_SIZE + 12 : 0
+          text_left = logo ? HOTEL_LOGO_SIZE + LOGO_GUTTER : 0
+          text_width = @pdf.bounds.width - text_left
+          name = @hotel.name.to_s
+          address = hotel_address
 
           @pdf.image logo, at: [ 0, top ], fit: [ HOTEL_LOGO_SIZE, HOTEL_LOGO_SIZE ] if logo
+
           @pdf.fill_color PdfTheme::COLORS[:ink]
-          @pdf.text_box @hotel.name.to_s, at: [ text_left, top ], width: @pdf.bounds.width - text_left,
-            height: 18, size: 12, style: :bold, overflow: :shrink_to_fit, min_font_size: 9
-          @pdf.fill_color PdfTheme::COLORS[:muted]
-          @pdf.text_box hotel_address, at: [ text_left, top - 21 ], width: @pdf.bounds.width - text_left,
-            height: 24, size: 8, leading: 2, overflow: :shrink_to_fit, min_font_size: 6
-          @pdf.move_down [ HOTEL_LOGO_SIZE, 48 ].max
-          @pdf.move_down 8
+          name_size = PdfTheme::TYPE[:subhead]
+          name_height = @pdf.height_of(name, width: text_width, size: name_size, style: :bold)
+          @pdf.text_box name, at: [ text_left, top ], width: text_width, height: name_height,
+            size: name_size, style: :bold
+          text_bottom = top - name_height
+
+          if address.present?
+            @pdf.fill_color PdfTheme::COLORS[:muted]
+            address_size = PdfTheme::TYPE[:small]
+            address_top = text_bottom - NAME_ADDRESS_GAP
+            address_height = @pdf.height_of(address, width: text_width, size: address_size, leading: 2)
+            @pdf.text_box address, at: [ text_left, address_top ], width: text_width,
+              height: address_height, size: address_size, leading: 2
+            text_bottom = address_top - address_height
+          end
+
+          @pdf.move_cursor_to [ text_bottom, logo ? top - HOTEL_LOGO_SIZE : text_bottom ].min
+          @pdf.move_down MASTHEAD_RULE_GAP
           @pdf.stroke_color PdfTheme::COLORS[:border]
           @pdf.stroke_horizontal_rule
-          @pdf.move_down 14
+          @pdf.move_down TITLE_GAP_ABOVE
         end
 
+        # The title carries the display face; the hotel name above it stays in the text
+        # face, so the two are separated by typeface rather than by size alone. An eyebrow
+        # lets a document whose title is an identifier still name what kind of document it is.
         def draw_report_identity
-          @pdf.fill_color PdfTheme::COLORS[:ink]
-          @pdf.text @report_name.to_s, size: 16, style: :bold, align: :center,
-            overflow: :shrink_to_fit, min_font_size: 11
-          if @subtitle.present?
-            @pdf.move_down 3
+          if @eyebrow.present?
             @pdf.fill_color PdfTheme::COLORS[:muted]
-            @pdf.text @subtitle.to_s, size: 9, align: :center
+            @pdf.text @eyebrow.to_s.upcase, size: PdfTheme::TYPE[:micro], style: :bold,
+              character_spacing: METADATA_LABEL_TRACKING
+            @pdf.move_down EYEBROW_GAP
           end
-          @pdf.move_down 14
+          @pdf.fill_color PdfTheme::COLORS[:ink]
+          @pdf.font(PdfTheme::DISPLAY_FAMILY) do
+            @pdf.text @report_name.to_s, size: PdfTheme::TYPE[:display]
+          end
+          if @subtitle.present?
+            @pdf.move_down TITLE_SUBTITLE_GAP
+            @pdf.fill_color PdfTheme::COLORS[:muted]
+            @pdf.text @subtitle.to_s, size: PdfTheme::TYPE[:body]
+          end
+          @pdf.move_down TITLE_GAP_BELOW
         end
 
+        # Rules rather than a tint: the fill made three short values read as an empty
+        # table header, and forced padding that broke the page's left margin.
         def draw_metadata
-          metadata = [
+          metadata = metadata_pairs
+          return if metadata.empty?
+
+          # Drawn directly rather than as a table: prawn-table cells reject
+          # character_spacing, and measuring the boxes here keeps the closing rule tight
+          # against the tallest column whatever it holds.
+          widths = metadata_column_widths(metadata.size)
+          offsets = widths.each_with_index.map { |_, index| widths[0...index].sum }
+
+          @pdf.stroke_color PdfTheme::COLORS[:border]
+          @pdf.stroke_horizontal_rule
+          @pdf.move_down METADATA_RULE_GAP
+
+          top = @pdf.cursor
+          label_height = draw_metadata_row(
+            metadata.map { |(label, _)| label.to_s.upcase }, widths, offsets, top,
+            size: PdfTheme::TYPE[:micro], style: :bold, color: PdfTheme::COLORS[:muted],
+            character_spacing: METADATA_LABEL_TRACKING
+          )
+          value_top = top - label_height - METADATA_LABEL_GAP
+          value_height = draw_metadata_row(
+            metadata.map { |(_, value)| value.to_s }, widths, offsets, value_top,
+            size: PdfTheme::TYPE[:small], style: :normal, color: PdfTheme::COLORS[:ink]
+          )
+
+          @pdf.move_cursor_to value_top - value_height
+          @pdf.move_down METADATA_RULE_GAP
+          @pdf.stroke_horizontal_rule
+          @pdf.move_down METADATA_GAP_BELOW
+          @pdf.fill_color PdfTheme::COLORS[:ink]
+        end
+
+        # Draws one row of the metadata strip and reports the height of its tallest column.
+        def draw_metadata_row(texts, widths, offsets, top, size:, style:, color:, character_spacing: 0)
+          @pdf.fill_color color
+          options = { size: size, style: style, character_spacing: character_spacing }
+          heights = texts.each_with_index.map do |text, index|
+            width = widths[index] - METADATA_GUTTER
+            height = @pdf.height_of(text, width: width, **options)
+            @pdf.text_box text, at: [ offsets[index], top ], width: width, height: height, **options
+            height
+          end
+          heights.max
+        end
+
+        # Documents that are not period-based supply their own pairs; everything else gets
+        # the standard three.
+        def metadata_pairs
+          pairs = @metadata || [
             [ @period_label_title, @period_label ],
             [ "Generated", generated_label ],
             [ "Prepared by", @prepared_by ]
           ]
-          table = @pdf.make_table(
-            [ metadata.map(&:first), metadata.map(&:last) ],
-            width: @pdf.bounds.width,
-            cell_style: { padding: [ 5, 8 ], borders: [], overflow: :shrink_to_fit, min_font_size: 6 }
-          )
-          table.row(0).style(
-            background_color: PdfTheme::COLORS[:primary_light], text_color: PdfTheme::COLORS[:muted],
-            size: 7, font_style: :bold, borders: [ :top ], border_color: PdfTheme::COLORS[:border]
-          )
-          table.row(1).style(
-            background_color: PdfTheme::COLORS[:primary_light], text_color: PdfTheme::COLORS[:ink],
-            size: 8, borders: [ :bottom ], border_color: PdfTheme::COLORS[:border]
-          )
-          table.draw
-          @pdf.fill_color PdfTheme::COLORS[:ink]
-          @pdf.move_down 16
+          pairs.reject { |(label, value)| label.blank? || value.blank? }
+        end
+
+        def metadata_column_widths(count)
+          width = @pdf.bounds.width
+          widths = Array.new(count, (width / count).floor)
+          widths[-1] += width - widths.sum
+          widths
         end
 
         def hotel_address
@@ -105,7 +213,7 @@ module HotelPortal
         end
 
         def generated_label
-          @generated_at.in_time_zone(@hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p")
+          PdfTheme.format_time(@generated_at, @hotel.hotel_time_zone)
         end
 
         def hotel_logo
@@ -120,12 +228,18 @@ module HotelPortal
 
         def draw_wastays_attribution
           logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-          center = @pdf.bounds.width / 2.0
-          label_width = 48
-          group_width = label_width + WASTAYS_LOGO_WIDTH + 5
-          left = center - (group_width / 2.0)
-          @pdf.draw_text "Generated by", at: [ left, FOOTER_Y ], size: 7
-          @pdf.image logo_path, at: [ left + label_width + 5, FOOTER_Y + 7 ], width: WASTAYS_LOGO_WIDTH if File.exist?(logo_path)
+          label = "Generated by"
+          size = PdfTheme::TYPE[:micro]
+          # Measured rather than assumed: the hardcoded width this used to carry was wider
+          # than the label, which pushed the whole group off centre.
+          label_width = @pdf.width_of(label, size: size)
+          gap = PdfTheme::SPACE[:xs]
+          group_width = label_width + gap + WASTAYS_LOGO_WIDTH
+          left = (@pdf.bounds.width - group_width) / 2.0
+          @pdf.draw_text label, at: [ left, FOOTER_Y ], size: size
+          return unless File.exist?(logo_path)
+
+          @pdf.image logo_path, at: [ left + label_width + gap, FOOTER_Y + 7 ], width: WASTAYS_LOGO_WIDTH
         end
       end
     end

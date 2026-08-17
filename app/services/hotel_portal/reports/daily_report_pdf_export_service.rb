@@ -6,7 +6,8 @@ require "prawn/table"
 module HotelPortal
   module Reports
     class DailyReportPdfExportService
-      COLORS = Exports::PdfTheme::COLORS.merge(negative: "A33636").freeze
+      THEME = Exports::PdfTheme
+      COLORS = THEME::COLORS.merge(negative: "A33636").freeze
 
       def initialize(hotel:, tab:, revenue_report:, cashier_report:, prepared_by:, charge_register: [])
         @hotel = hotel
@@ -21,9 +22,9 @@ module HotelPortal
         pdf = Prawn::Document.new(
           page_size: "A4",
           page_layout: @tab == "overview" ? :portrait : :landscape,
-          margin: [ 40, 32, 42, 32 ]
+          margin: THEME::PAGE_MARGIN
         )
-        Exports::PdfTheme.configure_font(pdf)
+        THEME.configure_font(pdf)
         frame = Exports::PdfReportFrame.new(
           pdf: pdf,
           hotel: @hotel,
@@ -39,7 +40,7 @@ module HotelPortal
         when "cashier" then draw_cashier_report(pdf)
         else draw_overview_report(pdf)
         end
-        frame.stamp_footer
+        frame.stamp_page_furniture
 
         pdf.render
       end
@@ -48,17 +49,17 @@ module HotelPortal
 
       def draw_overview_report(pdf)
         draw_kpi_section(pdf, "Revenue (Accrual)", revenue_kpis)
-        pdf.move_down 18
+        pdf.move_down THEME::SPACE[:lg]
         draw_kpi_section(pdf, "Cashier Sales (Cash Flow)", cashier_kpis)
-        pdf.move_down 18
+        pdf.move_down THEME::SPACE[:lg]
         draw_note(pdf, "Revenue records when charges are earned. Cashier Sales records when payments or refunds move.")
       end
 
       def draw_revenue_report(pdf)
         draw_kpi_section(pdf, "Revenue Summary", revenue_kpis)
-        pdf.move_down 16
+        pdf.move_down THEME::SPACE[:lg]
         draw_revenue_table(pdf, "Daily Breakdown", @revenue_report.rows, :date)
-        pdf.move_down 16
+        pdf.move_down THEME::SPACE[:lg]
         draw_revenue_table(pdf, "Revenue by Source", @revenue_report.source_rows, :source)
         pdf.start_new_page(layout: :landscape)
         draw_section_heading(pdf, "Revenue Register", "Revenue charges and adjustments posted during the reporting period")
@@ -67,7 +68,7 @@ module HotelPortal
 
       def draw_cashier_report(pdf)
         draw_kpi_section(pdf, "Cashier Sales Summary", cashier_kpis)
-        pdf.move_down 16
+        pdf.move_down THEME::SPACE[:lg]
         draw_cashier_transaction_table(pdf, "Advance", @cashier_report.advance_scope)
         pdf.start_new_page(layout: :landscape)
         draw_cashier_transaction_table(pdf, "Settlement", @cashier_report.settlement_scope)
@@ -78,12 +79,12 @@ module HotelPortal
       def draw_kpi_section(pdf, title, cards)
         draw_section_heading(pdf, title)
         data = [ cards.map(&:first), cards.map(&:last) ]
-        table = pdf.make_table(data, width: pdf.bounds.width, cell_style: { padding: [ 8, 9 ], border_color: COLORS[:border] })
+        table = pdf.make_table(data, width: pdf.bounds.width, cell_style: { padding: THEME::SUMMARY_CELL_PADDING, border_color: COLORS[:border] })
         table.row(0).style(
           background_color: COLORS[:primary_light], text_color: COLORS[:muted],
-          size: 7, font_style: :bold, borders: [ :bottom ]
+          size: THEME::TYPE[:micro], font_style: :bold, borders: [ :bottom ]
         )
-        table.row(1).style(text_color: COLORS[:ink], size: 12, font_style: :bold, borders: [])
+        table.row(1).style(text_color: COLORS[:ink], size: THEME::TYPE[:heading], font_style: :bold, borders: [])
         table.draw
       end
 
@@ -212,7 +213,7 @@ module HotelPortal
           draw_empty_state(pdf, "No cashier activity for this selected period.")
         end
 
-        pdf.move_down 18
+        pdf.move_down THEME::SPACE[:lg]
         draw_section_heading(pdf, "Currency Summary", "Cash movement totals by currency")
         currency_rows = @cashier_report.currency_summary_rows.map do |row|
           [ row[:currency], row[:section], money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
@@ -237,8 +238,8 @@ module HotelPortal
           header: true,
           width: column_widths ? column_widths.sum : pdf.bounds.width,
           cell_style: {
-            size: 7.5,
-            padding: [ 5, 6 ],
+            size: THEME::TYPE[:micro],
+            padding: THEME::TABLE_CELL_PADDING,
             border_color: COLORS[:border],
             borders: [ :bottom ],
             text_color: COLORS[:ink],
@@ -251,7 +252,7 @@ module HotelPortal
         table = pdf.make_table([ headers ] + rows, options)
         table.row(0).style(
           background_color: COLORS[:ink], text_color: COLORS[:white],
-          font_style: :bold, size: 7, borders: []
+          font_style: :bold, size: THEME::TYPE[:micro], borders: []
         )
         rows.each_index do |index|
           table.row(index + 1).background_color = COLORS[:stripe] if index.odd?
@@ -271,19 +272,19 @@ module HotelPortal
 
       def draw_section_heading(pdf, title, subtitle = nil)
         pdf.fill_color COLORS[:ink]
-        pdf.text title, size: 11, style: :bold
+        pdf.text title, size: THEME::TYPE[:heading], style: :bold
         if subtitle
-          pdf.move_down 2
+          pdf.move_down THEME::SPACE[:xs]
           pdf.fill_color COLORS[:muted]
-          pdf.text subtitle, size: 7.5
+          pdf.text subtitle, size: THEME::TYPE[:small]
         end
         pdf.fill_color COLORS[:ink]
-        pdf.move_down 6
+        pdf.move_down THEME::SPACE[:sm]
       end
 
       def draw_empty_state(pdf, message)
         pdf.fill_color COLORS[:muted]
-        pdf.text message, size: 9, style: :italic
+        pdf.text message, size: THEME::TYPE[:body], style: :italic
         pdf.fill_color COLORS[:ink]
       end
 
@@ -291,7 +292,7 @@ module HotelPortal
         pdf.fill_color COLORS[:primary_light]
         pdf.fill_rectangle([ 0, pdf.cursor ], pdf.bounds.width, 42)
         pdf.fill_color COLORS[:ink]
-        pdf.text_box message, at: [ 12, pdf.cursor - 12 ], width: pdf.bounds.width - 24, height: 24, size: 9
+        pdf.text_box message, at: [ 12, pdf.cursor - 12 ], width: pdf.bounds.width - 24, height: 24, size: THEME::TYPE[:body]
         pdf.move_down 50
       end
 

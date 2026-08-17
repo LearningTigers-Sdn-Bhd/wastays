@@ -16,7 +16,7 @@ RSpec.describe Reports::HousekeepingTasksPdfGenerator do
       ).call
       text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
 
-      expect(text).to include("Housekeeping Tasks", "Selected date", "17 Aug 2026", "Prepared by", "Housekeeping Manager")
+      expect(text).to include("Housekeeping Tasks", "SELECTED DATE", "17 Aug 2026", "PREPARED BY", "Housekeeping Manager")
     end
   end
 end
