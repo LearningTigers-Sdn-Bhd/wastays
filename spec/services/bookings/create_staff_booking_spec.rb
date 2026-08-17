@@ -28,12 +28,21 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     create(:room_rate, room_type: room_type, date: Date.current, price: 200)
   end
 
-  it "creates an unassigned reservation and deducts room-type inventory" do
+  it "auto-assigns a clean room to a reservation left unassigned and deducts room-type inventory" do
+    result = described_class.new(hotel: hotel, common_params: common_params, room_rows: room_rows, user: nil).call
+
+    expect(result.success?).to be(true)
+    expect(result.booking.booking_rooms.sole).to have_attributes(room_type: room_type, room_number: "101")
+    expect(room_type.room_inventories.find_by!(date: Date.current).quantity).to eq(4)
+  end
+
+  it "leaves the reservation unassigned when the property assigns rooms manually" do
+    hotel.update!(auto_assign_rooms_enabled: false)
+
     result = described_class.new(hotel: hotel, common_params: common_params, room_rows: room_rows, user: nil).call
 
     expect(result.success?).to be(true)
     expect(result.booking.booking_rooms.sole).to have_attributes(room_type: room_type, room_number: nil)
-    expect(room_type.room_inventories.find_by!(date: Date.current).quantity).to eq(4)
   end
 
   it "requires a room number for walk-in creation" do

@@ -2,15 +2,21 @@
 
 require "ostruct"
 
-module ChannelManagers
+module Bookings
+  # Puts a booking into the first room that is clean and free for the whole
+  # stay. Reached from channel-manager ingestion, from a desk booking left
+  # without a room, and from check-in as a last chance before arrival.
   class AutoAssignRoom
     ASSIGNABLE_BOOKING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required].freeze
 
-    def initialize(booking:)
+    def initialize(booking:, source: "channel_manager")
       @booking = booking
+      @source = source
     end
 
     def call
+      return skipped("Automatic room assignment is off for this property") unless @booking.hotel.auto_assign_rooms_enabled?
+
       booking_room = @booking.booking_rooms.first
       return skipped("Booking has no room category") unless booking_room&.room_type
       return skipped("Booking status does not hold inventory") unless @booking.status.in?(ASSIGNABLE_BOOKING_STATUSES)
@@ -27,14 +33,16 @@ module ChannelManagers
         return success(booking_room.room_number, preserved: true)
       end
 
-      # Runs inside the ingestion transaction, so keep every write in a savepoint:
-      # a database level failure here must not abort the surrounding booking write.
+      # May run inside the caller's transaction, so keep every write in a
+      # savepoint: a database level failure here must not abort the surrounding
+      # booking write. Assignment is a convenience, never a reason to lose the
+      # booking or block a check-in.
       ActiveRecord::Base.transaction(requires_new: true) do
         assign(booking_room, available_numbers.first)
       end
     rescue StandardError => e
       Rails.logger.error(
-        "Channel manager automatic room assignment failed booking_id=#{@booking.id} error=#{e.message.inspect}"
+        "Automatic room assignment failed booking_id=#{@booking.id} source=#{@source} error=#{e.message.inspect}"
       )
       failure(e.message)
     end
@@ -49,7 +57,7 @@ module ChannelManagers
         booking: @booking,
         room_number: room_number,
         user: nil,
-        metadata: { "automatic" => true, "source" => "channel_manager" }
+        metadata: { "automatic" => true, "source" => @source }
       ).call
 
       return success(room_number) if result.success?
@@ -63,7 +71,7 @@ module ChannelManagers
       Bookings::RecordAuditLog.call!(
         auditable: booking_room,
         action_type: "room_removed",
-        source: "channel_manager",
+        source: @source,
         old_value: { "room_number" => previous_room_number },
         new_value: { "room_number" => nil },
         metadata: { "automatic" => true, "reason" => "Room is no longer available for the full stay" }

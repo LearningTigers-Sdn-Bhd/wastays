@@ -146,6 +146,11 @@ module Bookings
               ).call
 
               raise assignment_result.error unless assignment_result.success?
+            else
+              # The desk left the room open. Picking one now saves a second pass
+              # at arrival; if nothing is clean and free the booking simply stays
+              # unassigned, so this never blocks taking the reservation.
+              Bookings::AutoAssignRoom.new(booking: booking, source: "staff").call
             end
 
             InventoryManager.new(booking).deduct
