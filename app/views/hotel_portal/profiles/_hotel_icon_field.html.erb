@@ -21,7 +21,7 @@
         attribute: :icon,
         label: "Hotel icon",
         hint: "Recommended aspect ratio 1:1. PNG, JPG, or WebP, up to 2 MB.",
-        class: "sm:col-span-2",
+        class: local_assigns.fetch(:class, "sm:col-span-2"),
         data: { testid: "hotel-icon-field" }) do |field| %>
     <% field.with_dropzone(
          accept: Hotel::ICON_CONTENT_TYPES.join(","),
