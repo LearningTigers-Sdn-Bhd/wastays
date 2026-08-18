@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "pdf-reader"
 
 RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
   describe "#generate" do
@@ -45,10 +46,14 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
       )
 
       pdf = described_class.new(hotel: hotel, report: report, prepared_by: "Sarah Lim").generate
+      text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
 
       expect(pdf).to be_a(String)
       expect(pdf).to start_with("%PDF")
       expect(pdf.bytesize).to be > 500
+      expect(text).to include("Arrivals", "1 record")
+      expect(text).not_to include("·")
+      expect(text).not_to include("RECORDS")
     end
 
     it "returns a valid PDF binary for in-house tab" do
@@ -148,6 +153,7 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
 
       expect(pdf).to start_with("%PDF")
       expect(sections.map { |section| section[:section_title] }).to eq([ "Boat-ins", "Boat-outs" ])
+      expect(sections.map { |section| section[:section_meta] }).to eq([ "1 transfer", "1 transfer" ])
       expect(sections.first[:headers]).to eq([ "Guest Name", "Room Number", "Arrival Date", "Arrival Time" ])
       expect(sections.last[:headers]).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time" ])
       expect(sections.first[:rows]).to eq([ [ "Boat Guest", "103", "27 Jul 2026", "07:00 AM" ] ])

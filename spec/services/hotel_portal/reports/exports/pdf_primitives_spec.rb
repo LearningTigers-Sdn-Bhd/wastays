@@ -126,6 +126,12 @@ RSpec.describe "PDF print primitives" do
       expect(text).to include("Summary (MYR)", "Room charge", "350.00")
     end
 
+    it "places optional metadata in the section heading" do
+      text = draw_table(section_meta: "45 records")
+
+      expect(text).to include("Transactions", "45 records", "Room charge")
+    end
+
     it "still carries its total when there are no rows" do
       text = draw_table(rows: [], total_row: [ "Total", "0.00" ])
 

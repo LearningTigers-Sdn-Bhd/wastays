@@ -24,8 +24,8 @@ module HotelPortal
 
         case @tab
         when "meal_prep" then add_meal_prep_pages(builder)
-        when "bibo" then add_summary_and_header(builder) { add_bibo_tables(builder) }
-        else add_summary_and_header(builder) { add_single_table(builder) }
+        when "bibo" then add_header_and_content(builder) { add_bibo_tables(builder) }
+        else add_header_and_content(builder) { add_single_table(builder) }
         end
 
         builder.render
@@ -33,16 +33,15 @@ module HotelPortal
 
       private
 
-      def add_summary_and_header(builder)
+      def add_header_and_content(builder)
         builder.add_header
-        builder.add_summary([ [ "Records", record_count.to_s ] ])
         yield
       end
 
       def add_single_table(builder)
         headers = @table.export_headers
         builder.add_table(
-          section_title: section_name, headers: headers,
+          section_title: section_name, section_meta: count_label(record_count, "record"), headers: headers,
           rows: @table.export_rows.reject(&:empty?).map { |row| row.map { |value| value.presence || "-" } },
           numeric_columns: [], total_row: nil,
           empty_message: "No guest records found for the selected period."
@@ -83,7 +82,7 @@ module HotelPortal
         @report.sections.each do |leg|
           rows = leg[:rows]
           builder.add_table(
-            section_title: leg[:title],
+            section_title: leg[:title], section_meta: count_label(rows.size, "transfer"),
             headers: [ "Guest Name", "Room Number", leg[:date_header], leg[:time_header] ],
             rows: rows.map { |row| [ row[:guest_name], row[:room_number], row[leg[:date_key]], row[:boat_time] ].map { |value| value.presence || "-" } },
             numeric_columns: [], total_row: nil, empty_message: leg[:empty_message],
@@ -103,6 +102,8 @@ module HotelPortal
 
         @table.export_rows.size
       end
+
+      def count_label(count, noun) = "#{count} #{count == 1 ? noun : noun.pluralize}"
 
       def section_name
         { "arrivals" => "Arrivals", "in_house" => "In-House", "departures" => "Departures", "checkout" => "Checkout", "bibo" => "Boat Transfers", "meal_prep" => "Meal Prep" }.fetch(@tab, "Arrivals")

@@ -32,18 +32,18 @@ module HotelPortal
         # than the measure against the right margin, for the summary blocks an invoice ends on.
         def draw(section_title:, headers:, rows:, numeric_columns:, total_row:, empty_message:,
                  column_widths: nil, row_variants: {}, density: :default, position: nil, width: nil,
-                 show_header: true)
+                 show_header: true, section_meta: nil)
           sizes = PdfTheme::TABLE_TYPE.fetch(density)
           block_width = resolve_width(width, column_widths)
           if rows.empty?
-            break_unless_it_fits(section_title, block_width, position, empty_state_height(empty_message, sizes))
-            draw_section_title(section_title, block_width, position)
+            break_unless_it_fits(section_title, section_meta, block_width, position, empty_state_height(empty_message, sizes))
+            draw_section_title(section_title, section_meta, block_width, position)
             return draw_empty_state(empty_message, headers, numeric_columns, total_row, column_widths, block_width, position, sizes)
           end
 
           table = build(headers, rows, total_row, column_widths, row_variants, sizes, block_width, position, show_header)
-          break_unless_it_fits(section_title, block_width, position, kept_height(table, show_header))
-          draw_section_title(section_title, block_width, position)
+          break_unless_it_fits(section_title, section_meta, block_width, position, kept_height(table, show_header))
+          draw_section_title(section_title, section_meta, block_width, position)
           stripe(table, rows, row_variants, show_header)
           numeric_columns.each { |index| table.column(index).style(align: :right) }
           table.draw
@@ -59,10 +59,10 @@ module HotelPortal
         # A block only asks for a page of its own if a page can hold it. A table longer than
         # the sheet has to break somewhere, so it asks for its title, its header and its
         # first row — enough that the heading is never the last thing on a page.
-        def break_unless_it_fits(section_title, block_width, position, block_height)
+        def break_unless_it_fits(section_title, section_meta, block_width, position, block_height)
           return if @pdf.cursor >= @pdf.bounds.height # already at the top of a page
 
-          needed = title_height(section_title, block_width, position) + block_height
+          needed = title_height(section_title, section_meta, block_width, position) + block_height
           @pdf.start_new_page if needed > @pdf.cursor
         end
 
@@ -77,14 +77,26 @@ module HotelPortal
           @pdf.height_of(empty_message.to_s.presence || " ", size: sizes[:body]) + PdfTheme::SPACE[:sm]
         end
 
-        def title_height(section_title, block_width, position)
+        def title_height(section_title, section_meta, block_width, position)
           return 0 if section_title.blank?
 
           width = position == :right ? block_width : @pdf.bounds.width
-          @pdf.height_of(section_title, width: width, **section_title_options) + PdfTheme::SPACE[:sm]
+          return @pdf.height_of(section_title, width: width, **section_title_options) + PdfTheme::SPACE[:sm] if section_meta.blank?
+
+          title_width, meta_width = section_heading_widths(section_meta, width)
+          [
+            @pdf.height_of(section_title, width: title_width, **section_title_options),
+            @pdf.height_of(section_meta, width: meta_width, **section_meta_options)
+          ].max + PdfTheme::SPACE[:sm]
         end
 
         def section_title_options = { size: PdfTheme::TYPE[:heading], style: :bold }
+        def section_meta_options = { size: PdfTheme::TYPE[:body], style: :bold }
+
+        def section_heading_widths(section_meta, width)
+          meta_width = [ @pdf.width_of(section_meta, **section_meta_options) + PdfTheme::SPACE[:xs], width / 2 ].min
+          [ width - meta_width - PdfTheme::SPACE[:md], meta_width ]
+        end
 
         def resolve_width(width, column_widths)
           width || column_widths&.sum || @pdf.bounds.width
@@ -92,11 +104,17 @@ module HotelPortal
 
         # A block set against the right margin takes its title with it, so the title always
         # sits above the block it names rather than at the page's left edge.
-        def draw_section_title(section_title, block_width, position)
+        def draw_section_title(section_title, section_meta, block_width, position)
           return if section_title.blank?
 
           @pdf.fill_color PdfTheme::COLORS[:ink]
           options = section_title_options
+          if section_meta.present?
+            draw_section_heading(section_title, section_meta, block_width, position)
+            @pdf.move_down PdfTheme::SPACE[:sm]
+            return
+          end
+
           if position == :right
             height = @pdf.height_of(section_title, width: block_width, **options)
             @pdf.text_box section_title, at: [ @pdf.bounds.width - block_width, @pdf.cursor ],
@@ -106,6 +124,23 @@ module HotelPortal
             @pdf.text section_title, **options
           end
           @pdf.move_down PdfTheme::SPACE[:sm]
+        end
+
+        def draw_section_heading(section_title, section_meta, block_width, position)
+          width = position == :right ? block_width : @pdf.bounds.width
+          left = position == :right ? @pdf.bounds.width - block_width : 0
+          title_width, meta_width = section_heading_widths(section_meta, width)
+          height = [
+            @pdf.height_of(section_title, width: title_width, **section_title_options),
+            @pdf.height_of(section_meta, width: meta_width, **section_meta_options)
+          ].max
+
+          @pdf.text_box section_title, at: [ left, @pdf.cursor ], width: title_width, height: height, **section_title_options
+          @pdf.fill_color PdfTheme::COLORS[:muted]
+          @pdf.text_box section_meta, at: [ left + width - meta_width, @pdf.cursor ],
+            width: meta_width, height: height, align: :right, **section_meta_options
+          @pdf.fill_color PdfTheme::COLORS[:ink]
+          @pdf.move_down height
         end
 
         def draw_empty_state(empty_message, headers, numeric_columns, total_row, column_widths, block_width, position, sizes)

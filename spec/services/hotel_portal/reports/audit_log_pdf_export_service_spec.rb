@@ -17,7 +17,8 @@ RSpec.describe HotelPortal::Reports::AuditLogPdfExportService do
     expect(pdf).to start_with("%PDF")
     expect(text).to include(
       "Harbour View Hotel", "Operation Audit Logs", "PERIOD", "01 Aug 2026 - 17 Aug 2026",
-      "PREPARED BY", "Operations Manager", "Audit Entries", "Confidential", "Page 1 of 1"
+      "PREPARED BY", "Operations Manager", "Audit Entries", "0 entries", "Confidential", "Page 1 of 1"
     )
+    expect(text).not_to include("RECORDS")
   end
 end
