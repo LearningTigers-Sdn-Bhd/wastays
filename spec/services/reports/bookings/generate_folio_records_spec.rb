@@ -222,6 +222,34 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.summary_rows[-2].amount).to be_nil
   end
 
+  it "counts a parentless room tax against rooms, on the basis the tax line records" do
+    # How a room tax is actually posted: no parent_folio_transaction_id, and the charge it
+    # belongs to identified only by a source_transaction_code_id. The code lookup behind
+    # that is empty once the invoice renders from its snapshot, so the basis is all the
+    # document has to go on.
+    other_booking = create(:booking, hotel: hotel, currency: "MYR")
+    other_folio = create(:booking_folio, booking: other_booking, hotel: hotel, status: "closed")
+    create(:folio_transaction,
+      booking_folio: other_folio, transaction_code: room_code, transaction_type: "charge",
+      category: "accommodation", amount: 1000, description: "Room Charge",
+      posting_date: Date.new(2026, 12, 17))
+    create(:folio_transaction,
+      booking_folio: other_folio, transaction_code: sst_code, transaction_type: "charge",
+      category: "tax", amount: 80, description: "Tax: SST 8% - 2026-12-17",
+      posting_date: Date.new(2026, 12, 17),
+      metadata: { tax_line: { name: "SST 8%", type: "sst", basis: "nightly_room_charge", source_transaction_code_id: 99 } })
+    create(:folio_transaction,
+      booking_folio: other_folio, transaction_code: payment_code, transaction_type: "payment",
+      category: "booking_payment", amount: 1080, description: "Card payment",
+      posting_date: Date.new(2026, 12, 17), metadata: { payment_source: "card" })
+    Invoices::Finalize.call!(folio: other_folio, issued_by: nil, balance: 0)
+
+    summary = described_class.new(folio: other_folio.reload).call.summary_rows.index_by(&:label)
+
+    expect(summary.fetch("SST 8% on rooms").amount).to eq(80.to_d)
+    expect(summary.keys).not_to include("SST 6% on F&B and other")
+  end
+
   it "keeps payment references off the charge rows" do
     charge = records.charge_rows.find { |row| row.code == "FB-REST" }
 

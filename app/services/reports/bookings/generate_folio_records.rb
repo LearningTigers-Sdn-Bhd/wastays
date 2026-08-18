@@ -120,6 +120,10 @@ module Reports
         [ "refund_request_id", "Refund Ref" ]
       ].freeze
 
+      # What a tax was charged on, as the tax line itself records it. Every posted room tax
+      # carries one of these.
+      ROOM_TAX_BASES = %w[nightly_room_charge room_night].freeze
+
       PdfTheme = HotelPortal::Reports::Exports::PdfTheme
 
       # What the frame needs of a hotel, taken from the invoice's own snapshot.
@@ -705,20 +709,32 @@ module Reports
                            .sum { |transaction| transaction.amount.to_d }
       end
 
+      # Asked of the tax line first, and of the charge it hangs off only as a fallback. The
+      # code lookup behind source_transaction_category is empty for a snapshotted invoice —
+      # which is every issued one — so a room tax posted without a parent transaction
+      # resolved to no category at all and was counted as F&B. The basis is in the snapshot
+      # and says plainly what the tax was charged on.
+      def room_tax?(transaction)
+        return true if ROOM_TAX_BASES.include?(tax_line(transaction)["basis"].to_s)
+
+        source_transaction_category(transaction) == "accommodation"
+      end
+
       def sst_room_total
-        active_transactions.select do |transaction|
-          tax_transaction?(transaction) &&
-            sst_transaction?(transaction) &&
-            source_transaction_category(transaction) == "accommodation"
-        end.sum { |transaction| transaction.amount.to_d }
+        sst_transactions.select { |transaction| room_tax?(transaction) }
+                        .sum { |transaction| transaction.amount.to_d }
       end
 
       def sst_other_total
-        active_transactions.select do |transaction|
-          tax_transaction?(transaction) &&
-            sst_transaction?(transaction) &&
-            source_transaction_category(transaction) != "accommodation"
-        end.sum { |transaction| transaction.amount.to_d }
+        sst_transactions.reject { |transaction| room_tax?(transaction) }
+                        .sum { |transaction| transaction.amount.to_d }
+      end
+
+      # One list, so the two rates are complements and no SST can fall between them.
+      def sst_transactions
+        @sst_transactions ||= active_transactions.select do |transaction|
+          tax_transaction?(transaction) && sst_transaction?(transaction)
+        end
       end
 
       def tourism_tax_total
