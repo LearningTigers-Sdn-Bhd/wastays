@@ -25,7 +25,7 @@ module GuestArrival
         updates[:country] = @country if @country.present? && guest.country.blank?
         updates[:gender] = @gender if @gender.present? && guest.gender.blank?
         updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
-        updates[:government_id] = @government_id if @government_id.present? && guest.government_id.blank?
+        updates[:government_id] = @government_id if @government_id.present? && guest.safely_read_encrypted(:government_id).blank?
         updates[:date_of_birth] = @date_of_birth if @date_of_birth.present? && guest.date_of_birth.blank?
 
         if @marketing_consent.present? || @privacy_consent.present?
@@ -40,7 +40,20 @@ module GuestArrival
           end
         end
 
-        guest.update(updates) if updates.any? || guest.metadata_changed?
+        if updates.any? || guest.metadata_changed?
+          begin
+            guest.update(updates)
+          rescue ActiveRecord::Encryption::Errors::Decryption
+            # `update` runs dirty-checking, which decrypts the *current* stored
+            # value to compare it against the new one. If that stored value was
+            # encrypted under a since-rotated/mismatched key, the comparison
+            # itself raises. update_columns writes the new value directly
+            # (still encrypting it under the current key) without needing to
+            # read the old ciphertext, healing the row going forward.
+            Rails.logger.warn("[Guest##{guest.id}] update fell back to update_columns after a decrypt failure on the stored value")
+            guest.update_columns(updates.merge(metadata: guest.metadata, updated_at: Time.current))
+          end
+        end
       else
         metadata = {}
         if @marketing_consent.present?
