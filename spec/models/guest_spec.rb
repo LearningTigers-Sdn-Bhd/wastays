@@ -260,4 +260,22 @@ RSpec.describe Guest, type: :model do
       expect(second_booking.repeat?).to be(true) # second booking is a repeat booking
     end
   end
+
+  describe '#safely_read_encrypted' do
+    it 'returns the decrypted value when readable' do
+      record = create(:guest, government_id: 'A123456')
+
+      expect(record.safely_read_encrypted(:government_id)).to eq('a123456')
+    end
+
+    it 'returns nil instead of raising when the stored ciphertext cannot be decrypted with the current key' do
+      record = create(:guest, government_id: 'A123456')
+      quoted = Guest.connection.quote('{"p":"corrupted","h":{"iv":"bogus","at":"bogus"}}')
+      Guest.connection.execute("UPDATE guests SET government_id = #{quoted} WHERE id = #{record.id}")
+      record.reload
+
+      expect { record.safely_read_encrypted(:government_id) }.not_to raise_error
+      expect(record.safely_read_encrypted(:government_id)).to be_nil
+    end
+  end
 end

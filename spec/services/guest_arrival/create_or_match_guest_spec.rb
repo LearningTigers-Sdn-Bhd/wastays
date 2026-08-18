@@ -75,4 +75,17 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
     expect(result.guest.id).to eq(existing.id)
     expect(existing.reload.date_of_birth).to eq(Date.new(1990, 5, 6))
   end
+
+  it "does not raise and heals a matched guest whose government_id was encrypted under a stale key" do
+    existing = create(:guest, phone: "+60111111111", government_id: "OLDID")
+    quoted = Guest.connection.quote('{"p":"corrupted","h":{"iv":"bogus","at":"bogus"}}')
+    Guest.connection.execute("UPDATE guests SET government_id = #{quoted} WHERE id = #{existing.id}")
+
+    result = nil
+    expect { result = described_class.new(params).call }.not_to raise_error
+
+    expect(result.success?).to be(true)
+    expect(result.guest.id).to eq(existing.id)
+    expect(result.guest.reload.government_id).to eq("a123456")
+  end
 end

@@ -36,6 +36,9 @@ module BookingEngine
         Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
       end
       success(group, bookings)
+    rescue ActiveRecord::Encryption::Errors::Decryption => e
+      Rails.logger.error("[ConfirmGroupBooking] guest data unreadable under current encryption key for quote #{@quote.id}: #{e.message}")
+      OpenStruct.new(success?: false, message: "We couldn't confirm your booking due to a data issue on our end. Please try again or contact support.", group_booking: nil, bookings: [])
     rescue StandardError => e
       OpenStruct.new(success?: false, message: "Group confirmation failed: #{e.message}", group_booking: nil, bookings: [])
     end
