@@ -141,10 +141,9 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.hotel_contact_line).to eq("+60 12-345 6789 · frontdesk@example.com")
 
     expect(records.bill_to_entries).to include([ "Guest", "John Doe" ], [ "Country", "Foreign Tourist" ])
-    expect(records.invoice_detail_entries).to include(
-      [ "Folio no.", folio.folio_reference_display ],
-      [ "Account ref", booking.folio_account_reference_display ]
-    )
+    expect(records.invoice_detail_entries).to include([ "Folio no.", folio.folio_reference_display ])
+    # The folio number already carries the account reference, so the invoice prints one.
+    expect(records.invoice_detail_entries.map(&:first)).not_to include("Account ref")
     expect(records.stay_detail_entries).to include([ "Confirm no.", "BK-778291" ], [ "Room / type", "412 / Deluxe King" ])
   end
 

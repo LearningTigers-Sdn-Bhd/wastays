@@ -182,10 +182,12 @@ module Reports
       end
 
       def invoice_detail_entries
+        # No account reference: the folio number is that reference plus the window, so
+        # printing both tells the payer the same thing twice. The ledger keeps it, where
+        # how the account is filed is the point.
         entries = [
           [ "Issued by", printed_by ],
-          [ "Folio no.", folio_reference ],
-          [ "Account ref", folio_account_reference ]
+          [ "Folio no.", folio_reference ]
         ]
         entries.concat(direct_bill_term_entries) if direct_bill?
         entries << [ "Generated", format_datetime(Time.current) ]
