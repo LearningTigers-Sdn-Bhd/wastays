@@ -25,6 +25,15 @@ module HotelPortal
           micro: 7      # metadata and stat labels, footer
         }.freeze
 
+        # Two density steps, because §12 forbids a table inventing its own size. A table
+        # that carries more columns than its page comfortably holds steps *down* to
+        # :dense rather than tightening its columns. The header always sits one step
+        # below its body: it is a label tier, and case plus weight carry it from there.
+        TABLE_TYPE = {
+          default: { header: TYPE[:small], body: TYPE[:body] },
+          dense: { header: TYPE[:micro], body: TYPE[:small] }
+        }.freeze
+
         # Small labels need tracking to stay legible, and print is where uppercase plus
         # tracking is the right way to mark a label tier — Prawn cannot reach OpenType
         # small caps, so case and spacing carry the distinction instead.

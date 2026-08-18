@@ -7,13 +7,14 @@ module HotelPortal
   module Reports
     module Exports
       class PdfReportBuilder
-        def initialize(hotel:, title:, period_label:, prepared_by:, period_label_title: "Period", subtitle: nil, eyebrow: nil, generated_at: Time.current, page_layout: :portrait, confidential: true)
+        def initialize(hotel:, title:, period_label:, prepared_by:, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, page_layout: :portrait, confidential: true, hotel_contact: nil)
           @pdf = Prawn::Document.new(page_size: "A4", page_layout: page_layout, margin: PdfTheme::PAGE_MARGIN)
           PdfTheme.configure_font(@pdf)
           @frame = PdfReportFrame.new(
             pdf: @pdf, hotel: hotel, report_name: title, subtitle: subtitle, eyebrow: eyebrow,
-            period_label_title: period_label_title, period_label: period_label,
-            prepared_by: prepared_by, generated_at: generated_at, confidential: confidential
+            period_label_title: period_label_title, period_label: period_label, metadata: metadata,
+            prepared_by: prepared_by, generated_at: generated_at, confidential: confidential,
+            hotel_contact: hotel_contact
           )
         end
 

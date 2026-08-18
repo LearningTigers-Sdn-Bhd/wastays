@@ -29,9 +29,10 @@ module HotelPortal
         # Sits in the top margin, mirroring how the footer sits below the content box.
         RUNNING_HEAD_Y = 18
 
-        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true)
+        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_contact: nil)
           @pdf = pdf
           @hotel = hotel
+          @hotel_contact = hotel_contact
           @report_name = report_name
           @subtitle = subtitle
           @eyebrow = eyebrow
@@ -104,14 +105,16 @@ module HotelPortal
             size: name_size, style: :bold
           text_bottom = top - name_height
 
-          if address.present?
+          # A document that bills in the hotel's name has to print how to reach it. The
+          # reports do not, so the contact line is the caller's to ask for.
+          [ address, @hotel_contact ].compact_blank.each do |line|
             @pdf.fill_color PdfTheme::COLORS[:muted]
-            address_size = PdfTheme::TYPE[:small]
-            address_top = text_bottom - NAME_ADDRESS_GAP
-            address_height = @pdf.height_of(address, width: text_width, size: address_size, leading: 2)
-            @pdf.text_box address, at: [ text_left, address_top ], width: text_width,
-              height: address_height, size: address_size, leading: 2
-            text_bottom = address_top - address_height
+            line_size = PdfTheme::TYPE[:small]
+            line_top = text_bottom - NAME_ADDRESS_GAP
+            line_height = @pdf.height_of(line, width: text_width, size: line_size, leading: 2)
+            @pdf.text_box line, at: [ text_left, line_top ], width: text_width,
+              height: line_height, size: line_size, leading: 2
+            text_bottom = line_top - line_height
           end
 
           @pdf.move_cursor_to [ text_bottom, logo ? top - HOTEL_LOGO_SIZE : text_bottom ].min

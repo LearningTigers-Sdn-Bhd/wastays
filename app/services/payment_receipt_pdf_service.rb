@@ -8,7 +8,6 @@ require "prawn"
 class PaymentReceiptPdfService
   THEME = HotelPortal::Reports::Exports::PdfTheme
 
-  VOID_BAND_PADDING = THEME::SPACE[:sm]
   ALLOCATION_NOTE = "This receipt records one payment received. Allocations to folios or invoices do not create additional receipts."
   VOID_NOTE = "This receipt has been voided and is no longer evidence of a payment received."
 
@@ -48,26 +47,8 @@ class PaymentReceiptPdfService
   # A voided receipt reads exactly like a valid one at a glance, so the void has to
   # arrive before the amount does.
   def draw_void_notice(pdf)
-    label = "VOIDED"
-    width = pdf.bounds.width - (VOID_BAND_PADDING * 2)
-    label_options = { size: THEME::TYPE[:heading], style: :bold, character_spacing: THEME::LABEL_TRACKING }
-    note_options = { size: THEME::TYPE[:body] }
-    label_height = pdf.height_of(label, width: width, **label_options)
-    note_height = pdf.height_of(VOID_NOTE, width: width, **note_options)
-    band_height = label_height + THEME::SPACE[:xs] + note_height + (VOID_BAND_PADDING * 2)
-
-    top = pdf.cursor
-    pdf.fill_color THEME::COLORS[:danger_light]
-    pdf.fill_rectangle [ 0, top ], pdf.bounds.width, band_height
-    pdf.fill_color THEME::COLORS[:danger]
-    label_top = top - VOID_BAND_PADDING
-    pdf.text_box label, at: [ VOID_BAND_PADDING, label_top ], width: width, height: label_height, **label_options
-    pdf.text_box VOID_NOTE, at: [ VOID_BAND_PADDING, label_top - label_height - THEME::SPACE[:xs] ],
-      width: width, height: note_height, **note_options
-
-    pdf.move_cursor_to top - band_height
-    pdf.move_down THEME::SPACE[:lg]
-    pdf.fill_color THEME::COLORS[:ink]
+    HotelPortal::Reports::Exports::PdfNoticeBand.new(pdf: pdf)
+      .draw(label: "VOIDED", note: VOID_NOTE, variant: :danger)
   end
 
   def draw_note(pdf)
