@@ -313,7 +313,9 @@ Facts about the document sit in one of three places, and never in two at once:
   A document wearing party blocks passes `metadata: []` so the frame draws no
   strip above them. Labels never sit *beside* their values here: the columns are a
   third of a portrait page, so the longer values wrap mid-value while the shorter
-  ones do not, and one stacked entry among inline ones reads as a mistake.
+  ones do not, and one stacked entry among inline ones reads as a mistake. A block
+  may use one `{ columns: [...] }` entry to place two short, closely related facts
+  on the same row; each fact still keeps its label above its value.
 
 `PdfNoticeBand` carries a status that has to arrive before the document's numbers
 do — a void, a reconstruction. `:danger` and `:warning` variants.
@@ -331,9 +333,14 @@ body, and call `stamp_page_furniture` once at the end so continuation pages get 
 running head. A document whose title is an identifier passes `eyebrow:` to name
 what it is; a document that is not period-based passes its own `metadata:` pairs.
 The footer marks every document `Confidential` because most are internal; a
-document that goes to the guest or the payer passes `confidential: false`. A
-document that bills in the hotel's name passes `hotel_contact:`, which the
-reports leave off.
+document that goes to the guest or the payer passes `confidential: false`. Every
+masthead names the ways of reaching the hotel, built by the frame from the hotel
+it is given rather than passed in per document, so the line cannot say one thing
+on an invoice and another on a voucher. A hotel that publishes none of them gets
+no line at all rather than a row of dashes. A document whose masthead is a
+snapshot hands the frame a hotel carrying live contact details: the identity is as
+it was when the document was issued, but a number the hotel stopped answering
+serves nobody.
 
 ## Source of truth
 

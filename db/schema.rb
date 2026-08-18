@@ -2168,8 +2168,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.bigint "hotel_id", null: false
-    t.decimal "maximum_amount_per_room_night", precision: 15, scale: 2, default: "10.0", null: false
-    t.decimal "maximum_percentage", precision: 8, scale: 4, default: "1.0", null: false
+    t.decimal "maximum_amount_per_room_night", precision: 12, scale: 2, default: "10.0", null: false
+    t.decimal "maximum_percentage", precision: 7, scale: 4, default: "1.0", null: false
     t.string "mode", default: "recommended", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_ota_rate_variance_policies_on_hotel_id", unique: true

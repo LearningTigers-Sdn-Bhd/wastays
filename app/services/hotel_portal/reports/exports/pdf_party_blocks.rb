@@ -23,14 +23,16 @@ module HotelPortal
         # stay tight without the column reading as one run of alternating lines.
         ENTRY_GAP = PdfTheme::SPACE[:xs]
         LABEL_GAP = 1
+        PAIRED_ENTRY_GUTTER = PdfTheme::SPACE[:sm]
 
         def initialize(pdf:)
           @pdf = pdf
         end
 
-        # blocks: [{ heading:, entries: [[label_or_nil, value], ...] }, ...]
+        # blocks: [{ heading:, entries: [[label_or_nil, value], { columns: [[label, value], ...] }] }, ...]
         # An entry with no label spans the block's full width, which is how an address
-        # reads as an address rather than as a column of unlabelled values.
+        # reads as an address rather than as a column of unlabelled values. A columns entry
+        # groups two short, related facts on one row without turning the whole block into a grid.
         def draw(blocks)
           # A heading with nothing under it is worse than no column at all.
           blocks = Array(blocks).reject { |block| entries(block).empty? }
@@ -55,10 +57,23 @@ module HotelPortal
         # tallest of them.
         def draw_block(block, at:, width:, top:)
           cursor = draw_heading(block[:heading], at: at, width: width, top: top)
-          entries(block).each do |label, value|
-            cursor = draw_entry(label, value, at: at, width: width, top: cursor) - ENTRY_GAP
+          entries(block).each do |entry|
+            cursor = if entry.is_a?(Hash)
+              draw_column_entry(entry.fetch(:columns), at: at, width: width, top: cursor)
+            else
+              draw_entry(*entry, at: at, width: width, top: cursor)
+            end
+            cursor -= ENTRY_GAP
           end
           cursor
+        end
+
+        def draw_column_entry(columns, at:, width:, top:)
+          column_width = (width - (PAIRED_ENTRY_GUTTER * (columns.size - 1))) / columns.size
+          columns.each_with_index.map do |(label, value), index|
+            left = at + (index * (column_width + PAIRED_ENTRY_GUTTER))
+            draw_entry(label, value, at: left, width: column_width, top: top)
+          end.min
         end
 
         def draw_heading(heading, at:, width:, top:)
@@ -101,6 +116,15 @@ module HotelPortal
 
         def entries(block)
           Array(block[:entries]).filter_map do |entry|
+            if entry.is_a?(Hash) && entry.key?(:columns)
+              columns = Array(entry[:columns]).filter_map do |label, value|
+                [ label, value ] if value.present?
+              end
+              next if columns.empty?
+
+              next({ columns: columns })
+            end
+
             label, value = entry
             next if value.blank?
 

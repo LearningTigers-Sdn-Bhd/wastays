@@ -128,7 +128,8 @@ module Reports
       PdfTheme = HotelPortal::Reports::Exports::PdfTheme
 
       # What the frame needs of a hotel, taken from the invoice's own snapshot.
-      SnapshotHotel = Struct.new(:name, :address, :city, :country, :icon, :hotel_time_zone, keyword_init: true)
+      SnapshotHotel = Struct.new(:name, :address, :city, :country, :icon, :hotel_time_zone,
+        :fixed_line_number, :contact_phone, :contact_email, keyword_init: true)
 
       attr_reader :booking, :hotel, :folio, :revision, :invoice_document, :receivable
 
@@ -230,11 +231,17 @@ module Reports
           address: hotel_value("address") { hotel.address },
           city: hotel_value("city") { hotel.city },
           country: hotel_value("country") { hotel.country },
-          icon: hotel.try(:icon), hotel_time_zone: invoice_time_zone
+          icon: hotel.try(:icon), hotel_time_zone: invoice_time_zone,
+          # Read live, and the only part of the masthead that is. It exists so whoever holds
+          # the bill can reach the hotel about it, and a number the hotel stopped answering
+          # serves nobody — where its name, address and registrations are what they were when
+          # it billed, and have to stay that. The snapshot keeps capturing them as a record of
+          # the day; it is simply not what the masthead prints.
+          fixed_line_number: hotel.fixed_line_number,
+          contact_phone: hotel.contact_phone,
+          contact_email: hotel.contact_email
         )
       end
-
-      def hotel_contact_line = hotel_contact
 
       # Sits under the address rather than among the invoice details: these identify the
       # party issuing the document, not the document. Every registration is named whether
@@ -762,19 +769,6 @@ module Reports
       # read as one string of digits, and a guest who cannot find a landline on the bill
       # should see that the hotel published none rather than wonder which number is which.
       #
-      # Read live, and the only thing on the document that is. The masthead contact exists
-      # so whoever holds the bill can reach the hotel about it, and a number the hotel
-      # stopped answering serves nobody — where its name, address and registrations are
-      # what it was when it billed, and have to stay that. The snapshot keeps capturing
-      # them as a record of the day; it is simply not what the masthead prints.
-      def hotel_contact
-        [
-          [ "Fixed line", hotel.fixed_line_number ],
-          [ "Phone", hotel.contact_phone ],
-          [ "Email", hotel.contact_email ]
-        ].map { |label, value| "#{label}: #{value.presence || '-'}" }.join(" · ")
-      end
-
       def folio_account_reference
         snapshot_or_live("folio", "folio_account_reference") { booking.folio_account_reference_display }.presence || booking.formatted_folio_number.presence || "-"
       end

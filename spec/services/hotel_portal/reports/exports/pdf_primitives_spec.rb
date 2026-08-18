@@ -40,6 +40,23 @@ RSpec.describe "PDF print primitives" do
       expect(extracted_text(pdf.render)).not_to include("Address", "Country")
     end
 
+    it "draws a paired entry as two short facts on the same row" do
+      described_class.new(pdf: pdf).draw([
+        {
+          heading: "Stay details",
+          entries: [
+            [ "Arrival", "01 Sep 2026, 3:00 PM" ],
+            { columns: [ [ "Duration", "3 nights" ], [ "Guests", "2 adults" ] ] },
+            [ "Booked at", "18 Aug 2026, 12:17 PM" ]
+          ]
+        }
+      ])
+
+      expect(extracted_text(pdf.render)).to include(
+        "STAY DETAILS", "Duration", "3 nights", "Guests", "2 adults", "Booked at"
+      )
+    end
+
     it "skips a block whose entries are all blank" do
       described_class.new(pdf: pdf).draw([
         { heading: "Bill to", entries: [ [ "Guest", "Akabane Kiyomi" ] ] },

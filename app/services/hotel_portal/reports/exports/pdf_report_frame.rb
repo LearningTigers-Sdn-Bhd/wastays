@@ -32,12 +32,12 @@ module HotelPortal
         # Sits in the top margin, mirroring how the footer sits below the content box.
         RUNNING_HEAD_Y = 18
 
-        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_contact: nil, hotel_identifiers: nil, badge: nil)
+        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_identifiers: nil, badge: nil, title_accessory: nil)
           @pdf = pdf
           @hotel = hotel
-          @hotel_contact = hotel_contact
           @hotel_identifiers = hotel_identifiers
           @badge = badge
+          @title_accessory = title_accessory
           @report_name = report_name
           @subtitle = subtitle
           @eyebrow = eyebrow
@@ -113,7 +113,7 @@ module HotelPortal
           # A document that bills in the hotel's name has to print how to reach it, and a
           # tax document how it is registered. The reports need neither, so both lines are
           # the caller's to ask for.
-          [ address, @hotel_contact, @hotel_identifiers ].compact_blank.each do |line|
+          [ address, hotel_contact, @hotel_identifiers ].compact_blank.each do |line|
             @pdf.fill_color PdfTheme::COLORS[:muted]
             line_size = PdfTheme::TYPE[:small]
             line_top = text_bottom - NAME_ADDRESS_GAP
@@ -131,36 +131,53 @@ module HotelPortal
         end
 
         # The title carries the display face; the hotel name above it stays in the text
-        # face, so the two are separated by typeface rather than by size alone. An eyebrow
-        # lets a document whose title is an identifier still name what kind of document it is.
-        #
-        # The title row is set between its two ends: the title against the left margin, and
-        # a badge, when the document has one, against the right. The title takes what the
-        # badge leaves, so a long one wraps rather than running underneath it.
+        # face, so the two are separated by typeface rather than by size alone. The whole
+        # identity is measured as a row: ordinary documents place a badge against the title,
+        # while documents such as a reservation voucher can supply a taller accessory. The
+        # cursor clears whichever column is taller, so the metadata below cannot collide with
+        # a QR code or another out-of-flow object.
         def draw_report_identity
-          if @eyebrow.present?
-            @pdf.fill_color PdfTheme::COLORS[:muted]
-            @pdf.text @eyebrow.to_s.upcase, size: PdfTheme::TYPE[:micro], style: :bold,
-              character_spacing: METADATA_LABEL_TRACKING
-            @pdf.move_down EYEBROW_GAP
-          end
-
           top = @pdf.cursor
-          title_height = draw_report_title(top)
-          draw_report_badge(top)
-          @pdf.move_cursor_to top - title_height
-
-          if @subtitle.present?
-            @pdf.move_down TITLE_SUBTITLE_GAP
-            @pdf.fill_color PdfTheme::COLORS[:muted]
-            @pdf.text @subtitle.to_s, size: PdfTheme::TYPE[:body]
-          end
+          left = draw_report_identity_left(top)
+          accessory_height = draw_report_identity_right(top, left)
+          @pdf.move_cursor_to top - [ left[:height], accessory_height ].max
           @pdf.move_down TITLE_GAP_BELOW
         end
 
-        def draw_report_title(top)
+        def draw_report_identity_left(top)
+          width = identity_left_width
+          cursor = top
+
+          if @eyebrow.present?
+            options = {
+              size: PdfTheme::TYPE[:micro], style: :bold,
+              character_spacing: METADATA_LABEL_TRACKING
+            }
+            text = @eyebrow.to_s.upcase
+            height = @pdf.height_of(text, width: width, **options)
+            @pdf.fill_color PdfTheme::COLORS[:muted]
+            @pdf.text_box text, at: [ 0, cursor ], width: width, height: height, **options
+            cursor -= height + EYEBROW_GAP
+          end
+
+          title_top = cursor
+          title_height = draw_report_title(title_top, width)
+          cursor -= title_height
+
+          if @subtitle.present?
+            cursor -= TITLE_SUBTITLE_GAP
+            options = { size: PdfTheme::TYPE[:body] }
+            height = @pdf.height_of(@subtitle.to_s, width: width, **options)
+            @pdf.fill_color PdfTheme::COLORS[:muted]
+            @pdf.text_box @subtitle.to_s, at: [ 0, cursor ], width: width, height: height, **options
+            cursor -= height
+          end
+
+          { height: top - cursor, title_top: title_top, title_height: title_height }
+        end
+
+        def draw_report_title(top, width)
           title = @report_name.to_s
-          width = @pdf.bounds.width - badge_slot_width
           options = { size: PdfTheme::TYPE[:display] }
 
           # Prawn's #font returns the font it set, not what the block evaluated to, so a
@@ -174,26 +191,45 @@ module HotelPortal
           height
         end
 
-        # Set against the first line of the title rather than against the whole block, so a
-        # title that wraps does not carry the badge down the page with it.
-        def draw_report_badge(top)
-          return if badge_label.blank?
+        def draw_report_identity_right(top, left)
+          return draw_title_accessory(top) if @title_accessory
+          return 0 if badge_label.blank?
 
           badge = PdfBadge.new(pdf: @pdf)
           line = nil
           @pdf.font(PdfTheme::DISPLAY_FAMILY) { line = @pdf.height_of("X", size: PdfTheme::TYPE[:display]) }
+          badge_top = left[:title_top] - ((line - badge.height) / 2.0)
           @pdf.fill_color PdfTheme::COLORS[:ink]
           badge.draw(
             label: badge_label,
-            at: [ @pdf.bounds.width - badge.width(badge_label), top - ((line - badge.height) / 2.0) ],
-            variant: @badge[:variant] || :neutral
+            at: [ @pdf.bounds.width - badge.width(badge_label), badge_top ],
+            variant: @badge.is_a?(Hash) ? (@badge[:variant] || :neutral) : :neutral
           )
+          top - badge_top + badge.height
         end
 
-        def badge_slot_width
-          return 0 if badge_label.blank?
+        def draw_title_accessory(top)
+          @title_accessory.draw(at: [ @pdf.bounds.width - @title_accessory.width, top ])
+          @title_accessory.height
+        end
 
-          PdfBadge.new(pdf: @pdf).width(badge_label) + BADGE_GUTTER
+        def identity_left_width
+          @pdf.bounds.width - identity_right_width
+        end
+
+        def identity_right_width
+          width = if @title_accessory
+            @title_accessory.width
+          elsif badge_label.present?
+            PdfBadge.new(pdf: @pdf).width(badge_label)
+          else
+            0
+          end
+          # An accessory too wide to set a title beside keeps the measure to itself rather
+          # than starving the title column of every point it has.
+          return 0 if width.zero? || width >= @pdf.bounds.width
+
+          width + BADGE_GUTTER
         end
 
         def badge_label = @badge.is_a?(Hash) ? @badge[:label] : @badge
@@ -268,6 +304,27 @@ module HotelPortal
         # so joining the three parts prints Langkawi twice. uniq cannot see it — the parts
         # are different strings and the repeat sits inside one of them — so a part is
         # dropped when what has already been kept names it.
+        # Every masthead names how to reach the hotel about the document it sits on, so the
+        # line is built here rather than passed in by each document. Every way of reaching
+        # it is named whether or not it publishes one — a dash says the number is absent,
+        # where dropping the label leaves a reader unable to tell a hotel without a landline
+        # from a document that failed to print the landline it had. A hotel publishing none
+        # of the three prints no line at all rather than a row of dashes.
+        #
+        # A document whose masthead is a snapshot passes contact details that are current
+        # anyway: the identity is as it was, but a number the hotel stopped answering serves
+        # nobody.
+        def hotel_contact
+          parts = [
+            [ "Fixed line", @hotel.try(:fixed_line_number) ],
+            [ "Phone", @hotel.try(:contact_phone) ],
+            [ "Email", @hotel.try(:contact_email) ]
+          ]
+          return if parts.none? { |_label, value| value.present? }
+
+          parts.map { |label, value| "#{label}: #{value.presence || '-'}" }.join(" · ")
+        end
+
         def hotel_address
           [ @hotel.try(:address), @hotel.try(:city), @hotel.try(:country) ]
             .compact_blank

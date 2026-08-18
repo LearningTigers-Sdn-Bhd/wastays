@@ -77,7 +77,6 @@ module Reports
         HotelPortal::Reports::Exports::PdfReportFrame.new(
           pdf: pdf,
           hotel: @records.pdf_hotel,
-          hotel_contact: @records.hotel_contact_line,
           hotel_identifiers: @records.hotel_identifier_line,
           eyebrow: @records.document_kind,
           report_name: @records.invoice_number,

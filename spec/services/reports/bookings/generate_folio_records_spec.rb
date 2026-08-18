@@ -141,7 +141,10 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.pdf_hotel).to have_attributes(
       address: "Jalan Pantai Cenang", city: "Langkawi", country: "Malaysia"
     )
-    expect(records.hotel_contact_line).to eq("Fixed line: - · Phone: +60 12-345 6789 · Email: frontdesk@example.com")
+    # Contact details ride on the same object, read live rather than from the snapshot.
+    expect(records.pdf_hotel).to have_attributes(
+      fixed_line_number: nil, contact_phone: "+60 12-345 6789", contact_email: "frontdesk@example.com"
+    )
 
     expect(records.bill_to_entries).to include([ "Guest", "John Doe" ], [ "Country", "Foreign Tourist" ])
     expect(records.invoice_detail_entries).to include([ "Folio no.", folio.folio_reference_display ])
@@ -151,10 +154,14 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
   end
 
   it "reaches the hotel as it can be reached now, not as at the time it billed" do
-    hotel.update!(fixed_line_number: "04-955 1200", contact_phone: "+60 19-000 1122", contact_email: nil)
+    hotel.update!(name: "Renamed Resort", fixed_line_number: "04-955 1200",
+      contact_phone: "+60 19-000 1122", contact_email: nil)
 
-    expect(described_class.new(folio: folio.reload).call.hotel_contact_line).to eq(
-      "Fixed line: 04-955 1200 · Phone: +60 19-000 1122 · Email: -"
+    expect(described_class.new(folio: folio.reload).call.pdf_hotel).to have_attributes(
+      name: "Hotel ABC Resort",
+      fixed_line_number: "04-955 1200",
+      contact_phone: "+60 19-000 1122",
+      contact_email: nil
     )
   end
 
@@ -308,16 +315,6 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
   it "shows the notes that apply to this folio" do
     expect(records.notes).to include("SST is not applied on top of Tourism Tax.")
     expect(records.notes).to include("Service Charge is shown separately from government tax.")
-  end
-
-  context "when the issuer publishes a landline" do
-    let(:hotel) { super().tap { |record| record.update!(fixed_line_number: "04-955 1200") } }
-
-    it "names every way of reaching the issuer, in one line" do
-      expect(records.hotel_contact_line).to eq(
-        "Fixed line: 04-955 1200 · Phone: +60 12-345 6789 · Email: frontdesk@example.com"
-      )
-    end
   end
 
   it "dashes the tax registrations an issuer does not hold rather than dropping them" do
