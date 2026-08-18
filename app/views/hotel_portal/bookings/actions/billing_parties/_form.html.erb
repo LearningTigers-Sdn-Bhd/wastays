@@ -73,17 +73,7 @@
       <% end %>
 
       <% if @booking.group_booking_id? && (!editing || @party.company?) %>
-        <% children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
-        <% choices = children.map do |child|
-             room = child.booking_rooms.first
-             label = room&.room_number.present? ? "Room #{room.room_number}" : child.formatted_reservation_number
-             [label, "booking:#{child.id}"]
-           end %>
-        <% if editing %>
-          <% choices = [["Current room", "booking:#{@booking.id}"], ["Apply to group booking (#{children.size} rooms)", "group"]] %>
-        <% else %>
-          <% choices << ["All rooms in group (#{children.size})", "group"] %>
-        <% end %>
+        <% choices = @group_choices || [] %>
         <%= render PanelsUI::FormField.new(form:, attribute: :apply_to, label: "Apply to", hint: editing ? "Group updates change existing matching account payers only." : "One payer and external folio will be created for each selected room.") do |field| %>
           <% field.with_select_menu(choices, selected: @billing_party_attributes[:apply_to].presence || "booking:#{@booking.id}") %>
         <% end %>

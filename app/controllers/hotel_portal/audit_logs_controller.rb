@@ -38,13 +38,13 @@ class HotelPortal::AuditLogsController < HotelPortal::ReportsBaseController
     logs = logs.where(room_type_id: params[:room_type_id]) if params[:room_type_id].present?
     if params[:action_type].present?
       action_types = case params[:action_type]
-                     when "bulk_rate_update", "rate_update"
+      when "bulk_rate_update", "rate_update"
                        %w[bulk_rate_update rate_update]
-                     when "bulk_inventory_update", "inventory_update"
+      when "bulk_inventory_update", "inventory_update"
                        %w[bulk_inventory_update inventory_update]
-                     else
+      else
                        params[:action_type]
-                     end
+      end
       logs = logs.where(action_type: action_types)
     end
     logs = logs.where("created_at >= ?", @start_date.beginning_of_day) if @start_date

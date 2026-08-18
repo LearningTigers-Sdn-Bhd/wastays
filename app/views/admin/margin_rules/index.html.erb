@@ -1,9 +1,3 @@
-<% all_rules = @all_margin_rules.to_a %>
-<% total_rules = all_rules.size %>
-<% active_rules = all_rules.count { |rule| rule.status == "active" } %>
-<% global_defaults = all_rules.count { |rule| rule.settable_type.blank? } %>
-<% override_rules = total_rules - global_defaults %>
-
 <div class="w-full space-y-8">
   <%= render PanelsUI::PageHeader.new(
         title: "Margin Settings",
@@ -11,7 +5,7 @@
     <% header.with_caption do %>
       <div class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm">
         <span class="size-2.5 rounded-full bg-blue-500"></span>
-        <%= pluralize(global_defaults, "global default") %> in coverage
+        <%= pluralize(@global_defaults, "global default") %> in coverage
       </div>
     <% end %>
   <% end %>
@@ -19,25 +13,25 @@
   <div class="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:grid-cols-4">
     <div class="p-6 md:border-r md:border-border md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Total Rules</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= total_rules %></h2>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-foreground"><%= @total_rules %></h2>
       <p class="mt-2 text-sm font-medium text-muted-foreground">All commission rules in the admin registry</p>
     </div>
 
     <div class="bg-muted/30 p-6 md:border-r md:border-border md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Active Rules</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= active_rules %></h2>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-emerald-600"><%= @active_rules %></h2>
       <p class="mt-2 text-sm font-medium text-muted-foreground">Rules currently used for pricing margins</p>
     </div>
 
     <div class="p-6 md:border-r md:border-border md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Global Defaults</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-blue-600"><%= global_defaults %></h2>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-blue-600"><%= @global_defaults %></h2>
       <p class="mt-2 text-sm font-medium text-muted-foreground">Base rules used when no override exists</p>
     </div>
 
     <div class="p-6 md:p-8">
       <p class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Overrides</p>
-      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-violet-600"><%= override_rules %></h2>
+      <h2 class="text-3xl font-bold tabular-nums tracking-tight text-violet-600"><%= @override_rules %></h2>
       <p class="mt-2 text-sm font-medium text-muted-foreground">Hotel or room-level exceptions to the default</p>
     </div>
   </div>
@@ -86,7 +80,7 @@
           <div data-margin-rule-form-target="roomTypeField" class="<%= @new_rule.settable_type == 'RoomType' ? '' : 'hidden' %>">
             <label class="mb-2 block text-sm font-medium text-muted-foreground">Room Type</label>
             <%= f.select :settable_id,
-                         (@room_types || []).map { |rt| ["#{rt.name} (#{rt.hotel&.name})", rt.id] },
+                         room_type_select_options(@room_types),
                          { include_blank: "Select a room type", selected: @new_rule.settable_type == 'RoomType' ? @new_rule.settable_id : nil },
                          class: "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0",
                          data: { margin_rule_form_target: "roomTypeInput" },
@@ -108,26 +102,14 @@
           <p class="mt-1 text-sm font-medium text-muted-foreground">Create and manage commission rules for default coverage or targeted overrides.</p>
         </div>
 
-        <span class="text-sm font-medium text-muted-foreground">Total <span class="font-semibold text-foreground"><%= total_rules %></span></span>
+        <span class="text-sm font-medium text-muted-foreground">Total <span class="font-semibold text-foreground"><%= @total_rules %></span></span>
       </div>
 
       <div id="admin-margin-rules-mobile-list" class="space-y-4 p-4 sm:p-6 lg:hidden">
         <% if @margin_rules.any? %>
           <% @margin_rules.each do |rule| %>
             <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-muted text-foreground ring-1 ring-inset ring-ring" %>
-            <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
-                 ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
-               elsif rule.settable_type == "Hotel"
-                 hotel_name = rule.settable&.name || (@hotels || []).find { |h| h.id == rule.settable_id }&.name
-                 ["Hotel Override", hotel_name.present? ? hotel_name : "Applies to hotel ##{rule.settable_id}", "text-foreground"]
-               else
-                 room_type_name = if rule.settable.respond_to?(:name)
-                   "#{rule.settable.name} (#{rule.settable.hotel&.name})"
-                 else
-                   "Applies to room type ##{rule.settable_id}"
-                 end
-                 ["Room Type Override", room_type_name, "text-foreground"]
-               end %>
+            <% target_title, target_caption, target_title_classes = margin_rule_target_info(rule, @hotels) %>
 
             <div class="rounded-2xl border border-border bg-muted/60 p-4 shadow-sm">
               <div class="flex items-start justify-between gap-3">
@@ -172,19 +154,7 @@
             <% if @margin_rules.any? %>
               <% @margin_rules.each_with_index do |rule, index| %>
                 <% status_classes = rule.status == "active" ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" : "bg-muted text-foreground ring-1 ring-inset ring-ring" %>
-                <% target_title, target_caption, target_title_classes = if rule.settable_type.blank?
-                     ["Global Default", "Applied when no hotel or room override exists", "text-blue-700"]
-                   elsif rule.settable_type == "Hotel"
-                     hotel_name = rule.settable&.name || (@hotels || []).find { |h| h.id == rule.settable_id }&.name
-                     ["Hotel Override", hotel_name.present? ? hotel_name : "Applies to hotel ##{rule.settable_id}", "text-foreground"]
-                   else
-                     room_type_name = if rule.settable.respond_to?(:name)
-                       "#{rule.settable.name} (#{rule.settable.hotel&.name})"
-                     else
-                       "Applies to room type ##{rule.settable_id}"
-                     end
-                     ["Room Type Override", room_type_name, "text-foreground"]
-                   end %>
+                <% target_title, target_caption, target_title_classes = margin_rule_target_info(rule, @hotels) %>
 
                 <tr class="transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
                   <td class="px-6 py-4 sm:px-8">

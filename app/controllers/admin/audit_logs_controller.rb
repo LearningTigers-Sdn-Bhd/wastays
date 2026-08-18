@@ -6,13 +6,13 @@ class Admin::AuditLogsController < Admin::BaseController
     @logs = @logs.where(hotel_id: params[:hotel_id]) if params[:hotel_id].present?
     if params[:action_type].present?
       action_types = case params[:action_type]
-                     when "bulk_rate_update", "rate_update"
+      when "bulk_rate_update", "rate_update"
                        %w[bulk_rate_update rate_update]
-                     when "bulk_inventory_update", "inventory_update"
+      when "bulk_inventory_update", "inventory_update"
                        %w[bulk_inventory_update inventory_update]
-                     else
+      else
                        params[:action_type]
-                     end
+      end
       @logs = @logs.where(action_type: action_types)
     end
 

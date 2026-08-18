@@ -29,6 +29,12 @@ class Admin::MarginRulesController < Admin::BaseController
     @new_rule ||= MarginRule.new
     @hotels = Hotel.order(:name)
     @room_types = RoomType.includes(:hotel).order(:name)
+
+    all_rules = @all_margin_rules.to_a
+    @total_rules = all_rules.size
+    @active_rules = all_rules.count { |rule| rule.status == "active" }
+    @global_defaults = all_rules.count { |rule| rule.settable_type.blank? }
+    @override_rules = @total_rules - @global_defaults
   end
 
   def margin_rule_params
