@@ -92,23 +92,47 @@ module Reports
           .draw(label: LEGACY_LABEL, note: LEGACY_NOTE, variant: :warning)
       end
 
+      # Two tables under two headings rather than one run of rows: what the stay cost, then
+      # what was paid against it. They were already ordered that way; the reader had to
+      # infer the break from the codes.
       def draw_transactions(pdf)
+        draw_charges(pdf)
+        draw_payments(pdf)
+      end
+
+      def draw_charges(pdf)
         HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
-          section_title: "Transactions",
+          section_title: "Charges",
           headers: [
             "Date", "Code", "Description", "Qty",
             "Net (#{@records.currency})", "Charges (#{@records.currency})", "Gross (#{@records.currency})"
           ],
-          rows: @records.transaction_rows.map { |row| transaction_row(row) },
+          rows: @records.charge_rows.map { |row| charge_row(row) },
           numeric_columns: [ 3, 4, 5, 6 ],
           total_row: nil,
-          empty_message: "No transactions were posted to this folio.",
-          column_widths: transaction_column_widths(pdf),
+          empty_message: "No charges were posted to this folio.",
+          column_widths: charge_column_widths(pdf),
           density: :dense
         )
       end
 
-      def transaction_row(row)
+      # A payment has no quantity, no net and no tax on top, so its table drops the three
+      # columns that could only ever hold a dash. The amount column keeps the width the
+      # charges table gives its gross, so both blocks share one money edge down the page.
+      def draw_payments(pdf)
+        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+          section_title: "Payments",
+          headers: [ "Date", "Code", "Description", "Amount (#{@records.currency})" ],
+          rows: @records.payment_rows.map { |row| payment_row(row) },
+          numeric_columns: [ 3 ],
+          total_row: nil,
+          empty_message: "No payments were recorded against this invoice.",
+          column_widths: payment_column_widths(pdf),
+          density: :dense
+        )
+      end
+
+      def charge_row(row)
         [
           row.date,
           row.code.to_s.presence || "-",
@@ -116,6 +140,15 @@ module Reports
           row.quantity.to_s.presence || "-",
           money_text(row.net),
           money_text(row.charges),
+          money_text(row.gross, credit: payment_credit?(row))
+        ]
+      end
+
+      def payment_row(row)
+        [
+          row.date,
+          row.code.to_s.presence || "-",
+          description_cell(row),
           money_text(row.gross, credit: payment_credit?(row))
         ]
       end
@@ -130,11 +163,16 @@ module Reports
         { content: content, inline_format: true }
       end
 
-      def transaction_column_widths(pdf)
+      def charge_column_widths(pdf)
         fixed = FIXED_COLUMN_WIDTHS
         described = pdf.bounds.width - fixed[:date] - fixed[:code] - fixed[:quantity] -
                     (fixed[:money] * 2) - fixed[:gross]
         [ fixed[:date], fixed[:code], described, fixed[:quantity], fixed[:money], fixed[:money], fixed[:gross] ]
+      end
+
+      def payment_column_widths(pdf)
+        fixed = FIXED_COLUMN_WIDTHS
+        [ fixed[:date], fixed[:code], pdf.bounds.width - fixed[:date] - fixed[:code] - fixed[:gross], fixed[:gross] ]
       end
 
       def payment_credit?(row) = row.kind == "payment" && row.gross.to_d.positive?
@@ -160,9 +198,9 @@ module Reports
           total_row: nil,
           empty_message: "No amounts to summarise.",
           column_widths: [ label_width, width - label_width ],
-          # Total Due and Balance are what the reader is looking for; the lines above are
-          # how they were reached.
-          row_variants: rows.each_with_index.to_h { |row, index| [ index, row.emphasis ? :subtotal : nil ] }.compact,
+          # Total Due and the balance are what the reader is looking for; the lines above
+          # are how they were reached, and an outstanding balance is marked as one.
+          row_variants: rows.each_with_index.to_h { |row, index| [ index, row.variant ] }.compact,
           position: :right,
           show_header: false
         )

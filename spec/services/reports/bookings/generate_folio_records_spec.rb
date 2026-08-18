@@ -202,7 +202,22 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(summary.fetch("Tourism Tax").amount).to eq(10.to_d)
     expect(summary.fetch("Total Due").amount).to eq(390.50.to_d)
     expect(summary.fetch("Total Payments").amount).to eq(390.50.to_d)
-    expect(summary.fetch("Balance").amount).to eq(0.to_d)
+    expect(summary.fetch("Balance settled").amount).to eq(0.to_d)
+  end
+
+  it "splits what the stay cost from what was paid against it" do
+    expect(records.charge_rows.map(&:code)).to match_array(
+      [ "RM-ACC", "RM-ACC_SVC-CHG", "RM-ACC_SST", "RM-ACC_TTX-FRN", "FB-REST" ]
+    )
+    expect(records.payment_rows.map(&:code)).to eq([ "PAY-CARD" ])
+    expect(records.charge_rows + records.payment_rows).to match_array(records.transaction_rows)
+  end
+
+  it "names the balance settled and keeps it out of the alert colour" do
+    balance = records.summary_rows.last
+
+    expect(balance.label).to eq("Balance settled")
+    expect(balance.variant).to eq(:subtotal)
   end
 
   it "shows the notes that apply to this folio" do

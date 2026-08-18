@@ -20,7 +20,7 @@ module Reports
         keyword_init: true
       )
 
-      SummaryRow = Struct.new(:label, :amount, :credit, :emphasis, keyword_init: true)
+      SummaryRow = Struct.new(:label, :amount, :credit, :variant, keyword_init: true)
       SnapshotCode = Data.define(:code, :name)
       SnapshotUser = Data.define(:name)
 
@@ -245,6 +245,13 @@ module Reports
         @transaction_rows ||= build_transaction_rows
       end
 
+      # The two halves of the document, already grouped by #presentation_bucket. Split so
+      # each can be tabled under a heading of its own: what the stay cost, then what was
+      # paid against it.
+      def charge_rows = transaction_rows.reject { |row| row.kind == "payment" }
+
+      def payment_rows = transaction_rows.select { |row| row.kind == "payment" }
+
       def summary_rows
         @summary_rows ||= build_summary_rows
       end
@@ -316,6 +323,15 @@ module Reports
       def balance
         total_due - total_payments
       end
+
+      # A closed folio and an unpaid receivable both end on a line called Balance, and the
+      # figure alone does not say which. The label says it, and the row takes the alert
+      # colour only while money is still owed.
+      def settled? = balance.zero?
+
+      def balance_label = settled? ? "Balance settled" : "Balance due"
+
+      def balance_variant = settled? ? :subtotal : :alert
 
       def money(amount)
         "#{currency} #{format_amount(amount)}"
@@ -402,9 +418,9 @@ module Reports
         rows << SummaryRow.new(label: "SST 6% - F&B / Other", amount: sst_other_total) unless sst_other_total.zero?
         rows << SummaryRow.new(label: tourism_tax_label, amount: tourism_tax_total) unless tourism_tax_total.zero?
         rows << SummaryRow.new(label: "Adjustments", amount: adjustment_total) unless adjustment_total.zero?
-        rows << SummaryRow.new(label: "Total Due", amount: total_due, emphasis: true)
+        rows << SummaryRow.new(label: "Total Due", amount: total_due, variant: :subtotal)
         rows << SummaryRow.new(label: "Total Payments", amount: total_payments, credit: true)
-        rows << SummaryRow.new(label: "Balance", amount: balance, emphasis: true)
+        rows << SummaryRow.new(label: balance_label, amount: balance, variant: balance_variant)
         rows
       end
 

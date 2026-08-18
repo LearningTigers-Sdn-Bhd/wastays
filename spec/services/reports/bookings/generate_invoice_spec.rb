@@ -135,10 +135,16 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
         expect(text).to include("Refund - Refund")
         expect(text).to include("-20.00")
         expect(text).not_to include("(20.00)")
+        # Payments are tabled apart from the charges, under a heading of their own, and
+        # carry no quantity, net or tax column — only an amount.
+        expect(text).to include("Amount (MYR)")
+        expect(text.index("Payments")).to be < text.index("Summary (MYR)")
+        expect(text.index("Charges")).to be < text.index("Payments")
         expect(text).to include("Summary (MYR)")
         expect(text).to include("Room Revenue, net")
         expect(text).to include("Total Due")
-        expect(text).to include("Balance")
+        # This folio's rows do not net to nothing, so the balance says it is still due.
+        expect(text).to include("Balance due")
         # The code column is on the invoice, so the legend that decoded it is not.
         expect(text).not_to include("Transaction Code Legend")
         expect(text).to include("GUEST SIGNATURE")
