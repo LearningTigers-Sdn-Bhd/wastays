@@ -46,6 +46,9 @@ module Invoices
         reservation_reference: @booking.formatted_reservation_number,
         guest_name: @booking.guest_name,
         guest_country: @booking.guest_country,
+        # The invoice bills a party at an address. Invoices issued before this was
+        # captured have none, so the document's bill-to block collapses to what it has.
+        guest_home_address: @booking.guest_home_address,
         check_in: @booking.check_in&.iso8601,
         check_out: @booking.check_out&.iso8601
       }

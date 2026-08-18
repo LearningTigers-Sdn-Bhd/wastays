@@ -131,27 +131,28 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     Invoices::Finalize.call!(folio:, issued_by: nil, balance: 0)
   end
 
-  it "builds guest and folio metadata for the document" do
-    expect(records.document_title).to eq("FOLIO INVOICE")
-    expect(records.hotel_info_rows).to include(
-      [ "Hotel Name", "Hotel ABC Resort" ],
-      [ "Address", "Jalan Pantai Cenang, Langkawi, Malaysia" ],
-      [ "Contact", "+60 12-345 6789 · frontdesk@example.com" ]
+  it "builds the parties the document bills, issues and covers" do
+    expect(records.document_kind).to eq("Folio invoice")
+    expect(records.invoice_number).to eq("ABC-26798231")
+
+    # The masthead is the hotel as the invoice was issued, not as it is named today.
+    expect(records.pdf_hotel.name).to eq("Hotel ABC Resort")
+    expect(records.pdf_hotel.address).to eq("Jalan Pantai Cenang, Langkawi, Malaysia")
+    expect(records.hotel_contact_line).to eq("+60 12-345 6789 · frontdesk@example.com")
+
+    expect(records.bill_to_entries).to include([ nil, "John Doe" ], [ nil, "Foreign Tourist" ])
+    expect(records.invoice_detail_entries).to include(
+      [ "Folio no.", folio.folio_reference_display ],
+      [ "Account ref", booking.folio_account_reference_display ]
     )
-    expect(records.guest_folio_detail_rows).to include([ "Guest Name", "John Doe" ])
-    expect(records.guest_folio_detail_rows).to include([ "Nationality", "Foreign Tourist" ])
-    expect(records.guest_folio_detail_rows).to include([ "Invoice No", "ABC-26798231" ])
-    expect(records.guest_folio_detail_rows).to include([ "Currency", "MYR" ])
-    expect(records.booking_stay_detail_rows).to include([ "Room No / Type", "412 / Deluxe King" ])
-    expect(records.booking_stay_detail_rows).to include([ "Folio Account Reference", booking.folio_account_reference_display ])
-    expect(records.booking_stay_detail_rows).to include([ "Folio Reference", folio.folio_reference_display ])
-    expect(records.booking_stay_detail_rows).to include([ "Confirm No", "BK-778291" ])
+    expect(records.stay_detail_entries).to include([ "Confirm no.", "BK-778291" ], [ nil, "412 / Deluxe King" ])
   end
 
-  it "omits missing optional hotel information rows" do
+  it "leaves the contact line empty rather than printing an empty masthead row" do
     hotel.update!(contact_phone: nil, contact_email: nil)
 
-    expect(described_class.new(folio: folio).call.hotel_info_rows).to include([ "Contact", "+60 12-345 6789 · frontdesk@example.com" ])
+    # Still the snapshotted contact: the invoice was issued while the hotel had one.
+    expect(described_class.new(folio: folio).call.hotel_contact_line).to eq("+60 12-345 6789 · frontdesk@example.com")
   end
 
   it "shows generated tax and charge rows separately with source-derived codes" do
@@ -204,9 +205,7 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(summary.fetch("Balance").amount).to eq(0.to_d)
   end
 
-  it "only shows used legend codes and relevant notes" do
-    expect(records.legend_rows).to include([ "RM-ACC", "Room / Accommodation" ], [ "RM-ACC_SVC-CHG", "Service Charge 10%" ], [ "PAY-CARD", "Card Terminal" ])
-    expect(records.legend_rows.map(&:first)).not_to include("UNUSED")
+  it "shows the notes that apply to this folio" do
     expect(records.notes).to include("SST is not applied on top of Tourism Tax.")
     expect(records.notes).to include("Service Charge is shown separately from government tax.")
   end

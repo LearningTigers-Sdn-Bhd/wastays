@@ -54,7 +54,8 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
     expect(text).to include("PO-7788", "AUTH-22", "Net 30 days")
     expect(text).to include("Executive Suite accommodation", "RM-AR")
     expect(text).to include("450.00", "125.00", "325.00", "Partially paid")
-    expect(text).to include("Printed at", "Finance User")
+    # Who issued the invoice is now a party on the document rather than a footer line.
+    expect(text).to include("Issued by", "Finance User")
   end
 
   it "keeps issue-time payer and reference values after source records change" do
@@ -101,7 +102,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
 
     text = pdf_text(described_class.new(invoice:).generate)
 
-    expect(text).to include("LEGACY-GENERATED RECONSTRUCTION")
+    expect(text).to include("RECONSTRUCTED FROM RECORDS")
     expect(text).to include("original issue-time snapshot was not available")
   end
 

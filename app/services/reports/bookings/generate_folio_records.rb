@@ -120,6 +120,11 @@ module Reports
         [ "refund_request_id", "Refund Ref" ]
       ].freeze
 
+      PdfTheme = HotelPortal::Reports::Exports::PdfTheme
+
+      # What the frame needs of a hotel, taken from the invoice's own snapshot.
+      SnapshotHotel = Struct.new(:name, :address, :city, :country, :icon, :hotel_time_zone, keyword_init: true)
+
       attr_reader :booking, :hotel, :folio, :revision, :invoice_document, :receivable
 
       def initialize(folio: nil, invoice: nil, receivable: nil, printed_by: nil, revision_number: nil)
@@ -130,7 +135,6 @@ module Reports
         @receivable = receivable || @invoice_document&.receivable || @folio&.receivable || @folio&.ar_invoice
         @revision_number = revision_number.presence&.to_i
         @printed_by = printed_by
-        @legend = {}
       end
 
       def call
@@ -139,56 +143,78 @@ module Reports
         self
       end
 
-      def document_title
-        direct_bill? ? "ACCOUNTS RECEIVABLE INVOICE" : "FOLIO INVOICE"
+      def invoice_number
+        revision.document_reference
+      end
+
+      # Sentence case: the frame upcases an eyebrow itself.
+      def document_kind
+        direct_bill? ? "Accounts receivable invoice" : "Folio invoice"
       end
 
       def pdf_title
         "#{direct_bill? ? 'AR' : 'Folio'} Invoice - #{invoice_number}"
       end
 
-      def metadata_left
-        guest_folio_detail_rows
-      end
-
-      def metadata_right
-        booking_stay_detail_rows
-      end
-
-      def hotel_info_rows
+      # The three parties to the document, for PdfPartyBlocks. An entry with no label runs
+      # as its own line, which is how an address reads as an address; blank values are
+      # dropped by the block, so a fact the snapshot never captured costs a line.
+      def party_blocks
         [
-          [ "Hotel Name", snapshot_or_live("hotel", "name") { hotel.name }.presence ],
-          [ "Address", hotel_address ],
-          [ "Contact", hotel_contact ]
-        ].select { |_label, value| value.present? }
-      end
-
-      def guest_folio_detail_rows
-        return corporate_folio_detail_rows if corporate_payer?
-
-        [
-          [ "Guest Name", guest_value(snapshot_or_live("booking", "guest_name") { booking.guest_name }) ],
-          [ "Nationality", guest_value(snapshot_or_live("booking", "guest_country") { booking.guest_country }) ],
-          [ "Invoice No", invoice_number ],
-          [ "Cashier", printed_by ],
-          [ "Currency", currency ]
+          { heading: payer_heading, entries: bill_to_entries },
+          { heading: "Invoice details", entries: invoice_detail_entries },
+          { heading: "Stay details", entries: stay_detail_entries }
         ]
       end
 
-      def payer_section_title
-        corporate_payer? ? "PAYER / FOLIO DETAILS" : "GUEST / FOLIO DETAILS"
+      def payer_heading
+        corporate_payer? ? "Bill to (payer)" : "Bill to"
       end
 
-      def booking_stay_detail_rows
+      def bill_to_entries
+        return corporate_bill_to_entries if corporate_payer?
+
         [
-          [ "Confirm No", guest_value(snapshot_or_live("booking", "confirmation_token") { booking.confirmation_token }) ],
-          [ "Folio Account Reference", folio_account_reference ],
-          [ "Folio Reference", folio_reference ],
-          [ "Room No / Type", room_summary ],
+          [ nil, snapshot_or_live("booking", "guest_name") { booking.guest_name } ],
+          [ nil, snapshot_or_live("booking", "guest_home_address") { booking.guest_home_address } ],
+          [ nil, snapshot_or_live("booking", "guest_country") { booking.guest_country } ]
+        ]
+      end
+
+      def invoice_detail_entries
+        entries = [
+          [ "Issued by", printed_by ],
+          [ "Folio no.", folio_reference ],
+          [ "Account ref", folio_account_reference ]
+        ]
+        entries.concat(direct_bill_term_entries) if direct_bill?
+        entries << [ "Generated", format_datetime(Time.current) ]
+        entries
+      end
+
+      def stay_detail_entries
+        [
+          [ "Booking ref", snapshot_or_live("booking", "reservation_reference") { booking.formatted_reservation_number } ],
+          [ "Confirm no.", snapshot_or_live("booking", "confirmation_token") { booking.confirmation_token } ],
+          [ nil, room_summary ],
           [ "Arrival", format_datetime(snapshot_or_live("booking", "check_in") { booking.check_in }) ],
           [ "Departure", format_datetime(snapshot_or_live("booking", "check_out") { booking.check_out }) ]
         ]
       end
+
+      # The frame draws the masthead from whatever answers to these, so an issued invoice
+      # can wear the hotel it was issued by rather than the hotel as it is named today.
+      # City and country are already folded into the address, and the logo is not
+      # snapshotted, so it comes from the live record.
+      def pdf_hotel
+        SnapshotHotel.new(
+          name: snapshot_or_live("hotel", "name") { hotel.name }.presence || hotel.name,
+          address: hotel_address, city: nil, country: nil,
+          icon: hotel.try(:icon), hotel_time_zone: invoice_time_zone
+        )
+      end
+
+      def hotel_contact_line = hotel_contact
 
       def transaction_rows
         @transaction_rows ||= build_transaction_rows
@@ -196,11 +222,6 @@ module Reports
 
       def summary_rows
         @summary_rows ||= build_summary_rows
-      end
-
-      def legend_rows
-        transaction_rows
-        @legend.sort_by { |code, _label| code.to_s }.map { |code, label| [ code, label ] }
       end
 
       def notes
@@ -237,7 +258,7 @@ module Reports
           [ "Original Amount", amount(receivable.amount) ],
           [ "Paid Amount", amount(receivable.paid_amount) ],
           [ "Outstanding Amount", amount(receivable.outstanding_amount) ],
-          [ "Status as of", Time.current.strftime("%d %b %Y %H:%M") ]
+          [ "Status as of", format_datetime(Time.current) ]
         ]
       end
 
@@ -273,28 +294,28 @@ module Reports
 
       private
 
-      def corporate_folio_detail_rows
+      # A corporate payer has a name but no address anywhere in the schema, so its block
+      # carries the references that identify the account instead.
+      def corporate_bill_to_entries
         terms = folio.booking_billing_party&.billing_terms
         account_type = snapshot_or_live("payer", "account_type") do
           folio.booking_billing_party&.account_type.presence || folio.hotel_corporate_account&.account_type
         end
-        rows = [
-          [ "Corporate Payer", guest_value(snapshot_or_live("payer", "name") { document_live_payer_name }) ],
-          [ "Account Type", account_type.to_s.humanize.presence || "-" ],
-          [ "Purchase Order", guest_value(snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference }) ],
-          [ "Authorization", guest_value(snapshot_or_live("payer", "authorization_reference") { terms&.authorization_reference }) ],
-          [ "Invoice No", invoice_number ],
-          [ "Cashier", printed_by ],
-          [ "Currency", currency ]
+        [
+          [ nil, snapshot_or_live("payer", "name") { document_live_payer_name } ],
+          [ nil, account_type.to_s.humanize.presence ],
+          [ "PO ref", snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference } ],
+          [ "Auth", snapshot_or_live("payer", "authorization_reference") { terms&.authorization_reference } ]
         ]
-        if direct_bill?
-          days = snapshot_or_live("payer", "payment_terms_days") { receivable&.hotel_corporate_account&.payment_terms_days }
-          terms_label = days.to_i.zero? ? "Due on receipt" : "Net #{days.to_i} days"
-          rows.insert(4, [ "Issue Date", invoice_document.issued_on.strftime("%d %b %Y") ])
-          rows.insert(5, [ "Due Date", receivable.due_on.strftime("%d %b %Y") ])
-          rows.insert(6, [ "Payment Terms", terms_label ])
-        end
-        rows
+      end
+
+      def direct_bill_term_entries
+        days = snapshot_or_live("payer", "payment_terms_days") { receivable&.hotel_corporate_account&.payment_terms_days }
+        [
+          [ "Issue date", PdfTheme.format_date(invoice_document.issued_on) ],
+          [ "Due date", PdfTheme.format_date(receivable&.due_on) ],
+          [ "Payment terms", days.to_i.zero? ? "Due on receipt" : "Net #{days.to_i} days" ]
+        ]
       end
 
       def corporate_payer?
@@ -348,7 +369,6 @@ module Reports
 
       def transaction_row(transaction, children: [])
         code, label = display_code_and_label(transaction)
-        @legend[code] ||= label
         TransactionRow.new(
           date: format_date(transaction.posting_date),
           code: code,
@@ -699,10 +719,6 @@ module Reports
         value.presence || "-"
       end
 
-      def invoice_number
-        revision.document_reference
-      end
-
       def folio_account_reference
         snapshot_or_live("folio", "folio_account_reference") { booking.folio_account_reference_display }.presence || booking.formatted_folio_number.presence || "-"
       end
@@ -714,18 +730,18 @@ module Reports
       def format_date(value)
         return "-" if value.blank?
 
-        value.to_date.strftime("%d %b %y")
+        PdfTheme.format_date(value.to_date)
       end
 
       def format_datetime(value)
         return "-" if value.blank?
 
         parsed = value.respond_to?(:in_time_zone) ? value : Time.zone.parse(value.to_s)
-        parsed.in_time_zone(invoice_time_zone).strftime("%d %b %Y %H:%M")
+        PdfTheme.format_time(parsed, invoice_time_zone)
       end
 
       def format_amount(amount)
-        HotelPortal::Reports::Exports::PdfTheme.money(amount)
+        PdfTheme.money(amount)
       end
 
       def safe_reference(value)

@@ -53,11 +53,20 @@ module HotelPortal
         # Draws one column and reports the y it ended at, so the caller can clear the
         # tallest of them.
         def draw_block(block, at:, width:, top:)
+          block_entries = entries(block)
+          stacked = stacked?(block_entries, width)
           cursor = draw_heading(block[:heading], at: at, width: width, top: top)
-          entries(block).each do |label, value|
-            cursor = draw_entry(label, value, at: at, width: width, top: cursor) - ENTRY_GAP
+          block_entries.each do |label, value|
+            cursor = draw_entry(label, value, at: at, width: width, top: cursor, stacked: stacked) - ENTRY_GAP
           end
           cursor
+        end
+
+        # Stacking is decided for the whole column, not per entry: one stacked line among
+        # inline ones reads as a mistake rather than as a fit.
+        def stacked?(block_entries, width)
+          value_width = width - (width * LABEL_FRACTION).floor
+          block_entries.any? { |label, value| label.present? && wraps?(value, value_width) }
         end
 
         def draw_heading(heading, at:, width:, top:)
@@ -71,8 +80,12 @@ module HotelPortal
           top - height - HEADING_GAP
         end
 
-        def draw_entry(label, value, at:, width:, top:)
+        # A label sits beside its value while every value in the column fits the space that
+        # leaves. When one does not, the whole column stacks: a date broken across two lines
+        # mid-value reads worse than a label on a line of its own.
+        def draw_entry(label, value, at:, width:, top:, stacked:)
           return draw_value(value, at: at, width: width, top: top) if label.blank?
+          return draw_stacked_entry(label, value, at: at, width: width, top: top) if stacked
 
           label_width = (width * LABEL_FRACTION).floor
           value_width = width - label_width
@@ -81,6 +94,13 @@ module HotelPortal
           # A wrapped value must not be overwritten by the next entry's label.
           [ label_bottom, value_bottom ].min
         end
+
+        def draw_stacked_entry(label, value, at:, width:, top:)
+          label_bottom = draw_label(label, at: at, width: width, top: top)
+          draw_value(value, at: at, width: width, top: label_bottom)
+        end
+
+        def wraps?(value, width) = @pdf.width_of(value.to_s, **value_options) > width
 
         def draw_label(label, at:, width:, top:)
           options = value_options

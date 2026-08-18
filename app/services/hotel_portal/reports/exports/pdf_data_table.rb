@@ -31,7 +31,8 @@ module HotelPortal
         # columns than their page comfortably holds. position: :right sets a block narrower
         # than the measure against the right margin, for the summary blocks an invoice ends on.
         def draw(section_title:, headers:, rows:, numeric_columns:, total_row:, empty_message:,
-                 column_widths: nil, row_variants: {}, density: :default, position: nil, width: nil)
+                 column_widths: nil, row_variants: {}, density: :default, position: nil, width: nil,
+                 show_header: true)
           sizes = PdfTheme::TABLE_TYPE.fetch(density)
           block_width = resolve_width(width, column_widths)
           draw_section_title(section_title, block_width, position)
@@ -39,8 +40,8 @@ module HotelPortal
             return draw_empty_state(empty_message, headers, numeric_columns, total_row, column_widths, block_width, position, sizes)
           end
 
-          table = build(headers, rows, total_row, column_widths, row_variants, sizes, block_width, position)
-          stripe(table, rows, row_variants)
+          table = build(headers, rows, total_row, column_widths, row_variants, sizes, block_width, position, show_header)
+          stripe(table, rows, row_variants, show_header)
           numeric_columns.each { |index| table.column(index).style(align: :right) }
           table.draw
           @pdf.move_down PdfTheme::SPACE[:lg]
@@ -79,11 +80,14 @@ module HotelPortal
           @pdf.move_down PdfTheme::SPACE[:sm]
         end
 
-        def build(headers, rows, total_row, column_widths, row_variants, sizes, block_width, position)
-          data = [ header_cells(headers, sizes) ] + body_cells(rows, row_variants, sizes)
+        # A block whose columns need no naming — a two-column summary of labels and their
+        # amounts — draws no header rather than an empty dark bar where one would go.
+        def build(headers, rows, total_row, column_widths, row_variants, sizes, block_width, position, show_header)
+          data = body_cells(rows, row_variants, sizes)
+          data.unshift(header_cells(headers, sizes)) if show_header
           data << total_cells(total_row, sizes) if total_row
           options = {
-            header: true, width: block_width,
+            header: show_header, width: block_width,
             # Only what is uniform: prawn-table applies these last, so anything a cell needs
             # to set for itself must not appear here.
             cell_style: { padding: PdfTheme::TABLE_CELL_PADDING, valign: :top }
@@ -153,11 +157,12 @@ module HotelPortal
 
         # A variant row carries its own background, so striping skips it rather than
         # painting over it.
-        def stripe(table, rows, row_variants)
+        def stripe(table, rows, row_variants, show_header)
+          offset = show_header ? 1 : 0
           rows.each_index do |index|
             next unless index.odd? && row_variants[index].nil?
 
-            table.row(index + 1).background_color = PdfTheme::COLORS[:stripe]
+            table.row(index + offset).background_color = PdfTheme::COLORS[:stripe]
           end
         end
 
