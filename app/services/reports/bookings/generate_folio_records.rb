@@ -186,11 +186,13 @@ module Reports
         # printing both tells the payer the same thing twice. The ledger keeps it, where
         # how the account is filed is the point.
         entries = [
+          # The date the invoice was issued, not the date this copy was printed. A tax
+          # document is dated once; the printing is drawn apart from these, at the foot.
+          [ "Issue date", PdfTheme.format_date(invoice_document.issued_on) ],
           [ "Issued by", printed_by ],
           [ "Folio no.", folio_reference ]
         ]
         entries.concat(direct_bill_term_entries) if direct_bill?
-        entries << [ "Generated", format_datetime(Time.current) ]
         entries
       end
 
@@ -230,10 +232,13 @@ module Reports
         rows = []
         rows << "SST is not applied on top of Tourism Tax." if sst_present? && tourism_tax_present?
         rows << "Service Charge is shown separately from government tax." if service_charge_present?
-
-        payment_note = payment_note_text
-        rows << payment_note if payment_note.present?
         rows
+      end
+
+      # When this copy was printed. Set against the issue date rather than beside it: a
+      # reprint changes this and nothing else on the document.
+      def printed_at
+        format_datetime(Time.current)
       end
 
       def printed_by
@@ -314,7 +319,6 @@ module Reports
       def direct_bill_term_entries
         days = snapshot_or_live("payer", "payment_terms_days") { receivable&.hotel_corporate_account&.payment_terms_days }
         [
-          [ "Issue date", PdfTheme.format_date(invoice_document.issued_on) ],
           [ "Due date", PdfTheme.format_date(receivable&.due_on) ],
           [ "Payment terms", days.to_i.zero? ? "Due on receipt" : "Net #{days.to_i} days" ]
         ]
@@ -356,7 +360,7 @@ module Reports
 
       def build_summary_rows
         rows = []
-        rows << SummaryRow.new(label: "Room Revenue, net", amount: room_revenue)
+        rows << SummaryRow.new(label: "Room Revenue, net", amount: room_revenue) unless room_revenue.zero?
         rows << SummaryRow.new(label: "F&B / Other Revenue, net", amount: other_revenue) unless other_revenue.zero?
         rows << SummaryRow.new(label: "Service Charge", amount: service_charge_total) unless service_charge_total.zero?
         rows << SummaryRow.new(label: "SST 8% - Rooms", amount: sst_room_total) unless sst_room_total.zero?
@@ -469,13 +473,6 @@ module Reports
         end
 
         refs.first
-      end
-
-      def payment_note_text
-        payment = active_transactions.select(&:payment?).find { |transaction| payment_reference(transaction).present? }
-        return if payment.blank?
-
-        "#{payment_description(payment)} - #{payment_reference(payment)} - Currency: #{currency}"
       end
 
       def quantity_for(transaction)

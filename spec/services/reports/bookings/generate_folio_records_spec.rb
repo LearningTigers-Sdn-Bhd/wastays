@@ -209,6 +209,49 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.notes).to include("Service Charge is shown separately from government tax.")
   end
 
+  it "dates the invoice by when it was issued, not by when it was printed" do
+    entries = records.invoice_detail_entries.to_h
+    issued_on = folio.reload.invoice.issued_on
+
+    expect(entries["Issue date"]).to eq(HotelPortal::Reports::Exports::PdfTheme.format_date(issued_on))
+    expect(entries.keys).not_to include("Generated")
+  end
+
+  it "leaves the payment reference on its own row rather than repeating it as a note" do
+    payment = records.transaction_rows.last
+
+    expect(payment.secondary_description).to eq("Card Ref: 552190")
+    expect(records.notes.join(" ")).not_to include("Card Ref: 552190")
+    expect(records.notes.join(" ")).not_to include("Currency:")
+  end
+
+  it "omits the room revenue line on a folio that posted no room charge" do
+    other_booking = create(:booking, hotel: hotel, currency: "MYR")
+    other_folio = create(:booking_folio, booking: other_booking, hotel: hotel, status: "closed")
+    create(:folio_transaction,
+      booking_folio: other_folio,
+      transaction_code: fb_code,
+      transaction_type: "charge",
+      category: "fb",
+      amount: 40,
+      description: "Restaurant - Dinner",
+      posting_date: Date.new(2026, 12, 18))
+    create(:folio_transaction,
+      booking_folio: other_folio,
+      transaction_code: payment_code,
+      transaction_type: "payment",
+      category: "booking_payment",
+      amount: 40,
+      description: "Card payment",
+      posting_date: Date.new(2026, 12, 18))
+    Invoices::Finalize.call!(folio: other_folio, issued_by: nil, balance: 0)
+
+    labels = described_class.new(folio: other_folio.reload).call.summary_rows.map(&:label)
+
+    expect(labels).not_to include("Room Revenue, net")
+    expect(labels).to include("F&B / Other Revenue, net")
+  end
+
   it "hides fully reversed transaction noise" do
     original = create(:folio_transaction,
       booking_folio: folio,

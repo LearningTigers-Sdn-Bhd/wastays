@@ -114,6 +114,9 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
         expect(text).to include("Foreign Tourist")
         expect(text).to include("Issued by", "F. Suhaila")
         expect(text).to include("Folio no.", folio.folio_reference_display)
+        # The invoice is dated by its issue date; when this copy was printed sits apart.
+        expect(text).to include("Issue date")
+        expect(text).to include("Printed")
         expect(text).to include("Confirm no.", "BK-778291")
         expect(text).to include("412 / Deluxe King")
         expect(text).to include("Date")

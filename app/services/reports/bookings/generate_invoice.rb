@@ -59,6 +59,7 @@ module Reports
         draw_summary(pdf)
         draw_current_payment_status(pdf) if @records.direct_bill?
         draw_notes(pdf)
+        draw_printed_at(pdf)
         draw_signatures(pdf)
         frame.stamp_page_furniture if footer
         pdf
@@ -199,6 +200,13 @@ module Reports
         return if notes.empty?
 
         notes.each { |note| draw_muted_line(pdf, note) }
+        pdf.move_down THEME::SPACE[:lg]
+      end
+
+      # The issue date is a fact about the invoice and sits with the invoice details; this
+      # is a fact about the sheet of paper, so it sits at the foot on its own.
+      def draw_printed_at(pdf)
+        draw_muted_line(pdf, "Printed #{@records.printed_at}")
         pdf.move_down THEME::SPACE[:lg]
       end
 
