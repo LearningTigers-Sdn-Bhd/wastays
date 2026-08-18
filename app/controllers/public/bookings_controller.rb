@@ -18,7 +18,7 @@ class Public::BookingsController < ApplicationController
 
   def confirmation
     @booking = Booking.with_confirmation_token(params[:id]).first!
-    pdf_bytes = ReceiptPdfService.new(@booking).generate
+    pdf_bytes = Reports::Bookings::GenerateConfirmation.new(@booking).generate
     send_data pdf_bytes,
       filename: "wastays-booking-confirmation-#{@booking.confirmation_token}.pdf",
       type: "application/pdf",
@@ -38,7 +38,7 @@ class Public::BookingsController < ApplicationController
 
   def voucher
     @booking = Booking.with_confirmation_token(params[:id]).first!
-    pdf_bytes = VoucherPdfService.new(@booking).generate
+    pdf_bytes = Reports::Bookings::GenerateVoucher.new(@booking).generate
     send_data pdf_bytes,
       filename: "wastays-voucher-#{@booking.confirmation_token}.pdf",
       type: "application/pdf",

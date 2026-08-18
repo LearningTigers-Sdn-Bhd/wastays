@@ -15,7 +15,7 @@ class HotelPortal::Bookings::TourismTaxVouchersController < HotelPortal::BaseCon
       return
     end
 
-    pdf_bytes = TourismTaxVoucherPdfService.new(booking: @booking, printed_by: current_user).generate
+    pdf_bytes = Reports::Bookings::GenerateTourismTaxVoucher.new(booking: @booking, printed_by: current_user).generate
 
     send_data pdf_bytes,
       filename: "wastays-tourism-tax-voucher-#{@booking.formatted_tourism_tax_voucher_number}.pdf",

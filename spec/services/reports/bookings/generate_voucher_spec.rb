@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe VoucherPdfService do
+RSpec.describe Reports::Bookings::GenerateVoucher do
   let(:hotel) do
     create(
       :hotel,

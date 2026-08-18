@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe ReceiptPdfService do
+RSpec.describe Reports::Bookings::GenerateConfirmation do
   let(:hotel) { create(:hotel, name: "Seaview Hotel", city: "Kuala Lumpur", country: "Malaysia") }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Deluxe King") }
   let(:booking) do

@@ -5,7 +5,7 @@ class HotelPortal::Bookings::ReservationVouchersController < HotelPortal::BaseCo
   before_action :set_booking
 
   def show
-    pdf_bytes = VoucherPdfService.new(@booking).generate
+    pdf_bytes = Reports::Bookings::GenerateVoucher.new(@booking).generate
 
     send_data pdf_bytes,
       filename: "wastays-reservation-voucher-#{@booking.confirmation_token}.pdf",
