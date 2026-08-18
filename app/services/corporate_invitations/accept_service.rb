@@ -36,6 +36,7 @@ module CorporateInvitations
           credit_limit: @invitation.credit_limit,
           credit_currency: @invitation.credit_currency,
           payment_terms_days: @invitation.payment_terms_days,
+          contact_email: @invitation.email,
           status: "active"
         )
         @invitation.update!(accepted_at: Time.current)

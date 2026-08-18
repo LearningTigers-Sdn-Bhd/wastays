@@ -34,7 +34,7 @@
             <td class="text-muted-foreground"><%= transaction_code.active? ? "Active" : "Inactive" %></td>
             <td>
               <% if owner %>
-                <%= link_to owner[:path], class: "inline-flex items-center gap-1 text-sm text-foreground underline underline-offset-2 hover:no-underline" do %>
+                <%= link_to owner[:path], class: "inline-flex items-center gap-1 text-sm text-foreground underline underline-offset-2 hover:no-underline", data: (owner[:turbo_frame].present? ? { turbo_frame: owner[:turbo_frame] } : {}) do %>
                   <%= owner[:label] %>
                   <%= app_icon "arrow-right", class: "size-3.5", aria: { hidden: true } %>
                 <% end %>

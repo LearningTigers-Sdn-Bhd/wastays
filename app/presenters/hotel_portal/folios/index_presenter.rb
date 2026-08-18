@@ -51,7 +51,7 @@ module HotelPortal
 
     def filter_options
       active_filters.map do |key, label|
-        { key: key, label: label, count: count_for_filter(key) }
+        { key: key, label: label, value: (key == "all" ? "" : key), count: count_for_filter(key) }
       end
     end
 

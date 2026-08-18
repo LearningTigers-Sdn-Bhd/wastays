@@ -26,17 +26,17 @@ module HotelPortal
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_hotel_profile", hotel: current_hotel)
     end
 
-    # transaction_code_id => { label:, path: } for the registry that owns it.
+    # transaction_code_id => { label:, path:, turbo_frame: } for the registry that owns it.
     def registry_owners
       owners = {}
       current_hotel.hotel_extra_charges.each do |charge|
-        owners[charge.transaction_code_id] = { label: "Extra Charges", path: edit_hotel_extra_charge_path(current_hotel, charge) }
+        owners[charge.transaction_code_id] = { label: "Extra Charges", path: edit_hotel_extra_charge_path(current_hotel, charge), turbo_frame: "settings_action_sheet" }
       end
       current_hotel.hotel_discounts.each do |discount|
-        owners[discount.transaction_code_id] = { label: "Discounts", path: edit_hotel_discount_path(current_hotel, discount) }
+        owners[discount.transaction_code_id] = { label: "Discounts", path: edit_hotel_discount_path(current_hotel, discount), turbo_frame: "settings_action_sheet" }
       end
       current_hotel.hotel_payment_methods.each do |method|
-        owners[method.transaction_code_id] = { label: "Payment Methods", path: edit_hotel_payment_method_path(current_hotel, method) }
+        owners[method.transaction_code_id] = { label: "Payment Methods", path: edit_hotel_payment_method_path(current_hotel, method), turbo_frame: "settings_action_sheet" }
       end
       current_hotel.hotel_taxes.where.not(transaction_code_id: nil).each do |tax|
         owners[tax.transaction_code_id] = { label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel) }

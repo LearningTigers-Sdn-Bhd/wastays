@@ -109,11 +109,22 @@ module HotelPortal
       redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
       if (request = updater.call)
         respond_to do |format|
+          format.turbo_stream do
+            @board = ::HotelPortal::RequestsBoard.new(current_hotel, board_filters)
+            @presenter = board_presenter(@board, pages: @board.pages)
+            from_column = ::HotelPortal::Requests::Column.for_record(kind: params[:kind], status: "pending", archived: false)
+            to_column = ::HotelPortal::Requests::Column.for_record(kind: params[:kind], status: request.status, archived: request.archived_at.present?)
+            @result = ::HotelPortal::Requests::Move::Result.new(request: request, from_column: from_column, to_column: to_column)
+            render :move, status: :ok
+          end
           format.html { redirect_to redirect_target, notice: "Request updated successfully." }
           format.json { render json: { ok: true, status: request.status } }
         end
       else
         respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: toast_stream("Failed to update request", type: :error), status: :unprocessable_entity
+          end
           format.html { redirect_to redirect_target, alert: "Failed to update request." }
           format.json { render json: { ok: false }, status: :unprocessable_entity }
         end
