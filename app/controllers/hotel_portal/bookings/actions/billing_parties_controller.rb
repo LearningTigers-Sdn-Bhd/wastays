@@ -34,6 +34,22 @@ module HotelPortal
             .joins(:corporate_account).includes(:corporate_account).order("accounts.name")
           @billing_party_attributes = billing_party_params.to_h.with_indifferent_access
           @errors ||= []
+          prepare_group_choices if @booking.group_booking_id?
+        end
+
+        def prepare_group_choices
+          children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id)
+          if @mode == "edit_terms"
+            @group_choices = [ [ "Current room", "booking:#{@booking.id}" ], [ "Apply to group booking (#{children.size} rooms)", "group" ] ]
+          else
+            choices = children.map do |child|
+              room = child.booking_rooms.first
+              label = room&.room_number.present? ? "Room #{room.room_number}" : child.formatted_reservation_number
+              [ label, "booking:#{child.id}" ]
+            end
+            choices << [ "All rooms in group (#{children.size})", "group" ]
+            @group_choices = choices
+          end
         end
 
         def create

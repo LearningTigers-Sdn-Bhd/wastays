@@ -17,8 +17,8 @@
       <% folio_index.filter_options.each do |option| %>
         <% input_id = "folio_filter_#{option[:key]}" %>
         <div class="shrink-0">
-          <input type="radio" name="filter" value="<%= option[:key] == "all" ? "" : option[:key] %>" id="<%= input_id %>" class="sr-only peer" <%= "checked" if folio_index.active_filter?(option[:key]) %> data-action="change->auto-submit#submitNow">
-          <label for="<%= input_id %>" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-black uppercase tracking-wider text-muted-foreground shadow-sm transition hover:bg-muted peer-checked:border-border-interactive peer-checked:bg-primary peer-checked:text-primary-foreground">
+          <input type="radio" name="filter" value="<%= option[:value] %>" id="<%= input_id %>" class="sr-only peer" <%= "checked" if folio_index.active_filter?(option[:key]) %> data-action="change->auto-submit#submitNow">
+          <label for="<%= input_id %>" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-black uppercase tracking-wider text-muted-foreground shadow-sm transition hover:border-border-interactive hover:bg-primary hover:text-primary-foreground peer-checked:border-border-interactive peer-checked:bg-primary peer-checked:text-primary-foreground">
             <%= option[:label] %>
             <span class="tabular-nums opacity-70"><%= option[:count] %></span>
           </label>

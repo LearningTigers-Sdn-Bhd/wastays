@@ -15,6 +15,14 @@ module HotelPortal
             bold: "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
           },
           {
+            normal: "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+            bold: "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
+          },
+          {
+            normal: "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            bold: "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+          },
+          {
             normal: "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
             bold: "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
           }

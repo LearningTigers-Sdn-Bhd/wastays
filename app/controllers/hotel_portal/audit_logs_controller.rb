@@ -36,7 +36,17 @@ class HotelPortal::AuditLogsController < HotelPortal::ReportsBaseController
   def filtered_logs
     logs = current_hotel.inventory_audit_logs.includes(:room_type, :user).order(created_at: :desc)
     logs = logs.where(room_type_id: params[:room_type_id]) if params[:room_type_id].present?
-    logs = logs.where(action_type: params[:action_type]) if params[:action_type].present?
+    if params[:action_type].present?
+      action_types = case params[:action_type]
+      when "bulk_rate_update", "rate_update"
+                       %w[bulk_rate_update rate_update]
+      when "bulk_inventory_update", "inventory_update"
+                       %w[bulk_inventory_update inventory_update]
+      else
+                       params[:action_type]
+      end
+      logs = logs.where(action_type: action_types)
+    end
     logs = logs.where("created_at >= ?", @start_date.beginning_of_day) if @start_date
     logs = logs.where("created_at <= ?", @end_date.end_of_day) if @end_date
     logs

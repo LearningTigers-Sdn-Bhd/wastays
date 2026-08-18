@@ -32,6 +32,10 @@ class HotelCorporateAccount < ApplicationRecord
   scope :active, -> { where(status: "active") }
   scope :suspended, -> { where(status: "suspended") }
 
+  def effective_contact_email
+    contact_email.presence || corporate_account&.users&.min_by(&:id)&.email
+  end
+
   def suspend!
     update!(status: "suspended", suspended_at: Time.current)
   end
