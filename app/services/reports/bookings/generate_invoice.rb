@@ -109,7 +109,9 @@ module Reports
           ],
           rows: @records.charge_rows.map { |row| charge_row(row) },
           numeric_columns: [ 3, 4, 5, 6 ],
-          total_row: nil,
+          # Each table answers its own question where it is read, rather than sending the
+          # reader to the summary to find out what it came to.
+          total_row: [ nil, nil, "Total due", nil, nil, nil, @records.amount(@records.total_due) ],
           empty_message: "No charges were posted to this folio.",
           column_widths: charge_column_widths(pdf),
           density: :dense
@@ -125,7 +127,7 @@ module Reports
           headers: [ "Date", "Code", "Description", "Amount (#{@records.currency})" ],
           rows: @records.payment_rows.map { |row| payment_row(row) },
           numeric_columns: [ 3 ],
-          total_row: nil,
+          total_row: [ nil, nil, "Total payments", @records.credit_amount(@records.total_payments) ],
           empty_message: "No payments were recorded against this invoice.",
           column_widths: payment_column_widths(pdf),
           density: :dense
@@ -198,15 +200,18 @@ module Reports
           total_row: nil,
           empty_message: "No amounts to summarise.",
           column_widths: [ label_width, width - label_width ],
-          # Total Due and the balance are what the reader is looking for; the lines above
-          # are how they were reached, and an outstanding balance is marked as one.
+          # The balance is what the reader is looking for; the lines above are how the
+          # charges decompose, and an outstanding balance is marked as one.
           row_variants: rows.each_with_index.to_h { |row, index| [ index, row.variant ] }.compact,
           position: :right,
           show_header: false
         )
       end
 
+      # A spacer carries no figure, so it renders as an empty pair rather than as 0.00.
       def summary_amount(row)
+        return "" if row.amount.nil?
+
         row.credit ? @records.credit_amount(row.amount) : @records.amount(row.amount)
       end
 

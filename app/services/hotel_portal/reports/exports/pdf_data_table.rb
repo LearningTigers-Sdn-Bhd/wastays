@@ -35,12 +35,15 @@ module HotelPortal
                  show_header: true)
           sizes = PdfTheme::TABLE_TYPE.fetch(density)
           block_width = resolve_width(width, column_widths)
-          draw_section_title(section_title, block_width, position)
           if rows.empty?
+            break_unless_it_fits(section_title, block_width, position, empty_state_height(empty_message, sizes))
+            draw_section_title(section_title, block_width, position)
             return draw_empty_state(empty_message, headers, numeric_columns, total_row, column_widths, block_width, position, sizes)
           end
 
           table = build(headers, rows, total_row, column_widths, row_variants, sizes, block_width, position, show_header)
+          break_unless_it_fits(section_title, block_width, position, kept_height(table, show_header))
+          draw_section_title(section_title, block_width, position)
           stripe(table, rows, row_variants, show_header)
           numeric_columns.each { |index| table.column(index).style(align: :right) }
           table.draw
@@ -48,6 +51,40 @@ module HotelPortal
         end
 
         private
+
+        # A section title is drawn after its block is measured, never before: it used to be
+        # drawn first, so a block that did not fit left its title alone at the foot of the
+        # page with the table it named on the next one.
+        #
+        # A block only asks for a page of its own if a page can hold it. A table longer than
+        # the sheet has to break somewhere, so it asks for its title, its header and its
+        # first row — enough that the heading is never the last thing on a page.
+        def break_unless_it_fits(section_title, block_width, position, block_height)
+          return if @pdf.cursor >= @pdf.bounds.height # already at the top of a page
+
+          needed = title_height(section_title, block_width, position) + block_height
+          @pdf.start_new_page if needed > @pdf.cursor
+        end
+
+        def kept_height(table, show_header)
+          return table.height if table.height <= @pdf.bounds.height
+
+          rows = [ show_header ? 2 : 1, table.row_length ].min
+          (0...rows).sum { |index| table.row(index).height }
+        end
+
+        def empty_state_height(empty_message, sizes)
+          @pdf.height_of(empty_message.to_s.presence || " ", size: sizes[:body]) + PdfTheme::SPACE[:sm]
+        end
+
+        def title_height(section_title, block_width, position)
+          return 0 if section_title.blank?
+
+          width = position == :right ? block_width : @pdf.bounds.width
+          @pdf.height_of(section_title, width: width, **section_title_options) + PdfTheme::SPACE[:sm]
+        end
+
+        def section_title_options = { size: PdfTheme::TYPE[:heading], style: :bold }
 
         def resolve_width(width, column_widths)
           width || column_widths&.sum || @pdf.bounds.width
@@ -59,7 +96,7 @@ module HotelPortal
           return if section_title.blank?
 
           @pdf.fill_color PdfTheme::COLORS[:ink]
-          options = { size: PdfTheme::TYPE[:heading], style: :bold }
+          options = section_title_options
           if position == :right
             height = @pdf.height_of(section_title, width: block_width, **options)
             @pdf.text_box section_title, at: [ @pdf.bounds.width - block_width, @pdf.cursor ],

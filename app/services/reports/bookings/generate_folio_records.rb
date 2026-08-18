@@ -412,17 +412,26 @@ module Reports
         invoice_transactions.map { |transaction| transaction_row(transaction) }.compact
       end
 
+      # Sentence case, and no separator inside a label that already has one. "SST 6% - F&B /
+      # Other" set beside a figure reads as arithmetic before it reads as a name: the
+      # hyphen looks like a minus and the slash like a second one. The rate is charged
+      # *on* something, so the label says so.
       def build_summary_rows
         rows = []
-        rows << SummaryRow.new(label: "Room Revenue, net", amount: room_revenue) unless room_revenue.zero?
-        rows << SummaryRow.new(label: "F&B / Other Revenue, net", amount: other_revenue) unless other_revenue.zero?
-        rows << SummaryRow.new(label: "Service Charge", amount: service_charge_total) unless service_charge_total.zero?
-        rows << SummaryRow.new(label: "SST 8% - Rooms", amount: sst_room_total) unless sst_room_total.zero?
-        rows << SummaryRow.new(label: "SST 6% - F&B / Other", amount: sst_other_total) unless sst_other_total.zero?
+        rows << SummaryRow.new(label: "Room revenue, net", amount: room_revenue) unless room_revenue.zero?
+        rows << SummaryRow.new(label: "F&B and other revenue, net", amount: other_revenue) unless other_revenue.zero?
+        rows << SummaryRow.new(label: "Service charge", amount: service_charge_total) unless service_charge_total.zero?
+        rows << SummaryRow.new(label: "SST 8% on rooms", amount: sst_room_total) unless sst_room_total.zero?
+        rows << SummaryRow.new(label: "SST 6% on F&B and other", amount: sst_other_total) unless sst_other_total.zero?
         rows << SummaryRow.new(label: tourism_tax_label, amount: tourism_tax_total) unless tourism_tax_total.zero?
-        rows << SummaryRow.new(label: "Adjustments", amount: adjustment_total) unless adjustment_total.zero?
-        rows << SummaryRow.new(label: "Total Due", amount: total_due, variant: :subtotal)
-        rows << SummaryRow.new(label: "Total Payments", amount: total_payments, credit: true)
+        unless adjustment_total.zero?
+          # An adjustment that gives money back is a credit and is bracketed like one; a
+          # bare minus among bracketed amounts reads as a second convention.
+          rows << SummaryRow.new(label: "Adjustments", amount: adjustment_total, credit: adjustment_total.negative?)
+        end
+        # The tables above end on Total Due and Total Payments, so the summary states the
+        # decomposition and the bottom line, and no figure is printed twice.
+        rows << SummaryRow.new(variant: :spacer)
         rows << SummaryRow.new(label: balance_label, amount: balance, variant: balance_variant)
         rows
       end
@@ -445,6 +454,10 @@ module Reports
       def secondary_description_for(transaction, children)
         includes = included_charge_summary(children)
         return includes if includes.present?
+        # The reference keys are payment-shaped — a receipt, an auth code, a gateway id —
+        # and a charge that happens to carry one in its metadata was printing it under the
+        # description as though the guest had paid for something twice.
+        return unless transaction.payment?
 
         payment_reference(transaction)
       end
@@ -714,7 +727,7 @@ module Reports
       end
 
       def tourism_tax_label
-        "Tourism Tax"
+        "Tourism tax"
       end
 
       def service_charge_present?

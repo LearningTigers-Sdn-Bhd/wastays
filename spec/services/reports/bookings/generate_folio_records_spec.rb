@@ -39,7 +39,7 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
   end
   let(:folio) { create(:booking_folio, booking: booking, hotel: hotel, folio_number: 451, invoice_number: 98231, status: "closed") }
   let(:room_code) { create(:transaction_code, hotel: hotel, code: "RM-ACC", name: "Room / Accommodation", kind: "charge", category: "accommodation") }
-  let(:service_code) { create(:transaction_code, hotel: hotel, code: "SVC-CHG", name: "Service Charge", kind: "charge", category: "tax") }
+  let(:service_code) { create(:transaction_code, hotel: hotel, code: "SVC-CHG", name: "Service charge", kind: "charge", category: "tax") }
   let(:sst_code) { create(:transaction_code, hotel: hotel, code: "SST", name: "SST - Room", kind: "charge", category: "tax") }
   let(:tourism_code) { create(:transaction_code, hotel: hotel, code: "TTX-FRN", name: "Tourism Tax - Foreign Guest", kind: "charge", category: "tax") }
   let(:fb_code) { create(:transaction_code, hotel: hotel, code: "FB-REST", name: "Restaurant", kind: "charge", category: "fb") }
@@ -198,14 +198,35 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
   it "builds summary rows that reconcile to the displayed transaction rows" do
     summary = records.summary_rows.index_by(&:label)
 
-    expect(summary.fetch("Room Revenue, net").amount).to eq(250.to_d)
-    expect(summary.fetch("F&B / Other Revenue, net").amount).to eq(85.50.to_d)
-    expect(summary.fetch("Service Charge").amount).to eq(25.to_d)
-    expect(summary.fetch("SST 8% - Rooms").amount).to eq(20.to_d)
-    expect(summary.fetch("Tourism Tax").amount).to eq(10.to_d)
-    expect(summary.fetch("Total Due").amount).to eq(390.50.to_d)
-    expect(summary.fetch("Total Payments").amount).to eq(390.50.to_d)
+    expect(summary.fetch("Room revenue, net").amount).to eq(250.to_d)
+    expect(summary.fetch("F&B and other revenue, net").amount).to eq(85.50.to_d)
+    expect(summary.fetch("Service charge").amount).to eq(25.to_d)
+    expect(summary.fetch("SST 8% on rooms").amount).to eq(20.to_d)
+    expect(summary.fetch("Tourism tax").amount).to eq(10.to_d)
     expect(summary.fetch("Balance settled").amount).to eq(0.to_d)
+
+    # The two totals belong to the tables that produce them, so the summary states the
+    # decomposition and the bottom line without restating either.
+    expect(summary.keys).not_to include("Total due", "Total payments")
+    expect(records.total_due).to eq(390.50.to_d)
+    expect(records.total_payments).to eq(390.50.to_d)
+    expect(summary.values.filter_map(&:amount).sum - records.balance).to eq(records.total_due)
+  end
+
+  it "sets the balance apart from the decomposition above it" do
+    labels = records.summary_rows.map(&:label)
+    variants = records.summary_rows.map(&:variant)
+
+    expect(labels.last).to eq("Balance settled")
+    expect(variants[-2]).to eq(:spacer)
+    expect(records.summary_rows[-2].amount).to be_nil
+  end
+
+  it "keeps payment references off the charge rows" do
+    charge = records.charge_rows.find { |row| row.code == "FB-REST" }
+
+    expect(charge.secondary_description).to be_nil
+    expect(records.charge_rows.map(&:secondary_description).compact).to be_empty
   end
 
   it "splits what the stay cost from what was paid against it" do
@@ -334,8 +355,8 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
 
     labels = described_class.new(folio: other_folio.reload).call.summary_rows.map(&:label)
 
-    expect(labels).not_to include("Room Revenue, net")
-    expect(labels).to include("F&B / Other Revenue, net")
+    expect(labels).not_to include("Room revenue, net")
+    expect(labels).to include("F&B and other revenue, net")
   end
 
   it "hides fully reversed transaction noise" do

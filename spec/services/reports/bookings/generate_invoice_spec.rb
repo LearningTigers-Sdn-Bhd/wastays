@@ -141,8 +141,8 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
         expect(text.index("Payments")).to be < text.index("Summary (MYR)")
         expect(text.index("Charges")).to be < text.index("Payments")
         expect(text).to include("Summary (MYR)")
-        expect(text).to include("Room Revenue, net")
-        expect(text).to include("Total Due")
+        expect(text).to include("Room revenue, net")
+        expect(text).to include("Total due")
         # This folio's rows do not net to nothing, so the balance says it is still due.
         expect(text).to include("Balance due")
         # The code column is on the invoice, so the legend that decoded it is not.
@@ -157,6 +157,39 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
         expect(text).not_to include("Guest Name:")
         expect(text).not_to include("MYR 100.00")
       end
+    end
+
+    it "totals each table where it is read" do
+      text = pdf_text(described_class.new(folio: folio).generate)
+
+      expect(text).to include("Total due")
+      expect(text).to include("Total payments")
+      # Neither total is restated by the summary that follows them.
+      expect(text.scan("Total due").size).to eq(1)
+      expect(text.scan("Total payments").size).to eq(1)
+    end
+
+    it "keeps a section title on the page as the block it names" do
+      # Enough rows that the summary would otherwise be pushed over the page break with
+      # its title stranded at the foot of the one before.
+      30.times do |index|
+        create(:folio_transaction,
+          booking_folio: folio,
+          transaction_type: "charge",
+          category: "fb",
+          amount: 12,
+          description: "Restaurant - cover #{index + 1}",
+          posting_date: Date.new(2026, 12, 18))
+      end
+      folio.invoice.update!(state: "under_correction")
+      Invoices::Finalize.call!(folio: folio.reload, issued_by: nil, balance: 0)
+
+      pages = pdf_pages(described_class.new(folio: folio.reload).generate)
+
+      expect(pages.size).to be > 1
+      summary_page = pages.find { |page| page.include?("Summary (MYR)") }
+      expect(summary_page).to be_present
+      expect(summary_page).to match(/Balance (settled|due)/)
     end
 
     context "when the hotel types its city into the address line" do
@@ -309,6 +342,10 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
   end
 
   def pdf_text(pdf)
-    PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
+    pdf_pages(pdf).join("\n")
+  end
+
+  def pdf_pages(pdf)
+    PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text)
   end
 end
