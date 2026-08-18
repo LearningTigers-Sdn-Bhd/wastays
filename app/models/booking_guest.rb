@@ -53,9 +53,9 @@ class BookingGuest < ApplicationRecord
     return if guest.blank?
 
     self.name_snapshot ||= guest.name
-    self.email_snapshot ||= guest.email
-    self.phone_snapshot ||= guest.phone
-    self.government_id_snapshot ||= guest.government_id
+    self.email_snapshot ||= guest.safely_read_encrypted(:email)
+    self.phone_snapshot ||= guest.safely_read_encrypted(:phone)
+    self.government_id_snapshot ||= guest.safely_read_encrypted(:government_id)
     self.gender_snapshot ||= guest.gender
     self.country_snapshot ||= guest.country
     self.document_type_snapshot ||= guest.document_type

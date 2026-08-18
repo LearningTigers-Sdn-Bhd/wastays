@@ -37,6 +37,100 @@
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 32%, transparent);
   }
 
+  .panel-dropzone[data-panels-ui--dropzone-presentation-value="single_image"] {
+    width: min(12rem, 100%);
+  }
+
+  .panel-dropzone[data-panels-ui--dropzone-presentation-value="single_image"] .panel-dropzone__surface {
+    position: relative;
+    aspect-ratio: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .panel-dropzone__single-empty,
+  .panel-dropzone__single-image,
+  .panel-dropzone__single-picker {
+    width: 100%;
+    height: 100%;
+  }
+
+  .panel-dropzone[data-disabled="true"] .panel-dropzone__single-picker {
+    pointer-events: none;
+  }
+
+  .panel-dropzone__single-empty[hidden],
+  .panel-dropzone__single-image[hidden],
+  .panel-dropzone__pending-removal[hidden] {
+    display: none;
+  }
+
+  .panel-dropzone__single-picker {
+    display: flex;
+    cursor: pointer;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .panel-dropzone__single-image {
+    position: relative;
+  }
+
+  .panel-dropzone__single-image > img {
+    width: 100%;
+    height: 100%;
+    background: var(--card);
+    object-fit: cover;
+  }
+
+  .panel-dropzone__single-actions {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: color-mix(in oklab, var(--background) 82%, transparent);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .panel-dropzone__single-image:hover .panel-dropzone__single-actions,
+  .panel-dropzone__single-image:focus-within .panel-dropzone__single-actions,
+  .panel-dropzone:has(input:focus-visible) .panel-dropzone__single-actions {
+    opacity: 1;
+  }
+
+  .panel-dropzone__pending-removal {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+    border-radius: var(--radius-md);
+    background: var(--card);
+    color: var(--muted-foreground);
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .panel-dropzone__single-actions {
+      align-items: flex-end;
+      background: linear-gradient(to bottom, transparent 45%, color-mix(in oklab, var(--background) 86%, transparent));
+      opacity: 1;
+      padding-bottom: 0.75rem;
+    }
+  }
+
   .panel-dropzone:has(input:focus-visible) .panel-dropzone__surface {
     outline: 2px solid var(--ring);
     outline-offset: 2px;

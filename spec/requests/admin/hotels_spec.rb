@@ -172,6 +172,30 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(invitation.role.slug).to eq('hotel_owner')
     end
 
+    it 'turns boat features off when the switch is unchecked' do
+      no_boat_params = hotel_params.deep_dup
+      no_boat_params[:admin_hotels_create_form][:allow_boat_information] = '0'
+
+      post admin_hotels_path, params: no_boat_params
+
+      expect(Hotel.order(:created_at).last.allow_boat_information).to be(false)
+    end
+
+    it 'keeps boat features on when the switch is left at its default' do
+      post admin_hotels_path, params: hotel_params
+
+      expect(Hotel.order(:created_at).last.allow_boat_information).to be(true)
+    end
+
+    it 'gives a boat-enabled hotel default meal times and a generic timetable' do
+      post admin_hotels_path, params: hotel_params
+
+      hotel = Hotel.order(:created_at).last
+      expect(hotel.hotel_boat_setting.lunch_time.strftime('%H:%M')).to eq('12:00')
+      expect(hotel.hotel_boat_schedules.boat_in.in_service_order.map(&:time_of_day)).to eq(%w[09:00 12:00 17:00])
+      expect(hotel.hotel_boat_schedules.boat_out.in_service_order.map(&:time_of_day)).to eq(%w[10:00 13:00 18:00])
+    end
+
     it 'queues the secure owner invitation for Create & onboard' do
       onboard_params = hotel_params.deep_dup
       onboard_params[:admin_hotels_create_form][:creation_action] = 'create_and_onboard'

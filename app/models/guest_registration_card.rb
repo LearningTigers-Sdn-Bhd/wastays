@@ -21,7 +21,10 @@ class GuestRegistrationCard < ApplicationRecord
   validates :booking_id, uniqueness: true
   validates :signer_name, presence: true, if: :signed?
   validates :signature_data_url, presence: true, if: :signed?
+  validates :public_token, presence: true, uniqueness: true
   validate :hotel_matches_booking
+
+  before_validation :generate_public_token, on: :create
 
   # The terms as they stand when the guest signs. `cancellation_policy_data` carries
   # the tier table; `cancellation_policy` keeps the flat text for readers that have
@@ -34,7 +37,8 @@ class GuestRegistrationCard < ApplicationRecord
       "check_in_time" => policy&.check_in_time,
       "check_out_time" => policy&.check_out_time,
       "cancellation_policy_data" => Cancellations::PolicySummary.snapshot_for(hotel).presence,
-      "cancellation_policy" => cancellation.to_text.presence || policy&.cancellation_policy
+      "cancellation_policy" => cancellation.to_text.presence || policy&.cancellation_policy,
+      "terms_and_conditions" => hotel.guest_registration_card_terms.presence
     }.compact
   end
 
@@ -56,7 +60,19 @@ class GuestRegistrationCard < ApplicationRecord
     key.to_s.in?(visible_fields)
   end
 
+  # Signing, printing, and sending all need a hotel policy to show the guest.
+  # A card that has already been signed carries its own snapshot regardless of
+  # what the hotel's live setting says now, so it never gets retroactively
+  # blocked by an edit made after the guest agreed to it.
+  def ready_for_guest?
+    signed? || hotel.guest_registration_card_terms.present?
+  end
+
   private
+
+  def generate_public_token
+    self.public_token ||= SecureRandom.hex(20)
+  end
 
   def sanitize_display_fields(fields)
     return DISPLAY_FIELDS.keys if fields.nil?

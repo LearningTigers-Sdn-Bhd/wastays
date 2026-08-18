@@ -197,6 +197,18 @@ class Guest < ApplicationRecord
     country&.split&.map(&:capitalize)&.join(" ")
   end
 
+  # Guards against ActiveRecord::Encryption::Errors::Decryption for guest
+  # records whose encrypted attributes were written under a since-rotated or
+  # mismatched encryption key. Callers get nil instead of a raised error, so a
+  # single unreadable field never blocks a booking confirmation that already
+  # collected fresh plaintext data from the guest.
+  def safely_read_encrypted(attribute)
+    public_send(attribute)
+  rescue ActiveRecord::Encryption::Errors::Decryption => e
+    Rails.logger.warn("[Guest##{id}] failed to decrypt #{attribute}: #{e.message}")
+    nil
+  end
+
   private
 
   def normalize_guest_data

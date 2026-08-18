@@ -126,7 +126,7 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
   end
 
   it "rejects dropped files with invalid types or excessive sizes" do
-    dropzone = page.find("[data-theme='panel-light'] .panel-dropzone")
+    dropzone = page.find("[data-theme='panel-light'] .panel-dropzone[data-panels-ui--dropzone-presentation-value='files']")
 
     page.execute_script(<<~JS, dropzone)
       const transfer = new DataTransfer()
@@ -175,7 +175,10 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
   end
 
   it "tracks nested drag entry without flickering the drag state" do
-    surface = page.find("[data-theme='panel-light'] .panel-dropzone__surface")
+    surface = page.find(
+      "[data-theme='panel-light'] .panel-dropzone[data-panels-ui--dropzone-presentation-value='files'] " \
+      ".panel-dropzone__surface"
+    )
 
     page.execute_script(<<~JS, surface)
       const surface = arguments[0]
@@ -199,5 +202,55 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
     JS
 
     expect(surface["data-state"]).to eq("idle")
+  end
+
+  it "replaces, stages removal, undoes removal, and exposes keyboard-focusable image actions" do
+    dropzone = page.find("[data-theme='panel-light'] .panel-dropzone[data-panels-ui--dropzone-presentation-value='single_image']")
+    expect(dropzone).to have_css("img[alt='Current hotel icon'][src='/icon.png']")
+    image_layout = page.evaluate_script(<<~JS, dropzone)
+      (() => {
+        const surface = arguments[0].querySelector(".panel-dropzone__surface")
+        const image = arguments[0].querySelector(".panel-dropzone__single-image > img")
+        return {
+          objectFit: getComputedStyle(image).objectFit,
+          width: surface.getBoundingClientRect().width,
+          height: surface.getBoundingClientRect().height
+        }
+      })()
+    JS
+    expect(image_layout.fetch("objectFit")).to eq("cover")
+    expect(image_layout.fetch("width")).to be_within(1).of(image_layout.fetch("height"))
+
+    dropzone.find(".panel-dropzone__single-image").hover
+    expect(dropzone).to have_button("Replace")
+    expect(dropzone).to have_button("Remove")
+
+    replace_button = dropzone.find("button", text: "Replace")
+    replace_button.send_keys(:tab)
+    expect(dropzone).to have_css("button:focus")
+
+    attach_file("file_upload_panel_light_icon", image_path, make_visible: true)
+    expect(dropzone).to have_css("img[alt='Preview of sample_image.jpg']")
+    expect(page.evaluate_script("document.querySelector('#file_upload_panel_light_remove_icon').value")).to eq("0")
+
+    dropzone.find("button", text: "Remove").click
+    expect(dropzone).to have_css(".panel-dropzone__pending-removal", text: "Icon will be removed when you save.")
+    expect(page.evaluate_script("document.querySelector('#file_upload_panel_light_remove_icon').value")).to eq("1")
+    expect(page.evaluate_script("document.querySelector('#file_upload_panel_light_icon').files.length")).to eq(0)
+
+    dropzone.find("button", text: "Undo remove").click
+    expect(dropzone).to have_css("img[alt='Current hotel icon'][src='/icon.png']")
+    expect(page.evaluate_script("document.querySelector('#file_upload_panel_light_remove_icon').value")).to eq("0")
+
+    page.execute_script(<<~JS, dropzone)
+      const transfer = new DataTransfer()
+      transfer.items.add(new File(["replacement"], "dropped.webp", { type: "image/webp" }))
+      const event = new Event("drop", { bubbles: true, cancelable: true })
+      Object.defineProperty(event, "dataTransfer", { value: transfer })
+      arguments[0].dispatchEvent(event)
+    JS
+
+    expect(dropzone).to have_css("img[alt='Preview of dropped.webp']")
+    expect(page.evaluate_script("document.querySelector('#file_upload_panel_light_remove_icon').value")).to eq("0")
   end
 end

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe HotelOps::PopulateRatesAvailability do
+  include ActiveJob::TestHelper
+
   let(:hotel) { create(:hotel) }
   let(:actor) { create(:user, account: hotel.account) }
   let(:room) { create(:room_type, hotel: hotel, quantity: 3, base_price: 100, max_adults: 2) }
@@ -55,6 +57,7 @@ RSpec.describe HotelOps::PopulateRatesAvailability do
   it "requests one consolidated ARI synchronization for the populated scope" do
     room
     hotel.update!(preferred_channel_manager: "channex")
+    clear_enqueued_jobs
 
     expect {
       described_class.call(
@@ -68,7 +71,6 @@ RSpec.describe HotelOps::PopulateRatesAvailability do
       )
     }.to have_enqueued_job(ChannelManagers::SyncJob).exactly(:once)
 
-    queued = ActiveJob::Base.queue_adapter.enqueued_jobs
-    expect(queued.count { |job| job[:job] == ChannelManagers::BufferAriSyncJob }).to eq(0)
+    expect(enqueued_jobs.count { |job| job[:job] == ChannelManagers::BufferAriSyncJob }).to eq(0)
   end
 end

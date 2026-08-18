@@ -1,0 +1,120 @@
+<% content_for :title, "Guest Registration Card" %>
+
+<div class="bg-muted min-h-screen pb-16">
+  <div class="max-w-3xl mx-auto px-4 py-10">
+    <div class="mb-8">
+      <p class="text-xs font-black uppercase tracking-widest text-primary">Guest Registration Card</p>
+      <h1 class="mt-2 text-3xl font-black text-foreground"><%= @hotel.name %></h1>
+      <p class="mt-2 text-sm text-muted-foreground">Registration No. <%= @booking.guest_registration_card_number_display %></p>
+    </div>
+
+    <% if flash[:notice].present? %>
+      <div class="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700"><%= flash[:notice] %></div>
+    <% end %>
+    <% if flash[:alert].present? %>
+      <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= flash[:alert] %></div>
+    <% end %>
+    <% if @card.errors.any? %>
+      <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= @card.errors.full_messages.to_sentence %></div>
+    <% end %>
+
+    <div class="space-y-6">
+      <div class="card p-6 md:p-8">
+        <div class="mb-6">
+          <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Stay Details</h2>
+        </div>
+        <dl class="grid gap-4 md:grid-cols-2 text-sm">
+          <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Name</dt><dd class="font-semibold text-foreground"><%= @presenter.guest_name %></dd></div>
+          <% if @card.field_visible?(:phone) %>
+            <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Phone</dt><dd class="font-semibold text-foreground"><%= @presenter.guest_phone %></dd></div>
+          <% end %>
+          <% if @card.field_visible?(:email) %>
+            <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Email</dt><dd class="font-semibold text-foreground break-all"><%= @presenter.guest_email %></dd></div>
+          <% end %>
+          <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Country</dt><dd class="font-semibold text-foreground"><%= @presenter.guest_country_display %></dd></div>
+          <% if @card.field_visible?(:booking_number) %>
+            <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Booking</dt><dd class="font-semibold text-foreground"><%= @booking.confirmation_token %></dd></div>
+          <% end %>
+          <% if @card.field_visible?(:room_type) %>
+            <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Room type</dt><dd class="font-semibold text-foreground"><%= @presenter.room_type_summary %></dd></div>
+          <% end %>
+          <% if @card.field_visible?(:check_in) %>
+            <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Check-in</dt><dd class="font-semibold text-foreground"><%= @presenter.check_in_display %></dd></div>
+          <% end %>
+          <% if @card.field_visible?(:check_out) %>
+            <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Check-out</dt><dd class="font-semibold text-foreground"><%= @presenter.check_out_display %></dd></div>
+          <% end %>
+        </dl>
+      </div>
+
+      <div class="card p-6 md:p-8">
+        <div class="mb-6">
+          <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Payment</h2>
+        </div>
+        <dl class="grid gap-4 md:grid-cols-2 text-sm">
+          <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Room price</dt><dd class="font-semibold text-foreground"><%= @presenter.room_price_display %></dd></div>
+          <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Amount paid</dt><dd class="font-semibold text-foreground"><%= @presenter.format_money(@presenter.amount_paid) %></dd></div>
+          <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Total charges</dt><dd class="font-semibold text-foreground"><%= @presenter.format_money(@presenter.total_charges) %></dd></div>
+          <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Due amount</dt><dd class="font-semibold text-rose-600"><%= @presenter.format_money(@presenter.due_amount) %></dd></div>
+        </dl>
+      </div>
+
+      <% if @presenter.terms_and_conditions.present? %>
+        <div class="card p-6 md:p-8">
+          <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Terms &amp; Conditions</h2>
+          <div class="mt-3 text-sm text-muted-foreground whitespace-pre-wrap"><%= @presenter.terms_and_conditions %></div>
+        </div>
+      <% end %>
+
+      <% if @presenter.terms.present? && @presenter.cancellation_summary.present? %>
+        <div class="card p-6 md:p-8">
+          <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Cancellation Policy</h2>
+          <div class="mt-3 text-sm text-muted-foreground">
+            <%= render "hotel_portal/bookings/guest_registration_cards/cancellation_policy", summary: @presenter.cancellation_summary %>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="card p-6 md:p-8">
+        <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Signature</h2>
+        <p class="mt-2 text-sm text-muted-foreground">
+          Please read the terms and conditions above carefully. Your signature confirms you have reviewed the check-in, check-out, and hotel policy terms shown on this card.
+        </p>
+
+        <% if @card.signed? && @card.signature_data_url.present? %>
+          <p class="mt-4 text-sm text-muted-foreground">Signed by <%= @card.signer_name %> at <%= l(@card.signed_at, format: :long) %></p>
+          <div class="mt-3 rounded-xl border border-border bg-white p-3">
+            <img src="<%= @card.signature_data_url %>" alt="Guest signature" class="h-24 max-w-full" />
+          </div>
+          <%= link_to "Download PDF", pdf_guest_registration_card_path(@card.public_token), class: "btn btn-primary mt-6 inline-flex px-6 py-3 text-sm font-black uppercase tracking-widest" %>
+        <% elsif !@card.ready_for_guest? %>
+          <div class="mt-4 rounded-xl border border-dashed border-border bg-white p-6 text-center text-sm text-muted-foreground">
+            This card isn't ready for signature yet. Please contact the hotel.
+          </div>
+        <% else %>
+          <%= form_with model: @card, url: guest_registration_card_path(@card.public_token), method: :patch, local: true, class: "mt-6 space-y-4", data: { controller: "signature" } do |form| %>
+            <div>
+              <%= form.label :signer_name, "Signer name", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+              <%= form.text_field :signer_name, value: @card.signer_name.presence || @presenter.guest_name, class: "form-input py-3 px-5 border border-border", required: true %>
+            </div>
+
+            <div class="relative space-y-2">
+              <label class="block text-xs font-bold uppercase tracking-widest text-muted-foreground">Signature</label>
+              <div class="rounded-xl border border-border bg-white p-2">
+                <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
+              </div>
+              <div class="flex justify-end">
+                <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-primary hover:underline">Clear signature</button>
+              </div>
+              <%= form.hidden_field :signature_data_url, data: { signature_target: "input" }, required: true %>
+            </div>
+
+            <div class="flex justify-end">
+              <%= form.submit "Sign registration card", class: "btn btn-primary px-6 py-3 text-sm font-black uppercase tracking-widest" %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

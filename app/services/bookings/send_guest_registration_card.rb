@@ -19,7 +19,10 @@ module Bookings
     def call
       recipient = @booking.guest_email.presence
       return failure("This booking has no guest email address to send to.") if recipient.blank?
-      return failure("The registration card has not been created yet.") if @booking.guest_registration_card.blank?
+
+      card = @booking.guest_registration_card
+      return failure("The registration card has not been created yet.") if card.blank?
+      return failure("Set a Terms & Conditions policy in Settings before sending this card.") unless card.ready_for_guest?
 
       delivery = NotificationDelivery.create!(
         hotel: @booking.hotel,

@@ -28,6 +28,9 @@ class Hotel < ApplicationRecord
   validates :ai_provider_name, presence: true, if: :ai_provider_enabled?
   validates :ai_provider_key, presence: true, if: :ai_provider_enabled?
 
+  has_one_attached :icon, dependent: :purge_later do |attachable|
+    attachable.variant :thumbnail, resize_to_limit: [ 256, 256 ]
+  end
   has_many_attached :photos
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :users, through: :user_hotel_accesses
@@ -137,6 +140,7 @@ class Hotel < ApplicationRecord
   validates :default_currency, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :sell_mode, presence: true
   validates :sell_mode, inclusion: { in: ->(_) { RatePlan.sell_modes } }, allow_blank: true
+  validate :icon_is_supported
   validate :photos_limit_not_exceeded
   validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
@@ -210,6 +214,8 @@ class Hotel < ApplicationRecord
     suspended
   ].freeze
   MAX_PHOTOS = 20
+  ICON_CONTENT_TYPES = %w[image/png image/jpeg image/webp].freeze
+  ICON_MAX_SIZE = 2.megabytes
 
   # The public identifier: a plain number, issued in order, starting here. Hotels quote
   # it down a phone line and sort by it in spreadsheets, which is what earned it the
@@ -221,10 +227,12 @@ class Hotel < ApplicationRecord
   UNIQUE_ID_LOCK_KEY = 8_231_101
 
   # The numbers a hotel quotes on its documents. The first two identify the business
-  # itself; the other two identify it to the authority behind each statutory tax.
+  # itself, the next its licence with the local council, and the last two identify it
+  # to the authority behind each statutory tax.
   REGISTRATION_NUMBER_ATTRIBUTES = %i[
     tin
     ssm_number
+    local_government_license_number
     sst_registration_number
     tourism_tax_registration_number
   ].freeze
@@ -760,6 +768,10 @@ class Hotel < ApplicationRecord
       value = self[attribute].to_s.strip.upcase.gsub(/\s+/, " ")
       self[attribute] = value.presence
     end
+
+    # The council is named, not numbered: properties write either the acronym
+    # (DBKK) or the full name, so tidy the spacing and leave the casing alone.
+    self.local_government_name = local_government_name.to_s.strip.gsub(/\s+/, " ").presence
   end
 
   PREFIX_MIN_LENGTH = 3
@@ -813,6 +825,13 @@ class Hotel < ApplicationRecord
     return unless photos.attached?
 
     errors.add(:photos, "cannot exceed #{MAX_PHOTOS} photos") if photos.count > MAX_PHOTOS
+  end
+
+  def icon_is_supported
+    return unless icon.attached?
+
+    errors.add(:icon, "must be a PNG, JPG, or WebP image") unless icon.blob.content_type.in?(ICON_CONTENT_TYPES)
+    errors.add(:icon, "must be 2 MB or smaller") if icon.blob.byte_size > ICON_MAX_SIZE
   end
 
   def featured_photo_attachment_belongs_to_hotel

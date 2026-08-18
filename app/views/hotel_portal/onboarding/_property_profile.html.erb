@@ -1,12 +1,15 @@
 <% if presenter.read_only? %>
   <section aria-labelledby="property-summary-heading" class="space-y-4">
     <h2 id="property-summary-heading" class="text-base font-semibold">Property summary</h2>
+    <%= render "hotel_portal/profiles/hotel_icon_field", hotel: current_hotel, readonly: true %>
     <dl class="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
       <% {
         "Legal account" => current_hotel.account.name,
         "Property name" => current_hotel.name,
         "TIN" => current_hotel.tin,
         "SSM No." => current_hotel.ssm_number,
+        "Local government" => current_hotel.local_government_name,
+        "License No." => current_hotel.local_government_license_number,
         "Address" => [current_hotel.address, current_hotel.city, current_hotel.country].compact_blank.join(", "),
         "Timezone" => current_hotel.time_zone,
         "Default currency" => current_hotel.default_currency,
@@ -35,6 +38,8 @@
         this first grid cell opens directly into the fields. %>
     <section aria-label="Identity and guest details" class="space-y-4">
       <div class="grid gap-4 sm:grid-cols-2">
+        <%= render "hotel_portal/profiles/hotel_icon_field", form: form, hotel: current_hotel %>
+
         <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Property name", required: true, class: "sm:col-span-2") do |field| %>
           <% field.with_input %>
         <% end %>
@@ -61,6 +66,15 @@
         <% end %>
         <%= render PanelsUI::FormField.new(form: form, attribute: :ssm_number, label: "SSM No.", hint: "Company registration number.") do |field| %>
           <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., 202301012345 (1234567-A)", class: "font-mono uppercase") %>
+        <% end %>
+        <%# The council that licenses the property to trade. Free text: every local
+            authority abbreviates itself differently and properties quote the
+            acronym their licence carries. %>
+        <%= render PanelsUI::FormField.new(form: form, attribute: :local_government_name, label: "Local government name", hint: "The local authority that issued the premises licence.") do |field| %>
+          <% field.with_input(autocomplete: "off", placeholder: "e.g., DBKK, MDP, MPSJ, DBKL") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: form, attribute: :local_government_license_number, label: "License number", hint: "The licence number issued by that local authority.") do |field| %>
+          <% field.with_input(autocomplete: "off", spellcheck: false, placeholder: "e.g., PL/2026/001234", class: "font-mono uppercase") %>
         <% end %>
       </div>
     </section>

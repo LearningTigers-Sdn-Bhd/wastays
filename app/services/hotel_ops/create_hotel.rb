@@ -45,6 +45,7 @@ module HotelOps
           actor: @owner_invitation_options&.fetch(:invited_by, nil)
         ).call if hotel.status == "setup"
 
+        Boats::EnsureDefaults.call(hotel)
         Financials::EnsureDefaultGlMaps.call(hotel)
         Financials::EnsureDefaultTransactionCodes.call(hotel)
         HotelBusinessDate.initialize_for_hotel!(hotel: hotel, date: hotel.business_date_for(Time.current))

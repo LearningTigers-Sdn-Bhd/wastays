@@ -148,6 +148,18 @@
               include_hidden: false) %>
       <% end %>
     </div>
+
+    <div class="mt-6">
+      <%# One fixed policy per property, so the front desk never has to pick or
+          type it per booking — every card and every "sign" link uses it as-is. %>
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :guest_registration_card_terms,
+            label: "Terms & Conditions",
+            hint: "Shown on every registration card and the link sent to guests. Leave blank to show only the cancellation policy.") do |field| %>
+        <% field.with_text_area(rows: 6, placeholder: "e.g. Check-in requires a valid ID matching the booking name. A security deposit may be collected at check-in and refunded at check-out, subject to inspection...") %>
+      <% end %>
+    </div>
   </section>
 
   <section aria-labelledby="localization-security-heading">

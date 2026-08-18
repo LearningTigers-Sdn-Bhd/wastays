@@ -34,6 +34,23 @@
                    preview: :auto,
                    description: "PNG, JPG, or WebP · maximum 5 MB each") %>
             <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :icon,
+                  label: "Hotel icon",
+                  hint: "Single-image replacement and staged removal.") do |field| %>
+              <% field.with_dropzone(
+                   accept: "image/png,image/jpeg,image/webp",
+                   max_size: 2.megabytes,
+                   preview: :image,
+                   presentation: :single_image,
+                   existing_image_url: "/icon.png",
+                   existing_image_alt: "Current hotel icon",
+                   remove_attribute: :remove_icon,
+                   prompt: "Drop hotel icon here or",
+                   description: "PNG, JPG, or WebP · maximum 2 MB") %>
+            <% end %>
           <% end %>
         <% end %>
 

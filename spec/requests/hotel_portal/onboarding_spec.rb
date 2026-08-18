@@ -48,6 +48,54 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     expect(document.at_css("input[name='hotel[fixed_line_number]']")&.[]("placeholder")).to eq("e.g., 088-234 567")
     expect(response.body).to include("Save draft")
     expect(response.body).not_to include("Open navigation")
+    expect(document.at_css("[data-testid='hotel-icon-field'] input[name='hotel[icon]']")).to be_present
+  end
+
+  it "uploads and removes the optional hotel icon without changing profile readiness" do
+    patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
+          params: {
+            navigation_action: "save_draft",
+            hotel: property_params.merge(icon: uploaded_icon("onboarding-icon.jpg"), remove_icon: "0")
+          }
+
+    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "property_profile"))
+    expect(hotel.reload.icon.filename.to_s).to eq("onboarding-icon.jpg")
+    expect(hotel).to be_property_profile_ready
+
+    patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
+          params: {
+            navigation_action: "save_draft",
+            hotel: property_params.merge(remove_icon: "1")
+          }
+
+    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "property_profile"))
+    expect(hotel.reload.icon).not_to be_attached
+    expect(hotel).to be_property_profile_ready
+  end
+
+  it "preserves the existing icon when an onboarding removal is submitted with invalid details" do
+    hotel.icon.attach(uploaded_icon("existing-icon.jpg"))
+
+    patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
+          params: {
+            navigation_action: "save_draft",
+            hotel: property_params.merge(name: "", remove_icon: "1")
+          }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(hotel.reload.icon.filename.to_s).to eq("existing-icon.jpg")
+  end
+
+  it "shows the saved icon without upload actions in the read-only property summary" do
+    hotel.icon.attach(uploaded_icon("review-icon.jpg"))
+    hotel.update!(status: "pending_review")
+
+    get hotel_onboarding_section_path(hotel, section_key: "property_profile")
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.at_css("img[alt='#{hotel.name} hotel icon']")).to be_present
+    expect(response.parsed_body.at_css("input[name='hotel[icon]']")).to be_nil
+    expect(response.body).not_to include("Replace", "Undo remove")
   end
 
   it "keeps the section actions in the shell footer, outside the scrolling body" do
@@ -82,10 +130,20 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   # — so it is worth asserting it actually lands.
   it "stores normalized business registration numbers without gating completion" do
     patch hotel_onboarding_section_path(hotel, section_key: "property_profile"),
-          params: { navigation_action: "save_draft", hotel: property_params.merge(tin: " c1234567890 ", ssm_number: "202301012345") }
+          params: {
+            navigation_action: "save_draft",
+            hotel: property_params.merge(
+              tin: " c1234567890 ",
+              ssm_number: "202301012345",
+              local_government_name: " DBKK ",
+              local_government_license_number: " pl/2026/001234 "
+            )
+          }
 
     expect(hotel.reload.tin).to eq("C1234567890")
     expect(hotel.ssm_number).to eq("202301012345")
+    expect(hotel.local_government_name).to eq("DBKK")
+    expect(hotel.local_government_license_number).to eq("PL/2026/001234")
     expect(hotel.onboarding_sections.find_by!(section_key: "property_profile").state).to eq("in_progress")
   end
 
@@ -623,5 +681,15 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     get hotel_onboarding_path(other_hotel)
 
     expect(response).to redirect_to(root_path)
+  end
+
+
+  def uploaded_icon(filename)
+    Rack::Test::UploadedFile.new(
+      Rails.root.join("spec/fixtures/files/sample_image.jpg"),
+      "image/jpeg",
+      false,
+      original_filename: filename
+    )
   end
 end

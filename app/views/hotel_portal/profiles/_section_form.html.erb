@@ -1,0 +1,57 @@
+<%# Each editable block on the property settings page saves on its own, so the
+    form plumbing, the header and the Save button are the same four times over
+    and live here. `section` names the block for the post-save anchor and
+    doubles as the section's element id. `action` takes an optional control
+    rendered opposite the heading. %>
+<%= form_with model: hotel,
+              url: hotel_profile_path,
+              method: :patch,
+              local: true,
+              data: {
+                turbo: false,
+                controller: "form-dirty",
+                action: "input->form-dirty#refresh change->form-dirty#refresh reset->form-dirty#restore"
+              },
+              class: local_assigns[:class] do |form| %>
+  <%= hidden_field_tag :section, section %>
+
+  <%# The whole block stops short of the full column on desktop, so the heading,
+      the inputs and the Save row all end on the same edge. %>
+  <section id="<%= section %>" class="lg:w-4/5" aria-labelledby="<%= section %>-heading">
+    <%= render "section_header",
+               section: section,
+               title: title,
+               description: description,
+               action: local_assigns[:action] %>
+
+    <div class="mt-5">
+      <%= yield form %>
+    </div>
+
+    <footer class="mt-5 flex justify-end gap-3">
+      <%# Cancel only exists while there is something to discard, so it starts
+          hidden and the controller reveals it alongside enabling Save. A native
+          reset restores the section's fields; the PanelsUI selects and the Tom
+          Select-backed combobox all resync themselves off the reset event. %>
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :reset,
+            variant: :secondary,
+            size: :md,
+            hidden: true,
+            data: { form_dirty_target: "cancel" }) do %>
+        Cancel
+      <% end %>
+
+      <%# Enabled in the markup and switched off by the controller on connect,
+          so a page whose JS never runs keeps a Save that works. %>
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :submit,
+            size: :md,
+            data: { form_dirty_target: "submit" }) do %>
+        Save
+      <% end %>
+    </footer>
+  </section>
+<% end %>

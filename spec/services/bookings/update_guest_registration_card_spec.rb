@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Bookings::UpdateGuestRegistrationCard do
-  let(:booking) { create(:booking) }
-  let(:hotel) { booking.hotel }
+  let(:booking) { create(:booking, hotel: hotel) }
+  let(:hotel) { create(:hotel, guest_registration_card_terms: "Valid photo ID is required at check-in.") }
   let!(:property_policy) { create(:property_policy, hotel: hotel) }
   let(:card) { create(:guest_registration_card, booking: booking, hotel: hotel, status: "draft") }
 
@@ -55,6 +55,20 @@ RSpec.describe Bookings::UpdateGuestRegistrationCard do
         expect(result.success?).to be false
         expect(result.error).to eq(:invalid)
         expect(result.message).to include("Signature data url can't be blank")
+        expect(card.reload.status).to eq("draft")
+      end
+
+      it "returns terms_missing when the hotel has not set its Terms & Conditions" do
+        hotel.update!(guest_registration_card_terms: nil)
+        params = {
+          signer_name: "John Doe",
+          signature_data_url: "data:image/png;base64,signature123"
+        }
+
+        result = described_class.call(card: card, booking: booking, params: params)
+
+        expect(result.success?).to be false
+        expect(result.error).to eq(:terms_missing)
         expect(card.reload.status).to eq("draft")
       end
 

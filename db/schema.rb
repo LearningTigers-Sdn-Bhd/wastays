@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -787,16 +787,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_110000) do
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
-  create_table "complaints", force: :cascade do |t|
-    t.bigint "booking_id", null: false
-    t.string "category"
-    t.datetime "created_at", null: false
-    t.text "description"
-    t.datetime "resolved_at"
-    t.string "status", default: "open"
-    t.datetime "updated_at", null: false
-    t.index ["booking_id"], name: "index_complaints_on_booking_id"
-  end
 
   create_table "corporate_ar_payment_intents", force: :cascade do |t|
     t.decimal "amount", precision: 10, scale: 2, null: false
@@ -1156,6 +1146,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_110000) do
     t.datetime "created_at", null: false
     t.jsonb "display_fields_snapshot"
     t.bigint "hotel_id", null: false
+    t.string "public_token"
     t.text "signature_data_url"
     t.datetime "signed_at"
     t.string "signer_name"
@@ -1164,6 +1155,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_110000) do
     t.datetime "updated_at", null: false
     t.index ["booking_id"], name: "index_guest_registration_cards_on_booking_id", unique: true
     t.index ["hotel_id"], name: "index_guest_registration_cards_on_hotel_id"
+    t.index ["public_token"], name: "index_guest_registration_cards_on_public_token", unique: true
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'signed'::character varying]::text[])", name: "guest_registration_cards_status_allowed"
   end
 
@@ -1618,7 +1610,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_110000) do
     t.boolean "geolocation_enabled", default: true, null: false
     t.string "google_map_link"
     t.jsonb "guest_registration_card_fields"
+    t.text "guest_registration_card_terms"
     t.string "hotel_prefix"
+    t.string "local_government_license_number"
+    t.string "local_government_name"
     t.string "name"
     t.date "onboarding_end_date"
     t.date "onboarding_start_date"

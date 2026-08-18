@@ -37,7 +37,6 @@ class GuestRegistrationCardPdfService
     draw_bordered_section(pdf, bottom_margin: @presenter.boat_transfer? ? 2 : 5) { draw_payment_section(pdf) }
     draw_bordered_section(pdf) { draw_boat_transfer_section(pdf) } if @presenter.boat_transfer?
     draw_policy_section(pdf)
-    draw_bordered_section(pdf) { draw_notes_section(pdf, "Please Note", @booking.internal_notes) } if @booking.internal_notes.present?
     draw_bordered_section(pdf) { draw_notes_section(pdf, "Remark", @booking.special_requests) } if @booking.special_requests.present?
     pdf.move_down 12
     draw_signature_section(pdf)
@@ -139,6 +138,8 @@ class GuestRegistrationCardPdfService
   end
 
   def draw_policy_section(pdf)
+    draw_terms_and_conditions(pdf)
+
     summary = @presenter.cancellation_summary
     pdf.fill_color TEXT
     if summary.present?
@@ -146,7 +147,10 @@ class GuestRegistrationCardPdfService
       pdf.move_down 2
       draw_cancellation_tiers(pdf, summary.rows)
       draw_cancellation_notes(pdf, summary)
-    else
+    elsif @presenter.terms_and_conditions.blank?
+      # Only worth a line when the whole policy section would otherwise be
+      # empty — with terms and conditions already shown above, a missing
+      # cancellation policy on its own isn't worth calling out here.
       pdf.fill_color TEXT_MUTED
       pdf.text "Hotel terms are not configured.", size: 9
     end
@@ -163,6 +167,20 @@ class GuestRegistrationCardPdfService
       row(0).font_style = :bold
     end
     pdf.move_down 4
+  end
+
+  # The hotel's fixed policy, set once in Settings rather than per booking —
+  # printed ahead of the cancellation tiers, which stay their own section since
+  # they're computed, not authored.
+  def draw_terms_and_conditions(pdf)
+    text = @presenter.terms_and_conditions
+    return if text.blank?
+
+    pdf.fill_color TEXT
+    pdf.text "Terms & Conditions", size: 8, style: :bold
+    pdf.move_down 2
+    pdf.text text, size: 9, leading: 2
+    pdf.move_down 10
   end
 
   def draw_cancellation_notes(pdf, summary)
