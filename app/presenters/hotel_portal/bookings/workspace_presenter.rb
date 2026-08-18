@@ -20,6 +20,7 @@ module HotelPortal
     ) do
       def available? = href.present?
       def history? = revision_actions.present?
+      def issue_required? = type == "Tourism tax voucher" && status == "Not issued"
     end
     DocumentSection = Data.define(:key, :title, :caption, :primary_heading, :type_heading, :party_heading, :amount_heading, :rows, :empty_message) do
       def single_currency?
@@ -50,6 +51,8 @@ module HotelPortal
       "Deposit receipt" => :receipts,
       "Group deposit receipt" => :receipts,
       "AR payment receipt" => :receipts,
+      "Reservation voucher" => :utility,
+      "Tourism tax voucher" => :utility,
       "Registration card" => :utility,
       "Group statement" => :statements
     }.freeze
@@ -253,7 +256,7 @@ module HotelPortal
         DocumentSection.new(:invoices, "Invoices", "Booking invoices", "Invoice", "Folio type", "Payer", document_amount_heading("Amount", invoices), invoices, "No invoices are available."),
         DocumentSection.new(:ledgers, "Folio ledgers", "Folio ledgers", "Folio", "Folio type", "Payer", document_amount_heading("Balance", ledgers), ledgers, "No folio ledgers are available."),
         DocumentSection.new(:receipts, "Receipts", "Payment and deposit receipts", "Receipt", "Receipt type", "Payer", document_amount_heading("Amount", receipts), receipts, "No receipts have been issued."),
-        DocumentSection.new(:utility, "Utility", "Registration cards", "Document", "Document type", "Subject", nil, grouped.fetch(:utility, []), "No utility documents are available."),
+        DocumentSection.new(:utility, "Utility", "Reservation, tourism tax, and registration documents", "Document", "Document type", "Subject", nil, grouped.fetch(:utility, []), "No utility documents are available."),
         DocumentSection.new(:statements, "Statements", "Consolidated group accounts receivable statements", "Statement", "Statement type", "Payer", nil, grouped.fetch(:statements, []), "No consolidated statements are available.")
       ]
     end
@@ -1325,7 +1328,8 @@ module HotelPortal
     def build_documents
       load_document_records
       rows = document_folio_invoice_rows + document_ar_invoice_rows + document_ledger_rows +
-        document_receipt_rows + document_registration_card_rows + document_statement_rows
+        document_receipt_rows + document_reservation_voucher_rows + document_tourism_tax_voucher_rows +
+        document_registration_card_rows + document_statement_rows
       rows.sort_by do |row|
         [ @document_booking_positions.fetch(row.booking, [ -1, 0 ]), DOCUMENT_TYPE_ORDER.fetch(row.type), row.issued_at || Time.zone.at(0), row.key ]
       end
@@ -1545,6 +1549,54 @@ module HotelPortal
         next unless card
 
         document_registration_card_row(child, card)
+      end
+    end
+
+    def document_reservation_voucher_rows
+      return [] unless document_permission?("manage_bookings")
+
+      @document_bookings.map do |child|
+        DocumentRow.new(
+          key: "reservation-voucher-#{child.id}",
+          type: "Reservation voucher",
+          number: child.confirmation_token,
+          booking: document_booking_label(child),
+          room: document_booking_room_label(child),
+          payer: document_primary_guest_name(child),
+          currency: nil,
+          amount: nil,
+          status: "Available",
+          issued_at: nil,
+          href: routes.hotel_booking_reservation_voucher_path(hotel, child),
+          context_type: "Reservation voucher",
+          revision_actions: []
+        )
+      end
+    end
+
+    def document_tourism_tax_voucher_rows
+      return [] unless document_permission?("manage_bookings")
+
+      @document_bookings.filter_map do |child|
+        next unless child.tourism_tax?
+
+        issued = child.tourism_tax_voucher_number?
+
+        DocumentRow.new(
+          key: "tourism-tax-voucher-#{child.id}",
+          type: "Tourism tax voucher",
+          number: issued ? child.formatted_tourism_tax_voucher_number : "Pending assignment",
+          booking: document_booking_label(child),
+          room: document_booking_room_label(child),
+          payer: document_primary_guest_name(child),
+          currency: nil,
+          amount: nil,
+          status: issued ? (child.tourism_tax_collected? ? "Paid" : "Issued") : "Not issued",
+          issued_at: nil,
+          href: issued ? routes.hotel_booking_tourism_tax_voucher_path(hotel, child) : routes.issue_hotel_booking_tourism_tax_voucher_path(hotel, child),
+          context_type: "Tourism tax voucher",
+          revision_actions: []
+        )
       end
     end
 

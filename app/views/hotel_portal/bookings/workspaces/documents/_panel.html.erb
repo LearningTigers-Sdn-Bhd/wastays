@@ -95,6 +95,13 @@
                             <% end %>
                           <% end %>
                         <% end %>
+                      <% elsif document.issue_required? %>
+                        <%= form_with url: document.href, method: :post, data: { turbo: false }, html: { target: "_blank" } do %>
+                          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :xs, aria: { label: "Issue #{document.type} for #{document.booking}" }) do %>
+                            <%= app_icon "receipt", class: "size-4", aria: { hidden: true } %>
+                            <span>Issue</span>
+                          <% end %>
+                        <% end %>
                       <% elsif document.available? %>
                         <%= render PanelsUI::Button.new(href: document.href, variant: :secondary, size: :xs, target: "_blank", data: { turbo: false }, aria: { label: "Open #{document.type} #{document.number}" }) do %>
                           <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>

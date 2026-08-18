@@ -43,6 +43,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(document.at_css('[data-layout-mode="standard"]')).to be_present
       expect(document.at_css('[data-testid="workspace-entity-rail"]')).to be_nil
       expect(document.at_css('#booking-entity-selector-sheet')).to be_nil
+      expect(document.at_css('[data-document-type="reservation-voucher"]')).to be_nil
+      expect(document.at_css('[data-document-type="tourism-tax-voucher"]')).to be_nil
       expect(document.at_css('[data-testid="booking-documents"]').text).to include(
         "No invoices are available.",
         "No folio ledgers are available.",
@@ -50,6 +52,103 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         "No utility documents are available.",
         "No consolidated statements are available."
       )
+    end
+
+    it "lists the reservation voucher in Utility for staff who can manage bookings" do
+      role.permissions << manage_bookings
+      create(:booking_room, booking:, room_number: "208")
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "documents")
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      row = document.at_css('[data-document-section="utility"] [data-document-type="reservation-voucher"]')
+      expect(row).to be_present
+      expect(row.text.squish).to include("BK-PANEL-42", "Reservation voucher", booking.formatted_reservation_number, "Room 208", "Available")
+      expect(row.at_css("a[href='#{hotel_booking_reservation_voucher_path(hotel, booking)}'][target='_blank'][data-turbo='false']")).to be_present
+    end
+
+    it "offers to issue a tourism tax voucher from Documents and opens it after issuance" do
+      role.permissions << manage_bookings
+      booking.update!(guest_country: "Singapore", tourism_tax_amount: 20.0, tax_lines: [ { "type" => "tourism_tax", "amount" => 20.0 } ])
+
+      expect {
+        get hotel_booking_workspace_path(hotel, booking, tab: "documents")
+      }.not_to change(BookingAuditLog, :count)
+
+      document = Nokogiri::HTML(response.body)
+      row = document.at_css('[data-document-section="utility"] [data-document-type="tourism-tax-voucher"]')
+      expect(row.text.squish).to include("Pending assignment", "Tourism tax voucher", booking.formatted_reservation_number, "Not issued", "Issue")
+      expect(row.at_css("form[action='#{issue_hotel_booking_tourism_tax_voucher_path(hotel, booking)}'][method='post'][target='_blank'][data-turbo='false']")).to be_present
+      expect(row.at_css("button[type='submit']").text.squish).to eq("Issue")
+      expect(booking.reload.tourism_tax_voucher_number).to be_nil
+
+      booking.assign_tourism_tax_voucher_number!(user:)
+      get hotel_booking_workspace_path(hotel, booking, tab: "documents")
+
+      document = Nokogiri::HTML(response.body)
+      row = document.at_css('[data-document-section="utility"] [data-document-type="tourism-tax-voucher"]')
+      expect(row).to be_present
+      expect(row.text.squish).to include(booking.formatted_tourism_tax_voucher_number, "Tourism tax voucher", booking.formatted_reservation_number, "Issued")
+      expect(row.at_css("a[href='#{hotel_booking_tourism_tax_voucher_path(hotel, booking)}'][target='_blank'][data-turbo='false']")).to be_present
+    end
+
+    it "lists one reservation voucher per child booking in a group workspace" do
+      role.permissions << manage_bookings
+      group = create(:group_booking, hotel:)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel:, group_booking: group, group_position: 2, confirmation_token: "BK-SIBLING-43")
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "documents")
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      rows = document.css('[data-document-section="utility"] [data-document-type="reservation-voucher"]')
+      expect(rows.size).to eq(2)
+      expect(rows.map { |row| row.text.squish }).to contain_exactly(
+        a_string_including("BK-PANEL-42", booking.formatted_reservation_number),
+        a_string_including("BK-SIBLING-43", sibling.formatted_reservation_number)
+      )
+      expect(rows.filter_map { |row| row.at_css("a")&.[]("href") }).to contain_exactly(
+        hotel_booking_reservation_voucher_path(hotel, booking),
+        hotel_booking_reservation_voucher_path(hotel, sibling)
+      )
+    end
+
+    it "offers issue or open per eligible child in a group workspace" do
+      role.permissions << manage_bookings
+      group = create(:group_booking, hotel:)
+      booking.update!(
+        group_booking: group,
+        group_position: 1,
+        guest_country: "Singapore",
+        tourism_tax_amount: 20.0,
+        tax_lines: [ { "type" => "tourism_tax", "amount" => 20.0 } ]
+      )
+      sibling = create(
+        :booking,
+        hotel:,
+        group_booking: group,
+        group_position: 2,
+        guest_country: "Singapore",
+        tourism_tax_amount: 20.0,
+        tax_lines: [ { "type" => "tourism_tax", "amount" => 20.0 } ]
+      )
+      sibling.assign_tourism_tax_voucher_number!(user:)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "documents")
+
+      document = Nokogiri::HTML(response.body)
+      rows = document.css('[data-document-section="utility"] [data-document-type="tourism-tax-voucher"]')
+      expect(rows.size).to eq(2)
+
+      pending_row = rows.find { |row| row.text.include?(booking.formatted_reservation_number) }
+      expect(pending_row.text.squish).to include("Pending assignment", "Not issued", "Issue")
+      expect(pending_row.at_css("form")&.[]("action")).to eq(issue_hotel_booking_tourism_tax_voucher_path(hotel, booking))
+
+      issued_row = rows.find { |row| row.text.include?(sibling.formatted_reservation_number) }
+      expect(issued_row.text.squish).to include(sibling.formatted_tourism_tax_voucher_number, "Issued", "Open")
+      expect(issued_row.at_css("a")&.[]("href")).to eq(hotel_booking_tourism_tax_voucher_path(hotel, sibling))
     end
 
     it "renders only actual documents across the entire group" do
