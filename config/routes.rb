@@ -158,7 +158,9 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index", as: :dashboard
     resource :profile, only: [ :show ]
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
-    resources :ar_statements, only: [ :index, :show ], path: "statements"
+    resources :ar_statements, only: [ :index, :show ], path: "statements" do
+      get "pdf/:filename", action: :pdf, as: :pdf, on: :member, constraints: { filename: /[^\/]+\.pdf/ }
+    end
     resources :ar_payments, only: [ :index, :show ], path: "payments" do
       collection do
         get :pay_invoices, path: "pay-invoices"
@@ -321,10 +323,14 @@ Rails.application.routes.draw do
       end
       get "aging", to: "ar_invoices#aging", as: :ar_aging
       get "agent-summary", to: "ar_invoices#agent_summary", as: :ar_agent_summary
+      get "agent-summary/:filename", to: "ar_invoices#agent_summary_pdf", as: :ar_agent_summary_pdf,
+        constraints: { filename: /[^\/]+\.pdf/ }
       resources :ar_invoices, only: [ :index, :show ], path: "invoices" do
         get :pdf, on: :member
       end
-      resources :ar_statements, only: [ :index, :show ], path: "statements"
+      resources :ar_statements, only: [ :index, :show ], path: "statements" do
+        get "pdf/:filename", action: :pdf, as: :pdf, on: :member, constraints: { filename: /[^\/]+\.pdf/ }
+      end
       resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
         get :eligible_invoices, on: :collection
         resources :allocations, only: [ :create ], controller: "ar_payment_allocations" do
@@ -398,7 +404,8 @@ Rails.application.routes.draw do
         post :resolve_complaint_request, controller: :workspace_actions
       end
     end
-    get "bookings/:booking_id/group-statement", to: "bookings/group_statements#show", as: :booking_group_statement
+    get "bookings/:booking_id/group-statement/:filename", to: "bookings/group_statements#show", as: :booking_group_statement,
+      constraints: { filename: /[^\/]+\.pdf/ }
     scope "booking-actions", as: :booking_action, module: "bookings/actions" do
       get "audit-trail/:booking_id", to: "audit_trails#show", as: :audit_trail
       get "show-booking/:booking_id", to: "summaries#show", as: :show_booking

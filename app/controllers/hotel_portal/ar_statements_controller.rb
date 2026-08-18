@@ -2,8 +2,10 @@
 
 module HotelPortal
   class ArStatementsController < FinancialsBaseController
+    helper_method :statement_pdf_filename
+
     before_action :authorize_view_reports!
-    before_action :set_relationship, only: :show
+    before_action :set_relationship, only: %i[show pdf]
 
     def index
       @presenter = HotelPortal::AccountsReceivable::StatementsIndexPresenter.new(hotel: current_hotel, params: params)
@@ -13,27 +15,23 @@ module HotelPortal
       report = build_report
       @presenter = HotelPortal::AccountsReceivable::StatementPresenter.new(report: report, params: params)
 
-      respond_to do |format|
-        format.html
-        format.pdf do
-          pdf = ::Reports::AccountsReceivable::GenerateStatement.new(report: report, printed_by: current_user&.name, detail: detail_report?).generate
-          send_data pdf,
-            filename: statement_filename(report),
-            type: "application/pdf",
-            disposition: "inline"
-        end
-      end
     rescue ::Reports::AccountsReceivable::GenerateStatementRecords::InvalidStatementError => e
-      @statement_error = e.message
-      @start_date = parsed_date_or_default(params[:start_date], default_start_date)
-      @end_date = parsed_date_or_default(params[:end_date], business_date)
-      @available_currencies = available_currencies
-      @selected_currency = params[:currency].presence || @available_currencies.first
+      render_invalid_statement(e)
+    end
 
-      respond_to do |format|
-        format.html { render :show, status: :unprocessable_content }
-        format.pdf { render plain: e.message, status: :unprocessable_content }
-      end
+    def pdf
+      report = build_report(include_invoice_details: detail_report?)
+      document = ::Reports::AccountsReceivable::GenerateStatement.new(
+        report: report,
+        printed_by: current_user&.name,
+        detail: detail_report?
+      ).generate
+      send_data document,
+        filename: statement_filename(report),
+        type: "application/pdf",
+        disposition: "inline"
+    rescue ::Reports::AccountsReceivable::GenerateStatementRecords::InvalidStatementError => e
+      render plain: e.message, status: :unprocessable_content
     end
 
     private
@@ -44,14 +42,14 @@ module HotelPortal
         .find(params[:id])
     end
 
-    def build_report
+    def build_report(include_invoice_details: false)
       ::Reports::AccountsReceivable::GenerateStatementRecords.call(
         hotel: current_hotel,
         hotel_corporate_account: @hotel_corporate_account,
         start_date: params[:start_date].presence || default_start_date,
         end_date: params[:end_date].presence || business_date,
         currency: params[:currency],
-        include_invoice_details: detail_report? && request.format.pdf?
+        include_invoice_details: include_invoice_details
       )
     end
 
@@ -81,8 +79,26 @@ module HotelPortal
     end
 
     def statement_filename(report)
-      account = report.corporate_account.name.parameterize.presence || "corporate-account"
-      "ar-statement-#{account}-#{report.start_date}-#{report.end_date}-#{report.currency}.pdf"
+      statement_pdf_filename(
+        account_name: report.corporate_account.name,
+        start_date: report.start_date,
+        end_date: report.end_date,
+        currency: report.currency
+      )
+    end
+
+    def statement_pdf_filename(account_name:, start_date:, end_date:, currency:)
+      account = account_name.parameterize.presence || "corporate-account"
+      "account-statement-#{account}-#{start_date}-#{end_date}-#{currency}.pdf"
+    end
+
+    def render_invalid_statement(error)
+      @statement_error = error.message
+      @start_date = parsed_date_or_default(params[:start_date], default_start_date)
+      @end_date = parsed_date_or_default(params[:end_date], business_date)
+      @available_currencies = available_currencies
+      @selected_currency = params[:currency].presence || @available_currencies.first
+      render :show, status: :unprocessable_content
     end
 
     def authorize_view_reports!

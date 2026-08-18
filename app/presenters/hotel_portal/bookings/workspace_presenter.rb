@@ -1636,6 +1636,7 @@ module HotelPortal
           href: routes.hotel_booking_group_statement_path(
             hotel,
             booking,
+            "group-ar-statement-#{booking.group_booking.formatted_reservation_number}-#{currency}.pdf",
             hotel_corporate_account_id: account.id,
             currency:
           ),

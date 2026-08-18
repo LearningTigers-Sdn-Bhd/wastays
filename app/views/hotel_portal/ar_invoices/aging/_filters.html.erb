@@ -24,7 +24,17 @@
       <% end %>
     </div>
 
-    <%= render PanelsUI::Button.new(as: :a, href: hotel_ar_agent_summary_path(current_hotel, format: :pdf), variant: :primary, size: :md, class: "shrink-0", target: "_blank", rel: "noopener") do %>
+    <%= render PanelsUI::Button.new(
+          as: :a,
+          href: hotel_ar_agent_summary_pdf_path(
+            current_hotel,
+            "agent-summary-statement-#{current_hotel.slug}-#{presenter.as_of_date}.pdf"
+          ),
+          variant: :primary,
+          size: :md,
+          class: "shrink-0",
+          target: "_blank",
+          rel: "noopener") do %>
       <%= cached_icon "printer", class: "size-4", aria: { hidden: true } %>
       Print Summary
     <% end %>

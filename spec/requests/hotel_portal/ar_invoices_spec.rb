@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "pdf/reader"
+require "stringio"
 
 RSpec.describe "HotelPortal::ArInvoices", type: :request do
   let(:hotel) { create(:hotel, status: "live") }
@@ -151,7 +153,8 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Aging Report")
       expect(response.body).to include("Print Summary")
-      expect(document.at_css("a[href='#{hotel_ar_agent_summary_path(hotel, format: :pdf)}']")).to be_present
+      filename = "agent-summary-statement-#{hotel.slug}-#{hotel.current_business_date}.pdf"
+      expect(document.at_css("a[href='#{hotel_ar_agent_summary_pdf_path(hotel, filename)}']")).to be_present
       expect(response.body).to include("Current")
       expect(response.body).to include("1–30 days")
       expect(response.body).to include("Total outstanding")
@@ -236,11 +239,18 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
         corporate_account: create(:account, :corporate, name: "Sunset Travel Agency"))
       create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGENT-PDF", folio_number: 703, amount: 200, relationship: agent, due_on: Date.current - 5.days)
 
-      get hotel_ar_agent_summary_path(hotel, format: :pdf)
+      filename = "agent-summary-statement-#{hotel.slug}-#{hotel.current_business_date}.pdf"
+      get hotel_ar_agent_summary_pdf_path(hotel, filename)
 
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq("application/pdf")
       expect(response.body).to start_with("%PDF")
+      expect(response.headers["Content-Disposition"]).to include(
+        filename
+      )
+      expect(URI.parse(hotel_ar_agent_summary_pdf_path(hotel, filename)).path).to end_with("/#{filename}")
+      text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+      expect(text).to include("PREPARED BY", user.name)
     end
   end
 
