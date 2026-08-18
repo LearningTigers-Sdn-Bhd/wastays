@@ -64,7 +64,9 @@ RSpec.describe "Public::Bookings invoice", type: :request do
       text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
       expect(text).to include("FOLIO INVOICE")
       expect(text).to include("Room Charge - Standard Room")
-      expect(text).to include("SUMMARY (MYR)")
+      expect(text).to include("Summary (MYR)")
+      # A guest copy is not marked confidential.
+      expect(text).not_to include("Confidential")
     end
 
     it "returns 404 when the booking has no closed folio" do

@@ -3,13 +3,18 @@
 module HotelPortal
   module Reports
     class DepositLiabilityPdfExportService
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, prepared_by:)
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Deposit Liability Report", period_label: "As of #{@report.as_of_date.strftime('%d %b %Y')}", page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(
+          hotel: @hotel, title: "Deposit Liability Report",
+          period_label: @report.as_of_date.strftime("%d %b %Y"), period_label_title: "As of date",
+          prepared_by: @prepared_by, page_layout: :landscape
+        )
         builder.add_header
         builder.add_summary([ [ "Bookings", @report.totals[:booking_count].to_s ], [ "Booking Payments", amount(:booking_payment_amount) ], [ "Earned", amount(:earned_amount) ], [ "Remaining Liability", amount(:remaining_liability) ] ])
         builder.add_table(
@@ -24,7 +29,7 @@ module HotelPortal
       private
 
       def amount(key) = "#{currency} #{money(@report.totals[key])}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def currency = @hotel.default_currency.presence || "MYR"
     end
   end

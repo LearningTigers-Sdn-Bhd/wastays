@@ -47,6 +47,25 @@ RSpec.describe "CorporatePortal::ArStatements", type: :request do
     expect(response.body).not_to include("MYR 250.00")
   end
 
+  it "exports a statement with a readable hotel and period filename" do
+    hotel = create(:hotel, name: "Seaview Resort")
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, hotel: hotel)
+    create_invoice(relationship, amount: 250, issued_on: Date.new(2026, 6, 5))
+
+    filename = "account-statement-seaview-resort-2026-06-01-2026-06-30-MYR.pdf"
+    get pdf_corporate_ar_statement_path(relationship, filename), params: {
+      start_date: "2026-06-01",
+      end_date: "2026-06-30",
+      currency: "MYR"
+    }
+
+    expect(response).to have_http_status(:success)
+    expect(response.headers["Content-Disposition"]).to include(
+      "account-statement-seaview-resort-2026-06-01-2026-06-30-MYR.pdf"
+    )
+    expect(URI.parse(pdf_corporate_ar_statement_path(relationship, filename)).path).to end_with("/#{filename}")
+  end
+
   it "does not allow viewing a statement for another corporate account's relationship" do
     other_relationship = create(:hotel_corporate_account)
 

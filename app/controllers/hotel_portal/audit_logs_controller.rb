@@ -24,7 +24,7 @@ class HotelPortal::AuditLogsController < HotelPortal::ReportsBaseController
       end
       format.pdf do
         send_data HotelPortal::Reports::AuditLogPdfExportService.new(
-          hotel: current_hotel, logs: @logs, period_label: period_label
+          hotel: current_hotel, logs: @logs, period_label: period_label, prepared_by: current_user.name
         ).generate,
           filename: export_filename("pdf"), type: "application/pdf"
       end

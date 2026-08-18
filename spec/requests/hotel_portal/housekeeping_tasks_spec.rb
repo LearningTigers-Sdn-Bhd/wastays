@@ -208,7 +208,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/pdf")
-      expect(text).to include("HOUSEKEEPING TASKS", "Inspect balcony", "Page 1 of 1")
+      expect(text).to include("Housekeeping Tasks", "Inspect balcony", user.name, "Page 1 of 1")
     end
   end
 

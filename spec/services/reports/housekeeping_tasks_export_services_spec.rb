@@ -68,7 +68,7 @@ RSpec.describe "Housekeeping task export services" do
       hotel: hotel, room_groups: room_groups, selected_date: selected_date
     ).call
     pdf = Reports::HousekeepingTasksPdfGenerator.new(
-      hotel: hotel, room_groups: room_groups, selected_date: selected_date
+      hotel: hotel, room_groups: room_groups, selected_date: selected_date, prepared_by: "Housekeeping Manager"
     ).call
     pdf_text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
 
@@ -78,6 +78,9 @@ RSpec.describe "Housekeeping task export services" do
     expect(xlsx).to start_with("PK")
     expect(Zip::File.open_buffer(StringIO.new(xlsx)).map(&:name)).to include("xl/workbook.xml")
     expect(pdf).to start_with("%PDF")
-    expect(pdf_text).to include("HOUSEKEEPING TASKS", "Rooms", "2", "José 陈", "002", "Vacant", "Page 1 of 1")
+    expect(pdf_text).to include(
+      "Housekeeping Tasks", "SELECTED DATE", "21 Jul 2026", "PREPARED BY", "Housekeeping Manager",
+      "ROOMS", "2", "José 陈", "002", "Vacant", "Confidential", "Page 1 of 1"
+    )
   end
 end

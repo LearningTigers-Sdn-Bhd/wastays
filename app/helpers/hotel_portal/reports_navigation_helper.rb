@@ -25,8 +25,8 @@ module HotelPortal
         NavItem.new(label: "Outstanding Balance", path: outstanding_balance_hotel_reports_path(current_hotel), icon: "wallet", active: reports_action?("outstanding_balance"), permission: "view_reports", plan_feature: "outstanding_balance_noshow"),
         NavItem.new(label: "OTA Settlements", path: channel_settlements_hotel_reports_path(current_hotel), search_text: "OTA Channel Settlements Reconciliation Expected Received Variance", icon: "banknote", active: reports_action?("channel_settlements") || controller_name == "channel_settlement_receipts", permission: "view_reports"),
         NavItem.new(label: "Deposit Liability", path: deposit_liability_hotel_reports_path(current_hotel), icon: "landmark", active: reports_action?("deposit_liability"), permission: "view_reports"),
-        NavItem.new(label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements Weekly Reports", icon: "banknote", active: reports_action?("payouts"), permission: "view_reports")
-      ]
+        (NavItem.new(label: "Payouts", path: payouts_hotel_reports_path(current_hotel), search_text: "Payouts Settlements Weekly Reports", icon: "banknote", active: reports_action?("payouts"), permission: "view_reports") unless current_hotel.hide_payout_reports?)
+      ].compact
 
       compliance_nav_items = [
         NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: reports_action?("tax_compliance"), icon: "calculator", permission: "view_reports"),

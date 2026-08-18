@@ -33,7 +33,7 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityPdfExportService do
     )
   end
 
-  subject { described_class.new(hotel: hotel, report: report) }
+  subject { described_class.new(hotel: hotel, report: report, prepared_by: "Sarah Lim") }
 
   describe "#generate" do
     it "generates a PDF content" do

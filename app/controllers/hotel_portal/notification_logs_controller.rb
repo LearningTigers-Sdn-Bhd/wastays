@@ -23,7 +23,7 @@ class HotelPortal::NotificationLogsController < HotelPortal::ReportsBaseControll
       end
       format.pdf do
         send_data HotelPortal::Reports::NotificationLogPdfExportService.new(
-          hotel: current_hotel, logs: @logs, period_label: "All records"
+          hotel: current_hotel, logs: @logs, period_label: "All records", prepared_by: current_user.name
         ).generate,
           filename: export_filename("pdf"), type: "application/pdf"
       end

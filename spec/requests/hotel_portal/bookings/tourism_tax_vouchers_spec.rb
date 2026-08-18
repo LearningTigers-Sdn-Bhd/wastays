@@ -77,8 +77,59 @@ RSpec.describe "HotelPortal::Bookings::TourismTaxVouchers", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
       expect(pages.size).to eq(2)
-      expect(pages.first.text).to include("VOUCHER", "COLLECTED", "Guest Signature", "Authorized Signatory", "This voucher is to prove that the guest has paid the tourism fee.")
-      expect(pages.last.text).to include("VOUCHER - DUPLICATE COPY", "COLLECTED", "Guest Signature", "Authorized Signatory", "This voucher is to prove that the guest has paid the tourism fee.")
+      expect(pages.first.text).to include("TOURISM TAX VOUCHER", "GUEST COPY", "COLLECTED", "GUEST SIGNATURE", "AUTHORISED SIGNATURE")
+      expect(pages.last.text).to include("TOURISM TAX VOUCHER", "HOTEL COPY", "COLLECTED")
+    end
+
+    # Tourism tax is charged per room per night. The voucher used to print the room count
+    # as its quantity and the total divided by it as its rate, so a three-night stay
+    # claimed a unit rate of thirty ringgit.
+    it "prints room-nights as the quantity and the true per-room-night rate" do
+      booking.update!(
+        check_out: booking.check_in + 3.days,
+        tourism_tax_amount: 30.0,
+        tax_posting_snapshot: three_night_tourism_tax_snapshot(booking.check_in.to_date)
+      )
+      post issue_hotel_booking_tourism_tax_voucher_path(hotel, booking)
+
+      get hotel_booking_tourism_tax_voucher_path(hotel, booking)
+      text = PDF::Reader.new(StringIO.new(response.body)).pages.first.text
+
+      expect(text).to include("Room nights")
+      expect(text).to match(/Tourism tax\s+3\s+10\.00\s+30\.00/)
+      expect(text).not_to include("30.00 30.00")
+    end
+
+    it "prints the hotel's tourism tax registration number and the guest's nationality" do
+      hotel.update!(tourism_tax_registration_number: "TTX-998877")
+      post issue_hotel_booking_tourism_tax_voucher_path(hotel, booking)
+
+      get hotel_booking_tourism_tax_voucher_path(hotel, booking)
+      text = PDF::Reader.new(StringIO.new(response.body)).pages.first.text
+
+      expect(text).to include("Tourism Tax: TTX-998877")
+      expect(text).to include("Nationality", "Singapore")
+    end
+
+    # The old voucher matched only the check-in posting source, so a tax taken anywhere
+    # else printed "pending collection" beside a badge that said collected.
+    it "dates a collection that was not taken at check-in" do
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction,
+        booking_folio: folio,
+        transaction_type: "payment",
+        category: "cash",
+        amount: 10.0,
+        posting_date: Date.current,
+        metadata: { "tourism_tax" => true, "source" => "tourism_tax_checkout" })
+      booking.update!(tourism_tax_collected: true)
+      post issue_hotel_booking_tourism_tax_voucher_path(hotel, booking)
+
+      get hotel_booking_tourism_tax_voucher_path(hotel, booking)
+      text = PDF::Reader.new(StringIO.new(response.body)).pages.first.text
+
+      expect(text).to include(Date.current.strftime("%d %b %Y"))
+      expect(text).not_to include("Not yet collected")
     end
 
     it "does not issue voucher number on PDF GET" do
@@ -93,8 +144,8 @@ RSpec.describe "HotelPortal::Bookings::TourismTaxVouchers", type: :request do
       get hotel_booking_tourism_tax_voucher_path(hotel, booking)
       text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
 
-      expect(text).to include("This voucher records the tourism fee payable for this stay.")
-      expect(text).not_to include("This voucher is to prove that the guest has paid the tourism fee.")
+      expect(text).to include("Payable", "It is not evidence of payment.")
+      expect(text).not_to include("evidence that the guest has paid")
     end
 
     it "denies access to staff without manage_bookings permission" do
@@ -116,6 +167,22 @@ RSpec.describe "HotelPortal::Bookings::TourismTaxVouchers", type: :request do
 
       expect(response).to have_http_status(:not_found)
       expect(other_booking.reload.tourism_tax_voucher_number).to be_nil
+    end
+  end
+
+  # One tourism tax line per stay date, each carrying the rate it was charged at and the
+  # rooms it applied to — the shape Bookings::BuildFinancialSnapshot posts.
+  def three_night_tourism_tax_snapshot(first_night)
+    3.times.to_h do |offset|
+      date = (first_night + offset.days).iso8601
+      [
+        date,
+        [ {
+          "type" => "tourism_tax", "primary_tax_key" => "tourism_tax", "name" => "Tourism Tax",
+          "rate" => "10.0", "basis_amount" => 1, "amount" => "10.0",
+          "currency" => "MYR", "stay_date" => date
+        } ]
+      ]
     end
   end
 end

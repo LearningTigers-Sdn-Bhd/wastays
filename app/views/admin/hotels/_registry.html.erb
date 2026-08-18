@@ -48,6 +48,7 @@
           <th scope="col">Hotel</th>
           <th scope="col" class="hidden sm:table-cell">City</th>
           <th scope="col">Status</th>
+          <th scope="col" class="hidden lg:table-cell">Payout reports</th>
           <th scope="col" class="hidden md:table-cell">Registered</th>
           <% if presenter.onboarding_queue? %>
             <th scope="col">Onboarding period</th>
@@ -72,6 +73,9 @@
                   <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm, indicator: true) %>
                 </button>
               <% end %>
+            </td>
+            <td class="hidden lg:table-cell">
+              <%= render PanelsUI::Badge.new(label: row.payout_reports_label, variant: row.payout_reports_variant, size: :sm) %>
             </td>
             <td class="hidden text-muted-foreground md:table-cell"><%= row.registered_on %></td>
             <% if presenter.onboarding_queue? %>

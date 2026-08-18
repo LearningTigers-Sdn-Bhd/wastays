@@ -17,7 +17,11 @@ RSpec.describe "HotelPortal::Bookings::GroupStatements", type: :request do
   it "returns the deterministic group AR statement as an inline PDF" do
     group = create(:group_booking, hotel:)
     booking = create(:booking, hotel:, group_booking: group, group_position: 1)
-    relationship = create(:hotel_corporate_account, hotel:)
+    relationship = create(
+      :hotel_corporate_account,
+      hotel:,
+      corporate_account: create(:account, :corporate, name: "Atlas Travel")
+    )
     folio = create(:booking_folio,
       booking:,
       hotel:,
@@ -31,13 +35,17 @@ RSpec.describe "HotelPortal::Bookings::GroupStatements", type: :request do
     get hotel_booking_group_statement_path(
       hotel,
       booking,
+      "group-ar-statement-#{group.formatted_reservation_number}-#{invoice.currency}.pdf",
       hotel_corporate_account_id: relationship.id,
       currency: invoice.currency
     )
 
     expect(response).to have_http_status(:success)
     expect(response.media_type).to eq("application/pdf")
-    expect(response.headers["Content-Disposition"]).to include("inline", "group-statement")
+    expect(response.headers["Content-Disposition"]).to include(
+      "inline",
+      "group-ar-statement-#{group.formatted_reservation_number}-#{invoice.currency}.pdf"
+    )
   end
 
   it "redirects with the validation message when the payer has no matching invoices" do
@@ -48,6 +56,7 @@ RSpec.describe "HotelPortal::Bookings::GroupStatements", type: :request do
     get hotel_booking_group_statement_path(
       hotel,
       booking,
+      "group-ar-statement-#{group.formatted_reservation_number}-MYR.pdf",
       hotel_corporate_account_id: relationship.id,
       currency: "MYR"
     )

@@ -3,13 +3,14 @@
 module HotelPortal
   module Reports
     class FinancialBreakdownPdfExportService
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, prepared_by:)
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Financial Breakdown", period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Financial Breakdown", period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
         builder.add_header
         builder.add_summary([ [ "Gross", amount(:gross) ], [ "Taxes", amount(:taxes) ], [ "Margin", amount(:margin) ], [ "Net Payout", amount(:net) ] ])
         builder.add_table(
@@ -25,7 +26,7 @@ module HotelPortal
       private
 
       def amount(key) = "#{currency} #{money(@report.totals[key])}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def date(value) = value&.strftime("%d %b %Y") || "-"
       def period_label = "#{date(@report.start_date)} - #{date(@report.end_date)}"
       def currency = @hotel.default_currency.presence || "MYR"
