@@ -303,12 +303,14 @@ Facts about the document sit in one of three places, and never in two at once:
 - `PdfDetailGrid` — the same label-above-value tier without the bounding rules,
   wrapping to as many rows as the pairs need. For a second band of facts under
   the one the frame already drew.
-- `PdfPartyBlocks` — headed columns of free-running lines, separated by white
-  space rather than rules. This is for the parties to a document: who it bills,
-  who issued it, what it covers. A block holds a name and an address, so its
-  columns end at different heights and a label-value grid cannot carry it.
+- `PdfPartyBlocks` — headed columns, separated by white space rather than rules,
+  every entry a label above its value. This is for the parties to a document: who
+  it bills, who issued it, what it covers. A block holds a name and an address, so
+  its columns end at different heights and a label-value *grid* cannot carry it.
   A document wearing party blocks passes `metadata: []` so the frame draws no
-  strip above them.
+  strip above them. Labels never sit *beside* their values here: the columns are a
+  third of a portrait page, so the longer values wrap mid-value while the shorter
+  ones do not, and one stacked entry among inline ones reads as a mistake.
 
 `PdfNoticeBand` carries a status that has to arrive before the document's numbers
 do — a void, a reconstruction. `:danger` and `:warning` variants.

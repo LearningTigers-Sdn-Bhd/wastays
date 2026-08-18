@@ -18,10 +18,8 @@ module HotelPortal
       class PdfPartyBlocks
         GUTTER = PdfTheme::SPACE[:xl]
         HEADING_GAP = PdfTheme::SPACE[:sm]
-        ENTRY_GAP = PdfTheme::SPACE[:xs]
-        # Wide enough for "Confirmation no." at TYPE[:small] without wrapping, which is the
-        # longest label these documents use.
-        LABEL_FRACTION = 0.42
+        ENTRY_GAP = PdfTheme::SPACE[:sm]
+        LABEL_GAP = 1
 
         def initialize(pdf:)
           @pdf = pdf
@@ -53,20 +51,11 @@ module HotelPortal
         # Draws one column and reports the y it ended at, so the caller can clear the
         # tallest of them.
         def draw_block(block, at:, width:, top:)
-          block_entries = entries(block)
-          stacked = stacked?(block_entries, width)
           cursor = draw_heading(block[:heading], at: at, width: width, top: top)
-          block_entries.each do |label, value|
-            cursor = draw_entry(label, value, at: at, width: width, top: cursor, stacked: stacked) - ENTRY_GAP
+          entries(block).each do |label, value|
+            cursor = draw_entry(label, value, at: at, width: width, top: cursor) - ENTRY_GAP
           end
           cursor
-        end
-
-        # Stacking is decided for the whole column, not per entry: one stacked line among
-        # inline ones reads as a mistake rather than as a fit.
-        def stacked?(block_entries, width)
-          value_width = width - (width * LABEL_FRACTION).floor
-          block_entries.any? { |label, value| label.present? && wraps?(value, value_width) }
         end
 
         def draw_heading(heading, at:, width:, top:)
@@ -80,30 +69,19 @@ module HotelPortal
           top - height - HEADING_GAP
         end
 
-        # A label sits beside its value while every value in the column fits the space that
-        # leaves. When one does not, the whole column stacks: a date broken across two lines
-        # mid-value reads worse than a label on a line of its own.
-        def draw_entry(label, value, at:, width:, top:, stacked:)
+        # Label above value, always, and the value takes the whole column. Setting a label
+        # beside its value was tried and withdrawn: the columns are a third of a portrait
+        # page, so the longer values wrapped mid-value while the shorter ones did not, and
+        # one stacked line among inline ones reads as a mistake rather than as a fit.
+        def draw_entry(label, value, at:, width:, top:)
           return draw_value(value, at: at, width: width, top: top) if label.blank?
-          return draw_stacked_entry(label, value, at: at, width: width, top: top) if stacked
 
-          label_width = (width * LABEL_FRACTION).floor
-          value_width = width - label_width
-          label_bottom = draw_label(label, at: at, width: label_width, top: top)
-          value_bottom = draw_value(value, at: at + label_width, width: value_width, top: top)
-          # A wrapped value must not be overwritten by the next entry's label.
-          [ label_bottom, value_bottom ].min
-        end
-
-        def draw_stacked_entry(label, value, at:, width:, top:)
           label_bottom = draw_label(label, at: at, width: width, top: top)
-          draw_value(value, at: at, width: width, top: label_bottom)
+          draw_value(value, at: at, width: width, top: label_bottom - LABEL_GAP)
         end
-
-        def wraps?(value, width) = @pdf.width_of(value.to_s, **value_options) > width
 
         def draw_label(label, at:, width:, top:)
-          options = value_options
+          options = label_options
           height = @pdf.height_of(label.to_s, width: width, **options)
           @pdf.fill_color PdfTheme::COLORS[:muted]
           @pdf.text_box label.to_s, at: [ at, top ], width: width, height: height, **options
@@ -133,6 +111,8 @@ module HotelPortal
             character_spacing: PdfTheme::LABEL_TRACKING
           }
         end
+
+        def label_options = { size: PdfTheme::TYPE[:micro] }
 
         def value_options = { size: PdfTheme::TYPE[:small], leading: 1 }
 

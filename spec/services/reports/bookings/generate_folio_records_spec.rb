@@ -140,12 +140,12 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.pdf_hotel.address).to eq("Jalan Pantai Cenang, Langkawi, Malaysia")
     expect(records.hotel_contact_line).to eq("+60 12-345 6789 · frontdesk@example.com")
 
-    expect(records.bill_to_entries).to include([ nil, "John Doe" ], [ nil, "Foreign Tourist" ])
+    expect(records.bill_to_entries).to include([ "Guest", "John Doe" ], [ "Country", "Foreign Tourist" ])
     expect(records.invoice_detail_entries).to include(
       [ "Folio no.", folio.folio_reference_display ],
       [ "Account ref", booking.folio_account_reference_display ]
     )
-    expect(records.stay_detail_entries).to include([ "Confirm no.", "BK-778291" ], [ nil, "412 / Deluxe King" ])
+    expect(records.stay_detail_entries).to include([ "Confirm no.", "BK-778291" ], [ "Room / type", "412 / Deluxe King" ])
   end
 
   it "leaves the contact line empty rather than printing an empty masthead row" do

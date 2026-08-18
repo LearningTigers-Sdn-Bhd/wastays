@@ -156,9 +156,9 @@ module Reports
         "#{direct_bill? ? 'AR' : 'Folio'} Invoice - #{invoice_number}"
       end
 
-      # The three parties to the document, for PdfPartyBlocks. An entry with no label runs
-      # as its own line, which is how an address reads as an address; blank values are
-      # dropped by the block, so a fact the snapshot never captured costs a line.
+      # The three parties to the document, for PdfPartyBlocks. Every entry is labelled and
+      # every label sits above its value, so the three columns read the same way; blank
+      # values are dropped by the block, so a fact the snapshot never captured costs a line.
       def party_blocks
         [
           { heading: payer_heading, entries: bill_to_entries },
@@ -175,9 +175,9 @@ module Reports
         return corporate_bill_to_entries if corporate_payer?
 
         [
-          [ nil, snapshot_or_live("booking", "guest_name") { booking.guest_name } ],
-          [ nil, snapshot_or_live("booking", "guest_home_address") { booking.guest_home_address } ],
-          [ nil, snapshot_or_live("booking", "guest_country") { booking.guest_country } ]
+          [ "Guest", snapshot_or_live("booking", "guest_name") { booking.guest_name } ],
+          [ "Address", snapshot_or_live("booking", "guest_home_address") { booking.guest_home_address } ],
+          [ "Country", snapshot_or_live("booking", "guest_country") { booking.guest_country } ]
         ]
       end
 
@@ -196,7 +196,7 @@ module Reports
         [
           [ "Booking ref", snapshot_or_live("booking", "reservation_reference") { booking.formatted_reservation_number } ],
           [ "Confirm no.", snapshot_or_live("booking", "confirmation_token") { booking.confirmation_token } ],
-          [ nil, room_summary ],
+          [ "Room / type", room_summary ],
           [ "Arrival", format_datetime(snapshot_or_live("booking", "check_in") { booking.check_in }) ],
           [ "Departure", format_datetime(snapshot_or_live("booking", "check_out") { booking.check_out }) ]
         ]
@@ -302,8 +302,8 @@ module Reports
           folio.booking_billing_party&.account_type.presence || folio.hotel_corporate_account&.account_type
         end
         [
-          [ nil, snapshot_or_live("payer", "name") { document_live_payer_name } ],
-          [ nil, account_type.to_s.humanize.presence ],
+          [ "Payer", snapshot_or_live("payer", "name") { document_live_payer_name } ],
+          [ "Account type", account_type.to_s.humanize.presence ],
           [ "PO ref", snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference } ],
           [ "Auth", snapshot_or_live("payer", "authorization_reference") { terms&.authorization_reference } ]
         ]

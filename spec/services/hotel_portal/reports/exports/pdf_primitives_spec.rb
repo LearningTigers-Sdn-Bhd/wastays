@@ -19,22 +19,22 @@ RSpec.describe "PDF print primitives" do
   end
 
   describe HotelPortal::Reports::Exports::PdfPartyBlocks do
-    it "draws each block's heading, labelled entries, and unlabelled lines" do
+    it "draws each block's heading and its labels above their values" do
       described_class.new(pdf: pdf).draw([
-        { heading: "Bill to", entries: [ [ nil, "Akabane Kiyomi" ], [ nil, "Minato City, Tokyo" ], [ nil, "Japan" ] ] },
+        { heading: "Bill to", entries: [ [ "Guest", "Akabane Kiyomi" ], [ "Address", "Minato City, Tokyo" ], [ "Country", "Japan" ] ] },
         { heading: "Invoice details", entries: [ [ "Issued by", "Platform Admin" ], [ "Folio no.", "ACR-26300084/1" ] ] },
         { heading: "Stay details", entries: [ [ "Confirm no.", "AQDWKA" ] ] }
       ])
 
       text = extracted_text(pdf.render)
       expect(text).to include("BILL TO", "INVOICE DETAILS", "STAY DETAILS")
-      expect(text).to include("Akabane Kiyomi", "Minato City, Tokyo", "Japan")
+      expect(text).to include("Guest", "Akabane Kiyomi", "Address", "Minato City, Tokyo", "Country", "Japan")
       expect(text).to include("Issued by", "Platform Admin", "Folio no.", "ACR-26300084/1", "AQDWKA")
     end
 
     it "drops entries with no value so a missing fact costs a line rather than printing a dash" do
       described_class.new(pdf: pdf).draw([
-        { heading: "Bill to", entries: [ [ nil, "Akabane Kiyomi" ], [ "Address", nil ], [ "Country", "" ] ] }
+        { heading: "Bill to", entries: [ [ "Guest", "Akabane Kiyomi" ], [ "Address", nil ], [ "Country", "" ] ] }
       ])
 
       expect(extracted_text(pdf.render)).not_to include("Address", "Country")
@@ -42,7 +42,7 @@ RSpec.describe "PDF print primitives" do
 
     it "skips a block whose entries are all blank" do
       described_class.new(pdf: pdf).draw([
-        { heading: "Bill to", entries: [ [ nil, "Akabane Kiyomi" ] ] },
+        { heading: "Bill to", entries: [ [ "Guest", "Akabane Kiyomi" ] ] },
         { heading: "Empty block", entries: [ [ "Nothing", nil ] ] }
       ])
 
@@ -54,8 +54,8 @@ RSpec.describe "PDF print primitives" do
     it "leaves the cursor below the tallest column" do
       pdf.move_cursor_to 700
       described_class.new(pdf: pdf).draw([
-        { heading: "Short", entries: [ [ nil, "One line" ] ] },
-        { heading: "Tall", entries: Array.new(6) { |index| [ nil, "Line #{index}" ] } }
+        { heading: "Short", entries: [ [ "Only", "One line" ] ] },
+        { heading: "Tall", entries: Array.new(6) { |index| [ "Label #{index}", "Line #{index}" ] } }
       ])
 
       expect(pdf.cursor).to be < 620
