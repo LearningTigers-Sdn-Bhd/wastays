@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
-
 module Reports
   module Bookings
     class GenerateFolioRecords
@@ -340,14 +338,6 @@ module Reports
 
       def balance_variant = settled? ? :subtotal : :alert
 
-      def money(amount)
-        "#{currency} #{format_amount(amount)}"
-      end
-
-      def credit_money(amount)
-        "(#{currency} #{format_amount(amount.to_d.abs)})"
-      end
-
       def amount(amount)
         format_amount(amount)
       end
@@ -440,37 +430,28 @@ module Reports
         rows
       end
 
-      def transaction_row(transaction, children: [])
+      def transaction_row(transaction)
         code, label = display_code_and_label(transaction)
         TransactionRow.new(
           date: format_date(transaction.posting_date),
           code: code,
           description: display_description(transaction),
-          secondary_description: secondary_description_for(transaction, children),
+          secondary_description: secondary_description_for(transaction),
           quantity: quantity_for(transaction),
-          net: net_amount_for(transaction, children),
-          charges: charges_amount_for(transaction, children),
-          gross: gross_amount_for(transaction, children),
+          net: net_amount_for(transaction),
+          charges: charges_amount_for(transaction),
+          gross: gross_amount_for(transaction),
           kind: transaction.transaction_type
         )
       end
 
-      def secondary_description_for(transaction, children)
-        includes = included_charge_summary(children)
-        return includes if includes.present?
-        # The reference keys are payment-shaped — a receipt, an auth code, a gateway id —
-        # and a charge that happens to carry one in its metadata was printing it under the
-        # description as though the guest had paid for something twice.
+      # The reference keys are payment-shaped — a receipt, an auth code, a gateway id — and
+      # a charge that happens to carry one in its metadata was printing it under the
+      # description as though the guest had paid for something twice.
+      def secondary_description_for(transaction)
         return unless transaction.payment?
 
         payment_reference(transaction)
-      end
-
-      def included_charge_summary(children)
-        return if children.blank?
-
-        summaries = children.map { |child| "#{display_description(child)} #{format_amount(child.amount)}" }
-        "Includes: #{summaries.join(' · ')}"
       end
 
       def display_code_and_label(transaction)
@@ -555,23 +536,21 @@ module Reports
         "1"
       end
 
-      def net_amount_for(transaction, children = [])
+      # A charge posts its own amount as net, a tax posts its amount as the charge on top,
+      # and every row is gross of itself. Nothing is folded into anything.
+      def net_amount_for(transaction)
         return nil unless transaction.charge? && !tax_transaction?(transaction)
 
         transaction.amount.to_d
       end
 
-      def charges_amount_for(transaction, children = [])
-        child_total = children.sum { |child| child.amount.to_d }
-        return child_total unless child_total.zero?
+      def charges_amount_for(transaction)
         return transaction.amount.to_d if transaction.charge? && tax_transaction?(transaction)
 
         nil
       end
 
-      def gross_amount_for(transaction, children = [])
-        transaction.amount.to_d + children.sum { |child| child.amount.to_d }
-      end
+      def gross_amount_for(transaction) = transaction.amount.to_d
 
       def invoice_transactions
         @invoice_transactions ||= active_transactions.sort_by do |transaction|
@@ -585,16 +564,6 @@ module Reports
         return 1 if transaction.charge? || transaction.adjustment?
 
         4
-      end
-
-      def attached_children_for(transaction)
-        return [] unless transaction.charge? || transaction.adjustment?
-
-        child_transactions_by_parent[transaction.id].to_a
-      end
-
-      def hidden_generated_child?(transaction)
-        generated_child?(transaction) && active_parent_ids.include?(parent_id(transaction))
       end
 
       def active_transactions
@@ -613,20 +582,6 @@ module Reports
 
       def hidden_reversal_noise?(transaction)
         transaction.voided_by_transaction_id.present? || transaction.reversal_of_transaction_id.present?
-      end
-
-      def generated_child?(transaction)
-        parent_id(transaction).present?
-      end
-
-      def child_transactions_by_parent
-        @child_transactions_by_parent ||= active_transactions
-          .select { |transaction| parent_id(transaction).present? }
-          .group_by { |transaction| parent_id(transaction) }
-      end
-
-      def active_parent_ids
-        @active_parent_ids ||= active_transactions.map(&:id).to_set
       end
 
       def tax_transaction?(transaction)
@@ -796,10 +751,6 @@ module Reports
         ].map { |label, value| "#{label}: #{value.presence || '-'}" }.join(" · ")
       end
 
-      def guest_value(value)
-        value.presence || "-"
-      end
-
       def folio_account_reference
         snapshot_or_live("folio", "folio_account_reference") { booking.folio_account_reference_display }.presence || booking.formatted_folio_number.presence || "-"
       end
@@ -831,10 +782,6 @@ module Reports
 
       def snapshot_transactions?
         @snapshot["transactions"].is_a?(Array)
-      end
-
-      def snapshot_value(*keys)
-        @snapshot&.dig(*keys)
       end
 
       def snapshot_or_live(section, key)

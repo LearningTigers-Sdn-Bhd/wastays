@@ -192,7 +192,6 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
   it "formats invoice amount cells without repeating currency" do
     expect(records.amount(504)).to eq("504.00")
     expect(records.credit_amount(504)).to eq("(504.00)")
-    expect(records.money(504)).to eq("MYR 504.00")
   end
 
   it "builds summary rows that reconcile to the displayed transaction rows" do
