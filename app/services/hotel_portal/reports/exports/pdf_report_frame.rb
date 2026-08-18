@@ -7,8 +7,8 @@ module HotelPortal
     module Exports
       class PdfReportFrame
         FOOTER_Y = -9
+        PAGE_NUMBER_WIDTH = 90
         HOTEL_LOGO_SIZE = 44
-        WASTAYS_LOGO_WIDTH = 50
         LOGO_GUTTER = PdfTheme::SPACE[:md]
         NAME_ADDRESS_GAP = PdfTheme::SPACE[:xs]
         # The title binds to the metadata strip it describes, so it sits closer to
@@ -29,14 +29,20 @@ module HotelPortal
         # Air between the title and the badge it is set against, so the two never touch on
         # a title long enough to reach for the slot.
         BADGE_GUTTER = PdfTheme::SPACE[:md]
+        # Between two badges sharing the slot. Tighter than the gutter that separates the
+        # pair from the title: they are one group, set apart from what they sit beside.
+        BADGE_GAP = PdfTheme::SPACE[:sm]
+        # Keeps a long hotel name from running under the badge set opposite it.
+        MASTHEAD_BADGE_GUTTER = PdfTheme::SPACE[:md]
         # Sits in the top margin, mirroring how the footer sits below the content box.
         RUNNING_HEAD_Y = 18
 
-        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_identifiers: nil, badge: nil, title_accessory: nil)
+        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_identifiers: nil, badge: nil, masthead_badge: nil, title_accessory: nil)
           @pdf = pdf
           @hotel = hotel
           @hotel_identifiers = hotel_identifiers
           @badge = badge
+          @masthead_badge = masthead_badge
           @title_accessory = title_accessory
           @report_name = report_name
           @subtitle = subtitle
@@ -56,17 +62,19 @@ module HotelPortal
           draw_metadata
         end
 
-        # Call once, after all content is drawn.
-        def stamp_page_furniture
-          stamp_running_head
+        # Call once, after all content is drawn. A document that draws a masthead on more
+        # than its first page — an original and its duplicate copy — names those pages, so
+        # they do not get a running head on top of the masthead they already carry.
+        def stamp_page_furniture(masthead_pages: [ 1 ])
+          stamp_running_head(masthead_pages:)
           stamp_footer
         end
 
         # Continuation pages carry no masthead, so on their own they identify neither the
         # hotel nor the report. A detached page 2 needs to say what it belongs to.
-        def stamp_running_head
+        def stamp_running_head(masthead_pages: [ 1 ])
           label = [ @hotel.name, @eyebrow.presence || @report_name, @period_label ].compact_blank.join("  ·  ")
-          @pdf.repeat(->(page) { page > 1 }) do
+          @pdf.repeat(->(page) { masthead_pages.exclude?(page) }) do
             @pdf.fill_color PdfTheme::COLORS[:muted]
             @pdf.draw_text label, at: [ 0, @pdf.bounds.top + RUNNING_HEAD_Y ], size: PdfTheme::TYPE[:micro]
           end
@@ -82,11 +90,17 @@ module HotelPortal
             @pdf.draw_text "Confidential", at: [ 0, FOOTER_Y ], size: PdfTheme::TYPE[:micro] if @confidential
             draw_wastays_attribution
           end
-          @pdf.number_pages(
-            "Page <page> of <total>",
-            at: [ @pdf.bounds.width - 90, FOOTER_Y ], width: 90, align: :right, size: PdfTheme::TYPE[:micro],
-            color: PdfTheme::COLORS[:muted]
-          )
+          # #number_pages draws a text box, whose :at is the top of the box, while the two
+          # items beside it are drawn at their baseline. Without the ascender the page
+          # number hangs a line below the rest of the footer.
+          @pdf.font_size(PdfTheme::TYPE[:micro]) do
+            @pdf.number_pages(
+              "Page <page> of <total>",
+              at: [ @pdf.bounds.width - PAGE_NUMBER_WIDTH, FOOTER_Y + @pdf.font.ascender ],
+              width: PAGE_NUMBER_WIDTH, align: :right, size: PdfTheme::TYPE[:micro],
+              color: PdfTheme::COLORS[:muted]
+            )
+          end
         end
 
         private
@@ -97,11 +111,12 @@ module HotelPortal
           top = @pdf.cursor
           logo = hotel_logo
           text_left = logo ? HOTEL_LOGO_SIZE + LOGO_GUTTER : 0
-          text_width = @pdf.bounds.width - text_left
+          text_width = @pdf.bounds.width - text_left - masthead_badge_reserve
           name = @hotel.name.to_s
           address = hotel_address
 
           @pdf.image logo, at: [ 0, top ], fit: [ HOTEL_LOGO_SIZE, HOTEL_LOGO_SIZE ] if logo
+          draw_masthead_badge(top)
 
           @pdf.fill_color PdfTheme::COLORS[:ink]
           name_size = PdfTheme::TYPE[:subhead]
@@ -191,20 +206,25 @@ module HotelPortal
           height
         end
 
+        # The slot takes as many badges as the document has facts to set against its title.
+        # They are laid out from the right margin inwards, so a document adding a second
+        # badge leaves the first exactly where every other document puts it.
         def draw_report_identity_right(top, left)
           return draw_title_accessory(top) if @title_accessory
-          return 0 if badge_label.blank?
+          return 0 if badges.empty?
 
           badge = PdfBadge.new(pdf: @pdf)
           line = nil
           @pdf.font(PdfTheme::DISPLAY_FAMILY) { line = @pdf.height_of("X", size: PdfTheme::TYPE[:display]) }
           badge_top = left[:title_top] - ((line - badge.height) / 2.0)
           @pdf.fill_color PdfTheme::COLORS[:ink]
-          badge.draw(
-            label: badge_label,
-            at: [ @pdf.bounds.width - badge.width(badge_label), badge_top ],
-            variant: @badge.is_a?(Hash) ? (@badge[:variant] || :neutral) : :neutral
-          )
+
+          right = @pdf.bounds.width
+          badges.reverse_each do |entry|
+            right -= badge.width(entry[:label])
+            badge.draw(label: entry[:label], at: [ right, badge_top ], variant: entry[:variant])
+            right -= BADGE_GAP
+          end
           top - badge_top + badge.height
         end
 
@@ -220,8 +240,9 @@ module HotelPortal
         def identity_right_width
           width = if @title_accessory
             @title_accessory.width
-          elsif badge_label.present?
-            PdfBadge.new(pdf: @pdf).width(badge_label)
+          elsif badges.any?
+            badge = PdfBadge.new(pdf: @pdf)
+            badges.sum { |entry| badge.width(entry[:label]) } + (BADGE_GAP * (badges.size - 1))
           else
             0
           end
@@ -232,7 +253,44 @@ module HotelPortal
           width + BADGE_GUTTER
         end
 
-        def badge_label = @badge.is_a?(Hash) ? @badge[:label] : @badge
+        # Sits at the very top of the sheet, opposite the hotel identity, above even the
+        # report title. That height is for a fact about the piece of paper rather than
+        # about the document on it — which copy of it you are holding — so it is read
+        # before the reader is into the document at all. Facts about the document itself
+        # belong on the title row with `badge:`.
+        def draw_masthead_badge(top)
+          return if masthead_badge.nil?
+
+          badge = PdfBadge.new(pdf: @pdf)
+          label = masthead_badge.fetch(:label)
+          badge.draw(
+            label: label,
+            at: [ @pdf.bounds.width - badge.width(label), top ],
+            variant: masthead_badge[:variant] || :outline
+          )
+        end
+
+        def masthead_badge_reserve
+          return 0 if masthead_badge.nil?
+
+          PdfBadge.new(pdf: @pdf).width(masthead_badge.fetch(:label)) + MASTHEAD_BADGE_GUTTER
+        end
+
+        def masthead_badge
+          entry = @masthead_badge.is_a?(Hash) ? @masthead_badge : { label: @masthead_badge }
+          entry[:label].blank? ? nil : entry
+        end
+
+        # badge: takes a string, a { label:, variant: } hash, or an array of either. One
+        # badge is the ordinary case and stays a bare hash at the call site.
+        def badges
+          @badges ||= Array.wrap(@badge).filter_map do |entry|
+            label = entry.is_a?(Hash) ? entry[:label] : entry
+            next if label.blank?
+
+            { label: label, variant: (entry.is_a?(Hash) ? entry[:variant] : nil) || :neutral }
+          end
+        end
 
         # Rules rather than a tint: the fill made three short values read as an empty
         # table header, and forced padding that broke the page's left margin.
@@ -351,20 +409,18 @@ module HotelPortal
           nil
         end
 
+        # The wordmark is set as text rather than placed as the logo image: at footer size
+        # the bitmap read as a smudge, and the name keeps its weight against the label.
         def draw_wastays_attribution
-          logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-          label = "Generated by"
+          label = "Generated by "
+          name = "WaStays.com"
           size = PdfTheme::TYPE[:micro]
-          # Measured rather than assumed: the hardcoded width this used to carry was wider
-          # than the label, which pushed the whole group off centre.
           label_width = @pdf.width_of(label, size: size)
-          gap = PdfTheme::SPACE[:xs]
-          group_width = label_width + gap + WASTAYS_LOGO_WIDTH
-          left = (@pdf.bounds.width - group_width) / 2.0
+          name_width = @pdf.width_of(name, size: size, style: :bold)
+          left = (@pdf.bounds.width - (label_width + name_width)) / 2.0
           @pdf.draw_text label, at: [ left, FOOTER_Y ], size: size
-          return unless File.exist?(logo_path)
-
-          @pdf.image logo_path, at: [ left + label_width + gap, FOOTER_Y + 7 ], width: WASTAYS_LOGO_WIDTH
+          @pdf.fill_color PdfTheme::COLORS[:ink]
+          @pdf.draw_text name, at: [ left + label_width, FOOTER_Y ], size: size, style: :bold
         end
       end
     end

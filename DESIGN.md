@@ -320,12 +320,35 @@ Facts about the document sit in one of three places, and never in two at once:
 `PdfNoticeBand` carries a status that has to arrive before the document's numbers
 do — a void, a reconstruction. `:danger` and `:warning` variants.
 
-`PdfBadge` is the inline form: a tinted pill of one or two words, set beside
+`PdfBadge` is the inline form: a pill of one or two words, set beside
 something else rather than across the measure, for a question the reader has
 already asked. It measures before it draws, so a caller can set a title against it
-and know what is left of the line. `PdfReportFrame` takes one as `badge:` and sets
-the title row between its two ends — title left, badge right. `:positive`,
-`:warning`, `:danger` and `:neutral` variants.
+and know what is left of the line. `:positive`, `:warning`, `:danger` and
+`:neutral` are tinted and say something about the document's state. `:outline` is
+bordered rather than filled and says something about the sheet itself — which copy
+of it you are holding. Two tinted badges side by side read as one claim in two
+halves; one tinted and one outlined read as two facts of different kinds.
+
+`PdfReportFrame` has two slots for them. `badge:` sets the title row between its
+two ends — title left, badges right — and takes a string, a `{ label:, variant: }`
+hash, or an array of either, laid out from the right margin inwards so a document
+adding a second badge leaves the first where every other document puts it. That
+row is for facts about the *document*: paid, void, overdue.
+
+`masthead_badge:` sits higher, opposite the hotel identity and above the report
+title, for a fact about the *sheet of paper* — which copy of it you are holding.
+Whoever is filing it should not have to read as far as the title to sort it. It
+defaults to `:outline` and reserves its own width, so a long hotel name wraps
+rather than running under it.
+
+`PdfSignatureBlock` is where a document is signed: clear air to sign into, a
+hairline rule to sign above, and the label tracked beneath it, in one to three
+columns. It takes an optional `image:` for a signature already captured and a
+`caption:` for who signed and when. **It is not a bordered box** — the invoice
+drew one and it read as another data table, because a box puts a second
+horizontal beside the one you actually sign on. The border vocabulary here is
+one hairline; a signing area does not get a second, and nothing in print is
+dashed.
 
 Build reports with `PdfReportBuilder`, which owns the frame, tables, and page
 furniture. Reach for `PdfReportFrame` directly only when a document draws its own

@@ -25,7 +25,6 @@ module Reports
       SUMMARY_WIDTH_FRACTION = 0.48
       SUMMARY_LABEL_FRACTION = 0.62
       STATUS_WIDTH_FRACTION = 0.54
-      SIGNATURE_SPACE = THEME::SPACE[:xl] * 2
 
       LEGACY_LABEL = "RECONSTRUCTED FROM RECORDS"
       LEGACY_NOTE = "Rebuilt from currently available records; an original issue-time snapshot was not available."
@@ -260,25 +259,10 @@ module Reports
         pdf.fill_color THEME::COLORS[:ink]
       end
 
-      # A rule to sign above, with its label beneath — the bordered box this used to draw
-      # read as another data table.
       def draw_signatures(pdf)
-        pdf.start_new_page if pdf.cursor < SIGNATURE_SPACE + THEME::SPACE[:xl]
-        pdf.move_down SIGNATURE_SPACE
-
-        column_width = (pdf.bounds.width - THEME::SPACE[:xl]) / 2.0
-        top = pdf.cursor
-        pdf.stroke_color THEME::COLORS[:border]
-        pdf.line_width THEME::RULE_WIDTH
-        [ [ 0, "Guest signature" ], [ column_width + THEME::SPACE[:xl], "Authorised signature" ] ].each do |left, label|
-          pdf.stroke_horizontal_line left, left + column_width, at: top
-          pdf.fill_color THEME::COLORS[:muted]
-          pdf.text_box label.upcase, at: [ left, top - THEME::SPACE[:xs] ], width: column_width,
-            height: THEME::TYPE[:micro] + THEME::SPACE[:xs],
-            size: THEME::TYPE[:micro], style: :bold, character_spacing: THEME::LABEL_TRACKING
-        end
-        pdf.move_cursor_to top - THEME::SPACE[:lg]
-        pdf.fill_color THEME::COLORS[:ink]
+        HotelPortal::Reports::Exports::PdfSignatureBlock.new(pdf: pdf).draw(
+          fields: [ { label: "Guest signature" }, { label: "Authorised signature" } ]
+        )
       end
 
       def escape(value) = CGI.escapeHTML(value.to_s)

@@ -12,11 +12,17 @@ module HotelPortal
       # much of the measure is left. Drawn rather than tabled: the label is tracked, and
       # prawn-table cells reject character_spacing.
       class PdfBadge
+        # A tinted variant says something about the document's state — paid, void, overdue.
+        # :outline says something about the sheet itself, such as which copy of it you are
+        # holding, and is drawn as a border rather than a fill so it cannot be mistaken for
+        # a status. Two badges of the same weight beside each other read as one claim in two
+        # halves; one tinted and one outlined read as two facts of different kinds.
         VARIANTS = {
           positive: { text: :primary, background: :primary_light },
           warning: { text: :warning, background: :warning_light },
           danger: { text: :danger, background: :danger_light },
-          neutral: { text: :muted, background: :stripe }
+          neutral: { text: :muted, background: :stripe },
+          outline: { text: :muted, border: :border }
         }.freeze
 
         PADDING_X = PdfTheme::SPACE[:sm]
@@ -38,8 +44,14 @@ module HotelPortal
           text = display_label(label)
           left, top = at
 
-          @pdf.fill_color PdfTheme::COLORS[colors[:background]]
-          @pdf.fill_rounded_rectangle [ left, top ], width(label), height, CORNER_RADIUS
+          if colors[:background]
+            @pdf.fill_color PdfTheme::COLORS[colors[:background]]
+            @pdf.fill_rounded_rectangle [ left, top ], width(label), height, CORNER_RADIUS
+          else
+            @pdf.stroke_color PdfTheme::COLORS[colors.fetch(:border)]
+            @pdf.line_width PdfTheme::RULE_WIDTH
+            @pdf.stroke_rounded_rectangle [ left, top ], width(label), height, CORNER_RADIUS
+          end
 
           @pdf.fill_color PdfTheme::COLORS[colors[:text]]
           @pdf.text_box text, at: [ left + PADDING_X, top - PADDING_Y ],

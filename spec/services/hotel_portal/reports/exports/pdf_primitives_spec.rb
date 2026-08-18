@@ -166,4 +166,61 @@ RSpec.describe "PDF print primitives" do
       expect(text).to include("Overdue", "120.00")
     end
   end
+
+  describe HotelPortal::Reports::Exports::PdfBadge do
+    it "draws a tinted variant's label in the print label tier" do
+      described_class.new(pdf: pdf).draw(label: "Collected", at: [ 0, pdf.cursor ], variant: :positive)
+
+      expect(extracted_text(pdf.render)).to include("COLLECTED")
+    end
+
+    # A fact about the sheet rather than about the document, so it is bordered rather than
+    # filled and cannot be read as a status.
+    it "draws an outline variant with a border instead of a fill" do
+      badge = described_class.new(pdf: pdf)
+      expect { badge.draw(label: "Guest copy", at: [ 0, pdf.cursor ], variant: :outline) }.not_to raise_error
+
+      expect(extracted_text(pdf.render)).to include("GUEST COPY")
+    end
+
+    it "measures wide enough for the tracking its label carries" do
+      badge = described_class.new(pdf: pdf)
+
+      expect(badge.width("Collected")).to be > pdf.width_of("COLLECTED", size: 7, style: :bold)
+    end
+  end
+
+  describe HotelPortal::Reports::Exports::PdfSignatureBlock do
+    it "draws each field's label beneath its rule" do
+      described_class.new(pdf: pdf).draw(
+        fields: [ { label: "Guest signature" }, { label: "Authorised signature" } ]
+      )
+
+      expect(extracted_text(pdf.render)).to include("GUEST SIGNATURE", "AUTHORISED SIGNATURE")
+    end
+
+    it "draws a caption under the label for a signature already captured" do
+      described_class.new(pdf: pdf).draw(
+        fields: [ { label: "Guest signature", caption: "Signed by Akabane Kiyomi at 18 Aug 2026, 12:17 PM" } ]
+      )
+
+      expect(extracted_text(pdf.render)).to include("GUEST SIGNATURE", "Signed by Akabane Kiyomi")
+    end
+
+    it "drops a field with no label rather than drawing a rule nobody can sign against" do
+      described_class.new(pdf: pdf).draw(
+        fields: [ { label: "Guest signature" }, { label: nil } ]
+      )
+
+      expect(extracted_text(pdf.render)).to include("GUEST SIGNATURE")
+    end
+
+    it "moves the whole block to the next page rather than splitting its rules from its labels" do
+      pdf.move_cursor_to 10
+      described_class.new(pdf: pdf).draw(fields: [ { label: "Guest signature" } ])
+
+      expect(pdf.page_count).to eq(2)
+      expect(extracted_text(pdf.render)).to include("GUEST SIGNATURE")
+    end
+  end
 end

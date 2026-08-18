@@ -244,16 +244,15 @@ module Reports
       end
 
       # Sits under the address rather than among the invoice details: these identify the
-      # party issuing the document, not the document. Every registration is named whether
-      # or not the issuer holds one — a dash says the number is absent, where dropping the
-      # label leaves a reader unable to tell an unregistered issuer from a document that
-      # failed to print what it had.
+      # party issuing the document, not the document. Read from the issue-time snapshot,
+      # unlike the contact line above — a registration is what it was when the hotel
+      # billed, and has to stay that.
       def hotel_identifier_line
-        [
-          [ "TIN", hotel_value("tin") { hotel.tin } ],
-          [ "SST", hotel_value("sst_registration_number") { hotel.sst_registration_number } ],
-          [ "Tourism Tax", hotel_value("tourism_tax_registration_number") { hotel.tourism_tax_registration_number } ]
-        ].map { |label, value| "#{label}: #{value.presence || '-'}" }.join(" · ")
+        Reports::HotelIdentifierLine.call(
+          tin: hotel_value("tin") { hotel.tin },
+          sst: hotel_value("sst_registration_number") { hotel.sst_registration_number },
+          tourism_tax: hotel_value("tourism_tax_registration_number") { hotel.tourism_tax_registration_number }
+        )
       end
 
       def transaction_rows

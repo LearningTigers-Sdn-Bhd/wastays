@@ -219,4 +219,60 @@ RSpec.describe HotelPortal::Reports::Exports::PdfReportBuilder do
 
     expect(text).to include("Badge report", "22 Jul 2026", "Sarah Lim")
   end
+
+  # A document with a second fact to set against its title lays badges out from the right
+  # margin inwards, so the first one stays where every single-badge document puts it.
+  it "sets several badges in the title slot from the right margin inwards" do
+    pdf = Prawn::Document.new(page_size: "A4", margin: HotelPortal::Reports::Exports::PdfTheme::PAGE_MARGIN)
+    HotelPortal::Reports::Exports::PdfTheme.configure_font(pdf)
+    gap = HotelPortal::Reports::Exports::PdfReportFrame::BADGE_GAP
+    badge = instance_double(HotelPortal::Reports::Exports::PdfBadge, width: 48, height: 14)
+    allow(HotelPortal::Reports::Exports::PdfBadge).to receive(:new).with(pdf:).and_return(badge)
+    expect(badge).to receive(:draw).with(
+      label: "Payable", at: [ pdf.bounds.width - 48, kind_of(Numeric) ], variant: :warning
+    )
+    expect(badge).to receive(:draw).with(
+      label: "Guest copy", at: [ pdf.bounds.width - 96 - gap, kind_of(Numeric) ], variant: :outline
+    )
+
+    HotelPortal::Reports::Exports::PdfReportFrame.new(
+      pdf:,
+      hotel:,
+      report_name: "ACR-26600001",
+      metadata: [],
+      badge: [ { label: "Guest copy", variant: :outline }, { label: "Payable", variant: :warning } ]
+    ).draw_header
+
+    expect(extracted_text(pdf.render)).to include("ACR-26600001")
+  end
+
+  # A fact about the sheet rather than the document, so it sits above the title, opposite
+  # the hotel identity, where whoever is filing it reads it first.
+  it "sets a masthead badge at the top of the sheet, opposite the hotel identity" do
+    pdf = Prawn::Document.new(page_size: "A4", margin: HotelPortal::Reports::Exports::PdfTheme::PAGE_MARGIN)
+    HotelPortal::Reports::Exports::PdfTheme.configure_font(pdf)
+    page_top = pdf.cursor
+    badge = instance_double(HotelPortal::Reports::Exports::PdfBadge, width: 48, height: 14)
+    allow(HotelPortal::Reports::Exports::PdfBadge).to receive(:new).with(pdf:).and_return(badge)
+
+    # Level with the hotel name, which is the first thing on the page ...
+    expect(badge).to receive(:draw).with(
+      label: "Guest copy", at: [ pdf.bounds.width - 48, page_top ], variant: :outline
+    )
+    # ... and the status badge lower, on the title row.
+    expect(badge).to receive(:draw).with(
+      label: "Payable", at: [ pdf.bounds.width - 48, be < page_top ], variant: :warning
+    )
+
+    HotelPortal::Reports::Exports::PdfReportFrame.new(
+      pdf:,
+      hotel:,
+      report_name: "ACR-26600001",
+      metadata: [],
+      masthead_badge: { label: "Guest copy", variant: :outline },
+      badge: { label: "Payable", variant: :warning }
+    ).draw_header
+
+    expect(extracted_text(pdf.render)).to include("ACR-26600001")
+  end
 end
