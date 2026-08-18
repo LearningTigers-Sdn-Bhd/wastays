@@ -18,7 +18,10 @@ module HotelPortal
       class PdfPartyBlocks
         GUTTER = PdfTheme::SPACE[:xl]
         HEADING_GAP = PdfTheme::SPACE[:sm]
-        ENTRY_GAP = PdfTheme::SPACE[:sm]
+        # One step on the grid between entries, against a hairline between a label and the
+        # value it names. The ratio is what groups the pair, so the gap between entries can
+        # stay tight without the column reading as one run of alternating lines.
+        ENTRY_GAP = PdfTheme::SPACE[:xs]
         LABEL_GAP = 1
 
         def initialize(pdf:)
