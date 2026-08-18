@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PanelsUI::Dropzone, type: :component do
   DropzoneObject = Class.new do
     include ActiveModel::Model
-    attr_accessor :photos
+    attr_accessor :photos, :icon, :remove_icon
   end
 
   def form_for(object = DropzoneObject.new)
@@ -70,5 +70,37 @@ RSpec.describe PanelsUI::Dropzone, type: :component do
     expect do
       render_inline(described_class.new(form: form_for, attribute: :photos, max_size: -1))
     end.to raise_error(ArgumentError, "max_size must not be negative")
+  end
+
+  it "renders a persisted single image with replace, staged removal, and an accessible native input" do
+    render_inline(
+      described_class.new(
+        form: form_for,
+        attribute: :icon,
+        accept: "image/png,image/jpeg,image/webp",
+        max_size: 2.megabytes,
+        preview: :image,
+        presentation: :single_image,
+        existing_image_url: "/hotel-icon.png",
+        existing_image_alt: "Seaside Hotel icon",
+        remove_attribute: :remove_icon,
+        labelled_by: "icon-label"
+      )
+    )
+
+    expect(page).to have_css(".panel-dropzone[data-panels-ui--dropzone-presentation-value='single_image']")
+    expect(page).to have_css("input#room_icon[type='file'][accept='image/png,image/jpeg,image/webp']", visible: :all)
+    expect(page).to have_css("input#room_remove_icon[type='hidden'][name='room[remove_icon]'][value='0']", visible: :all)
+    expect(page).to have_css(".panel-dropzone__single-image img[src='/hotel-icon.png'][alt='Seaside Hotel icon']")
+    expect(page).to have_button("Replace")
+    expect(page).to have_button("Remove")
+    expect(page).to have_button("Undo remove", visible: :all)
+    expect(page).to have_no_css(".panel-dropzone__selection")
+  end
+
+  it "rejects a multiple-file single-image presentation" do
+    expect do
+      render_inline(described_class.new(form: form_for, attribute: :icon, multiple: true, presentation: :single_image))
+    end.to raise_error(ArgumentError, "Single-image dropzones do not support multiple files")
   end
 end

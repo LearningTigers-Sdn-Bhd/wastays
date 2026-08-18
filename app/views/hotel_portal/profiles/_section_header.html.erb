@@ -1,0 +1,13 @@
+<%# Shared by the editable sections and the read-only Billing Reference so every
+    block on the page opens the same way: title and description on one side, an
+    optional control on the other. %>
+<header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <h2 id="<%= section %>-heading" class="text-base font-semibold text-foreground"><%= title %></h2>
+    <p class="mt-2 text-sm text-muted-foreground"><%= description %></p>
+  </div>
+
+  <% if local_assigns[:action].present? %>
+    <div class="shrink-0"><%= local_assigns[:action] %></div>
+  <% end %>
+</header>

@@ -1,18 +1,71 @@
 <%= tag.div(**root_attributes) do %>
   <%= @form.file_field(@attribute, **input_attributes) %>
+  <%= tag.input(**remove_input_attributes) if remove_input_attributes %>
 
   <div class="panel-dropzone__surface"
        data-panels-ui--dropzone-target="surface"
        data-state="idle">
-    <div class="panel-dropzone__icon" aria-hidden="true">
-      <%= helpers.app_icon("upload", class: "size-5", aria: { hidden: "true" }) %>
-    </div>
-    <p class="panel-dropzone__prompt">
-      <span><%= @prompt %></span>
-      <%= tag.label("Browse", for: @id, class: "panel-dropzone__browse") %>
-    </p>
-    <% if @description.present? %>
-      <p class="panel-dropzone__description"><%= @description %></p>
+    <% if single_image? %>
+      <div class="panel-dropzone__single-empty" data-panels-ui--dropzone-target="emptyState">
+        <%= tag.label(for: @id, class: "panel-dropzone__single-picker") do %>
+          <span class="panel-dropzone__icon" aria-hidden="true">
+            <%= helpers.app_icon("image-up", class: "size-5", aria: { hidden: "true" }) %>
+          </span>
+          <span class="panel-dropzone__prompt">
+            <span><%= @prompt %></span>
+            <span class="panel-dropzone__browse">Browse</span>
+          </span>
+          <% if @description.present? %>
+            <span class="panel-dropzone__description"><%= @description %></span>
+          <% end %>
+        <% end %>
+        <div class="panel-dropzone__pending-removal" data-panels-ui--dropzone-target="pendingRemoval" hidden>
+          <span>Icon will be removed when you save.</span>
+          <%= render PanelsUI::Button.new(
+                label: "Undo remove",
+                variant: :ghost,
+                size: :xs,
+                disabled: @disabled,
+                data: { action: "panels-ui--dropzone#undoRemoveImage" }
+              ) %>
+        </div>
+      </div>
+
+      <div class="panel-dropzone__single-image" data-panels-ui--dropzone-target="imageState" <%= "hidden" if @existing_image_url.blank? %>>
+        <img src="<%= @existing_image_url %>"
+             alt="<%= @existing_image_alt %>"
+             data-panels-ui--dropzone-target="previewImage"
+             data-existing-src="<%= @existing_image_url %>"
+             data-existing-alt="<%= @existing_image_alt %>"
+             <%= "hidden" if @existing_image_url.blank? %>>
+        <div class="panel-dropzone__single-actions">
+          <%= render PanelsUI::Button.new(
+                label: "Replace",
+                variant: :secondary,
+                size: :xs,
+                disabled: @disabled,
+                data: { action: "panels-ui--dropzone#browse" }
+              ) %>
+          <%= render PanelsUI::Button.new(
+                label: "Remove",
+                variant: :destructive,
+                size: :xs,
+                disabled: @disabled,
+                data: { action: "panels-ui--dropzone#removeImage" }
+              ) %>
+        </div>
+      </div>
+    <% else %>
+      <div class="panel-dropzone__icon" aria-hidden="true">
+        <%= helpers.app_icon("upload", class: "size-5", aria: { hidden: "true" }) %>
+      </div>
+      <p class="panel-dropzone__prompt">
+        <span><%= @prompt %></span>
+        <%= tag.label("Browse", for: @id, class: "panel-dropzone__browse") %>
+      </p>
+      <% if @description.present? %>
+        <p class="panel-dropzone__description"><%= @description %></p>
+      <% end %>
     <% end %>
   </div>
 
@@ -23,43 +76,45 @@
      aria-live="polite"
      hidden></p>
 
-  <div class="panel-dropzone__selection"
-       data-panels-ui--dropzone-target="selection"
-       hidden>
-    <div class="panel-dropzone__selection-header">
-      <p class="panel-dropzone__selection-title" data-panels-ui--dropzone-target="count">Selected files</p>
-      <%= render PanelsUI::Button.new(
-            label: "Clear all",
-            variant: :ghost,
-            size: :xs,
-            data: { action: "panels-ui--dropzone#clear" }
+  <% unless single_image? %>
+    <div class="panel-dropzone__selection"
+         data-panels-ui--dropzone-target="selection"
+         hidden>
+      <div class="panel-dropzone__selection-header">
+        <p class="panel-dropzone__selection-title" data-panels-ui--dropzone-target="count">Selected files</p>
+        <%= render PanelsUI::Button.new(
+              label: "Clear all",
+              variant: :ghost,
+              size: :xs,
+              data: { action: "panels-ui--dropzone#clear" }
+            ) %>
+      </div>
+      <%= render PanelsUI::AttachmentGroup.new(
+            layout: (@preview == :image ? :grid : :list),
+            data: { panels_ui__dropzone_target: "attachments" }
           ) %>
     </div>
-    <%= render PanelsUI::AttachmentGroup.new(
-          layout: (@preview == :image ? :grid : :list),
-          data: { panels_ui__dropzone_target: "attachments" }
-        ) %>
-  </div>
 
-  <template data-panels-ui--dropzone-target="template">
-    <%= render PanelsUI::Attachment.new(title: "Selected file", description: "File details", role: "listitem") do |attachment| %>
-      <% attachment.with_media(variant: :icon) do %>
-        <span class="panel-dropzone__file-icon" aria-hidden="true">
-          <%= helpers.app_icon("clock", class: "size-4", aria: { hidden: "true" }) %>
-        </span>
-        <img class="panel-dropzone__thumbnail" alt="" hidden>
-      <% end %>
-      <% attachment.with_actions do %>
-        <%= render PanelsUI::Button.new(
-              variant: :ghost,
-              size: :icon_xs,
-              icon_only: true,
-              aria_label: "Remove selected file",
-              data: { action: "panels-ui--dropzone#remove" }
-            ) do %>
-          <%= helpers.app_icon("x", class: "size-3.5", aria: { hidden: "true" }) %>
+    <template data-panels-ui--dropzone-target="template">
+      <%= render PanelsUI::Attachment.new(title: "Selected file", description: "File details", role: "listitem") do |attachment| %>
+        <% attachment.with_media(variant: :icon) do %>
+          <span class="panel-dropzone__file-icon" aria-hidden="true">
+            <%= helpers.app_icon("clock", class: "size-4", aria: { hidden: "true" }) %>
+          </span>
+          <img class="panel-dropzone__thumbnail" alt="" hidden>
+        <% end %>
+        <% attachment.with_actions do %>
+          <%= render PanelsUI::Button.new(
+                variant: :ghost,
+                size: :icon_xs,
+                icon_only: true,
+                aria_label: "Remove selected file",
+                data: { action: "panels-ui--dropzone#remove" }
+              ) do %>
+            <%= helpers.app_icon("x", class: "size-3.5", aria: { hidden: "true" }) %>
+          <% end %>
         <% end %>
       <% end %>
-    <% end %>
-  </template>
+    </template>
+  <% end %>
 <% end %>

@@ -44,6 +44,31 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     expect(page).not_to have_css('#hotel-faq-section')
   end
 
+  it 'uploads, previews, and removes the hotel icon through the section form' do
+    visit edit_hotel_profile_path(hotel)
+
+    within('#hotel-information') do
+      attach_file 'hotel_icon', Rails.root.join('public/icon.png'), make_visible: true
+      expect(page).to have_css("img[alt='Preview of icon.png']")
+      expect(page).to have_button('Save', disabled: false)
+      click_button 'Save'
+    end
+
+    expect(page).to have_css('.toast', text: 'Hotel profile updated successfully.')
+    expect(hotel.reload.icon).to be_attached
+
+    within('#hotel-information') do
+      find('.panel-dropzone__single-image').hover
+      click_button 'Remove'
+      expect(page).to have_text('Icon will be removed when you save.')
+      expect(page).to have_button('Save', disabled: false)
+      click_button 'Save'
+    end
+
+    expect(page).to have_css('.toast', text: 'Hotel profile updated successfully.')
+    expect(hotel.reload.icon).not_to be_attached
+  end
+
   it 'saves one section without touching the fields of another' do
     hotel.update!(contact_email: 'frontdesk@example.com')
 

@@ -22,6 +22,43 @@ RSpec.describe Hotel, type: :model do
       expect(hotel).not_to be_valid
       expect(hotel.errors[:arrival_grace_period]).to be_present
     end
+
+    it "accepts an optional PNG, JPEG, or WebP hotel icon up to 2 MB" do
+      Hotel::ICON_CONTENT_TYPES.each do |content_type|
+        extension = content_type.split("/").last.sub("jpeg", "jpg")
+        hotel = create(:hotel)
+        hotel.icon.attach(
+          io: StringIO.new("image-content"),
+          filename: "icon.#{extension}",
+          content_type: content_type
+        )
+
+        expect(hotel).to be_valid
+      end
+
+      expect(create(:hotel)).to be_valid
+    end
+
+    it "rejects SVG, non-image, and oversized hotel icons" do
+      [ [ "icon.svg", "image/svg+xml", "<svg></svg>" ],
+        [ "notes.txt", "text/plain", "not an image" ],
+        [ "large.png", "image/png", "x" * (Hotel::ICON_MAX_SIZE + 1) ] ].each do |filename, content_type, content|
+        hotel = build(:hotel)
+        hotel.icon.attach(io: StringIO.new(content), filename: filename, content_type: content_type)
+
+        expect(hotel).not_to be_valid
+        expect(hotel.errors[:icon]).to be_present
+      end
+    end
+
+    it "keeps one attachment when the hotel icon is replaced" do
+      hotel = create(:hotel)
+      hotel.icon.attach(io: StringIO.new("first"), filename: "first.png", content_type: "image/png")
+      hotel.icon.attach(io: StringIO.new("second"), filename: "second.webp", content_type: "image/webp")
+
+      expect(hotel.reload.icon.filename.to_s).to eq("second.webp")
+      expect(ActiveStorage::Attachment.where(record: hotel, name: "icon").count).to eq(1)
+    end
   end
 
   describe "prefix history" do
