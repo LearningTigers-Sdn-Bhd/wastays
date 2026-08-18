@@ -2063,6 +2063,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
   end
 
   describe "GET /payouts" do
+    it "blocks the page and every export format when payouts are hidden for the hotel" do
+      hotel.update!(hide_payout_reports: true)
+
+      [ :html, :csv, :xlsx, :pdf ].each do |format|
+        get payouts_hotel_reports_path(hotel, format: format)
+
+        expect(response).to redirect_to(root_path)
+        expect(flash[:alert]).to eq("You are not authorized to perform this action.")
+      end
+    end
+
     it "renders both payout panels and the tab-aware breadcrumb" do
       get payouts_hotel_reports_path(hotel), params: { tab: "paid" }
 

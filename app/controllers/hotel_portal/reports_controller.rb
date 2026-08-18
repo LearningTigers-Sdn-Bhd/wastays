@@ -965,7 +965,8 @@ module HotelPortal
     end
 
     def authorize_view_payouts!
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_payouts", hotel: current_hotel)
+      allowed = current_user.has_permission?("view_payouts", hotel: current_hotel) && !current_hotel.hide_payout_reports?
+      raise Pundit::NotAuthorizedError unless allowed
     end
 
     def financial_performance_export_result

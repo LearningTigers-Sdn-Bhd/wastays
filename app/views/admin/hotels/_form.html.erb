@@ -183,6 +183,15 @@
                   description: "For island and jetty-served properties: boat schedules, boat in/out times on bookings, and the BIBO and meal prep reports.") %>
           </div>
 
+          <div>
+            <%= render PanelsUI::Switch.new(
+                  form: f,
+                  attribute: :hide_payout_reports,
+                  variant: :card,
+                  label: "Hide payout reports",
+                  description: "Remove payout reports from this hotel's navigation and block direct page and export access.") %>
+          </div>
+
           <% if hotel.persisted? %>
             <div class="sm:col-span-2">
               <div class="grid gap-5 sm:grid-cols-2">

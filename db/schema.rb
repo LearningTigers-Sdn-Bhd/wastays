@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1611,6 +1611,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_160000) do
     t.string "google_map_link"
     t.jsonb "guest_registration_card_fields"
     t.text "guest_registration_card_terms"
+    t.boolean "hide_payout_reports", default: false, null: false
     t.string "hotel_prefix"
     t.string "local_government_license_number"
     t.string "local_government_name"
