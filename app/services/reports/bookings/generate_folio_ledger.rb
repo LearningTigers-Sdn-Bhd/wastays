@@ -10,13 +10,11 @@ Prawn::Fonts::AFM.hide_m17n_warning = true
 module Reports
   module Bookings
     class GenerateFolioLedger
-      DARK_GREEN = "0a2e29"
-      LIGHT_GRAY = "f9fafb"
-      BORDER_GRAY = "e5e7eb"
-      TEXT_PRIMARY = "111827"
-      TEXT_MUTED = "6b7280"
-      BOTTOM_MARGIN = 72
-      FOOTER_Y = -26
+      THEME = HotelPortal::Reports::Exports::PdfTheme
+
+      # Landscape, and still seven columns wide, so the table takes the dense step of
+      # the scale rather than tightening its columns.
+      FIXED_COLUMN_WIDTHS = { code: 58, date: 62, source: 80, money: 74 }.freeze
 
       PAYMENT_SOURCE_LABELS = {
         "cash" => "Cash",
@@ -73,11 +71,13 @@ module Reports
         end
       end
 
+      # Wears the shared print design system (DESIGN.md §12). It draws its own body rather
+      # than going through PdfReportBuilder because its facts do not fit one metadata strip.
       def generate_pdf
         pdf = Prawn::Document.new(
           page_size: "A4",
           page_layout: :landscape,
-          margin: [ 36, 32, BOTTOM_MARGIN, 32 ],
+          margin: THEME::PAGE_MARGIN,
           info: {
             Title: pdf_title,
             Author: "WAStays",
@@ -85,13 +85,20 @@ module Reports
             CreationDate: Time.current
           }
         )
+        THEME.configure_font(pdf)
+        frame = HotelPortal::Reports::Exports::PdfReportFrame.new(
+          pdf: pdf,
+          hotel: hotel,
+          # The folio reference is the title; the eyebrow says what the reference belongs to.
+          eyebrow: "Folio ledger",
+          report_name: folio_reference,
+          metadata: identity_pairs
+        )
 
-        draw_header(pdf)
-        pdf.move_down 14
-        draw_metadata(pdf)
-        pdf.move_down 14
+        frame.draw_header
+        HotelPortal::Reports::Exports::PdfDetailGrid.new(pdf: pdf).draw(account_pairs)
         draw_transactions(pdf)
-        draw_footer(pdf)
+        frame.stamp_page_furniture
         pdf.render
       end
 
@@ -99,25 +106,7 @@ module Reports
 
       attr_reader :booking, :folio
 
-      def draw_header(pdf)
-        logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-        if File.exist?(logo_path)
-          pdf.image logo_path, height: 32
-        else
-          pdf.fill_color DARK_GREEN
-          pdf.text "WAStays", size: 22, style: :bold
-        end
-
-        pdf.move_up 32
-        pdf.fill_color DARK_GREEN
-        pdf.text "Folio Ledger", size: 18, style: :bold, align: :right
-        pdf.move_down 12
-        pdf.stroke_color DARK_GREEN
-        pdf.line_width 0.5
-        pdf.stroke_horizontal_rule
-        pdf.line_width 1
-        pdf.fill_color TEXT_PRIMARY
-      end
+      def hotel = folio.hotel
 
       def transactions
         @transactions ||= folio.folio_transactions
@@ -147,75 +136,73 @@ module Reports
         ]
       end
 
-      def draw_metadata(pdf)
-        rows = [
-          [ { content: "FOLIO", colspan: 4, font_style: :bold, text_color: TEXT_PRIMARY } ],
-          [ label_cell("Folio Account Reference"), value_cell(folio_account_reference), label_cell("Folio Reference"), value_cell(folio_reference) ],
-          [ label_cell("Booking Ref"), value_cell(booking.confirmation_token), label_cell("Window"), value_cell(folio_window_label) ],
-          [ label_cell("Guest Name"), value_cell(booking.guest_name), label_cell("Room No / Type"), value_cell(room_summary) ],
-          [ label_cell("Stay Dates"), value_cell(stay_dates), label_cell("Folio Status"), value_cell(folio.status.to_s.titleize) ],
-          [ label_cell("Currency"), value_cell(currency), label_cell(""), value_cell("") ]
+      # Who and what the ledger is for goes in the frame's strip; how the account itself is
+      # filed goes in the grid below it. Blank pairs are dropped by both, so an unlabelled
+      # folio costs a column rather than printing a dash.
+      def identity_pairs
+        [
+          [ "Booking ref", booking.confirmation_token ],
+          [ "Guest", booking.guest_name ],
+          [ "Room / type", room_summary ],
+          [ "Stay", stay_dates ]
         ]
+      end
 
-        label_width = 95
-        value_width = (pdf.bounds.width - (label_width * 2)) / 2.0
-        pdf.table(rows, width: pdf.bounds.width, column_widths: [ label_width, value_width, label_width, value_width ]) do
-          cells.border_color = BORDER_GRAY
-          cells.padding = [ 5, 8, 5, 8 ]
-          cells.size = 8
-          cells.inline_format = true
-          row(0).background_color = LIGHT_GRAY
-          row(0).padding = [ 6, 8, 6, 8 ]
-        end
+      def account_pairs
+        [
+          [ "Account ref", folio_account_reference ],
+          [ "Window", folio_window_label ],
+          [ "Status", folio.status.to_s.titleize ],
+          [ "Currency", currency ],
+          [ "Printed by", printed_by ],
+          [ "Generated", THEME.format_time(Time.current, hotel.hotel_time_zone) ]
+        ]
       end
 
       def draw_transactions(pdf)
         ledger = ledger_rows
         totals = ledger_totals(ledger)
-        table_rows = [
-          [
-            header_cell("Code"),
-            header_cell("Date"),
-            header_cell("Description / Reference"),
-            header_cell("Source"),
-            header_cell("Debit\n(#{currency})", align: :right),
-            header_cell("Credit\n(#{currency})", align: :right),
-            header_cell("Balance\n(#{currency})", align: :right)
-          ]
+
+        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+          section_title: "Ledger transactions",
+          headers: [
+            "Code", "Date", "Description / Reference", "Source",
+            "Debit\n(#{currency})", "Credit\n(#{currency})", "Balance\n(#{currency})"
+          ],
+          rows: ledger.map { |row| transaction_row(row) },
+          numeric_columns: [ 4, 5, 6 ],
+          # The label sits in the description column rather than the first one: code is 58pt
+          # wide, and a label that wraps to two lines reads as two rows.
+          total_row: [
+            "", "", "FOLIO TOTAL", "",
+            format_money(totals[:debit]), format_money(totals[:credit]),
+            format_money(totals[:balance], blank_zero: false)
+          ],
+          empty_message: "No transactions have been posted to this folio.",
+          column_widths: transaction_column_widths(pdf),
+          density: :dense
+        )
+      end
+
+      def transaction_row(row)
+        [
+          row[:code].to_s.presence || "-",
+          row[:date],
+          description_cell(row),
+          row[:source].to_s.presence || "-",
+          format_money(row[:debit]),
+          format_money(row[:credit]),
+          format_money(row[:balance], blank_zero: false)
         ]
-
-        table_rows += ledger.map do |row|
-          [
-            body_cell(row[:code], color: TEXT_MUTED),
-            body_cell(row[:date], color: TEXT_MUTED),
-            description_cell(row),
-            body_cell(row[:source], color: TEXT_MUTED),
-            money_cell(row[:debit]),
-            money_cell(row[:credit]),
-            money_cell(row[:balance], balance: true)
-          ]
-        end
-
-        table_rows << [
-          { content: "FOLIO TOTAL", colspan: 4, font_style: :bold, text_color: TEXT_PRIMARY, background_color: LIGHT_GRAY },
-          money_cell(totals[:debit], bold: true, background_color: LIGHT_GRAY),
-          money_cell(totals[:credit], bold: true, background_color: LIGHT_GRAY),
-          money_cell(totals[:balance], bold: true, balance: true, background_color: LIGHT_GRAY)
-        ]
-
-        pdf.table(table_rows, width: pdf.bounds.width, header: true, column_widths: transaction_column_widths(pdf)) do
-          cells.border_color = BORDER_GRAY
-          cells.padding = [ 5, 6, 5, 6 ]
-          cells.size = 7.5
-          cells.inline_format = true
-          row(0).background_color = LIGHT_GRAY
-          row(0).font_style = :bold
-        end
       end
 
       def transaction_column_widths(pdf)
-        width = pdf.bounds.width
-        [ 55, 58, width - 55 - 58 - 80 - 72 - 72 - 72, 80, 72, 72, 72 ]
+        fixed = FIXED_COLUMN_WIDTHS
+        [
+          fixed[:code], fixed[:date],
+          pdf.bounds.width - fixed[:code] - fixed[:date] - fixed[:source] - (fixed[:money] * 3),
+          fixed[:source], fixed[:money], fixed[:money], fixed[:money]
+        ]
       end
 
       def ledger_rows
@@ -225,7 +212,7 @@ module Reports
           balance += debit - credit
           {
             code: transaction_code(transaction),
-            date: transaction.posting_date&.strftime("%d %b %y"),
+            date: THEME.format_date(transaction.posting_date),
             posting_date: transaction.posting_date,
             description: display_description(transaction),
             reference: reference_text(transaction),
@@ -329,70 +316,24 @@ module Reports
         transaction.user_id.present? ? "Staff" : "System"
       end
 
-      def label_cell(label)
-        { content: label.to_s, text_color: TEXT_MUTED, font_style: :bold }
-      end
-
-      def value_cell(value)
-        { content: escape(value.to_s.presence || "-"), text_color: TEXT_PRIMARY }
-      end
-
-      def header_cell(text, align: :left)
-        { content: escape(text), text_color: TEXT_MUTED, align: align }
-      end
-
-      def body_cell(text, align: :left, color: TEXT_PRIMARY)
-        { content: escape(text.to_s.presence || "-"), text_color: color, align: align }
-      end
-
+      # The only cell that carries more than one value: the reference sits under the
+      # description a step down the scale rather than taking a column of its own.
       def description_cell(row)
         content = escape(row[:description].to_s.presence || "-")
-        content += "\n<font size='6.5'>#{escape(row[:reference])}</font>" if row[:reference].present?
-        { content: content, inline_format: true, text_color: TEXT_PRIMARY }
+        content += "\n<font size='#{THEME::TYPE[:micro]}'>#{escape(row[:reference])}</font>" if row[:reference].present?
+        { content: content, inline_format: true }
       end
 
-      def money_cell(amount, bold: false, balance: false, background_color: nil)
-        {
-          content: format_money(amount, blank_zero: !balance),
-          align: :right,
-          text_color: TEXT_PRIMARY,
-          font_style: (bold ? :bold : nil),
-          background_color: background_color
-        }.compact
-      end
-
-      def format_money(amount, blank_zero: false)
+      def format_money(amount, blank_zero: true)
         amount = amount.to_d
         return "-" if blank_zero && amount.zero?
-        return "(#{HotelPortal::Reports::Exports::PdfTheme.money(amount.abs)})" if amount.negative?
+        return "(#{THEME.money(amount.abs)})" if amount.negative?
 
-        HotelPortal::Reports::Exports::PdfTheme.money(amount)
+        THEME.money(amount)
       end
 
       def csv_money(amount)
         format("%.2f", amount.to_d)
-      end
-
-      def draw_footer(pdf)
-        pdf.repeat(:all) do
-          pdf.stroke_color BORDER_GRAY
-          pdf.line_width 0.5
-          pdf.stroke_horizontal_line(pdf.bounds.left, pdf.bounds.right, at: FOOTER_Y + 14)
-
-          pdf.bounding_box([ pdf.bounds.left, FOOTER_Y ], width: pdf.bounds.width - 88, height: 12) do
-            pdf.fill_color TEXT_MUTED
-            pdf.text printed_at_text, size: 7, align: :left
-          end
-        end
-
-        pdf.number_pages "Page <page> of <total>",
-          at: [ pdf.bounds.right - 75, FOOTER_Y ],
-          size: 7,
-          color: TEXT_MUTED
-      end
-
-      def printed_at_text
-        "Printed at #{Time.current.strftime('%d %b %Y %H:%M')} by #{printed_by}"
       end
 
       def printed_by
@@ -421,7 +362,7 @@ module Reports
       end
 
       def stay_dates
-        dates = [ booking.check_in, booking.check_out ].map { |date| date&.strftime("%d %b %Y") }
+        dates = [ booking.check_in, booking.check_out ].map { |date| THEME.format_date(date) }
         dates.all?(&:present?) ? dates.join(" - ") : "-"
       end
 
