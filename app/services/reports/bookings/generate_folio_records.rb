@@ -216,12 +216,15 @@ module Reports
 
       # The frame draws the masthead from whatever answers to these, so an issued invoice
       # can wear the hotel it was issued by rather than the hotel as it is named today.
-      # City and country are already folded into the address, and the logo is not
-      # snapshotted, so it comes from the live record.
+      # The three parts of the address go over separately: the frame joins them, and drops
+      # the ones the address line already names. The logo is not snapshotted, so it comes
+      # from the live record.
       def pdf_hotel
         SnapshotHotel.new(
           name: snapshot_or_live("hotel", "name") { hotel.name }.presence || hotel.name,
-          address: hotel_address, city: nil, country: nil,
+          address: hotel_value("address") { hotel.address },
+          city: hotel_value("city") { hotel.city },
+          country: hotel_value("country") { hotel.country },
           icon: hotel.try(:icon), hotel_time_zone: invoice_time_zone
         )
       end
@@ -745,15 +748,6 @@ module Reports
         end
 
         rooms.presence&.join(", ") || "-"
-      end
-
-      def hotel_address
-        values = if @snapshot["hotel"].is_a?(Hash)
-          %w[address city country].map { |key| @snapshot["hotel"][key] }
-        else
-          [ hotel.address, hotel.city, hotel.country ]
-        end
-        values.filter_map(&:presence).uniq.join(", ").presence
       end
 
       # Named and dashed like the registrations: three contacts run together unlabelled

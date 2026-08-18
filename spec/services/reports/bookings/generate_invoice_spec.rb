@@ -159,6 +159,21 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
       end
     end
 
+    context "when the hotel types its city into the address line" do
+      let(:hotel) do
+        super().tap do |record|
+          record.update!(address: "12 Jalan Pantai Tengah, 07000 Langkawi, Kedah", city: "Langkawi", country: "Malaysia")
+        end
+      end
+
+      it "names the city once in the masthead" do
+        text = pdf_text(described_class.new(folio: folio).generate)
+
+        expect(text).to include("12 Jalan Pantai Tengah, 07000 Langkawi, Kedah, Malaysia")
+        expect(text.scan("Langkawi").size).to eq(1)
+      end
+    end
+
     context "when the issuer is registered for tax" do
       let(:hotel) do
         super().tap do |record|

@@ -214,8 +214,20 @@ module HotelPortal
           widths
         end
 
+        # Hotels type the city, and often the state with it, into the address line itself,
+        # so joining the three parts prints Langkawi twice. uniq cannot see it — the parts
+        # are different strings and the repeat sits inside one of them — so a part is
+        # dropped when what has already been kept names it.
         def hotel_address
-          [ @hotel.try(:address), @hotel.try(:city), @hotel.try(:country) ].compact_blank.join(", ")
+          [ @hotel.try(:address), @hotel.try(:city), @hotel.try(:country) ]
+            .compact_blank
+            .each_with_object([]) { |part, kept| kept << part unless already_named?(kept, part) }
+            .join(", ")
+        end
+
+        def already_named?(kept, part)
+          pattern = /\b#{Regexp.escape(part.to_s.strip)}\b/i
+          kept.any? { |line| line.match?(pattern) }
         end
 
         def generated_label

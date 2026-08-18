@@ -137,7 +137,10 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
 
     # The masthead is the hotel as the invoice was issued, not as it is named today.
     expect(records.pdf_hotel.name).to eq("Hotel ABC Resort")
-    expect(records.pdf_hotel.address).to eq("Jalan Pantai Cenang, Langkawi, Malaysia")
+    # The three parts go over separately; the frame is what joins them.
+    expect(records.pdf_hotel).to have_attributes(
+      address: "Jalan Pantai Cenang", city: "Langkawi", country: "Malaysia"
+    )
     expect(records.hotel_contact_line).to eq("Fixed line: - · Phone: +60 12-345 6789 · Email: frontdesk@example.com")
 
     expect(records.bill_to_entries).to include([ "Guest", "John Doe" ], [ "Country", "Foreign Tourist" ])
