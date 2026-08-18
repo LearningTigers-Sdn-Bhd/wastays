@@ -209,6 +209,55 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.notes).to include("Service Charge is shown separately from government tax.")
   end
 
+  it "prints no tax registrations for an issuer that has none" do
+    expect(records.document_kind).to eq("Folio invoice")
+    expect(records.hotel_identifier_line).to be_nil
+  end
+
+  context "when the issuer was registered for tax at the time it billed" do
+    let(:hotel) do
+      super().tap do |record|
+        record.update!(
+          sst_enabled: true,
+          tin: "C21836402070",
+          sst_registration_number: "W10-1808-32000012",
+          tourism_tax_registration_number: "T-0402-1234-5678"
+        )
+      end
+    end
+
+    it "calls the document a tax invoice and prints how the issuer is registered" do
+      expect(records.document_kind).to eq("Tax invoice · Folio")
+      expect(records.hotel_identifier_line).to eq(
+        "TIN: C21836402070 · SST: W10-1808-32000012 · Tourism Tax: T-0402-1234-5678"
+      )
+    end
+
+    it "keeps the registrations it was issued under after the hotel changes them" do
+      records_at_issue = records
+
+      hotel.update!(sst_enabled: false, sst_registration_number: "W10-9999-99999999", tin: nil)
+
+      expect(records_at_issue.document_kind).to eq("Tax invoice · Folio")
+      expect(records_at_issue.hotel_identifier_line).to include("W10-1808-32000012", "C21836402070")
+    end
+  end
+
+  context "when the invoice has been reissued" do
+    before do
+      folio.invoice.update!(state: "under_correction")
+      Invoices::Finalize.call!(folio: folio.reload, issued_by: nil, balance: 0)
+    end
+
+    it "says on its face that it is a revision and what it supersedes" do
+      reissued = described_class.new(folio: folio.reload).call
+
+      expect(reissued.invoice_number).to eq("ABC-26798231-2")
+      expect(reissued.invoice_detail_entries.to_h).to include("Revision" => "2")
+      expect(reissued.notes).to include("Revision 2 of this invoice; it supersedes ABC-26798231.")
+    end
+  end
+
   it "dates the invoice by when it was issued, not by when it was printed" do
     entries = records.invoice_detail_entries.to_h
     issued_on = folio.reload.invoice.issued_on

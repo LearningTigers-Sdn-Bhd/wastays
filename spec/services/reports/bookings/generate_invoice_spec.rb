@@ -153,6 +153,28 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
       end
     end
 
+    context "when the issuer is registered for tax" do
+      let(:hotel) do
+        super().tap do |record|
+          record.update!(
+            sst_enabled: true,
+            tin: "C21836402070",
+            sst_registration_number: "W10-1808-32000012",
+            tourism_tax_registration_number: "T-0402-1234-5678"
+          )
+        end
+      end
+
+      it "names the document a tax invoice and registers the issuer under the masthead" do
+        text = pdf_text(described_class.new(folio: folio, printed_by: "F. Suhaila").generate)
+
+        expect(text).to include("TAX INVOICE")
+        expect(text).to include("TIN: C21836402070")
+        expect(text).to include("SST: W10-1808-32000012")
+        expect(text).to include("Tourism Tax: T-0402-1234-5678")
+      end
+    end
+
     it "does not expose internal folio metadata" do
       text = pdf_text(described_class.new(folio: folio).generate)
 

@@ -35,7 +35,15 @@ module Invoices
         country: @hotel.country,
         contact_phone: @hotel.contact_phone,
         contact_email: @hotel.contact_email,
-        time_zone: @hotel.hotel_time_zone.name
+        time_zone: @hotel.hotel_time_zone.name,
+        # How the issuer was registered for tax on the day it billed. A registration
+        # number changes and a hotel deregisters, so the document has to keep the ones it
+        # was issued under rather than reach for today's. Invoices issued before this was
+        # captured fall back to the live record, which is the best they have.
+        tin: @hotel.tin,
+        sst_enabled: @hotel.sst_enabled,
+        sst_registration_number: @hotel.sst_registration_number,
+        tourism_tax_registration_number: @hotel.tourism_tax_registration_number
       }
     end
 

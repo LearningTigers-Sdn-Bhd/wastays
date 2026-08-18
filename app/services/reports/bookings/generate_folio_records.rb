@@ -147,9 +147,16 @@ module Reports
         revision.document_reference
       end
 
-      # Sentence case: the frame upcases an eyebrow itself.
+      # Sentence case: the frame upcases an eyebrow itself. An SST-registered issuer has
+      # to call the document a tax invoice, and the designation leads because that is the
+      # part with force; which of our two invoices it is follows it.
       def document_kind
-        direct_bill? ? "Accounts receivable invoice" : "Folio invoice"
+        kind = direct_bill? ? "Accounts receivable" : "Folio"
+        sst_registered? ? "Tax invoice · #{kind}" : "#{kind} invoice"
+      end
+
+      def sst_registered?
+        snapshot_or_live("hotel", "sst_enabled") { hotel.sst_enabled }.present?
       end
 
       def pdf_title
@@ -192,6 +199,7 @@ module Reports
           [ "Issued by", printed_by ],
           [ "Folio no.", folio_reference ]
         ]
+        entries << [ "Revision", revision.revision_number.to_s ] if revised?
         entries.concat(direct_bill_term_entries) if direct_bill?
         entries
       end
@@ -220,6 +228,17 @@ module Reports
 
       def hotel_contact_line = hotel_contact
 
+      # Sits under the address rather than among the invoice details: these identify the
+      # party issuing the document, not the document. Each is dropped when the issuer has
+      # none, so an unregistered hotel prints no empty labels.
+      def hotel_identifier_line
+        [
+          [ "TIN", hotel_tax_value("tin") { hotel.tin } ],
+          [ "SST", hotel_tax_value("sst_registration_number") { hotel.sst_registration_number } ],
+          [ "Tourism Tax", hotel_tax_value("tourism_tax_registration_number") { hotel.tourism_tax_registration_number } ]
+        ].filter_map { |label, value| "#{label}: #{value}" if value.present? }.join(" · ").presence
+      end
+
       def transaction_rows
         @transaction_rows ||= build_transaction_rows
       end
@@ -230,6 +249,7 @@ module Reports
 
       def notes
         rows = []
+        rows << superseded_note if revised?
         rows << "SST is not applied on top of Tourism Tax." if sst_present? && tourism_tax_present?
         rows << "Service Charge is shown separately from government tax." if service_charge_present?
         rows
@@ -239,6 +259,19 @@ module Reports
       # reprint changes this and nothing else on the document.
       def printed_at
         format_datetime(Time.current)
+      end
+
+      # A reissued invoice has to say so on its face. The document reference carries the
+      # revision, but a reader holding one sheet cannot tell a suffix from a serial.
+      def revised?
+        revision.revision_number > 1
+      end
+
+      def superseded_note
+        superseded = invoice_document.revisions.find_by(revision_number: revision.revision_number - 1)
+        return "Revision #{revision.revision_number} of this invoice." if superseded.blank?
+
+        "Revision #{revision.revision_number} of this invoice; it supersedes #{superseded.document_reference}."
       end
 
       def printed_by
@@ -760,6 +793,10 @@ module Reports
         return values[key] if values.is_a?(Hash) && values.key?(key)
 
         yield
+      end
+
+      def hotel_tax_value(key, &live)
+        snapshot_or_live("hotel", key, &live).presence
       end
 
       def invoice_time_zone

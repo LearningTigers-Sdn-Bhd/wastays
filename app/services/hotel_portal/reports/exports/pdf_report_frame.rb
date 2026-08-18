@@ -29,10 +29,11 @@ module HotelPortal
         # Sits in the top margin, mirroring how the footer sits below the content box.
         RUNNING_HEAD_Y = 18
 
-        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_contact: nil)
+        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_contact: nil, hotel_identifiers: nil)
           @pdf = pdf
           @hotel = hotel
           @hotel_contact = hotel_contact
+          @hotel_identifiers = hotel_identifiers
           @report_name = report_name
           @subtitle = subtitle
           @eyebrow = eyebrow
@@ -105,9 +106,10 @@ module HotelPortal
             size: name_size, style: :bold
           text_bottom = top - name_height
 
-          # A document that bills in the hotel's name has to print how to reach it. The
-          # reports do not, so the contact line is the caller's to ask for.
-          [ address, @hotel_contact ].compact_blank.each do |line|
+          # A document that bills in the hotel's name has to print how to reach it, and a
+          # tax document how it is registered. The reports need neither, so both lines are
+          # the caller's to ask for.
+          [ address, @hotel_contact, @hotel_identifiers ].compact_blank.each do |line|
             @pdf.fill_color PdfTheme::COLORS[:muted]
             line_size = PdfTheme::TYPE[:small]
             line_top = text_bottom - NAME_ADDRESS_GAP
