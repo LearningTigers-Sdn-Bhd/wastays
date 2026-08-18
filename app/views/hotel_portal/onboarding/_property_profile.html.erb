@@ -1,6 +1,7 @@
 <% if presenter.read_only? %>
   <section aria-labelledby="property-summary-heading" class="space-y-4">
     <h2 id="property-summary-heading" class="text-base font-semibold">Property summary</h2>
+    <%= render "hotel_portal/profiles/hotel_icon_field", hotel: current_hotel, readonly: true %>
     <dl class="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
       <% {
         "Legal account" => current_hotel.account.name,
@@ -37,6 +38,8 @@
         this first grid cell opens directly into the fields. %>
     <section aria-label="Identity and guest details" class="space-y-4">
       <div class="grid gap-4 sm:grid-cols-2">
+        <%= render "hotel_portal/profiles/hotel_icon_field", form: form, hotel: current_hotel %>
+
         <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Property name", required: true, class: "sm:col-span-2") do |field| %>
           <% field.with_input %>
         <% end %>

@@ -77,7 +77,7 @@ module Onboarding
         :name, :description, :address, :city, :country, :star_rating,
         :google_map_link, :contact_email, :contact_phone, :fixed_line_number, :whatsapp_number,
         :time_zone, :default_currency, :tin, :ssm_number,
-        :local_government_name, :local_government_license_number, amenities: []
+        :local_government_name, :local_government_license_number, :icon, :remove_icon, amenities: []
       )
     end
 

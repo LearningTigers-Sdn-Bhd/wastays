@@ -146,6 +146,9 @@ module BookingEngine
           OpenStruct.new(success?: false, message: booking.errors.full_messages.to_sentence)
         end
       end
+    rescue ActiveRecord::Encryption::Errors::Decryption => e
+      Rails.logger.error("[ConfirmBooking] guest data unreadable under current encryption key for quote #{@quote.id}: #{e.message}")
+      OpenStruct.new(success?: false, message: "We couldn't confirm your booking due to a data issue on our end. Please try again or contact support.")
     rescue => e
       OpenStruct.new(success?: false, message: "Confirmation failed: #{e.message}")
     end

@@ -34,12 +34,12 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(document.css(".panel-form-field .panel-multi-select")).not_to be_empty
     end
 
-    it 'lists the sections in order with the read-only billing reference last' do
+    it 'lists the sections in column order with the read-only billing reference under hotel information' do
       get edit_hotel_profile_path(hotel)
 
       document = response.parsed_body
       expect(document.css("#hotel-profile-section h2").map { |heading| heading.text.squish }).to eq(
-        [ "Hotel Information", "Hotel Location", "Property Contact", "Business Registration", "Billing Reference" ]
+        [ "Hotel Information", "Billing Reference", "Hotel Location", "Property Contact", "Business Registration" ]
       )
       billing_reference = document.at_css("[data-testid='billing-reference'].panel-metric-card")
       expect(billing_reference.text.squish).to include("Billing Reference", "Effective setup fee")

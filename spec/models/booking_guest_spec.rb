@@ -84,4 +84,20 @@ RSpec.describe BookingGuest, type: :model do
       end
     end
   end
+
+  describe 'guest snapshot capture' do
+    it 'does not raise and leaves the snapshot blank when a guest field is undecryptable under the current key' do
+      guest = create(:guest, email: 'jane@example.com', phone: '+60111111111', government_id: 'A123456')
+      quoted = Guest.connection.quote('{"p":"corrupted","h":{"iv":"bogus","at":"bogus"}}')
+      Guest.connection.execute("UPDATE guests SET email = #{quoted} WHERE id = #{guest.id}")
+      guest.reload
+      booking = create(:booking)
+
+      booking_guest = nil
+      expect { booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true) }.not_to raise_error
+
+      expect(booking_guest.email_snapshot).to be_nil
+      expect(booking_guest.phone_snapshot).to eq('+60111111111')
+    end
+  end
 end
