@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "prawn"
 require "prawn/table"
 
@@ -5,157 +7,121 @@ Prawn::Fonts::AFM.hide_m17n_warning = true
 
 module Reports
   module Bookings
+    # Attached to the confirmation email and reachable from the guest and public booking
+    # pages. It states what was booked and what it is expected to cost.
+    #
+    # It is not evidence of payment: a receipt is issued per payment received and carries
+    # its own number, which is what PaymentReceiptPdfService draws. This document says only
+    # that the reservation exists.
+    #
+    # Wears the shared print design system (DESIGN.md §12) but draws its own body: the
+    # parties it names do not fit a metadata strip, and its line items are the booked
+    # position rather than the tabular period report PdfReportBuilder owns.
     class GenerateConfirmation
-      DARK_GREEN   = "0a2e29"
-      GOLD         = "d9c5a0"
-      WHITE        = "ffffff"
-      LIGHT_GRAY   = "f9fafb"
-      BORDER_GRAY  = "e5e7eb"
-      TEXT_PRIMARY = "111827"
-      TEXT_MUTED   = "6b7280"
-      SUCCESS      = "059669"
-      WARNING      = "d97706"
+      THEME = HotelPortal::Reports::Exports::PdfTheme
+
+      NIGHTS_WIDTH = 60
+      AMOUNT_WIDTH = 96
+      CLOSING_NOTE = "This document confirms the reservation and is not a payment receipt. " \
+        "It is electronically generated - no signature required."
 
       def initialize(booking)
-        @booking       = booking
-        @hotel         = booking.hotel
-        @nights        = (booking.check_out.to_date - booking.check_in.to_date).to_i
-        @booking_rooms = booking.booking_rooms.includes(:room_type)
+        @booking = booking
+        @records = Reports::Bookings::GenerateVoucherRecords.new(booking).call
       end
 
       def generate
-        pdf = Prawn::Document.new(
-          page_size: "A4",
-          margin: [ 40, 40, 40, 40 ],
-          info: { Title: "Booking Confirmation - #{@booking.confirmation_token}", Author: "WAStays", Creator: "WAStays", CreationDate: Time.now }
-        )
+        pdf = Prawn::Document.new(page_size: "A4", margin: THEME::PAGE_MARGIN, info: document_info)
+        THEME.configure_font(pdf)
+        frame = build_frame(pdf)
 
-        draw_header(pdf)
-        pdf.move_down 20
-        draw_meta(pdf)
-        pdf.move_down 30
-        draw_parties(pdf)
-        pdf.move_down 35
+        frame.draw_header
+        HotelPortal::Reports::Exports::PdfPartyBlocks.new(pdf: pdf).draw(@records.party_blocks)
         draw_line_items(pdf)
-        pdf.move_down 40
-        draw_footer(pdf)
-
+        draw_closing_notes(pdf)
+        frame.stamp_page_furniture
         pdf.render
       end
 
       private
 
-      def draw_header(pdf)
-        logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-        File.exist?(logo_path) ? pdf.image(logo_path, height: 32) : (pdf.fill_color DARK_GREEN; pdf.text "WAStays", size: 22, style: :bold)
-        pdf.move_up 32
-        pdf.fill_color DARK_GREEN
-        pdf.text "BOOKING CONFIRMATION", size: 18, style: :bold, align: :right
-        pdf.move_down 12
-        pdf.stroke_color DARK_GREEN
-        pdf.line_width 0.5
-        pdf.stroke_horizontal_rule
-        pdf.line_width 1
+      def document_info
+        {
+          Title: "Booking Confirmation - #{@records.confirmation_token}",
+          Author: "WAStays",
+          Creator: "WAStays",
+          CreationDate: Time.current
+        }
       end
 
-      def draw_meta(pdf)
-        is_confirmed = @booking.status == "confirmed"
-        status_text = @booking.status.upcase.tr("_", " ")
-        status_color = is_confirmed ? SUCCESS : WARNING
-
-        pdf.fill_color status_color
-        pdf.fill_rectangle [ 0, pdf.cursor ], 50, 16
-        pdf.fill_color WHITE
-        pdf.text_box status_text, at: [ 0, pdf.cursor ], width: 50, height: 16, align: :center, valign: :center, size: 8, style: :bold
-        pdf.move_down 26
-        pdf.fill_color TEXT_PRIMARY
-
-        pdf.table([
-          [ { content: "CONFIRMATION CODE", font_style: :bold, text_color: GOLD, size: 8, borders: [] },
-            { content: "ISSUE DATE", font_style: :bold, text_color: GOLD, size: 8, borders: [], align: :right } ],
-          [ { content: @booking.confirmation_token, font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [] },
-            { content: @booking.created_at.strftime("%d %B %Y"), size: 11, text_color: TEXT_PRIMARY, borders: [], align: :right } ]
-        ], width: pdf.bounds.width)
-      end
-
-      def draw_parties(pdf)
-        pdf.fill_color TEXT_PRIMARY
-        hotel_location = [ @hotel.city, @hotel.country ].compact.join(", ")
-
-        pdf.table([
-          [ { content: "BILLED TO", font_style: :bold, text_color: GOLD, size: 8, borders: [], padding: [ 0, 0, 6, 0 ] },
-            { content: "PROPERTY",  font_style: :bold, text_color: GOLD, size: 8, borders: [], padding: [ 0, 0, 6, 0 ], align: :right } ],
-          [ { content: @booking.guest_name,  font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 2, 0 ] },
-            { content: @hotel.name,          font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 2, 0 ], align: :right } ],
-          [ { content: @booking.guest_email, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 1, 0 ] },
-            { content: hotel_location,       size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 1, 0 ], align: :right } ],
-          [ { content: @booking.guest_phone, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 0 ] },
-            { content: "", borders: [], padding: [ 0, 0, 0, 0 ] } ]
-        ], width: pdf.bounds.width, column_widths: [ pdf.bounds.width / 2, pdf.bounds.width / 2 ])
-      end
-
-      def draw_line_items(pdf)
-        nights_label = @nights == 1 ? "1 Night" : "#{@nights} Nights"
-
-        pdf.fill_color LIGHT_GRAY
-        pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, 26
-        pdf.fill_color TEXT_PRIMARY
-        pdf.move_down 8
-        pdf.indent(12) { pdf.text "STAY DETAILS: #{@booking.check_in.strftime('%d %b %Y')} — #{@booking.check_out.strftime('%d %b %Y')}  (#{nights_label})", size: 9, style: :bold }
-        pdf.move_down 18
-
-        desc_w   = (pdf.bounds.width * 0.55).floor
-        qty_w    = 50
-        nights_w = 60
-        amt_w    = pdf.bounds.width - desc_w - qty_w - nights_w
-
-        rows = @booking_rooms.map do |room|
-          name = room.room_type_snapshot["name"].presence || room.room_type.name
-          [ { content: name, size: 10, text_color: TEXT_PRIMARY },
-            { content: "1", size: 10, text_color: TEXT_PRIMARY, align: :center },
-            { content: @nights.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
-            { content: "MYR #{fmt(room.subtotal)}", size: 10, text_color: TEXT_PRIMARY, align: :right } ]
-        end
-
-        tax_rows = Array(@booking.tax_lines).map do |tax|
-          [ { content: tax["name"].to_s, size: 10, text_color: TEXT_MUTED, colspan: 3 },
-            { content: "MYR #{fmt(tax["amount"])}", size: 10, text_color: TEXT_MUTED, align: :right } ]
-        end
-
-        pdf.table(
-          [ [ { content: "DESCRIPTION", font_style: :bold, size: 8, text_color: TEXT_MUTED },
-              { content: "QTY",      font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
-              { content: "NIGHTS",   font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
-              { content: "SUBTOTAL", font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :right } ] ] + rows + tax_rows,
-          width: pdf.bounds.width,
-          column_widths: [ desc_w, qty_w, nights_w, amt_w ],
-          cell_style: { borders: [ :bottom ], padding: [ 12, 6, 12, 6 ], border_color: BORDER_GRAY }
+      # The confirmation code is the identity the guest quotes, so it is the title; the
+      # internal reservation number goes underneath it. The parties go in blocks of their
+      # own, so the frame draws no metadata strip above them.
+      def build_frame(pdf)
+        HotelPortal::Reports::Exports::PdfReportFrame.new(
+          pdf: pdf,
+          hotel: @records.hotel,
+          eyebrow: "Booking confirmation",
+          report_name: @records.confirmation_token,
+          subtitle: "Reservation #{@records.reservation_number}",
+          badge: @records.status_badge,
+          metadata: [],
+          # Goes to the guest, not into the hotel's filing cabinet.
+          confidential: false
         )
-
-        pdf.move_down 30
-        band_h = 54
-        pdf.fill_color DARK_GREEN
-        pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, band_h
-        pdf.fill_color WHITE
-        pdf.draw_text "BOOKING TOTAL", at: [ 18, pdf.cursor - 32 ], size: 10, style: :bold
-        pdf.text_box "MYR #{fmt(@booking.total_amount)}", at: [ 0, pdf.cursor ], width: pdf.bounds.width - 18, height: band_h, align: :right, valign: :center, size: 20, style: :bold
-        pdf.move_down band_h + 40
-        pdf.fill_color TEXT_PRIMARY
       end
 
-      def draw_footer(pdf)
-        pdf.stroke_color BORDER_GRAY
-        pdf.stroke_horizontal_rule
-        pdf.move_down 20
-        pdf.fill_color TEXT_MUTED
-        pdf.text "Thank you for choosing WAStays. We hope you have a pleasant stay!", size: 9, align: :center, style: :italic
-        pdf.move_down 12
-        pdf.text "This is a system-generated booking confirmation, not a payment receipt.", size: 8, align: :center
-        pdf.text "WAStays · hello@wastays.com · www.wastays.com", size: 8, align: :center
+      # One row per room plus the taxes that the booking total actually includes. Tourism
+      # tax is excluded from both, and says so in the closing notes, so the rows here always
+      # sum to the total printed beneath them.
+      def draw_line_items(pdf)
+        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+          section_title: "Booked items",
+          headers: [ "Description", "Nights", "Amount (#{@records.currency})" ],
+          rows: room_rows + tax_rows,
+          numeric_columns: [ 1, 2 ],
+          total_row: [ "Booking total", nil, @records.money(@records.total_due) ],
+          empty_message: "No items are recorded for this reservation.",
+          column_widths: column_widths(pdf)
+        )
       end
 
-      def fmt(amount)
-        format("%.2f", amount.to_f)
+      def room_rows
+        @booking.booking_rooms.includes(:room_type).map do |room|
+          [ room_name(room), nights.to_s, @records.money(room.subtotal) ]
+        end
+      end
+
+      def tax_rows
+        Array(@booking.tax_lines).map { |line| line.to_h.stringify_keys }.filter_map do |line|
+          next if Booking.tourism_tax_line?(line) || line["amount"].to_d.zero?
+
+          [ line["name"].presence || "Tax / charge", "-", @records.money(line["amount"]) ]
+        end
+      end
+
+      def room_name(room) = room.room_type_snapshot.to_h["name"].presence || room.room_type.name
+
+      def nights = (@booking.check_out.to_date - @booking.check_in.to_date).to_i
+
+      def column_widths(pdf)
+        [ pdf.bounds.width - NIGHTS_WIDTH - AMOUNT_WIDTH, NIGHTS_WIDTH, AMOUNT_WIDTH ]
+      end
+
+      def draw_closing_notes(pdf)
+        disclosure = @records.tourism_tax_disclosure
+        height = pdf.height_of(CLOSING_NOTE, size: THEME::TYPE[:small])
+        height += pdf.height_of(disclosure, size: THEME::TYPE[:micro], leading: 2) + THEME::SPACE[:sm] if disclosure.present?
+        pdf.start_new_page if pdf.cursor < height + THEME::SPACE[:lg]
+
+        if disclosure.present?
+          pdf.fill_color THEME::COLORS[:muted]
+          pdf.text disclosure, size: THEME::TYPE[:micro], leading: 2
+          pdf.move_down THEME::SPACE[:sm]
+        end
+        pdf.fill_color THEME::COLORS[:muted]
+        pdf.text CLOSING_NOTE, size: THEME::TYPE[:small], style: :italic
+        pdf.fill_color THEME::COLORS[:ink]
       end
     end
   end
