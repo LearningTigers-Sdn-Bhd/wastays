@@ -153,8 +153,8 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Aging Report")
       expect(response.body).to include("Print Summary")
-      filename = "agent-summary-statement-#{hotel.slug}-#{hotel.current_business_date}.pdf"
-      expect(document.at_css("a[href='#{hotel_ar_agent_summary_pdf_path(hotel, filename)}']")).to be_present
+      filename = "aging-summary-statement-#{hotel.slug}-#{hotel.current_business_date}.pdf"
+      expect(document.at_css("a[href='#{hotel_ar_aging_summary_pdf_path(hotel, filename)}']")).to be_present
       expect(response.body).to include("Current")
       expect(response.body).to include("1–30 days")
       expect(response.body).to include("Total outstanding")
@@ -216,6 +216,19 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response.body).not_to include("Acme Sdn Bhd")
     end
 
+    it "carries the active controls into the PDF export link" do
+      relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel, account_type: "company",
+        corporate_account: create(:account, :corporate, name: "Megat Holdings"))
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-EXPORT", folio_number: 609, amount: 90, relationship: relationship, due_on: Date.current - 5.days)
+
+      get hotel_ar_aging_path(hotel, query: "Megat", account_type: "company")
+
+      document = Nokogiri::HTML(response.body)
+      export_link = document.css("a").find { |link| link.text.squish == "Print Summary" }
+      export_query = Rack::Utils.parse_query(URI.parse(export_link["href"]).query)
+      expect(export_query).to include("query" => "Megat", "account_type" => "company")
+    end
+
     it "renders a search-specific empty state when a filter matches nothing" do
       relationship = create(:hotel_corporate_account, :direct_bill, hotel: hotel)
       create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGING-NOMATCH", folio_number: 608, amount: 90, relationship: relationship, due_on: Date.current - 5.days)
@@ -234,13 +247,16 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response).to redirect_to(hotel_ar_aging_path(hotel))
     end
 
-    it "exports a PDF" do
+    it "exports all account types by default" do
       agent = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent",
         corporate_account: create(:account, :corporate, name: "Sunset Travel Agency"))
+      company = create(:hotel_corporate_account, hotel: hotel, account_type: "company",
+        corporate_account: create(:account, :corporate, name: "Megat Holdings"))
       create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AGENT-PDF", folio_number: 703, amount: 200, relationship: agent, due_on: Date.current - 5.days)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-COMPANY-PDF", folio_number: 704, amount: 300, relationship: company, due_on: Date.current - 5.days)
 
-      filename = "agent-summary-statement-#{hotel.slug}-#{hotel.current_business_date}.pdf"
-      get hotel_ar_agent_summary_pdf_path(hotel, filename)
+      filename = "aging-summary-statement-#{hotel.slug}-#{hotel.current_business_date}.pdf"
+      get hotel_ar_aging_summary_pdf_path(hotel, filename)
 
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq("application/pdf")
@@ -248,9 +264,29 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response.headers["Content-Disposition"]).to include(
         filename
       )
-      expect(URI.parse(hotel_ar_agent_summary_pdf_path(hotel, filename)).path).to end_with("/#{filename}")
+      expect(URI.parse(hotel_ar_aging_summary_pdf_path(hotel, filename)).path).to end_with("/#{filename}")
       text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+      expect(text).to include("Aging Summary Statement", "Sunset Travel Agency", "Megat Holdings")
       expect(text).to include("PREPARED BY", user.name)
+    end
+
+    it "uses the active account type and search controls for the PDF" do
+      matching = create(:hotel_corporate_account, hotel: hotel, account_type: "company",
+        corporate_account: create(:account, :corporate, name: "Megat Holdings"))
+      hidden_company = create(:hotel_corporate_account, hotel: hotel, account_type: "company",
+        corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd"))
+      hidden_agent = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent",
+        corporate_account: create(:account, :corporate, name: "Megat Travel"))
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-MATCHING-PDF", folio_number: 705, amount: 300, relationship: matching, due_on: Date.current - 5.days)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-HIDDEN-COMPANY-PDF", folio_number: 706, amount: 400, relationship: hidden_company, due_on: Date.current - 5.days)
+      create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-HIDDEN-AGENT-PDF", folio_number: 707, amount: 500, relationship: hidden_agent, due_on: Date.current - 5.days)
+
+      filename = "aging-summary-statement-#{hotel.slug}-#{hotel.current_business_date}.pdf"
+      get hotel_ar_aging_summary_pdf_path(hotel, filename), params: { query: "Megat", account_type: "company" }
+
+      text = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+      expect(text).to include("Megat Holdings")
+      expect(text).not_to include("Acme Sdn Bhd", "Megat Travel")
     end
   end
 

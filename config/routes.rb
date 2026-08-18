@@ -323,7 +323,9 @@ Rails.application.routes.draw do
       end
       get "aging", to: "ar_invoices#aging", as: :ar_aging
       get "agent-summary", to: "ar_invoices#agent_summary", as: :ar_agent_summary
-      get "agent-summary/:filename", to: "ar_invoices#agent_summary_pdf", as: :ar_agent_summary_pdf,
+      get "aging-summary/:filename", to: "ar_invoices#aging_summary_pdf", as: :ar_aging_summary_pdf,
+        constraints: { filename: /[^\/]+\.pdf/ }
+      get "agent-summary/:filename", to: "ar_invoices#aging_summary_pdf",
         constraints: { filename: /[^\/]+\.pdf/ }
       resources :ar_invoices, only: [ :index, :show ], path: "invoices" do
         get :pdf, on: :member

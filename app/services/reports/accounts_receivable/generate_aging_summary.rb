@@ -2,7 +2,7 @@
 
 module Reports
   module AccountsReceivable
-    class GenerateAgentSummary
+    class GenerateAgingSummary
       Exports = HotelPortal::Reports::Exports
 
       def initialize(hotel:, report:, printed_by: nil)
@@ -14,7 +14,7 @@ module Reports
       def generate
         builder = Exports::PdfReportBuilder.new(
           hotel: @hotel,
-          title: "Agent Summary Statement",
+          title: "Aging Summary Statement",
           period_label: Exports::PdfTheme.format_date(@report.as_of_date),
           period_label_title: "As of",
           prepared_by: @printed_by,
@@ -43,12 +43,12 @@ module Reports
 
       def add_accounts(builder)
         builder.add_table(
-          section_title: "Agent & Airline Accounts",
+          section_title: "Accounts Receivable",
           headers: [ "Account", *aging_headers ],
           rows: @report.rows.map { |row| account_row(row) },
           numeric_columns: (2..7).to_a,
           total_row: nil,
-          empty_message: "No outstanding balances for agent or airline accounts.",
+          empty_message: "No outstanding accounts receivable balances.",
           density: :dense
         )
       end
@@ -70,7 +70,7 @@ module Reports
       end
 
       def account_row(row)
-        [ row.corporate_account.name, *aging_row(row.currency, row.buckets), money(row.total_outstanding) ]
+        [ row.corporate_account.name, *aging_row(row.currency, row.buckets) ]
       end
 
       def money(value) = Exports::PdfTheme.money(value)

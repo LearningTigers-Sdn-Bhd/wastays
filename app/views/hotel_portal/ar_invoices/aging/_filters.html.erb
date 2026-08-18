@@ -26,9 +26,11 @@
 
     <%= render PanelsUI::Button.new(
           as: :a,
-          href: hotel_ar_agent_summary_pdf_path(
+          href: hotel_ar_aging_summary_pdf_path(
             current_hotel,
-            "agent-summary-statement-#{current_hotel.slug}-#{presenter.as_of_date}.pdf"
+            "aging-summary-statement-#{current_hotel.slug}-#{presenter.as_of_date}.pdf",
+            query: presenter.query,
+            account_type: presenter.account_type
           ),
           variant: :primary,
           size: :md,
