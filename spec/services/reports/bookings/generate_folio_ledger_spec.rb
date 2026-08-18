@@ -74,7 +74,7 @@ RSpec.describe Reports::Bookings::GenerateFolioLedger do
 
   it "does not include another booking folio transactions" do
     other_booking = create(:booking, hotel: hotel)
-    other_folio = create(:booking_folio, booking: other_booking, hotel: hotel)
+    other_folio = create(:booking_folio, booking: other_booking, hotel: hotel, folio_number: 124)
     create(:folio_transaction, booking_folio: other_folio, amount: 999, description: "Other Booking Charge")
 
     csv = described_class.new(folio: folio).generate_csv

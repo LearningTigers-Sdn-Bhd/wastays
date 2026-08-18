@@ -28,7 +28,7 @@ module NightAudits
         period_label_title: "Business date",
         prepared_by: @prepared_by,
         generated_at: @generated_at
-      ).freeze
+      )
 
       # Page 1: Daily Summary
       frame.draw_header
