@@ -26,7 +26,8 @@ module Reports
         attr_reader :id, :transaction_type, :category, :description, :amount,
           :currency, :posting_date, :created_at, :metadata,
           :reversal_of_transaction_id, :voided_by_transaction_id,
-          :transaction_code, :user
+          :transaction_code, :user,
+          :source_transaction_code, :source_transaction_category
 
         def initialize(attributes)
           attributes = attributes.to_h.stringify_keys
@@ -43,6 +44,8 @@ module Reports
           @voided_by_transaction_id = attributes["voided_by_transaction_id"]
           @transaction_code = SnapshotCode.new(attributes["code"], attributes["code_name"]) if attributes["code"].present?
           @user = SnapshotUser.new(attributes["user_name"]) if attributes["user_name"].present?
+          @source_transaction_code = attributes["source_transaction_code"]
+          @source_transaction_category = attributes["source_transaction_category"]
         end
 
         def charge?
@@ -621,26 +624,40 @@ module Reports
         active_transactions.find { |candidate| candidate.id == transaction_parent_id }
       end
 
+      # The parent is the fallback whether or not an id was posted. It used to be reached
+      # only when no id was posted at all, so a transaction naming its source by an id the
+      # lookup could not resolve — which is any of them, once the invoice renders from its
+      # snapshot — resolved to nothing while its parent sat there unasked.
       def source_transaction_code_for(transaction)
         parent = parent_transaction_for(transaction)
         source_id = tax_line(transaction)["source_transaction_code_id"].presence ||
           transaction.metadata.to_h["source_transaction_code_id"].presence ||
           (parent.transaction_code_id if parent.respond_to?(:transaction_code_id))
-        return parent&.transaction_code if source_id.blank?
 
-        transaction_codes_by_id[source_id.to_i]
+        transaction_codes_by_id[source_id.to_i] || parent&.transaction_code
+      end
+
+      # What the tax was levied on, in the order the document can trust it: what the
+      # invoice recorded when it was issued, then what the posted tax line names, then the
+      # live codes, which a snapshotted invoice cannot reach.
+      def source_code(transaction)
+        transaction.try(:source_transaction_code).presence ||
+          tax_line(transaction)["source_transaction_code_code"].presence ||
+          source_transaction_code_for(transaction)&.code.presence
       end
 
       def derived_tax_transaction_code(transaction)
         child_code = tax_line(transaction)["transaction_code_code"].presence || transaction.posted_transaction_code.presence
-        source_code = source_transaction_code_for(transaction)&.code.presence
-        return "#{source_code}_#{child_code}" if source_code.present? && child_code.present?
+        source = source_code(transaction)
+        return "#{source}_#{child_code}" if source.present? && child_code.present?
 
         child_code || transaction.posted_transaction_code.presence || FALLBACK_CODES.dig(transaction.category, 0) || transaction.category.to_s.upcase
       end
 
       def source_transaction_category(transaction)
-        parent_transaction_for(transaction)&.category.presence || source_transaction_code_for(transaction)&.category
+        transaction.try(:source_transaction_category).presence ||
+          parent_transaction_for(transaction)&.category.presence ||
+          source_transaction_code_for(transaction)&.category
       end
 
       def transaction_codes_by_id

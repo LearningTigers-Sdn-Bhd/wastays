@@ -225,6 +225,36 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.summary_rows[-2].amount).to be_nil
   end
 
+  it "resolves the charge a parentless tax was levied on, from what the invoice recorded" do
+    # A room tax names its charge by a transaction code id and nothing else. The id is
+    # worth nothing once the document renders from its snapshot, so the invoice resolves
+    # it while the codes are still to hand and keeps the answer.
+    other_booking = create(:booking, hotel: hotel, currency: "MYR")
+    other_folio = create(:booking_folio, booking: other_booking, hotel: hotel, status: "closed")
+    create(:folio_transaction,
+      booking_folio: other_folio, transaction_code: room_code, transaction_type: "charge",
+      category: "accommodation", amount: 1000, description: "Room Charge",
+      posting_date: Date.new(2026, 12, 17))
+    create(:folio_transaction,
+      booking_folio: other_folio, transaction_code: sst_code, transaction_type: "charge",
+      category: "tax", amount: 80, description: "Tax: SST 8%",
+      posting_date: Date.new(2026, 12, 17),
+      metadata: { tax_line: { name: "SST 8%", type: "sst", basis: "nightly_room_charge",
+                              transaction_code_code: "SST", source_transaction_code_id: room_code.id } })
+    create(:folio_transaction,
+      booking_folio: other_folio, transaction_code: payment_code, transaction_type: "payment",
+      category: "booking_payment", amount: 1080, description: "Card payment",
+      posting_date: Date.new(2026, 12, 17), metadata: { payment_source: "card" })
+    Invoices::Finalize.call!(folio: other_folio, issued_by: nil, balance: 0)
+
+    reissued = described_class.new(folio: other_folio.reload).call
+    tax_row = reissued.charge_rows.find { |row| row.description == "SST 8%" }
+
+    expect(tax_row.code).to eq("RM-ACC_SST")
+    # And the category comes from the snapshot rather than from the basis heuristic.
+    expect(reissued.summary_rows.index_by(&:label).fetch("SST 8% on rooms").amount).to eq(80.to_d)
+  end
+
   it "counts a parentless room tax against rooms, on the basis the tax line records" do
     # How a room tax is actually posted: no parent_folio_transaction_id, and the charge it
     # belongs to identified only by a source_transaction_code_id. The code lookup behind

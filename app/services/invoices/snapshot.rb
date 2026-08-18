@@ -120,6 +120,11 @@ module Invoices
           posting_date: transaction.posting_date&.iso8601,
           created_at: transaction.created_at&.iso8601,
           user_name: transaction.user&.name,
+          # The charge this one was levied on, resolved while the codes are still to hand.
+          # The posted metadata names it by id, and an id is worth nothing to a document
+          # rendered from its snapshot years later.
+          source_transaction_code: source_code_for(transaction)&.code,
+          source_transaction_category: source_code_for(transaction)&.category,
           reversal_of_transaction_id: transaction.reversal_of_transaction_id,
           voided_by_transaction_id: transaction.voided_by_transaction_id,
           metadata: transaction.metadata.to_h
@@ -139,6 +144,26 @@ module Invoices
         balance: decimal(charges - payments + adjustments),
         currency: @folio.currency
       }
+    end
+
+    def source_code_for(transaction)
+      metadata = transaction.metadata.to_h
+      source_id = metadata["tax_line"].to_h["source_transaction_code_id"].presence ||
+        metadata["source_transaction_code_id"].presence
+      return parent_of(transaction)&.transaction_code if source_id.blank?
+
+      transaction_codes[source_id.to_i] || parent_of(transaction)&.transaction_code
+    end
+
+    def parent_of(transaction)
+      parent_id = transaction.metadata.to_h["parent_folio_transaction_id"].presence
+      return if parent_id.blank?
+
+      transactions.find { |candidate| candidate.id == parent_id.to_i }
+    end
+
+    def transaction_codes
+      @transaction_codes ||= @hotel.transaction_codes.index_by(&:id)
     end
 
     def transactions
