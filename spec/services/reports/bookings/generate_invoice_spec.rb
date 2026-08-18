@@ -159,6 +159,14 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
       end
     end
 
+    it "badges a settled folio beside its number" do
+      text = pdf_text(described_class.new(folio: folio).generate)
+
+      # This folio's rows do not net to nothing, so the badge says what the balance says.
+      expect(text).to include("BALANCE DUE")
+      expect(text.index("BALANCE DUE")).to be < text.index("BILL TO")
+    end
+
     it "totals each table where it is read" do
       text = pdf_text(described_class.new(folio: folio).generate)
 

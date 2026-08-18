@@ -212,6 +212,10 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(summary.values.filter_map(&:amount).sum - records.balance).to eq(records.total_due)
   end
 
+  it "badges the document with what its own figures say" do
+    expect(records.status_badge).to eq(label: "Settled", variant: :positive)
+  end
+
   it "sets the balance apart from the decomposition above it" do
     labels = records.summary_rows.map(&:label)
     variants = records.summary_rows.map(&:variant)

@@ -26,14 +26,18 @@ module HotelPortal
         # Shared with the stat strip, which marks its label tier the same way.
         METADATA_LABEL_TRACKING = PdfTheme::LABEL_TRACKING
         EYEBROW_GAP = PdfTheme::SPACE[:xs]
+        # Air between the title and the badge it is set against, so the two never touch on
+        # a title long enough to reach for the slot.
+        BADGE_GUTTER = PdfTheme::SPACE[:md]
         # Sits in the top margin, mirroring how the footer sits below the content box.
         RUNNING_HEAD_Y = 18
 
-        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_contact: nil, hotel_identifiers: nil)
+        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_contact: nil, hotel_identifiers: nil, badge: nil)
           @pdf = pdf
           @hotel = hotel
           @hotel_contact = hotel_contact
           @hotel_identifiers = hotel_identifiers
+          @badge = badge
           @report_name = report_name
           @subtitle = subtitle
           @eyebrow = eyebrow
@@ -129,6 +133,10 @@ module HotelPortal
         # The title carries the display face; the hotel name above it stays in the text
         # face, so the two are separated by typeface rather than by size alone. An eyebrow
         # lets a document whose title is an identifier still name what kind of document it is.
+        #
+        # The title row is set between its two ends: the title against the left margin, and
+        # a badge, when the document has one, against the right. The title takes what the
+        # badge leaves, so a long one wraps rather than running underneath it.
         def draw_report_identity
           if @eyebrow.present?
             @pdf.fill_color PdfTheme::COLORS[:muted]
@@ -136,10 +144,12 @@ module HotelPortal
               character_spacing: METADATA_LABEL_TRACKING
             @pdf.move_down EYEBROW_GAP
           end
-          @pdf.fill_color PdfTheme::COLORS[:ink]
-          @pdf.font(PdfTheme::DISPLAY_FAMILY) do
-            @pdf.text @report_name.to_s, size: PdfTheme::TYPE[:display]
-          end
+
+          top = @pdf.cursor
+          title_height = draw_report_title(top)
+          draw_report_badge(top)
+          @pdf.move_cursor_to top - title_height
+
           if @subtitle.present?
             @pdf.move_down TITLE_SUBTITLE_GAP
             @pdf.fill_color PdfTheme::COLORS[:muted]
@@ -147,6 +157,46 @@ module HotelPortal
           end
           @pdf.move_down TITLE_GAP_BELOW
         end
+
+        def draw_report_title(top)
+          title = @report_name.to_s
+          width = @pdf.bounds.width - badge_slot_width
+          options = { size: PdfTheme::TYPE[:display] }
+
+          # Prawn's #font returns the font it set, not what the block evaluated to, so a
+          # measurement taken inside one has to be carried out in a local.
+          height = nil
+          @pdf.fill_color PdfTheme::COLORS[:ink]
+          @pdf.font(PdfTheme::DISPLAY_FAMILY) do
+            height = @pdf.height_of(title, width: width, **options)
+            @pdf.text_box title, at: [ 0, top ], width: width, height: height, **options
+          end
+          height
+        end
+
+        # Set against the first line of the title rather than against the whole block, so a
+        # title that wraps does not carry the badge down the page with it.
+        def draw_report_badge(top)
+          return if badge_label.blank?
+
+          badge = PdfBadge.new(pdf: @pdf)
+          line = nil
+          @pdf.font(PdfTheme::DISPLAY_FAMILY) { line = @pdf.height_of("X", size: PdfTheme::TYPE[:display]) }
+          @pdf.fill_color PdfTheme::COLORS[:ink]
+          badge.draw(
+            label: badge_label,
+            at: [ @pdf.bounds.width - badge.width(badge_label), top - ((line - badge.height) / 2.0) ],
+            variant: @badge[:variant] || :neutral
+          )
+        end
+
+        def badge_slot_width
+          return 0 if badge_label.blank?
+
+          PdfBadge.new(pdf: @pdf).width(badge_label) + BADGE_GUTTER
+        end
+
+        def badge_label = @badge.is_a?(Hash) ? @badge[:label] : @badge
 
         # Rules rather than a tint: the fill made three short values read as an empty
         # table header, and forced padding that broke the page's left margin.

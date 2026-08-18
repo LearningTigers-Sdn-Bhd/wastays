@@ -336,6 +336,13 @@ module Reports
 
       def balance_label = settled? ? "Balance settled" : "Balance due"
 
+      # The first thing a reader looks for, answered beside the invoice number rather than
+      # eight inches down the page. Read from the issued figures like every other total on
+      # the document, so a reprint cannot change what it says.
+      def status_badge
+        settled? ? { label: "Settled", variant: :positive } : { label: "Balance due", variant: :warning }
+      end
+
       def balance_variant = settled? ? :subtotal : :alert
 
       def amount(amount)

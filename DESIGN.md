@@ -282,6 +282,9 @@ Rules that exist because breaking them has already caused bugs:
   own hash.
 - **prawn-table cells reject `character_spacing`.** Tracked text must be drawn
   with measured text boxes.
+- **`pdf.font(family) { … }` returns the font, not the block.** A measurement
+  taken inside one has to be carried out in a local, or the caller gets a
+  `Prawn::Fonts::TTF` where it expected a height.
 
 A table that carries more columns than its page holds takes `density: :dense`
 (`TABLE_TYPE`), which steps the whole table down one size. It does not tighten
@@ -314,6 +317,13 @@ Facts about the document sit in one of three places, and never in two at once:
 
 `PdfNoticeBand` carries a status that has to arrive before the document's numbers
 do — a void, a reconstruction. `:danger` and `:warning` variants.
+
+`PdfBadge` is the inline form: a tinted pill of one or two words, set beside
+something else rather than across the measure, for a question the reader has
+already asked. It measures before it draws, so a caller can set a title against it
+and know what is left of the line. `PdfReportFrame` takes one as `badge:` and sets
+the title row between its two ends — title left, badge right. `:positive`,
+`:warning`, `:danger` and `:neutral` variants.
 
 Build reports with `PdfReportBuilder`, which owns the frame, tables, and page
 furniture. Reach for `PdfReportFrame` directly only when a document draws its own

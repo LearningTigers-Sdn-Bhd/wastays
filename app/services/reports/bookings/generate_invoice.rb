@@ -81,6 +81,7 @@ module Reports
           hotel_identifiers: @records.hotel_identifier_line,
           eyebrow: @records.document_kind,
           report_name: @records.invoice_number,
+          badge: @records.status_badge,
           metadata: [],
           # Goes to the guest or the corporate payer, not into the hotel's filing cabinet.
           confidential: false
