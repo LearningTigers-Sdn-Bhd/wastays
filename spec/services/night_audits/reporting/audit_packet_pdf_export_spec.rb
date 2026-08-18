@@ -5,6 +5,6 @@ RSpec.describe NightAudits::Reporting::AuditPacketPdfExport do
     audit = create(:night_audit)
     create(:night_audit_financial_summary, night_audit: audit)
 
-    expect(described_class.new(night_audit: audit).generate).to start_with("%PDF")
+    expect(described_class.new(night_audit: audit, prepared_by: "Night Manager").generate).to start_with("%PDF")
   end
 end

@@ -35,11 +35,12 @@ RSpec.describe HotelPortal::Reports::JournalBatchCsvExportService, type: :servic
 
   it "generates a branded PDF" do
     content = HotelPortal::Reports::JournalBatchPdfExportService.new(
-      hotel: hotel, batches: [ batch ], start_date: Date.current, end_date: Date.current
+      hotel: hotel, batches: [ batch ], start_date: Date.current, end_date: Date.current,
+      prepared_by: "Sarah Lim"
     ).generate
     text = PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join
 
     expect(content).to start_with("%PDF")
-    expect(text).to include("JOURNAL BATCHES", "4010", "Page 1 of 1")
+    expect(text).to include("Journal Batches", "Sarah Lim", "4010", "Page 1 of 1")
   end
 end

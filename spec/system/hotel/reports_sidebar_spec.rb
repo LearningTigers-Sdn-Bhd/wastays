@@ -75,6 +75,17 @@ RSpec.describe "Hotel reports layer sidebar", type: :system do
     end
   end
 
+  it "hides payout reports when they are disabled for the hotel" do
+    hotel.update!(hide_payout_reports: true)
+
+    visit hotel_reports_path(hotel)
+
+    within("#hotel-reports-sidebar") do
+      expect(page).to have_no_link("Payouts", href: payouts_hotel_reports_path(hotel), visible: :all)
+      expect(page).to have_link("Daily Performance Breakdown", href: breakdown_hotel_reports_path(hotel), visible: :all)
+    end
+  end
+
   it "gathers the log pages into their own group and leaves operations behind" do
     visit hotel_audit_logs_path(hotel)
 

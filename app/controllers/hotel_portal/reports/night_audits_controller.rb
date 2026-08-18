@@ -30,7 +30,9 @@ module HotelPortal
             )
           end
           format.pdf do
-            send_data ::NightAudits::AuditPacketPdfExport.new(night_audit: @night_audit).generate,
+            send_data ::NightAudits::AuditPacketPdfExport.new(
+              night_audit: @night_audit, prepared_by: current_user.name
+            ).generate,
               filename: audit_packet_filename,
               type: "application/pdf",
               disposition: "inline"

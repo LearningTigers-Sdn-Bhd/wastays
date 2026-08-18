@@ -61,6 +61,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
       tab: "cashier",
       revenue_report: revenue_report,
       cashier_report: cashier_report,
+      prepared_by: "Aina Salleh",
       charge_register: charge_register
     )
     cashier_row = pdf_service.send(:cashier_transaction_row, advance_payment)
@@ -75,6 +76,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
         tab: tab,
         revenue_report: revenue_report,
         cashier_report: cashier_report,
+        prepared_by: "Aina Salleh",
         charge_register: charge_register
       )
       if tab == "revenue"
@@ -92,14 +94,20 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     revenue = text_for.call("revenue")
     cashier = text_for.call("cashier")
 
-    expect(overview).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "Net Revenue", "Net Cash")
+    expect(overview).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "NET REVENUE", "NET CASH")
     expect(overview).not_to include("Daily Breakdown", "Cashier Summary")
-    expect(overview).to include("Overview", "Page 1 of")
+    expect(overview).to include(
+      "Daily Report", "Overview", "PERIOD", "GENERATED", "PREPARED BY", "Aina Salleh",
+      "Confidential", "Page 1 of"
+    )
 
     expect(revenue).to include(
       "Revenue", "Revenue Summary", "Daily Breakdown", "Revenue by Source", "Revenue Register",
       "Charter Boat", "Adjustments", "Net Revenue", "Total", "Page 1 of"
     )
+    # Mixed case above is the table header; the stat strip carries the same words upcased,
+    # so assert both rather than letting one stand in for the other.
+    expect(revenue).to include("BOOKINGS ENGAGED", "TOTAL CHARGES", "NET REVENUE")
     expect(revenue).not_to include("Cashier Summary", "Advance")
     register_table = charge_register_tables.sole
     expect(register_table).to include(
@@ -107,7 +115,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
       rows: a_kind_of(Array),
       numeric_columns: [ 5, 6, 7 ],
       total_row: 4,
-      column_widths: [ 65, 125, 125, 115, 60, 84, 78, 90 ]
+      column_widths: [ 65, 125, 125, 115, 60, 84, 86, 90 ]
     )
     register_rows = register_table.fetch(:rows)
     room_row = register_rows.find { |row| row[5] == "MYR 480.00" }

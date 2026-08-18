@@ -3,14 +3,15 @@
 module HotelPortal
   module Reports
     class TaxCompliancePdfExportService
-      def initialize(hotel:, report:, type:)
+      def initialize(hotel:, report:, type:, prepared_by:)
         @hotel = hotel
         @report = report
         @table = TaxComplianceExportTable.new(report: report, type: type)
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: @table.title, period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: @table.title, period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
         builder.add_header
         builder.add_summary(@table.summary_metrics.map { |label, value, unit| [ label, unit == :currency ? "#{currency} #{money(value)}" : value.to_s ] })
         builder.add_table(section_title: @table.section_title, headers: @table.headers,
@@ -34,7 +35,7 @@ module HotelPortal
 
       def numeric_columns = @table.column_types.each_index.select { |index| %i[integer money].include?(@table.column_types[index]) }
       def period_label = @report.start_date == @report.end_date ? @report.start_date.strftime("%d %b %Y") : "#{@report.start_date.strftime('%d %b %Y')} - #{@report.end_date.strftime('%d %b %Y')}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def currency = @hotel.default_currency.presence || "MYR"
     end
   end

@@ -21,7 +21,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
         onboarding_end_date: Date.new(2026, 4, 20)
       )
     end
-    let!(:live_hotel) { create(:hotel, name: "Live Stay #{token}", status: "live") }
+    let!(:live_hotel) { create(:hotel, name: "Live Stay #{token}", status: "live", hide_payout_reports: true) }
     let!(:next_session) do
       create(
         :onboarding_session,
@@ -52,9 +52,10 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(document.css('#hotel-status-tabs .tabs-tab').size).to eq(6)
       expect(document.css('.panel-select-menu').size).to eq(1)
       expect(document.at_css("select[name='per_page'] option[selected]").text).to eq('15')
-      expect(document.css('turbo-frame#hotels_list .panel-badge').size).to eq(2)
+      expect(document.css("turbo-frame#hotels_list .panel-badge[data-indicator='true']").size).to eq(2)
       expect(document.at_css("turbo-frame#hotels_list")).to be_present
       expect(document.at_css('table.panel-table').text).not_to include("Onboarding period", "Scheduled session")
+      expect(document.at_css('table.panel-table').text).to include("Payout reports", "Visible", "Hidden")
       expect(response.body).not_to include('href="/admin/hotels/onboarding"')
     end
 
@@ -130,6 +131,9 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(document.at_css(".panel-radio-group")).to be_present
       expect(document.css(".panel-select-menu").size).to eq(3)
       expect(response.body).to include("Create only", "Create & onboard")
+      payout_switch = document.at_css("input[type='checkbox'][name='admin_hotels_create_form[hide_payout_reports]']")
+      expect(payout_switch).to be_present
+      expect(payout_switch["checked"]).to be_nil
       expect(response.body).not_to include("Default Password", "Property amenities", "Star rating")
     end
   end
@@ -185,6 +189,21 @@ RSpec.describe 'Admin::Hotels', type: :request do
       post admin_hotels_path, params: hotel_params
 
       expect(Hotel.order(:created_at).last.allow_boat_information).to be(true)
+    end
+
+    it 'hides payout reports when the switch is checked' do
+      hidden_payout_params = hotel_params.deep_dup
+      hidden_payout_params[:admin_hotels_create_form][:hide_payout_reports] = '1'
+
+      post admin_hotels_path, params: hidden_payout_params
+
+      expect(Hotel.order(:created_at).last.hide_payout_reports).to be(true)
+    end
+
+    it 'keeps payout reports visible when the switch is left at its default' do
+      post admin_hotels_path, params: hotel_params
+
+      expect(Hotel.order(:created_at).last.hide_payout_reports).to be(false)
     end
 
     it 'gives a boat-enabled hotel default meal times and a generic timetable' do
@@ -402,6 +421,21 @@ RSpec.describe 'Admin::Hotels', type: :request do
     end
   end
 
+  describe 'GET /admin/hotels/:id/edit' do
+    let(:hotel) { create(:hotel, hide_payout_reports: true) }
+
+    it 'renders the checked payout reports switch' do
+      get edit_admin_hotel_path(hotel)
+
+      document = Nokogiri::HTML(response.body)
+      payout_switch = document.at_css("input[type='checkbox'][name='hotel[hide_payout_reports]']")
+
+      expect(response).to have_http_status(:ok)
+      expect(payout_switch).to be_present
+      expect(payout_switch["checked"]).to eq("checked")
+    end
+  end
+
   describe 'PATCH /admin/hotels/:id' do
     let(:hotel_account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
     let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'setup', sell_mode: "per_room") }
@@ -411,6 +445,18 @@ RSpec.describe 'Admin::Hotels', type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(hotel.reload).to have_attributes(name: "Luma Stay #{token}", sell_mode: 'per_room')
+    end
+
+    it 'can hide and show payout reports' do
+      patch admin_hotel_path(hotel), params: { hotel: { hide_payout_reports: '1' } }
+
+      expect(response).to redirect_to(admin_hotel_path(hotel))
+      expect(hotel.reload.hide_payout_reports).to be(true)
+
+      patch admin_hotel_path(hotel), params: { hotel: { hide_payout_reports: '0' } }
+
+      expect(response).to redirect_to(admin_hotel_path(hotel))
+      expect(hotel.reload.hide_payout_reports).to be(false)
     end
   end
 end

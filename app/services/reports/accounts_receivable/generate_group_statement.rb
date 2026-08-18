@@ -1,30 +1,36 @@
 # frozen_string_literal: true
 
-require "prawn"
-require "prawn/table"
-
-Prawn::Fonts::AFM.hide_m17n_warning = true
-
 module Reports
   module AccountsReceivable
     class GenerateGroupStatement
       ValidationError = Class.new(StandardError)
+      Exports = HotelPortal::Reports::Exports
 
       def initialize(hotel:, group_booking:, hotel_corporate_account:, currency:, printed_by: nil)
         @hotel = hotel
         @group_booking = group_booking
         @hotel_corporate_account = hotel_corporate_account
         @currency = currency.to_s
-        @printed_by = printed_by
+        @printed_by = printed_by.presence || "-"
       end
 
       def generate
         validate_and_load!
-        pdf = Prawn::Document.new(page_size: "A4", margin: [ 36, 32, 52, 32 ])
-        draw_header(pdf)
-        draw_invoices(pdf)
-        draw_footer(pdf)
-        pdf.render
+        generated_at = Time.current
+        builder = Exports::PdfReportBuilder.new(
+          hotel: @hotel,
+          title: "Group Accounts Receivable Statement",
+          subtitle: @group_booking.formatted_reservation_number.to_s,
+          period_label: nil,
+          prepared_by: @printed_by,
+          metadata: metadata(generated_at),
+          generated_at: generated_at,
+          page_layout: :landscape,
+          confidential: false
+        )
+        builder.add_header
+        add_invoices(builder)
+        builder.render
       end
 
       private
@@ -52,62 +58,51 @@ module Reports
         @account = @invoices.first.corporate_account
       end
 
-      def draw_header(pdf)
-        pdf.fill_color "0a2e29"
-        pdf.text "GROUP ACCOUNTS RECEIVABLE STATEMENT", size: 17, style: :bold
-        pdf.move_down 5
-        pdf.text @group_booking.formatted_reservation_number.to_s, size: 11, style: :bold
-        pdf.fill_color "111827"
-        pdf.move_down 16
-        pdf.table(
-          [
-            [ "Corporate account", @account.name.to_s, "Currency", @currency ],
-            [ "Generated", I18n.l(Date.current, format: :long), "Invoices", @invoices.size.to_s ]
+      def metadata(generated_at)
+        [
+          [ "Corporate account", @account.name ],
+          [ "Currency", @currency ],
+          [ "Invoices", @invoices.size.to_s ],
+          [ "Generated", Exports::PdfTheme.format_time(generated_at, @hotel.hotel_time_zone) ],
+          [ "Prepared by", @printed_by ]
+        ]
+      end
+
+      def add_invoices(builder)
+        builder.add_table(
+          section_title: "Group Invoices",
+          headers: [ "Invoice", "Booking", "Issued", "Due", "Status", "Amount", "Outstanding" ],
+          rows: @invoices.map { |invoice| invoice_row(invoice) },
+          numeric_columns: [ 5, 6 ],
+          total_row: [
+            { content: "TOTAL (#{@currency})", colspan: 5, align: :right },
+            money(@invoices.sum(&:amount)),
+            money(@invoices.sum(&:outstanding_amount))
           ],
-          width: pdf.bounds.width,
-          cell_style: { size: 9, padding: [ 5, 6 ], border_color: "e5e7eb" },
-          column_widths: [ 100, 186, 80, pdf.bounds.width - 366 ]
-        )
-        pdf.move_down 16
-      end
-
-      def draw_invoices(pdf)
-        rows = [ [ "Invoice", "Booking", "Issued", "Due", "Status", "Amount", "Outstanding" ] ]
-        rows.concat(@invoices.map do |invoice|
-          [
-            invoice.formatted_invoice_number,
-            invoice.booking.confirmation_token,
-            invoice.issued_on.to_s,
-            invoice.due_on.to_s,
-            invoice.status.humanize,
-            money(invoice.amount),
-            money(invoice.outstanding_amount)
-          ]
-        end)
-        rows << [ { content: "TOTAL (#{@currency})", colspan: 5, align: :right, font_style: :bold }, { content: money(@invoices.sum(&:amount)), align: :right, font_style: :bold }, { content: money(@invoices.sum(&:outstanding_amount)), align: :right, font_style: :bold } ]
-
-        pdf.table(rows, header: true, width: pdf.bounds.width, cell_style: { size: 8, padding: [ 6, 4 ], border_color: "e5e7eb" }) do
-          row(0).font_style = :bold
-          row(0).background_color = "f3f4f6"
-          columns(5..6).align = :right
-        end
-      end
-
-      def draw_footer(pdf)
-        printed = @printed_by.present? ? " · Printed by #{@printed_by}" : ""
-        pdf.number_pages(
-          "Generated #{Time.current.strftime('%Y-%m-%d %H:%M')}#{printed} · Page <page> of <total>",
-          at: [ pdf.bounds.left, -30 ],
-          width: pdf.bounds.width,
-          align: :center,
-          size: 8,
-          color: "6b7280"
+          empty_message: "No group invoices are available.",
+          column_widths: proportional_widths(builder.content_width, [ 15, 18, 11, 11, 11, 17, 17 ])
         )
       end
 
-      def money(amount)
-        ActiveSupport::NumberHelper.number_to_delimited(Kernel.format("%.2f", amount.to_d))
+      def invoice_row(invoice)
+        [
+          invoice.formatted_invoice_number,
+          invoice.booking.confirmation_token,
+          Exports::PdfTheme.format_date(invoice.issued_on),
+          Exports::PdfTheme.format_date(invoice.due_on),
+          invoice.status.humanize,
+          money(invoice.amount),
+          money(invoice.outstanding_amount)
+        ]
       end
+
+      def proportional_widths(width, shares)
+        widths = shares.map { |share| width * share / shares.sum.to_f }
+        widths[-1] += width - widths.sum
+        widths
+      end
+
+      def money(amount) = Exports::PdfTheme.money(amount)
     end
   end
 end

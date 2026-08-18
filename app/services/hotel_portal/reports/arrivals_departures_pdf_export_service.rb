@@ -11,20 +11,21 @@ module HotelPortal
       MEAL_PREP_FIXED_COLUMN_WIDTHS = { "Pax" => 60, "Room Number" => 110, "Transfer" => 110,
                                         "Transfer Date" => 120, "Transfer Time" => 110 }.freeze
 
-      def initialize(hotel:, report:, tab: "arrivals")
+      def initialize(hotel:, report:, prepared_by:, tab: "arrivals")
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
         @tab = tab.to_s
         @table = ArrivalsDeparturesCsvExportService.new(report: report, tab: tab)
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Guest Reports", subtitle: section_name, period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Guest Reports", subtitle: section_name, period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
 
         case @tab
         when "meal_prep" then add_meal_prep_pages(builder)
-        when "bibo" then add_summary_and_header(builder) { add_bibo_tables(builder) }
-        else add_summary_and_header(builder) { add_single_table(builder) }
+        when "bibo" then add_header_and_content(builder) { add_bibo_tables(builder) }
+        else add_header_and_content(builder) { add_single_table(builder) }
         end
 
         builder.render
@@ -32,24 +33,23 @@ module HotelPortal
 
       private
 
-      def add_summary_and_header(builder)
+      def add_header_and_content(builder)
         builder.add_header
-        builder.add_summary([ [ "Records", record_count.to_s ] ])
         yield
       end
 
       def add_single_table(builder)
         headers = @table.export_headers
         builder.add_table(
-          section_title: section_name, headers: headers,
+          section_title: section_name, section_meta: count_label(record_count, "record"), headers: headers,
           rows: @table.export_rows.reject(&:empty?).map { |row| row.map { |value| value.presence || "-" } },
           numeric_columns: [], total_row: nil,
           empty_message: "No guest records found for the selected period."
         )
       end
 
-      # A kitchen works one meal at a time, so each meal gets its own printed page,
-      # header and pax total.
+      # A kitchen works one meal at a time, so each meal gets its own printed page
+      # and pax total. The complete report frame belongs on the first page only.
       def add_meal_prep_pages(builder)
         headers = ArrivalsDeparturesCsvExportService::MEAL_PREP_COLUMNS
         widths = meal_prep_column_widths(builder, headers)
@@ -57,7 +57,7 @@ module HotelPortal
 
         @report.sections.each_with_index do |section, index|
           builder.start_new_page unless index.zero?
-          builder.add_header
+          builder.add_header if index.zero?
           builder.add_summary([ [ "Transfers", section[:rows].size.to_s ], [ "Total Pax", section[:total_pax].to_s ] ])
           builder.add_table(
             section_title: section[:title], headers: headers,
@@ -82,7 +82,7 @@ module HotelPortal
         @report.sections.each do |leg|
           rows = leg[:rows]
           builder.add_table(
-            section_title: leg[:title],
+            section_title: leg[:title], section_meta: count_label(rows.size, "transfer"),
             headers: [ "Guest Name", "Room Number", leg[:date_header], leg[:time_header] ],
             rows: rows.map { |row| [ row[:guest_name], row[:room_number], row[leg[:date_key]], row[:boat_time] ].map { |value| value.presence || "-" } },
             numeric_columns: [], total_row: nil, empty_message: leg[:empty_message],
@@ -102,6 +102,8 @@ module HotelPortal
 
         @table.export_rows.size
       end
+
+      def count_label(count, noun) = "#{count} #{count == 1 ? noun : noun.pluralize}"
 
       def section_name
         { "arrivals" => "Arrivals", "in_house" => "In-House", "departures" => "Departures", "checkout" => "Checkout", "bibo" => "Boat Transfers", "meal_prep" => "Meal Prep" }.fetch(@tab, "Arrivals")

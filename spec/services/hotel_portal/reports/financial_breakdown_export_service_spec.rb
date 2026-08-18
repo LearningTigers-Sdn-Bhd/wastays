@@ -6,7 +6,12 @@ require "zip"
 require "pdf-reader"
 
 RSpec.describe "Financial Breakdown export services" do
-  let(:hotel) { instance_double(Hotel, name: "Sample Hotel", default_currency: "MYR") }
+  let(:hotel) do
+    instance_double(
+      Hotel, name: "Sample Hotel", default_currency: "MYR",
+      hotel_time_zone: ActiveSupport::TimeZone["Kuala Lumpur"]
+    )
+  end
   let(:report) do
     HotelPortal::Reports::FinancialBreakdownExportResult.new(
       start_date: Date.new(2026, 5, 6), end_date: Date.new(2026, 5, 7),
@@ -31,8 +36,8 @@ RSpec.describe "Financial Breakdown export services" do
   end
 
   it "generates a branded PDF" do
-    content = HotelPortal::Reports::FinancialBreakdownPdfExportService.new(hotel: hotel, report: report).generate
+    content = HotelPortal::Reports::FinancialBreakdownPdfExportService.new(hotel: hotel, report: report, prepared_by: "Sarah Lim").generate
     text = PDF::Reader.new(StringIO.new(content)).pages.map(&:text).join
-    expect(text).to include("FINANCIAL BREAKDOWN", "Booking Details", "WS-ABC", "MYR 270.00", "Page 1 of 1")
+    expect(text).to include("Financial Breakdown", "Sarah Lim", "Booking Details", "WS-ABC", "MYR 270.00", "Page 1 of 1")
   end
 end

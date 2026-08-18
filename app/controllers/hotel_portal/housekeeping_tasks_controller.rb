@@ -153,7 +153,8 @@ module HotelPortal
 
     def send_pdf
       send_data ::Reports::HousekeepingTasksPdfGenerator.new(
-        hotel: current_hotel, room_groups: @room_groups, selected_date: @selected_date
+        hotel: current_hotel, room_groups: @room_groups, selected_date: @selected_date,
+        prepared_by: current_user.name
       ).call, filename: export_filename("pdf"), type: "application/pdf"
     end
 

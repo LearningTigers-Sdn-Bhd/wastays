@@ -19,7 +19,7 @@ module HotelPortal
         ).generate
 
         send_data pdf,
-          filename: "group-statement-#{booking.group_booking.formatted_reservation_number}.pdf",
+          filename: "group-ar-statement-#{booking.group_booking.formatted_reservation_number}-#{params[:currency]}.pdf",
           type: "application/pdf",
           disposition: "inline"
       rescue ::Reports::AccountsReceivable::GenerateGroupStatement::ValidationError => e

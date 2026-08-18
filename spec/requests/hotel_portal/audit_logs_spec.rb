@@ -1,4 +1,5 @@
 require 'rails_helper'
+require "pdf-reader"
 
 RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.local(2026, 6, 10, 3) do
   let(:plan) { create(:plan) }
@@ -187,6 +188,7 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.
       get "/hotel/#{hotel.to_param}/audit_logs.pdf"
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
+      expect(PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")).to include(user.name)
     end
   end
 end

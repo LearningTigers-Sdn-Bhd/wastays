@@ -29,4 +29,24 @@ RSpec.describe "Public::Bookings", type: :request do
       expect(response.body).to include("2 Nights")
     end
   end
+
+  describe "GET /bookings/:id/voucher" do
+    it "downloads the booking voucher with its existing filename" do
+      get voucher_booking_path(booking.confirmation_token)
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to start_with("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include(
+        "attachment",
+        "wastays-voucher-CONF123.pdf"
+      )
+      expect(response.body).to start_with("%PDF")
+    end
+
+    it "does not expose an unknown confirmation token" do
+      get voucher_booking_path("NOT-A-BOOKING")
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
 end

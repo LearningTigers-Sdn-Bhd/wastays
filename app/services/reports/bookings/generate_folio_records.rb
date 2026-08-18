@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
-
 module Reports
   module Bookings
     class GenerateFolioRecords
@@ -20,7 +18,7 @@ module Reports
         keyword_init: true
       )
 
-      SummaryRow = Struct.new(:label, :amount, :credit, :emphasis, keyword_init: true)
+      SummaryRow = Struct.new(:label, :amount, :credit, :variant, keyword_init: true)
       SnapshotCode = Data.define(:code, :name)
       SnapshotUser = Data.define(:name)
 
@@ -28,7 +26,8 @@ module Reports
         attr_reader :id, :transaction_type, :category, :description, :amount,
           :currency, :posting_date, :created_at, :metadata,
           :reversal_of_transaction_id, :voided_by_transaction_id,
-          :transaction_code, :user
+          :transaction_code, :user,
+          :source_transaction_code, :source_transaction_category
 
         def initialize(attributes)
           attributes = attributes.to_h.stringify_keys
@@ -45,6 +44,8 @@ module Reports
           @voided_by_transaction_id = attributes["voided_by_transaction_id"]
           @transaction_code = SnapshotCode.new(attributes["code"], attributes["code_name"]) if attributes["code"].present?
           @user = SnapshotUser.new(attributes["user_name"]) if attributes["user_name"].present?
+          @source_transaction_code = attributes["source_transaction_code"]
+          @source_transaction_category = attributes["source_transaction_category"]
         end
 
         def charge?
@@ -120,6 +121,16 @@ module Reports
         [ "refund_request_id", "Refund Ref" ]
       ].freeze
 
+      # What a tax was charged on, as the tax line itself records it. Every posted room tax
+      # carries one of these.
+      ROOM_TAX_BASES = %w[nightly_room_charge room_night].freeze
+
+      PdfTheme = HotelPortal::Reports::Exports::PdfTheme
+
+      # What the frame needs of a hotel, taken from the invoice's own snapshot.
+      SnapshotHotel = Struct.new(:name, :address, :city, :country, :icon, :hotel_time_zone,
+        :fixed_line_number, :contact_phone, :contact_email, keyword_init: true)
+
       attr_reader :booking, :hotel, :folio, :revision, :invoice_document, :receivable
 
       def initialize(folio: nil, invoice: nil, receivable: nil, printed_by: nil, revision_number: nil)
@@ -130,7 +141,6 @@ module Reports
         @receivable = receivable || @invoice_document&.receivable || @folio&.receivable || @folio&.ar_invoice
         @revision_number = revision_number.presence&.to_i
         @printed_by = printed_by
-        @legend = {}
       end
 
       def call
@@ -139,78 +149,152 @@ module Reports
         self
       end
 
-      def document_title
-        direct_bill? ? "ACCOUNTS RECEIVABLE INVOICE" : "FOLIO INVOICE"
+      def invoice_number
+        revision.document_reference
+      end
+
+      # Sentence case: the frame upcases an eyebrow itself. An SST-registered issuer has
+      # to call the document a tax invoice, and the designation leads because that is the
+      # part with force; which of our two invoices it is follows it.
+      def document_kind
+        kind = direct_bill? ? "Accounts receivable" : "Folio"
+        sst_registered? ? "Tax invoice · #{kind}" : "#{kind} invoice"
+      end
+
+      def sst_registered?
+        snapshot_or_live("hotel", "sst_enabled") { hotel.sst_enabled }.present?
       end
 
       def pdf_title
         "#{direct_bill? ? 'AR' : 'Folio'} Invoice - #{invoice_number}"
       end
 
-      def metadata_left
-        guest_folio_detail_rows
-      end
-
-      def metadata_right
-        booking_stay_detail_rows
-      end
-
-      def hotel_info_rows
+      # The three parties to the document, for PdfPartyBlocks. Every entry is labelled and
+      # every label sits above its value, so the three columns read the same way; blank
+      # values are dropped by the block, so a fact the snapshot never captured costs a line.
+      def party_blocks
         [
-          [ "Hotel Name", snapshot_or_live("hotel", "name") { hotel.name }.presence ],
-          [ "Address", hotel_address ],
-          [ "Contact", hotel_contact ]
-        ].select { |_label, value| value.present? }
-      end
-
-      def guest_folio_detail_rows
-        return corporate_folio_detail_rows if corporate_payer?
-
-        [
-          [ "Guest Name", guest_value(snapshot_or_live("booking", "guest_name") { booking.guest_name }) ],
-          [ "Nationality", guest_value(snapshot_or_live("booking", "guest_country") { booking.guest_country }) ],
-          [ "Invoice No", invoice_number ],
-          [ "Cashier", printed_by ],
-          [ "Currency", currency ]
+          { heading: payer_heading, entries: bill_to_entries },
+          { heading: "Invoice details", entries: invoice_detail_entries },
+          { heading: "Stay details", entries: stay_detail_entries }
         ]
       end
 
-      def payer_section_title
-        corporate_payer? ? "PAYER / FOLIO DETAILS" : "GUEST / FOLIO DETAILS"
+      def payer_heading
+        corporate_payer? ? "Bill to (payer)" : "Bill to"
       end
 
-      def booking_stay_detail_rows
+      def bill_to_entries
+        return corporate_bill_to_entries if corporate_payer?
+
         [
-          [ "Confirm No", guest_value(snapshot_or_live("booking", "confirmation_token") { booking.confirmation_token }) ],
-          [ "Folio Account Reference", folio_account_reference ],
-          [ "Folio Reference", folio_reference ],
-          [ "Room No / Type", room_summary ],
+          [ "Guest", snapshot_or_live("booking", "guest_name") { booking.guest_name } ],
+          [ "Address", snapshot_or_live("booking", "guest_home_address") { booking.guest_home_address } ],
+          [ "Country", snapshot_or_live("booking", "guest_country") { booking.guest_country } ]
+        ]
+      end
+
+      def invoice_detail_entries
+        # No account reference: the folio number is that reference plus the window, so
+        # printing both tells the payer the same thing twice. The ledger keeps it, where
+        # how the account is filed is the point.
+        entries = [
+          # The date the invoice was issued, not the date this copy was printed. A tax
+          # document is dated once; the printing is drawn apart from these, at the foot.
+          [ "Issue date", PdfTheme.format_date(invoice_document.issued_on) ],
+          [ "Issued by", printed_by ],
+          [ "Folio no.", folio_reference ]
+        ]
+        entries << [ "Revision", revision.revision_number.to_s ] if revised?
+        entries.concat(direct_bill_term_entries) if direct_bill?
+        entries
+      end
+
+      def stay_detail_entries
+        [
+          [ "Booking ref", snapshot_or_live("booking", "reservation_reference") { booking.formatted_reservation_number } ],
+          [ "Confirm no.", snapshot_or_live("booking", "confirmation_token") { booking.confirmation_token } ],
+          [ "Room / type", room_summary ],
           [ "Arrival", format_datetime(snapshot_or_live("booking", "check_in") { booking.check_in }) ],
           [ "Departure", format_datetime(snapshot_or_live("booking", "check_out") { booking.check_out }) ]
         ]
+      end
+
+      # The frame draws the masthead from whatever answers to these, so an issued invoice
+      # can wear the hotel it was issued by rather than the hotel as it is named today.
+      # The three parts of the address go over separately: the frame joins them, and drops
+      # the ones the address line already names. The logo is not snapshotted, so it comes
+      # from the live record.
+      def pdf_hotel
+        SnapshotHotel.new(
+          name: snapshot_or_live("hotel", "name") { hotel.name }.presence || hotel.name,
+          address: hotel_value("address") { hotel.address },
+          city: hotel_value("city") { hotel.city },
+          country: hotel_value("country") { hotel.country },
+          icon: hotel.try(:icon), hotel_time_zone: invoice_time_zone,
+          # Read live, and the only part of the masthead that is. It exists so whoever holds
+          # the bill can reach the hotel about it, and a number the hotel stopped answering
+          # serves nobody — where its name, address and registrations are what they were when
+          # it billed, and have to stay that. The snapshot keeps capturing them as a record of
+          # the day; it is simply not what the masthead prints.
+          fixed_line_number: hotel.fixed_line_number,
+          contact_phone: hotel.contact_phone,
+          contact_email: hotel.contact_email
+        )
+      end
+
+      # Sits under the address rather than among the invoice details: these identify the
+      # party issuing the document, not the document. Read from the issue-time snapshot,
+      # unlike the contact line above — a registration is what it was when the hotel
+      # billed, and has to stay that.
+      def hotel_identifier_line
+        Reports::HotelIdentifierLine.call(
+          tin: hotel_value("tin") { hotel.tin },
+          sst: hotel_value("sst_registration_number") { hotel.sst_registration_number },
+          tourism_tax: hotel_value("tourism_tax_registration_number") { hotel.tourism_tax_registration_number }
+        )
       end
 
       def transaction_rows
         @transaction_rows ||= build_transaction_rows
       end
 
+      # The two halves of the document, already grouped by #presentation_bucket. Split so
+      # each can be tabled under a heading of its own: what the stay cost, then what was
+      # paid against it.
+      def charge_rows = transaction_rows.reject { |row| row.kind == "payment" }
+
+      def payment_rows = transaction_rows.select { |row| row.kind == "payment" }
+
       def summary_rows
         @summary_rows ||= build_summary_rows
       end
 
-      def legend_rows
-        transaction_rows
-        @legend.sort_by { |code, _label| code.to_s }.map { |code, label| [ code, label ] }
-      end
-
       def notes
         rows = []
+        rows << superseded_note if revised?
         rows << "SST is not applied on top of Tourism Tax." if sst_present? && tourism_tax_present?
         rows << "Service Charge is shown separately from government tax." if service_charge_present?
-
-        payment_note = payment_note_text
-        rows << payment_note if payment_note.present?
         rows
+      end
+
+      # When this copy was printed. Set against the issue date rather than beside it: a
+      # reprint changes this and nothing else on the document.
+      def printed_at
+        format_datetime(Time.current)
+      end
+
+      # A reissued invoice has to say so on its face. The document reference carries the
+      # revision, but a reader holding one sheet cannot tell a suffix from a serial.
+      def revised?
+        revision.revision_number > 1
+      end
+
+      def superseded_note
+        superseded = invoice_document.revisions.find_by(revision_number: revision.revision_number - 1)
+        return "Revision #{revision.revision_number} of this invoice." if superseded.blank?
+
+        "Revision #{revision.revision_number} of this invoice; it supersedes #{superseded.document_reference}."
       end
 
       def printed_by
@@ -237,7 +321,7 @@ module Reports
           [ "Original Amount", amount(receivable.amount) ],
           [ "Paid Amount", amount(receivable.paid_amount) ],
           [ "Outstanding Amount", amount(receivable.outstanding_amount) ],
-          [ "Status as of", Time.current.strftime("%d %b %Y %H:%M") ]
+          [ "Status as of", format_datetime(Time.current) ]
         ]
       end
 
@@ -254,13 +338,21 @@ module Reports
         total_due - total_payments
       end
 
-      def money(amount)
-        "#{currency} #{format_amount(amount)}"
+      # A closed folio and an unpaid receivable both end on a line called Balance, and the
+      # figure alone does not say which. The label says it, and the row takes the alert
+      # colour only while money is still owed.
+      def settled? = balance.zero?
+
+      def balance_label = settled? ? "Balance settled" : "Balance due"
+
+      # The first thing a reader looks for, answered beside the invoice number rather than
+      # eight inches down the page. Read from the issued figures like every other total on
+      # the document, so a reprint cannot change what it says.
+      def status_badge
+        settled? ? { label: "Settled", variant: :positive } : { label: "Balance due", variant: :warning }
       end
 
-      def credit_money(amount)
-        "(#{currency} #{format_amount(amount.to_d.abs)})"
-      end
+      def balance_variant = settled? ? :subtotal : :alert
 
       def amount(amount)
         format_amount(amount)
@@ -273,28 +365,27 @@ module Reports
 
       private
 
-      def corporate_folio_detail_rows
+      # A corporate payer has a name but no address anywhere in the schema, so its block
+      # carries the references that identify the account instead.
+      def corporate_bill_to_entries
         terms = folio.booking_billing_party&.billing_terms
         account_type = snapshot_or_live("payer", "account_type") do
           folio.booking_billing_party&.account_type.presence || folio.hotel_corporate_account&.account_type
         end
-        rows = [
-          [ "Corporate Payer", guest_value(snapshot_or_live("payer", "name") { document_live_payer_name }) ],
-          [ "Account Type", account_type.to_s.humanize.presence || "-" ],
-          [ "Purchase Order", guest_value(snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference }) ],
-          [ "Authorization", guest_value(snapshot_or_live("payer", "authorization_reference") { terms&.authorization_reference }) ],
-          [ "Invoice No", invoice_number ],
-          [ "Cashier", printed_by ],
-          [ "Currency", currency ]
+        [
+          [ "Payer", snapshot_or_live("payer", "name") { document_live_payer_name } ],
+          [ "Account type", account_type.to_s.humanize.presence ],
+          [ "PO ref", snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference } ],
+          [ "Auth", snapshot_or_live("payer", "authorization_reference") { terms&.authorization_reference } ]
         ]
-        if direct_bill?
-          days = snapshot_or_live("payer", "payment_terms_days") { receivable&.hotel_corporate_account&.payment_terms_days }
-          terms_label = days.to_i.zero? ? "Due on receipt" : "Net #{days.to_i} days"
-          rows.insert(4, [ "Issue Date", invoice_document.issued_on.strftime("%d %b %Y") ])
-          rows.insert(5, [ "Due Date", receivable.due_on.strftime("%d %b %Y") ])
-          rows.insert(6, [ "Payment Terms", terms_label ])
-        end
-        rows
+      end
+
+      def direct_bill_term_entries
+        days = snapshot_or_live("payer", "payment_terms_days") { receivable&.hotel_corporate_account&.payment_terms_days }
+        [
+          [ "Due date", PdfTheme.format_date(receivable&.due_on) ],
+          [ "Payment terms", days.to_i.zero? ? "Due on receipt" : "Net #{days.to_i} days" ]
+        ]
       end
 
       def corporate_payer?
@@ -331,49 +422,52 @@ module Reports
         invoice_transactions.map { |transaction| transaction_row(transaction) }.compact
       end
 
+      # Sentence case, and no separator inside a label that already has one. "SST 6% - F&B /
+      # Other" set beside a figure reads as arithmetic before it reads as a name: the
+      # hyphen looks like a minus and the slash like a second one. The rate is charged
+      # *on* something, so the label says so.
       def build_summary_rows
         rows = []
-        rows << SummaryRow.new(label: "Room Revenue, net", amount: room_revenue)
-        rows << SummaryRow.new(label: "F&B / Other Revenue, net", amount: other_revenue) unless other_revenue.zero?
-        rows << SummaryRow.new(label: "Service Charge", amount: service_charge_total) unless service_charge_total.zero?
-        rows << SummaryRow.new(label: "SST 8% - Rooms", amount: sst_room_total) unless sst_room_total.zero?
-        rows << SummaryRow.new(label: "SST 6% - F&B / Other", amount: sst_other_total) unless sst_other_total.zero?
+        rows << SummaryRow.new(label: "Room revenue, net", amount: room_revenue) unless room_revenue.zero?
+        rows << SummaryRow.new(label: "F&B and other revenue, net", amount: other_revenue) unless other_revenue.zero?
+        rows << SummaryRow.new(label: "Service charge", amount: service_charge_total) unless service_charge_total.zero?
+        rows << SummaryRow.new(label: "SST 8% on rooms", amount: sst_room_total) unless sst_room_total.zero?
+        rows << SummaryRow.new(label: "SST 6% on F&B and other", amount: sst_other_total) unless sst_other_total.zero?
         rows << SummaryRow.new(label: tourism_tax_label, amount: tourism_tax_total) unless tourism_tax_total.zero?
-        rows << SummaryRow.new(label: "Adjustments", amount: adjustment_total) unless adjustment_total.zero?
-        rows << SummaryRow.new(label: "Total Due", amount: total_due, emphasis: true)
-        rows << SummaryRow.new(label: "Total Payments", amount: total_payments, credit: true)
-        rows << SummaryRow.new(label: "Balance", amount: balance, emphasis: true)
+        unless adjustment_total.zero?
+          # An adjustment that gives money back is a credit and is bracketed like one; a
+          # bare minus among bracketed amounts reads as a second convention.
+          rows << SummaryRow.new(label: "Adjustments", amount: adjustment_total, credit: adjustment_total.negative?)
+        end
+        # The tables above end on Total Due and Total Payments, so the summary states the
+        # decomposition and the bottom line, and no figure is printed twice.
+        rows << SummaryRow.new(variant: :spacer)
+        rows << SummaryRow.new(label: balance_label, amount: balance, variant: balance_variant)
         rows
       end
 
-      def transaction_row(transaction, children: [])
+      def transaction_row(transaction)
         code, label = display_code_and_label(transaction)
-        @legend[code] ||= label
         TransactionRow.new(
           date: format_date(transaction.posting_date),
           code: code,
           description: display_description(transaction),
-          secondary_description: secondary_description_for(transaction, children),
+          secondary_description: secondary_description_for(transaction),
           quantity: quantity_for(transaction),
-          net: net_amount_for(transaction, children),
-          charges: charges_amount_for(transaction, children),
-          gross: gross_amount_for(transaction, children),
+          net: net_amount_for(transaction),
+          charges: charges_amount_for(transaction),
+          gross: gross_amount_for(transaction),
           kind: transaction.transaction_type
         )
       end
 
-      def secondary_description_for(transaction, children)
-        includes = included_charge_summary(children)
-        return includes if includes.present?
+      # The reference keys are payment-shaped — a receipt, an auth code, a gateway id — and
+      # a charge that happens to carry one in its metadata was printing it under the
+      # description as though the guest had paid for something twice.
+      def secondary_description_for(transaction)
+        return unless transaction.payment?
 
         payment_reference(transaction)
-      end
-
-      def included_charge_summary(children)
-        return if children.blank?
-
-        summaries = children.map { |child| "#{display_description(child)} #{format_amount(child.amount)}" }
-        "Includes: #{summaries.join(' · ')}"
       end
 
       def display_code_and_label(transaction)
@@ -449,13 +543,6 @@ module Reports
         refs.first
       end
 
-      def payment_note_text
-        payment = active_transactions.select(&:payment?).find { |transaction| payment_reference(transaction).present? }
-        return if payment.blank?
-
-        "#{payment_description(payment)} - #{payment_reference(payment)} - Currency: #{currency}"
-      end
-
       def quantity_for(transaction)
         return "-" if transaction.payment?
         return "1" if tourism_tax_transaction?(transaction)
@@ -465,23 +552,21 @@ module Reports
         "1"
       end
 
-      def net_amount_for(transaction, children = [])
+      # A charge posts its own amount as net, a tax posts its amount as the charge on top,
+      # and every row is gross of itself. Nothing is folded into anything.
+      def net_amount_for(transaction)
         return nil unless transaction.charge? && !tax_transaction?(transaction)
 
         transaction.amount.to_d
       end
 
-      def charges_amount_for(transaction, children = [])
-        child_total = children.sum { |child| child.amount.to_d }
-        return child_total unless child_total.zero?
+      def charges_amount_for(transaction)
         return transaction.amount.to_d if transaction.charge? && tax_transaction?(transaction)
 
         nil
       end
 
-      def gross_amount_for(transaction, children = [])
-        transaction.amount.to_d + children.sum { |child| child.amount.to_d }
-      end
+      def gross_amount_for(transaction) = transaction.amount.to_d
 
       def invoice_transactions
         @invoice_transactions ||= active_transactions.sort_by do |transaction|
@@ -495,16 +580,6 @@ module Reports
         return 1 if transaction.charge? || transaction.adjustment?
 
         4
-      end
-
-      def attached_children_for(transaction)
-        return [] unless transaction.charge? || transaction.adjustment?
-
-        child_transactions_by_parent[transaction.id].to_a
-      end
-
-      def hidden_generated_child?(transaction)
-        generated_child?(transaction) && active_parent_ids.include?(parent_id(transaction))
       end
 
       def active_transactions
@@ -523,20 +598,6 @@ module Reports
 
       def hidden_reversal_noise?(transaction)
         transaction.voided_by_transaction_id.present? || transaction.reversal_of_transaction_id.present?
-      end
-
-      def generated_child?(transaction)
-        parent_id(transaction).present?
-      end
-
-      def child_transactions_by_parent
-        @child_transactions_by_parent ||= active_transactions
-          .select { |transaction| parent_id(transaction).present? }
-          .group_by { |transaction| parent_id(transaction) }
-      end
-
-      def active_parent_ids
-        @active_parent_ids ||= active_transactions.map(&:id).to_set
       end
 
       def tax_transaction?(transaction)
@@ -569,26 +630,40 @@ module Reports
         active_transactions.find { |candidate| candidate.id == transaction_parent_id }
       end
 
+      # The parent is the fallback whether or not an id was posted. It used to be reached
+      # only when no id was posted at all, so a transaction naming its source by an id the
+      # lookup could not resolve — which is any of them, once the invoice renders from its
+      # snapshot — resolved to nothing while its parent sat there unasked.
       def source_transaction_code_for(transaction)
         parent = parent_transaction_for(transaction)
         source_id = tax_line(transaction)["source_transaction_code_id"].presence ||
           transaction.metadata.to_h["source_transaction_code_id"].presence ||
           (parent.transaction_code_id if parent.respond_to?(:transaction_code_id))
-        return parent&.transaction_code if source_id.blank?
 
-        transaction_codes_by_id[source_id.to_i]
+        transaction_codes_by_id[source_id.to_i] || parent&.transaction_code
+      end
+
+      # What the tax was levied on, in the order the document can trust it: what the
+      # invoice recorded when it was issued, then what the posted tax line names, then the
+      # live codes, which a snapshotted invoice cannot reach.
+      def source_code(transaction)
+        transaction.try(:source_transaction_code).presence ||
+          tax_line(transaction)["source_transaction_code_code"].presence ||
+          source_transaction_code_for(transaction)&.code.presence
       end
 
       def derived_tax_transaction_code(transaction)
         child_code = tax_line(transaction)["transaction_code_code"].presence || transaction.posted_transaction_code.presence
-        source_code = source_transaction_code_for(transaction)&.code.presence
-        return "#{source_code}_#{child_code}" if source_code.present? && child_code.present?
+        source = source_code(transaction)
+        return "#{source}_#{child_code}" if source.present? && child_code.present?
 
         child_code || transaction.posted_transaction_code.presence || FALLBACK_CODES.dig(transaction.category, 0) || transaction.category.to_s.upcase
       end
 
       def source_transaction_category(transaction)
-        parent_transaction_for(transaction)&.category.presence || source_transaction_code_for(transaction)&.category
+        transaction.try(:source_transaction_category).presence ||
+          parent_transaction_for(transaction)&.category.presence ||
+          source_transaction_code_for(transaction)&.category
       end
 
       def transaction_codes_by_id
@@ -619,20 +694,32 @@ module Reports
                            .sum { |transaction| transaction.amount.to_d }
       end
 
+      # Asked of the tax line first, and of the charge it hangs off only as a fallback. The
+      # code lookup behind source_transaction_category is empty for a snapshotted invoice —
+      # which is every issued one — so a room tax posted without a parent transaction
+      # resolved to no category at all and was counted as F&B. The basis is in the snapshot
+      # and says plainly what the tax was charged on.
+      def room_tax?(transaction)
+        return true if ROOM_TAX_BASES.include?(tax_line(transaction)["basis"].to_s)
+
+        source_transaction_category(transaction) == "accommodation"
+      end
+
       def sst_room_total
-        active_transactions.select do |transaction|
-          tax_transaction?(transaction) &&
-            sst_transaction?(transaction) &&
-            source_transaction_category(transaction) == "accommodation"
-        end.sum { |transaction| transaction.amount.to_d }
+        sst_transactions.select { |transaction| room_tax?(transaction) }
+                        .sum { |transaction| transaction.amount.to_d }
       end
 
       def sst_other_total
-        active_transactions.select do |transaction|
-          tax_transaction?(transaction) &&
-            sst_transaction?(transaction) &&
-            source_transaction_category(transaction) != "accommodation"
-        end.sum { |transaction| transaction.amount.to_d }
+        sst_transactions.reject { |transaction| room_tax?(transaction) }
+                        .sum { |transaction| transaction.amount.to_d }
+      end
+
+      # One list, so the two rates are complements and no SST can fall between them.
+      def sst_transactions
+        @sst_transactions ||= active_transactions.select do |transaction|
+          tax_transaction?(transaction) && sst_transaction?(transaction)
+        end
       end
 
       def tourism_tax_total
@@ -641,7 +728,7 @@ module Reports
       end
 
       def tourism_tax_label
-        "Tourism Tax"
+        "Tourism tax"
       end
 
       def service_charge_present?
@@ -677,32 +764,10 @@ module Reports
         rooms.presence&.join(", ") || "-"
       end
 
-      def hotel_address
-        values = if @snapshot["hotel"].is_a?(Hash)
-          %w[address city country].map { |key| @snapshot["hotel"][key] }
-        else
-          [ hotel.address, hotel.city, hotel.country ]
-        end
-        values.filter_map(&:presence).uniq.join(", ").presence
-      end
-
-      def hotel_contact
-        values = if @snapshot["hotel"].is_a?(Hash)
-          %w[contact_phone contact_email].map { |key| @snapshot["hotel"][key] }
-        else
-          [ hotel.contact_phone, hotel.contact_email ]
-        end
-        values.filter_map(&:presence).join(" · ").presence
-      end
-
-      def guest_value(value)
-        value.presence || "-"
-      end
-
-      def invoice_number
-        revision.document_reference
-      end
-
+      # Named and dashed like the registrations: three contacts run together unlabelled
+      # read as one string of digits, and a guest who cannot find a landline on the bill
+      # should see that the hotel published none rather than wonder which number is which.
+      #
       def folio_account_reference
         snapshot_or_live("folio", "folio_account_reference") { booking.folio_account_reference_display }.presence || booking.formatted_folio_number.presence || "-"
       end
@@ -714,18 +779,18 @@ module Reports
       def format_date(value)
         return "-" if value.blank?
 
-        value.to_date.strftime("%d %b %y")
+        PdfTheme.format_date(value.to_date)
       end
 
       def format_datetime(value)
         return "-" if value.blank?
 
         parsed = value.respond_to?(:in_time_zone) ? value : Time.zone.parse(value.to_s)
-        parsed.in_time_zone(invoice_time_zone).strftime("%d %b %Y %H:%M")
+        PdfTheme.format_time(parsed, invoice_time_zone)
       end
 
       def format_amount(amount)
-        ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", amount.to_d))
+        PdfTheme.money(amount)
       end
 
       def safe_reference(value)
@@ -736,15 +801,17 @@ module Reports
         @snapshot["transactions"].is_a?(Array)
       end
 
-      def snapshot_value(*keys)
-        @snapshot&.dig(*keys)
-      end
-
       def snapshot_or_live(section, key)
         values = @snapshot[section]
         return values[key] if values.is_a?(Hash) && values.key?(key)
 
         yield
+      end
+
+      # A hotel fact as the invoice was issued, falling back to the live record for the
+      # invoices whose snapshot was taken before the field was captured.
+      def hotel_value(key, &live)
+        snapshot_or_live("hotel", key, &live).presence
       end
 
       def invoice_time_zone

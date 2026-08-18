@@ -24,7 +24,7 @@ RSpec.describe HotelPortal::Reports::NonNationalPdfExportService do
         totals: { guest_count: 1, nights: 2 }
       )
 
-      pdf = described_class.new(hotel: hotel, report: report).generate
+      pdf = described_class.new(hotel: hotel, report: report, prepared_by: "Sarah Lim").generate
 
       expect(pdf).to start_with("%PDF")
       expect(pdf.bytesize).to be > 500

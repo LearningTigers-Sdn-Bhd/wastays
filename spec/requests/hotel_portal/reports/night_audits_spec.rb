@@ -33,7 +33,9 @@ RSpec.describe "HotelPortal::Reports::NightAudits", type: :request do
     grant_permission("manage_night_audit")
     audit = create(:night_audit, hotel: hotel, status: "completed")
     exporter = instance_double(NightAudits::AuditPacketPdfExport, generate: "%PDF-report")
-    allow(NightAudits::AuditPacketPdfExport).to receive(:new).and_return(exporter)
+    allow(NightAudits::AuditPacketPdfExport).to receive(:new).with(
+      night_audit: audit, prepared_by: user.name
+    ).and_return(exporter)
 
     get hotel_reports_night_audits_path(hotel)
     expect(response).to have_http_status(:ok)
@@ -97,7 +99,9 @@ RSpec.describe "HotelPortal::Reports::NightAudits", type: :request do
   it "exports the existing audit packet for an authorized reader" do
     audit = create(:night_audit, hotel: hotel, status: "completed")
     exporter = instance_double(NightAudits::AuditPacketPdfExport, generate: "%PDF-report")
-    allow(NightAudits::AuditPacketPdfExport).to receive(:new).with(night_audit: audit).and_return(exporter)
+    allow(NightAudits::AuditPacketPdfExport).to receive(:new).with(
+      night_audit: audit, prepared_by: user.name
+    ).and_return(exporter)
 
     get hotel_reports_night_audit_path(hotel, audit, format: :pdf)
 

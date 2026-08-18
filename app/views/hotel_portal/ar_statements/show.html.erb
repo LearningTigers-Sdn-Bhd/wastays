@@ -53,14 +53,19 @@
             <%= cached_icon "chevron-down", class: "size-3" %>
           </button>
           <div data-dropdown-target="menu" class="hidden absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10 focus:outline-none" role="menu" aria-orientation="vertical" tabindex="-1">
-            <%= link_to hotel_ar_statement_path(
+            <%= link_to pdf_hotel_ar_statement_path(
                   current_hotel,
                   @hotel_corporate_account,
+                  statement_pdf_filename(
+                    account_name: @hotel_corporate_account.corporate_account.name,
+                    start_date: @presenter.start_date,
+                    end_date: @presenter.end_date,
+                    currency: @presenter.currency
+                  ),
                   start_date: @presenter.start_date,
                   end_date: @presenter.end_date,
                   currency: @presenter.currency,
-                  report_type: "summary",
-                  format: :pdf
+                  report_type: "summary"
                 ),
                 role: "menuitem",
                 target: "_blank",
@@ -69,14 +74,19 @@
               <%= cached_icon "file-text", class: "size-4 text-muted-foreground" %>
               <span>Summary</span>
             <% end %>
-            <%= link_to hotel_ar_statement_path(
+            <%= link_to pdf_hotel_ar_statement_path(
                   current_hotel,
                   @hotel_corporate_account,
+                  statement_pdf_filename(
+                    account_name: @hotel_corporate_account.corporate_account.name,
+                    start_date: @presenter.start_date,
+                    end_date: @presenter.end_date,
+                    currency: @presenter.currency
+                  ),
                   start_date: @presenter.start_date,
                   end_date: @presenter.end_date,
                   currency: @presenter.currency,
-                  report_type: "detail",
-                  format: :pdf
+                  report_type: "detail"
                 ),
                 role: "menuitem",
                 target: "_blank",

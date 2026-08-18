@@ -96,7 +96,8 @@ class Admin::HotelsController < Admin::BaseController
       :salesperson_id,
       :creation_action,
       :verify_owner_account,
-      :allow_boat_information
+      :allow_boat_information,
+      :hide_payout_reports
     )
   end
 
@@ -127,7 +128,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, :sell_mode, :allow_boat_information, amenities: [])
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, :sell_mode, :allow_boat_information, :hide_payout_reports, amenities: [])
   end
 
   def salesperson_name_param

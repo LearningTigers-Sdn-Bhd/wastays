@@ -8,13 +8,11 @@ module Reports
     class GenerateCombinedInvoices
       InvalidCombinedInvoicesError = Class.new(StandardError)
 
-      DARK_GREEN = GenerateInvoice::DARK_GREEN
-      LIGHT_GRAY = GenerateInvoice::LIGHT_GRAY
-      BORDER_GRAY = GenerateInvoice::BORDER_GRAY
-      TEXT_PRIMARY = GenerateInvoice::TEXT_PRIMARY
-      TEXT_MUTED = GenerateInvoice::TEXT_MUTED
-      BOTTOM_MARGIN = GenerateInvoice::BOTTOM_MARGIN
-      FOOTER_Y = GenerateInvoice::FOOTER_Y
+      THEME = HotelPortal::Reports::Exports::PdfTheme
+
+      TOTALS_WIDTH_FRACTION = 0.45
+      TOTALS_LABEL_FRACTION = 0.62
+      CLOSING_NOTE = "Each invoice that follows keeps its own official invoice number."
 
       def initialize(hotel:, invoices:, recipient:, printed_by: nil)
         @hotel = hotel
@@ -28,7 +26,7 @@ module Reports
         @invoices.sort_by! { |invoice| [ invoice.booking.id, invoice.booking_folio.folio_sequence.to_i, invoice.id ] }
         pdf = Prawn::Document.new(
           page_size: "A4",
-          margin: [ 36, 32, BOTTOM_MARGIN, 32 ],
+          margin: THEME::PAGE_MARGIN,
           info: {
             Title: "Combined invoices - #{@recipient.name}",
             Author: "WAStays",
@@ -36,13 +34,18 @@ module Reports
             CreationDate: Time.current
           }
         )
+        THEME.configure_font(pdf)
 
+        frame = cover_frame(pdf)
+        frame.draw_header
         draw_summary(pdf)
         @invoices.each do |invoice|
           pdf.start_new_page
           GenerateInvoice.new(folio: invoice.booking_folio, printed_by: @printed_by).render_into(pdf)
         end
-        draw_footer(pdf)
+        # Stamped once for the whole pack: each invoice draws its body but leaves the page
+        # furniture alone, or every page would carry as many footers as there are invoices.
+        frame.stamp_page_furniture
         pdf.render
       end
 
@@ -63,37 +66,39 @@ module Reports
         end
       end
 
+      # The cover names the recipient and what the pack is; the invoices that follow each
+      # draw their own masthead for the hotel that issued them.
+      def cover_frame(pdf)
+        HotelPortal::Reports::Exports::PdfReportFrame.new(
+          pdf: pdf,
+          hotel: @hotel,
+          eyebrow: "Combined invoices",
+          report_name: @recipient.name,
+          metadata: [
+            [ "Invoices", @invoices.size.to_s ],
+            [ "Prepared by", @printed_by ],
+            [ "Prepared", THEME.format_time(Time.current, @hotel.hotel_time_zone) ]
+          ],
+          confidential: false
+        )
+      end
+
       def draw_summary(pdf)
-        pdf.fill_color DARK_GREEN
-        pdf.text "COMBINED INVOICES", size: 18, style: :bold
-        pdf.move_down 5
-        pdf.fill_color TEXT_MUTED
-        pdf.text "Prepared for #{@recipient.name}", size: 10
-        pdf.move_down 12
-        pdf.stroke_color DARK_GREEN
-        pdf.stroke_horizontal_rule
-        pdf.fill_color TEXT_PRIMARY
-        pdf.move_down 18
+        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+          section_title: "Invoices in this pack",
+          headers: [ "Invoice", "Booking / room", "Payer", "Currency", "Amount" ],
+          rows: @invoices.map { |invoice| summary_row(invoice) },
+          numeric_columns: [ 4 ],
+          total_row: nil,
+          empty_message: "No invoices in this pack.",
+          column_widths: summary_widths(pdf),
+          density: :dense
+        )
 
-        rows = [
-          [ "Invoice", "Booking / room", "Payer", "Currency", "Amount" ].map { |label| header_cell(label) }
-        ]
-        rows.concat(@invoices.map { |invoice| summary_row(invoice) })
-
-        pdf.table(rows, width: pdf.bounds.width, header: true, column_widths: summary_widths(pdf)) do
-          cells.border_color = BORDER_GRAY
-          cells.padding = [ 6, 6 ]
-          cells.size = 7.5
-          row(0).background_color = LIGHT_GRAY
-          row(0).font_style = :bold
-          column(4).align = :right
-        end
-
-        pdf.move_down 16
         draw_currency_totals(pdf)
-        pdf.move_down 12
-        pdf.fill_color TEXT_MUTED
-        pdf.text "Each invoice that follows keeps its own official invoice number.", size: 8
+        pdf.fill_color THEME::COLORS[:muted]
+        pdf.text CLOSING_NOTE, size: THEME::TYPE[:micro]
+        pdf.fill_color THEME::COLORS[:ink]
       end
 
       def summary_row(invoice)
@@ -114,7 +119,7 @@ module Reports
           [ booking.formatted_reservation_number.presence || booking.confirmation_token, rooms.to_sentence.presence || "Room unavailable" ].join(" · "),
           @recipient.name,
           records.currency,
-          ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", records.total_due))
+          THEME.money(records.total_due)
         ]
       end
 
@@ -122,15 +127,24 @@ module Reports
         totals = @invoices.group_by { |invoice| invoice_currency(invoice) }.transform_values do |invoices|
           invoices.sum { |invoice| invoice_amount(invoice) }
         end
-        width = pdf.bounds.width * 0.45
-        rows = totals.sort.map do |currency, amount|
-          [ { content: "Total (#{currency})", font_style: :bold }, { content: ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", amount)), align: :right, font_style: :bold } ]
-        end
-        pdf.table(rows, width:, position: :right, column_widths: [ width * 0.62, width * 0.38 ]) do
-          cells.border_color = BORDER_GRAY
-          cells.padding = [ 6, 8 ]
-          cells.size = 8
-        end
+        return if totals.empty?
+
+        width = pdf.bounds.width * TOTALS_WIDTH_FRACTION
+        label_width = (width * TOTALS_LABEL_FRACTION).floor
+        rows = totals.sort.map { |currency, amount| [ "Total (#{currency})", THEME.money(amount) ] }
+
+        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+          section_title: nil,
+          headers: [ "", "" ],
+          rows: rows,
+          numeric_columns: [ 1 ],
+          total_row: nil,
+          empty_message: "",
+          column_widths: [ label_width, width - label_width ],
+          row_variants: rows.each_index.to_h { |index| [ index, :subtotal ] },
+          position: :right,
+          show_header: false
+        )
       end
 
       def invoice_currency(invoice)
@@ -149,23 +163,6 @@ module Reports
       def summary_widths(pdf)
         width = pdf.bounds.width
         [ 100, width - 100 - 100 - 62 - 72, 100, 62, 72 ]
-      end
-
-      def header_cell(value)
-        { content: value, text_color: TEXT_MUTED }
-      end
-
-      def draw_footer(pdf)
-        pdf.repeat(:all) do
-          pdf.stroke_color BORDER_GRAY
-          pdf.line_width 0.5
-          pdf.stroke_horizontal_line(pdf.bounds.left, pdf.bounds.right, at: FOOTER_Y + 14)
-          pdf.bounding_box([ pdf.bounds.left, FOOTER_Y ], width: pdf.bounds.width - 88, height: 12) do
-            pdf.fill_color TEXT_MUTED
-            pdf.text "Prepared at #{Time.current.strftime('%d %b %Y %H:%M')} by #{@printed_by}", size: 7
-          end
-        end
-        pdf.number_pages "Page <page> of <total>", at: [ pdf.bounds.right - 75, FOOTER_Y ], size: 7, color: TEXT_MUTED
       end
     end
   end

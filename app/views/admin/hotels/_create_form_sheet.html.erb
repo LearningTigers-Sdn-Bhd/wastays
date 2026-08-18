@@ -100,6 +100,13 @@
                   variant: :card,
                   label: "Boat features",
                   description: "For island and jetty-served properties: boat schedules, boat in/out times on bookings, and the BIBO and meal prep reports. Can be changed later.") %>
+
+            <%= render PanelsUI::Switch.new(
+                  form: builder,
+                  attribute: :hide_payout_reports,
+                  variant: :card,
+                  label: "Hide payout reports",
+                  description: "Remove payout reports from this hotel's navigation and block direct page and export access. Can be changed later.") %>
           </section>
         <% end %>
       <% end %>
