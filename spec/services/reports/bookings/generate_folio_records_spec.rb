@@ -138,7 +138,7 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     # The masthead is the hotel as the invoice was issued, not as it is named today.
     expect(records.pdf_hotel.name).to eq("Hotel ABC Resort")
     expect(records.pdf_hotel.address).to eq("Jalan Pantai Cenang, Langkawi, Malaysia")
-    expect(records.hotel_contact_line).to eq("+60 12-345 6789 · frontdesk@example.com")
+    expect(records.hotel_contact_line).to eq("Fixed line: - · Phone: +60 12-345 6789 · Email: frontdesk@example.com")
 
     expect(records.bill_to_entries).to include([ "Guest", "John Doe" ], [ "Country", "Foreign Tourist" ])
     expect(records.invoice_detail_entries).to include([ "Folio no.", folio.folio_reference_display ])
@@ -147,11 +147,12 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.stay_detail_entries).to include([ "Confirm no.", "BK-778291" ], [ "Room / type", "412 / Deluxe King" ])
   end
 
-  it "leaves the contact line empty rather than printing an empty masthead row" do
-    hotel.update!(contact_phone: nil, contact_email: nil)
+  it "reaches the hotel as it can be reached now, not as at the time it billed" do
+    hotel.update!(fixed_line_number: "04-955 1200", contact_phone: "+60 19-000 1122", contact_email: nil)
 
-    # Still the snapshotted contact: the invoice was issued while the hotel had one.
-    expect(described_class.new(folio: folio).call.hotel_contact_line).to eq("+60 12-345 6789 · frontdesk@example.com")
+    expect(described_class.new(folio: folio.reload).call.hotel_contact_line).to eq(
+      "Fixed line: 04-955 1200 · Phone: +60 19-000 1122 · Email: -"
+    )
   end
 
   it "shows generated tax and charge rows separately with source-derived codes" do
@@ -209,9 +210,27 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.notes).to include("Service Charge is shown separately from government tax.")
   end
 
-  it "prints no tax registrations for an issuer that has none" do
+  context "when the issuer publishes a landline" do
+    let(:hotel) { super().tap { |record| record.update!(fixed_line_number: "04-955 1200") } }
+
+    it "names every way of reaching the issuer, in one line" do
+      expect(records.hotel_contact_line).to eq(
+        "Fixed line: 04-955 1200 · Phone: +60 12-345 6789 · Email: frontdesk@example.com"
+      )
+    end
+  end
+
+  it "dashes the tax registrations an issuer does not hold rather than dropping them" do
     expect(records.document_kind).to eq("Folio invoice")
-    expect(records.hotel_identifier_line).to be_nil
+    expect(records.hotel_identifier_line).to eq("TIN: - · SST: - · Tourism Tax: -")
+  end
+
+  context "when the issuer holds some of the registrations but not all" do
+    let(:hotel) { super().tap { |record| record.update!(sst_registration_number: "W10-1808-32000012") } }
+
+    it "dashes only the ones that are missing" do
+      expect(records.hotel_identifier_line).to eq("TIN: - · SST: W10-1808-32000012 · Tourism Tax: -")
+    end
   end
 
   context "when the issuer was registered for tax at the time it billed" do

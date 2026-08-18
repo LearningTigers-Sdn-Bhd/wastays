@@ -229,14 +229,16 @@ module Reports
       def hotel_contact_line = hotel_contact
 
       # Sits under the address rather than among the invoice details: these identify the
-      # party issuing the document, not the document. Each is dropped when the issuer has
-      # none, so an unregistered hotel prints no empty labels.
+      # party issuing the document, not the document. Every registration is named whether
+      # or not the issuer holds one — a dash says the number is absent, where dropping the
+      # label leaves a reader unable to tell an unregistered issuer from a document that
+      # failed to print what it had.
       def hotel_identifier_line
         [
-          [ "TIN", hotel_tax_value("tin") { hotel.tin } ],
-          [ "SST", hotel_tax_value("sst_registration_number") { hotel.sst_registration_number } ],
-          [ "Tourism Tax", hotel_tax_value("tourism_tax_registration_number") { hotel.tourism_tax_registration_number } ]
-        ].filter_map { |label, value| "#{label}: #{value}" if value.present? }.join(" · ").presence
+          [ "TIN", hotel_value("tin") { hotel.tin } ],
+          [ "SST", hotel_value("sst_registration_number") { hotel.sst_registration_number } ],
+          [ "Tourism Tax", hotel_value("tourism_tax_registration_number") { hotel.tourism_tax_registration_number } ]
+        ].map { |label, value| "#{label}: #{value.presence || '-'}" }.join(" · ")
       end
 
       def transaction_rows
@@ -738,13 +740,21 @@ module Reports
         values.filter_map(&:presence).uniq.join(", ").presence
       end
 
+      # Named and dashed like the registrations: three contacts run together unlabelled
+      # read as one string of digits, and a guest who cannot find a landline on the bill
+      # should see that the hotel published none rather than wonder which number is which.
+      #
+      # Read live, and the only thing on the document that is. The masthead contact exists
+      # so whoever holds the bill can reach the hotel about it, and a number the hotel
+      # stopped answering serves nobody — where its name, address and registrations are
+      # what it was when it billed, and have to stay that. The snapshot keeps capturing
+      # them as a record of the day; it is simply not what the masthead prints.
       def hotel_contact
-        values = if @snapshot["hotel"].is_a?(Hash)
-          %w[contact_phone contact_email].map { |key| @snapshot["hotel"][key] }
-        else
-          [ hotel.contact_phone, hotel.contact_email ]
-        end
-        values.filter_map(&:presence).join(" · ").presence
+        [
+          [ "Fixed line", hotel.fixed_line_number ],
+          [ "Phone", hotel.contact_phone ],
+          [ "Email", hotel.contact_email ]
+        ].map { |label, value| "#{label}: #{value.presence || '-'}" }.join(" · ")
       end
 
       def guest_value(value)
@@ -795,7 +805,9 @@ module Reports
         yield
       end
 
-      def hotel_tax_value(key, &live)
+      # A hotel fact as the invoice was issued, falling back to the live record for the
+      # invoices whose snapshot was taken before the field was captured.
+      def hotel_value(key, &live)
         snapshot_or_live("hotel", key, &live).presence
       end
 

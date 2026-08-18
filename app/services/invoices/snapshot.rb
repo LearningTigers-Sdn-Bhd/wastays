@@ -33,6 +33,7 @@ module Invoices
         address: @hotel.address,
         city: @hotel.city,
         country: @hotel.country,
+        fixed_line_number: @hotel.fixed_line_number,
         contact_phone: @hotel.contact_phone,
         contact_email: @hotel.contact_email,
         time_zone: @hotel.hotel_time_zone.name,
