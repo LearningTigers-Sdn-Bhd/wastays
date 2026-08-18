@@ -20,6 +20,8 @@ module StayEditingForm
     booking_values = params.fetch(:booking, ActionController::Parameters.new)
     @check_in_value = form_datetime(booking_values[:check_in].presence || @booking.check_in, :check_in)
     @check_out_value = form_datetime(booking_values[:check_out].presence || @booking.check_out, :check_out)
+    @check_in_date = @check_in_value.to_s.split("T").first
+    @check_out_date = @check_out_value.to_s.split("T").first
     @room_type_id = booking_values[:room_type_id].presence || @room&.room_type_id
     @room_number = booking_values[:room_number].presence || @room&.room_number
     @rate_selection = if booking_values.key?(:rate_selection)
@@ -30,6 +32,7 @@ module StayEditingForm
     @proposal_kind = params[:proposal_kind].presence_in(%w[move dates])
     @selected_booking_ids = Array(params[:booking_ids]).reject(&:blank?).map(&:to_s)
     @target_scope = params[:target_scope].presence || "individual"
+    @current_tax_total = Booking.non_tourism_tax_total_for(@booking.tax_lines)
   end
 
   def scheduled_value(value, kind)
