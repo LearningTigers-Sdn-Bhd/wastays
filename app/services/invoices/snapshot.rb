@@ -33,9 +33,18 @@ module Invoices
         address: @hotel.address,
         city: @hotel.city,
         country: @hotel.country,
+        fixed_line_number: @hotel.fixed_line_number,
         contact_phone: @hotel.contact_phone,
         contact_email: @hotel.contact_email,
-        time_zone: @hotel.hotel_time_zone.name
+        time_zone: @hotel.hotel_time_zone.name,
+        # How the issuer was registered for tax on the day it billed. A registration
+        # number changes and a hotel deregisters, so the document has to keep the ones it
+        # was issued under rather than reach for today's. Invoices issued before this was
+        # captured fall back to the live record, which is the best they have.
+        tin: @hotel.tin,
+        sst_enabled: @hotel.sst_enabled,
+        sst_registration_number: @hotel.sst_registration_number,
+        tourism_tax_registration_number: @hotel.tourism_tax_registration_number
       }
     end
 
@@ -46,6 +55,9 @@ module Invoices
         reservation_reference: @booking.formatted_reservation_number,
         guest_name: @booking.guest_name,
         guest_country: @booking.guest_country,
+        # The invoice bills a party at an address. Invoices issued before this was
+        # captured have none, so the document's bill-to block collapses to what it has.
+        guest_home_address: @booking.guest_home_address,
         check_in: @booking.check_in&.iso8601,
         check_out: @booking.check_out&.iso8601
       }
@@ -108,6 +120,11 @@ module Invoices
           posting_date: transaction.posting_date&.iso8601,
           created_at: transaction.created_at&.iso8601,
           user_name: transaction.user&.name,
+          # The charge this one was levied on, resolved while the codes are still to hand.
+          # The posted metadata names it by id, and an id is worth nothing to a document
+          # rendered from its snapshot years later.
+          source_transaction_code: source_code_for(transaction)&.code,
+          source_transaction_category: source_code_for(transaction)&.category,
           reversal_of_transaction_id: transaction.reversal_of_transaction_id,
           voided_by_transaction_id: transaction.voided_by_transaction_id,
           metadata: transaction.metadata.to_h
@@ -127,6 +144,26 @@ module Invoices
         balance: decimal(charges - payments + adjustments),
         currency: @folio.currency
       }
+    end
+
+    def source_code_for(transaction)
+      metadata = transaction.metadata.to_h
+      source_id = metadata["tax_line"].to_h["source_transaction_code_id"].presence ||
+        metadata["source_transaction_code_id"].presence
+      return parent_of(transaction)&.transaction_code if source_id.blank?
+
+      transaction_codes[source_id.to_i] || parent_of(transaction)&.transaction_code
+    end
+
+    def parent_of(transaction)
+      parent_id = transaction.metadata.to_h["parent_folio_transaction_id"].presence
+      return if parent_id.blank?
+
+      transactions.find { |candidate| candidate.id == parent_id.to_i }
+    end
+
+    def transaction_codes
+      @transaction_codes ||= @hotel.transaction_codes.index_by(&:id)
     end
 
     def transactions

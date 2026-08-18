@@ -1,378 +1,291 @@
+# frozen_string_literal: true
+
+require "cgi"
 require "prawn"
 require "prawn/table"
 
 Prawn::Fonts::AFM.hide_m17n_warning = true
 
+# Guest-facing reservation voucher. It wears the shared print design system but
+# draws its own body: the QR identity, projected booking charges and policy are not
+# the tabular period-report shape owned by PdfReportBuilder.
 class VoucherPdfService
-  DARK_GREEN   = "0a2e29"
-  GOLD         = "d9c5a0"
-  WHITE        = "ffffff"
-  LIGHT_GRAY   = "f9fafb"
-  BORDER_GRAY  = "e5e7eb"
-  TEXT_PRIMARY = "111827"
-  TEXT_MUTED   = "6b7280"
-  SUCCESS      = "059669"
+  THEME = HotelPortal::Reports::Exports::PdfTheme
+  FIXED_COLUMN_WIDTHS = { date: 64, code: 76, quantity: 28, money: 66, gross: 70 }.freeze
+  SUMMARY_WIDTH_FRACTION = 0.48
+  SUMMARY_LABEL_FRACTION = 0.62
+
+  class TitleAccessory
+    QR_SIZE = 64
+    ITEM_GAP = THEME::SPACE[:sm]
+
+    def initialize(pdf:, token:, badge:)
+      @pdf = pdf
+      @badge = badge
+      @qr = qr_image_io(token)
+      @pdf_badge = HotelPortal::Reports::Exports::PdfBadge.new(pdf: pdf)
+    end
+
+    def width = [ QR_SIZE, @pdf_badge.width(@badge.fetch(:label)) ].max
+
+    def height = @pdf_badge.height + ITEM_GAP + QR_SIZE
+
+    def draw(at:)
+      left, top = at
+      badge_width = @pdf_badge.width(@badge.fetch(:label))
+      @pdf_badge.draw(
+        label: @badge.fetch(:label),
+        at: [ left + width - badge_width, top ],
+        variant: @badge.fetch(:variant, :neutral)
+      )
+      @pdf.image @qr,
+        at: [ left + width - QR_SIZE, top - @pdf_badge.height - ITEM_GAP ],
+        width: QR_SIZE,
+        height: QR_SIZE
+    end
+
+    private
+
+    def qr_image_io(token)
+      png = RQRCode::QRCode.new(token).as_png(
+        bit_depth: 1,
+        border_modules: 2,
+        color_mode: ChunkyPNG::COLOR_GRAYSCALE,
+        color: "black",
+        file: nil,
+        fill: "white",
+        module_px_size: 6,
+        resize_exactly_to: false,
+        resize_gte_to: false
+      )
+      StringIO.new(png.to_s)
+    end
+  end
 
   def initialize(booking)
-    @booking      = booking
-    @hotel        = booking.hotel
-    @nights       = (booking.check_out.to_date - booking.check_in.to_date).to_i
-    @booking_rooms = booking.booking_rooms.includes(:room_type)
-    @snapshot     = booking.hotel_snapshot || {}
-    @policy       = @snapshot["property_policy"] || {}
-    # The booking's own snapshot, not the hotel's current policy: a voucher must
-    # keep saying what the guest agreed to.
-    @cancellation = Cancellations::PolicySummary.for_record(booking, legacy_text: @policy["cancellation_policy"])
+    @records = Reports::Bookings::GenerateVoucherRecords.new(booking).call
   end
 
   def generate
-    pdf = Prawn::Document.new(
-      page_size: "A4",
-      margin: [ 40, 40, 40, 40 ],
-      info: {
-        Title: "Booking Voucher - #{@booking.confirmation_token}",
-        Author: "WAStays",
-        Creator: "WAStays",
-        CreationDate: Time.now
-      }
-    )
+    pdf = Prawn::Document.new(page_size: "A4", margin: THEME::PAGE_MARGIN, info: document_info)
+    THEME.configure_font(pdf)
+    frame = build_frame(pdf)
 
-    draw_header(pdf)
-    pdf.move_down 20
-    draw_confirmation_band(pdf)
-    pdf.move_down 12
-    draw_booking_meta(pdf)
-    pdf.move_down 24
-    draw_property_section(pdf)
-    pdf.move_down 24
-    draw_stay_dates(pdf)
-    pdf.move_down 24
-    draw_rooms(pdf)
-    pdf.move_down 24
-    draw_guest_and_payment(pdf)
-    pdf.move_down 24
+    frame.draw_header
+    HotelPortal::Reports::Exports::PdfPartyBlocks.new(pdf: pdf).draw(@records.party_blocks)
+    draw_charges(pdf)
+    draw_payments(pdf)
+    draw_summary(pdf)
     draw_special_requests(pdf)
-    pdf.move_down 24
     draw_policies(pdf)
-    pdf.move_down 30
-    draw_footer(pdf)
-
+    draw_closing_notes(pdf)
+    frame.stamp_page_furniture
     pdf.render
   end
 
   private
 
-  def draw_header(pdf)
-    logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-
-    if File.exist?(logo_path)
-      pdf.image logo_path, height: 32
-    else
-      pdf.fill_color DARK_GREEN
-      pdf.text "WAStays", size: 22, style: :bold
-    end
-
-    pdf.move_up 32
-    pdf.fill_color DARK_GREEN
-    pdf.text "BOOKING VOUCHER", size: 22, style: :bold, align: :right
-
-    pdf.move_down 12
-    pdf.stroke_color DARK_GREEN
-    pdf.line_width 0.5
-    pdf.stroke_horizontal_rule
-    pdf.line_width 1
+  def document_info
+    {
+      Title: "Booking Voucher - #{@records.confirmation_token}",
+      Author: "WAStays",
+      Creator: "WAStays",
+      CreationDate: Time.current
+    }
   end
 
-  def draw_confirmation_band(pdf)
-    qr_size   = 80
-    band_height = [ qr_size + 20, 52 ].max
-
-    pdf.fill_color DARK_GREEN
-    pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, band_height
-
-    pdf.fill_color GOLD
-    pdf.draw_text "CONFIRMED", at: [ 18, pdf.cursor - 18 ], size: 9, style: :bold
-
-    pdf.fill_color WHITE
-    pdf.text_box @booking.confirmation_token,
-      at: [ 18, pdf.cursor - 30 ],
-      width: pdf.bounds.width - qr_size - 36,
-      height: band_height - 30,
-      valign: :center,
-      size: 18,
-      style: :bold
-
-    qr_png = qr_image_io(@booking.confirmation_token)
-    pdf.image qr_png,
-      at: [ pdf.bounds.width - qr_size - 12, pdf.cursor - 10 ],
-      width: qr_size,
-      height: qr_size
-
-    pdf.move_down band_height
-  end
-
-  def draw_property_section(pdf)
-    section_label(pdf, "PROPERTY")
-    pdf.move_down 8
-
-    data = [
-      [
-        { content: @hotel.name, font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 2, 0 ] },
-        { content: "Check-in Time",  font_style: :bold, size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 6, 2, 0 ], align: :right },
-        { content: "Check-out Time",  font_style: :bold, size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 2, 6 ], align: :right }
-      ],
-      [
-        { content: [ @hotel.city, @hotel.country ].compact.join(", "), size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 0 ] },
-        { content: @policy.fetch("check_in_time", "2:00 PM"), font_style: :bold, size: 10, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 6, 0, 0 ], align: :right },
-        { content: @policy.fetch("check_out_time", "12:00 PM"), font_style: :bold, size: 10, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 0, 6 ], align: :right }
-      ]
-    ]
-    pdf.table(data, width: pdf.bounds.width)
-  end
-
-  def draw_booking_meta(pdf)
-    data = [
-      [
-        { content: "RESERVATION NUMBER", font_style: :bold, size: 8, text_color: GOLD, borders: [], padding: [ 0, 0, 4, 0 ] },
-        { content: "BOOKING DATE", font_style: :bold, size: 8, text_color: GOLD, borders: [], padding: [ 0, 0, 4, 0 ], align: :right }
-      ],
-      [
-        { content: @booking.formatted_reservation_number, font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 0, 0 ] },
-        { content: @booking.created_at.strftime("%d %b %Y"), font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 0, 0 ], align: :right }
-      ]
-    ]
-
-    pdf.table(data, width: pdf.bounds.width)
-  end
-
-  def draw_stay_dates(pdf)
-    section_label(pdf, "STAY DETAILS")
-    pdf.move_down 8
-
-    nights_label = @nights == 1 ? "1 Night" : "#{@nights} Nights"
-    adults_label = @booking.adults == 1 ? "1 Adult" : "#{@booking.adults} Adults"
-    guests_label = @booking.children > 0 ? "#{adults_label}, #{@booking.children} Child#{@booking.children != 1 ? 'ren' : ''}" : adults_label
-
-    w     = pdf.bounds.width
-    col_w = (w / 4.0).floor
-    last_col_w = w - (col_w * 3)
-    data = [
-      [
-        { content: "CHECK-IN",   font_style: :bold, size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 4, 0 ] },
-        { content: "CHECK-OUT",  font_style: :bold, size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 4, 0 ] },
-        { content: "DURATION",   font_style: :bold, size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 4, 0 ] },
-        { content: "GUESTS",     font_style: :bold, size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 4, 0 ] }
-      ],
-      [
-        { content: @booking.check_in.strftime("%d %b %Y"),  font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 0, 0 ] },
-        { content: @booking.check_out.strftime("%d %b %Y"), font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 0, 0 ] },
-        { content: nights_label, font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 0, 0 ] },
-        { content: guests_label, font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 0, 0 ] }
-      ]
-    ]
-    pdf.table(data, width: w, column_widths: [ col_w, col_w, col_w, last_col_w ])
-  end
-
-  def draw_rooms(pdf)
-    section_label(pdf, "ACCOMMODATION")
-    pdf.move_down 8
-
-    header_row = [
-      { content: "ROOM TYPE",  font_style: :bold, size: 8, text_color: TEXT_MUTED },
-      { content: "QTY",        font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :center },
-      { content: "AMOUNT",     font_style: :bold, size: 8, text_color: TEXT_MUTED, align: :right }
-    ]
-
-    desc_w   = (pdf.bounds.width * 0.7).floor
-    qty_w    = 50
-    amount_w = pdf.bounds.width - desc_w - qty_w
-
-    room_rows = @booking_rooms.map do |room|
-      name = room.room_type_snapshot["name"].presence || room.room_type.name
-      [
-        { content: name,               size: 10, text_color: TEXT_PRIMARY },
-        { content: "1",                size: 10, text_color: TEXT_PRIMARY, align: :center },
-        { content: "MYR #{fmt(room.subtotal)}", size: 10, text_color: TEXT_PRIMARY, align: :right }
-      ]
-    end
-
-    tax_rows = Array(@booking.tax_lines).map do |tax|
-      [
-        { content: tax["name"].to_s, size: 10, text_color: TEXT_MUTED, colspan: 2 },
-        { content: "MYR #{fmt(tax["amount"])}", size: 10, text_color: TEXT_MUTED, align: :right }
-      ]
-    end
-
-    total_row = [
-      { content: "GRAND TOTAL", font_style: :bold, size: 10, text_color: TEXT_PRIMARY, colspan: 2 },
-      { content: "MYR #{fmt(@booking.total_amount)}", font_style: :bold, size: 10, text_color: TEXT_PRIMARY, align: :right }
-    ]
-
-    pdf.table(
-      [ header_row ] + room_rows + tax_rows + [ total_row ],
-      width: pdf.bounds.width,
-      column_widths: [ desc_w, qty_w, amount_w ],
-      cell_style: { borders: [ :bottom ], padding: [ 10, 6, 10, 6 ], border_color: BORDER_GRAY }
+  def build_frame(pdf)
+    accessory = TitleAccessory.new(
+      pdf: pdf,
+      token: @records.confirmation_token,
+      badge: @records.status_badge
+    )
+    HotelPortal::Reports::Exports::PdfReportFrame.new(
+      pdf: pdf,
+      hotel: @records.hotel,
+      eyebrow: "Booking voucher",
+      report_name: @records.reservation_number,
+      subtitle: "Confirmation #{@records.confirmation_token}",
+      metadata: [],
+      confidential: false,
+      title_accessory: accessory
     )
   end
 
-  def draw_guest_and_payment(pdf)
-    paid = @booking.booking_folios.sum(&:total_payments)
-    balance_due = [ @booking.total_amount.to_d - paid, 0.to_d ].max
+  def draw_charges(pdf)
+    HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+      section_title: "Charges",
+      headers: [
+        "Date", "Code", "Description", "Qty",
+        "Net (#{@records.currency})", "Charges (#{@records.currency})", "Gross (#{@records.currency})"
+      ],
+      rows: @records.charge_rows.map { |row| charge_row(row) },
+      numeric_columns: [ 3, 4, 5, 6 ],
+      total_row: [ nil, nil, "Total due", nil, nil, nil, @records.money(@records.total_due) ],
+      empty_message: "No reservation charges are available.",
+      column_widths: charge_column_widths(pdf),
+      density: :dense
+    )
+  end
 
-    guest_lines = [ @booking.guest_email.presence, @booking.guest_phone.presence, @booking.guest_country.presence ].compact
-    guest_details = guest_lines.join("\n")
+  def draw_payments(pdf)
+    HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+      section_title: "Payments",
+      headers: [ "Date", "Code", "Description", "Amount (#{@records.currency})" ],
+      rows: @records.payment_rows.map { |row| payment_row(row) },
+      numeric_columns: [ 3 ],
+      total_row: [ nil, nil, "Total payments", credit_amount(@records.total_payments) ],
+      empty_message: "No payments have been recorded for this reservation.",
+      column_widths: payment_column_widths(pdf),
+      density: :dense
+    )
+  end
 
-    if balance_due.positive?
-      draw_guest_with_balance(pdf, guest_details, paid, balance_due)
-    else
-      draw_guest_without_balance(pdf, guest_details, paid)
+  def charge_row(row)
+    [
+      row.date,
+      row.code,
+      description_cell(row.description, row.secondary_description),
+      row.quantity,
+      money_or_dash(row.net),
+      money_or_dash(row.charges),
+      money_or_dash(row.gross)
+    ]
+  end
+
+  def payment_row(row)
+    [
+      row.date,
+      row.code,
+      description_cell(row.description, row.secondary_description),
+      row.amount.positive? ? credit_amount(row.amount) : @records.money(row.amount)
+    ]
+  end
+
+  def description_cell(description, secondary_description)
+    content = CGI.escapeHTML(description.to_s)
+    if secondary_description.present?
+      content += "\n<font size='#{THEME::TYPE[:micro]}'>#{CGI.escapeHTML(secondary_description.to_s)}</font>"
     end
+    { content: content, inline_format: true }
   end
 
-  def draw_guest_with_balance(pdf, guest_details, paid, balance_due)
-    w = pdf.bounds.width
-    guest_w = (w * 0.5).floor
-    payment_w = ((w - guest_w) / 2.0).floor
-
-    data = [
-      [
-        { content: "PRIMARY GUEST", font_style: :bold, size: 8, text_color: GOLD, borders: [], padding: [ 0, 12, 6, 0 ] },
-        { content: "TOTAL PAID", font_style: :bold, size: 8, text_color: GOLD, borders: [], padding: [ 0, 6, 6, 12 ] },
-        { content: "BALANCE DUE", font_style: :bold, size: 8, text_color: GOLD, borders: [], padding: [ 0, 0, 6, 6 ], align: :right }
-      ],
-      [
-        { content: @booking.guest_name, font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 12, 4, 0 ] },
-        { content: "MYR #{fmt(paid)}", font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 6, 4, 12 ] },
-        { content: "MYR #{fmt(balance_due)}", font_style: :bold, size: 14, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 4, 6 ], align: :right }
-      ],
-      [
-        { content: guest_details, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 12, 0, 0 ] },
-        { content: "Payment received", size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 6, 0, 12 ] },
-        { content: "Due at check-in", size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 6 ], align: :right }
-      ]
-    ]
-
-    draw_payment_panel(pdf, data, [ guest_w, payment_w, w - guest_w - payment_w ])
+  def charge_column_widths(pdf)
+    fixed = FIXED_COLUMN_WIDTHS
+    described = pdf.bounds.width - fixed[:date] - fixed[:code] - fixed[:quantity] -
+      (fixed[:money] * 2) - fixed[:gross]
+    [ fixed[:date], fixed[:code], described, fixed[:quantity], fixed[:money], fixed[:money], fixed[:gross] ]
   end
 
-  def draw_guest_without_balance(pdf, guest_details, paid)
-    w = pdf.bounds.width
-    half = (w / 2.0).floor
-
-    data = [
-      [
-        { content: "PRIMARY GUEST", font_style: :bold, size: 8, text_color: GOLD, borders: [], padding: [ 0, 12, 6, 0 ] },
-        { content: "TOTAL PAID", font_style: :bold, size: 8, text_color: GOLD, borders: [], padding: [ 0, 0, 6, 12 ] }
-      ],
-      [
-        { content: @booking.guest_name, font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 12, 4, 0 ] },
-        { content: "MYR #{fmt(paid)}", font_style: :bold, size: 16, text_color: TEXT_PRIMARY, borders: [], padding: [ 0, 0, 4, 12 ] }
-      ],
-      [
-        { content: guest_details, size: 9, text_color: TEXT_MUTED, borders: [], padding: [ 0, 12, 0, 0 ] },
-        { content: "Payment confirmed", size: 8, text_color: TEXT_MUTED, borders: [], padding: [ 0, 0, 0, 12 ] }
-      ]
-    ]
-
-    draw_payment_panel(pdf, data, [ half, w - half ])
+  def payment_column_widths(pdf)
+    fixed = FIXED_COLUMN_WIDTHS
+    [ fixed[:date], fixed[:code], pdf.bounds.width - fixed[:date] - fixed[:code] - fixed[:gross], fixed[:gross] ]
   end
 
-  def draw_payment_panel(pdf, data, column_widths)
-    pdf.fill_color LIGHT_GRAY
-    row_height = 100
-    pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, row_height
+  def draw_summary(pdf)
+    rows = @records.summary_rows
+    width = pdf.bounds.width * SUMMARY_WIDTH_FRACTION
+    label_width = (width * SUMMARY_LABEL_FRACTION).floor
 
-    pdf.table(data, width: pdf.bounds.width, column_widths: column_widths)
+    HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+      section_title: "Summary (#{@records.currency})",
+      headers: [ "", "" ],
+      rows: rows.map { |row| [ row.label, row.amount.nil? ? "" : @records.money(row.amount) ] },
+      numeric_columns: [ 1 ],
+      total_row: nil,
+      empty_message: "No amounts to summarise.",
+      column_widths: [ label_width, width - label_width ],
+      row_variants: rows.each_with_index.to_h { |row, index| [ index, row.variant ] }.compact,
+      position: :right,
+      show_header: false
+    )
   end
 
   def draw_special_requests(pdf)
-    return if @booking.special_requests.blank?
+    return if @records.special_requests.blank?
 
-    section_label(pdf, "SPECIAL REQUESTS")
-    pdf.move_down 8
-
-    pdf.fill_color TEXT_PRIMARY
-    pdf.text @booking.special_requests, size: 9, leading: 2
+    draw_prose_section(pdf, "Special requests", @records.special_requests)
   end
 
   def draw_policies(pdf)
-    cancellation = @cancellation
+    cancellation = @records.cancellation
     return unless cancellation.present?
 
-    pdf.move_down 8
-    section_label(pdf, "PROPERTY POLICIES")
-    pdf.move_down 8
-
-    pdf.fill_color TEXT_MUTED
-    pdf.text "• Identification required upon check-in. Local government taxes may apply.", size: 8
-    pdf.move_down 4
-
-    draw_cancellation_tiers(pdf, cancellation.rows)
+    draw_prose_section(
+      pdf,
+      "Property policies",
+      "Identification is required at check-in. Local government taxes may apply."
+    )
+    draw_cancellation_table(pdf, cancellation.rows) if cancellation.rows.any?
     draw_cancellation_notes(pdf, cancellation)
   end
 
-  # The table is generated from the same tier rows the cancellation fee is computed
-  # from, so the voucher can never quote a number the folio disagrees with.
-  def draw_cancellation_tiers(pdf, rows)
-    return if rows.empty?
-
-    pdf.fill_color TEXT_PRIMARY
-    pdf.text "Cancellation", size: 8, style: :bold
-    pdf.move_down 4
-
-    data = [ [ "If cancelled", "Charge" ] ] + rows.map { |row| [ row.window, row.charge ] }
-    pdf.table(data, width: pdf.bounds.width, cell_style: { size: 8, padding: [ 4, 6 ], border_color: BORDER_GRAY, border_width: 0.5 }) do
-      row(0).font_style = :bold
-      row(0).background_color = LIGHT_GRAY
-    end
-    pdf.move_down 6
+  def draw_cancellation_table(pdf, rows)
+    HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+      section_title: "Cancellation policy",
+      headers: [ "If cancelled", "Charge" ],
+      rows: rows.map { |row| [ row.window, row.charge ] },
+      numeric_columns: [],
+      total_row: nil,
+      empty_message: "No cancellation tiers are configured.",
+      column_widths: [ 0.62, 0.38 ].map { |fraction| pdf.bounds.width * fraction }
+    )
   end
 
   def draw_cancellation_notes(pdf, cancellation)
-    pdf.fill_color TEXT_MUTED
-    [ cancellation.refund_note, cancellation.description, cancellation.structured? ? nil : cancellation.legacy_text ].compact.each do |note|
-      pdf.text "• #{note}", size: 8
-      pdf.move_down 4
+    notes = [
+      cancellation.refund_note,
+      cancellation.description,
+      cancellation.structured? ? nil : cancellation.legacy_text
+    ].compact_blank
+    return if notes.empty?
+
+    text = notes.map { |note| "- #{note}" }.join("\n")
+    ensure_block_fits(pdf, text, heading: nil)
+    draw_muted_line(pdf, text)
+    pdf.move_down THEME::SPACE[:lg]
+  end
+
+  def draw_closing_notes(pdf)
+    instruction = "Please present this voucher at check-in. This is an electronically generated document - no signature required."
+    disclosure = @records.tourism_tax_disclosure
+    height = pdf.height_of(instruction, size: THEME::TYPE[:small])
+    height += pdf.height_of(disclosure, size: THEME::TYPE[:micro], leading: 2) + THEME::SPACE[:sm] if disclosure.present?
+    pdf.start_new_page if pdf.cursor < height + THEME::SPACE[:lg]
+
+    if disclosure.present?
+      draw_muted_line(pdf, disclosure)
+      pdf.move_down THEME::SPACE[:sm]
     end
+    pdf.fill_color THEME::COLORS[:muted]
+    pdf.text instruction, size: THEME::TYPE[:small], style: :italic
+    pdf.fill_color THEME::COLORS[:ink]
   end
 
-  def draw_footer(pdf)
-    pdf.stroke_color BORDER_GRAY
-    pdf.stroke_horizontal_rule
-    pdf.move_down 14
-
-    pdf.fill_color TEXT_MUTED
-    pdf.text "Please present this voucher at check-in. This is an electronically generated document — no signature required.", size: 8, align: :center, style: :italic
-    pdf.move_down 8
-    pdf.text "WAStays · hello@wastays.com · www.wastays.com", size: 8, align: :center
+  def draw_prose_section(pdf, heading, text)
+    ensure_block_fits(pdf, text, heading: heading)
+    pdf.fill_color THEME::COLORS[:ink]
+    pdf.text heading, size: THEME::TYPE[:heading], style: :bold
+    pdf.move_down THEME::SPACE[:sm]
+    pdf.text text, size: THEME::TYPE[:body], leading: 2
+    pdf.move_down THEME::SPACE[:lg]
   end
 
-  def section_label(pdf, text)
-    pdf.fill_color LIGHT_GRAY
-    pdf.fill_rectangle [ 0, pdf.cursor ], pdf.bounds.width, 20
-    pdf.fill_color TEXT_MUTED
-    pdf.move_down 6
-    pdf.indent(8) { pdf.text text, size: 8, style: :bold }
-    pdf.move_down 14
+  def ensure_block_fits(pdf, text, heading:)
+    height = pdf.height_of(text, size: THEME::TYPE[:body], leading: 2)
+    if heading.present?
+      height += pdf.height_of(heading, size: THEME::TYPE[:heading], style: :bold) + THEME::SPACE[:sm]
+    end
+    pdf.start_new_page if pdf.cursor < height + THEME::SPACE[:lg]
   end
 
-  def qr_image_io(token)
-    png = RQRCode::QRCode.new(token).as_png(
-      bit_depth: 1,
-      border_modules: 2,
-      color_mode: ChunkyPNG::COLOR_GRAYSCALE,
-      color: "black",
-      file: nil,
-      fill: "white",
-      module_px_size: 6,
-      resize_exactly_to: false,
-      resize_gte_to: false
-    )
-    StringIO.new(png.to_s)
+  def draw_muted_line(pdf, text)
+    pdf.fill_color THEME::COLORS[:muted]
+    pdf.text text, size: THEME::TYPE[:micro], leading: 2
+    pdf.fill_color THEME::COLORS[:ink]
   end
 
-  def fmt(amount)
-    format("%.2f", amount.to_f)
-  end
+  def money_or_dash(value) = value.nil? ? "-" : @records.money(value)
+
+  def credit_amount(value) = "(#{@records.money(value.to_d.abs)})"
 end

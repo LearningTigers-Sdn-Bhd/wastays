@@ -6,10 +6,14 @@ require "prawn/table"
 Prawn::Fonts::AFM.hide_m17n_warning = true
 
 class GuestRegistrationCardPdfService
-  BORDER      = "d1d5db"
-  TEXT        = "111827"
-  TEXT_MUTED  = "6b7280"
-  DUE_RED     = "e11d48"
+  THEME = HotelPortal::Reports::Exports::PdfTheme
+
+  # Aliases onto the shared palette, so the card reads as the same family of document as
+  # the reports rather than carrying its own greys.
+  BORDER      = THEME::COLORS[:border]
+  TEXT        = THEME::COLORS[:ink]
+  TEXT_MUTED  = THEME::COLORS[:muted]
+  DUE_RED     = THEME::COLORS[:danger]
 
   def initialize(card, booking, presenter)
     @card = card
@@ -21,7 +25,7 @@ class GuestRegistrationCardPdfService
   def generate
     pdf = Prawn::Document.new(
       page_size: "A4",
-      margin: [ 40, 40, 40, 40 ],
+      margin: THEME::PAGE_MARGIN,
       info: {
         Title: "Guest Registration Card - #{@booking.guest_registration_card_number_display}",
         Author: "WAStays",
@@ -29,58 +33,37 @@ class GuestRegistrationCardPdfService
         CreationDate: Time.now
       }
     )
-    HotelPortal::Reports::Exports::PdfTheme.configure_font(pdf)
+    THEME.configure_font(pdf)
+    frame = build_frame(pdf)
 
-    draw_header(pdf)
+    frame.draw_header
     draw_bordered_section(pdf, bottom_margin: 2) { draw_guest_section(pdf) }
     draw_bordered_section(pdf, bottom_margin: 2) { draw_stay_section(pdf) }
     draw_bordered_section(pdf, bottom_margin: @presenter.boat_transfer? ? 2 : 5) { draw_payment_section(pdf) }
     draw_bordered_section(pdf) { draw_boat_transfer_section(pdf) } if @presenter.boat_transfer?
     draw_policy_section(pdf)
     draw_bordered_section(pdf) { draw_notes_section(pdf, "Remark", @booking.special_requests) } if @booking.special_requests.present?
-    pdf.move_down 12
+    pdf.move_down THEME::SPACE[:md]
     draw_signature_section(pdf)
-    pdf.move_down 16
-    draw_footer(pdf)
+    frame.stamp_page_furniture
 
     pdf.render
   end
 
   private
 
-  def draw_header(pdf)
-    logo_path = Rails.root.join("app/assets/images/logo/long-logo.png")
-    top = pdf.cursor
-
-    if File.exist?(logo_path)
-      pdf.image logo_path, height: 20, at: [ 0, top ]
-    else
-      pdf.fill_color TEXT
-      pdf.text_box "WAStays", size: 16, style: :bold, at: [ 0, top ]
-    end
-
-    pdf.fill_color TEXT
-    pdf.text_box @hotel.name, size: 11, style: :bold, at: [ 0, top - 26 ], width: 300
-    if @presenter.hotel_address_display.present?
-      pdf.fill_color TEXT_MUTED
-      pdf.text_box @presenter.hotel_address_display, size: 9, at: [ 0, top - 40 ], width: 300
-    end
-
-    box_width = 190
-    box_left = pdf.bounds.width - box_width
-    pdf.stroke_color BORDER
-    pdf.line_width 0.5
-    pdf.stroke_rectangle [ box_left, top ], box_width, 40
-    pdf.fill_color TEXT_MUTED
-    pdf.text_box "GUEST REGISTRATION CARD No.", at: [ box_left, top - 5 ], width: box_width, align: :center, size: 8, style: :bold
-    pdf.fill_color TEXT
-    pdf.text_box @booking.guest_registration_card_number_display, at: [ box_left, top - 22 ], width: box_width, align: :center, size: 12, style: :bold
-
-    pdf.move_down 58
-    pdf.stroke_color TEXT
-    pdf.line_width 1
-    pdf.stroke_horizontal_rule
-    pdf.move_down 6
+  # The title is the card number, so the eyebrow carries what kind of document this is.
+  def build_frame(pdf)
+    HotelPortal::Reports::Exports::PdfReportFrame.new(
+      pdf: pdf,
+      hotel: @hotel,
+      eyebrow: "Guest Registration Card",
+      report_name: @booking.guest_registration_card_number_display,
+      metadata: [
+        [ "Booking", @booking.confirmation_token ],
+        [ "Issued", THEME.format_time(Time.current, @hotel.hotel_time_zone) ]
+      ]
+    )
   end
 
   def draw_bordered_section(pdf, bottom_margin: 5)
@@ -226,17 +209,6 @@ class GuestRegistrationCardPdfService
     end
 
     pdf.move_down height
-  end
-
-  def draw_footer(pdf)
-    pdf.stroke_color BORDER
-    pdf.line_width 0.5
-    pdf.stroke_horizontal_rule
-    pdf.move_down 6
-
-    pdf.fill_color TEXT_MUTED
-    pdf.text_box "Generated #{l(Time.current, format: :long)}", at: [ 0, pdf.cursor ], size: 8
-    pdf.text_box "Page 1 of 1", at: [ pdf.bounds.width - 60, pdf.cursor ], width: 60, align: :right, size: 8
   end
 
   def draw_label_value_grid(pdf, rows)

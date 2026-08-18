@@ -39,12 +39,17 @@
       </div>
     <% else %>
       <div class="flex justify-end">
-        <%= link_to corporate_ar_statement_path(
+        <%= link_to pdf_corporate_ar_statement_path(
               @relationship,
+              statement_pdf_filename(
+                hotel_name: @relationship.hotel.name,
+                start_date: @presenter.start_date,
+                end_date: @presenter.end_date,
+                currency: @presenter.currency
+              ),
               start_date: @presenter.start_date,
               end_date: @presenter.end_date,
-              currency: @presenter.currency,
-              format: :pdf
+              currency: @presenter.currency
             ),
             target: "_blank",
             class: "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700",

@@ -22,8 +22,14 @@ RSpec.describe TourismTaxVoucherPdfService do
       expect(result.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
       expect(result.bytesize).to be > 1500
       expect(reader.pages.size).to eq(2)
-      expect(reader.pages.first.text).to include("VOUCHER", "PENDING", "Pending collection", "Guest Signature", "Authorized Signatory")
-      expect(reader.pages.last.text).to include("VOUCHER - DUPLICATE COPY", "PENDING", "Pending collection", "Guest Signature", "Authorized Signatory")
+      expect(reader.pages.first.text).to include(
+        "TOURISM TAX VOUCHER", "GUEST COPY", "PAYABLE", "Not yet collected",
+        "GUEST SIGNATURE", "AUTHORISED SIGNATURE", "It is not evidence of payment."
+      )
+      expect(reader.pages.last.text).to include(
+        "TOURISM TAX VOUCHER", "HOTEL COPY", "PAYABLE", "Not yet collected",
+        "GUEST SIGNATURE", "AUTHORISED SIGNATURE", "It is not evidence of payment."
+      )
     end
   end
 
@@ -46,8 +52,8 @@ RSpec.describe TourismTaxVoucherPdfService do
       expect(result.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
       expect(result.bytesize).to be > 1500
       expect(reader.pages.size).to eq(2)
-      expect(reader.pages.first.text).to include("COLLECTED")
-      expect(reader.pages.last.text).to include("VOUCHER - DUPLICATE COPY", "COLLECTED")
+      expect(reader.pages.first.text).to include("TOURISM TAX VOUCHER", "GUEST COPY", "COLLECTED")
+      expect(reader.pages.last.text).to include("TOURISM TAX VOUCHER", "HOTEL COPY", "COLLECTED")
     end
   end
 end

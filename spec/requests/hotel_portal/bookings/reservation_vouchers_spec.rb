@@ -21,7 +21,10 @@ RSpec.describe "HotelPortal::Bookings::ReservationVouchers", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.content_type).to start_with("application/pdf")
-      expect(response.headers["Content-Disposition"]).to include("inline")
+      expect(response.headers["Content-Disposition"]).to include(
+        "inline",
+        "wastays-reservation-voucher-#{booking.confirmation_token}.pdf"
+      )
       expect(response.body).to start_with("%PDF")
     end
 

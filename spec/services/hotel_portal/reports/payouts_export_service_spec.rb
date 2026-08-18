@@ -6,7 +6,12 @@ require "zip"
 require "pdf-reader"
 
 RSpec.describe "Payout export services" do
-  let(:hotel) { instance_double(Hotel, name: "Sample Hotel", default_currency: "MYR") }
+  let(:hotel) do
+    instance_double(
+      Hotel, name: "Sample Hotel", default_currency: "MYR",
+      hotel_time_zone: ActiveSupport::TimeZone["Kuala Lumpur"]
+    )
+  end
   let(:upcoming_report) do
     HotelPortal::Reports::PayoutsExportResult.new(
       active_tab: "upcoming",
@@ -72,11 +77,11 @@ RSpec.describe "Payout export services" do
   end
 
   it "generates branded PDFs with totals and page numbers" do
-    upcoming = HotelPortal::Reports::PayoutsPdfExportService.new(hotel: hotel, report: upcoming_report).generate
-    paid = HotelPortal::Reports::PayoutsPdfExportService.new(hotel: hotel, report: paid_report).generate
+    upcoming = HotelPortal::Reports::PayoutsPdfExportService.new(hotel: hotel, report: upcoming_report, prepared_by: "Sarah Lim").generate
+    paid = HotelPortal::Reports::PayoutsPdfExportService.new(hotel: hotel, report: paid_report, prepared_by: "Sarah Lim").generate
 
-    expect(pdf_text(upcoming)).to include("WEEKLY SETTLEMENTS", "Upcoming Settlements", "MYR 200.00", "Page 1 of 1")
-    expect(pdf_text(paid)).to include("WEEKLY SETTLEMENTS", "Paid History", "PO-1", "MYR 550.00", "Page 1 of 1")
+    expect(pdf_text(upcoming)).to include("Weekly Settlements", "PAYOUT CYCLE", "Sarah Lim", "Upcoming Settlements", "MYR 200.00", "Page 1 of 1")
+    expect(pdf_text(paid)).to include("Weekly Settlements", "PAYOUT CYCLE", "Sarah Lim", "Paid History", "PO-1", "MYR 550.00", "Page 1 of 1")
   end
 
   def workbook_text(content)

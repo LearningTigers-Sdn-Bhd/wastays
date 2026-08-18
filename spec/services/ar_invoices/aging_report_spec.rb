@@ -76,6 +76,23 @@ RSpec.describe ArInvoices::AgingReport do
     expect(report.totals.fetch("MYR").total).to eq(100.to_d)
   end
 
+  it "filters rows and totals by corporate account name when a query is provided" do
+    hotel = create(:hotel, default_currency: "MYR")
+    matching = create(:hotel_corporate_account, hotel: hotel,
+      corporate_account: create(:account, :corporate, name: "Megat Holdings"))
+    hidden = create(:hotel_corporate_account, hotel: hotel,
+      corporate_account: create(:account, :corporate, name: "Acme Sdn Bhd"))
+    as_of_date = Date.new(2026, 6, 25)
+
+    create_invoice(relationship: matching, amount: 100, due_on: as_of_date - 15.days)
+    create_invoice(relationship: hidden, amount: 200, due_on: as_of_date - 15.days)
+
+    report = described_class.call(hotel: hotel, as_of_date: as_of_date, query: "  megat  ")
+
+    expect(report.rows.map { |row| row.corporate_account.name }).to eq([ "Megat Holdings" ])
+    expect(report.totals.fetch("MYR").total).to eq(100.to_d)
+  end
+
   def create_invoice(
     relationship:,
     amount:,

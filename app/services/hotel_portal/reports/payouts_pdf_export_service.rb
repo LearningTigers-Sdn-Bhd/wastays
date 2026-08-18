@@ -3,15 +3,17 @@
 module HotelPortal
   module Reports
     class PayoutsPdfExportService
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, prepared_by:)
         @hotel = hotel
         @report = report
+        @prepared_by = prepared_by
       end
 
       def generate
         builder = Exports::PdfReportBuilder.new(
           hotel: @hotel, title: "Weekly Settlements", subtitle: subtitle,
-          period_label: period_label, page_layout: :landscape
+          period_label: period_label, period_label_title: "Payout cycle",
+          prepared_by: @prepared_by, page_layout: :landscape
         )
         builder.add_header
         @report.paid? ? add_paid_content(builder) : add_upcoming_content(builder)
@@ -62,7 +64,7 @@ module HotelPortal
       end
 
       def amount_label(value) = "#{currency} #{money(value)}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def date(value) = value&.strftime("%d %b %Y") || "-"
       def datetime(value) = value&.strftime("%d %b %Y %H:%M") || "-"
       def currency = @hotel.default_currency.presence || "MYR"

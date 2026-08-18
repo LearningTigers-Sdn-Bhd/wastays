@@ -3,15 +3,16 @@
 module HotelPortal
   module Reports
     class JournalBatchPdfExportService
-      def initialize(hotel:, batches:, start_date:, end_date:)
+      def initialize(hotel:, batches:, start_date:, end_date:, prepared_by:)
         @hotel = hotel
         @table = JournalBatchExportTable.new(batches: batches)
         @start_date = start_date.to_date
         @end_date = end_date.to_date
+        @prepared_by = prepared_by
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Journal Batches", period_label: period_label, page_layout: :landscape)
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Journal Batches", period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
         builder.add_header
         builder.add_summary([ [ "Batches", @table.batch_count.to_s ], [ "Total Debit", amount(@table.total_debit) ], [ "Total Credit", amount(@table.total_credit) ] ])
         builder.add_table(
@@ -27,7 +28,7 @@ module HotelPortal
 
       def period_label = @start_date == @end_date ? @start_date.strftime("%d %b %Y") : "#{@start_date.strftime('%d %b %Y')} - #{@end_date.strftime('%d %b %Y')}"
       def amount(value) = "#{currency} #{money(value)}"
-      def money(value) = format("%.2f", value.to_d)
+      def money(value) = Exports::PdfTheme.money(value)
       def currency = @hotel.default_currency.presence || "MYR"
     end
   end

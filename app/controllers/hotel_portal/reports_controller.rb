@@ -83,7 +83,8 @@ module HotelPortal
         format.pdf do
           pdf = HotelPortal::Reports::FinancialPerformancePdfExportService.new(
             hotel: current_hotel,
-            report: financial_performance_export_result
+            report: financial_performance_export_result,
+            prepared_by: current_user.name
           ).generate
           send_data pdf,
             filename: "financial-performance-#{@start_date}-#{@end_date}.pdf",
@@ -137,7 +138,8 @@ module HotelPortal
         format.pdf do
           pdf = HotelPortal::Reports::PayoutsPdfExportService.new(
             hotel: current_hotel,
-            report: payouts_export_result
+            report: payouts_export_result,
+            prepared_by: current_user.name
           ).generate
           send_data pdf,
             filename: "payouts-#{@active_tab}-#{Date.current}.pdf",
@@ -178,7 +180,9 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::FinancialBreakdownPdfExportService.new(hotel: current_hotel, report: financial_breakdown_export_result).generate
+          pdf = HotelPortal::Reports::FinancialBreakdownPdfExportService.new(
+            hotel: current_hotel, report: financial_breakdown_export_result, prepared_by: current_user.name
+          ).generate
           send_data pdf,
             filename: "financial-breakdown-#{@start_date}-#{@end_date}.pdf",
             type: "application/pdf",
@@ -212,7 +216,9 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::DailyOccupancyPdfExportService.new(hotel: current_hotel, report: @report).generate
+          pdf = HotelPortal::Reports::DailyOccupancyPdfExportService.new(
+            hotel: current_hotel, report: @report, prepared_by: current_user.name
+          ).generate
           send_data pdf,
             filename: "daily-occupancy-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
@@ -277,7 +283,8 @@ module HotelPortal
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
             cashier_report: @cashier_report,
-            charge_register: @charge_register_result.rows
+            charge_register: @charge_register_result.rows,
+            prepared_by: current_user.name
           ).generate
           send_data pdf,
             filename: "daily-report-#{@daily_report_tab}-#{@revenue_report.start_date}-#{@revenue_report.end_date}.pdf",
@@ -338,7 +345,9 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::OutstandingBalancePdfExportService.new(hotel: current_hotel, report: @report).generate
+          pdf = HotelPortal::Reports::OutstandingBalancePdfExportService.new(
+            hotel: current_hotel, report: @report, prepared_by: current_user.name
+          ).generate
           send_data pdf,
             filename: "outstanding-balance-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
@@ -414,7 +423,9 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::DepositLiabilityPdfExportService.new(hotel: current_hotel, report: @report).generate
+          pdf = HotelPortal::Reports::DepositLiabilityPdfExportService.new(
+            hotel: current_hotel, report: @report, prepared_by: current_user.name
+          ).generate
           send_data pdf,
             filename: "deposit-liability-#{@report.as_of_date}.pdf",
             type: "application/pdf",
@@ -531,9 +542,14 @@ module HotelPortal
           return head :not_acceptable if @active_guest_report_tab == "registration_cards"
 
           pdf = if @active_guest_report_tab == "police_report"
-            HotelPortal::Reports::PoliceReportPdfExportService.new(hotel: current_hotel, report: @police_report).generate
+            HotelPortal::Reports::PoliceReportPdfExportService.new(
+              hotel: current_hotel, report: @police_report, prepared_by: current_user.name
+            ).generate
           else
-            HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab).generate
+            HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(
+              hotel: current_hotel, report: report_to_export, tab: @active_guest_report_tab,
+              prepared_by: current_user.name
+            ).generate
           end
           send_data pdf,
             filename: "guest-reports-#{filename_suffix}-#{@report.start_date}-#{@report.end_date}.pdf",
@@ -570,7 +586,7 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
-          send_data service.generate_pdf,
+          send_data service.generate_pdf(prepared_by: current_user.name),
             filename: "folio-ledger-#{@start_date}-#{@end_date}.pdf",
             type: "application/pdf",
             disposition: "attachment"
@@ -607,7 +623,8 @@ module HotelPortal
         end
         format.pdf do
           pdf = HotelPortal::Reports::JournalBatchPdfExportService.new(
-            hotel: current_hotel, batches: @batches, start_date: @report_start_date, end_date: @report_end_date
+            hotel: current_hotel, batches: @batches, start_date: @report_start_date,
+            end_date: @report_end_date, prepared_by: current_user.name
           ).generate
           send_data pdf,
             filename: "journal-batches-#{@report_start_date}-#{@report_end_date}.pdf",
@@ -671,7 +688,9 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::RefundReportPdfExportService.new(hotel: current_hotel, report: @report).generate
+          pdf = HotelPortal::Reports::RefundReportPdfExportService.new(
+            hotel: current_hotel, report: @report, prepared_by: current_user.name
+          ).generate
           send_data pdf,
             filename: "refund-report-#{@report.start_date}-#{@report.end_date}.pdf",
             type: "application/pdf",
@@ -707,7 +726,9 @@ module HotelPortal
             disposition: "attachment"
         end
         format.pdf do
-          pdf = HotelPortal::Reports::ExtraChargePdfExportService.new(hotel: current_hotel, report: @report).generate
+          pdf = HotelPortal::Reports::ExtraChargePdfExportService.new(
+            hotel: current_hotel, report: @report, prepared_by: current_user.name
+          ).generate
           send_data pdf,
             filename: extra_charge_export_filename("pdf"),
             type: "application/pdf",
@@ -844,9 +865,9 @@ module HotelPortal
 
     def tax_compliance_pdf_export_service
       case @active_tax_compliance_tab
-      when "sst" then HotelPortal::Reports::SstPdfExportService.new(hotel: current_hotel, report: @report)
-      when "non_national" then HotelPortal::Reports::NonNationalPdfExportService.new(hotel: current_hotel, report: @report)
-      else HotelPortal::Reports::TourismTaxPdfExportService.new(hotel: current_hotel, report: @report)
+      when "sst" then HotelPortal::Reports::SstPdfExportService.new(hotel: current_hotel, report: @report, prepared_by: current_user.name)
+      when "non_national" then HotelPortal::Reports::NonNationalPdfExportService.new(hotel: current_hotel, report: @report, prepared_by: current_user.name)
+      else HotelPortal::Reports::TourismTaxPdfExportService.new(hotel: current_hotel, report: @report, prepared_by: current_user.name)
       end
     end
 
@@ -944,7 +965,8 @@ module HotelPortal
     end
 
     def authorize_view_payouts!
-      raise Pundit::NotAuthorizedError unless current_user.has_permission?("view_payouts", hotel: current_hotel)
+      allowed = current_user.has_permission?("view_payouts", hotel: current_hotel) && !current_hotel.hide_payout_reports?
+      raise Pundit::NotAuthorizedError unless allowed
     end
 
     def financial_performance_export_result

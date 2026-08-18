@@ -47,7 +47,7 @@ RSpec.describe "Deposit liability export services", type: :service do
   end
 
   it "generates a PDF" do
-    pdf = HotelPortal::Reports::DepositLiabilityPdfExportService.new(hotel: hotel, report: report).generate
+    pdf = HotelPortal::Reports::DepositLiabilityPdfExportService.new(hotel: hotel, report: report, prepared_by: "Sarah Lim").generate
 
     expect(pdf).to start_with("%PDF")
   end
