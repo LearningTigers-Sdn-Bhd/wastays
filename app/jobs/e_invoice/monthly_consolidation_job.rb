@@ -25,13 +25,44 @@ module EInvoice
       return if reference_date < month_end + 1.day
 
       batch_id = SecureRandom.uuid
+      hotels = Hotel.joins(:e_invoice_setting).where(e_invoice_settings: { enabled: true })
 
-      Hotel.joins(:e_invoice_setting).where(e_invoice_settings: { enabled: true }).find_each do |hotel|
+      hotels.find_each do |hotel|
         process_hotel(hotel, last_month, batch_id)
       end
+
+      # A month that consolidates nothing is indistinguishable from a month
+      # that never ran, and LHDN only allows 7 days to notice. Record the
+      # outcome either way.
+      record_run(batch_id, last_month, hotels.count)
     end
 
     private
+
+    def record_run(batch_id, month_start, hotel_count)
+      scope = EInvoiceSubmission.where(consolidation_batch_id: batch_id)
+      submitted = scope.where(status: "submitted").count
+      rejected = scope.where(status: "invalid").count
+
+      ObservationEntry.create!(
+        entry_type: "job",
+        # The deck treats >= 400 as an error, so a bad run surfaces in the
+        # existing error views rather than needing somewhere new to be looked at.
+        status: (rejected.positive? || submitted.zero?) ? 500 : 200,
+        path: self.class.name,
+        payload: {
+          batch_id: batch_id,
+          month: month_start.strftime("%Y-%m"),
+          hotels_considered: hotel_count,
+          submitted: submitted,
+          rejected: rejected
+        },
+        tags: [ "e_invoice", "consolidation" ]
+      )
+    rescue StandardError => e
+      # Never let bookkeeping take down a filing run.
+      Rails.logger.error("[MonthlyConsolidation] could not record run: #{e.class}: #{e.message}")
+    end
 
     def process_hotel(hotel, month_start, batch_id)
       pending_submissions = EInvoiceSubmission

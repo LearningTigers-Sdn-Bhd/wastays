@@ -36,6 +36,24 @@
             <%= render PanelsUI::FormField.new(form: form, attribute: :contact_phone, label: "Contact phone") do |field| %>
               <% field.with_input(type: :tel, autocomplete: "tel") %>
             <% end %>
+
+            <%# Without the company's own tax identity its e-invoices are filed
+                as general public, which the company cannot claim. %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :tin,
+                  label: "Tax identification number (TIN)",
+                  hint: "Needed for LHDN e-invoices this company can claim.") do |field| %>
+              <% field.with_input(autocomplete: "off") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :brn, label: "Business registration number") do |field| %>
+              <% field.with_input(autocomplete: "off") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :sst_registration_number, label: "SST registration number") do |field| %>
+              <% field.with_input(autocomplete: "off") %>
+            <% end %>
           </section>
 
           <%= render "hotel_portal/corporate_accounts/billing_terms_fields",

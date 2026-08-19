@@ -17,6 +17,44 @@ RSpec.describe EInvoice::MonthlyConsolidationJob, type: :job do
       .and_return(double(to_h: credentials_hash))
   end
 
+  describe "recording the outcome of a run" do
+    let(:last_month) { Date.current.prev_month.beginning_of_month }
+    let(:within_window_date) { last_month.end_of_month + 3.days }
+
+    # A month that files nothing looks exactly like a month that never ran,
+    # and there are only 7 days to notice.
+    it "flags a run that consolidated nothing" do
+      described_class.new.perform(within_window_date)
+
+      entry = ObservationEntry.where(path: described_class.name).last
+      expect(entry.status).to be >= 400
+      expect(entry.payload["submitted"]).to eq(0)
+    end
+
+    it "records a successful run with what it filed" do
+      booking = create(:booking, hotel: hotel, payment_status: "captured", total_amount: 300.0)
+      create(:booking_room, booking: booking, subtotal: 300.0)
+      create(:e_invoice_submission,
+        hotel: hotel, booking: booking,
+        document_scenario: "guest_invoice",
+        status: "pending", consolidated: true,
+        requested_by_guest: false,
+        payment_concluded_at: last_month + 10.days)
+
+      client = instance_double(MyInvois::MockClient)
+      allow(MyInvois::ClientFactory).to receive(:build).and_return(client)
+      allow(client).to receive(:submit_documents).and_return(
+        { "submissionUid" => "sub", "acceptedDocuments" => [ { "uuid" => SecureRandom.uuid } ] }
+      )
+
+      described_class.new.perform(within_window_date)
+
+      entry = ObservationEntry.where(path: described_class.name).last
+      expect(entry.status).to eq(200)
+      expect(entry.payload["submitted"]).to eq(1)
+    end
+  end
+
   describe "splitting a large month across documents" do
     let(:last_month) { Date.current.prev_month.beginning_of_month }
     let(:mid_last_month) { last_month + 10.days }
