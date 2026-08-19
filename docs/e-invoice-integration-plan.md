@@ -221,6 +221,37 @@ Guest-side views were not restructured — this should be the easiest UI piece.
 
 ---
 
+## Phase 6 — LHDN readiness (added 2026-08-19 after the readiness audit)
+
+Decisions taken with the user: sandbox credentials available; filing is
+go-forward only (no backfill of the 1215 historical bookings); buyer TIN
+captured for both corporate and individual guests; buyer address captured as a
+state code with free-text city.
+
+- [x] Buyer TIN on corporate accounts, guests and bookings; both builders file the real identity
+- [x] State code captured directly (17 LHDN codes), old city lookup kept and widened as a fallback
+- [x] Real buyer postcode instead of hard-coded "00000"
+- [x] `effective_from` on the setting so enabling the feature never files historical stays
+- [x] Transient vs permanent API failures, so `retry_on` actually retries
+- [x] Unconfigured credentials select the mock client instead of live LHDN
+- [x] Consolidation split at 100 bookings per document
+- [x] Unique index scoped so consolidated rows can share one LHDN UUID
+- [x] Payment-receiver control restored in the workspace Documents tab
+- [x] Corporate TIN/BRN/SST capture form
+- [x] Monthly run recorded to the observation deck, error status when it files nothing
+- [ ] **Blocked on credentials:** one real sandbox submission end-to-end
+- [ ] **Blocked on credentials:** fix whatever LHDN's schema validator rejects
+- [ ] Decide whether a guest whose state is missing should be blocked at request time rather than failing at submission
+
+### Bugs found during this work that the original branch shipped
+
+- `booking_rooms.quantity` was read after main dropped the column — crash on every build
+- The payment-completion hook was lost: `after_create_commit` and `after_update_commit` registered the same method name, so only the later survived, and prepaid bookings are created already captured
+- `retry_on` never fired anywhere, because every caller rescued `ApiError` internally
+- Consolidation raised a unique violation with more than one booking per hotel-month — i.e. in every real month — because consolidated rows share one UUID
+
+---
+
 ## Phase 5 — Rollout readiness (product/ops sign-off, not code)
 
 Carried over from the original branch's own unresolved sign-off list — still open, still blocking a real launch regardless of this integration:
