@@ -8,6 +8,12 @@ module Concierge
   # thread appears in the portal inbox, and a person answers. The same is true
   # once staff take a thread over -- the bot goes quiet and the message is
   # simply filed.
+  #
+  # Filing what the guest typed is the whole of the request. The answer, when
+  # there is a bot to give one, is a job -- so the guest sees their own message
+  # the moment they send it rather than watching a spinner for however long a
+  # model takes, and a model that is slow or down costs them a wait rather than
+  # their message.
   class PostWebMessage
     CHANNEL = "web"
     MAX_MESSAGE_LENGTH = 2_000
@@ -29,9 +35,10 @@ module Concierge
       prospect = resolve_prospect
       conversation = resolve_conversation(prospect)
 
-      error = bot_answers?(conversation) ? ask_the_bot(prospect) : record_only(prospect, conversation)
+      record(prospect, conversation)
+      AnswerWebMessageJob.perform_later(conversation.id, message) if bot_answers?(conversation)
 
-      Result.new(prospect: prospect, conversation: conversation.reload, error: error)
+      Result.new(prospect: prospect, conversation: conversation.reload)
     end
 
     private
@@ -55,21 +62,10 @@ module Concierge
       hotel.ai_concierge_ready? && conversation.bot?
     end
 
-    # The orchestrator records the guest's message itself as it loads the
-    # session, so a failure here means the message is already filed and only
-    # the reply is missing -- which is exactly what should be reported.
-    def ask_the_bot(prospect)
-      result = AiConcierge::Orchestration::Core::InquiryResponder.new(
-        hotel: hotel,
-        message: message,
-        prospect_public_id: prospect.public_id,
-        channel: CHANNEL
-      ).call
-
-      result.success? ? nil : result.error
-    end
-
-    def record_only(prospect, conversation)
+    # Always, and before anything else can fail. The assistant is told not to
+    # file it again (`record_inbound: false` on the way down), so this is the
+    # one place a guest's message is written whether a bot answers it or not.
+    def record(prospect, conversation)
       prospect.prospect_messages.create!(
         conversation: conversation,
         direction: "inbound",
@@ -77,7 +73,6 @@ module Concierge
         body: message
       )
       prospect.touch_last_contact!
-      nil
     end
   end
 end

@@ -1,13 +1,25 @@
 <%#
-  The thread and the box to add to it. Shared by the desktop and mobile pages so
-  the two cannot drift into saying different things about the same conversation.
-%>
-<%= render PublicUI::Chat::Panel.new do |panel| %>
-  <% panel.with_log(messages: messages, hotel: hotel) %>
+  The thread and the box to add to it.
 
-  <% unless hotel.ai_concierge_ready? %>
-    <% panel.with_notice(text: "Your message goes straight to our front desk. Someone will reply here shortly.") %>
+  Subscribed to the guest stream, so an answer written by the bot in a
+  background job or by a person in the portal arrives on this page without the
+  guest touching anything. Only once there is a conversation to subscribe to --
+  a visitor who has not written yet has no thread of their own.
+
+  Wrapped in one region with a stable id because that is what a send replaces.
+  The first message is the case that decides the shape: until it exists there is
+  no thread to subscribe to, so the reply to a send has to be able to hand the
+  page its subscription, its log and its box together.
+%>
+<%= tag.div(id: PublicUI::Chat::Panel::REGION_ID) do %>
+  <% if conversation %>
+    <%= turbo_stream_from conversation, :guest %>
   <% end %>
 
-  <% panel.with_composer(url: concierge_chat_messages_path(hotel)) %>
+  <%= render PublicUI::Chat::Panel.new do |panel| %>
+    <% panel.with_header(title: hotel.name, subtitle: concierge_chat_header_subtitle(conversation, hotel)) %>
+    <% panel.with_log(messages: messages, hotel: hotel) %>
+    <% panel.with_notice(**concierge_chat_notice(conversation, hotel)) %>
+    <% panel.with_composer(url: concierge_chat_messages_path(hotel)) %>
+  <% end %>
 <% end %>

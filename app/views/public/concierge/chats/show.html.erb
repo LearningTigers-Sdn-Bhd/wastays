@@ -8,7 +8,9 @@
              title_accent: "anything",
              subtitle: "Rooms, rates, facilities — or anything else about your stay.",
              subtitle_class: "hidden sm:block" %>
-  <%= render "public/concierge/shared/error_alert", message: flash[:alert] %>
+  <div id="concierge-chat-error">
+    <%= render "public/concierge/shared/error_alert", message: flash[:alert] %>
+  </div>
 
-  <%= render "public/concierge/chats/conversation", messages: @messages, hotel: @hotel %>
+  <%= render "public/concierge/chats/conversation", conversation: @conversation, messages: @messages, hotel: @hotel %>
 <% end %>

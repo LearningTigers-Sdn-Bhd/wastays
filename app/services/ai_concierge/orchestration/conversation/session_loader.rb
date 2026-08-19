@@ -6,12 +6,19 @@ module AiConcierge
 
         DEFAULT_CHANNEL = "whatsapp"
 
-        def initialize(hotel:, message:, phone: nil, prospect_public_id: nil, channel: DEFAULT_CHANNEL)
+        # `record_inbound: false` says the caller has already filed the guest's
+        # message. The web chat does: it saves what was typed and shows it before
+        # handing the answer to a job, so the guest is not left looking at an
+        # empty thread while a model thinks. Filing it a second time here would
+        # show them their own question twice.
+        def initialize(hotel:, message:, phone: nil, prospect_public_id: nil,
+                       channel: DEFAULT_CHANNEL, record_inbound: true)
           @hotel = hotel
           @message = message.to_s.strip
           @phone = phone.to_s.strip.presence
           @prospect_public_id = prospect_public_id.to_s.strip.presence
           @channel = channel.presence || DEFAULT_CHANNEL
+          @record_inbound = record_inbound
         end
 
         def with_locked_session
@@ -22,7 +29,7 @@ module AiConcierge
             conversation_state = load_conversation_state(prospect)
             ActiveRecord::Base.transaction do
               reactivate_state!(conversation_state)
-              record_inbound_message(prospect, conversation)
+              record_inbound_message(prospect, conversation) if record_inbound?
             end
 
             yield Session.new(prospect: prospect, conversation: conversation, conversation_state: conversation_state)
@@ -36,6 +43,8 @@ module AiConcierge
         private
 
         attr_reader :hotel, :message, :phone, :prospect_public_id, :channel
+
+        def record_inbound? = @record_inbound
 
         def resolve_prospect
           return resolve_prospect_by_phone if phone.present?

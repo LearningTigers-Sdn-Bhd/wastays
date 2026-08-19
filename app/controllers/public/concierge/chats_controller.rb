@@ -9,10 +9,15 @@ module Public
       include ConciergeChatSession
 
       def show
-        @conversation = current_conversation
-        @messages = @conversation ? @conversation.messages.to_a : []
+        load_thread
       end
 
+      # Answered in place. A guest who has just typed a question should not
+      # watch the page they are reading rebuild itself around the answer, and on
+      # a phone a full reload is a visible flash and a lost keyboard.
+      #
+      # The redirect stays as the reply to a browser that asked for HTML, so the
+      # chat still works with no JavaScript at all.
       def create
         result = ::Concierge::PostWebMessage.new(
           hotel: @hotel,
@@ -21,12 +26,27 @@ module Public
         ).call
 
         set_chat_prospect_cookie(result.prospect) if result.prospect
-        flash[:alert] = result.error if result.error.present?
+        @error = result.error
+        load_thread(result.conversation)
 
-        redirect_to concierge_chat_path(@hotel)
+        respond_to do |format|
+          format.turbo_stream { render :create }
+          format.html do
+            flash[:alert] = @error if @error.present?
+            redirect_to concierge_chat_path(@hotel)
+          end
+        end
       end
 
       private
+
+      # A write hands over the thread it wrote into -- on a first message that is
+      # a conversation the cookie does not know about yet, so looking it up again
+      # would find nothing.
+      def load_thread(conversation = nil)
+        @conversation = conversation || current_conversation
+        @messages = @conversation ? @conversation.messages.reload.to_a : []
+      end
 
       def current_conversation
         public_id = current_chat_prospect_public_id

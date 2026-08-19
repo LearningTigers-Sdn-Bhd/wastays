@@ -3,12 +3,14 @@ module AiConcierge
     class TurnOrchestrator
       MAX_TURNS = 50
 
-      def initialize(hotel:, message:, phone: nil, prospect_public_id: nil, channel: nil)
+      def initialize(hotel:, message:, phone: nil, prospect_public_id: nil, channel: nil,
+                     record_inbound: true)
         @hotel = hotel
         @message = message.to_s.strip
         @phone = phone.to_s.strip.presence
         @prospect_public_id = prospect_public_id.to_s.strip.presence
         @channel = channel.presence
+        @record_inbound = record_inbound
         @tool_registry = Tools::ToolRegistry.new
       end
 
@@ -28,7 +30,7 @@ module AiConcierge
 
       private
 
-      attr_reader :hotel, :message, :phone, :prospect_public_id, :channel, :tool_registry
+      attr_reader :hotel, :message, :phone, :prospect_public_id, :channel, :record_inbound, :tool_registry
 
       # The thread is captured before anything else runs because the persisters
       # below are memoised with it, and this is the only way into them -- read
@@ -137,7 +139,8 @@ module AiConcierge
           message: message,
           phone: phone,
           prospect_public_id: prospect_public_id,
-          channel: channel
+          channel: channel,
+          record_inbound: record_inbound
         )
       end
 

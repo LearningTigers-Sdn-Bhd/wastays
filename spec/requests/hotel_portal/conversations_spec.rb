@@ -114,4 +114,181 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
       expect(response).to redirect_to(hotel_conversations_path(hotel))
     end
   end
+
+  describe "POST reply" do
+    it "sends the reply to the guest and takes the thread over" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman")
+
+      post reply_hotel_conversation_path(hotel, conversation), params: { body: "Yes, we have parking." }
+
+      expect(response).to redirect_to(hotel_conversation_path(hotel, conversation))
+      expect(conversation.reload).to be_human
+      expect(conversation.assigned_user).to eq(user)
+      expect(conversation.messages.last.body).to eq("Yes, we have parking.")
+    end
+
+    it "shows the thread with the reply in it afterwards" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman")
+
+      post reply_hotel_conversation_path(hotel, conversation), params: { body: "Yes, we have parking." }
+      follow_redirect!
+
+      expect(response.body).to include("Yes, we have parking.")
+    end
+
+    it "reports a refusal instead of pretending the guest was answered" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman", channel: "whatsapp")
+
+      post reply_hotel_conversation_path(hotel, conversation), params: { body: "Yes, we have parking." }
+      follow_redirect!
+
+      expect(response.body).to include("cannot be delivered")
+      expect(conversation.messages.reload).to be_empty
+    end
+
+    it "refuses a user without the concierge permission" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman")
+      role.permissions.destroy_all
+
+      post reply_hotel_conversation_path(hotel, conversation), params: { body: "Hello" }
+
+      expect(conversation.messages.reload).to be_empty
+    end
+
+    it "does not reply into another hotel's conversation" do
+      conversation = conversation_for(other_hotel, name: "Someone Elses Guest")
+
+      post reply_hotel_conversation_path(hotel, conversation), params: { body: "Hello" }
+
+      expect(response).to redirect_to(hotel_conversations_path(hotel))
+      expect(conversation.messages.reload).to be_empty
+    end
+  end
+
+  describe "changing who answers" do
+    it "hands the thread to the person who asked for it" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman")
+
+      patch take_over_hotel_conversation_path(hotel, conversation)
+
+      expect(conversation.reload).to be_human
+      expect(conversation.assigned_user).to eq(user)
+    end
+
+    it "hands it back to the assistant when there is one" do
+      hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "k")
+      conversation = conversation_for(hotel, name: "Aisyah Rahman", mode: "human", assigned_user: user)
+
+      patch return_to_bot_hotel_conversation_path(hotel, conversation)
+
+      expect(conversation.reload).to be_bot
+    end
+
+    it "refuses to hand it back to an assistant the hotel does not have" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman", mode: "human", assigned_user: user)
+
+      patch return_to_bot_hotel_conversation_path(hotel, conversation)
+      follow_redirect!
+
+      expect(conversation.reload).to be_human
+      expect(response.body).to include("not switched on")
+    end
+
+    it "closes and reopens a thread" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman")
+
+      patch close_hotel_conversation_path(hotel, conversation)
+      expect(conversation.reload).not_to be_open
+
+      patch reopen_hotel_conversation_path(hotel, conversation)
+      expect(conversation.reload).to be_open
+      expect(conversation.closed_at).to be_nil
+    end
+  end
+
+  describe "the reply box" do
+    it "is offered on a thread a reply can actually reach" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman")
+
+      get hotel_conversation_path(hotel, conversation)
+
+      expect(response.body).to include("Send reply")
+    end
+
+    it "is withheld where nothing would be delivered" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman", channel: "whatsapp")
+
+      get hotel_conversation_path(hotel, conversation)
+
+      expect(response.body).not_to include("Send reply")
+      expect(response.body).to include("not switched on yet")
+    end
+
+    it "is withheld on a closed thread" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman", status: "closed", closed_at: Time.current)
+
+      get hotel_conversation_path(hotel, conversation, status: "closed")
+
+      expect(response.body).not_to include("Send reply")
+      expect(response.body).to include("Reopen")
+    end
+  end
+
+  # Replying should not rebuild the inbox around one new bubble -- the reader
+  # loses their scroll position and anything half-typed.
+  describe "acting on a thread without reloading it" do
+    let(:conversation) { conversation_for(hotel, name: "Aisyah Rahman", channel: "web", mode: "bot", status: "open") }
+
+    it "answers a reply with streams rather than a redirect" do
+      post reply_hotel_conversation_path(hotel, conversation),
+           params: { body: "Yes, we have parking." }, as: :turbo_stream
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    end
+
+    # What a broadcast cannot know is which reader did it. Replying takes the
+    # thread over, so the strip that offered "Take over" has to stop offering it.
+    it "replaces the parts of the card that now say something different" do
+      post reply_hotel_conversation_path(hotel, conversation),
+           params: { body: "Yes, we have parking." }, as: :turbo_stream
+
+      expect(response.body).to include(HotelPortal::Inbox::ModeBar.dom_id_for(conversation))
+      expect(response.body).to include(HotelPortal::Inbox::Composer.dom_id_for(conversation))
+      expect(response.body).to include(HotelPortal::Inbox::ListItem.dom_id_for(conversation))
+      expect(response.body).to include("A person is holding this conversation")
+      expect(response.body).not_to include("Take over")
+    end
+
+    # It is already on its way down the staff stream; sending it twice is what
+    # the chat controller's duplicate check has to clean up after.
+    it "leaves the message itself to the broadcast" do
+      post reply_hotel_conversation_path(hotel, conversation),
+           params: { body: "Yes, we have parking." }, as: :turbo_stream
+
+      expect(response.body).not_to include("Yes, we have parking.")
+    end
+
+    it "swaps the box for the closed notice when the thread is closed" do
+      patch close_hotel_conversation_path(hotel, conversation), as: :turbo_stream
+
+      expect(response.body).to include("Reopen it to reply")
+      expect(response.body).not_to include("Send reply")
+    end
+
+    it "reports a refusal as a toast instead of a reloaded page" do
+      conversation.close!
+
+      post reply_hotel_conversation_path(hotel, conversation),
+           params: { body: "Too late." }, as: :turbo_stream
+
+      expect(response.body).to include("Reopen it to reply")
+    end
+
+    it "still redirects a browser that asked for HTML" do
+      post reply_hotel_conversation_path(hotel, conversation), params: { body: "Yes." }
+
+      expect(response).to redirect_to(hotel_conversation_path(hotel, conversation))
+    end
+  end
 end

@@ -24,6 +24,7 @@ class ProspectMessage < ApplicationRecord
   before_validation :set_sent_at, on: :create
   before_validation :derive_sender_role, on: :create
   after_create :touch_conversation
+  after_create_commit :broadcast_to_both_sides
 
   scope :chronological, -> { order(sent_at: :asc, created_at: :asc) }
   scope :unread, -> { where(read_at: nil) }
@@ -42,6 +43,53 @@ class ProspectMessage < ApplicationRecord
   # working and get the role the direction implies.
   def derive_sender_role
     self.sender_role ||= DIRECTION_DEFAULT_SENDER_ROLES[direction]
+  end
+
+  # Every writer announces itself from here rather than from its own caller:
+  # the guest's line, the bot's answer and a staff reply are one row each, and
+  # a new writer added later cannot forget to push.
+  #
+  # Two streams, because the same row is not the same message on each side --
+  # "You" to the guest, "Guest" in the inbox -- so each side gets its own
+  # signed stream and its own renderer. Appending rather than refreshing: a
+  # refresh would fight the reader's scroll position and wipe half-typed text.
+  def broadcast_to_both_sides
+    return if conversation.blank?
+
+    broadcast_to_guest
+    broadcast_to_staff
+    broadcast_to_inbox
+  end
+
+  # The list everybody else is looking at. A thread's first message is also its
+  # arrival: until it exists there is nothing to show in a row and no telling
+  # which tabs it belongs on.
+  def broadcast_to_inbox
+    conversation.broadcast_arrival_to_inbox if first_in_conversation?
+    conversation.broadcast_to_inbox
+  end
+
+  def first_in_conversation?
+    conversation.messages.limit(2).count == 1
+  end
+
+  # The empty-state line has to go before the first bubble lands on top of it.
+  # Removing a target that is not there is a no-op, so this is safe every time.
+  def broadcast_to_guest
+    broadcast_remove_to([ conversation, :guest ], target: "#{PublicUI::Chat::Log::DEFAULT_ID}-empty")
+    broadcast_append_to(
+      [ conversation, :guest ],
+      target: PublicUI::Chat::Log::DEFAULT_ID,
+      renderable: PublicUI::Chat::Message.new(message: self, hotel: conversation.hotel)
+    )
+  end
+
+  def broadcast_to_staff
+    broadcast_append_to(
+      [ conversation, :staff ],
+      target: HotelPortal::Inbox::Log.dom_id_for(conversation),
+      renderable: HotelPortal::Inbox::Message.new(message: self)
+    )
   end
 
   # The inbox sorts on the conversation row, so it has to learn about the

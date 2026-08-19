@@ -1,5 +1,7 @@
-<div class="overflow-hidden rounded-xl border border-border bg-card">
-  <div class="border-b border-border p-3">
+<%# Search stays put, the rows scroll under it. The card is the height of its
+    pane, so without a scroll region of its own the list would spill out of it. %>
+<div class="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card">
+  <div class="shrink-0 border-b border-border p-3">
     <%= form_with url: hotel_conversations_path(current_hotel), method: :get,
           data: { controller: "auto-submit", turbo_action: "advance" } do |form| %>
       <%= form.hidden_field :status, value: query.status unless query.status == "open" %>
@@ -16,21 +18,24 @@
   </div>
 
   <% if conversations.any? %>
-    <ul class="divide-y divide-border" role="list">
-      <% conversations.each do |conversation| %>
-        <%= render "hotel_portal/conversations/list_item",
-              presenter: conversation_presenter(conversation),
-              selected: selected&.id == conversation.id %>
-      <% end %>
-    </ul>
+    <%= render PanelsUI::ScrollArea.new(scroll_fade: :y, class: "min-h-0 flex-1") do %>
+      <ul id="conversation-rows" class="divide-y divide-border" role="list">
+        <% conversations.each do |conversation| %>
+          <%= render HotelPortal::Inbox::ListItem.new(
+                conversation: conversation,
+                hotel: current_hotel,
+                selected: selected&.id == conversation.id) %>
+        <% end %>
+      </ul>
+    <% end %>
 
     <% if conversations.total_pages > 1 %>
-      <div class="border-t border-border p-3">
+      <div class="shrink-0 border-t border-border p-3">
         <%= paginate conversations %>
       </div>
     <% end %>
   <% else %>
-    <div class="p-6">
+    <div class="flex min-h-0 flex-1 items-center p-6">
       <%= render PanelsUI::EmptyState.new(
             icon: "inbox",
             title: "Nothing here",

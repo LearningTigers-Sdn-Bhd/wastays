@@ -482,7 +482,15 @@ Rails.application.routes.draw do
     # The guest message desk. Sits with the front-desk pages rather than in a
     # layer: an unanswered guest comes looking for you, which is the opposite
     # of a report.
-    resources :conversations, only: [ :index, :show ]
+    resources :conversations, only: [ :index, :show ] do
+      member do
+        post  :reply
+        patch :take_over
+        patch :return_to_bot
+        patch :close
+        patch :reopen
+      end
+    end
 
     get "requests", to: "requests#index", as: :requests
     # The rest of one column, read from a cursor rather than a page number.

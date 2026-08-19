@@ -12,6 +12,8 @@ module PublicUI
     # answers in a row read as one person still talking rather than three
     # strangers who happen to share a name.
     class Log < PublicUI::BaseComponent
+      include ChatMessageRuns
+
       DEFAULT_ID = "concierge-chat-log"
       DEFAULT_EMPTY_TEXT = "Ask about rooms, rates, facilities or anything else about your stay."
 
@@ -47,35 +49,20 @@ module PublicUI
           class: tw_merge("public-chat__log", @class),
           role: "log",
           aria: { label: @label, live: "polite" },
-          data: data.merge(concierge_chat_target: "log")
+          data: data.merge(
+            concierge_chat_target: "log",
+            more_above: "false",
+            action: "scroll->concierge-chat#markScrollPosition"
+          )
         )) do
           safe_join(bubbles)
         end
       end
 
       def bubbles
-        @messages.each_with_index.map do |message, index|
-          render Message.new(
-            message: message,
-            hotel: @hotel,
-            first_in_run: !same_author?(message, (@messages[index - 1] if index.positive?)),
-            last_in_run: !same_author?(message, @messages[index + 1])
-          )
+        message_runs(@messages).map do |message, run|
+          render Message.new(message: message, hotel: @hotel, **run)
         end
-      end
-
-      def same_author?(message, other)
-        return false if other.nil?
-
-        author_key(message) == author_key(other)
-      end
-
-      # Two staff replying in turn are two runs, not one. A system line always
-      # stands alone, so it is never anyone's neighbour.
-      def author_key(message)
-        return [ :system, message.object_id ] if message.sender_role == "system"
-
-        [ message.sender_role, message.sender_user_id ]
       end
     end
   end

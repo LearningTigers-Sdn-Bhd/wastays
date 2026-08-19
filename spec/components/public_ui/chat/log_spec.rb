@@ -85,4 +85,14 @@ RSpec.describe PublicUI::Chat::Log, type: :component do
 
     expect(page).to have_css("ol[data-concierge-chat-target='log']")
   end
+
+  # A permanent fade would wash out the first message of a short thread, so the
+  # page starts with it off and the controller turns it on once there is
+  # something hidden above.
+  it "starts with nothing hidden above it, and reports its own scrolling" do
+    render_inline(described_class.new(messages: [], hotel: hotel))
+
+    expect(page).to have_css("ol[data-more-above='false']")
+    expect(page).to have_css("ol[data-action='scroll->concierge-chat#markScrollPosition']")
+  end
 end

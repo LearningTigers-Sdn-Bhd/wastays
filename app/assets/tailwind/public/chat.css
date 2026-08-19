@@ -6,6 +6,22 @@
     @apply space-y-4 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5;
   }
 
+  /* ─── Header ───
+     Who the guest is talking to, kept in view while the thread scrolls under
+     it. A long conversation carries the page heading off the top of a phone,
+     and the names above the bubbles only appear at the start of a run. */
+  .public-chat__header {
+    @apply border-b border-border pb-3;
+  }
+
+  .public-chat__header-title {
+    @apply text-xs font-bold uppercase tracking-widest text-foreground;
+  }
+
+  .public-chat__header-subtitle {
+    @apply mt-0.5 text-xs text-muted-foreground;
+  }
+
   .public-chat__empty {
     @apply py-6 text-center text-sm text-muted-foreground;
   }
@@ -15,6 +31,15 @@
      scroll container or push a horizontal scrollbar into it. */
   .public-chat__log {
     @apply max-h-[26rem] overflow-y-auto px-2.5;
+  }
+
+  /* The only clue a thread continues above the fold is a bubble sliced in half
+     at the top edge, which reads as a rendering fault rather than as "scroll".
+     Set by the chat controller, so it is off for a thread that fits and off
+     again at the top -- a permanent fade would wash out the first message of a
+     short conversation. */
+  .public-chat__log[data-more-above="true"] {
+    mask-image: linear-gradient(to bottom, transparent 0, black 2rem);
   }
 
   .public-chat__log:empty {
@@ -107,6 +132,13 @@
 
   .public-chat__notice {
     @apply rounded-xl bg-muted px-4 py-3 text-xs text-muted-foreground;
+  }
+
+  /* The anchor a live notice is aimed at, while there is no notice. It has to
+     stay in the DOM, but a box of nothing still takes a gap out of the card's
+     `space-y`, so it is given no box at all. */
+  .public-chat__notice-anchor {
+    display: contents;
   }
 
   .public-chat__notice[data-tone="accent"] {

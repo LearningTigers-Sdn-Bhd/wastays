@@ -102,6 +102,37 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     end
   end
 
+  # The guest should never wait on a model to see their own words. The request
+  # files the message; the answer is somebody else's problem.
+  describe "when the assistant is answering" do
+    before { hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "k") }
+
+    it "files the message in the request and leaves the answer to a job" do
+      expect(AiConcierge::Orchestration::Core::InquiryResponder).not_to receive(:new)
+
+      expect {
+        post chat_path, params: { message: "Do you have parking?" }
+      }.to have_enqueued_job(Concierge::AnswerWebMessageJob)
+
+      expect(Conversation.last.messages.last.body).to eq("Do you have parking?")
+    end
+
+    # The assistant is told not to file it again, so this is what proves the two
+    # halves do not both write it.
+    it "records what the guest typed exactly once" do
+      post chat_path, params: { message: "Do you have parking?" }
+
+      expect(ProspectMessage.where(body: "Do you have parking?").count).to eq(1)
+    end
+
+    it "shows the guest their own message straight back" do
+      post chat_path, params: { message: "Do you have parking?" }
+      follow_redirect!
+
+      expect(response.body).to include("Do you have parking?")
+    end
+  end
+
   describe "when staff have taken the thread over" do
     it "records the guest's message without the bot answering" do
       post chat_path, params: { message: "First" }
@@ -114,6 +145,117 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       post chat_path, params: { message: "Anyone there?" }
 
       expect(conversation.reload.messages.last.body).to eq("Anyone there?")
+    end
+  end
+
+  # A long thread carries the page heading off the top of a phone, and the names
+  # above the bubbles only appear at the start of a run.
+  describe "knowing who you are talking to" do
+    it "keeps the hotel's name above the thread" do
+      get chat_path
+
+      expect(response.body).to include(hotel.name)
+      expect(response.body).to include("public-chat__header")
+    end
+
+    it "says the front desk answers when the hotel has no assistant" do
+      get chat_path
+
+      expect(response.body).to include("Our front desk replies here")
+    end
+
+    it "says a person is answering once staff have taken the thread" do
+      post chat_path, params: { message: "Do you have parking?" }
+      Conversation.last.hand_to_human!
+
+      get chat_path
+
+      expect(response.body).to include("A member of our team is answering you")
+    end
+  end
+
+  # Sending should not rebuild the page around the guest. On a phone a reload is
+  # a visible flash and a lost keyboard.
+  describe "sending without leaving the page" do
+    it "answers a send with streams rather than a redirect" do
+      post chat_path, params: { message: "Do you have parking?" }, as: :turbo_stream
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+      expect(response.body).to include("concierge-chat-region")
+    end
+
+    # The case the whole region-replace exists for: before the first message
+    # there is no thread, so there is nothing for the page to be listening to.
+    it "hands a first-time visitor their subscription with their first message" do
+      post chat_path, params: { message: "Hello" }, as: :turbo_stream
+
+      expect(response.body).to include("turbo-cable-stream-source")
+      expect(response.body).to include("Hello")
+    end
+
+    it "shows a refusal in place instead of on a reloaded page" do
+      post chat_path, params: { message: "" }, as: :turbo_stream
+
+      expect(response.body).to include("concierge-chat-error")
+      expect(response.body).to include("Please type a message first")
+    end
+
+    it "clears a refusal once the next message is accepted" do
+      post chat_path, params: { message: "" }, as: :turbo_stream
+      post chat_path, params: { message: "Do you have parking?" }, as: :turbo_stream
+
+      expect(response.body).not_to include("Please type a message first")
+    end
+
+    # No JavaScript, no Turbo -- the chat still has to work.
+    it "still redirects a browser that asked for HTML" do
+      post chat_path, params: { message: "Do you have parking?" }
+
+      # Redirects address the hotel by its canonical unique_id, not the slug the
+      # QR code happens to carry.
+      expect(response).to redirect_to(concierge_chat_path(hotel))
+    end
+  end
+
+  # The reason the web chat came before WhatsApp: the guest's browser is
+  # already connected, so a staff reply reaches them with no integration.
+  describe "the live connection" do
+    it "subscribes the page to the guest's own thread" do
+      post chat_path, params: { message: "Do you have parking?" }
+      follow_redirect!
+
+      expect(response.body).to include("turbo-cable-stream-source")
+    end
+
+    it "subscribes to nothing before the visitor has a thread" do
+      get chat_path
+
+      expect(response.body).not_to include("turbo-cable-stream-source")
+    end
+  end
+
+  describe "when a person is holding the thread" do
+    it "shows the guest who they are talking to" do
+      post chat_path, params: { message: "Anyone there?" }
+      staff = create(:user, account: hotel.account, name: "Farah Idris")
+      Concierge::TakeOverConversation.new(conversation: Conversation.last, user: staff).call
+
+      get chat_path
+
+      expect(response.body).to include("Farah Idris is answering you now")
+    end
+
+    it "shows the staff reply as coming from a person, not from the guest" do
+      post chat_path, params: { message: "Anyone there?" }
+      staff = create(:user, account: hotel.account, name: "Farah Idris")
+      Concierge::PostStaffReply.new(conversation: Conversation.last, user: staff, body: "Yes, we have parking.").call
+
+      get chat_path
+
+      expect(response.body).to include("Yes, we have parking.")
+      expect(response.body).to include("Farah Idris")
+      expect(response.body).to include("has joined this conversation")
     end
   end
 end

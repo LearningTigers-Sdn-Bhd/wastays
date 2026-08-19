@@ -1,0 +1,24 @@
+<%#
+  What the guest sees the moment they press Send.
+
+  The whole chat region is replaced rather than the message appended, because
+  the first message is the case that has to work: until it exists the page has
+  no thread, and therefore no stream subscription -- so the reply has to hand
+  over the subscription, the log and the box as one piece. The bot's answer
+  arrives later down that subscription, from the job.
+
+  The replacement also empties the box and drops the "ask us anything" prompt,
+  neither of which needs saying separately.
+%>
+<%= turbo_stream.replace PublicUI::Chat::Panel::REGION_ID do %>
+  <%= render "public/concierge/chats/conversation",
+        conversation: @conversation, messages: @messages, hotel: @hotel %>
+<% end %>
+
+<%# Always replaced, never only added: the region has to be able to clear the
+    last refusal as well as show a new one. %>
+<%= turbo_stream.replace "concierge-chat-error" do %>
+  <div id="concierge-chat-error">
+    <%= render "public/concierge/shared/error_alert", message: @error %>
+  </div>
+<% end %>

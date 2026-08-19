@@ -72,4 +72,67 @@ RSpec.describe Conversation, type: :model do
       expect(described_class.awaiting_staff).to contain_exactly(waiting)
     end
   end
+
+  describe "where a reply can reach the guest" do
+    it "accepts the channel the hotel owns the page for" do
+      expect(build(:conversation, channel: "web")).to be_replies_reach_guest
+    end
+
+    it "refuses a channel with no outbound route yet" do
+      expect(build(:conversation, channel: "whatsapp")).not_to be_replies_reach_guest
+    end
+  end
+
+  describe "reopening" do
+    let(:prospect) { create(:prospect, hotel: hotel) }
+
+    it "clears the closing timestamp rather than leaving a contradiction" do
+      conversation = create(:conversation, hotel: hotel, prospect: prospect)
+      conversation.close!
+
+      conversation.reopen!
+
+      expect(conversation).to be_open
+      expect(conversation.closed_at).to be_nil
+    end
+  end
+
+  describe "what the guest is told about who is answering" do
+    let(:prospect) { create(:prospect, hotel: hotel) }
+    let(:conversation) { create(:conversation, hotel: hotel, prospect: prospect) }
+
+    it "says nothing while the assistant is answering and able to" do
+      allow(hotel).to receive(:ai_concierge_ready?).and_return(true)
+
+      expect(conversation.guest_notice[:text]).to be_nil
+    end
+
+    it "points at the front desk when there is no assistant" do
+      expect(conversation.guest_notice[:text]).to eq(Conversation::FRONT_DESK_NOTICE)
+    end
+
+    it "names the person holding the thread" do
+      user = create(:user, account: hotel.account, name: "Farah Idris")
+      conversation.hand_to_human!(user: user)
+
+      expect(conversation.guest_notice[:text]).to include("Farah Idris")
+      expect(conversation.guest_notice[:tone]).to eq(:accent)
+    end
+
+    # The guest's page is already open when staff take the thread, so the strip
+    # above the composer has to change under them.
+    it "pushes the new answer down the guest's stream the moment mode changes" do
+      user = create(:user, account: hotel.account, name: "Farah Idris")
+
+      conversation.hand_to_human!(user: user)
+
+      expect(turbo_broadcasts_to(conversation, :guest).join).to include("Farah Idris")
+    end
+
+    it "stays quiet when something other than mode changes" do
+      conversation.update!(last_message_at: Time.current)
+
+      expect(turbo_broadcasts_to(conversation, :guest)).to be_empty
+    end
+  end
 end

@@ -1,4 +1,5 @@
 <%= tag.div(**root_attributes) do %>
+  <%= header if header? %>
   <%= log %>
   <%= notice if notice? %>
   <%= composer %>

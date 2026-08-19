@@ -1,0 +1,40 @@
+<%= tag.div(**root_attributes) do %>
+  <% if conversation.open? %>
+    <% if bot_holding? %>
+      <%= form_with url: take_over_hotel_conversation_path(hotel, conversation), method: :patch do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>
+          Take over
+        <% end %>
+      <% end %>
+      <p class="text-xs text-muted-foreground">
+        The assistant is answering. Replying takes the conversation over.
+      </p>
+    <% else %>
+      <% if assistant_available? %>
+        <%= form_with url: return_to_bot_hotel_conversation_path(hotel, conversation), method: :patch do %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :ghost, size: :sm) do %>
+            Return to assistant
+          <% end %>
+        <% end %>
+      <% end %>
+      <p class="text-xs text-muted-foreground">
+        A person is holding this conversation. The assistant stays quiet.
+      </p>
+    <% end %>
+
+    <%= form_with url: close_hotel_conversation_path(hotel, conversation), method: :patch, class: "ms-auto" do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :ghost, size: :sm) do %>
+        Close
+      <% end %>
+    <% end %>
+  <% else %>
+    <p class="text-xs text-muted-foreground">
+      This conversation is closed. A new message from the guest starts a fresh one.
+    </p>
+    <%= form_with url: reopen_hotel_conversation_path(hotel, conversation), method: :patch, class: "ms-auto" do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>
+        Reopen
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

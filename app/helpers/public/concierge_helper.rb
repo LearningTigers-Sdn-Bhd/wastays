@@ -24,6 +24,25 @@ module Public::ConciergeHelper
     hotel.name
   end
 
+  # A visitor who has not written yet has no conversation, so the answer to
+  # "who is on the other end" comes from the hotel alone. Once there is a
+  # thread, the thread knows -- and knows in the same words the live update
+  # uses.
+  def concierge_chat_notice(conversation, hotel)
+    return conversation.guest_notice if conversation
+
+    { text: (Conversation::FRONT_DESK_NOTICE unless hotel.ai_concierge_ready?) }
+  end
+
+  # The one line under the hotel's name in the chat header. Deliberately about
+  # who answers rather than a status light -- "online" would be a promise the
+  # page cannot keep at 3am.
+  def concierge_chat_header_subtitle(conversation, hotel)
+    return "A member of our team is answering you" if conversation&.human?
+
+    hotel.ai_concierge_ready? ? "Ask about your stay, any time" : "Our front desk replies here"
+  end
+
   def concierge_room_details(booking)
     booking.booking_rooms.map do |booking_room|
       room_type_name = booking_room.room_type_snapshot&.dig("name").presence || "Room"
