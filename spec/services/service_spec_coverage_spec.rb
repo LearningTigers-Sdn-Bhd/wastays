@@ -2,6 +2,22 @@ require "rails_helper"
 
 RSpec.describe "Service spec coverage" do
   GROUPED_SERVICE_SPECS = {
+    # The agent loop's collaborators are exercised through the loop itself --
+    # a chat builder or a recorder tested apart from the turn it runs in would
+    # be asserting on its own mock.
+    "ai_concierge/orchestration/agent_loop/build_chat" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/build_instructions" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/outcome" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/run_without_tools" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/tool_recorder" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/turn_context" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    # The model-facing tools are one surface and are specced as one.
+    "ai_concierge/tools/llm/advance_booking_tool" => "ai_concierge/tools/llm/tools_spec.rb",
+    "ai_concierge/tools/llm/answer_hotel_question_tool" => "ai_concierge/tools/llm/tools_spec.rb",
+    "ai_concierge/tools/llm/base_tool" => "ai_concierge/tools/llm/tools_spec.rb",
+    "ai_concierge/tools/llm/get_booking_context_tool" => "ai_concierge/tools/llm/tools_spec.rb",
+    "ai_concierge/tools/llm/get_nearby_attractions_tool" => "ai_concierge/tools/llm/tools_spec.rb",
+    "ai_concierge/tools/llm/get_room_type_details_tool" => "ai_concierge/tools/llm/tools_spec.rb",
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",
