@@ -1,0 +1,11 @@
+<%
+  variant, label = case submission.status
+  when "valid"     then [ :success,     "Ready" ]
+  when "submitted" then [ :info,        "Sent" ]
+  when "pending"   then [ :neutral,     "Preparing" ]
+  when "invalid"   then [ :destructive, "Rejected" ]
+  when "cancelled" then [ :outline,     "Cancelled" ]
+  else [ :neutral, submission.status_label ]
+  end
+%>
+<%= render PanelsUI::Badge.new(variant: variant, size: :sm) do %><%= label %><% end %>

@@ -2,7 +2,7 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::SettingsBaseController
-    SETTINGS_PAGES = %w[general boat ai notifications banking].freeze
+    SETTINGS_PAGES = %w[general boat ai notifications banking e_invoice].freeze
 
     before_action :set_account
     before_action :set_hotel
@@ -19,7 +19,9 @@ module HotelPortal
     end
 
     def update
-      if notification_update_request?
+      if e_invoice_update_request?
+        update_e_invoice_settings
+      elsif notification_update_request?
         update_notification_settings
       elsif settings_update_request?
         update_settings
@@ -74,6 +76,20 @@ module HotelPortal
       end
     end
 
+    def update_e_invoice_settings
+      authorize_settings_update!
+
+      form = HotelPortal::EInvoiceSettingsForm.new(@hotel, params)
+
+      if form.save
+        redirect_to hotel_e_invoice_settings_path(@hotel), notice: "Settings updated successfully."
+      else
+        @e_invoice_setting = form.setting
+        @presenter = settings_presenter(page: "e_invoice")
+        render :index, status: :unprocessable_entity
+      end
+    end
+
     def update_notification_settings
       authorize_settings_update!
 
@@ -109,6 +125,7 @@ module HotelPortal
     def prepare_settings_page
       @presenter = settings_presenter
       @account.build_banking_detail unless @account.banking_detail
+      @e_invoice_setting = @hotel.e_invoice_setting || @hotel.build_e_invoice_setting
     end
 
     def settings_presenter(page: active_settings_page)
@@ -132,6 +149,7 @@ module HotelPortal
       when "boat_settings" then "boat"
       when "ai_configuration" then "ai"
       when "notification_settings" then "notifications"
+      when "e_invoice_settings" then "e_invoice"
       else "general"
       end
     end
@@ -142,6 +160,7 @@ module HotelPortal
       when "ai" then hotel_ai_concierge_settings_path(@hotel)
       when "notifications" then hotel_notification_settings_path(@hotel)
       when "banking" then hotel_banking_details_settings_path(@hotel)
+      when "e_invoice" then hotel_e_invoice_settings_path(@hotel)
       else hotel_general_settings_path(@hotel)
       end
     end
@@ -157,6 +176,10 @@ module HotelPortal
 
     def notification_update_request?
       params[:notification_config].present?
+    end
+
+    def e_invoice_update_request?
+      params[:e_invoice_setting].present?
     end
 
     def settings_update_request?

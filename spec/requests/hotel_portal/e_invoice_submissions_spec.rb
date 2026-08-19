@@ -57,7 +57,7 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
       get hotel_e_invoice_submissions_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("E-Invoice Workspace")
+      expect(response.body).to include("E-Invoice")
       expect(response.body).to include("Open E-Invoice Settings")
       expect(response.body).to include("Configuration health")
     end

@@ -1,0 +1,129 @@
+<div class="space-y-5">
+  <%= render PanelsUI::PageHeader.new(
+        title: @submission.internal_id.presence || "E-Invoice record",
+        description: "#{@submission.document_type_label} · #{@submission.document_scenario_label}") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(href: hotel_e_invoice_submissions_path(current_hotel), variant: :secondary, size: :sm) do %>
+        <%= cached_icon "arrow-left", class: "size-4", aria: { hidden: true } %>
+        Back to E-Invoice
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if @submission.requested_by_guest? %>
+    <%= render PanelsUI::Alert.new(tone: :info, title: "Guest requested this e-invoice") do |alert| %>
+      <% alert.with_description do %>A guest is waiting on this document, so it takes priority over system-generated records.<% end %>
+    <% end %>
+  <% end %>
+
+  <% if @submission.invalid? && @submission.error_message.present? %>
+    <%= render PanelsUI::Alert.new(tone: :destructive, title: "LHDN rejected this document", role: :alert) do |alert| %>
+      <% alert.with_description do %>
+        <p><%= @submission.error_message %></p>
+        <% if @submission.requested_by_guest? %>
+          <p class="mt-1">Once the guest details are corrected on the booking, retry the submission from here.</p>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% elsif @submission.stale_pending? %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "This submission has been pending for a while") do |alert| %>
+      <% alert.with_description do %>Refresh the status to check whether LHDN has finished validating it.<% end %>
+    <% end %>
+  <% end %>
+
+  <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <section aria-labelledby="e-invoice-record-heading" class="space-y-3">
+      <h2 id="e-invoice-record-heading" class="text-base font-semibold text-foreground">Document details</h2>
+
+      <dl class="divide-y divide-border rounded-md border border-border bg-card">
+        <% [
+             [ "Status", nil ],
+             [ "Booking", @submission.booking&.confirmation_token ],
+             [ "Guest", @submission.booking&.guest_name ],
+             [ "Internal ID", @submission.internal_id ],
+             [ "LHDN UUID", @submission.uuid ],
+             [ "Submission UID", @submission.submission_uid ],
+             [ "Submitted", @submission.submitted_at&.strftime("%d %b %Y %H:%M") ],
+             [ "Validated", @submission.validated_at&.strftime("%d %b %Y %H:%M") ],
+             [ "Requested by guest", @submission.requested_by_guest? ? "Yes" : "No" ]
+           ].each do |label, value| %>
+          <div class="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <dt class="text-sm text-muted-foreground"><%= label %></dt>
+            <dd class="text-sm font-medium text-foreground">
+              <% if label == "Status" %>
+                <%= render "hotel_portal/e_invoice_submissions/status_badge", submission: @submission %>
+              <% else %>
+                <span class="break-all"><%= value.presence || "—" %></span>
+              <% end %>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
+
+      <% if @submission.error_details.present? %>
+        <details class="rounded-md border border-border bg-card">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">Raw error details</summary>
+          <pre class="overflow-x-auto border-t border-border px-4 py-3 text-xs text-muted-foreground"><%= JSON.pretty_generate(@submission.error_details) %></pre>
+        </details>
+      <% end %>
+    </section>
+
+    <section aria-labelledby="e-invoice-actions-heading" class="space-y-3">
+      <h2 id="e-invoice-actions-heading" class="text-base font-semibold text-foreground">Actions</h2>
+
+      <div class="space-y-2 rounded-md border border-border bg-card p-4">
+        <% if @submission.validated? %>
+          <%= render PanelsUI::Button.new(href: pdf_hotel_e_invoice_submission_path(current_hotel, @submission), variant: :secondary, size: :sm, class: "w-full") do %>
+            <%= cached_icon "download", class: "size-4", aria: { hidden: true } %>
+            Download PDF
+          <% end %>
+        <% end %>
+
+        <% if @submission.validation_url.present? %>
+          <%= render PanelsUI::Button.new(href: @submission.validation_url, variant: :secondary, size: :sm, class: "w-full", target: "_blank", rel: "noopener") do %>
+            <%= cached_icon "external-link", class: "size-4", aria: { hidden: true } %>
+            View on MyInvois
+          <% end %>
+        <% end %>
+
+        <% if @submission.refreshable? %>
+          <%= button_to refresh_status_hotel_e_invoice_submission_path(current_hotel, @submission), method: :post, class: "w-full" do %>
+            <span class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent">
+              <%= cached_icon "refresh-cw", class: "size-4", aria: { hidden: true } %>
+              Refresh status
+            </span>
+          <% end %>
+        <% end %>
+
+        <% if @submission.retryable? %>
+          <%= button_to retry_hotel_e_invoice_submission_path(current_hotel, @submission), method: :post, class: "w-full" do %>
+            <span class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent">
+              <%= cached_icon "rotate-ccw", class: "size-4", aria: { hidden: true } %>
+              Retry submission
+            </span>
+          <% end %>
+        <% end %>
+
+        <% if @submission.cancellable? %>
+          <%= button_to cancel_hotel_e_invoice_submission_path(current_hotel, @submission),
+                method: :post,
+                form: { data: { turbo_confirm: "Cancel this e-invoice with LHDN? This cannot be undone." } },
+                class: "w-full" do %>
+            <span class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-destructive px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10">
+              <%= cached_icon "circle-x", class: "size-4", aria: { hidden: true } %>
+              Cancel with LHDN
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+
+      <% if @submission.booking.present? %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_booking_workspace_path(current_hotel, @submission.booking, tab: "documents"),
+              variant: :ghost,
+              size: :sm,
+              class: "w-full") do %>Open booking<% end %>
+      <% end %>
+    </section>
+  </div>
+</div>

@@ -671,6 +671,8 @@ Rails.application.routes.draw do
       scope "finance" do
         get "banking-details", to: "settings#index", as: :banking_details_settings, defaults: { settings_page: "banking" }
         patch "banking-details", to: "settings#update", defaults: { settings_page: "banking" }
+        get "e-invoice", to: "settings#index", as: :e_invoice_settings, defaults: { settings_page: "e_invoice" }
+        patch "e-invoice", to: "settings#update", defaults: { settings_page: "e_invoice" }
         resource :taxes_fees, path: "taxes-and-fees", only: [ :show, :update ]
         get "taxes-and-fees/system/:tax_key/edit", to: "taxes_fees#edit_system", as: :edit_system_tax
         patch "taxes-and-fees/system/:tax_key", to: "taxes_fees#update_system", as: :system_tax

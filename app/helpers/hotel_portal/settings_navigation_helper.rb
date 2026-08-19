@@ -146,7 +146,8 @@ module HotelPortal
           hotel_permission_granted?("manage_account") ? { key: "banking", label: "Banking Details", path: hotel_banking_details_settings_path(current_hotel), icon: "landmark", active: controller_name == "settings" && settings_active_page == "banking" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "transaction-code-reference", label: "Transaction Code Reference", path: hotel_transaction_code_references_path(current_hotel), icon: "list", active: controller_name == "transaction_code_references" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "ota-financials", label: "OTA Financials", path: hotel_ota_financial_settings_path(current_hotel), icon: "waypoints", active: controller_name == "ota_financial_settings" } : nil,
-          hotel_permission_granted?("manage_general_ledger_maps") ? { key: "general-ledger-mappings", label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), icon: "git-merge", active: controller_name == "general_ledger_maps" } : nil
+          hotel_permission_granted?("manage_general_ledger_maps") ? { key: "general-ledger-mappings", label: "General Ledger Mappings", path: hotel_general_ledger_maps_path(current_hotel), icon: "git-merge", active: controller_name == "general_ledger_maps" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "e-invoice", label: "E-Invoice", path: hotel_e_invoice_settings_path(current_hotel), icon: "receipt", active: controller_name == "settings" && settings_active_page == "e_invoice" } : nil
         ].compact
       when :guest_content
         [

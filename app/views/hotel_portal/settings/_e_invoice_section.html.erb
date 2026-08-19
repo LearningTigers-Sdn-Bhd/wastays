@@ -1,0 +1,114 @@
+<%= form_with model: @e_invoice_setting,
+              url: hotel_e_invoice_settings_path(@hotel),
+              method: :patch,
+              local: true,
+              scope: :e_invoice_setting,
+              class: "grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2" do |f| %>
+  <% if @e_invoice_setting.errors.any? %>
+    <div class="lg:col-span-2">
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: pluralize(@e_invoice_setting.errors.count, "error") + " prevented these settings from being saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @e_invoice_setting.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <section aria-labelledby="e-invoice-status-heading">
+    <div>
+      <h2 id="e-invoice-status-heading" class="text-base font-semibold text-foreground">LHDN E-Invoicing</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Send invoices to LHDN through MyInvois. Guests may request one within the same calendar month as their payment;
+        anything unrequested and under RM10,000 goes out in the monthly consolidated batch.
+      </p>
+    </div>
+
+    <div class="mt-4 space-y-4">
+      <%= render PanelsUI::Switch.new(
+            form: f,
+            attribute: :enabled,
+            variant: :card,
+            label: "Enable e-invoicing",
+            description: "Turn this on before your team sends the first record to LHDN.") %>
+
+      <%= render PanelsUI::Switch.new(
+            form: f,
+            attribute: :intermediary_enabled,
+            variant: :card,
+            label: "Act as intermediary for hotel-collected payments",
+            description: "Needed when the guest pays the hotel directly and WAStays files on the hotel's behalf.") %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :hotel_tin, label: "Hotel TIN", hint: "Tax identification number issued by LHDN.") do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :hotel_brn, label: "Business registration number") do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_sst_registration_number, label: "SST registration number", hint: "Leave blank if not SST registered.") do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_msic_code, label: "MSIC code", hint: "Industry classification code, e.g. 55101 for hotels.") do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_business_description, label: "Business activity description") do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+    </div>
+  </section>
+
+  <section aria-labelledby="e-invoice-address-heading">
+    <div>
+      <h2 id="e-invoice-address-heading" class="text-base font-semibold text-foreground">Supplier address &amp; contact</h2>
+      <p class="mt-2 text-sm text-muted-foreground">LHDN requires the supplier address on every submitted document.</p>
+    </div>
+
+    <div class="mt-4 space-y-4">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_address_line1, label: "Address line 1") do |field| %>
+        <% field.with_input(autocomplete: "address-line1") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_address_line2, label: "Address line 2") do |field| %>
+        <% field.with_input(autocomplete: "address-line2") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_city, label: "City") do |field| %>
+        <% field.with_input(autocomplete: "address-level2") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_postal_code, label: "Postal code") do |field| %>
+        <% field.with_input(inputmode: "numeric", autocomplete: "postal-code") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_state_code, label: "State code", hint: "LHDN state code, e.g. 12 for Sabah.") do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_country_code, label: "Country code", hint: "Three-letter code, e.g. MYS.") do |field| %>
+        <% field.with_input(autocomplete: "country") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_contact_phone, label: "Contact phone") do |field| %>
+        <% field.with_input(type: "tel", autocomplete: "tel") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_contact_email, label: "Contact email") do |field| %>
+        <% field.with_input(type: "email", autocomplete: "email") %>
+      <% end %>
+    </div>
+  </section>
+
+  <div class="flex justify-end lg:col-span-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
+  </div>
+<% end %>
