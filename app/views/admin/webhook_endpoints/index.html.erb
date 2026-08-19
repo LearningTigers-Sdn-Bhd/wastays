@@ -32,6 +32,7 @@
             <%= f.text_field :url, placeholder: "https://...", class: "w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/20" %>
           </div>
         </div>
+        <%= render "scope_fields", f: f, hotel_choices: @hotel_choices %>
         <div class="flex items-center gap-2">
           <%= f.check_box :enabled, checked: true, class: "h-4 w-4 rounded border-border-interactive text-foreground focus:ring-ring" %>
           <%= f.label :enabled, "Enabled", class: "text-sm font-medium text-foreground" %>
@@ -51,6 +52,7 @@
             <tr>
               <th class="px-6 py-4">Name</th>
               <th class="px-6 py-4">URL</th>
+              <th class="px-6 py-4">Scope</th>
               <th class="px-6 py-4">Status</th>
               <th class="px-6 py-4">Created</th>
               <th class="px-6 py-4 text-right">Actions</th>
@@ -62,6 +64,12 @@
                 <tr class="hover:bg-muted">
                   <td class="px-6 py-4 font-semibold text-foreground"><%= endpoint.name %></td>
                   <td class="px-6 py-4 font-mono text-xs truncate max-w-[300px]"><%= endpoint.url %></td>
+                  <td class="px-6 py-4">
+                    <div class="text-foreground"><%= endpoint.hotel&.name || "All hotels" %></div>
+                    <div class="text-xs text-muted-foreground">
+                      <%= endpoint.all_events? ? "All events" : endpoint.event_types.map(&:humanize).to_sentence %>
+                    </div>
+                  </td>
                   <td class="px-6 py-4">
                     <% if endpoint.enabled %>
                       <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Enabled</span>
@@ -89,7 +97,7 @@
               <% end %>
             <% else %>
               <tr>
-                <td colspan="5" class="px-6 py-10 text-center italic text-muted-foreground">No webhooks configured.</td>
+                <td colspan="6" class="px-6 py-10 text-center italic text-muted-foreground">No webhooks configured.</td>
               </tr>
             <% end %>
           </tbody>
@@ -127,6 +135,7 @@
               <%= f.label :url, "Webhook URL", class: "mb-1.5 block text-sm font-semibold text-foreground" %>
               <%= f.text_field :url, class: "w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:border-border-interactive focus:outline-none focus:ring-2 focus:ring-ring/20" %>
             </div>
+            <%= render "scope_fields", f: f, hotel_choices: @hotel_choices %>
             <div class="flex items-center gap-2">
               <%= f.check_box :enabled, class: "h-4 w-4 rounded border-border-interactive text-foreground focus:ring-ring" %>
               <%= f.label :enabled, "Enabled", class: "text-sm font-medium text-foreground" %>

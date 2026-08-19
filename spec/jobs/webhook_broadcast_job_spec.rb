@@ -23,7 +23,7 @@ RSpec.describe WebhookBroadcastJob, type: :job do
           request_id: housekeeping_request.id,
           status: :completed
         ).call
-      }.to have_enqueued_job(WebhookBroadcastJob).with("housekeeping_completed", anything)
+      }.to have_enqueued_job(WebhookBroadcastJob).with("housekeeping_completed", anything, hotel_id: hotel.id)
     end
 
     it "broadcasts complaint_resolved when complaint is resolved" do
@@ -34,7 +34,7 @@ RSpec.describe WebhookBroadcastJob, type: :job do
           request_id: complaint_request.id,
           status: :completed # Maps to resolved
         ).call
-      }.to have_enqueued_job(WebhookBroadcastJob).with("complaint_resolved", anything)
+      }.to have_enqueued_job(WebhookBroadcastJob).with("complaint_resolved", anything, hotel_id: hotel.id)
     end
 
     it "does not broadcast if status is not 'done'" do
@@ -50,11 +50,10 @@ RSpec.describe WebhookBroadcastJob, type: :job do
   end
 
   describe "execution" do
-    it "posts to enabled endpoints" do
-      payload = { foo: "bar" }
+    let(:payload) { { foo: "bar" } }
+    let(:other_hotel) { create(:hotel, name: "Other Hotel") }
 
-      # We already mocked Net::HTTP in before block
-      # Just ensuring perform doesn't crash and respects enabled flag
+    it "posts to enabled endpoints" do
       expect_any_instance_of(WebhookBroadcastJob).to receive(:post_to_webhook).with("https://example.com/webhook", "Test Endpoint", "test_event", payload)
 
       WebhookBroadcastJob.new.perform("test_event", payload)
@@ -64,7 +63,54 @@ RSpec.describe WebhookBroadcastJob, type: :job do
       webhook_endpoint.update(enabled: false)
       expect_any_instance_of(WebhookBroadcastJob).not_to receive(:post_to_webhook)
 
-      WebhookBroadcastJob.new.perform("test_event", { foo: "bar" })
+      WebhookBroadcastJob.new.perform("test_event", payload)
+    end
+
+    it "reaches an endpoint pinned to the hotel the event belongs to" do
+      webhook_endpoint.update!(hotel: hotel)
+
+      expect_any_instance_of(WebhookBroadcastJob).to receive(:post_to_webhook)
+        .with("https://example.com/webhook", "Test Endpoint", "booking_confirmed", payload)
+
+      WebhookBroadcastJob.new.perform("booking_confirmed", payload, hotel_id: hotel.id)
+    end
+
+    it "keeps one hotel's events away from another hotel's endpoint" do
+      webhook_endpoint.update!(hotel: other_hotel)
+
+      expect_any_instance_of(WebhookBroadcastJob).not_to receive(:post_to_webhook)
+
+      WebhookBroadcastJob.new.perform("booking_confirmed", payload, hotel_id: hotel.id)
+    end
+
+    it "keeps a hotel's endpoint out of a broadcast that names no hotel" do
+      webhook_endpoint.update!(hotel: hotel)
+
+      expect_any_instance_of(WebhookBroadcastJob).not_to receive(:post_to_webhook)
+
+      WebhookBroadcastJob.new.perform("booking_confirmed", payload)
+    end
+
+    it "reaches a platform-wide endpoint whichever hotel the event belongs to" do
+      expect_any_instance_of(WebhookBroadcastJob).to receive(:post_to_webhook)
+        .with("https://example.com/webhook", "Test Endpoint", "booking_confirmed", payload)
+
+      WebhookBroadcastJob.new.perform("booking_confirmed", payload, hotel_id: other_hotel.id)
+    end
+
+    it "sends only the events an endpoint asked for" do
+      webhook_endpoint.update!(event_types: [ "booking_confirmed" ])
+
+      expect_any_instance_of(WebhookBroadcastJob).not_to receive(:post_to_webhook)
+
+      WebhookBroadcastJob.new.perform("complaint_resolved", payload)
+    end
+
+    it "sends every event to an endpoint that named none" do
+      expect_any_instance_of(WebhookBroadcastJob).to receive(:post_to_webhook)
+        .with("https://example.com/webhook", "Test Endpoint", "complaint_resolved", payload)
+
+      WebhookBroadcastJob.new.perform("complaint_resolved", payload)
     end
   end
 end

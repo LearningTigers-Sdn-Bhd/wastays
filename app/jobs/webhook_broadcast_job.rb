@@ -7,18 +7,23 @@ require "json"
 class WebhookBroadcastJob < ApplicationJob
   queue_as :default
 
-  # event_type: "housekeeping_completed", "complaint_resolved", "booking_confirmed", etc.
-  # payload: Hash containing the data to send
-  def perform(event_type, payload)
-    endpoints = WebhookEndpoint.where(enabled: true)
+  # `hotel_id` says whose event this is. Without it only platform-wide
+  # endpoints are reached, because an event nobody has claimed should not be
+  # handed to a relay that serves one hotel.
+  #
+  # It is a keyword with a default so the queue can drain jobs enqueued by the
+  # old signature during a deploy; every caller in the app now passes it.
+  def perform(event_type, payload, hotel_id: nil)
+    endpoints = WebhookEndpoint.listening_for(event_type, hotel_id: hotel_id)
 
-    # 1. New Multi-Webhook System
     endpoints.each do |endpoint|
-      # If we want to filter by event_types later, we can add it here
       post_to_webhook(endpoint.url, endpoint.name, event_type, payload)
     end
 
-    # 2. Legacy Fallback (if any)
+    # The single URL that predates the endpoints table. It has no hotel and no
+    # event list to give it, so it behaves exactly like an unscoped endpoint
+    # and keeps receiving everything. Narrowing it is a migration of its own --
+    # move it into `webhook_endpoints`, where it can be scoped like the rest.
     legacy_url = AppConfig.get("webhook_url")
     if legacy_url.present? && endpoints.none? { |e| e.url == legacy_url }
       post_to_webhook(legacy_url, "Legacy Webhook", event_type, payload)

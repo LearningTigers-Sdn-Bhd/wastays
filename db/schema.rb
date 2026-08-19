@@ -2726,9 +2726,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_143731) do
   create_table "webhook_endpoints", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "enabled"
+    t.text "event_types", default: [], null: false, array: true
+    t.bigint "hotel_id"
     t.string "name"
     t.datetime "updated_at", null: false
     t.string "url"
+    t.index ["hotel_id"], name: "index_webhook_endpoints_on_hotel_id"
   end
 
   create_table "webhook_events", force: :cascade do |t|
@@ -3040,4 +3043,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_143731) do
   add_foreign_key "user_roles", "roles"
   add_foreign_key "user_roles", "users"
   add_foreign_key "users", "accounts"
+  add_foreign_key "webhook_endpoints", "hotels"
 end

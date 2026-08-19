@@ -1,0 +1,40 @@
+<%# Who this endpoint hears, and about what. Shared by the create form and the
+    edit modal so the two cannot drift into offering different choices.
+
+    Every edit modal on the page builds a form for the same model class, so
+    Rails hands them all identical field ids. Left alone that puts a dozen
+    elements sharing one id in the document and Tom Select enhances whichever
+    it finds first. The record's own id disambiguates them. %>
+<% scope_id = f.object.persisted? ? "endpoint-#{f.object.id}" : "new-endpoint" %>
+<% hotel_field_id = "#{scope_id}-hotel-id" %>
+<% events_field_id = "#{scope_id}-event-types" %>
+
+<div class="grid gap-6 md:grid-cols-2">
+  <div>
+    <%= f.label :hotel_id, "Hotel", for: hotel_field_id, class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+    <% if hotel_choices.any? %>
+      <%= render PanelsUI::Combobox.new(
+            form: f,
+            attribute: :hotel_id,
+            id: hotel_field_id,
+            choices: hotel_choices,
+            include_blank: true,
+            prompt: "All hotels",
+            placeholder: "All hotels") %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">No hotels yet — this endpoint serves all of them.</p>
+    <% end %>
+    <p class="mt-1.5 text-xs text-muted-foreground">Leave blank to receive events for every hotel.</p>
+  </div>
+  <div>
+    <%= f.label :event_types, "Events", for: events_field_id, class: "mb-1.5 block text-sm font-semibold text-foreground" %>
+    <%= render PanelsUI::MultiSelect.new(
+          form: f,
+          attribute: :event_types,
+          id: events_field_id,
+          choices: WebhookEndpoint::EVENT_TYPES.map { |event| [ event.humanize, event ] },
+          placeholder: "All events",
+          all_selected_text: "Every event selected") %>
+    <p class="mt-1.5 text-xs text-muted-foreground">Select none to receive every event.</p>
+  </div>
+</div>
