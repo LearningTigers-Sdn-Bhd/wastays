@@ -1,6 +1,6 @@
 <% content_for :title, "Guest Registration Card #{ @booking.guest_registration_card_number_display }" %>
 
-<div class="mx-auto max-w-5xl px-4 py-6 text-foreground print:p-0" data-controller="registration-card" data-registration-card-url-value="<%= hotel_booking_guest_registration_card_path(current_hotel, @booking) %>">
+<div class="mx-auto max-w-5xl px-4 py-6 text-foreground print:p-0" data-controller="registration-card" data-registration-card-url-value="<%= hotel_booking_guest_registration_card_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id) %>">
   <div class="grc-no-print mb-4">
     <div>
       <p class="text-xs font-semibold uppercase text-muted-foreground">Front desk document</p>
@@ -99,7 +99,7 @@
                 </div>
               <% end %>
               <% if @card.field_visible?(:room_type) %>
-                <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
+                <div class="grid grid-cols-[5rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Room type</dt>
                   <dd class="text-foreground">: <%= @presenter.room_type_summary %></dd>
                 </div>
@@ -110,20 +110,20 @@
                   <dd class="text-foreground">: <%= @presenter.room_numbers_display %></dd>
                 </div>
               <% end %>
-              <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
+              <div class="grid grid-cols-[5rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Rate type</dt>
                 <dd class="text-foreground">: <%= @presenter.rate_type_display %></dd>
               </div>
-              <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
-                <dt class="text-muted-foreground">Night(s)</dt>
-                <dd class="text-foreground">: <%= @booking.duration_in_nights %></dd>
-              </div>
               <% if @card.field_visible?(:check_in) %>
-                <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
+                <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Check-in</dt>
                   <dd class="text-foreground">: <%= @presenter.check_in_display %></dd>
                 </div>
               <% end %>
+              <div class="grid grid-cols-[5rem_1fr] gap-x-2">
+                <dt class="text-muted-foreground">Night(s)</dt>
+                <dd class="text-foreground">: <%= @booking.duration_in_nights %></dd>
+              </div>
               <% if @card.field_visible?(:check_out) %>
                 <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Check-out</dt>
@@ -140,7 +140,7 @@
                 <dt class="text-muted-foreground">Room price</dt>
                 <dd class="text-foreground">: <%= @presenter.room_price_display %></dd>
               </div>
-              <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
+              <div class="grid grid-cols-[5.5rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Amount paid</dt>
                 <dd class="text-foreground">: <%= @presenter.format_money(@presenter.amount_paid) %></dd>
               </div>
@@ -148,7 +148,7 @@
                 <dt class="text-muted-foreground">Total charges</dt>
                 <dd class="text-foreground">: <%= @presenter.format_money(@presenter.total_charges) %></dd>
               </div>
-              <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
+              <div class="grid grid-cols-[5.5rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Tax</dt>
                 <dd class="text-foreground">: <%= @presenter.format_money(@booking.tax_total) %></dd>
               </div>
@@ -222,7 +222,7 @@
         <% if terms_missing %>
           <p class="mt-4 rounded-md border border-dashed border-border-interactive px-4 py-2.5 text-center text-xs text-muted-foreground">Set Terms &amp; Conditions to enable printing.</p>
         <% else %>
-          <%= link_to "Print official form", hotel_booking_guest_registration_card_pdf_path(current_hotel, @booking), target: "_blank", rel: "noopener", class: "mt-4 flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90" %>
+          <%= link_to "Print official form", hotel_booking_guest_registration_card_pdf_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id), target: "_blank", rel: "noopener", class: "mt-4 flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90" %>
         <% end %>
         <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
           <% if terms_missing %>
@@ -252,11 +252,11 @@
           <div class="mt-4 rounded-md border border-border bg-muted p-3">
             <img src="<%= @card.signature_data_url %>" alt="Guest signature" class="h-24 max-w-full bg-card" />
           </div>
-          <%= button_to "Remove signature", hotel_booking_guest_registration_card_path(current_hotel, @booking), method: :delete, class: "mt-4 w-full rounded-md border border-red-200 bg-card px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50", form: { data: { turbo_confirm: "Remove this guest signature? The guest can sign again or sign the printed form." } } %>
+          <%= button_to "Remove signature", hotel_booking_guest_registration_card_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id), method: :delete, class: "mt-4 w-full rounded-md border border-red-200 bg-card px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50", form: { data: { turbo_confirm: "Remove this guest signature? The guest can sign again or sign the printed form." } } %>
         <% elsif terms_missing %>
           <p class="mt-4 rounded-md border border-dashed border-border-interactive bg-muted px-4 py-6 text-center text-sm text-muted-foreground">Set the property's Terms &amp; Conditions before this card can be signed.</p>
         <% else %>
-          <%= form_with model: @card, url: hotel_booking_guest_registration_card_path(current_hotel, @booking), method: :patch, id: "grc-signature-form", class: "mt-4 space-y-4", data: { controller: "signature" } do |form| %>
+          <%= form_with model: @card, url: hotel_booking_guest_registration_card_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id), method: :patch, id: "grc-signature-form", class: "mt-4 space-y-4", data: { controller: "signature" } do |form| %>
             <%= form.hidden_field :special_requests, value: @booking.special_requests, data: { registration_card_target: "remarkHidden" } %>
             <div>
               <%= form.label :signer_name, "Signer name", class: "mb-1 block text-sm font-medium text-foreground" %>

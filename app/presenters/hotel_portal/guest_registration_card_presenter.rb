@@ -2,12 +2,13 @@
 
 module HotelPortal
   class GuestRegistrationCardPresenter
-    attr_reader :card, :booking, :hotel
+    attr_reader :card, :booking, :hotel, :selected_booking_guest
 
-    def initialize(card, booking)
+    def initialize(card, booking, booking_guest_id: nil)
       @card = card
       @booking = booking
       @hotel = booking.hotel
+      @selected_booking_guest = find_booking_guest(booking_guest_id)
     end
 
     def terms
@@ -34,20 +35,24 @@ module HotelPortal
       @primary_booking_guest ||= @booking.booking_guests.find(&:primary?)
     end
 
+    def active_booking_guest
+      @selected_booking_guest || primary_booking_guest
+    end
+
     def guest_name
-      primary_booking_guest&.name_snapshot.presence || @booking.guest_name
+      active_booking_guest&.name_snapshot.presence || @booking.guest_name
     end
 
     def guest_phone
-      primary_booking_guest&.phone_snapshot.presence || @booking.guest_phone
+      active_booking_guest&.phone_snapshot.presence || @booking.guest_phone
     end
 
     def guest_email
-      primary_booking_guest&.email_snapshot.presence || @booking.guest_email
+      active_booking_guest&.email_snapshot.presence || @booking.guest_email
     end
 
     def guest_country
-      primary_booking_guest&.country_snapshot.presence || @booking.guest_country
+      active_booking_guest&.country_snapshot.presence || @booking.guest_country
     end
 
     def room_type_summary
@@ -83,8 +88,8 @@ module HotelPortal
     end
 
     def guest_identity
-      primary_booking_guest&.government_id_snapshot.presence ||
-        @booking.guest_government_id.presence ||
+      active_booking_guest&.government_id_snapshot.presence ||
+        (active_booking_guest&.primary? ? @booking.guest_government_id.presence : nil) ||
         "-"
     end
 
@@ -119,15 +124,15 @@ module HotelPortal
     end
 
     def boat_transfer?
-      primary_booking_guest&.boat_in? || primary_booking_guest&.boat_out?
+      active_booking_guest&.boat_in? || active_booking_guest&.boat_out?
     end
 
     def boat_in_display
-      format_boat_time(primary_booking_guest&.boat_in_at)
+      format_boat_time(active_booking_guest&.boat_in_at)
     end
 
     def boat_out_display
-      format_boat_time(primary_booking_guest&.boat_out_at)
+      format_boat_time(active_booking_guest&.boat_out_at)
     end
 
     def check_in_display
@@ -139,6 +144,12 @@ module HotelPortal
     end
 
     private
+
+    def find_booking_guest(booking_guest_id)
+      return nil if booking_guest_id.blank?
+
+      @booking.booking_guests.find { |bg| bg.id.to_s == booking_guest_id.to_s }
+    end
 
     def format_boat_time(time)
       return "-" if time.blank?

@@ -2,7 +2,7 @@
 <% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
 <% can_view_grc = can_manage || current_user.has_permission?("view_reports", hotel: current_hotel) %>
 <% return_to = hotel_booking_workspace_path(current_hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id) %>
-<% grc_path = hotel_booking_guest_registration_card_path(current_hotel, booking) %>
+<% grc_path = hotel_booking_guest_registration_card_path(current_hotel, booking, booking_guest_id: booking_guest.id) %>
 
 <footer class="shrink-0 bg-card px-5 pb-4 pt-2 lg:px-8" data-testid="guest-details-footer">
   <div class="flex max-w-6xl items-center justify-between gap-3">

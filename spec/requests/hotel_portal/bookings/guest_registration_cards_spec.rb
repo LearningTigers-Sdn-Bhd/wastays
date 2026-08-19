@@ -85,6 +85,33 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body).not_to include("Profile Name", "profile@example.com", "Singapore")
     end
 
+    it "renders the additional guest details when booking_guest_id parameter is passed" do
+      primary = create(
+        :booking_guest,
+        booking: booking,
+        is_primary: true,
+        name_snapshot: "Primary Guest",
+        email_snapshot: "primary@example.com",
+        phone_snapshot: "111111",
+        country_snapshot: "Malaysia"
+      )
+      additional = create(
+        :booking_guest,
+        booking: booking,
+        is_primary: false,
+        name_snapshot: "Additional Guest",
+        email_snapshot: "additional@example.com",
+        phone_snapshot: "999999",
+        country_snapshot: "Singapore"
+      )
+
+      get hotel_booking_guest_registration_card_path(hotel, booking, booking_guest_id: additional.id)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Additional Guest", "additional@example.com", "999999", "Singapore")
+      expect(response.body).not_to include("Primary Guest", "primary@example.com", "111111")
+    end
+
     it "hides the boat transfer section when the guest has no boat data" do
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
