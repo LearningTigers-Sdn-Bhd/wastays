@@ -6,6 +6,7 @@ class BookingGuest < ApplicationRecord
   belongs_to :booking
   belongs_to :guest
   has_one :booking_billing_party, dependent: :restrict_with_error
+  has_one :guest_registration_card, dependent: :destroy
 
   encrypts :email_snapshot, deterministic: true
   encrypts :phone_snapshot, deterministic: true

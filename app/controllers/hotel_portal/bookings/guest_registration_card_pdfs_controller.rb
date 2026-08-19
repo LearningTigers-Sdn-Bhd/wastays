@@ -27,7 +27,17 @@ class HotelPortal::Bookings::GuestRegistrationCardPdfsController < HotelPortal::
   end
 
   def set_card
-    @card = @booking.guest_registration_card || @booking.create_guest_registration_card!(hotel: current_hotel)
+    booking_guest = if params[:booking_guest_id].present?
+                      @booking.booking_guests.find { |bg| bg.id.to_s == params[:booking_guest_id].to_s }
+                    else
+                      @booking.booking_guests.find(&:primary?)
+                    end
+
+    @card = if booking_guest
+              booking_guest.guest_registration_card || booking_guest.create_guest_registration_card!(hotel: current_hotel, booking: @booking)
+            else
+              @booking.guest_registration_card || @booking.create_guest_registration_card!(hotel: current_hotel)
+            end
   end
 
   def authorize_view_guest_registration_cards!

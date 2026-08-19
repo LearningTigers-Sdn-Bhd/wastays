@@ -2,22 +2,17 @@
 
 module Bookings
   class RemoveRegistrationCardSignature
-    def self.call(card:)
-      new(card: card).call
+    def self.call(card:, booking_guest_id: nil)
+      new(card: card, booking_guest_id: booking_guest_id).call
     end
 
-    def initialize(card:)
+    def initialize(card:, booking_guest_id: nil)
       @card = card
+      @booking_guest_id = booking_guest_id
     end
 
     def call
-      @card.update!(
-        status: "draft",
-        signer_name: nil,
-        signature_data_url: nil,
-        signed_at: nil,
-        display_fields_snapshot: nil
-      )
+      @card.remove_signature_for_guest!(booking_guest_id: @booking_guest_id)
     end
   end
 end

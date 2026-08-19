@@ -14,11 +14,12 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
     result = Bookings::UpdateGuestRegistrationCard.call(
       card: @card,
       booking: @booking,
-      params: guest_registration_card_params
+      params: guest_registration_card_params,
+      booking_guest_id: params[:booking_guest_id]
     )
 
     if result.success?
-      if params[:guest_registration_card][:signature_data_url].blank? && params[:guest_registration_card][:signer_name].blank?
+      if params.dig(:guest_registration_card, :signature_data_url).blank? && params.dig(:guest_registration_card, :signer_name).blank?
         respond_to do |format|
           format.html { redirect_to grc_redirect_path, notice: "Remarks and notes updated." }
           format.json { render json: { status: "success", message: "Remarks and notes updated." } }
@@ -37,7 +38,10 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   end
 
   def destroy
-    Bookings::RemoveRegistrationCardSignature.call(card: @card)
+    Bookings::RemoveRegistrationCardSignature.call(
+      card: @card,
+      booking_guest_id: params[:booking_guest_id]
+    )
     redirect_to grc_redirect_path, notice: "Guest registration card signature removed."
   end
 
@@ -52,7 +56,17 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   end
 
   def set_card
-    @card = @booking.guest_registration_card || @booking.create_guest_registration_card!(hotel: current_hotel)
+    booking_guest = if params[:booking_guest_id].present?
+                      @booking.booking_guests.find { |bg| bg.id.to_s == params[:booking_guest_id].to_s }
+                    else
+                      @booking.booking_guests.find(&:primary?)
+                    end
+
+    @card = if booking_guest
+              booking_guest.guest_registration_card || booking_guest.create_guest_registration_card!(hotel: current_hotel, booking: @booking)
+            else
+              @booking.guest_registration_card || @booking.create_guest_registration_card!(hotel: current_hotel)
+            end
   end
 
   def guest_registration_card_params

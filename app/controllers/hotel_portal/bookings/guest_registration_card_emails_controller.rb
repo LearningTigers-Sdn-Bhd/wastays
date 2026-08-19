@@ -5,13 +5,22 @@ class HotelPortal::Bookings::GuestRegistrationCardEmailsController < HotelPortal
   before_action :set_booking
 
   def create
-    result = ::Bookings::SendGuestRegistrationCard.call(booking: @booking, user: current_user)
+    result = ::Bookings::SendGuestRegistrationCard.call(
+      booking: @booking,
+      user: current_user,
+      booking_guest_id: params[:booking_guest_id]
+    )
+
+    redirect_path = hotel_booking_guest_registration_card_path(
+      current_hotel,
+      @booking,
+      booking_guest_id: params[:booking_guest_id].presence
+    )
 
     if result.success?
-      redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking),
-        notice: "Guest registration card sent to #{result.recipient}."
+      redirect_to redirect_path, notice: "Guest registration card sent to #{result.recipient}."
     else
-      redirect_to hotel_booking_guest_registration_card_path(current_hotel, @booking), alert: result.error
+      redirect_to redirect_path, alert: result.error
     end
   end
 

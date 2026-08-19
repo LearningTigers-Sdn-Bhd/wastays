@@ -151,6 +151,22 @@ module HotelPortal
       user.has_permission?("manage_bookings", hotel: hotel)
     end
 
+    def signed_for_active_guest?
+      @card&.signed? && @card&.signature_data_url.present?
+    end
+
+    def signer_name
+      @card&.signer_name
+    end
+
+    def signature_data_url
+      @card&.signature_data_url
+    end
+
+    def signed_at
+      @card&.signed_at
+    end
+
     private
 
     def find_booking_guest(booking_guest_id)
