@@ -1,21 +1,26 @@
 # frozen_string_literal: true
 
-require "cgi"
 require "prawn"
 require "prawn/table"
 
 Prawn::Fonts::AFM.hide_m17n_warning = true
 
-# Guest-facing reservation voucher. It wears the shared print design system but
-# draws its own body: the QR identity, projected booking charges and policy are not
-# the tabular period-report shape owned by PdfReportBuilder.
 module Reports
   module Bookings
+    # Guest-facing reservation voucher: proof that a room is owed, on these dates, under
+    # these terms. It is presented at check-in, which is why it states no money.
+    #
+    # What is charged, what has been paid and what is still owed are GenerateBookingSummary's
+    # subject. A guest handing this over at the desk should not be handing over their
+    # balance with it.
+    #
+    # Wears the shared print design system but draws its own body: the QR identity and the
+    # policy blocks are not the tabular period-report shape owned by PdfReportBuilder.
     class GenerateVoucher
       THEME = HotelPortal::Reports::Exports::PdfTheme
-      FIXED_COLUMN_WIDTHS = { date: 64, code: 76, quantity: 28, money: 66, gross: 70 }.freeze
-      SUMMARY_WIDTH_FRACTION = 0.48
-      SUMMARY_LABEL_FRACTION = 0.62
+
+      CLOSING_NOTE = "Please present this voucher at check-in. This is an electronically generated document - no signature required."
+      POLICY_NOTE = "Identification is required at check-in. Local government taxes may apply."
 
       class TitleAccessory
         QR_SIZE = 64
@@ -65,25 +70,33 @@ module Reports
       end
 
       def initialize(booking)
-        @records = Reports::Bookings::GenerateVoucherRecords.new(booking).call
+        @booking = booking
+        @records = Reports::Bookings::GenerateReservationRecords.new(booking: booking).call
       end
 
       def generate
         pdf = Prawn::Document.new(page_size: "A4", margin: THEME::PAGE_MARGIN, info: document_info)
         THEME.configure_font(pdf)
-        frame = build_frame(pdf)
-
-        frame.draw_header
-        HotelPortal::Reports::Exports::PdfPartyBlocks.new(pdf: pdf).draw(@records.party_blocks)
-        draw_charges(pdf)
-        draw_payments(pdf)
-        draw_summary(pdf)
-        draw_special_requests(pdf)
-        draw_policies(pdf)
-        draw_closing_notes(pdf)
+        frame = render_into(pdf)
         frame.stamp_page_furniture
         pdf.render
       end
+
+      # Draws one voucher into a document it does not own and hands back the frame, so a pack
+      # can stack many of them and stamp the furniture once at the end. The single voucher
+      # and its page inside a pack come out of this same path, so a reprinted room is
+      # identical to the page it was reprinted from.
+      def render_into(pdf)
+        frame = build_frame(pdf)
+        frame.draw_header
+        HotelPortal::Reports::Exports::PdfPartyBlocks.new(pdf: pdf).draw(@records.party_blocks)
+        draw_special_requests(pdf)
+        draw_policies(pdf)
+        draw_closing_note(pdf)
+        frame
+      end
+
+      def confirmation_token = @records.confirmation_token
 
       private
 
@@ -114,110 +127,15 @@ module Reports
         )
       end
 
-      def draw_charges(pdf)
-        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
-          section_title: "Charges",
-          headers: [
-            "Date", "Code", "Description", "Qty",
-            "Net (#{@records.currency})", "Charges (#{@records.currency})", "Gross (#{@records.currency})"
-          ],
-          rows: @records.charge_rows.map { |row| charge_row(row) },
-          numeric_columns: [ 3, 4, 5, 6 ],
-          total_row: [ nil, nil, "Total due", nil, nil, nil, @records.money(@records.total_due) ],
-          empty_message: "No reservation charges are available.",
-          column_widths: charge_column_widths(pdf),
-          density: :dense
-        )
-      end
-
-      def draw_payments(pdf)
-        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
-          section_title: "Payments",
-          headers: [ "Date", "Code", "Description", "Amount (#{@records.currency})" ],
-          rows: @records.payment_rows.map { |row| payment_row(row) },
-          numeric_columns: [ 3 ],
-          total_row: [ nil, nil, "Total payments", credit_amount(@records.total_payments) ],
-          empty_message: "No payments have been recorded for this reservation.",
-          column_widths: payment_column_widths(pdf),
-          density: :dense
-        )
-      end
-
-      def charge_row(row)
-        [
-          row.date,
-          row.code,
-          description_cell(row.description, row.secondary_description),
-          row.quantity,
-          money_or_dash(row.net),
-          money_or_dash(row.charges),
-          money_or_dash(row.gross)
-        ]
-      end
-
-      def payment_row(row)
-        [
-          row.date,
-          row.code,
-          description_cell(row.description, row.secondary_description),
-          row.amount.positive? ? credit_amount(row.amount) : @records.money(row.amount)
-        ]
-      end
-
-      def description_cell(description, secondary_description)
-        content = CGI.escapeHTML(description.to_s)
-        if secondary_description.present?
-          content += "\n<font size='#{THEME::TYPE[:micro]}'>#{CGI.escapeHTML(secondary_description.to_s)}</font>"
-        end
-        { content: content, inline_format: true }
-      end
-
-      def charge_column_widths(pdf)
-        fixed = FIXED_COLUMN_WIDTHS
-        described = pdf.bounds.width - fixed[:date] - fixed[:code] - fixed[:quantity] -
-          (fixed[:money] * 2) - fixed[:gross]
-        [ fixed[:date], fixed[:code], described, fixed[:quantity], fixed[:money], fixed[:money], fixed[:gross] ]
-      end
-
-      def payment_column_widths(pdf)
-        fixed = FIXED_COLUMN_WIDTHS
-        [ fixed[:date], fixed[:code], pdf.bounds.width - fixed[:date] - fixed[:code] - fixed[:gross], fixed[:gross] ]
-      end
-
-      def draw_summary(pdf)
-        rows = @records.summary_rows
-        width = pdf.bounds.width * SUMMARY_WIDTH_FRACTION
-        label_width = (width * SUMMARY_LABEL_FRACTION).floor
-
-        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
-          section_title: "Summary (#{@records.currency})",
-          headers: [ "", "" ],
-          rows: rows.map { |row| [ row.label, row.amount.nil? ? "" : @records.money(row.amount) ] },
-          numeric_columns: [ 1 ],
-          total_row: nil,
-          empty_message: "No amounts to summarise.",
-          column_widths: [ label_width, width - label_width ],
-          row_variants: rows.each_with_index.to_h { |row, index| [ index, row.variant ] }.compact,
-          position: :right,
-          show_header: false
-        )
-      end
-
       def draw_special_requests(pdf)
-        return if @records.special_requests.blank?
-
-        draw_prose_section(pdf, "Special requests", @records.special_requests)
+        prose(pdf).draw(@records.special_requests, heading: "Special requests")
       end
 
       def draw_policies(pdf)
         cancellation = @records.cancellation
         return unless cancellation.present?
 
-        draw_prose_section(
-          pdf,
-          "Property policies",
-          "Identification is required at check-in. Local government taxes may apply."
-        )
+        prose(pdf).draw(POLICY_NOTE, heading: "Property policies")
         draw_cancellation_table(pdf, cancellation.rows) if cancellation.rows.any?
         draw_cancellation_notes(pdf, cancellation)
       end
@@ -242,54 +160,14 @@ module Reports
         ].compact_blank
         return if notes.empty?
 
-        text = notes.map { |note| "- #{note}" }.join("\n")
-        ensure_block_fits(pdf, text, heading: nil)
-        draw_muted_line(pdf, text)
-        pdf.move_down THEME::SPACE[:lg]
+        prose(pdf).draw_muted(notes.map { |note| "- #{note}" }.join("\n"))
       end
 
-      def draw_closing_notes(pdf)
-        instruction = "Please present this voucher at check-in. This is an electronically generated document - no signature required."
-        disclosure = @records.tourism_tax_disclosure
-        height = pdf.height_of(instruction, size: THEME::TYPE[:small])
-        height += pdf.height_of(disclosure, size: THEME::TYPE[:micro], leading: 2) + THEME::SPACE[:sm] if disclosure.present?
-        pdf.start_new_page if pdf.cursor < height + THEME::SPACE[:lg]
-
-        if disclosure.present?
-          draw_muted_line(pdf, disclosure)
-          pdf.move_down THEME::SPACE[:sm]
-        end
-        pdf.fill_color THEME::COLORS[:muted]
-        pdf.text instruction, size: THEME::TYPE[:small], style: :italic
-        pdf.fill_color THEME::COLORS[:ink]
+      def draw_closing_note(pdf)
+        prose(pdf).draw_closing(CLOSING_NOTE)
       end
 
-      def draw_prose_section(pdf, heading, text)
-        ensure_block_fits(pdf, text, heading: heading)
-        pdf.fill_color THEME::COLORS[:ink]
-        pdf.text heading, size: THEME::TYPE[:heading], style: :bold
-        pdf.move_down THEME::SPACE[:sm]
-        pdf.text text, size: THEME::TYPE[:body], leading: 2
-        pdf.move_down THEME::SPACE[:lg]
-      end
-
-      def ensure_block_fits(pdf, text, heading:)
-        height = pdf.height_of(text, size: THEME::TYPE[:body], leading: 2)
-        if heading.present?
-          height += pdf.height_of(heading, size: THEME::TYPE[:heading], style: :bold) + THEME::SPACE[:sm]
-        end
-        pdf.start_new_page if pdf.cursor < height + THEME::SPACE[:lg]
-      end
-
-      def draw_muted_line(pdf, text)
-        pdf.fill_color THEME::COLORS[:muted]
-        pdf.text text, size: THEME::TYPE[:micro], leading: 2
-        pdf.fill_color THEME::COLORS[:ink]
-      end
-
-      def money_or_dash(value) = value.nil? ? "-" : @records.money(value)
-
-      def credit_amount(value) = "(#{@records.money(value.to_d.abs)})"
+      def prose(pdf) = HotelPortal::Reports::Exports::PdfProseBlock.new(pdf: pdf)
     end
   end
 end

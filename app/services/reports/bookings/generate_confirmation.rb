@@ -27,7 +27,7 @@ module Reports
 
       def initialize(booking)
         @booking = booking
-        @records = Reports::Bookings::GenerateVoucherRecords.new(booking).call
+        @records = Reports::Bookings::GenerateReservationRecords.new(booking: booking).call
       end
 
       def generate

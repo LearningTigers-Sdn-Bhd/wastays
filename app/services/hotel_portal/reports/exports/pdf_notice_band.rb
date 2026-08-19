@@ -12,7 +12,10 @@ module HotelPortal
       class PdfNoticeBand
         VARIANTS = {
           danger: { text: :danger, background: :danger_light },
-          warning: { text: :warning, background: :warning_light }
+          warning: { text: :warning, background: :warning_light },
+          # For a band that qualifies a document rather than warning about it: a summary
+          # saying it is the booked position, not the final bill.
+          info: { text: :primary, background: :primary_light }
         }.freeze
 
         PADDING = PdfTheme::SPACE[:sm]
