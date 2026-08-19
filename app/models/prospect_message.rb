@@ -25,6 +25,7 @@ class ProspectMessage < ApplicationRecord
   before_validation :derive_sender_role, on: :create
   after_create :touch_conversation
   after_create_commit :broadcast_to_both_sides
+  after_create_commit :deliver_to_guest_channel
 
   scope :chronological, -> { order(sent_at: :asc, created_at: :asc) }
   scope :unread, -> { where(read_at: nil) }
@@ -59,6 +60,19 @@ class ProspectMessage < ApplicationRecord
     broadcast_to_guest
     broadcast_to_staff
     broadcast_to_inbox
+  end
+
+  # A reply typed in the inbox still has to leave the building on whatever
+  # channel the guest is actually on. The broadcast above only reaches a page
+  # the app owns; WhatsApp is somebody else's network.
+  #
+  # Filed here for the same reason as the broadcasts -- one place every writer
+  # passes through, so a second way of writing a staff reply cannot forget to
+  # send it.
+  def deliver_to_guest_channel
+    return if conversation.blank?
+
+    Concierge::DeliverStaffReply.call(message: self)
   end
 
   # The list everybody else is looking at. A thread's first message is also its

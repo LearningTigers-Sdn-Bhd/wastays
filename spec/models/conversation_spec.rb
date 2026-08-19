@@ -74,12 +74,62 @@ RSpec.describe Conversation, type: :model do
   end
 
   describe "where a reply can reach the guest" do
+    let(:reachable_guest) { create(:prospect, hotel: hotel, phone_number: "+60123456789") }
+
+    def whatsapp_thread(prospect: reachable_guest)
+      create(:conversation, hotel: hotel, prospect: prospect, channel: "whatsapp")
+    end
+
     it "accepts the channel the hotel owns the page for" do
       expect(build(:conversation, channel: "web")).to be_replies_reach_guest
     end
 
-    it "refuses a channel with no outbound route yet" do
-      expect(build(:conversation, channel: "whatsapp")).not_to be_replies_reach_guest
+    it "accepts WhatsApp once a relay is connected for the hotel" do
+      create(:webhook_endpoint, hotel: hotel, event_types: [ Concierge::DeliverStaffReply::EVENT ])
+
+      expect(whatsapp_thread).to be_replies_reach_guest
+    end
+
+    it "accepts WhatsApp on a relay that takes every event for every hotel" do
+      create(:webhook_endpoint)
+
+      expect(whatsapp_thread).to be_replies_reach_guest
+    end
+
+    # The app has no WhatsApp connection of its own, so with nothing to relay
+    # through a reply box would take text nobody delivers.
+    it "refuses WhatsApp with no relay connected" do
+      thread = whatsapp_thread
+
+      expect(thread).not_to be_replies_reach_guest
+      expect(thread.reply_blocker_message).to include("No WhatsApp relay")
+    end
+
+    it "refuses WhatsApp when the relay serves a different hotel" do
+      create(:webhook_endpoint, hotel: create(:hotel), event_types: [ Concierge::DeliverStaffReply::EVENT ])
+
+      expect(whatsapp_thread).not_to be_replies_reach_guest
+    end
+
+    it "refuses WhatsApp when the relay does not take staff replies" do
+      create(:webhook_endpoint, hotel: hotel, event_types: [ "booking_confirmed" ])
+
+      expect(whatsapp_thread).not_to be_replies_reach_guest
+    end
+
+    it "refuses WhatsApp when the guest has no number to send to" do
+      create(:webhook_endpoint, hotel: hotel, event_types: [ Concierge::DeliverStaffReply::EVENT ])
+      thread = whatsapp_thread(prospect: create(:prospect, hotel: hotel, phone_number: nil))
+
+      expect(thread).not_to be_replies_reach_guest
+      expect(thread.reply_blocker_message).to include("no phone number")
+    end
+
+    it "refuses a channel that carries no replies at all" do
+      thread = build(:conversation, hotel: hotel, channel: "api")
+
+      expect(thread).not_to be_replies_reach_guest
+      expect(thread.reply_blocker_message).to eq(described_class::REPLY_BLOCKERS[:unsupported_channel])
     end
   end
 

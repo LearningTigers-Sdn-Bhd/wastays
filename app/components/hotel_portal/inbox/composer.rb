@@ -35,6 +35,15 @@ module HotelPortal
       def closed? = !conversation.open?
       def deliverable? = conversation.replies_reach_guest?
       def channel_label = helpers.conversation_presenter(conversation).channel_label
+
+      # How the reply travels, said plainly, because the two routes behave
+      # differently enough to matter: a web guest has the reply before the page
+      # settles, a WhatsApp guest gets it whenever the relay sends it on.
+      def delivery_note
+        return "The guest sees this on their chat page straight away." if conversation.channel == "web"
+
+        "Sent to the guest on #{channel_label}."
+      end
     end
   end
 end

@@ -22,7 +22,7 @@
 
       <div class="flex items-center justify-between gap-3">
         <p class="text-xs text-muted-foreground">
-          The guest sees this on their chat page straight away.
+          <%= delivery_note %>
         </p>
         <%= render PanelsUI::Button.new(
               as: :button,
@@ -34,12 +34,9 @@
       </div>
     <% end %>
   <% else %>
-    <%= render PanelsUI::Alert.new(
-          tone: :info,
-          title: "Replies to #{channel_label} are not switched on yet") do |alert| %>
+    <%= render PanelsUI::Alert.new(tone: :info, title: "You cannot reply to #{channel_label} here yet") do |alert| %>
       <% alert.with_description do %>
-        You can read everything here. Sending needs an outbound route to the
-        guest on this channel, which is the next piece of work.
+        You can read everything on this thread. <%= conversation.reply_blocker_message %>
       <% end %>
     <% end %>
   <% end %>

@@ -38,6 +38,7 @@ class WebhookEndpoint < ApplicationRecord
     check_out_receipt_message
     post_stay_review_request
     in_stay_guest_messaging
+    concierge_staff_reply
   ].freeze
 
   # Who should actually receive one event about one hotel.

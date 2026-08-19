@@ -69,15 +69,27 @@ RSpec.describe Concierge::PostStaffReply do
     expect(result.error).to include("closed")
   end
 
-  # A reply nobody can deliver is worse than no reply box: staff believe they
-  # have answered.
-  it "refuses a channel the reply cannot travel down yet" do
-    whatsapp = create(:conversation, hotel: hotel, prospect: create(:prospect, hotel: hotel), channel: "whatsapp")
+  describe "a WhatsApp thread" do
+    let(:guest) { create(:prospect, hotel: hotel, phone_number: "+60123456789") }
+    let(:whatsapp) { create(:conversation, hotel: hotel, prospect: guest, channel: "whatsapp") }
 
-    result = reply("We have parking.", on: whatsapp)
+    it "accepts a reply once a relay is connected to carry it" do
+      create(:webhook_endpoint, hotel: hotel, event_types: [ Concierge::DeliverStaffReply::EVENT ])
 
-    expect(result).not_to be_success
-    expect(result.error).to include("cannot be delivered")
-    expect(whatsapp.messages.reload).to be_empty
+      result = reply("We have parking.", on: whatsapp)
+
+      expect(result).to be_success
+      expect(whatsapp.messages.reload.map(&:body)).to include("We have parking.")
+    end
+
+    # A reply nobody can deliver is worse than no reply box: staff believe they
+    # have answered.
+    it "refuses a reply with nothing to carry it, and says which thing is missing" do
+      result = reply("We have parking.", on: whatsapp)
+
+      expect(result).not_to be_success
+      expect(result.error).to include("No WhatsApp relay")
+      expect(whatsapp.messages.reload).to be_empty
+    end
   end
 end

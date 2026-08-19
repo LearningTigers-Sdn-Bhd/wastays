@@ -7,9 +7,9 @@ module Concierge
   # who has answered is holding the conversation, and the bot answering over
   # the top of them would give the guest two answers to one question.
   #
-  # A channel the reply cannot travel down is refused rather than filed. A
-  # stored reply the guest never sees is worse than no reply box at all --
-  # staff believe they have answered.
+  # A reply that cannot travel is refused rather than filed, in the same words
+  # the reply box uses. A stored reply the guest never sees is worse than no
+  # reply box at all -- staff believe they have answered.
   class PostStaffReply
     MAX_MESSAGE_LENGTH = 2_000
 
@@ -45,7 +45,7 @@ module Concierge
       return "Type a message before sending." if body.blank?
       return "That message is too long." if body.length > MAX_MESSAGE_LENGTH
       return "This conversation is closed. Reopen it to reply." unless conversation.open?
-      return "Replies to this guest cannot be delivered yet." unless conversation.replies_reach_guest?
+      return conversation.reply_blocker_message unless conversation.replies_reach_guest?
 
       nil
     end

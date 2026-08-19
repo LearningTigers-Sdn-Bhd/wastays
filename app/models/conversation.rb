@@ -12,11 +12,25 @@ class Conversation < ApplicationRecord
 
   CHANNELS = %w[web whatsapp api].freeze
 
-  # Where a staff reply actually arrives. The web chat is a page the hotel
-  # owns, so the guest's browser is already listening; WhatsApp needs an
-  # outbound route that does not exist yet. Anywhere else, a reply box would be
-  # a promise the app cannot keep, so it is not offered.
-  REPLYABLE_CHANNELS = %w[web].freeze
+  # Where a staff reply can arrive at all. The web chat is a page the hotel
+  # owns, so the guest's browser is already listening. WhatsApp is somebody
+  # else's network: the app has no connection to it and reaches it through a
+  # relay, so a WhatsApp thread is only replyable when a relay is actually
+  # connected -- see `reply_blocker`. Anywhere else a reply box would be a
+  # promise the app cannot keep, so it is not offered.
+  REPLYABLE_CHANNELS = %w[web whatsapp].freeze
+
+  # Why a reply cannot be sent, in the words staff are shown.
+  #
+  # One place rather than a boolean and a guess, because the reply box and the
+  # refusal from `Concierge::PostStaffReply` have to give the same reason -- a
+  # box that says one thing and an error that says another is worse than
+  # either.
+  REPLY_BLOCKERS = {
+    unsupported_channel: "Replies to this channel cannot be delivered yet.",
+    no_guest_number: "This guest has no phone number on file, so a WhatsApp reply has nowhere to go.",
+    no_relay: "No WhatsApp relay is connected for this hotel, so a reply would not reach the guest."
+  }.freeze
 
   # The one line under the hotel's name in the chat bar. Deliberately about who
   # answers rather than a status light -- "online" would be a promise the page
@@ -51,7 +65,27 @@ class Conversation < ApplicationRecord
   scope :awaiting_staff, -> { open.where(mode: "human").or(open.where.not(human_requested_at: nil)) }
   scope :recent_first, -> { order(last_message_at: :desc, created_at: :desc) }
 
-  def replies_reach_guest? = REPLYABLE_CHANNELS.include?(channel)
+  def replies_reach_guest? = reply_blocker.nil?
+  def reply_blocker_message = REPLY_BLOCKERS[reply_blocker]
+
+  # nil when a reply would reach the guest, otherwise which thing is missing.
+  #
+  # Checked per thread rather than per channel because both answers are facts
+  # about this conversation, not about WhatsApp: a hotel with no relay
+  # connected cannot deliver anything, and a prospect who has only ever used
+  # the web chat has no number to deliver to.
+  def reply_blocker
+    return nil if channel == "web"
+    return :unsupported_channel unless REPLYABLE_CHANNELS.include?(channel)
+    return :no_guest_number if prospect.phone_number.blank?
+    return :no_relay unless staff_replies_relayed?
+
+    nil
+  end
+
+  def staff_replies_relayed?
+    WebhookEndpoint.listening_for(Concierge::DeliverStaffReply::EVENT, hotel_id: hotel_id).exists?
+  end
 
   # What the guest is told about who is answering them.
   #
