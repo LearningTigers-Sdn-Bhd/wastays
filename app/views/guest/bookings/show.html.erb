@@ -122,9 +122,21 @@
                 Download Invoice
               <% end %>
             <% else %>
+              <%# Named for what the document is: it confirms the reservation. Payment
+                  receipts are issued per payment and delivered on their own. %>
               <%= link_to receipt_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[#0a2e29] hover:bg-[#0d3d35] text-[#d9c5a0] transition-colors", data: { turbo: false } do %>
                 <%= cached_icon "download", class: "w-4 h-4" %>
-                Download Receipt
+                Download Confirmation
+              <% end %>
+            <% end %>
+            <%= link_to summary_guest_booking_path(@booking), class: "mt-2 w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted transition-colors", data: { turbo: false } do %>
+              <%= cached_icon "download", class: "w-4 h-4" %>
+              <%= @booking.group_booking_id? ? "Download Group Summary" : "Download Booking Summary" %>
+            <% end %>
+            <% if @booking.group_booking_id? %>
+              <%= link_to voucher_pack_guest_booking_path(@booking), class: "mt-2 w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted transition-colors", data: { turbo: false } do %>
+                <%= cached_icon "download", class: "w-4 h-4" %>
+                Download All Vouchers
               <% end %>
             <% end %>
           </div>

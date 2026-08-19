@@ -25,7 +25,7 @@ module Admin
     end
 
     def receipt
-      pdf_bytes = ReceiptPdfService.new(@booking).generate
+      pdf_bytes = Reports::Bookings::GenerateConfirmation.new(@booking).generate
       send_data pdf_bytes,
         filename: "wastays-receipt-#{@booking.confirmation_token}.pdf",
         type: "application/pdf",

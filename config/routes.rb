@@ -51,6 +51,8 @@ Rails.application.routes.draw do
       member do
         get :receipt
         get :invoice
+        get :voucher_pack, path: "voucher-pack"
+        get :summary
         patch :toggle_dnd
       end
       resources :refund_requests, only: [ :new, :create ]
@@ -121,6 +123,8 @@ Rails.application.routes.draw do
         get :receipt
         get :invoice
         get :voucher
+        get :voucher_pack, path: "voucher-pack"
+        get :summary
       end
     end
     resources :receipts, only: [ :show ]
@@ -383,7 +387,10 @@ Rails.application.routes.draw do
       resource :guest_registration_card_pdf, only: [ :show ], module: :bookings
       resource :guest_registration_card_email, only: [ :create ], module: :bookings
       resources :guest_registration_note_templates, only: [ :index, :new, :create, :edit, :update, :destroy ], module: :bookings
-      resource :reservation_voucher, only: [ :show ], module: :bookings
+      resource :reservation_voucher, only: [ :show ], module: :bookings do
+        get :pack
+      end
+      resource :booking_summary, only: [ :show ], module: :bookings
       resource :tourism_tax_voucher, only: [ :show ], module: :bookings do
         post :issue
       end

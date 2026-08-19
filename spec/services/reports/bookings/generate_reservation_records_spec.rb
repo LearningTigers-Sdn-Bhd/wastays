@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Reports::Bookings::GenerateVoucherRecords do
-  subject(:records) { described_class.new(booking).call }
+RSpec.describe Reports::Bookings::GenerateReservationRecords do
+  subject(:records) { described_class.new(booking: booking).call }
 
   let(:hotel) { create(:hotel) }
   let(:room_type) { create(:room_type, hotel:, name: "Ocean Suite") }
@@ -131,7 +131,7 @@ RSpec.describe Reports::Bookings::GenerateVoucherRecords do
         end
       )
 
-      rows = described_class.new(booking.reload).call.charge_rows
+      rows = described_class.new(booking: booking.reload).call.charge_rows
       expect(rows.size).to eq(night_count)
       expect(rows.last.secondary_description).to eq("Night #{night_count} of #{night_count}")
     end
@@ -168,7 +168,7 @@ RSpec.describe Reports::Bookings::GenerateVoucherRecords do
     )
 
     booking.update!(tourism_tax_collected: true)
-    expect(described_class.new(booking.reload).call.tourism_tax_disclosure).to eq(
+    expect(described_class.new(booking: booking.reload).call.tourism_tax_disclosure).to eq(
       "Excluded from booking total: Tourism tax of MYR 30.00 was collected separately. " \
         "See the official tourism tax voucher."
     )
@@ -256,10 +256,10 @@ RSpec.describe Reports::Bookings::GenerateVoucherRecords do
       "overbooked" => :warning
     }.each do |status, variant|
       booking.update_column(:status, status)
-      expect(described_class.new(booking.reload).call.status_badge).to eq(label: status.humanize, variant: variant)
+      expect(described_class.new(booking: booking.reload).call.status_badge).to eq(label: status.humanize, variant: variant)
     end
 
     allow(booking).to receive(:status).and_return("manual_review")
-    expect(described_class.new(booking).call.status_badge).to eq(label: "Manual review", variant: :neutral)
+    expect(described_class.new(booking: booking).call.status_badge).to eq(label: "Manual review", variant: :neutral)
   end
 end
