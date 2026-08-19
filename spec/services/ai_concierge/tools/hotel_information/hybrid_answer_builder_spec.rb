@@ -269,4 +269,76 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
 
     expect(result["answer_mode"]).not_to eq("deterministic")
   end
+
+  describe "caching the answer" do
+    it "answers a repeated question without searching again" do
+      with_real_cache_store do
+        search_service = search_service_returning([ match ])
+        allow(search_service).to receive(:new).and_call_original
+
+        2.times do
+          described_class.new(
+            hotel: hotel,
+            query: "what time is breakfast?",
+            intent: "hotel_information",
+            topic: "hotel_faq",
+            categories: [ "faq" ],
+            source: "hotel_faq",
+            search_service: search_service,
+            answer_agent: answer_agent_returning("unused")
+          ).call
+        end
+
+        expect(search_service).to have_received(:new).once
+      end
+    end
+
+    # A hotel that changes its check-in time must not keep being asked to
+    # honour the old one.
+    it "stops serving an answer once the facts behind it change" do
+      with_real_cache_store do
+        def build(check_in)
+          described_class.new(
+            hotel: hotel,
+            query: "what time is check in?",
+            intent: "hotel_policy",
+            topic: "hotel_policy",
+            categories: [ "policy" ],
+            source: "property_policy",
+            structured_facts: { "check_in_time" => check_in },
+            search_service: search_service_returning([]),
+            answer_agent: answer_agent_returning("unused")
+          ).call
+        end
+
+        expect(build("3:00 PM")["answer"]).to eq("Check-in starts at 3:00 PM.")
+        expect(build("2:00 PM")["answer"]).to eq("Check-in starts at 2:00 PM.")
+      end
+    end
+
+    it "stops serving an answer once the hotel re-ingests its knowledge" do
+      with_real_cache_store do
+        document = create(:hotel_knowledge_document, hotel: hotel, category: "faq", embedding_status: "indexed")
+
+        first = described_class.new(
+          hotel: hotel, query: "what time is breakfast?", intent: "hotel_information",
+          topic: "hotel_faq", categories: [ "faq" ], source: "hotel_faq",
+          search_service: search_service_returning([ match ]),
+          answer_agent: answer_agent_returning("unused")
+        ).call
+
+        travel_to(1.hour.from_now) { document.touch }
+
+        second = described_class.new(
+          hotel: hotel, query: "what time is breakfast?", intent: "hotel_information",
+          topic: "hotel_faq", categories: [ "faq" ], source: "hotel_faq",
+          search_service: search_service_returning([ match.merge("content" => "Breakfast now runs to 11 AM.") ]),
+          answer_agent: answer_agent_returning("unused")
+        ).call
+
+        expect(first["answer"]).to eq("Breakfast is served from 7 AM to 10 AM.")
+        expect(second["answer"]).to eq("Breakfast now runs to 11 AM.")
+      end
+    end
+  end
 end

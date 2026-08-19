@@ -6,6 +6,8 @@ module AiConcierge
       class HybridAnswerBuilder
         STRONG_MATCH_DISTANCE = 0.35
         FALLBACK_CATEGORIES = %w[general_info faq policy].freeze
+        CACHE_VERSION = "v1"
+        ANSWER_TTL = 6.hours
 
         def initialize(hotel:, query:, intent:, topic:, categories:, source:, structured_facts: {}, fallback_text: nil, unavailable_answer: nil, search_service: HotelKnowledges::SearchService, answer_agent: AiConcierge::Agents::KnowledgeAnswerAgent)
           @hotel = hotel
@@ -22,6 +24,12 @@ module AiConcierge
         end
 
         def call
+          Rails.cache.fetch(cache_key, expires_in: ANSWER_TTL) { build_answer }
+        end
+
+        private
+
+        def build_answer
           matches = search_matches
 
           if direct_structured_answer.present?
@@ -54,7 +62,27 @@ module AiConcierge
           payload(answer: unavailable_answer, answer_mode: "unavailable", matches: matches, success: false)
         end
 
-        private
+        # Hotel facts change monthly; the questions arrive hourly. Caching the
+        # answer also caches away the synthesis call to a model, which is the
+        # expensive half of a miss.
+        #
+        # Everything the answer is derived from is in the key, so nothing has
+        # to remember to invalidate this: the corpus timestamp moves when a
+        # document is re-ingested, and the structured facts and fallback text
+        # are digested rather than assumed constant -- a hotel that changes its
+        # check-in time must not keep being asked to honour the old one.
+        def cache_key
+          [
+            "ai_concierge/hotel_answer",
+            CACHE_VERSION,
+            hotel.id,
+            source,
+            categories.map(&:to_s).sort.join(","),
+            Digest::SHA256.hexdigest(query.downcase.squish),
+            Digest::SHA256.hexdigest([ structured_facts, fallback_text ].to_json),
+            hotel.knowledge_documents.maximum(:updated_at).to_i
+          ].join("/")
+        end
 
         attr_reader :hotel, :query, :intent, :topic, :categories, :source, :structured_facts,
           :fallback_text, :unavailable_answer, :search_service, :answer_agent
