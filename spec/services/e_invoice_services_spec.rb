@@ -6,7 +6,9 @@ RSpec.describe "E-Invoice & MyInvois Services" do
   # EInvoice::Cancel
   describe EInvoice::Cancel do
     describe ".call" do
-      let(:submission) { create(:e_invoice_submission, status: "valid") }
+      # LHDN stamps validated_at when it validates, and the 72-hour
+      # cancellation window runs from there.
+      let(:submission) { create(:e_invoice_submission, status: "valid", validated_at: 1.hour.ago) }
 
       before do
         allow(MyInvois::ClientFactory).to receive(:build).and_return(

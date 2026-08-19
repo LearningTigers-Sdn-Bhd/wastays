@@ -109,12 +109,16 @@ class EInvoiceSubmission < ApplicationRecord
 
   def cancellable?
     return false unless validated? && cancelled_at.nil?
+    # Validated without a timestamp is a data anomaly, not a closed window; we
+    # cannot tell whether LHDN would still accept it, so we do not offer it.
     return false if validated_at.blank?
 
     Time.current <= validated_at + CANCELLATION_WINDOW
   end
 
   def cancellation_window_closed?
+    return false if validated_at.blank?
+
     validated? && cancelled_at.nil? && !cancellable?
   end
 
