@@ -481,6 +481,18 @@ class Hotel < ApplicationRecord
     ai_provider_name != "deepseek"
   end
 
+  # Judged here rather than read off the model registry: the registry claims
+  # DeepSeek supports tool calling, and nothing in this codebase has confirmed
+  # that. A provider we are unsure about gets the single-hop JSON path, which
+  # runs the same tools by a different transport.
+  def ai_concierge_tool_calling_supported?
+    ai_provider_name != "deepseek"
+  end
+
+  def ai_concierge_agent_loop?
+    ai_concierge_agent_loop_enabled? && ai_concierge_ready?
+  end
+
   def effective_margin_rate(room_type = nil)
     # 1. Check room-type override
     if room_type

@@ -13,6 +13,10 @@ turns:
       legacy:
         intent: room_information
         topic: room_information
+      agent_loop:
+        tool: get_room_type_details
+        arguments:
+          query: "how much is a room here?"
     expect:
       intent: booking_search
       flow: booking_search

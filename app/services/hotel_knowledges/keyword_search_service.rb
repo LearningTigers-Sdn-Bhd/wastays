@@ -15,7 +15,13 @@ module HotelKnowledges
     # 'simple' rather than 'english': hotel corpora here are not all English,
     # and English stemming degrades every chunk that is not. The cost is that
     # 'simple' keeps stopwords, so they are removed below instead.
-    CONFIGURATION = "simple"
+    #
+    # Both fragments are written out in full rather than interpolated from a
+    # constant, so nothing about the SQL is assembled at runtime -- the only
+    # value that varies is the bound one.
+    MATCHES_SQL = "content_tsv @@ to_tsquery('simple', ?)"
+    RANK_SQL = "ts_rank(content_tsv, to_tsquery('simple', ?)) DESC"
+
     MIN_TERM_LENGTH = 3
     MAX_TERMS = 12
 
@@ -51,8 +57,8 @@ module HotelKnowledges
           category: categories,
           embedding_status: "indexed"
         })
-        .where("content_tsv @@ #{tsquery_sql}", tsquery)
-        .order(Arel.sql(HotelKnowledgeChunk.sanitize_sql_array([ "ts_rank(content_tsv, #{tsquery_sql}) DESC", tsquery ])))
+        .where(MATCHES_SQL, tsquery)
+        .order(Arel.sql(HotelKnowledgeChunk.sanitize_sql_array([ RANK_SQL, tsquery ])))
         .limit(limit)
     end
 
@@ -60,8 +66,6 @@ module HotelKnowledges
     # Requiring every word would mean a guest who writes a sentence rather than
     # a search box gets nothing -- which is most guests.
     def tsquery = terms.join(" | ")
-
-    def tsquery_sql = "to_tsquery('#{CONFIGURATION}', ?)"
 
     # Punctuation is stripped rather than escaped: what reaches to_tsquery is
     # only ever alphanumeric words, so nothing a guest types can be read as

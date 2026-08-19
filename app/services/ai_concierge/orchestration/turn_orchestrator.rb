@@ -49,6 +49,8 @@ module AiConcierge
           return control_handler.max_turns_response(prospect: session.prospect, conversation_state: session.conversation_state)
         end
 
+        return run_agent_loop(session) if hotel.ai_concierge_agent_loop?
+
         interpretation = interpretation_pipeline.interpret(conversation_state: session.conversation_state)
         control_response = control_handler.handle(
           prospect: session.prospect,
@@ -91,6 +93,37 @@ module AiConcierge
             action_name: nil,
             prospect_public_id: session.prospect.public_id
           ).call
+        )
+      end
+
+      # The tool-calling loop. Everything above it in `process_session` still
+      # runs first and still costs nothing: a staff member holding the thread,
+      # a turn limit, a guest saying goodbye. Control is settled deterministically
+      # here rather than after the model, so those turns no longer buy a
+      # round-trip to answer a question regex already answered.
+      def run_agent_loop(session)
+        control_response = control_handler.handle(
+          prospect: session.prospect,
+          conversation_state: session.conversation_state,
+          interpretation: Core::ConfirmationReader.new(message: message).as_interpretation
+        )
+        return control_response if control_response
+
+        outcome = AgentLoop::RunTurn.new(
+          hotel: hotel,
+          prospect: session.prospect,
+          phone: phone,
+          conversation_state: session.conversation_state,
+          message: message
+        ).call
+
+        Core::Result.success(
+          payload: response_persister.persist_domain_response(
+            prospect: session.prospect,
+            conversation_state: outcome.conversation_state,
+            interpretation: outcome.interpretation,
+            domain_result: outcome.domain_result
+          )
         )
       end
 

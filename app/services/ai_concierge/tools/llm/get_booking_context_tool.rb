@@ -1,0 +1,25 @@
+# frozen_string_literal: true
+
+module AiConcierge
+  module Tools
+    module Llm
+      class GetBookingContextTool < BaseTool
+        description <<~DESCRIPTION
+          Look up the booking this guest already has with the hotel -- their
+          dates and room. Use this when they ask about "my booking", "my
+          reservation" or "my stay", not when they are trying to make a new one.
+        DESCRIPTION
+
+        def execute
+          domain_result = Orchestration::Conversation::BookingContextHandler.new(
+            hotel: hotel,
+            phone: context.phone
+          ).call(prospect: context.prospect, conversation_state: context.conversation_state)
+
+          record(domain_result, intent: "booking_context", topic: "booking_context",
+                 digest: { answered: true })
+        end
+      end
+    end
+  end
+end

@@ -9,9 +9,10 @@
 # catch.
 module AiConciergeEval
   module PipelineDriver
-    # Phase F commit 5 adds :agent_loop here, at which point every fixture runs
-    # in two columns under the same assertions.
-    PIPELINES = %i[legacy].freeze
+    # Both columns run the same fixtures under the same assertions. That is the
+    # whole safety argument for the rewrite -- not "green with adjusted
+    # expectations", green against the same file.
+    PIPELINES = %i[legacy agent_loop].freeze
 
     TurnResult = Struct.new(:result, :prospect, :conversation_state, :quotes_created, keyword_init: true) do
       def payload = result.payload || {}
@@ -23,7 +24,7 @@ module AiConciergeEval
     def self.available?(pipeline) = PIPELINES.include?(pipeline.to_sym)
 
     def run_fixture(fixture, pipeline:)
-      world = build_fixture_world(fixture)
+      world = build_fixture_world(fixture, pipeline: pipeline)
       install_model_fake(fixture, world, pipeline: pipeline)
 
       fixture.turns.each_with_index do |turn, index|
@@ -33,8 +34,8 @@ module AiConciergeEval
 
     private
 
-    def build_fixture_world(fixture)
-      hotel = create(:hotel, :with_ai_concierge)
+    def build_fixture_world(fixture, pipeline:)
+      hotel = create(:hotel, :with_ai_concierge, ai_concierge_agent_loop_enabled: pipeline == :agent_loop)
       policy = fixture.setup["policy"] || {}
       create(
         :property_policy,
@@ -125,16 +126,24 @@ module AiConciergeEval
       scripted = fixture.turns.to_h { |turn| [ turn.guest, turn.model_for(pipeline) ] }
       summary = { "room_type_names" => world[:room_type_names] }
 
+      return install_scripted_chat(scripted, summary) if pipeline == :agent_loop
+
       allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call) do |agent|
         message = agent.send(:message)
         override = scripted[message]
         interpretation = ReferenceClassifier.call(message: message, conversation_summary: summary)
-        override ? deep_merge_interpretation(interpretation, override) : interpretation
+        override ? interpretation.deep_merge(override.deep_stringify_keys) : interpretation
       end
     end
 
-    def deep_merge_interpretation(interpretation, override)
-      interpretation.deep_merge(override.deep_stringify_keys)
+    # The fake stands where the provider stands. Tool dispatch, the halt, the
+    # hop cap and every orchestrator underneath are real.
+    def install_scripted_chat(scripted, summary)
+      turns = scripted.compact.transform_values { |script| script.deep_symbolize_keys }
+
+      allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat) do
+        ScriptedChat.new(classifier_summary: summary, scripted_turns: turns)
+      end
     end
 
     def post_fixture_turn(world, turn)
