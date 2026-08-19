@@ -23,11 +23,11 @@
         <% table.with_header do %>
           <tr>
             <th scope="col">Guest name</th>
-            <th scope="col" class="w-[80px]">Pax</th>
             <th scope="col" class="w-[140px]">Room number</th>
             <th scope="col" class="w-[140px]">Transfer</th>
             <th scope="col" class="w-[150px]">Transfer date</th>
             <th scope="col" class="w-[140px]">Transfer time</th>
+            <th scope="col" class="w-[80px]">Pax</th>
           </tr>
         <% end %>
         <% table.with_body do %>
@@ -66,7 +66,6 @@
                     <% end %>
                   </div>
                 </th>
-                <td class="tabular-nums"><%= row[:pax] %></td>
                 <td class="whitespace-nowrap"><%= row[:room_number] %></td>
                 <% transfer = transfer_badge(row[:type]) %>
                 <td>
@@ -78,6 +77,7 @@
                 </td>
                 <td class="whitespace-nowrap"><%= row[:transfer_date] %></td>
                 <td class="whitespace-nowrap tabular-nums text-foreground"><%= row[:formatted_boat_time] %></td>
+                <td class="tabular-nums"><%= row[:pax] %></td>
               </tr>
             <% end %>
             <% end %>

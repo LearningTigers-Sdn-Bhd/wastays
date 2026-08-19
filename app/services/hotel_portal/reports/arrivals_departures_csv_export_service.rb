@@ -7,7 +7,7 @@ module HotelPortal
 
       # The sectioned surfaces (screen tables, sheets, PDF pages) split by meal, so
       # the flat CSV names each row's entitlements in a column instead.
-      MEAL_PREP_COLUMNS = [ "Guest Name", "Pax", "Room Number", "Transfer", "Transfer Date", "Transfer Time" ].freeze
+      MEAL_PREP_COLUMNS = [ "Guest Name", "Room Number", "Transfer", "Transfer Date", "Transfer Time", "Pax" ].freeze
       MEAL_PREP_HEADERS = (MEAL_PREP_COLUMNS + [ "Meal Preps" ]).freeze
 
       def initialize(report:, tab: "arrivals")
@@ -39,12 +39,12 @@ module HotelPortal
       def export_total_row
         return nil unless @tab == "meal_prep"
 
-        [ "Total Pax", @report.total_pax ] + Array.new(export_headers.size - 2)
+        [ "Total Pax" ] + Array.new(export_headers.size - 3) + [ @report.total_pax, nil ]
       end
 
       # Ordered like the screen table; the meal column is the caller's to append.
       def meal_prep_row(row)
-        [ row[:guest_name], row[:pax], row[:room_number], row[:type], row[:transfer_date], row[:formatted_boat_time] ]
+        [ row[:guest_name], row[:room_number], row[:type], row[:transfer_date], row[:formatted_boat_time], row[:pax] ]
       end
 
       # A single-leg export is about that leg, so it carries only its own date and

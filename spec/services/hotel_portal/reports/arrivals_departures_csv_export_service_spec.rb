@@ -103,9 +103,9 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesCsvExportService do
       csv = described_class.new(report: report, tab: "meal_prep").generate
       table = CSV.parse(csv.delete_prefix("﻿"), headers: true)
 
-      expect(table.headers).to eq([ "Guest Name", "Pax", "Room Number", "Transfer", "Transfer Date", "Transfer Time", "Meal Preps" ])
-      expect(table[0].fields).to eq([ "Meal Guest", "3", "101", "Boat-in", "07 May 2026", "07:00 AM", "Breakfast, Lunch, Dinner" ])
-      expect(table[1].fields).to eq([ "Late Guest", "2", "205", "Boat-out", "08 May 2026", "01:00 PM", "Breakfast" ])
+      expect(table.headers).to eq([ "Guest Name", "Room Number", "Transfer", "Transfer Date", "Transfer Time", "Pax", "Meal Preps" ])
+      expect(table[0].fields).to eq([ "Meal Guest", "101", "Boat-in", "07 May 2026", "07:00 AM", "3", "Breakfast, Lunch, Dinner" ])
+      expect(table[1].fields).to eq([ "Late Guest", "205", "Boat-out", "08 May 2026", "01:00 PM", "2", "Breakfast" ])
 
       # The total lands under Pax, not wherever the column count happens to put it.
       total = table[2]

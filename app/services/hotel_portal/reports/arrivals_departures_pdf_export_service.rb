@@ -3,13 +3,12 @@
 module HotelPortal
   module Reports
     class ArrivalsDeparturesPdfExportService
-      # Room, date and time share one width so both tables line up; the guest
-      # name takes whatever page width is left over.
-      BIBO_FIXED_COLUMN_WIDTH = 150
+      # Room, date and time columns share fixed widths in portrait mode; guest name takes the remainder.
+      BIBO_FIXED_COLUMN_WIDTHS = [ 100, 110, 100 ].freeze
 
       # Same idea for meal prep, but its columns hold different amounts of text.
-      MEAL_PREP_FIXED_COLUMN_WIDTHS = { "Pax" => 60, "Room Number" => 110, "Transfer" => 110,
-                                        "Transfer Date" => 120, "Transfer Time" => 110 }.freeze
+      MEAL_PREP_FIXED_COLUMN_WIDTHS = { "Pax" => 40, "Room Number" => 75, "Transfer" => 75,
+                                        "Transfer Date" => 85, "Transfer Time" => 75 }.freeze
 
       def initialize(hotel:, report:, prepared_by:, tab: "arrivals")
         @hotel = hotel
@@ -20,7 +19,8 @@ module HotelPortal
       end
 
       def generate
-        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Guest Reports", subtitle: section_name, period_label: period_label, prepared_by: @prepared_by, page_layout: :landscape)
+        layout = %w[bibo meal_prep].include?(@tab) ? :portrait : :landscape
+        builder = Exports::PdfReportBuilder.new(hotel: @hotel, title: "Guest Reports", subtitle: section_name, period_label: period_label, prepared_by: @prepared_by, page_layout: layout)
 
         case @tab
         when "meal_prep" then add_meal_prep_pages(builder)
@@ -59,11 +59,16 @@ module HotelPortal
           builder.start_new_page unless index.zero?
           builder.add_header if index.zero?
           builder.add_summary([ [ "Transfers", section[:rows].size.to_s ], [ "Total Pax", section[:total_pax].to_s ] ])
+
+          total_row = Array.new(headers.size)
+          total_row[0] = "Total Pax"
+          total_row[pax_column] = section[:total_pax].to_s
+
           builder.add_table(
             section_title: section[:title], headers: headers,
             rows: section[:rows].map { |row| @table.meal_prep_row(row).map { |value| value.blank? ? "-" : value.to_s } },
             numeric_columns: [ pax_column ],
-            total_row: [ "Total Pax", section[:total_pax].to_s ] + Array.new(headers.size - 2),
+            total_row: total_row,
             empty_message: "No boat transfers or meal records found for the selected period.",
             column_widths: widths
           )
@@ -92,7 +97,7 @@ module HotelPortal
       end
 
       def bibo_column_widths(builder)
-        fixed = Array.new(3, BIBO_FIXED_COLUMN_WIDTH)
+        fixed = BIBO_FIXED_COLUMN_WIDTHS
         [ builder.content_width - fixed.sum ] + fixed
       end
 

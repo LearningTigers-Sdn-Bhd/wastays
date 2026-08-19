@@ -121,10 +121,10 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
       expect(pdf).to start_with("%PDF")
       expect(sections.map { |section| section[:section_title] }).to eq(%w[Breakfast Lunch Dinner])
       expect(page_breaks).to eq(2)
-      expect(sections.first[:headers]).to eq([ "Guest Name", "Pax", "Room Number", "Transfer", "Transfer Date", "Transfer Time" ])
-      expect(sections.first[:rows]).to eq([ [ "Meal Guest", "2", "101", "Boat-in", "07 May 2026", "07:00 AM" ] ])
-      expect(sections.first[:total_row]).to eq([ "Total Pax", "2", nil, nil, nil, nil ])
-      expect(sections.first[:numeric_columns]).to eq([ 1 ])
+      expect(sections.first[:headers]).to eq([ "Guest Name", "Room Number", "Transfer", "Transfer Date", "Transfer Time", "Pax" ])
+      expect(sections.first[:rows]).to eq([ [ "Meal Guest", "101", "Boat-in", "07 May 2026", "07:00 AM", "2" ] ])
+      expect(sections.first[:total_row]).to eq([ "Total Pax", nil, nil, nil, nil, "2" ])
+      expect(sections.first[:numeric_columns]).to eq([ 5 ])
     end
 
     it "prints boat transfers as separate boat-in and boat-out tables" do
