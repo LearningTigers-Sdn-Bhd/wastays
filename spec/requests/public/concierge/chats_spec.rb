@@ -228,6 +228,53 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     end
   end
 
+  describe "DELETE chat" do
+    def clear_path = "/concierge/#{hotel.slug}/chat"
+
+    it "puts the guest's thread away and gives them an empty chat" do
+      post chat_path, params: { message: "Do you have parking?" }
+
+      delete clear_path
+      follow_redirect!
+
+      expect(Conversation.last).not_to be_open
+      expect(response.body).not_to include("Do you have parking?")
+    end
+
+    # Cleared is not erased: the hotel is still answering the person, and the
+    # thread is still on the desk.
+    it "leaves the transcript where staff can still read it" do
+      post chat_path, params: { message: "Do you have parking?" }
+
+      delete clear_path
+
+      expect(Conversation.last.messages.map(&:body)).to include("Do you have parking?")
+    end
+
+    it "starts a fresh thread on the next message, for the same visitor" do
+      post chat_path, params: { message: "First thread" }
+      delete clear_path
+
+      expect {
+        post chat_path, params: { message: "Second thread" }
+      }.to change(Conversation, :count).by(1).and change(Prospect, :count).by(0)
+    end
+
+    it "is harmless for a visitor who has never written" do
+      delete clear_path
+
+      expect(response).to redirect_to(concierge_chat_path(hotel))
+    end
+
+    # The menu is the only way to reach it, so it has to be on the page.
+    it "offers clearing from the chat itself" do
+      get chat_path
+
+      expect(response.body).to include("Clear conversation")
+      expect(response.body).to include("public-menu__trigger")
+    end
+  end
+
   # The reason the web chat came before WhatsApp: the guest's browser is
   # already connected, so a staff reply reaches them with no integration.
   describe "the live connection" do

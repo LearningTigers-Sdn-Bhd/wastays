@@ -24,7 +24,18 @@
                       status: concierge_chat_status(conversation, hotel),
                       back_path: concierge_home_path(hotel),
                       back_label: "Back to concierge",
-                      avatar: conversation&.human? ? :staff : :bot) %>
+                      avatar: conversation&.human? ? :staff : :bot) do |bar| %>
+      <% bar.with_menu do %>
+        <%= render PublicUI::Menu.new(label: "Conversation options") do |menu| %>
+          <% menu.with_item(href: concierge_clear_chat_path(hotel),
+                            method: :delete,
+                            danger: true,
+                            confirm: "Start a new conversation? This one is put away -- the hotel keeps what was said.") do %>
+            Clear conversation
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
     <% panel.with_log(messages: messages, hotel: hotel) %>
     <% panel.with_alert do %>
       <div id="concierge-chat-error">

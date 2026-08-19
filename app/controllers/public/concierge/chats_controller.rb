@@ -38,6 +38,16 @@ module Public
         end
       end
 
+      # Put away, not erased. The thread closes, the hotel keeps the transcript,
+      # and the guest's next message opens a fresh one -- so this is a plain
+      # redirect rather than a stream: there is nothing left on the page worth
+      # keeping in place.
+      def destroy
+        ::Concierge::ClearConversation.new(conversation: current_conversation).call
+
+        redirect_to concierge_chat_path(@hotel)
+      end
+
       private
 
       # A write hands over the thread it wrote into -- on a first message that is

@@ -191,3 +191,32 @@
     @apply inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-transparent bg-primary text-primary-foreground transition-all duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50;
   }
 }
+
+@layer components {
+  /* Guest-facing dropdown (PublicUI::Menu). Anchored to the corner it hangs
+     from rather than positioned by script: on the public pages it is only ever
+     used at the end of the chat bar. */
+  .public-menu {
+    @apply relative;
+  }
+
+  .public-menu__trigger {
+    @apply inline-flex size-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .public-menu__trigger[aria-expanded="true"] {
+    @apply bg-muted text-foreground;
+  }
+
+  .public-menu__list {
+    @apply absolute right-0 top-full z-20 mt-1 flex min-w-56 flex-col overflow-hidden rounded-xl border border-border bg-white py-1 shadow-lg;
+  }
+
+  .public-menu__item {
+    @apply w-full cursor-pointer px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none;
+  }
+
+  .public-menu__item[data-danger="true"] {
+    @apply text-red-700 hover:bg-red-50;
+  }
+}
