@@ -39,6 +39,8 @@ module AiConcierge
       def process_session(session)
         @conversation = session.conversation
 
+        return staff_hold_response(session) if session.conversation.human?
+
         if control_handler.wait_time_end?(session.conversation_state)
           return control_handler.wait_time_end_response(prospect: session.prospect, conversation_state: session.conversation_state)
         end
@@ -68,6 +70,28 @@ module AiConcierge
         )
 
         Core::Result.success(payload: response)
+      end
+
+      # A person is holding this thread, so the assistant has nothing to say.
+      #
+      # The guest's message is already filed by the session loader above and is
+      # on its way to the inbox; what stops here is the answer, before any
+      # interpreting, any tool and any state is advanced -- a turn the bot did
+      # not take is not a turn.
+      #
+      # Success rather than an error, because nothing went wrong: the message
+      # arrived and a person will answer it. `reply_message` is nil because
+      # there is genuinely nothing to send, and a caller that delivers it
+      # anyway would put an empty message in front of the guest.
+      def staff_hold_response(session)
+        Core::Result.success(
+          payload: Core::ResponsePayloadBuilder.new(
+            reply_message: nil,
+            needs_human_support: true,
+            action_name: nil,
+            prospect_public_id: session.prospect.public_id
+          ).call
+        )
       end
 
       def process_decision(prospect:, conversation_state:, interpretation:, active_branch:, decision:)

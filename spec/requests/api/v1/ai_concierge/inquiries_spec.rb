@@ -58,6 +58,51 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["error"]).to eq("Message is too long (max 2000 characters)")
     end
 
+    # The thread's mode decides who may answer. Nothing on this path used to
+    # read it, so a staff member holding a WhatsApp thread from the inbox still
+    # had the assistant replying over the top of them.
+    context "when a staff member is holding the thread" do
+      let(:conversation) { Conversation.order(:id).last }
+
+      before do
+        post path, params: { message: "Hello", phone: phone }.to_json, headers: headers
+        Concierge::TakeOverConversation.new(conversation: conversation, user: create(:user)).call
+      end
+
+      it "answers with nothing to send" do
+        post path, params: { message: "Are you there?", phone: phone }.to_json, headers: headers
+
+        expect(response).to have_http_status(:ok)
+        expect(parsed_body["reply_message"]).to be_nil
+        expect(parsed_body["needs_human_support"]).to be(true)
+        expect(parsed_body["prospect_public_id"]).to be_present
+      end
+
+      # Silence is only the answer. The message itself still has to reach the
+      # person who is expected to reply to it.
+      it "still files the guest's message on the thread" do
+        expect {
+          post path, params: { message: "Are you there?", phone: phone }.to_json, headers: headers
+        }.to change { conversation.messages.from_guest.count }.by(1)
+
+        expect(conversation.messages.chronological.last.body).to eq("Are you there?")
+      end
+
+      it "writes no reply of its own" do
+        expect {
+          post path, params: { message: "Are you there?", phone: phone }.to_json, headers: headers
+        }.not_to change { conversation.messages.where(sender_role: "bot").count }
+      end
+
+      it "answers again once the thread goes back to the bot" do
+        conversation.return_to_bot!
+
+        post path, params: { message: "What is the policy of this hotel?", phone: phone }.to_json, headers: headers
+
+        expect(parsed_body["reply_message"]).to be_present
+      end
+    end
+
     it "answers hotel policy questions" do
       doc = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Quiet Hours", embedding_status: "indexed")
       create(:hotel_knowledge_chunk, document: doc, chunk_index: 0, content: "Quiet hours start at 10 PM.")
