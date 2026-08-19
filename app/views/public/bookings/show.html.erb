@@ -275,7 +275,11 @@
             <% end %>
             <%= link_to receipt_booking_path(@booking.confirmation_token), class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-[#0a2e29] hover:bg-[#0d3d35] text-[11px] font-bold text-[#d9c5a0] rounded-xl transition-all border border-[#d9c5a0]/20 uppercase tracking-widest shadow-sm", data: { turbo: false } do %>
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-              Download Receipt
+              Download Confirmation
+            <% end %>
+            <%= link_to summary_booking_path(@booking.confirmation_token), class: "group inline-flex items-center gap-x-2 px-6 py-3 bg-muted hover:bg-border/40 text-[11px] font-bold text-muted-foreground hover:text-primary rounded-xl transition-all border border-border/50 uppercase tracking-widest shadow-sm", data: { turbo: false } do %>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+              Booking Summary
             <% end %>
           </div>
         </div>

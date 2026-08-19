@@ -8,7 +8,13 @@ module HotelPortal
 
         def show
           @workspace_presenter = workspace_presenter
-          @quick_documents = @workspace_presenter.quick_documents unless @booking.group_booking_id?
+          # A group's sheet offers the group's own documents, which cost no folio lookups;
+          # the per-room catalog stays on the Documents tab.
+          @quick_documents = if @booking.group_booking_id?
+            @workspace_presenter.group_quick_documents
+          else
+            @workspace_presenter.quick_documents
+          end
           @invoice_delivery_preview = Notifications::InvoiceDelivery.preview(
             hotel: current_hotel,
             bookings: @workspace_presenter.document_context_bookings

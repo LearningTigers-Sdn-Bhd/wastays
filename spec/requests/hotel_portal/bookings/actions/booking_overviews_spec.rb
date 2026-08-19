@@ -191,14 +191,19 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
 
     before { booking.update!(group_booking: group, group_position: 1) }
 
-    it "renders group shortcuts without loading catalog counts" do
+    it "renders the group's own document shortcuts without loading catalog counts" do
       get hotel_booking_action_group_print_send_path(hotel, booking),
         headers: { "Turbo-Frame" => "booking_action_sheet_secondary" }
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
       dialog = document.at_css("turbo-frame#booking_action_sheet_secondary dialog#quick-documents-sheet")
-      expect(dialog.text).to include("Print/Send", "Open the Documents tab", "consolidated statements", "View all documents")
+      # A group settles one position, so the sheet offers the group's documents; the
+      # per-room catalog stays on the Documents tab, and none of this costs a folio lookup.
+      expect(dialog.text).to include(
+        "Print/Send", "Voucher Pack", "This Room's Voucher", "Group Summary",
+        "Documents tab", "consolidated statements", "View all documents"
+      )
       expect(dialog.text).not_to include("Invoices 0", "Receipts 0", "Registration cards 0")
       expect(dialog.text).not_to include("Room 101")
     end
@@ -209,7 +214,9 @@ RSpec.describe "HotelPortal::Bookings::Actions booking overviews", type: :reques
       get hotel_booking_action_group_print_send_path(hotel, standalone)
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Print/Send", "Invoice", "Receipt", "Registration Card", "View all documents")
+      expect(response.body).to include(
+        "Print/Send", "Invoice", "Receipt", "Booking Summary", "Voucher", "Registration Card", "View all documents"
+      )
     end
   end
 
