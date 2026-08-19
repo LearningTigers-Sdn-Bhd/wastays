@@ -1,0 +1,19 @@
+id: hotel_amenities_are_not_room_amenities
+description: "an amenities question without a room in it is about the property"
+origin: "InformationIntentGuard#hotel_amenities_question?"
+setup:
+  knowledge:
+    - category: general_info
+      title: Amenities
+      chunks: ["Hotel amenities include a spa, a rooftop pool and a 24-hour gym."]
+turns:
+  - guest: "what amenities does the hotel have?"
+    # The model gets this one wrong -- that mistake is why the rule exists.
+    model:
+      legacy:
+        intent: room_information
+        topic: room_information
+    expect:
+      intent: hotel_information
+      reply_matches: ["spa"]
+      creates_quote: false

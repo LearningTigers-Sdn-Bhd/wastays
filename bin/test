@@ -282,9 +282,11 @@ domain_paths() {
       ;;
     ai_concierge)
       printf "%s\n" \
+        spec/ai_concierge \
         spec/services/ai_concierge \
         spec/services/hotel_knowledges \
         spec/jobs/hotel_knowledges \
+        spec/jobs/concierge/answer_web_message_job_spec.rb \
         spec/requests/api/v1/ai_concierge_spec.rb \
         spec/requests/api/v1/ai_concierge
       ;;

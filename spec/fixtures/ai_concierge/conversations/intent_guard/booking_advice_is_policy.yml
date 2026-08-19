@@ -1,0 +1,19 @@
+id: booking_advice_is_policy
+description: "'what should I be aware of when booking' asks about terms, and must not start a booking"
+origin: "InformationIntentGuard#booking_advice_question?"
+setup:
+  knowledge:
+    - category: policy
+      title: House Rules
+      chunks: ["Guests must be aware that quiet hours start at 10 PM before booking."]
+turns:
+  - guest: "what should i be aware of during booking in this hotel?"
+    # The model gets this one wrong -- that mistake is why the rule exists.
+    model:
+      legacy:
+        intent: booking_search
+        topic: booking_search
+    expect:
+      intent: hotel_policy
+      reply_matches: ["quiet hours start at 10 PM"]
+      creates_quote: false

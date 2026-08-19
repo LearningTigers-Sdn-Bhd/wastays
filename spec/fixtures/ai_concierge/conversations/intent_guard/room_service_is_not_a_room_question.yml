@@ -1,0 +1,19 @@
+id: room_service_is_not_a_room_question
+description: "'room service' contains the word room but is a hotel service, never a room type enquiry"
+origin: "InformationIntentGuard#room_service_question? -- excluded from every `room` match"
+setup:
+  knowledge:
+    - category: general_info
+      title: Dining
+      chunks: ["Room service runs from 7 AM to 11 PM every day."]
+turns:
+  - guest: "do you have room service?"
+    # The model gets this one wrong -- that mistake is why the rule exists.
+    model:
+      legacy:
+        intent: room_information
+        topic: room_information
+    expect:
+      intent: hotel_information
+      reply_matches: ["Room service runs from 7 AM to 11 PM"]
+      creates_quote: false
