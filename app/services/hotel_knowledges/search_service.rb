@@ -4,27 +4,31 @@ module HotelKnowledges
   class SearchService
     DEFAULT_LIMIT = 5
 
-    def initialize(hotel:, query:, categories:, limit: DEFAULT_LIMIT)
+    # `query_vector:` lets a caller that is about to search the same question
+    # more than once embed it a single time. Without one, the service embeds
+    # for itself, so every existing caller keeps working unchanged.
+    def initialize(hotel:, query:, categories:, limit: DEFAULT_LIMIT, query_vector: nil)
       @hotel = hotel
       @query = query.to_s.strip
       @categories = Array(categories).map(&:to_s).reject(&:blank?)
       @limit = limit.to_i.positive? ? limit.to_i : DEFAULT_LIMIT
+      @query_vector = query_vector
     end
 
     def call
       return [] if query.blank? || categories.empty?
 
-      query_vector = EmbeddingService.new(hotel: hotel).call([ query ]).first
-      return [] if query_vector.blank?
+      vector = query_vector || EmbedQuery.new(hotel: hotel, query: query).call
+      return [] if vector.blank?
 
-      matching_chunks(query_vector).map { |chunk| normalize_chunk(chunk) }
+      matching_chunks(vector).map { |chunk| normalize_chunk(chunk) }
     rescue EmbeddingError
       []
     end
 
     private
 
-    attr_reader :hotel, :query, :categories, :limit
+    attr_reader :hotel, :query, :categories, :limit, :query_vector
 
     def matching_chunks(query_vector)
       HotelKnowledgeChunk

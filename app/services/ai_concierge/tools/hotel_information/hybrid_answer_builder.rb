@@ -59,6 +59,10 @@ module AiConcierge
         attr_reader :hotel, :query, :intent, :topic, :categories, :source, :structured_facts,
           :fallback_text, :unavailable_answer, :search_service, :answer_agent
 
+        # A thin first pass sends this same question through a second search
+        # over the fallback categories. Both passes embed the identical string,
+        # so the vector is resolved through HotelKnowledges::EmbedQuery, whose
+        # cache turns the second one into a lookup instead of a round-trip.
         def search_matches(search_categories = categories)
           search_service.new(hotel: hotel, query: query, categories: search_categories).call
         end

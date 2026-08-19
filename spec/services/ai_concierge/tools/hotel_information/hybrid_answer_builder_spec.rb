@@ -4,6 +4,12 @@ require "rails_helper"
 
 RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
+  let(:query_vector) { [ 0.1 ] * 1536 }
+
+  before do
+    allow_any_instance_of(HotelKnowledges::EmbeddingService).to receive(:call).and_return([ query_vector ])
+  end
+
   let(:match) do
     {
       "content" => "Breakfast is served from 7 AM to 10 AM.",
@@ -198,5 +204,29 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       "success" => false,
       "answer_mode" => "unavailable"
     )
+  end
+
+  # A thin first pass searches a second time over the fallback categories.
+  # Both passes ask about the same sentence, so there is only one vector to
+  # compute -- this used to be two round-trips to an embedding API on the
+  # slowest path the concierge has. The real search service is used here on
+  # purpose: the point of the example is what reaches the provider.
+  it "embeds the question once even when it falls back to a second search" do
+    with_real_cache_store do
+      embedding_service = instance_spy(HotelKnowledges::EmbeddingService, call: [ query_vector ])
+      allow(HotelKnowledges::EmbeddingService).to receive(:new).and_return(embedding_service)
+
+      described_class.new(
+        hotel: hotel,
+        query: "is there parking?",
+        intent: "hotel_information",
+        topic: "general_hotel_info",
+        categories: [ "general_info" ],
+        source: "general_hotel_info",
+        answer_agent: answer_agent_returning("unused")
+      ).call
+
+      expect(embedding_service).to have_received(:call).once
+    end
   end
 end
