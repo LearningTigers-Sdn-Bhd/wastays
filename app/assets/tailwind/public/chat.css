@@ -280,7 +280,7 @@
      from rather than positioned by script: on the public pages it is only ever
      used at the end of the chat bar. */
   .public-menu {
-    @apply relative;
+    @apply relative inline-flex;
   }
 
   .public-menu__trigger {
@@ -291,18 +291,32 @@
     @apply bg-secondary/15 text-foreground;
   }
 
+  /* Built to the panel dropdown's measurements -- a hairline border carried by
+     the shadow rather than by its own weight, a pad of its own so the items sit
+     inside it, and items with their own radius so a hover is a rounded block
+     and not a stripe running into the corners. The earlier version had
+     border-interactive around it and items flush to the edge, which read as a
+     box drawn around a list rather than as a menu.
+
+     Only the colours are this side's: --card, the softer public radius, and a
+     hover with something behind it. */
   .public-menu__list {
-    @apply absolute right-0 top-full z-20 mt-1 flex min-w-56 flex-col overflow-hidden rounded-xl border border-border-interactive bg-card py-1 shadow-lg;
+    @apply absolute right-0 top-full z-30 mt-1 flex min-w-52 max-w-[min(22rem,calc(100vw-1rem))] flex-col rounded-xl border border-border bg-card p-1 shadow-lg;
   }
 
-  /* The focus state is a ring, not a tint. It used to be --muted, which against
-     this panel is 1.03:1 -- a keyboard user could open the menu and have no way
-     of telling which item they were on. */
+  /* The focus state is a ring on top of the tint. The panel dropdown marks
+     focus with --muted alone, which over there is a judgement call and here is
+     not one I can make: on --card it is 1.05:1, and a guest arriving by
+     keyboard would have no way of telling which item they were on. */
   .public-menu__item {
-    @apply w-full cursor-pointer px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
+    @apply flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-foreground transition-colors select-none hover:bg-secondary/10 focus-visible:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
   }
 
   .public-menu__item[data-danger="true"] {
-    @apply text-red-700 hover:bg-red-50;
+    color: var(--destructive-on-surface);
+  }
+
+  .public-menu__item[data-danger="true"]:is(:hover, :focus-visible) {
+    background: color-mix(in oklab, var(--destructive) 14%, transparent);
   }
 }
