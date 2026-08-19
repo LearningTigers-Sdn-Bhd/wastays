@@ -3,6 +3,9 @@ require "rails_helper"
 RSpec.describe EInvoice::Submit, type: :service do
   describe ".call" do
     let(:hotel) { create(:hotel) }
+    let!(:e_invoice_setting) do
+      create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+    end
     let(:booking) { create(:booking, hotel: hotel, booking_quote: nil, payment_status: "captured") }
     let!(:folio) { create(:booking_folio, booking: booking, status: "closed") }
     let!(:booking_room) { create(:booking_room, booking: booking, subtotal: 200.0) }
@@ -101,8 +104,8 @@ RSpec.describe EInvoice::Submit, type: :service do
           document_scenario: "guest_invoice",
           submission_mode: "taxpayer",
           fund_collector: "wastays",
-          supplier_name: "Jesselton Pixel Sdn Bhd",
-          supplier_tin: "C1234567890",
+          supplier_name: hotel.name,
+          supplier_tin: "C9988776655",
           represented_taxpayer_tin: nil
         )
       end
@@ -141,7 +144,7 @@ RSpec.describe EInvoice::Submit, type: :service do
       let(:booking) { create(:booking, :direct_hotel_payment, hotel: hotel, booking_quote: nil, payment_status: "captured") }
 
       before do
-        create(:e_invoice_setting, :intermediary_ready, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+        e_invoice_setting.update!(intermediary_enabled: true)
         allow(MyInvois::ClientFactory).to receive(:build).and_return(@mock_client)
         allow(@mock_client).to receive(:submit_documents).and_return({
           "submissionUid" => "sub-123",
@@ -156,7 +159,8 @@ RSpec.describe EInvoice::Submit, type: :service do
 
         expect(MyInvois::ClientFactory).to have_received(:build).with(
           mode: :intermediary,
-          represented_taxpayer_tin: "C9988776655"
+          represented_taxpayer_tin: "C9988776655",
+          setting: e_invoice_setting
         )
         expect(result[:submission]).to have_attributes(
           document_scenario: "hotel_intermediary_guest_invoice",
@@ -191,7 +195,7 @@ RSpec.describe EInvoice::Submit, type: :service do
       end
 
       before do
-        create(:e_invoice_setting, :intermediary_ready, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+        e_invoice_setting.update!(intermediary_enabled: true)
         allow_any_instance_of(EInvoice::PayoutSelfBilledDocumentBuilder).to receive(:build).and_return({
           format: "JSON",
           document: "mock-doc",
@@ -211,7 +215,8 @@ RSpec.describe EInvoice::Submit, type: :service do
 
         expect(MyInvois::ClientFactory).to have_received(:build).with(
           mode: :taxpayer,
-          represented_taxpayer_tin: nil
+          represented_taxpayer_tin: nil,
+          setting: e_invoice_setting
         )
         expect(result[:submission]).to have_attributes(
           document_scenario: "payout_self_billed_invoice",

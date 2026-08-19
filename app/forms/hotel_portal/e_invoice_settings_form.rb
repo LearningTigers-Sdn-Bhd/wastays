@@ -16,7 +16,11 @@ module HotelPortal
     end
 
     def save
-      setting.update(setting_params)
+      attributes = setting_params
+      # A blank secret means "leave it alone", so an admin editing the address
+      # does not silently wipe the hotel's LHDN access.
+      attributes = attributes.except(:client_secret) if attributes[:client_secret].blank?
+      setting.update(attributes)
     end
 
     def errors
@@ -29,6 +33,9 @@ module HotelPortal
       params.require(:e_invoice_setting).permit(
         :enabled,
         :intermediary_enabled,
+        :api_environment,
+        :client_id,
+        :client_secret,
         :hotel_tin,
         :hotel_brn,
         :supplier_msic_code,

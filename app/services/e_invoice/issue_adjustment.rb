@@ -99,7 +99,8 @@ module EInvoice
 
       client = MyInvois::ClientFactory.build(
         mode: context.submission_mode.to_sym,
-        represented_taxpayer_tin: context.represented_taxpayer_tin
+        represented_taxpayer_tin: context.represented_taxpayer_tin,
+        setting: context.setting
       )
       response = client.submit_documents([ doc ])
 

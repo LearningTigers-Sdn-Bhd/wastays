@@ -44,47 +44,37 @@ module EInvoice
       @document_scenario = document_scenario
     end
 
+    # WAStays is under the RM1m threshold and so does not issue e-invoices as a
+    # supplier. The hotel is the supplier on every guest e-invoice and files
+    # under its own LHDN registration; WAStays only operates the submission.
+    #
+    # Because the hotel files either way, who collected the guest's money no
+    # longer decides who issues. fund_collector still drives payouts, but it no
+    # longer blocks a guest e-invoice.
+    #
+    # The intermediary path stays for when WAStays crosses the threshold and
+    # registers to file on a hotel's behalf.
     def for_booking
       return payout_self_billed_context if @document_scenario == "payout_self_billed_invoice"
 
-      collector = @booking.fund_collector == "unknown" ? "unknown" : @booking.resolved_fund_collector
+      raise ConfigurationError, "Hotel e-invoice settings have not been set up yet." unless @setting
 
-      if collector == "unknown"
-        raise ConfigurationError,
-          "Please confirm whether the guest paid WAStays or paid the hotel directly before sending this e-invoice."
-      end
+      # The scenario on the record says which kind of filing this is; the flag
+      # only says whether the hotel has opted into WAStays filing for them.
+      return intermediary_context if @document_scenario == "hotel_intermediary_guest_invoice"
 
-      if collector == "hotel"
-        raise ConfigurationError, "Hotel e-invoice settings have not been set up yet." unless @setting
+      ensure_hotel_can_file!
 
-        ensure_intermediary_ready!
-
-        Context.new(
-          booking: @booking,
-          hotel: @hotel,
-          setting: @setting,
-          fund_collector: collector,
-          submission_mode: "intermediary",
-          supplier_name: @setting.supplier_name,
-          supplier_tin: @setting.hotel_tin,
-          represented_taxpayer_tin: @setting.hotel_tin
-        )
-      else
-        creds = Rails.application.credentials.myinvois.to_h
-        tin = creds[:tin].to_s.presence || raise(ConfigurationError, "WAStays e-invoice account details are incomplete.")
-        name = creds[:name].to_s.presence || "Jesselton Pixel Sdn Bhd"
-
-        Context.new(
-          booking: @booking,
-          hotel: @hotel,
-          setting: @setting,
-          fund_collector: collector,
-          submission_mode: "taxpayer",
-          supplier_name: name,
-          supplier_tin: tin,
-          represented_taxpayer_tin: nil
-        )
-      end
+      Context.new(
+        booking: @booking,
+        hotel: @hotel,
+        setting: @setting,
+        fund_collector: @booking.resolved_fund_collector,
+        submission_mode: "taxpayer",
+        supplier_name: @setting.supplier_name,
+        supplier_tin: @setting.hotel_tin,
+        represented_taxpayer_tin: nil
+      )
     end
 
     private
@@ -106,6 +96,33 @@ module EInvoice
         supplier_tin: @setting.hotel_tin,
         represented_taxpayer_tin: nil
       )
+    end
+
+    def intermediary_context
+      ensure_intermediary_ready!
+
+      Context.new(
+        booking: @booking,
+        hotel: @hotel,
+        setting: @setting,
+        fund_collector: @booking.resolved_fund_collector,
+        submission_mode: "intermediary",
+        supplier_name: @setting.supplier_name,
+        supplier_tin: @setting.hotel_tin,
+        represented_taxpayer_tin: @setting.hotel_tin
+      )
+    end
+
+    def ensure_hotel_can_file!
+      unless @setting.api_credentials_ready?
+        raise ConfigurationError,
+          "This hotel has not connected its LHDN account yet. Add the hotel's MyInvois credentials in Settings > E-Invoice."
+      end
+
+      return if @setting.supplier_profile_ready?
+
+      raise ConfigurationError,
+        "Complete the hotel's tax, business and contact details in Settings > E-Invoice before filing."
     end
 
     def ensure_intermediary_ready!

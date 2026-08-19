@@ -44,11 +44,16 @@ module MyInvois
       Net::OpenTimeout, Net::ReadTimeout, SocketError, IOError, EOFError
     ].freeze
 
-    def initialize(mode: :taxpayer, represented_taxpayer_tin: nil)
+    # `setting` carries the filing hotel's own LHDN credentials. WAStays is
+    # under the RM1m threshold and does not file as a supplier, so the normal
+    # path authenticates as the hotel. The credentials-based path remains for
+    # the intermediary case, which needs WAStays' own registration.
+    def initialize(mode: :taxpayer, represented_taxpayer_tin: nil, setting: nil)
       @mode = mode.to_s
       @represented_taxpayer_tin = represented_taxpayer_tin.presence
-      @environment = Rails.application.credentials.dig(:myinvois, :environment).presence || "production"
-      @base_url = ENVIRONMENTS.fetch(@environment, ENVIRONMENTS["production"])
+      @setting = setting
+      @environment = resolved_environment
+      @base_url = ENVIRONMENTS.fetch(@environment, ENVIRONMENTS["sandbox"])
     end
 
     def submit_documents(documents)
@@ -85,7 +90,16 @@ module MyInvois
       end
     end
 
+    def resolved_environment
+      return @setting.api_environment if @setting&.api_environment.present?
+
+      Rails.application.credentials.dig(:myinvois, :environment).presence || "sandbox"
+    end
+
     def credential_config
+      # A hotel filing for itself uses its own registration end to end.
+      return hotel_credential_config if hotel_filing?
+
       client_id = if intermediary?
         Rails.application.credentials.dig(:myinvois, :intermediary_client_id)
       else
@@ -116,6 +130,21 @@ module MyInvois
         client_id: client_id,
         client_secret: client_secret,
         taxpayer_tin: taxpayer_tin
+      }
+    end
+
+    def hotel_filing?
+      !intermediary? && @setting&.api_credentials_ready?
+    end
+
+    def hotel_credential_config
+      tin = @setting.hotel_tin.to_s
+      raise ApiError, "This hotel's LHDN tax number is missing." if tin.blank?
+
+      {
+        client_id: @setting.client_id,
+        client_secret: @setting.client_secret,
+        taxpayer_tin: tin
       }
     end
 

@@ -17,7 +17,8 @@ module EInvoice
 
       client = MyInvois::ClientFactory.build(
         mode: @submission.submission_mode.to_sym,
-        represented_taxpayer_tin: @submission.represented_taxpayer_tin
+        represented_taxpayer_tin: @submission.represented_taxpayer_tin,
+        setting: @submission.hotel&.e_invoice_setting
       )
       client.cancel_document(@submission.uuid, reason: @reason)
 

@@ -208,7 +208,7 @@ module HotelPortal
     end
 
     def guest_document_scenario(booking)
-      booking.direct_hotel_payment? ? "hotel_intermediary_guest_invoice" : "guest_invoice"
+      booking.e_invoice_document_scenario
     end
 
     def prepare_submission!(scenario, context, requested_by_guest: false)

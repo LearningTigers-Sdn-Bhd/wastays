@@ -3,6 +3,11 @@ FactoryBot.define do
     association :hotel
     enabled { true }
     intermediary_enabled { false }
+    # The hotel files under its own LHDN registration, so a usable setting
+    # carries its credentials.
+    api_environment { "mock" }
+    client_id { "hotel-client-id" }
+    client_secret { "hotel-client-secret" }
     hotel_tin { "C1234567890" }
     hotel_brn { "202301012345" }
     supplier_msic_code { "55101" }
@@ -18,6 +23,12 @@ FactoryBot.define do
 
     trait :intermediary_ready do
       intermediary_enabled { true }
+    end
+
+    # A hotel that turned the feature on but has not handed over LHDN access.
+    trait :not_connected do
+      client_id { nil }
+      client_secret { nil }
     end
   end
 end

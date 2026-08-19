@@ -16,16 +16,22 @@ module MyInvois
   #
   # Also activates mock if ENV["MYINVOIS_MOCK"] = "true" regardless of credentials.
   module ClientFactory
-    def self.build(mode: :taxpayer, represented_taxpayer_tin: nil)
-      if mock?
+    # `setting` is the filing hotel's e-invoice setting, carrying its own LHDN
+    # credentials and chosen environment.
+    def self.build(mode: :taxpayer, represented_taxpayer_tin: nil, setting: nil)
+      if mock?(setting)
         MyInvois::MockClient.new(mode: mode, represented_taxpayer_tin: represented_taxpayer_tin)
       else
-        MyInvois::Client.new(mode: mode, represented_taxpayer_tin: represented_taxpayer_tin)
+        MyInvois::Client.new(mode: mode, represented_taxpayer_tin: represented_taxpayer_tin, setting: setting)
       end
     end
 
-    def self.mock?
+    def self.mock?(setting = nil)
       return true if ENV["MYINVOIS_MOCK"] == "true"
+      return true if setting&.api_environment == "mock"
+      # A hotel that has not handed over its LHDN access cannot file for real.
+      return true if setting.present? && !setting.api_credentials_ready?
+      return false if setting&.api_credentials_ready?
 
       environment = Rails.application.credentials.dig(:myinvois, :environment)
       return true if environment == "mock"

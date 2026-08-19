@@ -47,7 +47,8 @@ module EInvoice
         doc = builder_for(submission, context).build
         client = MyInvois::ClientFactory.build(
           mode: context.submission_mode.to_sym,
-          represented_taxpayer_tin: context.represented_taxpayer_tin
+          represented_taxpayer_tin: context.represented_taxpayer_tin,
+          setting: context.setting
         )
         response = client.submit_documents([ doc ])
 
@@ -100,7 +101,7 @@ module EInvoice
     end
 
     def guest_invoice_scenario
-      @booking.direct_hotel_payment? ? "hotel_intermediary_guest_invoice" : "guest_invoice"
+      @booking.e_invoice_document_scenario
     end
 
     def scenario

@@ -387,11 +387,11 @@ RSpec.describe EInvoice::MonthlyConsolidationJob, type: :job do
 
       it "builds one taxpayer client and one intermediary client" do
         expect(MyInvois::ClientFactory).to receive(:build).with(
-          mode: :taxpayer, represented_taxpayer_tin: nil
+          mode: :taxpayer, represented_taxpayer_tin: nil, setting: hotel.e_invoice_setting
         ).and_return(@mock_client)
 
         expect(MyInvois::ClientFactory).to receive(:build).with(
-          mode: :intermediary, represented_taxpayer_tin: hotel.e_invoice_setting.hotel_tin
+          mode: :intermediary, represented_taxpayer_tin: hotel.e_invoice_setting.hotel_tin, setting: hotel.e_invoice_setting
         ).and_return(@mock_client)
 
         described_class.perform_now(within_window_date)

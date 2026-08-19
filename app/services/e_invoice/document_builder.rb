@@ -119,28 +119,13 @@ module EInvoice
       end
     end
 
+    # The hotel is the supplier on every guest e-invoice. WAStays is under the
+    # RM1m threshold and files nothing as itself; self-billed payout documents
+    # are built elsewhere, by PayoutSelfBilledDocumentBuilder.
     def supplier_profile
-      @context.intermediary? ? hotel_supplier_profile : wastays_supplier_profile
+      hotel_supplier_profile
     end
 
-    def wastays_supplier_profile
-      {
-        tin: @creds[:tin].to_s.presence || raise(ArgumentError, "myinvois.tin not configured in credentials"),
-        brn: @creds[:brn].to_s.presence || raise(ArgumentError, "myinvois.brn not configured in credentials"),
-        name: @creds[:name].to_s.presence || "Jesselton Pixel Sdn Bhd",
-        msic_code: @creds[:msic_code].to_s.presence || WASTAYS_MSIC_CODE,
-        business_description: @creds[:business_description].to_s.presence || "Web portals - Online hotel booking platform",
-        phone: @creds[:phone].to_s.presence || "+60111234567",
-        email: @creds[:email].to_s.presence || "finance@wastays.com",
-        address_line1: @creds[:address].to_s.presence || "NA",
-        address_line2: @creds[:address_line2].to_s,
-        city: @creds[:city].to_s.presence || "Kota Kinabalu",
-        postal_code: @creds[:postal_code].to_s.presence || "88000",
-        state_code: @creds[:state_code].to_s.presence || "12",
-        country_code: @creds[:country_code].to_s.presence || "MYS",
-        sst_registration_number: @creds[:sst_registration_number].to_s.presence
-      }
-    end
 
     def hotel_supplier_profile
       raise ArgumentError, "Hotel e-invoice setting is missing." unless @setting

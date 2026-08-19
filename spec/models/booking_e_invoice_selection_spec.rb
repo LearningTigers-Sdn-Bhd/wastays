@@ -98,3 +98,39 @@ RSpec.describe "Booking buyer TIN resolution", type: :model do
     expect(booking.buyer_tin_for_e_invoice).to be_nil
   end
 end
+
+RSpec.describe "Booking e-invoice buyer readiness", type: :model do
+  let(:hotel) { create(:hotel) }
+  let!(:setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
+  let(:booking) do
+    create(:booking, hotel: hotel, payment_status: "captured",
+      guest_city: "Petaling Jaya", guest_state_code: "10")
+  end
+
+  before { create(:payment_transaction, booking: booking, status: "captured", captured_at: Time.current) }
+
+  it "is ready when the buyer has a city and a resolvable state" do
+    expect(booking.e_invoice_buyer_details_missing).to be_empty
+  end
+
+  # Blocked at the point of asking, so the guest can still fix it, rather than
+  # accepted and rejected by LHDN days later.
+  it "names the missing state so the guest can be told" do
+    booking.update!(guest_state_code: nil, guest_city: "Nowhereville")
+
+    expect(booking.e_invoice_buyer_details_missing).to include("state")
+    expect(booking.e_invoice_guest_request_possible?).to be(false)
+  end
+
+  it "names a missing city" do
+    booking.update!(guest_city: nil, guest_state_code: "10")
+
+    expect(booking.e_invoice_buyer_details_missing).to include("city")
+  end
+
+  it "accepts a city the old lookup knew, without an explicit state" do
+    booking.update!(guest_state_code: nil, guest_city: "Kota Kinabalu")
+
+    expect(booking.e_invoice_buyer_details_missing).to be_empty
+  end
+end

@@ -2,6 +2,9 @@ require "rails_helper"
 
 RSpec.describe EInvoice::AdjustmentNoteBuilder, type: :service do
   let(:hotel) { create(:hotel) }
+  let!(:e_invoice_setting) do
+    create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+  end
   let(:booking) { create(:booking, hotel: hotel, payment_status: "captured", total_amount: 500.0, guest_city: "Kota Kinabalu", guest_country: "Malaysia") }
   let(:credentials_hash) do
     {

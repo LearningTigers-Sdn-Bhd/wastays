@@ -25,8 +25,9 @@
     <div>
       <h2 id="e-invoice-status-heading" class="text-base font-semibold text-foreground">LHDN E-Invoicing</h2>
       <p class="mt-2 text-sm text-muted-foreground">
-        Send invoices to LHDN through MyInvois. Guests may request one within the same calendar month as their payment;
-        anything unrequested and under RM10,000 goes out in the monthly consolidated batch.
+        This hotel files its own e-invoices to LHDN through MyInvois, under its own tax registration, using the
+        credentials below. Guests may request one within the same calendar month as their payment; anything
+        unrequested and under RM10,000 goes out in the monthly consolidated batch.
       </p>
     </div>
 
@@ -38,12 +39,37 @@
             label: "Enable e-invoicing",
             description: "Turn this on before your team sends the first record to LHDN.") %>
 
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :api_environment,
+            label: "LHDN environment",
+            hint: "Use sandbox until the connection is proven, then switch to production.") do |field| %>
+        <% field.with_native_select(
+             EInvoiceSetting::API_ENVIRONMENTS.map { |value| [ value.titleize, value ] }) %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :client_id,
+            label: "MyInvois client ID",
+            hint: "From this hotel's own LHDN MyInvois account.") do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :client_secret,
+            label: "MyInvois client secret",
+            hint: @e_invoice_setting.client_secret.present? ? "Saved. Leave blank to keep the current secret." : "Stored encrypted.") do |field| %>
+        <% field.with_input(type: "password", value: nil, autocomplete: "off", placeholder: @e_invoice_setting.client_secret.present? ? "••••••••" : nil) %>
+      <% end %>
+
       <%= render PanelsUI::Switch.new(
             form: f,
             attribute: :intermediary_enabled,
             variant: :card,
-            label: "Act as intermediary for hotel-collected payments",
-            description: "Needed when the guest pays the hotel directly and WAStays files on the hotel's behalf.") %>
+            label: "Let WAStays file on this hotel's behalf",
+            description: "Not available yet: WAStays is under the RM1m threshold and is not registered with LHDN as an intermediary. Leave this off - the hotel files under its own credentials above.") %>
 
       <%= render PanelsUI::FormField.new(form: f, attribute: :hotel_tin, label: "Hotel TIN", hint: "Tax identification number issued by LHDN.") do |field| %>
         <% field.with_input(autocomplete: "off") %>

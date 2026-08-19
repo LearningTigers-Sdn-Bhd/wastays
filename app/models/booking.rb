@@ -122,8 +122,25 @@ class Booking < ApplicationRecord
   def e_invoice_guest_request_possible?
     return false unless hotel.e_invoice_setting&.covers?(payment_concluded_at)
     return false if e_invoice_already_issued?
+    return false unless e_invoice_buyer_details_ready?
 
     e_invoice_requestable?
+  end
+
+  # LHDN needs a resolvable state on the buyer address. Better to say so while
+  # the guest is still here to fix it than to accept the request and fail at
+  # submission days later.
+  def e_invoice_buyer_details_missing
+    missing = []
+    missing << "city" if guest_city.blank?
+    if EInvoice::MalaysiaStates.resolve(state_code: guest_state_code, city: guest_city, country_code: nil).blank?
+      missing << "state"
+    end
+    missing
+  end
+
+  def e_invoice_buyer_details_ready?
+    e_invoice_buyer_details_missing.empty?
   end
 
   def e_invoice_requestable?
@@ -143,8 +160,16 @@ class Booking < ApplicationRecord
     hotel_corporate_account&.tin.presence || guest_tin.presence || primary_guest&.tin.presence
   end
 
+  # WAStays is not a registered intermediary yet, so unless a hotel has opted
+  # in the hotel files everything itself as an ordinary taxpayer.
+  def e_invoice_document_scenario
+    return "hotel_intermediary_guest_invoice" if direct_hotel_payment? && hotel.e_invoice_setting&.intermediary_enabled?
+
+    "guest_invoice"
+  end
+
   def create_pending_consolidated_submission!
-    scenario = direct_hotel_payment? ? "hotel_intermediary_guest_invoice" : "guest_invoice"
+    scenario = e_invoice_document_scenario
     existing = e_invoice_submissions.where.not(status: "cancelled").find_by(document_scenario: scenario)
     return existing if existing
 
@@ -152,7 +177,7 @@ class Booking < ApplicationRecord
       hotel: hotel,
       document_type: "01",
       document_scenario: scenario,
-      submission_mode: resolved_fund_collector == "hotel" ? "intermediary" : "taxpayer",
+      submission_mode: scenario == "hotel_intermediary_guest_invoice" ? "intermediary" : "taxpayer",
       fund_collector: resolved_fund_collector,
       status: "pending",
       consolidated: true,

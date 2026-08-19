@@ -3,6 +3,16 @@
 class EInvoiceSetting < ApplicationRecord
   belongs_to :hotel
 
+  # The hotel's own MyInvois API credentials. WAStays is under the RM1m
+  # threshold and so does not file as a supplier; it operates the submission on
+  # the hotel's behalf using the hotel's own LHDN access.
+  encrypts :client_id
+  encrypts :client_secret
+
+  API_ENVIRONMENTS = %w[mock sandbox production].freeze
+
+  validates :api_environment, inclusion: { in: API_ENVIRONMENTS }
+
   COUNTRY_CODE_MAP = {
     "malaysia" => "MYS"
   }.freeze
@@ -29,6 +39,15 @@ class EInvoiceSetting < ApplicationRecord
     return false if concluded_at.blank?
 
     effective_from.blank? || concluded_at >= effective_from
+  end
+
+  # Filing needs both an identity to file as and access to file with.
+  def api_credentials_ready?
+    client_id.present? && client_secret.present?
+  end
+
+  def ready_to_file?
+    enabled? && api_credentials_ready? && supplier_profile_ready?
   end
 
   def buyer_configured?

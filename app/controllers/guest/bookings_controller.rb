@@ -146,6 +146,15 @@ class Guest::BookingsController < Guest::BaseController
       return respond_to_e_invoice_request_error("An e-invoice has already been issued for this booking.")
     end
 
+    # Say what is missing while the guest can still supply it, rather than
+    # accepting the request and failing LHDN validation days later.
+    missing = @booking.e_invoice_buyer_details_missing
+    if missing.any?
+      return respond_to_e_invoice_request_error(
+        "We need your #{missing.to_sentence} before we can request the e-invoice. Please contact the hotel to update your details."
+      )
+    end
+
     existing_pending = @booking.pending_guest_e_invoice_submission
 
     if existing_pending

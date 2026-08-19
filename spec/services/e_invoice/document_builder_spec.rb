@@ -3,6 +3,9 @@ require "rails_helper"
 RSpec.describe EInvoice::DocumentBuilder, type: :service do
   describe "#build" do
     let(:hotel) { create(:hotel, default_currency: "MYR") }
+    let!(:e_invoice_setting) do
+      create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+    end
     let(:booking) do
       create(:booking,
         hotel: hotel,
@@ -80,7 +83,7 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
       expect(line).to include("InvoicedQuantity")
       expect(line).not_to include("InvoiceQuantity")
 
-      expect(supplier.dig("PartyLegalEntity", 0, "RegistrationName", 0, "_")).to eq("Jesselton Pixel Sdn Bhd")
+      expect(supplier.dig("PartyLegalEntity", 0, "RegistrationName", 0, "_")).to eq(hotel.name)
       expect(buyer.dig("PartyLegalEntity", 0, "RegistrationName", 0, "_")).to eq("John Doe")
     end
 
@@ -100,12 +103,14 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
       expect(country).to include("_" => "MYS", "listID" => "ISO3166-1", "listAgencyID" => "6")
     end
 
-    it "uses WAStays as the supplier for WAStays-collected bookings" do
+    # WAStays is under the RM1m threshold and files nothing as itself, so the
+    # hotel is the supplier even when WAStays took the guest's money.
+    it "uses the hotel as the supplier even for WAStays-collected bookings" do
       decoded_json = JSON.parse(Base64.strict_decode64(subject[:document]))
       supplier = decoded_json.dig("Invoice", 0, "AccountingSupplierParty", 0, "Party", 0)
 
-      expect(supplier.dig("PartyLegalEntity", 0, "RegistrationName", 0, "_")).to eq("Jesselton Pixel Sdn Bhd")
-      expect(supplier.dig("PartyIdentification", 0, "ID", 0, "_")).to eq("C1234567890")
+      expect(supplier.dig("PartyLegalEntity", 0, "RegistrationName", 0, "_")).to eq(hotel.name)
+      expect(supplier.dig("PartyIdentification", 0, "ID", 0, "_")).to eq("C9988776655")
     end
 
     context "when the hotel collected payment directly" do
@@ -128,9 +133,7 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
         end
       end
 
-      before do
-        create(:e_invoice_setting, :intermediary_ready, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
-      end
+      before { e_invoice_setting.update!(intermediary_enabled: true) }
 
       it "uses the hotel as the supplier" do
         decoded_json = JSON.parse(Base64.strict_decode64(subject[:document]))

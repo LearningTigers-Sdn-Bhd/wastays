@@ -220,15 +220,29 @@ RSpec.describe EInvoice::AutoIssueJob, type: :job do
         create(:booking_room, booking: booking, subtotal: 500.0)
       end
 
-      it "creates a consolidated intermediary placeholder for month-end processing" do
+      # WAStays is not a registered intermediary, so a hotel-collected booking
+      # is still filed by the hotel as an ordinary taxpayer.
+      it "creates a consolidated placeholder the hotel files itself" do
         expect {
           described_class.perform_now(booking.id)
         }.to change(EInvoiceSubmission, :count).by(1)
 
         submission = EInvoiceSubmission.last
-        expect(submission.document_scenario).to eq("hotel_intermediary_guest_invoice")
-        expect(submission.submission_mode).to eq("intermediary")
+        expect(submission.document_scenario).to eq("guest_invoice")
+        expect(submission.submission_mode).to eq("taxpayer")
         expect(submission.consolidated).to be true
+      end
+
+      context "and the hotel has opted into WAStays filing on its behalf" do
+        before { hotel.e_invoice_setting.update!(intermediary_enabled: true) }
+
+        it "creates an intermediary placeholder instead" do
+          described_class.perform_now(booking.id)
+
+          submission = EInvoiceSubmission.last
+          expect(submission.document_scenario).to eq("hotel_intermediary_guest_invoice")
+          expect(submission.submission_mode).to eq("intermediary")
+        end
       end
     end
 

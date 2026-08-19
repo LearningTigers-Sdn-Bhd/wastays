@@ -16,7 +16,7 @@ module EInvoice
       # is out of scope and must not be filed or consolidated retroactively.
       return unless hotel.e_invoice_setting&.covers?(booking.payment_concluded_at)
 
-      scenario = booking.direct_hotel_payment? ? "hotel_intermediary_guest_invoice" : "guest_invoice"
+      scenario = booking.e_invoice_document_scenario
 
       # Case: Guest requests within same month
       if requested_by_guest
