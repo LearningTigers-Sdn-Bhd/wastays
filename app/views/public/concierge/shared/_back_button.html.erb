@@ -1,0 +1,14 @@
+<%# A thumb needs something to press; a cursor does not. Solid green button on a
+    phone, plain underlined link above sm — where it also sits at the right edge
+    with the rest of the page chrome, unless the caller places it itself. %>
+<div class="<%= local_assigns.fetch(:wrapper_class, "mb-6 flex sm:justify-end") %>">
+  <%= link_to back_path,
+        class: "group inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-3.5 text-primary-foreground shadow-xs transition-all active:scale-95 sm:min-h-0 sm:rounded-none sm:bg-transparent sm:px-0 sm:shadow-none sm:active:scale-100" do %>
+    <%= cached_icon "chevron-left", stroke_width: 3,
+          class: "h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 sm:text-muted-foreground sm:group-hover:text-primary" %>
+    <span class="text-[10px] font-black uppercase tracking-widest transition-colors sm:font-bold sm:text-muted-foreground sm:underline sm:underline-offset-4 sm:group-hover:text-primary">
+      <span class="sm:hidden"><%= local_assigns.fetch(:back_label_short, "Back") %></span>
+      <span class="hidden sm:inline"><%= back_label %></span>
+    </span>
+  <% end %>
+</div>

@@ -11,7 +11,6 @@ module Public
       def show
         @conversation = current_conversation
         @messages = @conversation ? @conversation.messages.to_a : []
-        render "show_mobile" if mobile_request?
       end
 
       def create

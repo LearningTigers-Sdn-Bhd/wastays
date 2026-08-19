@@ -6,7 +6,8 @@
              eyebrow: "Chat",
              title_prefix: "Ask us",
              title_accent: "anything",
-             subtitle: "Rooms, rates, facilities — or anything else about your stay." %>
+             subtitle: "Rooms, rates, facilities — or anything else about your stay.",
+             subtitle_class: "hidden sm:block" %>
   <%= render "public/concierge/shared/error_alert", message: flash[:alert] %>
 
   <%= render "public/concierge/chats/conversation", messages: @messages, hotel: @hotel %>
