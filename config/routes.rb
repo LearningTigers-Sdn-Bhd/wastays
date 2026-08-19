@@ -481,6 +481,8 @@ Rails.application.routes.draw do
       end
     end
 
+    post "e-invoice/validate-tin", to: "tin_validations#create", as: :validate_tin
+
     resources :e_invoice_submissions, only: [ :index, :show, :create ] do
       member do
         get :pdf
