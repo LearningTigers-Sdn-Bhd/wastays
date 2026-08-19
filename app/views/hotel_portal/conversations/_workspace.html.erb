@@ -1,0 +1,55 @@
+<%#
+  The inbox shell, shared by the list on its own and the list with a thread open.
+
+  Two panes on a wide screen, one on a narrow one: on mobile the list is a page
+  and a thread is a page, because a 360px column beside a conversation is not a
+  layout, it is two unusable halves.
+%>
+<% selected = local_assigns[:conversation] %>
+
+<div class="w-full space-y-4">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Conversations",
+        description: "Every guest enquiry, whether the assistant or a person is holding it.") %>
+
+  <%= render PanelsUI::Tabs.new(
+        id: "conversation-filter-tabs",
+        active: query.active_tab,
+        variant: :line,
+        aria_label: "Filter conversations") do |tabs| %>
+    <% conversation_inbox_tabs(counts).each do |tab| %>
+      <% tabs.with_tab(
+           name: tab[:name],
+           label: tab[:label],
+           icon: tab[:icon],
+           count: tab[:count],
+           href: hotel_conversations_path(current_hotel, **tab[:params]),
+           data: { turbo_action: "advance" }) %>
+    <% end %>
+  <% end %>
+
+  <div class="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
+    <section
+      aria-label="Conversation list"
+      class="<%= selected ? "hidden lg:block" : "block" %>">
+      <%= render "hotel_portal/conversations/list", conversations: conversations, query: query, selected: selected %>
+    </section>
+
+    <section
+      aria-label="Conversation"
+      class="<%= selected ? "block" : "hidden lg:block" %>">
+      <%= turbo_frame_tag "conversation_thread" do %>
+        <% if selected %>
+          <%= render "hotel_portal/conversations/thread", conversation: selected, messages: messages %>
+        <% else %>
+          <div class="flex min-h-[24rem] items-center justify-center rounded-xl border border-border bg-card">
+            <%= render PanelsUI::EmptyState.new(
+                  icon: "messages-square",
+                  title: "No conversation selected",
+                  description: "Pick a conversation on the left to read it.") %>
+          </div>
+        <% end %>
+      <% end %>
+    </section>
+  </div>
+</div>

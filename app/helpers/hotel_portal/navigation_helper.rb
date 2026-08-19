@@ -15,7 +15,10 @@ module HotelPortal
         NavSection.new(label: "Front Desk", items: [
           NavItem.new(label: "Reservations", path: hotel_front_desk_path(current_hotel), search_text: "Reservations Front Desk Arrivals In-House Guests Departures Check-in Check-out", active: controller_name == "front_desk", icon: "calendar-check-2", permission: [ "view_bookings", "manage_guest_arrival" ]),
           NavItem.new(label: "Stay View", path: hotel_stay_view_path(current_hotel), search_text: "Stay View Timeline Board Room Status Housekeeping Planning Operations Calendar Tape Chart Front Desk", active: controller_path == "hotel_portal/stay_view/board", icon: "table-2", permission: [ "view_bookings", "manage_bookings", "view_room_readiness", "manage_room_status" ]),
-          NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile")
+          NavItem.new(label: "Guest Records", path: hotel_guests_path(current_hotel), search_text: "Guest Records Guests Directory Front Desk", active: controller_name == "guests", icon: "user", permission: "view_guest_records", plan_feature: "unified_guest_profile"),
+          # Sits here rather than in a layer: an unanswered guest comes looking
+          # for you. Reports do not, which is what makes them a layer.
+          NavItem.new(label: "Conversations", path: hotel_conversations_path(current_hotel), search_text: "Conversations Inbox Messages Chat Enquiries Leads Concierge WhatsApp Front Desk", active: controller_name == "conversations", icon: "messages-square", permission: "manage_concierge")
         ]),
         NavSection.new(label: "Housekeeping", items: [
           NavItem.new(label: "Housekeeping Tasks", path: hotel_housekeeping_tasks_path(current_hotel), search_text: "Housekeeping Tasks Cleaning Room Status Front Desk", active: controller_name == "housekeeping_tasks", icon: "clipboard-check", permission: [ "perform_housekeeping_tasks", "dispatch_housekeeping_tasks" ], plan_feature: "task_assignment_minibar_log"),

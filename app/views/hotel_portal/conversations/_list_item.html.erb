@@ -1,0 +1,40 @@
+<%#
+  One row. The unread marker is a dot *and* a word in the accessible name --
+  never colour or position alone (DESIGN.md §10).
+%>
+<li>
+  <%= link_to hotel_conversation_path(current_hotel, presenter.id),
+        data: { turbo_frame: "conversation_thread", turbo_action: "advance" },
+        aria: { current: (selected ? "true" : nil) },
+        class: class_names(
+          "flex w-full flex-col gap-1.5 px-3 py-3 text-left transition hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+          "bg-muted" => selected
+        ) do %>
+    <span class="flex items-center gap-2">
+      <% if presenter.unread? %>
+        <span class="size-2 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
+        <span class="sr-only"><%= pluralize(presenter.unread_count, "unread message") %>.</span>
+      <% end %>
+      <span class="truncate text-sm font-medium text-foreground"><%= presenter.display_name %></span>
+      <% if presenter.returning_guest? %>
+        <%= render PanelsUI::Badge.new(label: "Returning", variant: :info, size: :xs) %>
+      <% end %>
+    </span>
+
+    <% if presenter.subtitle %>
+      <span class="truncate text-xs text-muted-foreground"><%= presenter.subtitle %></span>
+    <% end %>
+
+    <span class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      <%= app_icon presenter.channel_icon, class: "size-3.5", aria: { hidden: "true" } %>
+      <span><%= presenter.channel_label %></span>
+      <span aria-hidden="true">·</span>
+      <span><%= presenter.last_activity %></span>
+    </span>
+
+    <% badge = presenter.status_badge %>
+    <span>
+      <%= render PanelsUI::Badge.new(label: badge[:label], variant: badge[:variant], size: :xs) %>
+    </span>
+  <% end %>
+</li>

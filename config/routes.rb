@@ -477,6 +477,11 @@ Rails.application.routes.draw do
     get "folio-documents/:folio_id/invoice/revisions/:revision_number", to: "folios#invoice", as: :folio_invoice_revision
     get "folio-documents/:folio_id/ledger", to: "folios#ledger", as: :folio_ledger
 
+    # The guest message desk. Sits with the front-desk pages rather than in a
+    # layer: an unanswered guest comes looking for you, which is the opposite
+    # of a report.
+    resources :conversations, only: [ :index, :show ]
+
     get "requests", to: "requests#index", as: :requests
     # The rest of one column, read from a cursor rather than a page number.
     get "requests/columns/:column", to: "requests#column", as: :requests_column

@@ -1,0 +1,17 @@
+<%#
+  Who wrote it is carried by the label above the bubble, not by which side it
+  sits on -- alignment alone is meaning conveyed by position (DESIGN.md §10).
+%>
+<% from_guest = message.from_guest? %>
+
+<li class="flex flex-col gap-1 <%= from_guest ? "items-start" : "items-end" %>">
+  <span class="px-1 text-xs text-muted-foreground">
+    <%= conversation_message_author(message) %>
+    <span aria-hidden="true">·</span>
+    <time datetime="<%= message.sent_at&.iso8601 %>"><%= l(message.sent_at, format: :short) if message.sent_at %></time>
+  </span>
+
+  <div class="<%= from_guest ? "bg-muted text-foreground" : "bg-primary text-primary-foreground" %> max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm">
+    <%= message.body %>
+  </div>
+</li>
