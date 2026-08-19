@@ -105,6 +105,8 @@ Rails.application.routes.draw do
     post "requests",               to: "requests#create",      as: :requests
     get  "requests/success",       to: "requests#success",     as: :request_success
     get  "contact",                to: "contact#show",         as: :contact
+    get  "chat",                   to: "chats#show",           as: :chat
+    post "chat",                   to: "chats#create",         as: :chat_messages
   end
 
   # Public Booking Engine

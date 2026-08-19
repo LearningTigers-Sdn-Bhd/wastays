@@ -1,0 +1,46 @@
+<%#
+  The thread and the box to add to it. Shared by the desktop and mobile pages so
+  the two cannot drift into saying different things about the same conversation.
+%>
+<div class="space-y-4 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5"
+     data-controller="concierge-chat">
+
+  <% if messages.any? %>
+    <ol class="max-h-[26rem] space-y-3 overflow-y-auto pr-1" role="log" aria-label="Conversation" aria-live="polite"
+        data-concierge-chat-target="log">
+      <% messages.each do |message| %>
+        <% from_guest = message.from_guest? %>
+        <li class="flex flex-col gap-1 <%= from_guest ? "items-end" : "items-start" %>">
+          <span class="px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <%= from_guest ? "You" : concierge_reply_author(message, hotel) %>
+          </span>
+          <div class="<%= from_guest ? "bg-primary text-white" : "bg-muted text-foreground" %> max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm">
+            <%= message.body %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p class="py-6 text-center text-sm text-muted-foreground">
+      Ask about rooms, rates, facilities or anything else about your stay.
+    </p>
+  <% end %>
+
+  <% unless hotel.ai_concierge_ready? %>
+    <p class="rounded-xl bg-muted px-4 py-3 text-xs text-muted-foreground">
+      Your message goes straight to our front desk. Someone will reply here shortly.
+    </p>
+  <% end %>
+
+  <%= form_with url: concierge_chat_messages_path(hotel), method: :post, class: "space-y-3" do %>
+    <div>
+      <label for="message" class="mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        Your message
+      </label>
+      <%= text_area_tag :message, nil, rows: 3, id: "message", required: true,
+            class: "form-input px-4 py-3", placeholder: "Type your message...",
+            data: { concierge_chat_target: "input" } %>
+    </div>
+    <%= submit_tag "Send →", class: "btn btn-primary w-full cursor-pointer py-3 text-sm font-black uppercase tracking-widest" %>
+  <% end %>
+</div>

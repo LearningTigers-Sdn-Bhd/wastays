@@ -15,6 +15,15 @@ module Public::ConciergeHelper
     [ hotel.city, hotel.country ].compact_blank.join(", ")
   end
 
+  # The guest does not need to know whether a bot or a person typed it -- they
+  # are talking to the hotel either way. Staff replies are named so the guest
+  # knows a human picked it up.
+  def concierge_reply_author(message, hotel)
+    return message.sender_user&.name.presence || "Front Desk" if message.from_staff?
+
+    hotel.name
+  end
+
   def concierge_room_details(booking)
     booking.booking_rooms.map do |booking_room|
       room_type_name = booking_room.room_type_snapshot&.dig("name").presence || "Room"
