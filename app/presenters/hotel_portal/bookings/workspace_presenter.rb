@@ -663,6 +663,19 @@ module HotelPortal
       booking_presenter.can_manage_bookings?(user)
     end
 
+    def can_view_grc?(user)
+      can_manage_bookings?(user) || user.has_permission?("view_reports", hotel: hotel)
+    end
+
+    def guest_details_return_to_path(booking, booking_guest = selected_booking_guest)
+      routes.hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest&.id)
+    end
+
+    def guest_registration_card_path(booking, booking_guest = selected_booking_guest)
+      guest_id = booking_guest&.id unless booking_guest&.primary?
+      routes.hotel_booking_guest_registration_card_path(hotel, booking, booking_guest_id: guest_id)
+    end
+
     def can_add_guests?(user)
       booking_presenter.can_add_guests?(user)
     end

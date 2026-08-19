@@ -1,8 +1,8 @@
 <% booking_guest = presenter.selected_booking_guest %>
-<% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
-<% can_view_grc = can_manage || current_user.has_permission?("view_reports", hotel: current_hotel) %>
-<% return_to = hotel_booking_workspace_path(current_hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id) %>
-<% grc_path = hotel_booking_guest_registration_card_path(current_hotel, booking, booking_guest_id: booking_guest.id) %>
+<% can_manage = presenter.can_manage_bookings?(current_user) %>
+<% can_view_grc = presenter.can_view_grc?(current_user) %>
+<% return_to = presenter.guest_details_return_to_path(booking, booking_guest) %>
+<% grc_path = presenter.guest_registration_card_path(booking, booking_guest) %>
 
 <footer class="shrink-0 bg-card px-5 pb-4 pt-2 lg:px-8" data-testid="guest-details-footer">
   <div class="flex max-w-6xl items-center justify-between gap-3">
@@ -29,7 +29,7 @@
               rel: "noopener",
               variant: :secondary,
               size: :sm) do %>
-          <%= cached_icon "clipboard-list", class: "size-4 text-white", aria: { hidden: true } %>
+          <%= cached_icon "clipboard-list", class: "size-4", aria: { hidden: true } %>
           View GRC
         <% end %>
       <% end %>

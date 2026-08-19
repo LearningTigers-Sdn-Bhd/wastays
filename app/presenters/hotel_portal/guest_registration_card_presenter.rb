@@ -143,6 +143,14 @@ module HotelPortal
       format_stay_datetime(booking.check_out.to_date, terms&.dig("check_out_time"))
     end
 
+    def can_manage_hotel_profile?(user)
+      user.has_permission?("manage_hotel_profile", hotel: hotel)
+    end
+
+    def can_manage_bookings?(user)
+      user.has_permission?("manage_bookings", hotel: hotel)
+    end
+
     private
 
     def find_booking_guest(booking_guest_id)

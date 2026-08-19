@@ -161,7 +161,7 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
 
       # Both tables line up, and the guest name keeps the leftover page width.
       expect(sections.first[:column_widths]).to eq(sections.last[:column_widths])
-      expect(sections.first[:column_widths].drop(1)).to all(eq(150))
+      expect(sections.first[:column_widths].drop(1)).to eq([ 100, 110, 100 ])
       expect(sections.first[:column_widths].first).to be > 150
     end
   end

@@ -10,6 +10,11 @@ module HotelPortal
       MEAL_PREP_COLUMNS = [ "Guest Name", "Room Number", "Transfer", "Transfer Date", "Transfer Time", "Pax" ].freeze
       MEAL_PREP_HEADERS = (MEAL_PREP_COLUMNS + [ "Meal Preps" ]).freeze
 
+      ARRIVALS_HEADERS = [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Departure Status", "Notes" ].freeze
+      ARRIVALS_BOAT_HEADERS = [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Departure Status", "Boat-in", "Notes" ].freeze
+      DEPARTURES_HEADERS = [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ].freeze
+      DEPARTURES_BOAT_HEADERS = [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat-out", "Notes" ].freeze
+
       def initialize(report:, tab: "arrivals")
         @report = report
         @tab = tab.to_s
@@ -94,22 +99,10 @@ module HotelPortal
         allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information
 
         if @tab == "arrivals"
-          if allow_boat
-            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Departure Status", "Boat-in", "Notes" ]
-          else
-            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Pre-checkin Status", "Guarantee Method", "Deposit Status", "Departure Status", "Notes" ]
-          end
+          allow_boat ? ARRIVALS_BOAT_HEADERS : ARRIVALS_HEADERS
+        else
+          allow_boat ? DEPARTURES_BOAT_HEADERS : DEPARTURES_HEADERS
         end
-
-        if @tab == "in_house" || @tab == "departures" || @tab == "checkout"
-          if allow_boat
-            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Boat-out", "Notes" ]
-          else
-            return [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
-          end
-        end
-
-        [ "Section", "Guest Name", "Booking Ref", "Rooms", "Room Numbers", "Stay", "Departure Status", "Notes" ]
       end
 
       def rows_for_active_tab
@@ -132,6 +125,13 @@ module HotelPortal
         }.fetch(@tab, "Arrival")
       end
 
+      def format_boat_time(timestamp, tz)
+        return "—" if timestamp.blank?
+
+        boat_time = timestamp.in_time_zone(tz)
+        "#{boat_time.strftime('%d %b %Y')} #{boat_time.strftime('%I:%M %p')}"
+      end
+
       def values_for_active_tab(row)
         allow_boat = @report.respond_to?(:allow_boat_information) && @report.allow_boat_information
         tz = @report.respond_to?(:hotel_time_zone) ? @report.hotel_time_zone : Time.zone.name
@@ -149,62 +149,23 @@ module HotelPortal
             row[:deposit_status],
             nil
           ]
-          if allow_boat
-            boat_arr_str = if row[:boat_arrival].present?
-              boat_time = row[:boat_arrival].in_time_zone(tz)
-              "#{boat_time.strftime('%d %b %Y')} #{boat_time.strftime('%I:%M %p')}"
-            else
-              "—"
-            end
-            cols << boat_arr_str
-          end
+          cols << format_boat_time(row[:boat_arrival], tz) if allow_boat
           cols << row[:latest_note]
-          return cols
-        end
-
-        if @tab == "in_house" || @tab == "departures" || @tab == "checkout"
-          if !allow_boat
-            return [
-              active_tab_label,
-              row[:guest_name],
-              row[:confirmation_token],
-              row[:room_details],
-              row[:room_numbers],
-              row[:stay_dates],
-              row[:departure_status],
-              row[:latest_note]
-            ]
-          end
-
-          boat_dep_str = if row[:boat_departure].present?
-            boat_time = row[:boat_departure].in_time_zone(tz)
-            "#{boat_time.strftime('%d %b %Y')} #{boat_time.strftime('%I:%M %p')}"
-          else
-            "—"
-          end
-          return [
+          cols
+        else
+          cols = [
             active_tab_label,
             row[:guest_name],
             row[:confirmation_token],
             row[:room_details],
             row[:room_numbers],
             row[:stay_dates],
-            row[:departure_status],
-            boat_dep_str,
-            row[:latest_note]
+            row[:departure_status]
           ]
+          cols << format_boat_time(row[:boat_departure], tz) if allow_boat
+          cols << row[:latest_note]
+          cols
         end
-
-        [
-          active_tab_label,
-          row[:guest_name],
-          row[:confirmation_token],
-          row[:room_details],
-          row[:room_numbers],
-          row[:stay_dates],
-          row[:departure_status],
-          row[:latest_note]
-        ]
       end
     end
   end
