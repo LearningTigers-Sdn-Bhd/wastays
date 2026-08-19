@@ -17,14 +17,20 @@
 
      The top inset is the phone's, not the design's -- the chat runs to the
      edge of the screen, so the notch has to be paid for here. It resolves to
-     zero everywhere else. */
+     zero everywhere else.
+
+     The fill is its own rather than the page's: the bar and the box are the
+     chrome the thread scrolls between, and a bar the same colour as what
+     passes under it is a bar you can only find by its hairline. */
   .public-chat__bar {
-    @apply grid shrink-0 grid-cols-[auto_auto_1fr_auto] items-center gap-3 border-b border-border px-4 py-3;
+    @apply grid shrink-0 grid-cols-[auto_auto_1fr_auto] items-center gap-3 border-b border-border bg-card px-4 py-3;
     padding-top: calc(0.75rem + env(safe-area-inset-top));
   }
 
+  /* Hover tints with the brand rather than with --muted: muted is within a
+     hundredth of white, so on this chrome it is a state you cannot see. */
   .public-chat__bar-back {
-    @apply -ml-2 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+    @apply -ml-2 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
   }
 
   .public-chat__avatar {
@@ -62,7 +68,7 @@
      would either be clipped by the scroll container or push a horizontal
      scrollbar into it. */
   .public-chat__log {
-    @apply flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4;
+    @apply flex min-h-0 flex-1 flex-col overflow-y-auto bg-background px-4 py-4;
   }
 
   /* The only clue a thread continues above the fold is a bubble sliced in half
@@ -106,8 +112,13 @@
     @apply px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground;
   }
 
+  /* Tinted with the brand rather than filled with --muted. Muted is a hundredth
+     of a step from white, so a bubble wearing it on this thread had no edge at
+     all -- and a bubble is the only thing saying where one message stops and
+     the next starts. The tint is carried by the fill rather than an outline so
+     the tail can inherit it. */
   .public-chat__bubble {
-    @apply relative max-w-[85%] whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-sm text-foreground;
+    @apply relative max-w-[85%] whitespace-pre-wrap rounded-2xl bg-secondary/15 px-4 py-2.5 text-sm text-foreground;
   }
 
   /* Mid-run bubbles tuck the corner nearest the speaker; the last one squares it
@@ -169,15 +180,23 @@
      The bottom inset is the phone's home indicator, for the same reason the bar
      pays for the notch. */
   .public-chat__footer {
-    @apply shrink-0 border-t border-border px-4 py-3;
+    @apply shrink-0 border-t border-border bg-card px-4 py-3;
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
   }
 
   /* One row: a field that grows with what is being written, and the button
      beside it. The ring is drawn on the row rather than on the textarea, so
      focus lights the whole control instead of half of it. */
+  /* Not the thread's fill: the box is chrome, and a box wearing the colour of
+     what scrolls past it reads as part of the conversation.
+
+     What makes it a box is the outline, not a tint -- border-interactive rather
+     than border, which is 1.2:1 against this chrome and says nothing. A tint
+     was the first instinct and does not survive the arithmetic: any fill dark
+     enough to be visible takes the placeholder below 4.5:1, because
+     --muted-foreground only clears it by a tenth on white as it is. */
   .public-chat__composer-field {
-    @apply flex items-end gap-2 rounded-2xl border border-border bg-white p-1.5 transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary;
+    @apply flex items-end gap-2 rounded-2xl border border-border-interactive bg-card p-1.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary;
   }
 
   /* Height is set by the chat controller as the guest types; the max is here so
@@ -201,19 +220,22 @@
   }
 
   .public-menu__trigger {
-    @apply inline-flex size-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+    @apply inline-flex size-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
   }
 
   .public-menu__trigger[aria-expanded="true"] {
-    @apply bg-muted text-foreground;
+    @apply bg-secondary/15 text-foreground;
   }
 
   .public-menu__list {
-    @apply absolute right-0 top-full z-20 mt-1 flex min-w-56 flex-col overflow-hidden rounded-xl border border-border bg-white py-1 shadow-lg;
+    @apply absolute right-0 top-full z-20 mt-1 flex min-w-56 flex-col overflow-hidden rounded-xl border border-border-interactive bg-card py-1 shadow-lg;
   }
 
+  /* The focus state is a ring, not a tint. It used to be --muted, which against
+     this panel is 1.03:1 -- a keyboard user could open the menu and have no way
+     of telling which item they were on. */
   .public-menu__item {
-    @apply w-full cursor-pointer px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none;
+    @apply w-full cursor-pointer px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
   }
 
   .public-menu__item[data-danger="true"] {

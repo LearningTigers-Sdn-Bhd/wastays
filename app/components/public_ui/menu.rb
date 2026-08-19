@@ -36,6 +36,10 @@ module PublicUI
 
         attributes.merge(
           role: "menuitem",
+          # Roving tabindex: the menu is one stop on the page, and the arrow
+          # keys move within it. Leaving every item tabbable would make a
+          # two-item menu two extra stops on the way to the message box.
+          tabindex: "-1",
           class: tw_merge("public-menu__item", @class),
           data: data.merge(
             danger: @danger.to_s,
@@ -48,9 +52,10 @@ module PublicUI
 
     renders_many :items, Item
 
-    def initialize(label:, icon: "ellipsis-vertical", class: nil, **attributes)
+    def initialize(label:, icon: "ellipsis-vertical", id: nil, class: nil, **attributes)
       @label = label
       @icon = icon
+      @id = id || "public-menu-#{SecureRandom.hex(4)}"
       @class = binding.local_variable_get(:class)
       @attributes = attributes
     end
@@ -58,6 +63,8 @@ module PublicUI
     private
 
     attr_reader :label, :icon
+
+    def list_id = "#{@id}-list"
 
     def root_attributes
       attributes = @attributes.deep_dup

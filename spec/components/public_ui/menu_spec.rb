@@ -13,6 +13,38 @@ RSpec.describe PublicUI::Menu, type: :component do
     expect(page).to have_css("[role='menuitem']", text: "Clear conversation", visible: :all)
   end
 
+  it "points the trigger at the list it opens" do
+    render_inline(described_class.new(label: "Conversation options")) do |menu|
+      menu.with_item(href: "/x") { "Clear conversation" }
+    end
+
+    list_id = page.find(".public-menu__list", visible: :all)["id"]
+    expect(list_id).to be_present
+    expect(page).to have_css("button.public-menu__trigger[aria-controls='#{list_id}']")
+  end
+
+  # The arrow keys move between items, so the menu is one stop on the way to
+  # the message box rather than one stop per item.
+  it "takes its items out of the tab order" do
+    render_inline(described_class.new(label: "Conversation options")) do |menu|
+      menu.with_item(href: "/x") { "Clear conversation" }
+      menu.with_item(href: "/y", method: :post) { "Ask for a person" }
+    end
+
+    expect(page.all("[role='menuitem']", visible: :all).map { |item| item["tabindex"] }).to eq(%w[-1 -1])
+  end
+
+  it "gives two menus on one page ids of their own" do
+    ids = 2.times.map do
+      render_inline(described_class.new(label: "Conversation options")) do |menu|
+        menu.with_item(href: "/x") { "Clear conversation" }
+      end
+      page.find(".public-menu__list", visible: :all)["id"]
+    end
+
+    expect(ids.uniq.length).to eq(2)
+  end
+
   # Anything that changes something has to be a form: a menu of links would put
   # "clear my conversation" one prefetch away.
   it "posts an action that changes something rather than linking to it" do

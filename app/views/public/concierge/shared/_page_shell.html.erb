@@ -3,9 +3,11 @@
 <div class="<%= local_assigns.fetch(:root_class, 'bg-background min-h-screen flex flex-col md:flex-row') %>">
   <%= render "public/concierge/shared/left_panel" %>
 
-  <div class="<%= local_assigns.fetch(:content_class, 'flex-1 flex items-start justify-center px-4 pt-20 pb-20 sm:px-6 md:pt-28') %>">
+  <%# A landmark, so anyone navigating by them can get past the brand panel in
+      one move rather than tabbing through it. %>
+  <main class="<%= local_assigns.fetch(:content_class, 'flex-1 flex items-start justify-center px-4 pt-20 pb-20 sm:px-6 md:pt-28') %>">
     <div class="<%= local_assigns.fetch(:container_class, 'w-full max-w-3xl') %>">
       <%= yield %>
     </div>
-  </div>
+  </main>
 </div>
