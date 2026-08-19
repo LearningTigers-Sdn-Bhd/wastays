@@ -866,7 +866,8 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
     it "loads Quick Documents without composing the full document catalog" do
       documents_presenter = described_class.new(booking, params: { tab: "documents" }, hotel:)
 
-      expect(documents_presenter.quick_documents.keys).to eq(%i[invoice ledger receipt registration_card])
+      expect(documents_presenter.quick_documents.keys)
+        .to eq(%i[invoice ledger receipt registration_card voucher voucher_pack summary])
       expect(documents_presenter.instance_variable_defined?(:@documents)).to be(false)
     end
 
