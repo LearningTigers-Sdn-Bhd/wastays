@@ -52,6 +52,24 @@
         </div>
 
         <div>
+          <%= f.label :state_code, "State", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.select :state_code,
+                EInvoice::MalaysiaStates.options,
+                { include_blank: "Select state" },
+                class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div>
+          <%= f.label :postal_code, "Postcode", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :postal_code, placeholder: "e.g. 88000", inputmode: "numeric", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div>
+          <%= f.label :tin, "Tax identification number", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :tin, placeholder: "Only if the guest claims their stays", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div>
           <%= f.label :country, "Country", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
           <%= f.text_field :country, required: true, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "country", action: "input->guest-dob#autofill" } %>
         </div>

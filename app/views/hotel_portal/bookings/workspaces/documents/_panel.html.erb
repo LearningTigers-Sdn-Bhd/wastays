@@ -142,6 +142,30 @@
           <% end %>
         </div>
 
+        <%# Nothing can be filed until we know who took the guest's money: it
+            decides whether WAStays files as itself or on the hotel's behalf.
+            Channel-manager bookings arrive without that answer. %>
+        <% if booking.resolved_fund_collector == "unknown" && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+          <%= render PanelsUI::Alert.new(tone: :warning, title: "Confirm who received the guest payment") do |alert| %>
+            <% alert.with_description do %>
+              <p>This decides whether WAStays or the hotel issues the e-invoice. Nothing can be filed until it is set.</p>
+              <%= form_with url: update_payment_receiver_hotel_e_invoice_submissions_path(current_hotel, booking_id: booking.id),
+                    method: :patch,
+                    scope: :booking,
+                    class: "mt-3 flex flex-col gap-2 sm:flex-row sm:items-end" do |f| %>
+                <div class="sm:min-w-[280px]">
+                  <%= f.label :fund_collector, "Who received the guest payment?", class: "mb-1.5 block text-xs font-medium text-foreground" %>
+                  <%= f.select :fund_collector,
+                        [ [ "WAStays received the payment", "wastays" ], [ "Hotel received the payment directly", "hotel" ] ],
+                        { prompt: "Select one" },
+                        class: "w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground" %>
+                </div>
+                <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>Save<% end %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+
         <%= render PanelsUI::Table.new(
               caption: "LHDN e-invoice submissions for this booking",
               density: :compact,
