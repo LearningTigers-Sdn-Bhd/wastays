@@ -91,6 +91,8 @@ module EInvoice
           submitted_at: Time.current,
           raw_response: response
         )
+        # Nothing else polls this one either.
+        EInvoice::RefreshStatusJob.set(wait: 30.seconds).perform_later(submission.id)
       elsif rejected
         submission.update!(
           status: "invalid",

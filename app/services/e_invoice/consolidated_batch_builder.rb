@@ -8,7 +8,6 @@ module EInvoice
   class ConsolidatedBatchBuilder
     include PhoneFormatter
 
-    DOCUMENT_VERSION         = "1.0"
     INVOICE_TYPE_CODE        = "01"
     ACCOMMODATION_CLASS_CODE = "022"
     GENERAL_CONSUMER_TIN     = "EI00000000010"
@@ -57,7 +56,16 @@ module EInvoice
     private
 
     def build_payload
-      UBL_NAMESPACES.merge("Invoice" => [ invoice_body ])
+      document_signer.apply(UBL_NAMESPACES.merge("Invoice" => [ invoice_body ]))
+    end
+
+    # 1.1 when this hotel signs, 1.0 when it does not. See EInvoice::DocumentSigner.
+    def document_version
+      document_signer.document_version
+    end
+
+    def document_signer
+      @document_signer ||= EInvoice::DocumentSigner.new(@setting)
     end
 
     def invoice_body
@@ -65,7 +73,7 @@ module EInvoice
         "ID" => [ { "_" => internal_id } ],
         "IssueDate" => [ { "_" => issue_date } ],
         "IssueTime" => [ { "_" => issue_time } ],
-        "InvoiceTypeCode" => [ { "_" => INVOICE_TYPE_CODE, "listVersionID" => DOCUMENT_VERSION } ],
+        "InvoiceTypeCode" => [ { "_" => INVOICE_TYPE_CODE, "listVersionID" => document_version } ],
         "DocumentCurrencyCode" => [ { "_" => DEFAULT_CURRENCY } ],
         "TaxCurrencyCode" => [ { "_" => DEFAULT_CURRENCY } ],
         "InvoicePeriod" => [ invoice_period ],

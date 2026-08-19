@@ -460,11 +460,13 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
       expect(flash[:notice]).to include("paid to the hotel")
     end
 
-    it "cancels mismatched consolidated placeholder when receiver changes" do
+    # The hotel issues either way now, so recording who took the money does not
+    # change the document that is pending.
+    it "leaves the pending placeholder alone when the receiver changes" do
       create(:e_invoice_submission,
         hotel: hotel,
         booking: booking,
-        document_scenario: "guest_invoice", # WAStays scenario
+        document_scenario: "guest_invoice",
         status: "pending",
         consolidated: true,
         requested_by_guest: false)
@@ -474,14 +476,36 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
 
       expect(booking.reload.fund_collector).to eq("hotel")
 
-      old_submission = booking.e_invoice_submissions.find_by(document_scenario: "guest_invoice")
-      expect(old_submission.status).to eq("cancelled")
-      expect(old_submission.error_details["receiver_changed"]).to be true
+      placeholder = booking.e_invoice_submissions.find_by(document_scenario: "guest_invoice")
+      expect(placeholder.status).to eq("pending")
+    end
 
-      replacement = booking.e_invoice_submissions.find_by(document_scenario: "hotel_intermediary_guest_invoice")
-      expect(replacement).to be_present
-      expect(replacement.status).to eq("pending")
-      expect(replacement.consolidated).to be true
+    # It does matter once the hotel has asked WAStays to file on its behalf,
+    # because then the issuer really does change.
+    context "when the hotel has opted into WAStays filing on its behalf" do
+      before { hotel.e_invoice_setting.update!(intermediary_enabled: true) }
+
+      it "swaps the placeholder for the intermediary one" do
+        create(:e_invoice_submission,
+          hotel: hotel,
+          booking: booking,
+          document_scenario: "guest_invoice",
+          status: "pending",
+          consolidated: true,
+          requested_by_guest: false)
+
+        patch update_payment_receiver_hotel_e_invoice_submissions_path(hotel, booking_id: booking.id),
+          params: { booking: { fund_collector: "hotel" } }
+
+        old_submission = booking.e_invoice_submissions.find_by(document_scenario: "guest_invoice")
+        expect(old_submission.status).to eq("cancelled")
+        expect(old_submission.error_details["receiver_changed"]).to be true
+
+        replacement = booking.e_invoice_submissions.find_by(document_scenario: "hotel_intermediary_guest_invoice")
+        expect(replacement).to be_present
+        expect(replacement.status).to eq("pending")
+        expect(replacement.consolidated).to be true
+      end
     end
 
     it "blocks changes when pending individual submission exists" do

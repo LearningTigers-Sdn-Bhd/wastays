@@ -31,6 +31,26 @@ RSpec.describe EInvoice::MonthlyConsolidationJob, type: :job do
       expect(entry.payload["submitted"]).to eq(0)
     end
 
+    it "polls LHDN for the outcome of what it filed" do
+      booking = create(:booking, hotel: hotel, payment_status: "captured", total_amount: 300.0)
+      create(:booking_room, booking: booking, subtotal: 300.0)
+      create(:e_invoice_submission,
+        hotel: hotel, booking: booking,
+        document_scenario: "guest_invoice",
+        status: "pending", consolidated: true,
+        requested_by_guest: false,
+        payment_concluded_at: last_month + 10.days)
+
+      client = instance_double(MyInvois::MockClient)
+      allow(MyInvois::ClientFactory).to receive(:build).and_return(client)
+      allow(client).to receive(:submit_documents).and_return(
+        { "submissionUid" => "sub", "acceptedDocuments" => [ { "uuid" => SecureRandom.uuid } ] }
+      )
+
+      expect { described_class.new.perform(within_window_date) }
+        .to have_enqueued_job(EInvoice::RefreshStatusJob)
+    end
+
     it "records a successful run with what it filed" do
       booking = create(:booking, hotel: hotel, payment_status: "captured", total_amount: 300.0)
       create(:booking_room, booking: booking, subtotal: 300.0)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_19_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -898,6 +898,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_170000) do
     t.bigint "hotel_id", null: false
     t.string "hotel_tin"
     t.boolean "intermediary_enabled", default: false, null: false
+    t.boolean "signature_enabled", default: false, null: false
+    t.text "signing_certificate"
+    t.text "signing_private_key"
     t.string "supplier_address_line1"
     t.string "supplier_address_line2"
     t.string "supplier_business_description"

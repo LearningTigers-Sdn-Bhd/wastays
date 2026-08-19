@@ -39,6 +39,14 @@ module EInvoice
 
     private
 
+    # One poll per consolidated document, not per booking: they share a UUID.
+    def schedule_status_refresh(scope)
+      scope.reorder(nil).distinct.pluck(:uuid).compact.each do |uuid|
+        submission_id = EInvoiceSubmission.where(uuid: uuid).order(:id).first&.id
+        EInvoice::RefreshStatusJob.set(wait: 30.seconds).perform_later(submission_id) if submission_id
+      end
+    end
+
     def record_run(batch_id, month_start, hotel_count)
       scope = EInvoiceSubmission.where(consolidation_batch_id: batch_id)
       submitted = scope.where(status: "submitted").count
@@ -114,7 +122,8 @@ module EInvoice
         rejected = Array(response.dig("rejectedDocuments")).first
 
         if accepted
-          batch_scope.where(booking_id: low_value_bookings.map(&:id)).update_all(
+          accepted_scope = batch_scope.where(booking_id: low_value_bookings.map(&:id))
+          accepted_scope.update_all(
             status: "submitted",
             consolidation_batch_id: batch_id,
             internal_id: doc[:codeNumber],
@@ -123,6 +132,9 @@ module EInvoice
             submitted_at: Time.current,
             raw_response: response
           )
+          # Nothing else polls these, so without this the whole month would sit
+          # at "submitted" and never be confirmed valid by LHDN.
+          schedule_status_refresh(accepted_scope)
         elsif rejected
           error_details = rejected.dig("error", "details") || []
           batch_scope.where(booking_id: low_value_bookings.map(&:id)).update_all(

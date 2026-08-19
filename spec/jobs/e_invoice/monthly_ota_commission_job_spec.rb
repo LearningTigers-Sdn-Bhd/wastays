@@ -44,6 +44,14 @@ RSpec.describe EInvoice::MonthlyOtaCommissionJob, type: :job do
     expect(agoda.period_start).to eq(last_month)
   end
 
+  # Otherwise the document sits at "submitted" and is never confirmed.
+  it "polls LHDN for the outcome after filing" do
+    ota_stay(source: "agoda", total: 720.0, net: 633.60)
+
+    expect { described_class.new.perform(run_date) }
+      .to have_enqueued_job(EInvoice::RefreshStatusJob)
+  end
+
   it "leaves direct bookings out of it" do
     ota_stay(source: "walk_in", total: 720.0, net: 633.60)
 

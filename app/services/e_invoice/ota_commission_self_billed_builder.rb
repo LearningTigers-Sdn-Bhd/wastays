@@ -13,7 +13,6 @@ module EInvoice
   class OtaCommissionSelfBilledBuilder
     include PhoneFormatter
 
-    DOCUMENT_VERSION = "1.0"
     INVOICE_TYPE_CODE = "11" # self-billed invoice
     # LHDN's placeholder identifiers for a supplier outside Malaysia.
     FOREIGN_SUPPLIER_TIN = "EI00000000030"
@@ -54,7 +53,16 @@ module EInvoice
     private
 
     def build_payload
-      UBL_NAMESPACES.merge("Invoice" => [ invoice_body ])
+      document_signer.apply(UBL_NAMESPACES.merge("Invoice" => [ invoice_body ]))
+    end
+
+    # 1.1 when this hotel signs, 1.0 when it does not. See EInvoice::DocumentSigner.
+    def document_version
+      document_signer.document_version
+    end
+
+    def document_signer
+      @document_signer ||= EInvoice::DocumentSigner.new(@setting)
     end
 
     def invoice_body
@@ -62,7 +70,7 @@ module EInvoice
         "ID" => [ { "_" => internal_id } ],
         "IssueDate" => [ { "_" => issue_date.iso8601 } ],
         "IssueTime" => [ { "_" => Time.current.utc.strftime("%H:%M:%SZ") } ],
-        "InvoiceTypeCode" => [ { "_" => INVOICE_TYPE_CODE, "listVersionID" => DOCUMENT_VERSION } ],
+        "InvoiceTypeCode" => [ { "_" => INVOICE_TYPE_CODE, "listVersionID" => document_version } ],
         "DocumentCurrencyCode" => [ { "_" => DEFAULT_CURRENCY } ],
         "TaxCurrencyCode" => [ { "_" => DEFAULT_CURRENCY } ],
         "InvoicePeriod" => [ {

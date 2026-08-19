@@ -8,6 +8,9 @@ class EInvoiceSetting < ApplicationRecord
   # the hotel's behalf using the hotel's own LHDN access.
   encrypts :client_id
   encrypts :client_secret
+  encrypts :signing_private_key
+
+  validate :signing_material_present, if: :signature_enabled?
 
   API_ENVIRONMENTS = %w[mock sandbox production].freeze
 
@@ -42,6 +45,12 @@ class EInvoiceSetting < ApplicationRecord
   end
 
   # Filing needs both an identity to file as and access to file with.
+  def signing_material_present
+    return if signing_certificate.present? && signing_private_key.present?
+
+    errors.add(:signature_enabled, "needs a signing certificate and private key before it can be switched on")
+  end
+
   def api_credentials_ready?
     client_id.present? && client_secret.present?
   end

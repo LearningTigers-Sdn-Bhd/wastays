@@ -67,7 +67,9 @@ module HotelPortal
           alert: "A guest e-invoice has already been successfully sent for this booking."
       end
 
-      context = EInvoice::SubmissionContext.for(@booking)
+      # The scenario decides taxpayer vs intermediary, so the context has to
+      # be resolved for the scenario we actually chose.
+      context = EInvoice::SubmissionContext.for(@booking, document_scenario: scenario)
       submission, already_processing = prepare_submission!(scenario, context, requested_by_guest: requested_by_guest)
 
       if already_processing
@@ -125,21 +127,17 @@ module HotelPortal
 
       old_receiver = @booking.resolved_fund_collector
 
-      # Only handle placeholder if receiver actually changes and affects scenario
-      if existing_consolidated && receiver != old_receiver
-        scenario_for_receiver = receiver == "hotel" ? "hotel_intermediary_guest_invoice" : "guest_invoice"
-        current_scenario = existing_consolidated.document_scenario
-
-        # If scenario would change, cancel the old placeholder
-        if scenario_for_receiver != current_scenario
-          existing_consolidated.update!(status: "cancelled", error_details: { receiver_changed: true })
-          # New placeholder will be created by AutoIssueJob if needed
-        end
-      end
-
       @booking.update!(fund_collector: receiver)
 
-      if @booking.total_amount.to_d < HIGH_VALUE_THRESHOLD
+      # Recording who took the money usually changes nothing about the document:
+      # the hotel issues either way. It only matters where the hotel has asked
+      # WAStays to file on its behalf, since then the issuer really does change.
+      if existing_consolidated && receiver != old_receiver &&
+         @booking.e_invoice_document_scenario != existing_consolidated.document_scenario
+        existing_consolidated.update!(status: "cancelled", error_details: { receiver_changed: true })
+      end
+
+      if @booking.e_invoice_amount < HIGH_VALUE_THRESHOLD
         @booking.create_pending_consolidated_submission!
       end
 

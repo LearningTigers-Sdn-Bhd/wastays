@@ -20,6 +20,7 @@ module HotelPortal
       # A blank secret means "leave it alone", so an admin editing the address
       # does not silently wipe the hotel's LHDN access.
       attributes = attributes.except(:client_secret) if attributes[:client_secret].blank?
+      attributes = attributes.except(:signing_private_key) if attributes[:signing_private_key].blank?
       setting.update(attributes)
     end
 
@@ -31,11 +32,16 @@ module HotelPortal
 
     def setting_params
       params.require(:e_invoice_setting).permit(
+        # intermediary_enabled is deliberately not permitted: WAStays is not a
+        # registered LHDN intermediary, so the hotel admin does not offer it and
+        # a crafted request must not switch it on either.
         :enabled,
-        :intermediary_enabled,
         :api_environment,
         :client_id,
         :client_secret,
+        :signature_enabled,
+        :signing_certificate,
+        :signing_private_key,
         :hotel_tin,
         :hotel_brn,
         :supplier_msic_code,
