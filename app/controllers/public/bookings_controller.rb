@@ -45,5 +45,49 @@ class Public::BookingsController < ApplicationController
       disposition: "attachment"
   end
 
+  # A group organiser holds the group's own code; each guest holds their room's. Either one
+  # reaches the pack, so the organiser can print the set from the link they were sent.
+  def voucher_pack
+    group_booking = resolve_group_booking!
+    pdf_bytes = Reports::Bookings::GenerateVoucherPack.new(group_booking).generate
+    send_data pdf_bytes,
+      filename: "wastays-vouchers-#{group_booking.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "attachment"
+  rescue Reports::Bookings::GenerateVoucherPack::EmptyGroupError
+    head :not_found
+  end
+
+  def summary
+    subject = resolve_summary_subject!
+    pdf_bytes = if subject.is_a?(GroupBooking)
+      Reports::Bookings::GenerateBookingSummary.new(group_booking: subject).generate
+    else
+      Reports::Bookings::GenerateBookingSummary.new(booking: subject).generate
+    end
+    send_data pdf_bytes,
+      filename: "wastays-booking-summary-#{subject.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "attachment"
+  end
+
   private
+
+  # A room that belongs to a group reports the group's position, because that is the
+  # position anyone settles.
+  def resolve_summary_subject!
+    booking = Booking.with_confirmation_token(params[:id]).includes(:group_booking).first
+    return booking.group_booking || booking if booking
+
+    GroupBooking.with_confirmation_token(params[:id]).first!
+  end
+
+  def resolve_group_booking!
+    booking = Booking.with_confirmation_token(params[:id]).includes(:group_booking).first
+    group_booking = booking&.group_booking
+    return group_booking if group_booking
+    raise ActiveRecord::RecordNotFound, "booking #{params[:id]} belongs to no group" if booking
+
+    GroupBooking.with_confirmation_token(params[:id]).first!
+  end
 end

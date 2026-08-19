@@ -68,6 +68,42 @@ class Guest::BookingsController < Guest::BaseController
     redirect_to guest_bookings_path, alert: "Booking not found."
   end
 
+  # The guest is signed in, so the group is reached through a room they own rather than
+  # through a code they were sent.
+  def voucher_pack
+    booking = current_guest.bookings.includes(:group_booking).find(params[:id])
+    group_booking = booking.group_booking
+    return redirect_to guest_booking_path(booking), alert: "This booking is not part of a group." if group_booking.blank?
+
+    send_data Reports::Bookings::GenerateVoucherPack.new(group_booking).generate,
+      filename: "wastays-vouchers-#{group_booking.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "attachment"
+  rescue Reports::Bookings::GenerateVoucherPack::EmptyGroupError
+    redirect_to guest_booking_path(booking), alert: "This group has no rooms to print."
+  rescue ActiveRecord::RecordNotFound
+    redirect_to guest_bookings_path, alert: "Booking not found."
+  end
+
+  # A room in a group reports the group's position, because that is the position anyone
+  # settles.
+  def summary
+    booking = current_guest.bookings.includes(:group_booking).find(params[:id])
+    subject = booking.group_booking || booking
+    pdf_bytes = if subject.is_a?(GroupBooking)
+      Reports::Bookings::GenerateBookingSummary.new(group_booking: subject).generate
+    else
+      Reports::Bookings::GenerateBookingSummary.new(booking: subject).generate
+    end
+
+    send_data pdf_bytes,
+      filename: "wastays-booking-summary-#{subject.confirmation_token}.pdf",
+      type: "application/pdf",
+      disposition: "attachment"
+  rescue ActiveRecord::RecordNotFound
+    redirect_to guest_bookings_path, alert: "Booking not found."
+  end
+
   def toggle_dnd
     @booking = current_guest.bookings.find(params[:id])
     result = Guest::ToggleDndService.new(booking: @booking).call

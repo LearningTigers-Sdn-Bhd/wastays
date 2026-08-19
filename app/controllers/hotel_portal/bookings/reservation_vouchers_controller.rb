@@ -13,10 +13,26 @@ class HotelPortal::Bookings::ReservationVouchersController < HotelPortal::BaseCo
       disposition: "inline"
   end
 
+  # Every room in the group, one voucher per page. A booking that belongs to no group has
+  # nothing to pack, so it falls back to its own voucher rather than erroring.
+  def pack
+    group_booking = @booking.group_booking
+    return redirect_to hotel_booking_reservation_voucher_path(current_hotel, @booking) if group_booking.blank?
+
+    pdf_bytes = Reports::Bookings::GenerateVoucherPack.new(group_booking).generate
+
+    send_data pdf_bytes,
+      filename: "wastays-reservation-vouchers-#{group_booking.formatted_reservation_number}.pdf",
+      type: "application/pdf",
+      disposition: "inline"
+  rescue Reports::Bookings::GenerateVoucherPack::EmptyGroupError
+    redirect_to hotel_booking_path(current_hotel, @booking), alert: "This group has no rooms to print."
+  end
+
   private
 
   def set_booking
-    @booking = current_hotel.bookings.find(params[:booking_id])
+    @booking = current_hotel.bookings.includes(:group_booking).find(params[:booking_id])
   end
 
   def authorize_manage_bookings!

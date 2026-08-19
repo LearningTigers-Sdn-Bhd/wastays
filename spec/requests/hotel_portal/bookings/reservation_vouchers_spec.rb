@@ -48,4 +48,28 @@ RSpec.describe "HotelPortal::Bookings::ReservationVouchers", type: :request do
       expect(response).to have_http_status(:not_found)
     end
   end
+
+  describe "GET .../reservation_voucher/pack" do
+    let(:group_booking) { create(:group_booking, hotel: hotel) }
+    let!(:first_room) { create(:booking, hotel: hotel, group_booking: group_booking, group_position: 1) }
+    let!(:second_room) { create(:booking, hotel: hotel, group_booking: group_booking, group_position: 2) }
+
+    it "returns every room in the group as one PDF" do
+      get pack_hotel_booking_reservation_voucher_path(hotel, first_room)
+
+      expect(response).to have_http_status(:success)
+      expect(response.content_type).to start_with("application/pdf")
+      expect(response.headers["Content-Disposition"]).to include(
+        "wastays-reservation-vouchers-#{group_booking.formatted_reservation_number}.pdf"
+      )
+      expect(PDF::Reader.new(StringIO.new(response.body)).pages.size).to eq(2)
+    end
+
+    # A booking that belongs to no group has nothing to pack.
+    it "falls back to the single voucher for a booking outside a group" do
+      get pack_hotel_booking_reservation_voucher_path(hotel, booking)
+
+      expect(response).to redirect_to(hotel_booking_reservation_voucher_path(hotel, booking))
+    end
+  end
 end

@@ -54,7 +54,13 @@ module HotelPortal
       return unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
 
       if tab.in?(%w[bookings arrivals])
-        { label: "Print reservation voucher", path: hotel_booking_reservation_voucher_path(current_hotel, booking), target: "_blank", data: { turbo: false } }
+        # A group arriving together is checked in as a block, so the useful thing to hand
+        # the desk is the whole pack rather than one room's page.
+        if booking.group_booking_id?
+          { label: "Print group vouchers", path: pack_hotel_booking_reservation_voucher_path(current_hotel, booking), target: "_blank", data: { turbo: false } }
+        else
+          { label: "Print reservation voucher", path: hotel_booking_reservation_voucher_path(current_hotel, booking), target: "_blank", data: { turbo: false } }
+        end
       else
         { label: "Print invoice", path: invoice_booking_path(booking.confirmation_token), target: "_blank", data: { turbo: false } }
       end
