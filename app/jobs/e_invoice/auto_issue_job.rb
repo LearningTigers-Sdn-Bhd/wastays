@@ -18,10 +18,10 @@ module EInvoice
 
       scenario = booking.e_invoice_document_scenario
 
-      # On an OTA stay the hotel's customer is the OTA, not the guest, so no
-      # guest-facing document is ever issued - requested or not. It goes into
-      # the consolidated batch, which names no buyer.
-      if booking.ota_booking?
+      # Only when the OTA collected is the guest not the hotel's customer. Then
+      # no guest-facing document is ever issued, requested or not, and the stay
+      # goes into the consolidated batch, which names no buyer.
+      if booking.ota_collected?
         booking.create_pending_consolidated_submission!
         return
       end

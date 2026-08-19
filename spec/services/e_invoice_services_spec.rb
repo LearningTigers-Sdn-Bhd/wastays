@@ -46,6 +46,8 @@ RSpec.describe "E-Invoice & MyInvois Services" do
   describe EInvoice::SubmissionContext do
     describe ".for" do
       let(:hotel) { create(:hotel, status: "live") }
+      # The hotel files under its own registration, so it needs a setting.
+      let!(:setting) { create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655") }
       let(:booking) { create(:booking, hotel: hotel, fund_collector: "wastays") }
 
       before do
@@ -114,7 +116,10 @@ RSpec.describe "E-Invoice & MyInvois Services" do
             }
           )
         )
-        client = described_class.build
+        # An explicit non-mock environment is required before a real client is
+        # built; unconfigured deliberately falls back to the mock.
+        setting = build(:e_invoice_setting, api_environment: "sandbox")
+        client = described_class.build(setting: setting)
         expect(client).to be_a(MyInvois::Client)
       end
     end

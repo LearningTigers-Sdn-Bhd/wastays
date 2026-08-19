@@ -120,9 +120,9 @@ class Booking < ApplicationRecord
   # Guest may request only within the same calendar month as the payment,
   # and only while nothing has been issued yet.
   def e_invoice_guest_request_possible?
-    # The hotel is not the guest's seller on an OTA stay, so it must not issue
-    # them an invoice. Hidden rather than explained, by product decision.
-    return false if ota_booking?
+    # Only when the OTA took the money is the guest not the hotel's customer.
+    # A pay-at-hotel guest may request one like any other walk-in.
+    return false if ota_collected?
     return false unless hotel.e_invoice_setting&.covers?(payment_concluded_at)
     return false if e_invoice_already_issued?
     return false unless e_invoice_buyer_details_ready?
@@ -163,22 +163,45 @@ class Booking < ApplicationRecord
     hotel_corporate_account&.tin.presence || guest_tin.presence || primary_guest&.tin.presence
   end
 
-  # On an OTA stay the hotel sells to the OTA, not to the guest, so the hotel
-  # never issues a guest-facing e-invoice for it. These go into the monthly
-  # consolidated document with no named buyer; a guest who wants an invoice
-  # gets it from the OTA they booked through.
   def ota_booking?
     return true if source.to_s == "ota"
 
     BookingSource.find_by_source(source)&.kind == "ota"
   end
 
-  # An OTA stay is filed at what the hotel actually receives, since the guest's
-  # gross price includes the OTA's commission, which is not the hotel's revenue.
+  # Who the hotel actually sold to, which is not the same question as which
+  # channel the booking arrived through:
+  #
+  #   OTA collected (prepaid)      - the hotel sold to the OTA. No guest-facing
+  #                                  e-invoice; the guest gets theirs from the OTA.
+  #   Hotel collected (pay at hotel) - the hotel sold to the guest, who may
+  #                                  request an individual e-invoice like any
+  #                                  other walk-in.
+  #
+  # Absent settlement data we assume the hotel collected, so a guest is never
+  # silently denied a document they are entitled to.
+  def ota_collected?
+    return false unless ota_booking?
+
+    channel_settlements.any? { |settlement| settlement.collection_by == "ota" }
+  end
+
+  # Filed at what the hotel actually received for the stay. When the OTA
+  # collected, that is the net after commission. When the guest paid the front
+  # desk it is the full amount, and the commission is a separate expense the
+  # hotel self-bills for.
   def e_invoice_amount
-    return net_amount.to_d if ota_booking? && net_amount.present?
+    return net_amount.to_d if ota_collected? && net_amount.present?
 
     total_amount.to_d
+  end
+
+  # Commission the OTA keeps. Only meaningful on OTA stays, and it is what the
+  # hotel must self-bill for as an importation of services.
+  def ota_commission_amount
+    return 0.to_d unless ota_booking? && net_amount.present?
+
+    (total_amount.to_d - net_amount.to_d).clamp(0.to_d, total_amount.to_d)
   end
 
   # WAStays is not a registered intermediary yet, so unless a hotel has opted

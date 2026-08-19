@@ -153,26 +153,48 @@ RSpec.describe "Booking OTA e-invoice treatment", type: :model do
     expect(build(:booking, hotel: hotel, source: "ota").ota_booking?).to be(true)
   end
 
-  # The guest's gross price includes commission the hotel never receives.
-  it "files an OTA stay at net, and a direct stay at gross" do
-    ota = build(:booking, hotel: hotel, source: "agoda", total_amount: 720.0, net_amount: 633.60)
-    direct = build(:booking, hotel: hotel, source: "walk_in", total_amount: 720.0, net_amount: 633.60)
-
-    expect(ota.e_invoice_amount).to eq(633.60)
-    expect(direct.e_invoice_amount).to eq(720.0)
-  end
-
-  it "falls back to gross when an OTA stay has no net recorded" do
-    ota = build(:booking, hotel: hotel, source: "agoda", total_amount: 720.0, net_amount: nil)
-
-    expect(ota.e_invoice_amount).to eq(720.0)
-  end
-
-  it "never offers a guest on an OTA booking an e-invoice request" do
+  def ota_stay(collection_by:, total: 720.0, net: 633.60)
     booking = create(:booking, hotel: hotel, source: "agoda", payment_status: "captured",
+      total_amount: total, net_amount: net,
       guest_city: "Kuala Lumpur", guest_state_code: "14")
     create(:payment_transaction, booking: booking, status: "captured", captured_at: Time.current)
+    if collection_by
+      settlement = create(:channel_settlement, hotel: hotel, collection_by: collection_by)
+      create(:channel_settlement_allocation, channel_settlement: settlement, booking: booking)
+    end
+    booking.reload
+  end
 
-    expect(booking.e_invoice_guest_request_possible?).to be(false)
+  # Arriving through Agoda is not the same as Agoda taking the money.
+  it "counts the stay as OTA-collected only when settlement says so" do
+    expect(ota_stay(collection_by: "ota").ota_collected?).to be(true)
+    expect(ota_stay(collection_by: "property").ota_collected?).to be(false)
+  end
+
+  it "assumes the hotel collected when there is no settlement data" do
+    expect(ota_stay(collection_by: nil).ota_collected?).to be(false)
+  end
+
+  # Prepaid: the OTA paid the hotel net, and that is the hotel's sale.
+  it "files an OTA-collected stay at net" do
+    expect(ota_stay(collection_by: "ota").e_invoice_amount).to eq(633.60)
+  end
+
+  # Pay at hotel: the guest handed over the full amount at the front desk.
+  it "files a pay-at-hotel stay at gross, commission being a separate expense" do
+    expect(ota_stay(collection_by: "property").e_invoice_amount).to eq(720.0)
+  end
+
+  it "reports the commission the OTA keeps" do
+    expect(ota_stay(collection_by: "ota").ota_commission_amount).to eq(86.40)
+  end
+
+  it "denies a guest request only when the OTA took the money" do
+    expect(ota_stay(collection_by: "ota").e_invoice_guest_request_possible?).to be(false)
+  end
+
+  # This guest is the hotel's customer and may claim the stay.
+  it "lets a pay-at-hotel guest request an individual e-invoice" do
+    expect(ota_stay(collection_by: "property").e_invoice_guest_request_possible?).to be(true)
   end
 end

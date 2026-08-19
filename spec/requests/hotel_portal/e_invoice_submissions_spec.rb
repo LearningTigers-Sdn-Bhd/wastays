@@ -98,11 +98,12 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
           gateway: "stripe", captured_at: Time.current, amount_subunits: 1_500_000, currency: "MYR")
       end
 
-      it "blocks submission with actionable alert" do
-        post hotel_e_invoice_submissions_path(hotel, booking_id: booking.id)
-
-        expect(response).to redirect_to(hotel_folio_path(hotel, booking))
-        expect(flash[:alert]).to include("Please confirm whether the guest paid WAStays or paid the hotel directly")
+      # The hotel files under its own registration either way, so who collected
+      # the money no longer decides who issues and no longer blocks filing.
+      it "files anyway, since the hotel is the issuer regardless" do
+        expect {
+          post hotel_e_invoice_submissions_path(hotel, booking_id: booking.id)
+        }.to have_enqueued_job(EInvoice::SubmitJob)
       end
     end
 
@@ -152,11 +153,18 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
           gateway: "stripe", captured_at: Time.current, amount_subunits: 1_500_000, currency: "MYR")
       end
 
-      it "redirects back with an actionable alert" do
+      # Nothing to set up: without opting into WAStays filing on its behalf,
+      # the hotel simply files this itself as an ordinary taxpayer.
+      it "files it as the hotel's own taxpayer submission" do
+        ActiveJob::Base.queue_adapter = :test
+
         post hotel_e_invoice_submissions_path(hotel, booking_id: booking.id)
 
-        expect(response).to redirect_to(hotel_folio_path(hotel, booking))
-        expect(flash[:alert]).to include("Hotel-issued e-invoices are not ready yet")
+        expect(booking.reload.guest_invoice_submission).to have_attributes(
+          document_scenario: "guest_invoice",
+          submission_mode: "taxpayer",
+          represented_taxpayer_tin: nil
+        )
       end
     end
 

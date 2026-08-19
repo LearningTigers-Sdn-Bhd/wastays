@@ -281,17 +281,20 @@ RSpec.describe EInvoice::AutoIssueJob, "OTA bookings", type: :job do
 
   before { BookingSource.seed_defaults! }
 
-  def ota_booking(total:, net:)
+  def ota_booking(total:, net:, collection_by:)
     booking = create(:booking, hotel: hotel, source: "agoda", payment_status: "captured",
-      total_amount: total, net_amount: net)
+      total_amount: total, net_amount: net,
+      guest_city: "Kuala Lumpur", guest_state_code: "14")
     create(:booking_room, booking: booking, subtotal: total)
     create(:payment_transaction, booking: booking, status: "captured", captured_at: Time.current)
-    booking
+    settlement = create(:channel_settlement, hotel: hotel, collection_by: collection_by)
+    create(:channel_settlement_allocation, channel_settlement: settlement, booking: booking)
+    booking.reload
   end
 
-  # The hotel sells to the OTA, so it never issues the guest a document.
-  it "consolidates an OTA stay instead of issuing to the guest" do
-    booking = ota_booking(total: 720.0, net: 633.60)
+  # Prepaid: the hotel sold to the OTA, so the guest gets no document from it.
+  it "consolidates a prepaid OTA stay instead of issuing to the guest" do
+    booking = ota_booking(total: 720.0, net: 633.60, collection_by: "ota")
 
     expect { described_class.perform_now(booking.id) }.to change(EInvoiceSubmission, :count).by(1)
 
@@ -300,18 +303,27 @@ RSpec.describe EInvoice::AutoIssueJob, "OTA bookings", type: :job do
     expect(submission.requested_by_guest).to be(false)
   end
 
-  it "consolidates an OTA stay even when a guest asks" do
-    booking = ota_booking(total: 720.0, net: 633.60)
+  it "consolidates a prepaid OTA stay even when a guest asks" do
+    booking = ota_booking(total: 720.0, net: 633.60, collection_by: "ota")
+
+    described_class.perform_now(booking.id, requested_by_guest: true)
+
+    expect(EInvoiceSubmission.last.consolidated).to be(true)
+  end
+
+  # Pay at hotel: the guest is the hotel's customer and may claim the stay.
+  it "issues an individual e-invoice when a pay-at-hotel guest asks" do
+    booking = ota_booking(total: 720.0, net: 633.60, collection_by: "property")
 
     described_class.perform_now(booking.id, requested_by_guest: true)
 
     submission = EInvoiceSubmission.last
-    expect(submission.consolidated).to be(true)
+    expect(submission.consolidated).to be(false)
+    expect(submission.requested_by_guest).to be(true)
   end
 
-  # Threshold is judged on what the hotel actually receives.
-  it "still consolidates an OTA stay whose gross exceeds the threshold" do
-    booking = ota_booking(total: 12_000.0, net: 10_800.0)
+  it "consolidates a pay-at-hotel stay when the guest does not ask" do
+    booking = ota_booking(total: 720.0, net: 633.60, collection_by: "property")
 
     described_class.perform_now(booking.id)
 
