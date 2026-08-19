@@ -119,6 +119,13 @@ RSpec.describe Conversation, type: :model do
       expect(conversation.guest_status[:tone]).to eq(:accent)
     end
 
+    it "says a person has been sent for while the assistant carries on" do
+      conversation.request_human!
+
+      expect(conversation.guest_status[:text]).to eq(Conversation::HUMAN_REQUESTED_STATUS)
+      expect(conversation.guest_status[:tone]).to eq(:accent)
+    end
+
     # A visitor who has not written yet has no thread to ask, but the bar still
     # has a line to fill.
     it "answers for a hotel with no thread at all" do
@@ -133,6 +140,12 @@ RSpec.describe Conversation, type: :model do
       conversation.hand_to_human!(user: user)
 
       expect(turbo_broadcasts_to(conversation, :guest).join).to include("Farah Idris")
+    end
+
+    it "pushes the new line down the stream when the guest asks for a person" do
+      conversation.request_human!
+
+      expect(turbo_broadcasts_to(conversation, :guest).join).to include(Conversation::HUMAN_REQUESTED_STATUS)
     end
 
     it "stays quiet when something other than mode changes" do

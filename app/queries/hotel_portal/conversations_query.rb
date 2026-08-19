@@ -39,7 +39,7 @@ module HotelPortal
 
       {
         open: scoped.count,
-        awaiting_staff: scoped.where(mode: "human").count,
+        awaiting_staff: scoped.awaiting_staff.count,
         unread: scoped.where(id: unread_conversation_ids).count
       }
     end
@@ -60,7 +60,7 @@ module HotelPortal
 
     def filter_by_mode(relation)
       case filter
-      when "awaiting_staff" then relation.where(mode: "human")
+      when "awaiting_staff" then relation.awaiting_staff
       when "unread" then relation.where(id: unread_conversation_ids)
       else relation
       end

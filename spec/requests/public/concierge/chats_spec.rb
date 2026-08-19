@@ -275,6 +275,66 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     end
   end
 
+  describe "asking for a person" do
+    def agent_path = "/concierge/#{hotel.slug}/chat/agent"
+
+    before { hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "k") }
+
+    it "puts the thread on the desk staff are watching" do
+      post chat_path, params: { message: "Do you have parking?" }
+
+      post agent_path
+
+      expect(Conversation.last).to be_human_requested
+      expect(HotelPortal::ConversationsQuery.new(hotel: hotel, params: { filter: "awaiting_staff" }).call)
+        .to include(Conversation.last)
+    end
+
+    # An ask must not buy the guest silence: the assistant keeps answering
+    # until a person actually arrives.
+    it "leaves the assistant answering while they wait" do
+      post chat_path, params: { message: "Do you have parking?" }
+      post agent_path
+
+      expect {
+        post chat_path, params: { message: "And breakfast?" }
+      }.to have_enqueued_job(Concierge::AnswerWebMessageJob)
+    end
+
+    it "says so on the guest's own page" do
+      post chat_path, params: { message: "Do you have parking?" }
+      post agent_path
+
+      get chat_path
+
+      expect(response.body).to include(Conversation::HUMAN_REQUESTED_STATUS)
+    end
+
+    # There is no thread for anyone to arrive in until the guest has written.
+    it "is not offered before the visitor has said anything" do
+      get chat_path
+
+      expect(response.body).not_to include("Ask for a person")
+    end
+
+    it "is offered once there is a thread" do
+      post chat_path, params: { message: "Do you have parking?" }
+
+      get chat_path
+
+      expect(response.body).to include("Ask for a person")
+    end
+
+    it "stops being offered once it has been asked" do
+      post chat_path, params: { message: "Do you have parking?" }
+      post agent_path
+
+      get chat_path
+
+      expect(response.body).not_to include("Ask for a person")
+    end
+  end
+
   # The reason the web chat came before WhatsApp: the guest's browser is
   # already connected, so a staff reply reaches them with no integration.
   describe "the live connection" do

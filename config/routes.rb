@@ -108,6 +108,7 @@ Rails.application.routes.draw do
     get    "chat",                 to: "chats#show",           as: :chat
     post   "chat",                 to: "chats#create",         as: :chat_messages
     delete "chat",                 to: "chats#destroy",        as: :clear_chat
+    post   "chat/agent",           to: "chats#request_agent",  as: :chat_agent
   end
 
   # Public Booking Engine

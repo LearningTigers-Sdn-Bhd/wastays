@@ -23,6 +23,7 @@ class Conversation < ApplicationRecord
   # cannot keep at 3am.
   BOT_STATUS = "Ask about your stay, any time"
   FRONT_DESK_STATUS = "Our front desk replies here"
+  HUMAN_REQUESTED_STATUS = "A team member has been asked to join"
   MODES = %w[bot human].freeze
   STATUSES = %w[open closed].freeze
 
@@ -35,7 +36,7 @@ class Conversation < ApplicationRecord
            inverse_of: :conversation,
            dependent: :destroy
 
-  after_update_commit :broadcast_status_to_guest, if: :saved_change_to_mode?
+  after_update_commit :broadcast_status_to_guest, if: :saved_change_to_guest_status_facts?
   after_update_commit :broadcast_to_inbox, if: :saved_change_to_inbox_facts?
 
   validates :channel, presence: true, inclusion: { in: CHANNELS }
@@ -44,7 +45,10 @@ class Conversation < ApplicationRecord
 
   scope :open, -> { where(status: "open") }
   scope :closed, -> { where(status: "closed") }
-  scope :awaiting_staff, -> { open.where(mode: "human") }
+  # Threads a person is expected to look at: the ones staff already hold, and
+  # the ones a guest has asked them to. Defined here rather than in the inbox
+  # query, because the guest's page and the tab counts have to agree with it.
+  scope :awaiting_staff, -> { open.where(mode: "human").or(open.where.not(human_requested_at: nil)) }
   scope :recent_first, -> { order(last_message_at: :desc, created_at: :desc) }
 
   def replies_reach_guest? = REPLYABLE_CHANNELS.include?(channel)
@@ -60,6 +64,7 @@ class Conversation < ApplicationRecord
   # while the guest reads.
   def guest_status
     return { text: "#{assigned_user&.name.presence || "Our front desk"} is answering you now", tone: :accent } if human?
+    return { text: HUMAN_REQUESTED_STATUS, tone: :accent } if human_requested?
 
     self.class.guest_status_for(hotel)
   end
@@ -73,11 +78,24 @@ class Conversation < ApplicationRecord
   def bot? = mode == "bot"
   def human? = mode == "human"
   def open? = status == "open"
+  def human_requested? = human_requested_at.present?
+
+  # The guest asks; the assistant carries on answering until somebody actually
+  # arrives. Asked twice is still asked once -- the first ask is the one that
+  # tells staff how long they have been waiting.
+  def request_human!(at: Time.current)
+    return self if human? || human_requested?
+
+    update!(human_requested_at: at)
+    self
+  end
 
   # Handing over is one move, not two: the bot stops answering and the thread
   # gains an owner at the same moment.
+  # The request is cleared as the person arrives: it is a call for someone, and
+  # it stops meaning anything the moment someone answers it.
   def hand_to_human!(user: nil)
-    update!(mode: "human", assigned_user: user)
+    update!(mode: "human", assigned_user: user, human_requested_at: nil)
   end
 
   def return_to_bot!
@@ -154,14 +172,20 @@ class Conversation < ApplicationRecord
 
     tabs = [ "all" ]
     tabs << "unread" if messages.unread.from_guest.exists?
-    tabs << "awaiting_staff" if human?
+    tabs << "awaiting_staff" if human? || human_requested?
     tabs
   end
 
   # What the list actually shows about a thread: who is holding it, and whether
   # it is still open. A change to anything else is not worth a push.
   def saved_change_to_inbox_facts?
-    saved_change_to_mode? || saved_change_to_status? || saved_change_to_assigned_user_id?
+    saved_change_to_mode? || saved_change_to_status? || saved_change_to_assigned_user_id? ||
+      saved_change_to_human_requested_at?
+  end
+
+  # Everything the line under the hotel's name is built from.
+  def saved_change_to_guest_status_facts?
+    saved_change_to_mode? || saved_change_to_assigned_user_id? || saved_change_to_human_requested_at?
   end
 
   # The guest's page is already open when staff take the thread; the line under

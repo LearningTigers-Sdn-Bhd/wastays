@@ -27,6 +27,14 @@
                       avatar: conversation&.human? ? :staff : :bot) do |bar| %>
       <% bar.with_menu do %>
         <%= render PublicUI::Menu.new(label: "Conversation options") do |menu| %>
+          <%# Nobody can be sent for before the guest has said anything: there
+              would be no thread for them to arrive in. %>
+          <% if conversation && !conversation.human? && !conversation.human_requested? %>
+            <% menu.with_item(href: concierge_chat_agent_path(hotel), method: :post) do %>
+              Ask for a person
+            <% end %>
+          <% end %>
+
           <% menu.with_item(href: concierge_clear_chat_path(hotel),
                             method: :delete,
                             danger: true,

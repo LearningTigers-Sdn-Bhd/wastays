@@ -790,6 +790,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_143731) do
     t.datetime "closed_at"
     t.datetime "created_at", null: false
     t.bigint "hotel_id", null: false
+    t.datetime "human_requested_at"
     t.datetime "last_guest_message_at"
     t.datetime "last_message_at"
     t.string "mode", default: "bot", null: false

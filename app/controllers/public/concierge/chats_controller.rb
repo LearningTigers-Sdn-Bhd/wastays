@@ -48,6 +48,15 @@ module Public
         redirect_to concierge_chat_path(@hotel)
       end
 
+      # The guest asks for a person. The assistant carries on answering while
+      # they wait -- see Concierge::RequestHumanAgent for why that is not a
+      # handover.
+      def request_agent
+        ::Concierge::RequestHumanAgent.new(conversation: current_conversation).call
+
+        redirect_to concierge_chat_path(@hotel)
+      end
+
       private
 
       # A write hands over the thread it wrote into -- on a first message that is

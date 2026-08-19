@@ -18,7 +18,7 @@ module HotelPortal
     attr_reader :conversation
 
     delegate :id, :mode, :status, :channel, :prospect, :assigned_user,
-             :last_message_at, :human?, :open?, to: :conversation
+             :last_message_at, :human?, :open?, :human_requested?, to: :conversation
 
     def display_name
       prospect.name.presence || prospect.phone_number.presence || "Unnamed guest"
@@ -42,9 +42,13 @@ module HotelPortal
       "#{view.time_ago_in_words(last_message_at)} ago"
     end
 
+    # A guest who has asked for a person is still being answered by the bot, so
+    # "bot handling" is true and beside the point: what the reader needs to know
+    # is that somebody is waiting for them.
     def status_badge
-      return { label: "Waiting for staff", variant: :warning } if human? && open?
       return { label: "Closed", variant: :neutral } unless open?
+      return { label: "Waiting for staff", variant: :warning } if human?
+      return { label: "Asked for a person", variant: :warning } if human_requested?
 
       { label: "Bot handling", variant: :outline }
     end
