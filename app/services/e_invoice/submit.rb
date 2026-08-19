@@ -62,6 +62,11 @@ module EInvoice
         submission.save!
         error(e.message, submission: submission)
       rescue MyInvois::Client::ApiError => e
+        # A transient fault says nothing about the document. Leave it pending
+        # and let the job's retry_on back off, rather than burning it as
+        # invalid and making staff re-file by hand.
+        raise if e.transient?
+
         submission.assign_attributes(
           status:        "invalid",
           error_details: { message: e.message, code: e.code, body: truncated_error_body(e.body) }

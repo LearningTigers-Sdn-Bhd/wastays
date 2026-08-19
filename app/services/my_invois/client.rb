@@ -11,6 +11,11 @@ module MyInvois
     }.freeze
 
     class ApiError < StandardError
+      # A rate limit or a fault on LHDN's side says nothing about the document,
+      # so those are worth retrying. A 4xx is LHDN telling us the document or
+      # our credentials are wrong, and retrying it just repeats the rejection.
+      TRANSIENT_STATUSES = [ 408, 429 ].freeze
+
       attr_reader :code, :body
 
       def initialize(msg, code: nil, body: nil)
@@ -18,7 +23,26 @@ module MyInvois
         @code = code
         @body = body
       end
+
+      def transient?
+        return false if code.blank?
+
+        status = code.to_i
+        status >= 500 || TRANSIENT_STATUSES.include?(status)
+      end
     end
+
+    # Raised for network-level failures, which are always worth retrying.
+    class TransportError < ApiError
+      def transient?
+        true
+      end
+    end
+
+    TRANSPORT_ERRORS = [
+      Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH,
+      Net::OpenTimeout, Net::ReadTimeout, SocketError, IOError, EOFError
+    ].freeze
 
     def initialize(mode: :taxpayer, represented_taxpayer_tin: nil)
       @mode = mode.to_s
@@ -161,7 +185,11 @@ module MyInvois
       http.open_timeout = 10
       http.read_timeout = 30
 
-      response = http.request(request)
+      response = begin
+        http.request(request)
+      rescue *TRANSPORT_ERRORS => e
+        raise TransportError.new("MyInvois transport failure: #{e.class}: #{e.message}")
+      end
       parsed = safe_parse(response.body)
 
       unless response.is_a?(Net::HTTPSuccess)

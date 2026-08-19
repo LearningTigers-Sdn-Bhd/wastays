@@ -95,6 +95,17 @@ module EInvoice
           status: "invalid",
           error_details: { message: e.message }
         )
+      rescue MyInvois::Client::ApiError => e
+        # Let a transient fault bubble to retry_on. Marking a whole hotel-month
+        # invalid because LHDN was briefly unavailable would need every record
+        # re-filed by hand, inside a 7-day statutory window.
+        raise if e.transient?
+
+        Rails.logger.error("[MonthlyConsolidation] #{e.class}: #{e.message} for hotel #{hotel.id}, scenario #{document_scenario}")
+        batch_scope.where(booking_id: low_value_bookings.map(&:id)).update_all(
+          status: "invalid",
+          error_details: { message: e.message }
+        )
       rescue => e
         Rails.logger.error("[MonthlyConsolidation] #{e.class}: #{e.message} for hotel #{hotel.id}, scenario #{document_scenario}")
         batch_scope.where(booking_id: low_value_bookings.map(&:id)).update_all(

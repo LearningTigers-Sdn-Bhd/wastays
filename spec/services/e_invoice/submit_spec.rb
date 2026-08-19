@@ -222,6 +222,33 @@ RSpec.describe EInvoice::Submit, type: :service do
       end
     end
 
+    context "when LHDN is briefly unavailable" do
+      before do
+        allow(@mock_client).to receive(:submit_documents).and_raise(
+          MyInvois::Client::ApiError.new("Service unavailable", code: "503")
+        )
+      end
+
+      # The job's retry_on can only back off if the error escapes the service.
+      # Swallowing it here would strand the document as invalid on a blip.
+      it "re-raises so the job retries, and writes off nothing" do
+        expect { described_class.call(booking) }.to raise_error(MyInvois::Client::ApiError)
+
+        expect(booking.e_invoice_submissions.where(status: "invalid")).to be_empty
+      end
+
+      it "still writes off a document LHDN actually rejected" do
+        allow(@mock_client).to receive(:submit_documents).and_raise(
+          MyInvois::Client::ApiError.new("Buyer TIN invalid", code: "400")
+        )
+
+        result = described_class.call(booking)
+
+        expect(result[:success]).to be false
+        expect(result[:submission].status).to eq("invalid")
+      end
+    end
+
     context "when MyInvois returns huge error payload" do
       before do
         allow(@mock_client).to receive(:submit_documents).and_raise(

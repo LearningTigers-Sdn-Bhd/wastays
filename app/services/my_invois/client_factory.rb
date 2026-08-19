@@ -25,8 +25,14 @@ module MyInvois
     end
 
     def self.mock?
-      ENV["MYINVOIS_MOCK"] == "true" ||
-        Rails.application.credentials.dig(:myinvois, :environment) == "mock"
+      return true if ENV["MYINVOIS_MOCK"] == "true"
+
+      environment = Rails.application.credentials.dig(:myinvois, :environment)
+      return true if environment == "mock"
+
+      # Unconfigured must never mean "talk to the live tax authority". An
+      # environment has to be chosen deliberately before anything is filed.
+      environment.blank?
     end
 
     def self.sandbox?
