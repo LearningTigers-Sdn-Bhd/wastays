@@ -148,6 +148,31 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     end
   end
 
+  describe "the pattern behind the thread" do
+    # Masked rather than drawn, so the file supplies the shape and the
+    # stylesheet the colour -- which is what lets a doodle inked in white for a
+    # dark app show up on this cream one.
+    it "hands the chat the doodle as a mask" do
+      get chat_path
+
+      expect(response.body).to include("--public-chat-doodle: url(")
+      expect(response.body).to include("data-doodle=\"true\"")
+    end
+
+    # A hotel is allowed to have no pattern, and must not get a 500 for it.
+    it "renders a plain thread when the asset is not there" do
+      allow(Rails.application.assets.load_path).to receive(:find).and_call_original
+      allow(Rails.application.assets.load_path).to receive(:find)
+        .with(Public::ConciergeHelper::CHAT_DOODLE_ASSET).and_return(nil)
+
+      get chat_path
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("data-doodle=\"false\"")
+      expect(response.body).not_to include("--public-chat-doodle:")
+    end
+  end
+
   # The chat has no page heading at all -- the bar is the only thing naming the
   # hotel, and the names above the bubbles only appear at the start of a run.
   describe "knowing who you are talking to" do

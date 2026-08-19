@@ -8,6 +8,10 @@
 
   --muted: oklch(0.9842 0.0034 247.86);
   --muted-foreground: oklch(0.5544 0.0407 257.42);
+  /* For secondary text that sits on a patterned or tinted surface rather than a
+     flat one. --muted-foreground clears 4.5:1 on --background by a tenth, so
+     anything at all behind it takes it under. */
+  --muted-foreground-strong: oklch(0.4455 0.0375 257.00);
 
   --primary: oklch(0.3707 0.0594 183.34);
   --primary-hover: oklch(0.3157 0.0506 182.79);

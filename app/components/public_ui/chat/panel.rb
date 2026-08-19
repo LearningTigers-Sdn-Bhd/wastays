@@ -25,18 +25,24 @@ module PublicUI
       renders_one :alert
       renders_one :composer, PublicUI::Chat::Composer
 
-      def initialize(class: nil, **attributes)
+      def initialize(doodle: nil, class: nil, **attributes)
+        @doodle = doodle
         @class = binding.local_variable_get(:class)
         @attributes = attributes
       end
 
+      # The pattern is flagged as well as supplied. An unset mask-image is not
+      # a mask at all -- it lets everything through -- so a rule that only
+      # checked for the url would paint a flat wash across the chat of every
+      # hotel that has no pattern.
       def root_attributes
         attributes = @attributes.deep_dup
         data = attributes.delete(:data) || {}
 
         attributes.merge(
           class: tw_merge("public-chat", @class),
-          data: data.reverse_merge(controller: "concierge-chat")
+          style: @doodle,
+          data: data.reverse_merge(controller: "concierge-chat", doodle: @doodle.present?.to_s)
         )
       end
     end

@@ -7,7 +7,45 @@
      one scrolls. No card: the chat is the page here, and a panel floating
      inside a page that cannot scroll is a frame around nothing. */
   .public-chat {
-    @apply flex h-full min-h-0 flex-col;
+    @apply relative flex h-full min-h-0 flex-col bg-background;
+
+    /* The pattern's colour and strength. Change these two rather than the PNG:
+       the file is only ever read for its shape.
+
+       The ceiling on strength is not taste. --muted-foreground was carrying the
+       author labels at 4.60:1 on the bare thread, a tenth over the line, so any
+       pattern at all took them under; they moved to --muted-foreground-strong,
+       which holds 6.5:1 at this setting. Past about 0.15 that gives out too. */
+    --public-chat-doodle-ink: var(--secondary);
+    --public-chat-doodle-strength: 0.08;
+    --public-chat-doodle-scale: 27rem;
+  }
+
+  /* The doodle, painted rather than placed.
+     A WhatsApp-style doodle is drawn in white for a dark app, and dropped onto
+     this cream thread as a picture it is simply invisible. Used as a mask it is
+     a stencil instead: the file gives the shape, --public-chat-doodle-ink gives
+     the colour, and the same PNG works in either direction.
+
+     Behind the whole chat rather than inside the thread, because the thread is
+     the scroller -- a layer inside it would scroll away after one screen and
+     leave the rest bare. The bar and the box are lifted over it and are opaque,
+     so the pattern only shows where the conversation is. */
+  .public-chat[data-doodle="true"]::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 z-0;
+    background-color: var(--public-chat-doodle-ink);
+    opacity: var(--public-chat-doodle-strength);
+    -webkit-mask-image: var(--public-chat-doodle);
+    -webkit-mask-repeat: repeat;
+    -webkit-mask-size: var(--public-chat-doodle-scale) auto;
+    mask-image: var(--public-chat-doodle);
+    mask-repeat: repeat;
+    mask-size: var(--public-chat-doodle-scale) auto;
+  }
+
+  .public-chat > * {
+    @apply relative z-10;
   }
 
   /* ─── Bar ───
@@ -67,8 +105,10 @@
      the tails hang 7px outside the bubble, and without room to hang in they
      would either be clipped by the scroll container or push a horizontal
      scrollbar into it. */
+  /* Transparent on purpose: the fill lives on .public-chat so the pattern can
+     sit between the two and stay put while this scrolls over it. */
   .public-chat__log {
-    @apply flex min-h-0 flex-1 flex-col overflow-y-auto bg-background px-4 py-4;
+    @apply flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4;
   }
 
   /* The only clue a thread continues above the fold is a bubble sliced in half
@@ -84,7 +124,8 @@
      prompt is the only thing on a screen-high surface, and a line of text
      pinned under the bar reads as a message the hotel sent. */
   .public-chat__empty {
-    @apply m-auto max-w-xs text-center text-sm text-muted-foreground;
+    @apply m-auto max-w-xs text-center text-sm;
+    color: var(--muted-foreground-strong);
   }
 
   .public-chat__message {
@@ -108,8 +149,15 @@
     @apply items-center;
   }
 
+  /* The two things that sit on the thread rather than inside a bubble, and so
+     the two the doodle can reach. --muted-foreground clears 4.5:1 on the bare
+     background by a tenth, which is no headroom at all: at 2% ink it is already
+     failing. This is the same neutral two steps darker, which holds 6.2:1 over
+     the darkest pixel the veil allows while staying well behind the message
+     text at 17:1. */
   .public-chat__author {
-    @apply px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground;
+    @apply px-1 text-[10px] font-bold uppercase tracking-widest;
+    color: var(--muted-foreground-strong);
   }
 
   /* Tinted with the brand rather than filled with --muted. Muted is a hundredth

@@ -19,7 +19,7 @@
     <% end %>
   </div>
 
-  <%= render PublicUI::Chat::Panel.new do |panel| %>
+  <%= render PublicUI::Chat::Panel.new(doodle: concierge_chat_doodle_style) do |panel| %>
     <% panel.with_bar(title: hotel.name,
                       status: concierge_chat_status(conversation, hotel),
                       back_path: concierge_home_path(hotel),

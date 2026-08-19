@@ -30,6 +30,30 @@ RSpec.describe PublicUI::Chat::Panel, type: :component do
     expect(page).to have_css(".public-chat__footer", text: "That message is too long.")
   end
 
+  # An unset mask-image is not a mask at all -- it lets everything through --
+  # so the pattern has to be flagged as well as supplied, or a hotel without one
+  # gets a flat wash across its chat.
+  describe "the doodle behind the thread" do
+    it "carries the pattern and says it has one" do
+      render_inline(described_class.new(doodle: "--public-chat-doodle: url(/assets/doodle.png);")) do |panel|
+        panel.with_log(messages: [], hotel: hotel)
+        panel.with_composer(url: "/concierge/aurora/chat")
+      end
+
+      expect(page).to have_css(".public-chat[data-doodle='true'][style*='--public-chat-doodle']")
+    end
+
+    it "says it has none rather than leaving the question open" do
+      render_inline(described_class.new) do |panel|
+        panel.with_log(messages: [], hotel: hotel)
+        panel.with_composer(url: "/concierge/aurora/chat")
+      end
+
+      expect(page).to have_css(".public-chat[data-doodle='false']")
+      expect(page).to have_no_css(".public-chat[style]")
+    end
+  end
+
   it "accepts caller classes and attributes without losing its own" do
     render_inline(described_class.new(class: "mt-8", id: "enquiry")) do |panel|
       panel.with_log(messages: [], hotel: hotel)
