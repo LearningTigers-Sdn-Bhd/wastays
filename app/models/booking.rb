@@ -414,6 +414,18 @@ class Booking < ApplicationRecord
   before_save :set_payout_status, if: :status_changed?
   after_create_commit :enqueue_receipt_email, if: :send_creation_notifications?
   after_create_commit :enqueue_whatsapp_receipt, if: :send_creation_notifications?
+  # Payment concluding is the taxable event, so it is what starts the e-invoice
+  # lifecycle: >=RM10,000 issues immediately, anything smaller is parked as a
+  # consolidated placeholder for the month-end batch. Without this the monthly
+  # consolidation has nothing to collect and quietly files nothing.
+  #
+  # Registered once for both events on purpose. Two separate registrations of
+  # the same method name (after_create_commit + after_update_commit) do not
+  # both survive - the later one replaces the earlier - which silently loses
+  # the create case, and prepaid online bookings are created already captured.
+  after_commit :enqueue_auto_e_invoice,
+               on: %i[create update],
+               if: -> { payment_concluded? && (previously_new_record? || saved_change_to_payment_status?) }
 
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
@@ -649,6 +661,12 @@ class Booking < ApplicationRecord
 
   def send_creation_notifications?
     status == "confirmed" && !Thread.current[:skip_booking_creation_notifications]
+  end
+
+  def enqueue_auto_e_invoice
+    return unless hotel&.e_invoice_setting&.enabled?
+
+    EInvoice::AutoIssueJob.perform_later(id)
   end
 
   def enqueue_receipt_email
