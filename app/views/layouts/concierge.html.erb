@@ -2,7 +2,11 @@
 <html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <%# viewport-fit=cover is what makes env(safe-area-inset-*) resolve to anything
+        other than zero; the chat runs to the edge of the screen and pays for the
+        notch itself. interactive-widget keeps the iOS keyboard shrinking the
+        viewport rather than sliding a fixed composer off the bottom of it. %>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <title><%= content_for?(:title) ? yield(:title) : "Concierge | WAStays" %></title>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>

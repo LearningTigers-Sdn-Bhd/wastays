@@ -2,21 +2,28 @@
 
 module PublicUI
   module Chat
-    # The chat card: thread, notice, composer.
+    # The chat itself: bar, thread, composer, stacked to fill whatever height it
+    # is given.
     #
-    # Owns the Stimulus controller the thread and the composer are targets of, so
-    # a page composes the three pieces without knowing they talk to each other.
+    # Three rows, and only the middle one scrolls -- the bar and the box stay
+    # where the guest last saw them, which is what makes this read as a
+    # messenger rather than as a page with a conversation on it.
+    #
+    # Owns the Stimulus controller the thread and the composer are targets of,
+    # so a page composes the pieces without knowing they talk to each other.
     class Panel < PublicUI::BaseComponent
-      # The id of the region a send replaces. It sits on the wrapper rather than
-      # on the panel itself because the stream subscription has to travel with
-      # it -- a page that has just gained its first thread needs the
-      # subscription and the thread in the same replacement.
+      # The id of the region the whole chat lives in. It sits on the wrapper
+      # rather than on the panel itself because the stream subscription has to
+      # travel with it.
       REGION_ID = "concierge-chat-region"
 
-      renders_one :header, ->(**args) { Header.new(**args) }
-      renders_one :log, ->(**args) { Log.new(**args) }
-      renders_one :notice, ->(**args) { Notice.new(**args) }
-      renders_one :composer, ->(**args) { Composer.new(**args) }
+      renders_one :bar, PublicUI::Chat::Bar
+      renders_one :log, PublicUI::Chat::Log
+      # Sits with the composer rather than at the top of the page: what it has
+      # to say is always about the message the guest just tried to send, and
+      # that is where they are looking.
+      renders_one :alert
+      renders_one :composer, PublicUI::Chat::Composer
 
       def initialize(class: nil, **attributes)
         @class = binding.local_variable_get(:class)

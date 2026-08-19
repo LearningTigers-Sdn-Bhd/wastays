@@ -101,26 +101,32 @@ RSpec.describe Conversation, type: :model do
     let(:prospect) { create(:prospect, hotel: hotel) }
     let(:conversation) { create(:conversation, hotel: hotel, prospect: prospect) }
 
-    it "says nothing while the assistant is answering and able to" do
+    it "invites a question while the assistant is answering and able to" do
       allow(hotel).to receive(:ai_concierge_ready?).and_return(true)
 
-      expect(conversation.guest_notice[:text]).to be_nil
+      expect(conversation.guest_status[:text]).to eq(Conversation::BOT_STATUS)
     end
 
     it "points at the front desk when there is no assistant" do
-      expect(conversation.guest_notice[:text]).to eq(Conversation::FRONT_DESK_NOTICE)
+      expect(conversation.guest_status[:text]).to eq(Conversation::FRONT_DESK_STATUS)
     end
 
     it "names the person holding the thread" do
       user = create(:user, account: hotel.account, name: "Farah Idris")
       conversation.hand_to_human!(user: user)
 
-      expect(conversation.guest_notice[:text]).to include("Farah Idris")
-      expect(conversation.guest_notice[:tone]).to eq(:accent)
+      expect(conversation.guest_status[:text]).to include("Farah Idris")
+      expect(conversation.guest_status[:tone]).to eq(:accent)
     end
 
-    # The guest's page is already open when staff take the thread, so the strip
-    # above the composer has to change under them.
+    # A visitor who has not written yet has no thread to ask, but the bar still
+    # has a line to fill.
+    it "answers for a hotel with no thread at all" do
+      expect(described_class.guest_status_for(hotel)[:text]).to eq(Conversation::FRONT_DESK_STATUS)
+    end
+
+    # The guest's page is already open when staff take the thread, so the line
+    # under the hotel's name has to change under them.
     it "pushes the new answer down the guest's stream the moment mode changes" do
       user = create(:user, account: hotel.account, name: "Farah Idris")
 

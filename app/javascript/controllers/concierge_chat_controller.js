@@ -26,6 +26,17 @@ export default class extends Controller {
     document.removeEventListener("turbo:before-stream-render", this.onBeforeStreamRender)
   }
 
+  // The reply to a send no longer replaces the box, so emptying it is this
+  // controller's job. Only on a send that worked -- a refused message is one
+  // the guest may want to edit rather than retype.
+  onSubmitEnd(event) {
+    if (!event.detail?.success) return
+    if (!this.hasInputTarget) return
+
+    this.inputTarget.value = ""
+    this.scrollToLatest()
+  }
+
   onBeforeStreamRender(event) {
     const stream = event.target
     if (this.alreadyRendered(stream)) {

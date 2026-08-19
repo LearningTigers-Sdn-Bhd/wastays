@@ -1,4 +1,6 @@
-<div class="bg-background min-h-screen flex flex-col md:flex-row">
+<%# Pages scroll as documents by default. The chat overrides the root instead:
+    it fills the viewport exactly and hands its own thread the only scrollbar. %>
+<div class="<%= local_assigns.fetch(:root_class, 'bg-background min-h-screen flex flex-col md:flex-row') %>">
   <%= render "public/concierge/shared/left_panel" %>
 
   <div class="<%= local_assigns.fetch(:content_class, 'flex-1 flex items-start justify-center px-4 pt-20 pb-20 sm:px-6 md:pt-28') %>">

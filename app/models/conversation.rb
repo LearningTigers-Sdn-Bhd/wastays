@@ -18,7 +18,11 @@ class Conversation < ApplicationRecord
   # a promise the app cannot keep, so it is not offered.
   REPLYABLE_CHANNELS = %w[web].freeze
 
-  FRONT_DESK_NOTICE = "Your message goes straight to our front desk. Someone will reply here shortly."
+  # The one line under the hotel's name in the chat bar. Deliberately about who
+  # answers rather than a status light -- "online" would be a promise the page
+  # cannot keep at 3am.
+  BOT_STATUS = "Ask about your stay, any time"
+  FRONT_DESK_STATUS = "Our front desk replies here"
   MODES = %w[bot human].freeze
   STATUSES = %w[open closed].freeze
 
@@ -31,7 +35,7 @@ class Conversation < ApplicationRecord
            inverse_of: :conversation,
            dependent: :destroy
 
-  after_update_commit :broadcast_notice_to_guest, if: :saved_change_to_mode?
+  after_update_commit :broadcast_status_to_guest, if: :saved_change_to_mode?
   after_update_commit :broadcast_to_inbox, if: :saved_change_to_inbox_facts?
 
   validates :channel, presence: true, inclusion: { in: CHANNELS }
@@ -50,11 +54,20 @@ class Conversation < ApplicationRecord
   # It lives on the model because two places have to say the same thing: the
   # chat page when it loads, and the live replacement pushed the moment mode
   # changes under a guest who is already looking at it.
-  def guest_notice
-    return { text: "#{assigned_user&.name.presence || "Our front desk"} is answering you now.", tone: :accent } if human?
-    return { text: nil } if hotel.ai_concierge_ready?
+  #
+  # Always a sentence, never nothing: it holds a fixed line in the bar, and a
+  # bar whose second line comes and goes moves the hotel's name up and down
+  # while the guest reads.
+  def guest_status
+    return { text: "#{assigned_user&.name.presence || "Our front desk"} is answering you now", tone: :accent } if human?
 
-    { text: FRONT_DESK_NOTICE }
+    self.class.guest_status_for(hotel)
+  end
+
+  # The same answer for a visitor who has not written yet, and so has no thread
+  # to ask. Only the hotel is known at that point.
+  def self.guest_status_for(hotel)
+    { text: hotel.ai_concierge_ready? ? BOT_STATUS : FRONT_DESK_STATUS }
   end
 
   def bot? = mode == "bot"
@@ -151,13 +164,13 @@ class Conversation < ApplicationRecord
     saved_change_to_mode? || saved_change_to_status? || saved_change_to_assigned_user_id?
   end
 
-  # The guest's page is already open when staff take the thread; the strip above
-  # the composer would otherwise still name the bot until they reload.
-  def broadcast_notice_to_guest
+  # The guest's page is already open when staff take the thread; the line under
+  # the hotel's name would otherwise still name the bot until they reload.
+  def broadcast_status_to_guest
     broadcast_replace_to(
       [ self, :guest ],
-      target: PublicUI::Chat::Notice::DEFAULT_ID,
-      renderable: PublicUI::Chat::Notice.new(**guest_notice)
+      target: PublicUI::Chat::Status::DEFAULT_ID,
+      renderable: PublicUI::Chat::Status.new(**guest_status)
     )
   end
 end

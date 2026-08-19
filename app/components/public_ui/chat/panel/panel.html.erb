@@ -1,6 +1,8 @@
 <%= tag.div(**root_attributes) do %>
-  <%= header if header? %>
+  <%= bar if bar? %>
   <%= log %>
-  <%= notice if notice? %>
-  <%= composer %>
+  <div class="public-chat__footer">
+    <%= alert if alert? %>
+    <%= composer %>
+  </div>
 <% end %>

@@ -23,7 +23,7 @@ RSpec.describe PublicUI::Chat::Log, type: :component do
     render_inline(described_class.new(messages: [], hotel: hotel))
 
     expect(page).to have_css("ol#concierge-chat-log")
-    expect(page).to have_css("p#concierge-chat-log-empty.public-chat__empty", text: "Ask about rooms")
+    expect(page).to have_css("ol > li#concierge-chat-log-empty.public-chat__empty", text: "Ask about rooms")
   end
 
   it "drops the prompt once someone has spoken" do
@@ -77,7 +77,7 @@ RSpec.describe PublicUI::Chat::Log, type: :component do
     render_inline(described_class.new(messages: [], hotel: hotel, id: "thread-7", label: "Booking enquiry"))
 
     expect(page).to have_css("ol#thread-7[aria-label='Booking enquiry']")
-    expect(page).to have_css("p#thread-7-empty")
+    expect(page).to have_css("li#thread-7-empty")
   end
 
   it "wires the scroll target the chat controller looks for" do

@@ -1,4 +1,4 @@
-<%= form_with url: url, method: :post, class: form_class, **@attributes do %>
+<%= form_with url: url, method: :post, **form_attributes do %>
   <div>
     <%= label_tag param, label, class: "public-chat__label" %>
     <%= text_area_tag param, nil, rows: rows, required: true, class: "public-chat__input",

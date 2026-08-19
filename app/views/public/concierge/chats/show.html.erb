@@ -1,16 +1,15 @@
 <% content_for :title, "Chat | #{@hotel.name}" %>
-<%= render layout: "public/concierge/shared/page_shell" do %>
-  <%= render "public/concierge/shared/page_header",
-             back_path: concierge_home_path(@hotel),
-             back_label: "Back to Concierge",
-             eyebrow: "Chat",
-             title_prefix: "Ask us",
-             title_accent: "anything",
-             subtitle: "Rooms, rates, facilities — or anything else about your stay.",
-             subtitle_class: "hidden sm:block" %>
-  <div id="concierge-chat-error">
-    <%= render "public/concierge/shared/error_alert", message: flash[:alert] %>
-  </div>
-
+<%#
+  The one concierge page with no page furniture. A chat is a place, not a
+  document: the heading, the eyebrow rule and the back link that every other
+  page carries would push the thread down and take the composer off the bottom
+  of a phone. The bar says all three things in one row instead.
+%>
+<%= render layout: "public/concierge/shared/page_shell",
+           locals: {
+             root_class: "bg-background flex h-dvh flex-col overflow-hidden md:flex-row",
+             content_class: "flex min-h-0 flex-1 justify-center",
+             container_class: "flex w-full min-h-0 max-w-3xl flex-col"
+           } do %>
   <%= render "public/concierge/chats/conversation", conversation: @conversation, messages: @messages, hotel: @hotel %>
 <% end %>

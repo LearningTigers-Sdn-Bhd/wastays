@@ -2,11 +2,13 @@
 
 module PublicUI
   module Chat
-    # The scrollable thread.
+    # The thread, and the only part of the chat that scrolls.
     #
     # The list is rendered even with nothing in it: it is the anchor a live
     # message gets appended to, and an element that only exists once there is
-    # already a message is no anchor at all.
+    # already a message is no anchor at all. The empty line sits inside it for
+    # the same reason the list does -- one element owns the height, so there is
+    # nothing to reflow when the first message lands.
     #
     # Consecutive messages from the same author are grouped into a run, so three
     # answers in a row read as one person still talking rather than three
@@ -29,18 +31,6 @@ module PublicUI
       end
 
       def call
-        safe_join([ empty_state, list ].compact)
-      end
-
-      private
-
-      def empty_state
-        return if @messages.any?
-
-        tag.p(@empty_text, id: "#{@id}-empty", class: "public-chat__empty")
-      end
-
-      def list
         attributes = @attributes.deep_dup
         data = attributes.delete(:data) || {}
 
@@ -55,8 +45,14 @@ module PublicUI
             action: "scroll->concierge-chat#markScrollPosition"
           )
         )) do
-          safe_join(bubbles)
+          safe_join(@messages.any? ? bubbles : [ empty_state ])
         end
+      end
+
+      private
+
+      def empty_state
+        tag.li(@empty_text, id: "#{@id}-empty", class: "public-chat__empty")
       end
 
       def bubbles

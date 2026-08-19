@@ -19,7 +19,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       get chat_path
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("Ask us")
+      expect(response.body).to include("public-chat__bar")
     end
 
     it "creates nothing until the visitor actually says something" do
@@ -44,7 +44,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
         post chat_path, params: { message: "Do you have parking?" }
         follow_redirect!
 
-        expect(response.body).to include("straight to our front desk")
+        expect(response.body).to include(Conversation::FRONT_DESK_STATUS)
       end
 
       it "keeps the same thread on the visitor's next message" do
@@ -148,14 +148,14 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     end
   end
 
-  # A long thread carries the page heading off the top of a phone, and the names
-  # above the bubbles only appear at the start of a run.
+  # The chat has no page heading at all -- the bar is the only thing naming the
+  # hotel, and the names above the bubbles only appear at the start of a run.
   describe "knowing who you are talking to" do
     it "keeps the hotel's name above the thread" do
       get chat_path
 
       expect(response.body).to include(hotel.name)
-      expect(response.body).to include("public-chat__header")
+      expect(response.body).to include("public-chat__bar-title")
     end
 
     it "says the front desk answers when the hotel has no assistant" do
@@ -170,7 +170,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
 
       get chat_path
 
-      expect(response.body).to include("A member of our team is answering you")
+      expect(response.body).to include("Our front desk is answering you now")
     end
   end
 
@@ -182,10 +182,20 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
-      expect(response.body).to include("concierge-chat-region")
+      expect(response.body).to include("Do you have parking?")
     end
 
-    # The case the whole region-replace exists for: before the first message
+    # The bar, the box and the guest's place in the thread all survive a send:
+    # rebuilding the chat around a message they can already see would close an
+    # open menu and drop the keyboard.
+    it "adds the message to the thread instead of rebuilding the chat" do
+      post chat_path, params: { message: "Do you have parking?" }, as: :turbo_stream
+
+      expect(response.body).to include(%(action="append" target="#{PublicUI::Chat::Log::DEFAULT_ID}"))
+      expect(response.body).not_to include("public-chat__bar")
+    end
+
+    # The case the subscription element exists for: before the first message
     # there is no thread, so there is nothing for the page to be listening to.
     it "hands a first-time visitor their subscription with their first message" do
       post chat_path, params: { message: "Hello" }, as: :turbo_stream
