@@ -1,0 +1,8 @@
+<%= form_with url: url, method: :post, class: form_class, **@attributes do %>
+  <div>
+    <%= label_tag param, label, class: "public-chat__label" %>
+    <%= text_area_tag param, nil, rows: rows, required: true, class: "public-chat__input",
+          placeholder: placeholder, data: { concierge_chat_target: "input" } %>
+  </div>
+  <%= submit_tag submit_label, class: "public-chat__send" %>
+<% end %>

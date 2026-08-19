@@ -1,0 +1,131 @@
+@layer components {
+  /* Guest-facing chat (PublicUI::Chat::*). Public pages are outside DESIGN.md,
+     so this follows the concierge's own language -- soft 2xl panels, uppercase
+     tracking-widest labels -- not the panel/ theme. */
+  .public-chat {
+    @apply space-y-4 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5;
+  }
+
+  .public-chat__empty {
+    @apply py-6 text-center text-sm text-muted-foreground;
+  }
+
+  /* The horizontal padding is not decoration: the tails hang 7px outside the
+     bubble, and without room to hang in they would either be clipped by the
+     scroll container or push a horizontal scrollbar into it. */
+  .public-chat__log {
+    @apply max-h-[26rem] overflow-y-auto px-2.5;
+  }
+
+  .public-chat__log:empty {
+    @apply hidden;
+  }
+
+  .public-chat__message {
+    @apply flex flex-col items-start gap-1;
+  }
+
+  /* A gap between people, a smaller one between two things the same person said. */
+  .public-chat__message + .public-chat__message {
+    @apply mt-3;
+  }
+
+  .public-chat__message + .public-chat__message[data-run-start="false"] {
+    @apply mt-1;
+  }
+
+  .public-chat__message[data-side="guest"] {
+    @apply items-end;
+  }
+
+  .public-chat__message[data-side="system"] {
+    @apply items-center;
+  }
+
+  .public-chat__author {
+    @apply px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .public-chat__bubble {
+    @apply relative max-w-[85%] whitespace-pre-wrap rounded-2xl bg-muted px-4 py-2.5 text-sm text-foreground;
+  }
+
+  /* Mid-run bubbles tuck the corner nearest the speaker; the last one squares it
+     off instead, because that is where the tail joins. */
+  .public-chat__message[data-side="guest"] .public-chat__bubble {
+    @apply rounded-br-md bg-primary text-primary-foreground;
+  }
+
+  .public-chat__message[data-side="hotel"] .public-chat__bubble,
+  .public-chat__message[data-side="staff"] .public-chat__bubble {
+    @apply rounded-bl-md;
+  }
+
+  /* A person answered, not the bot. Carried by the fill rather than an outline so
+     the tail can inherit it -- a 1px ring stops at the bubble and would leave the
+     tail hanging off it unringed. */
+  .public-chat__message[data-side="staff"] .public-chat__bubble {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .public-chat__message[data-side="system"] .public-chat__bubble {
+    @apply max-w-full rounded-none bg-transparent px-0 py-0 text-center text-xs italic;
+  }
+
+  /* ─── Tail ───
+     Only the last bubble of a run gets one. It inherits the bubble's fill and
+     overlaps it by 1px, so it reads as part of the same shape rather than a
+     triangle parked next to it. */
+  .public-chat__message[data-run-end="true"]:not([data-side="system"]) .public-chat__bubble::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: 0.5rem;
+    height: 0.75rem;
+    background-color: inherit;
+  }
+
+  .public-chat__message[data-run-end="true"][data-side="guest"] .public-chat__bubble {
+    @apply rounded-br-none;
+  }
+
+  .public-chat__message[data-run-end="true"][data-side="guest"] .public-chat__bubble::after {
+    right: -0.4375rem;
+    clip-path: polygon(0 0, 0 100%, 100% 100%);
+  }
+
+  .public-chat__message[data-run-end="true"][data-side="hotel"] .public-chat__bubble,
+  .public-chat__message[data-run-end="true"][data-side="staff"] .public-chat__bubble {
+    @apply rounded-bl-none;
+  }
+
+  .public-chat__message[data-run-end="true"][data-side="hotel"] .public-chat__bubble::after,
+  .public-chat__message[data-run-end="true"][data-side="staff"] .public-chat__bubble::after {
+    left: -0.4375rem;
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+
+  .public-chat__notice {
+    @apply rounded-xl bg-muted px-4 py-3 text-xs text-muted-foreground;
+  }
+
+  .public-chat__notice[data-tone="accent"] {
+    @apply bg-accent/20 text-accent-foreground;
+  }
+
+  .public-chat__composer {
+    @apply space-y-3;
+  }
+
+  .public-chat__label {
+    @apply mb-2 block text-xs font-bold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .public-chat__input {
+    @apply block w-full rounded-lg border-border px-4 py-3 shadow-xs transition-all duration-200 focus:border-primary focus:ring-primary sm:text-sm;
+  }
+
+  .public-chat__send {
+    @apply inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-transparent bg-primary px-4 py-3 text-sm font-black uppercase tracking-widest text-primary-foreground transition-all duration-200 hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+}
