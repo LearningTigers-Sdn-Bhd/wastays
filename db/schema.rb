@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_19_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -944,7 +944,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_140000) do
     t.index ["payout_batch_id"], name: "index_e_invoice_submissions_on_payout_batch_id"
     t.index ["status", "consolidated", "payment_concluded_at"], name: "index_e_invoice_submissions_on_status_consolidated_payment"
     t.index ["status"], name: "index_e_invoice_submissions_on_status"
-    t.index ["uuid"], name: "index_e_invoice_submissions_on_uuid", unique: true, where: "(uuid IS NOT NULL)"
+    t.index ["uuid"], name: "index_e_invoice_submissions_on_individual_uuid", unique: true, where: "((uuid IS NOT NULL) AND (consolidated = false))"
+    t.index ["uuid"], name: "index_e_invoice_submissions_on_uuid", where: "(uuid IS NOT NULL)"
   end
 
   create_table "exchange_rates", force: :cascade do |t|

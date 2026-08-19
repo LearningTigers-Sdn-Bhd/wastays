@@ -17,6 +17,41 @@ RSpec.describe EInvoice::MonthlyConsolidationJob, type: :job do
       .and_return(double(to_h: credentials_hash))
   end
 
+  describe "splitting a large month across documents" do
+    let(:last_month) { Date.current.prev_month.beginning_of_month }
+    let(:mid_last_month) { last_month + 10.days }
+    let(:within_window_date) { last_month.end_of_month + 3.days }
+
+    # A month bigger than one document must go out as several, or LHDN rejects
+    # the oversized payload and the whole month misses its 7-day window.
+    it "sends one document per slice rather than a single oversized payload" do
+      stub_const("#{described_class}::MAX_BOOKINGS_PER_DOCUMENT", 2)
+
+      5.times do
+        booking = create(:booking, hotel: hotel, payment_status: "captured", total_amount: 300.0)
+        create(:booking_room, booking: booking, subtotal: 300.0)
+        create(:e_invoice_submission,
+          hotel: hotel, booking: booking,
+          document_scenario: "guest_invoice",
+          status: "pending", consolidated: true,
+          requested_by_guest: false,
+          payment_concluded_at: mid_last_month)
+      end
+
+      client = instance_double(MyInvois::MockClient)
+      allow(MyInvois::ClientFactory).to receive(:build).and_return(client)
+      allow(client).to receive(:submit_documents) do |docs|
+        { "submissionUid" => "sub", "acceptedDocuments" => [ { "uuid" => SecureRandom.uuid } ] }
+      end
+
+      described_class.new.perform(within_window_date)
+
+      # 5 bookings at 2 per document
+      expect(client).to have_received(:submit_documents).exactly(3).times
+      expect(EInvoiceSubmission.where(status: "submitted").count).to eq(5)
+    end
+  end
+
   describe "#perform" do
     let(:last_month) { Date.current.prev_month.beginning_of_month }
     let(:mid_last_month) { last_month + 10.days }

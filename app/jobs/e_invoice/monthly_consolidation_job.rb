@@ -9,6 +9,10 @@ module EInvoice
     # Consolidation must be submitted within 7 days after month end
     DAYS_AFTER_MONTH_END_FOR_CONSOLIDATION = 7
 
+    # LHDN caps document size, so a month is split across documents rather than
+    # sent as one oversized payload.
+    MAX_BOOKINGS_PER_DOCUMENT = 100
+
     retry_on MyInvois::Client::ApiError, wait: :polynomially_longer, attempts: 3
 
     def perform(reference_date = Date.current)
@@ -51,12 +55,21 @@ module EInvoice
 
       return if low_value_bookings.empty?
 
-      booking_for_context = low_value_bookings.first
-      context = EInvoice::SubmissionContext.for(booking_for_context, document_scenario: document_scenario)
+      # One document per slice. A whole month of a busy property in a single
+      # document runs past LHDN's per-document size limit, and a rejection
+      # there would take the entire month with it.
+      low_value_bookings.each_slice(MAX_BOOKINGS_PER_DOCUMENT) do |slice|
+        submit_consolidated_slice(hotel, month_start, batch_id, document_scenario, scenario_submissions, slice)
+      end
+    end
+
+    def submit_consolidated_slice(hotel, month_start, batch_id, document_scenario, scenario_submissions, low_value_bookings)
+      context = EInvoice::SubmissionContext.for(low_value_bookings.first, document_scenario: document_scenario)
       builder = EInvoice::ConsolidatedBatchBuilder.new(hotel: hotel, context: context)
       doc = builder.build_for_bookings(low_value_bookings, month_start: month_start)
 
-      batch_scope = EInvoiceSubmission.where(id: scenario_submissions.map(&:id))
+      slice_ids = scenario_submissions.select { |s| low_value_bookings.map(&:id).include?(s.booking_id) }.map(&:id)
+      batch_scope = EInvoiceSubmission.where(id: slice_ids)
 
       begin
         client = MyInvois::ClientFactory.build(
