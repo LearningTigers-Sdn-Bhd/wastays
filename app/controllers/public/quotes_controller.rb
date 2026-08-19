@@ -71,6 +71,7 @@ class Public::QuotesController < ApplicationController
       phone: guest.phone,
       government_id: guest.government_id,
       gender: guest.gender,
+      city: guest.city,
       country: guest.country,
       document_type: guest.document_type,
       date_of_birth: guest.date_of_birth&.iso8601

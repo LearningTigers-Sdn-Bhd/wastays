@@ -68,6 +68,7 @@ class Public::PreCheckinsController < ApplicationController
       :guest_name,
       :guest_email,
       :guest_phone,
+      :guest_city,
       :guest_country,
       :guest_document_type,
       :guest_government_id,
