@@ -336,7 +336,7 @@ class EInvoicePdfService
 
       [
         { content: room_name, size: 10, text_color: TEXT_PRIMARY },
-        { content: room.quantity.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
+        { content: "1", size: 10, text_color: TEXT_PRIMARY, align: :center },
         { content: nights.to_s, size: 10, text_color: TEXT_PRIMARY, align: :center },
         { content: "MYR #{fmt(room.subtotal)}", size: 10, text_color: TEXT_PRIMARY, align: :right }
       ]

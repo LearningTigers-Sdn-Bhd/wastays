@@ -229,9 +229,11 @@ module EInvoice
       @rooms.each_with_index.map do |room, idx|
         subtotal = room.subtotal.to_d
         room_name = room.room_type_snapshot["name"].presence || room.room_type&.name || "Accommodation"
-        desc = "#{room_name} x #{room.quantity} room(s) x #{nights} night(s)"
-        qty = room.quantity.to_i
-        unit_price = qty.positive? ? (subtotal / qty).to_f.round(4) : subtotal.to_f.round(2)
+        # booking_rooms.quantity was dropped when the schema moved to one room
+        # per booking_room row, so each line is always a single room.
+        qty = 1
+        desc = "#{room_name} x #{qty} room(s) x #{nights} night(s)"
+        unit_price = subtotal.to_f.round(4)
 
         {
           "ID" => [ { "_" => (idx + 1).to_s } ],

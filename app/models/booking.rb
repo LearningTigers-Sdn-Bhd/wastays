@@ -4,6 +4,7 @@ class Booking < ApplicationRecord
   include Bookings::StatusLifecycle
 
   TOURISM_TAX_KEYS = %w[tourism_tax ttx].freeze
+  FUND_COLLECTORS = %w[unknown wastays hotel].freeze
 
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
@@ -36,6 +37,7 @@ class Booking < ApplicationRecord
   has_many :complaint_requests, dependent: :destroy
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  has_many :e_invoice_submissions, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_one :booking_confirmation_token, dependent: :destroy
   has_many :folio_operation_logs, dependent: :restrict_with_error
@@ -44,6 +46,127 @@ class Booking < ApplicationRecord
 
   def online?
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
+  end
+
+  def direct_hotel_payment?
+    resolved_fund_collector == "hotel"
+  end
+
+  def payment_concluded?
+    payment_status == "captured"
+  end
+
+  def payment_concluded_at
+    payment_transactions.captured.maximum(:captured_at) || checked_out_at || check_out
+  end
+
+  def guest_invoice_submission
+    e_invoice_submissions.guest_facing.where(document_type: "01").recent_first.first
+  end
+
+  def original_ready_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.where(document_type: "01").recent_first.first
+  end
+
+  def latest_ready_adjustment_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.where(document_type: %w[02 03]).recent_first.first
+  end
+
+  def latest_ready_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.recent_first.first
+  end
+  alias_method :ready_guest_e_invoice_submission, :latest_ready_guest_e_invoice_submission
+
+  def latest_pending_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.pending_or_submitted.recent_first.first
+  end
+
+  def latest_failed_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.where(status: "invalid").recent_first.first
+  end
+  alias_method :failed_guest_e_invoice_submission, :latest_failed_guest_e_invoice_submission
+
+  def pending_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(document_type: "01", status: %w[pending submitted], consolidated: false)
+      .recent_first
+      .first
+  end
+
+  def pending_consolidated_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(document_type: "01", status: "pending", consolidated: true)
+      .recent_first
+      .first
+  end
+
+  def payout_self_billed_submission
+    e_invoice_submissions.for_scenario("payout_self_billed_invoice").recent_first.first
+  end
+
+  def e_invoice_already_issued?
+    e_invoice_submissions.guest_facing.where(status: %w[submitted valid]).exists?
+  end
+  alias_method :e_invoice_already_requested_or_issued?, :e_invoice_already_issued?
+
+  # A consolidated placeholder the guest never asked for must not block them
+  # from requesting an individual e-invoice.
+  def e_invoice_pending_consolidated_unrequested?
+    e_invoice_submissions.guest_facing
+      .where(status: "pending", consolidated: true, requested_by_guest: false)
+      .exists?
+  end
+
+  # Guest may request only within the same calendar month as the payment,
+  # and only while nothing has been issued yet.
+  def e_invoice_guest_request_possible?
+    return false unless hotel.e_invoice_setting&.enabled?
+    return false if e_invoice_already_issued?
+
+    e_invoice_requestable?
+  end
+
+  def e_invoice_requestable?
+    return false unless payment_concluded?
+
+    concluded_at = payment_concluded_at
+    return false if concluded_at.blank?
+
+    Time.current.between?(concluded_at.beginning_of_month, concluded_at.end_of_month)
+  end
+
+  def create_pending_consolidated_submission!
+    scenario = direct_hotel_payment? ? "hotel_intermediary_guest_invoice" : "guest_invoice"
+    existing = e_invoice_submissions.where.not(status: "cancelled").find_by(document_scenario: scenario)
+    return existing if existing
+
+    e_invoice_submissions.create!(
+      hotel: hotel,
+      document_type: "01",
+      document_scenario: scenario,
+      submission_mode: resolved_fund_collector == "hotel" ? "intermediary" : "taxpayer",
+      fund_collector: resolved_fund_collector,
+      status: "pending",
+      consolidated: true,
+      payment_concluded_at: payment_concluded_at,
+      raw_response: {},
+      error_details: {}
+    )
+  end
+
+  def resolved_fund_collector
+    return fund_collector if fund_collector.present? && fund_collector != "unknown"
+
+    if payment_transactions.any?(&:direct_hotel_payment?) ||
+        source == "walk_in" ||
+        guarantee_method == "manual_at_hotel"
+      "hotel"
+    elsif booking_quote_id.present? ||
+        payment_transactions.any?(&:wastays_collected_payment?)
+      "wastays"
+    else
+      "unknown"
+    end
   end
 
   def check_in=(value)
@@ -94,6 +217,7 @@ class Booking < ApplicationRecord
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
+  validates :fund_collector, inclusion: { in: FUND_COLLECTORS }
 
   def primary_guest
     if booking_guests.loaded?
@@ -129,6 +253,7 @@ class Booking < ApplicationRecord
   before_validation :assign_confirmation_token, on: :create
   before_create :assign_document_counters
   before_validation :normalize_guest_data
+  before_validation :default_fund_collector
   before_validation :assign_existing_document_references
   after_create :register_confirmation_token
   after_update :sync_confirmation_token, if: :saved_change_to_confirmation_token?
@@ -144,6 +269,7 @@ class Booking < ApplicationRecord
   scope :active, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required" ]) }
   scope :revenue_generating, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
+  scope :wastays_collected, -> { where(fund_collector: "wastays") }
 
   scope :search, ->(query) {
     return all if query.blank?
@@ -176,7 +302,7 @@ class Booking < ApplicationRecord
   }
 
   scope :unbatched_upcoming, ->(cutoff_date) {
-    completed.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)
+    completed.wastays_collected.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)
   }
 
   def self.analytics_summary(start_date, end_date, query: nil, base_scope: nil)
@@ -480,6 +606,22 @@ class Booking < ApplicationRecord
   end
 
   private
+
+  def default_fund_collector
+    return if FUND_COLLECTORS.include?(fund_collector)
+
+    self.fund_collector = if source == "walk_in" || guarantee_method == "manual_at_hotel"
+      "hotel"
+    elsif booking_quote_id.present?
+      "wastays"
+    elsif payment_transactions.any?(&:direct_hotel_payment?)
+      "hotel"
+    elsif payment_transactions.any?(&:wastays_collected_payment?)
+      "wastays"
+    else
+      "unknown"
+    end
+  end
 
   def group_booking_belongs_to_hotel
     return if group_booking.blank? || hotel_id.blank? || group_booking.hotel_id == hotel_id

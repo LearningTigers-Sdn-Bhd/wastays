@@ -8,6 +8,7 @@ module GuestArrival
       @phone = params[:phone]&.strip
       @government_id = params[:government_id]&.downcase&.strip
       @gender = params[:gender]&.downcase&.strip
+      @city = params[:city]&.strip
       @country = params[:country]&.downcase&.strip
       @document_type = params[:document_type]&.downcase&.strip
       @date_of_birth = params[:date_of_birth].presence
@@ -22,6 +23,7 @@ module GuestArrival
       if guest
         updates = {}
         updates[:name] = @name if @name.present? && guest.name != @name
+        updates[:city] = @city if @city.present? && guest.city.blank?
         updates[:country] = @country if @country.present? && guest.country.blank?
         updates[:gender] = @gender if @gender.present? && guest.gender.blank?
         updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
@@ -70,6 +72,7 @@ module GuestArrival
           email: @email,
           phone: @phone,
           government_id: @government_id,
+          city: @city,
           country: @country,
           gender: @gender,
           document_type: @document_type,

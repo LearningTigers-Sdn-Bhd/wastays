@@ -2,6 +2,11 @@ require "rails_helper"
 
 RSpec.describe "Service spec coverage" do
   GROUPED_SERVICE_SPECS = {
+    "e_invoice/cancel" => "e_invoice_services_spec.rb",
+    "e_invoice/phone_formatter" => "e_invoice_services_spec.rb",
+    "e_invoice/submission_context" => "e_invoice_services_spec.rb",
+    "my_invois/client" => "e_invoice_services_spec.rb",
+    "my_invois/client_factory" => "e_invoice_services_spec.rb",
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",

@@ -34,6 +34,9 @@ production:
   retry_onboarding_deliveries:
     class: Onboarding::DispatchPendingDeliveriesJob
     schedule: every 5 minutes
+  monthly_e_invoice_consolidation:
+    class: EInvoice::MonthlyConsolidationJob
+    schedule: "cron 5 0 1 * *"
 
 demo:
   release_expired_holds:
@@ -57,3 +60,6 @@ demo:
   retry_onboarding_deliveries:
     class: Onboarding::DispatchPendingDeliveriesJob
     schedule: every 5 minutes
+  monthly_e_invoice_consolidation:
+    class: EInvoice::MonthlyConsolidationJob
+    schedule: "cron 5 0 1 * *"

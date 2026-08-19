@@ -52,6 +52,7 @@ module GuestArrival
           email: @booking.guest_email,
           phone: @booking.guest_phone,
           government_id: submitted_government_id,
+          city: @booking.guest_city,
           country: @booking.guest_country,
           document_type: @booking.guest_document_type,
           date_of_birth: @booking.guest_date_of_birth
