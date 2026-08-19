@@ -102,8 +102,26 @@ class EInvoiceSubmission < ApplicationRecord
     invalid? || stale_pending?
   end
 
+  # LHDN accepts a cancellation only within 72 hours of validating the
+  # document. After that the correction has to be a credit or debit note, so
+  # offering "cancel" past the window would just produce a rejection.
+  CANCELLATION_WINDOW = 72.hours
+
   def cancellable?
-    validated? && cancelled_at.nil?
+    return false unless validated? && cancelled_at.nil?
+    return false if validated_at.blank?
+
+    Time.current <= validated_at + CANCELLATION_WINDOW
+  end
+
+  def cancellation_window_closed?
+    validated? && cancelled_at.nil? && !cancellable?
+  end
+
+  def cancellation_deadline
+    return nil if validated_at.blank?
+
+    validated_at + CANCELLATION_WINDOW
   end
 
   def refreshable?

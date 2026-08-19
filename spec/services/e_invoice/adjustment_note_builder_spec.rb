@@ -57,8 +57,14 @@ RSpec.describe EInvoice::AdjustmentNoteBuilder, type: :service do
       payload = JSON.parse(Base64.strict_decode64(result[:document]))
       invoice = payload["Invoice"].first
 
-      ref = invoice["BillingReference"].first["AdditionalDocumentReference"].first["ID"].first["_"]
-      expect(ref).to eq("INV-001")
+      billing_reference = invoice["BillingReference"].first
+      expect(billing_reference["AdditionalDocumentReference"].first["ID"].first["_"]).to eq("INV-001")
+
+      # LHDN matches an adjustment to the document it corrects by UUID; the
+      # internal number alone does not bind them.
+      invoice_reference = billing_reference["InvoiceDocumentReference"].first
+      expect(invoice_reference["ID"].first["_"]).to eq("INV-001")
+      expect(invoice_reference["UUID"].first["_"]).to eq(original_submission.uuid)
     end
 
     it "suffixes internal_id with -DN" do

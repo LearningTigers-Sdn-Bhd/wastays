@@ -104,6 +104,14 @@
           <% end %>
         <% end %>
 
+        <% if @submission.cancellation_window_closed? %>
+          <p class="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+            The 72-hour window to cancel this with LHDN closed on
+            <%= @submission.cancellation_deadline&.strftime("%d %b %Y %H:%M") %>.
+            Correct it with a credit or debit note instead.
+          </p>
+        <% end %>
+
         <% if @submission.cancellable? %>
           <%= button_to cancel_hotel_e_invoice_submission_path(current_hotel, @submission),
                 method: :post,

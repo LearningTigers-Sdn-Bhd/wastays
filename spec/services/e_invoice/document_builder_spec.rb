@@ -105,6 +105,18 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
 
     # WAStays is under the RM1m threshold and files nothing as itself, so the
     # hotel is the supplier even when WAStays took the guest's money.
+    # LHDN rejects a backdated document. The payment date still decides which
+    # month a guest may request in; it is not when the document was issued.
+    it "issues the document now, not on the date the guest paid" do
+      travel_to Time.zone.parse("2026-08-20 10:30:00") do
+        decoded = JSON.parse(Base64.strict_decode64(described_class.new(booking).build[:document]))
+        invoice = decoded.dig("Invoice", 0)
+
+        expect(invoice.dig("IssueDate", 0, "_")).to eq("2026-08-20")
+        expect(invoice.dig("IssueTime", 0, "_")).to match(/\A\d{2}:\d{2}:\d{2}Z\z/)
+      end
+    end
+
     it "uses the hotel as the supplier even for WAStays-collected bookings" do
       decoded_json = JSON.parse(Base64.strict_decode64(subject[:document]))
       supplier = decoded_json.dig("Invoice", 0, "AccountingSupplierParty", 0, "Party", 0)

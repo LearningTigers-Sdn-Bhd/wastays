@@ -68,12 +68,14 @@ module EInvoice
       [ "SBI", @booking.confirmation_token, @batch&.id || "unbatched" ].join("-")
     end
 
+    # Issued now, not when the batch was created: LHDN rejects backdated
+    # documents.
     def issue_date
-      (@batch&.created_at || Time.current).to_date.iso8601
+      Time.current.utc.to_date.iso8601
     end
 
     def issue_time
-      (@batch&.created_at || Time.current).utc.strftime("%H:%M:%SZ")
+      Time.current.utc.strftime("%H:%M:%SZ")
     end
 
     def currency

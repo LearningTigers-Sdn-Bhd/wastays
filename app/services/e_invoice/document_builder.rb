@@ -85,12 +85,17 @@ module EInvoice
         @booking.confirmation_token
     end
 
+    # LHDN validates that a document is issued now, not backdated. The payment
+    # date is the taxable event and still governs which month a guest may
+    # request in, but it is not when the document was issued: a guest asking on
+    # the 20th for a stay paid on the 5th would otherwise produce a document
+    # two weeks old, which LHDN rejects.
     def issue_date
-      @booking.payment_concluded_at.to_date.iso8601
+      Time.current.utc.to_date.iso8601
     end
 
     def issue_time
-      @booking.payment_concluded_at.utc.strftime("%H:%M:%SZ")
+      Time.current.utc.strftime("%H:%M:%SZ")
     end
 
     def currency

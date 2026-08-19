@@ -80,7 +80,13 @@ module EInvoice
         "InvoiceTypeCode" => [ { "_" => @document_type, "listVersionID" => document_version } ],
         "DocumentCurrencyCode" => [ { "_" => currency } ],
         "TaxCurrencyCode" => [ { "_" => currency } ],
+        # LHDN binds an adjustment to the document it corrects by UUID; the
+        # internal number alone is not enough to match them.
         "BillingReference" => [ {
+          "InvoiceDocumentReference" => [ {
+            "ID" => [ { "_" => @original_submission.internal_id.to_s } ],
+            "UUID" => [ { "_" => @original_submission.uuid.to_s } ]
+          } ],
           "AdditionalDocumentReference" => [ {
             "ID" => [ { "_" => @original_submission.internal_id.to_s } ]
           } ]

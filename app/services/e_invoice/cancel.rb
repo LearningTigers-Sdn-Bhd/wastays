@@ -13,6 +13,14 @@ module EInvoice
     end
 
     def call
+      if @submission.cancellation_window_closed?
+        return {
+          success: false,
+          error: "LHDN only accepts a cancellation within 72 hours of validating the document. " \
+                 "Issue a credit note against it instead."
+        }
+      end
+
       return { success: false, error: "Submission is not cancellable." } unless @submission.cancellable?
 
       client = MyInvois::ClientFactory.build(

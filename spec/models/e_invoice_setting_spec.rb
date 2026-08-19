@@ -53,3 +53,42 @@ RSpec.describe EInvoiceSetting do
     end
   end
 end
+
+RSpec.describe EInvoiceSubmission, "cancellation window" do
+  let(:hotel) { create(:hotel) }
+  let(:booking) { create(:booking, hotel: hotel) }
+
+  def validated_submission(validated_at:)
+    create(:e_invoice_submission, hotel: hotel, booking: booking,
+      status: "valid", uuid: SecureRandom.uuid, validated_at: validated_at)
+  end
+
+  # LHDN accepts a cancellation only within 72 hours of validating; after that
+  # the correction must be a credit note.
+  it "can be cancelled inside the 72-hour window" do
+    expect(validated_submission(validated_at: 1.hour.ago)).to be_cancellable
+  end
+
+  it "cannot be cancelled once the window has closed" do
+    submission = validated_submission(validated_at: 4.days.ago)
+
+    expect(submission).not_to be_cancellable
+    expect(submission).to be_cancellation_window_closed
+  end
+
+  it "reports when the window closes, so staff know why" do
+    validated_at = 1.hour.ago
+    submission = validated_submission(validated_at: validated_at)
+
+    expect(submission.cancellation_deadline).to be_within(1.second).of(validated_at + 72.hours)
+  end
+
+  it "points staff at a credit note instead of failing at LHDN" do
+    submission = validated_submission(validated_at: 4.days.ago)
+
+    result = EInvoice::Cancel.new(submission, reason: "mistake").call
+
+    expect(result[:success]).to be(false)
+    expect(result[:error]).to match(/credit note/)
+  end
+end

@@ -86,9 +86,10 @@ module EInvoice
       }
     end
 
-    # Issued after the period closes, so it carries the month it covers.
+    # Issued now; the month it covers is carried by InvoicePeriod. Dating it to
+    # the end of the period would backdate the document, which LHDN rejects.
     def issue_date
-      [ @period_start.end_of_month, Date.current ].min
+      Time.current.utc.to_date
     end
 
     def ota_supplier_party
