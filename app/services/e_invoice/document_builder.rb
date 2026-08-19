@@ -17,23 +17,6 @@ module EInvoice
     COUNTRY_LIST_ID          = "ISO3166-1"
     COUNTRY_LIST_AGENCY_ID   = "6"
     UNIT_CODE_EACH           = "C62"
-    MALAYSIA_STATE_CODES     = {
-      "johor bahru" => "01",
-      "alor setar" => "02",
-      "kota bharu" => "03",
-      "melaka" => "04",
-      "seremban" => "05",
-      "kuantan" => "06",
-      "george town" => "07",
-      "ipoh" => "08",
-      "kangar" => "09",
-      "shah alam" => "10",
-      "kota kinabalu" => "12",
-      "kuching" => "13",
-      "kuala lumpur" => "14",
-      "labuan" => "15",
-      "putrajaya" => "16"
-    }.freeze
     ZERO_ALLOWANCE_CHARGE    = {
       "ChargeIndicator" => [ { "_" => false } ],
       "Amount" => [ { "_" => 0, "currencyID" => DEFAULT_CURRENCY } ]
@@ -197,7 +180,7 @@ module EInvoice
     def buyer_party
       {
         "PartyIdentification" => [
-          { "ID" => [ { "_" => GENERAL_CONSUMER_TIN, "schemeID" => "TIN" } ] },
+          { "ID" => [ { "_" => buyer_tin, "schemeID" => "TIN" } ] },
           { "ID" => [ buyer_identifier ] }
         ],
         "PostalAddress" => [ buyer_address ],
@@ -212,7 +195,7 @@ module EInvoice
     def buyer_address
       {
         "CityName" => [ { "_" => buyer_city } ],
-        "PostalZone" => [ { "_" => "00000" } ],
+        "PostalZone" => [ { "_" => buyer_postal_code } ],
         "CountrySubentityCode" => [ { "_" => buyer_state_code } ],
         "AddressLine" => [
           { "Line" => [ { "_" => @booking.guest_home_address.presence || "NA" } ] },
@@ -353,11 +336,21 @@ module EInvoice
     end
 
     def buyer_state_code
-      return "17" unless guest_country_code == "MYS"
+      EInvoice::MalaysiaStates.resolve(
+        state_code: @booking.guest_state_code,
+        city: @booking.guest_city,
+        country_code: guest_country_code
+      ) || raise(ArgumentError, "Booking needs a buyer state before it can be filed with LHDN")
+    end
 
-      MALAYSIA_STATE_CODES.fetch(buyer_city.to_s.strip.downcase) do
-        raise ArgumentError, "Booking guest city must map to a valid Malaysia state code"
-      end
+    # A buyer who supplies their own TIN can claim the invoice; everyone else
+    # is filed under LHDN's general public TIN, which is what it is for.
+    def buyer_tin
+      @booking.buyer_tin_for_e_invoice.presence || GENERAL_CONSUMER_TIN
+    end
+
+    def buyer_postal_code
+      @booking.guest_postal_code.to_s.gsub(/\D/, "").presence || "00000"
     end
 
     def country_identification_code(code)

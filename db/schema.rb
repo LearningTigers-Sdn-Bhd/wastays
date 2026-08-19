@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_100004) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_19_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -527,9 +527,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_100004) do
     t.string "guest_home_address"
     t.string "guest_name", null: false
     t.string "guest_phone", null: false
+    t.string "guest_postal_code"
     t.integer "guest_registration_number"
     t.string "guest_registration_reference"
     t.integer "guest_registration_year"
+    t.string "guest_state_code"
+    t.string "guest_tin"
     t.bigint "hotel_corporate_account_id"
     t.bigint "hotel_id", null: false
     t.jsonb "hotel_snapshot", default: {}, null: false
@@ -883,6 +886,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_100004) do
 
   create_table "e_invoice_settings", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "effective_from"
     t.boolean "enabled", default: false, null: false
     t.string "hotel_brn"
     t.bigint "hotel_id", null: false
@@ -1237,6 +1241,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_100004) do
     t.string "otp_code_digest"
     t.datetime "otp_sent_at"
     t.string "phone"
+    t.string "postal_code"
+    t.string "state_code"
+    t.string "tin"
     t.datetime "updated_at", null: false
     t.boolean "vip", default: false, null: false
     t.index ["blacklisted"], name: "index_guests_on_blacklisted"
@@ -1317,6 +1324,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_100004) do
     t.string "account_type", default: "company", null: false
     t.string "agent_code"
     t.boolean "auto_allocate_payments", default: false, null: false
+    t.string "brn"
     t.string "contact_email"
     t.string "contact_phone"
     t.bigint "corporate_account_id", null: false
@@ -1328,8 +1336,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_100004) do
     t.bigint "hotel_id", null: false
     t.integer "payment_terms_days"
     t.string "relationship_type", default: "standard", null: false
+    t.string "sst_registration_number"
     t.string "status", default: "active", null: false
     t.datetime "suspended_at"
+    t.string "tin"
     t.datetime "updated_at", null: false
     t.index ["corporate_account_id", "status"], name: "idx_hotel_corporate_accounts_on_account_and_status"
     t.index ["corporate_account_id"], name: "index_hotel_corporate_accounts_on_corporate_account_id"
@@ -2219,8 +2229,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_100004) do
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.bigint "hotel_id", null: false
-    t.decimal "maximum_amount_per_room_night", precision: 12, scale: 2, default: "10.0", null: false
-    t.decimal "maximum_percentage", precision: 7, scale: 4, default: "1.0", null: false
+    t.decimal "maximum_amount_per_room_night", precision: 15, scale: 2, default: "10.0", null: false
+    t.decimal "maximum_percentage", precision: 8, scale: 4, default: "1.0", null: false
     t.string "mode", default: "recommended", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_ota_rate_variance_policies_on_hotel_id", unique: true

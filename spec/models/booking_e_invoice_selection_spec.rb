@@ -64,3 +64,37 @@ RSpec.describe "Booking e-invoice automation", type: :model do
     }.not_to have_enqueued_job(EInvoice::AutoIssueJob)
   end
 end
+
+RSpec.describe "Booking buyer TIN resolution", type: :model do
+  let(:hotel) { create(:hotel) }
+
+  # Whoever is being billed is who claims the invoice, so the company's TIN
+  # wins over the individual traveller's.
+  it "prefers the corporate account's TIN when the company is billed" do
+    account = create(:account, :corporate)
+    corporate = create(:hotel_corporate_account, hotel: hotel, corporate_account: account, tin: "C9999999999")
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: corporate, guest_tin: "IG1111111111")
+
+    expect(booking.buyer_tin_for_e_invoice).to eq("C9999999999")
+  end
+
+  it "uses the TIN captured on the booking for an individual guest" do
+    booking = create(:booking, hotel: hotel, guest_tin: "IG1111111111")
+
+    expect(booking.buyer_tin_for_e_invoice).to eq("IG1111111111")
+  end
+
+  it "falls back to the matched guest record's TIN" do
+    guest = create(:guest, tin: "IG2222222222")
+    booking = create(:booking, hotel: hotel, guest_tin: nil)
+    create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+    expect(booking.reload.buyer_tin_for_e_invoice).to eq("IG2222222222")
+  end
+
+  it "is nil when nobody supplied one, so the builder files as general public" do
+    booking = create(:booking, hotel: hotel)
+
+    expect(booking.buyer_tin_for_e_invoice).to be_nil
+  end
+end

@@ -120,7 +120,7 @@ class Booking < ApplicationRecord
   # Guest may request only within the same calendar month as the payment,
   # and only while nothing has been issued yet.
   def e_invoice_guest_request_possible?
-    return false unless hotel.e_invoice_setting&.enabled?
+    return false unless hotel.e_invoice_setting&.covers?(payment_concluded_at)
     return false if e_invoice_already_issued?
 
     e_invoice_requestable?
@@ -133,6 +133,14 @@ class Booking < ApplicationRecord
     return false if concluded_at.blank?
 
     Time.current.between?(concluded_at.beginning_of_month, concluded_at.end_of_month)
+  end
+
+  # A buyer who gives us a TIN can claim the invoice against their own tax.
+  # A corporate booking files under the company's TIN, since the company is the
+  # one being billed; otherwise it is whatever the guest supplied. Falling back
+  # to nil lets the builder use LHDN's general public TIN.
+  def buyer_tin_for_e_invoice
+    hotel_corporate_account&.tin.presence || guest_tin.presence || primary_guest&.tin.presence
   end
 
   def create_pending_consolidated_submission!

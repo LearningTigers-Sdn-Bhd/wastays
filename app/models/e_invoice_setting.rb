@@ -19,6 +19,18 @@ class EInvoiceSetting < ApplicationRecord
       :supplier_contact_phone, :supplier_contact_email, presence: true
   end
 
+  # Stamped the first time e-invoicing is switched on. Everything paid before
+  # that point stays out of the feature entirely - enabling it must never
+  # retroactively file, or consolidate, historical stays.
+  before_save :stamp_effective_from, if: -> { enabled? && effective_from.blank? }
+
+  def covers?(concluded_at)
+    return false unless enabled?
+    return false if concluded_at.blank?
+
+    effective_from.blank? || concluded_at >= effective_from
+  end
+
   def buyer_configured?
     hotel_tin.present? && hotel_brn.present?
   end
@@ -66,5 +78,11 @@ class EInvoiceSetting < ApplicationRecord
 
   def supplier_contact_email_value
     supplier_contact_email.presence || hotel.contact_email
+  end
+
+  private
+
+  def stamp_effective_from
+    self.effective_from = Time.current
   end
 end

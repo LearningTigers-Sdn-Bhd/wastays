@@ -12,7 +12,9 @@ module EInvoice
 
       hotel = booking.hotel
       return unless booking.payment_concluded?
-      return unless hotel.e_invoice_setting&.enabled?
+      # Go-forward only: a stay paid before this hotel switched e-invoicing on
+      # is out of scope and must not be filed or consolidated retroactively.
+      return unless hotel.e_invoice_setting&.covers?(booking.payment_concluded_at)
 
       scenario = booking.direct_hotel_payment? ? "hotel_intermediary_guest_invoice" : "guest_invoice"
 

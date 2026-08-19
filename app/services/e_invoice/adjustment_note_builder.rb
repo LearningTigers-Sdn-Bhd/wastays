@@ -177,12 +177,12 @@ module EInvoice
     def buyer_party
       {
         "PartyIdentification" => [
-          { "ID" => [ { "_" => GENERAL_CONSUMER_TIN, "schemeID" => "TIN" } ] },
+          { "ID" => [ { "_" => buyer_tin, "schemeID" => "TIN" } ] },
           { "ID" => [ { "_" => "NA", "schemeID" => "BRN" } ] }
         ],
         "PostalAddress" => [ {
           "CityName" => [ { "_" => buyer_city } ],
-          "PostalZone" => [ { "_" => "00000" } ],
+          "PostalZone" => [ { "_" => buyer_postal_code } ],
           "CountrySubentityCode" => [ { "_" => buyer_state_code } ],
           "AddressLine" => [
             { "Line" => [ { "_" => "NA" } ] },
@@ -266,11 +266,21 @@ module EInvoice
     end
 
     def buyer_state_code
-      return "17" unless guest_country_code == "MYS"
+      EInvoice::MalaysiaStates.resolve(
+        state_code: @booking.guest_state_code,
+        city: @booking.guest_city,
+        country_code: guest_country_code
+      ) || raise(ArgumentError, "Booking needs a buyer state before it can be filed with LHDN")
+    end
 
-      DocumentBuilder::MALAYSIA_STATE_CODES.fetch(buyer_city.to_s.strip.downcase) do
-        raise ArgumentError, "Booking guest city must map to a valid Malaysia state code"
-      end
+    # An adjustment note must carry the same buyer identity as the invoice it
+    # references, or LHDN cannot match the two.
+    def buyer_tin
+      @booking.buyer_tin_for_e_invoice.presence || GENERAL_CONSUMER_TIN
+    end
+
+    def buyer_postal_code
+      @booking.guest_postal_code.to_s.gsub(/\D/, "").presence || "00000"
     end
 
     def guest_country_code
