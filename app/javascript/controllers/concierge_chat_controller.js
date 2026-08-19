@@ -42,11 +42,19 @@ export default class extends Controller {
   // Enter sends, Shift+Enter breaks the line. Not while an IME is composing:
   // for anyone typing Chinese or Japanese, Enter is how a candidate is chosen,
   // and sending on it would post half a word.
+  //
+  // The box's *own* form, reached through the field rather than looked up in
+  // the panel. Asking the panel for its first form found the menu's -- button_to
+  // builds one per item and the bar comes first in the document -- so Enter
+  // submitted "clear conversation", and submitting a form without its button
+  // skips the confirm that hangs off the button. Enter deleted the thread
+  // silently. A field always knows the form it belongs to; nothing else here
+  // should be guessing.
   onInputKeydown(event) {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing) return
 
     event.preventDefault()
-    this.element.querySelector("form")?.requestSubmit()
+    this.inputTarget.form?.requestSubmit()
   }
 
   // The box grows with what is being written, up to the max-height the
