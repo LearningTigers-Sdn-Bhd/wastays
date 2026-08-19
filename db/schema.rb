@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_19_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -468,7 +468,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_160000) do
     t.string "key", null: false
     t.string "kind", default: "ota", null: false
     t.string "label", null: false
+    t.string "legal_name"
     t.integer "position", default: 0, null: false
+    t.boolean "self_bill_commission", default: false, null: false
+    t.string "tax_country_code"
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_booking_sources_on_active"
     t.index ["key"], name: "index_booking_sources_on_key", unique: true
@@ -911,7 +914,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_160000) do
   end
 
   create_table "e_invoice_submissions", force: :cascade do |t|
-    t.bigint "booking_id", null: false
+    t.bigint "booking_id"
     t.datetime "cancelled_at"
     t.boolean "consolidated", default: false, null: false
     t.uuid "consolidation_batch_id"
@@ -924,8 +927,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_160000) do
     t.string "internal_id"
     t.string "long_id"
     t.string "original_invoice_internal_id"
+    t.string "ota_source_key"
     t.datetime "payment_concluded_at"
     t.bigint "payout_batch_id"
+    t.date "period_start"
     t.jsonb "raw_response", default: {}
     t.string "represented_taxpayer_tin"
     t.datetime "requested_at"
@@ -943,6 +948,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_160000) do
     t.index ["booking_id"], name: "index_e_invoice_submissions_on_booking_id"
     t.index ["consolidation_batch_id"], name: "index_e_invoice_submissions_on_consolidation_batch_id"
     t.index ["fund_collector"], name: "index_e_invoice_submissions_on_fund_collector"
+    t.index ["hotel_id", "ota_source_key", "period_start"], name: "index_e_invoice_submissions_on_ota_commission_period", unique: true, where: "(((document_scenario)::text = 'ota_commission_self_billed'::text) AND ((status)::text <> 'cancelled'::text))"
     t.index ["hotel_id"], name: "index_e_invoice_submissions_on_hotel_id"
     t.index ["payout_batch_id"], name: "index_e_invoice_submissions_on_payout_batch_id"
     t.index ["status", "consolidated", "payment_concluded_at"], name: "index_e_invoice_submissions_on_status_consolidated_payment"

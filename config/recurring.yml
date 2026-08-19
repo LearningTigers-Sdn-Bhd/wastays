@@ -37,6 +37,9 @@ production:
   monthly_e_invoice_consolidation:
     class: EInvoice::MonthlyConsolidationJob
     schedule: "cron 5 0 1 * *"
+  monthly_ota_commission_self_billing:
+    class: EInvoice::MonthlyOtaCommissionJob
+    schedule: "cron 20 0 1 * *"
 
 demo:
   release_expired_holds:
@@ -63,3 +66,6 @@ demo:
   monthly_e_invoice_consolidation:
     class: EInvoice::MonthlyConsolidationJob
     schedule: "cron 5 0 1 * *"
+  monthly_ota_commission_self_billing:
+    class: EInvoice::MonthlyOtaCommissionJob
+    schedule: "cron 20 0 1 * *"

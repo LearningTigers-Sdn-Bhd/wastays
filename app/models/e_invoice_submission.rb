@@ -2,15 +2,18 @@
 
 class EInvoiceSubmission < ApplicationRecord
   belongs_to :hotel
-  belongs_to :booking
+  belongs_to :booking, optional: true
   belongs_to :payout_batch, optional: true
 
   STATUSES = %w[pending submitted valid invalid cancelled].freeze
   SUBMISSION_MODES = %w[taxpayer intermediary].freeze
   FUND_COLLECTORS = Booking::FUND_COLLECTORS
   DOCUMENT_SCENARIOS = {
-    "guest_invoice" => "Guest e-invoice by WAStays",
-    "hotel_intermediary_guest_invoice" => "Guest e-invoice by hotel",
+    # The hotel files its own guest e-invoices; WAStays only operates the
+    # submission, so the labels name the hotel as issuer.
+    "guest_invoice" => "Guest e-invoice",
+    "hotel_intermediary_guest_invoice" => "Guest e-invoice filed on the hotel's behalf",
+    "ota_commission_self_billed" => "OTA commission (self-billed)",
     "payout_self_billed_invoice" => "Hotel payout record",
     "commission_invoice" => "WAStays service fee invoice",
     "subscription_invoice" => "WAStays subscription invoice"
@@ -27,11 +30,17 @@ class EInvoiceSubmission < ApplicationRecord
   validates :document_type, inclusion: { in: DOCUMENT_TYPES.keys }
   validates :submission_mode, inclusion: { in: SUBMISSION_MODES }
   validates :fund_collector, inclusion: { in: FUND_COLLECTORS }
+  # A commission document covers a period and an OTA, not a stay.
+  validates :booking_id, presence: true, unless: :ota_commission_self_billed?
+  # Only meaningful for booking-scoped documents: ActiveRecord treats two nil
+  # booking_ids as duplicates, which would let one commission document per
+  # month exist across the whole system. Those are kept unique by their own
+  # index on (hotel, OTA, period).
   validates :booking_id, uniqueness: {
     scope: [ :document_scenario, :document_type ],
     conditions: -> { where.not(status: "cancelled") },
     message: "already has an active submission for this document scenario and type"
-  }
+  }, if: -> { booking_id.present? }
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :valid, -> { where(status: "valid") }
@@ -131,5 +140,9 @@ class EInvoiceSubmission < ApplicationRecord
 
   def intermediary_submission?
     submission_mode == "intermediary"
+  end
+
+  def ota_commission_self_billed?
+    document_scenario == "ota_commission_self_billed"
   end
 end
