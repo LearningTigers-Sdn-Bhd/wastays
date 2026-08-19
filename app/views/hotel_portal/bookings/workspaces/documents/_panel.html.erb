@@ -121,5 +121,73 @@
         <% end %>
       </section>
     <% end %>
+
+    <%# LHDN e-invoicing is a separate filing lifecycle from the folio documents
+        above: each record has a status with the tax authority, not just a file. %>
+    <% if current_hotel.e_invoice_setting&.enabled? %>
+      <% e_invoice_submissions = booking.e_invoice_submissions.recent_first.to_a %>
+      <% adjustment_preview = EInvoice::IssueAdjustment.preview(booking) %>
+      <section aria-labelledby="documents-e-invoice-heading" class="min-w-0 space-y-3" data-document-section="e_invoice">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="documents-e-invoice-heading" class="text-base font-semibold text-foreground">E-Invoice</h2>
+          <% if adjustment_preview.needed? && current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+            <%= render PanelsUI::Button.new(
+                  href: hotel_folio_action_issue_e_invoice_adjustment_path(current_hotel, booking, return_to: request.fullpath),
+                  variant: :secondary,
+                  size: :sm,
+                  data: { turbo_frame: "folio_action_sheet" }) do %>
+              <%= cached_icon "file-plus", class: "size-3.5", aria: { hidden: true } %>
+              Issue adjustment note
+            <% end %>
+          <% end %>
+        </div>
+
+        <%= render PanelsUI::Table.new(
+              caption: "LHDN e-invoice submissions for this booking",
+              density: :compact,
+              hoverable: true,
+              bordered: true,
+              wrapper_class: "rounded-md border border-border",
+              class: "table-fixed min-w-[600px] xl:min-w-0") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col" class="w-1/3">Document</th>
+              <th scope="col" class="w-32">Status</th>
+              <th scope="col" class="w-1/4">Flow</th>
+              <th scope="col" class="w-32">Updated</th>
+              <th scope="col" class="w-20"><span class="sr-only">Actions</span></th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% if e_invoice_submissions.any? %>
+              <% e_invoice_submissions.each do |submission| %>
+                <tr>
+                  <td>
+                    <p class="font-medium text-foreground"><%= submission.internal_id.presence || "Draft record" %></p>
+                    <p class="mt-0.5 text-xs text-muted-foreground"><%= submission.document_type_label %></p>
+                  </td>
+                  <td><%= render "hotel_portal/e_invoice_submissions/status_badge", submission: submission %></td>
+                  <td class="text-sm text-muted-foreground"><%= submission.requested_by_guest? ? "Guest requested" : submission.document_scenario_label %></td>
+                  <td class="text-sm text-muted-foreground"><%= (submission.validated_at || submission.submitted_at || submission.updated_at)&.strftime("%d %b %Y") %></td>
+                  <td>
+                    <%= render PanelsUI::Button.new(href: hotel_e_invoice_submission_path(current_hotel, submission), variant: :secondary, size: :xs) do %>
+                      <span>Open</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            <% else %>
+              <tr>
+                <td colspan="5" class="py-10 text-center text-muted-foreground">No e-invoice has been filed for this booking yet.</td>
+              </tr>
+            <% end %>
+          <% end %>
+        <% end %>
+
+        <% if adjustment_preview.needed? %>
+          <p class="text-sm text-muted-foreground"><%= adjustment_preview.message %></p>
+        <% end %>
+      </section>
+    <% end %>
   </div>
 </div>

@@ -93,6 +93,11 @@
           </div>
 
           <div>
+            <%= f.label :guest_city, "City", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+            <%= f.text_field :guest_city, value: @booking.guest_city, class: "form-input py-3 px-5 border border-border", required: true, placeholder: "e.g. Kuala Lumpur" %>
+          </div>
+
+          <div>
             <%= f.label :guest_country, "Nationality", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
               <%= f.select :guest_country,
                   country_options,

@@ -142,6 +142,13 @@
             </div>
 
             <div class="space-y-2">
+              <%= f.label :guest_city, "City", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.text_field :guest_city, value: @booking.guest_city,
+                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
+                    required: true, placeholder: "e.g. Kuala Lumpur" %>
+            </div>
+
+            <div class="space-y-2">
               <%= f.label :guest_country, "Nationality", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
               <div class="relative" data-controller="searchable-select">
                 <%= f.hidden_field :guest_country, value: @presenter.default_country, data: { searchable_select_target: "hiddenInput", guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
