@@ -120,6 +120,9 @@ class Booking < ApplicationRecord
   # Guest may request only within the same calendar month as the payment,
   # and only while nothing has been issued yet.
   def e_invoice_guest_request_possible?
+    # The hotel is not the guest's seller on an OTA stay, so it must not issue
+    # them an invoice. Hidden rather than explained, by product decision.
+    return false if ota_booking?
     return false unless hotel.e_invoice_setting&.covers?(payment_concluded_at)
     return false if e_invoice_already_issued?
     return false unless e_invoice_buyer_details_ready?
@@ -158,6 +161,24 @@ class Booking < ApplicationRecord
   # to nil lets the builder use LHDN's general public TIN.
   def buyer_tin_for_e_invoice
     hotel_corporate_account&.tin.presence || guest_tin.presence || primary_guest&.tin.presence
+  end
+
+  # On an OTA stay the hotel sells to the OTA, not to the guest, so the hotel
+  # never issues a guest-facing e-invoice for it. These go into the monthly
+  # consolidated document with no named buyer; a guest who wants an invoice
+  # gets it from the OTA they booked through.
+  def ota_booking?
+    return true if source.to_s == "ota"
+
+    BookingSource.find_by_source(source)&.kind == "ota"
+  end
+
+  # An OTA stay is filed at what the hotel actually receives, since the guest's
+  # gross price includes the OTA's commission, which is not the hotel's revenue.
+  def e_invoice_amount
+    return net_amount.to_d if ota_booking? && net_amount.present?
+
+    total_amount.to_d
   end
 
   # WAStays is not a registered intermediary yet, so unless a hotel has opted

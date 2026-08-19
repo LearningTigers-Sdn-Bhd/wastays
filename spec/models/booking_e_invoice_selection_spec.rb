@@ -134,3 +134,45 @@ RSpec.describe "Booking e-invoice buyer readiness", type: :model do
     expect(booking.e_invoice_buyer_details_missing).to be_empty
   end
 end
+
+RSpec.describe "Booking OTA e-invoice treatment", type: :model do
+  let(:hotel) { create(:hotel) }
+  let!(:setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
+
+  before { BookingSource.seed_defaults! }
+
+  # On an OTA stay the hotel sells to the OTA, not to the guest.
+  it "recognises an OTA source from the booking source registry" do
+    expect(build(:booking, hotel: hotel, source: "agoda").ota_booking?).to be(true)
+    expect(build(:booking, hotel: hotel, source: "booking_com").ota_booking?).to be(true)
+    expect(build(:booking, hotel: hotel, source: "walk_in").ota_booking?).to be(false)
+    expect(build(:booking, hotel: hotel, source: "direct").ota_booking?).to be(false)
+  end
+
+  it "treats the catch-all 'ota' source as an OTA" do
+    expect(build(:booking, hotel: hotel, source: "ota").ota_booking?).to be(true)
+  end
+
+  # The guest's gross price includes commission the hotel never receives.
+  it "files an OTA stay at net, and a direct stay at gross" do
+    ota = build(:booking, hotel: hotel, source: "agoda", total_amount: 720.0, net_amount: 633.60)
+    direct = build(:booking, hotel: hotel, source: "walk_in", total_amount: 720.0, net_amount: 633.60)
+
+    expect(ota.e_invoice_amount).to eq(633.60)
+    expect(direct.e_invoice_amount).to eq(720.0)
+  end
+
+  it "falls back to gross when an OTA stay has no net recorded" do
+    ota = build(:booking, hotel: hotel, source: "agoda", total_amount: 720.0, net_amount: nil)
+
+    expect(ota.e_invoice_amount).to eq(720.0)
+  end
+
+  it "never offers a guest on an OTA booking an e-invoice request" do
+    booking = create(:booking, hotel: hotel, source: "agoda", payment_status: "captured",
+      guest_city: "Kuala Lumpur", guest_state_code: "14")
+    create(:payment_transaction, booking: booking, status: "captured", captured_at: Time.current)
+
+    expect(booking.e_invoice_guest_request_possible?).to be(false)
+  end
+end

@@ -18,6 +18,14 @@ module EInvoice
 
       scenario = booking.e_invoice_document_scenario
 
+      # On an OTA stay the hotel's customer is the OTA, not the guest, so no
+      # guest-facing document is ever issued - requested or not. It goes into
+      # the consolidated batch, which names no buyer.
+      if booking.ota_booking?
+        booking.create_pending_consolidated_submission!
+        return
+      end
+
       # Case: Guest requests within same month
       if requested_by_guest
         handle_guest_request(booking, hotel, scenario)
@@ -27,7 +35,7 @@ module EInvoice
       # Case: Automatic processing for low-value bookings.
       # Both WAStays-collected and hotel-direct bookings get consolidated placeholders,
       # and month-end processing will submit them in separate issuer-specific batches.
-      if booking.total_amount.to_d < HIGH_VALUE_THRESHOLD
+      if booking.e_invoice_amount < HIGH_VALUE_THRESHOLD
         booking.create_pending_consolidated_submission!
         return
       end

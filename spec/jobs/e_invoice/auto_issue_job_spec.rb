@@ -274,3 +274,47 @@ RSpec.describe EInvoice::AutoIssueJob, type: :job do
     end
   end
 end
+
+RSpec.describe EInvoice::AutoIssueJob, "OTA bookings", type: :job do
+  let(:hotel) { create(:hotel) }
+  let!(:setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
+
+  before { BookingSource.seed_defaults! }
+
+  def ota_booking(total:, net:)
+    booking = create(:booking, hotel: hotel, source: "agoda", payment_status: "captured",
+      total_amount: total, net_amount: net)
+    create(:booking_room, booking: booking, subtotal: total)
+    create(:payment_transaction, booking: booking, status: "captured", captured_at: Time.current)
+    booking
+  end
+
+  # The hotel sells to the OTA, so it never issues the guest a document.
+  it "consolidates an OTA stay instead of issuing to the guest" do
+    booking = ota_booking(total: 720.0, net: 633.60)
+
+    expect { described_class.perform_now(booking.id) }.to change(EInvoiceSubmission, :count).by(1)
+
+    submission = EInvoiceSubmission.last
+    expect(submission.consolidated).to be(true)
+    expect(submission.requested_by_guest).to be(false)
+  end
+
+  it "consolidates an OTA stay even when a guest asks" do
+    booking = ota_booking(total: 720.0, net: 633.60)
+
+    described_class.perform_now(booking.id, requested_by_guest: true)
+
+    submission = EInvoiceSubmission.last
+    expect(submission.consolidated).to be(true)
+  end
+
+  # Threshold is judged on what the hotel actually receives.
+  it "still consolidates an OTA stay whose gross exceeds the threshold" do
+    booking = ota_booking(total: 12_000.0, net: 10_800.0)
+
+    described_class.perform_now(booking.id)
+
+    expect(EInvoiceSubmission.last.consolidated).to be(true)
+  end
+end

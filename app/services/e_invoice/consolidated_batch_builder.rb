@@ -165,7 +165,9 @@ module EInvoice
 
     def invoice_lines
       @bookings.each_with_index.map do |booking, idx|
-        amount = booking.total_amount.to_d
+        # OTA stays are filed at net: the guest's gross includes commission
+        # the hotel never receives.
+        amount = booking.e_invoice_amount
         hotel_name = booking.hotel.name
         ref = booking.confirmation_token.to_s.upcase
 
@@ -225,7 +227,7 @@ module EInvoice
     end
 
     def total_subtotal
-      @bookings.sum { |b| b.total_amount.to_d }
+      @bookings.sum(&:e_invoice_amount)
     end
 
     def country_identification_code(code)

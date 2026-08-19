@@ -81,7 +81,7 @@ module EInvoice
 
     def process_scenario_batch(hotel, month_start, batch_id, document_scenario, scenario_submissions)
       low_value_bookings = scenario_submissions.map(&:booking).uniq.select do |booking|
-        booking.total_amount.to_d < HIGH_VALUE_THRESHOLD
+        booking.e_invoice_amount < HIGH_VALUE_THRESHOLD
       end
 
       return if low_value_bookings.empty?
