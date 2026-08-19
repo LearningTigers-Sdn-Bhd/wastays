@@ -52,8 +52,10 @@ module HotelPortal
       "Group deposit receipt" => :receipts,
       "AR payment receipt" => :receipts,
       "Reservation voucher" => :utility,
+      "Reservation voucher pack" => :utility,
       "Tourism tax voucher" => :utility,
       "Registration card" => :utility,
+      "Booking summary" => :statements,
       "Group statement" => :statements
     }.freeze
     DOCUMENT_TYPE_ORDER = DOCUMENT_SECTION_BY_TYPE.keys.each_with_index.to_h.freeze
@@ -245,6 +247,10 @@ module HotelPortal
 
     def quick_documents
       @quick_documents ||= build_quick_documents
+    end
+
+    def group_quick_documents
+      @group_quick_documents ||= build_group_quick_documents
     end
 
     def document_sections
@@ -1285,6 +1291,17 @@ module HotelPortal
 
     private
 
+    # A group's invoices and ledgers stay per-room on the Documents tab, so the group sheet
+    # needs only the three documents that belong to the group itself — and none of them
+    # needs the folio and receipt load that build_quick_documents performs.
+    def build_group_quick_documents
+      {
+        voucher: quick_voucher_row,
+        voucher_pack: quick_voucher_pack_row,
+        summary: quick_summary_row
+      }
+    end
+
     def build_quick_documents
       quick_folios = hotel.booking_folios
         .where(booking_id: booking.id)
@@ -1321,15 +1338,65 @@ module HotelPortal
         invoice: quick_folios.filter_map { |folio| document_folio_invoice_row(folio) }.find(&:available?),
         ledger: quick_folios.map { |folio| document_ledger_row(folio) }.find(&:available?),
         receipt: receipt_rows.select(&:available?).max_by(&:issued_at),
-        registration_card: (document_registration_card_row(booking, card) if card && (document_permission?("manage_bookings") || document_permission?("view_reports")))
+        registration_card: (document_registration_card_row(booking, card) if card && (document_permission?("manage_bookings") || document_permission?("view_reports"))),
+        voucher: quick_voucher_row,
+        voucher_pack: quick_voucher_pack_row,
+        summary: quick_summary_row
       }
+    end
+
+    # The quick sheet reaches the voucher, the pack and the summary without loading the
+    # group's whole document set, so these build their own rows rather than filtering
+    # build_documents.
+    def quick_voucher_row
+      return unless document_permission?("manage_bookings")
+
+      quick_row(
+        key: "quick-reservation-voucher-#{booking.id}",
+        type: "Reservation voucher",
+        number: booking.confirmation_token,
+        href: routes.hotel_booking_reservation_voucher_path(hotel, booking)
+      )
+    end
+
+    def quick_voucher_pack_row
+      return unless booking.group_booking_id? && document_permission?("manage_bookings")
+
+      quick_row(
+        key: "quick-reservation-voucher-pack-#{booking.group_booking_id}",
+        type: "Reservation voucher pack",
+        number: booking.group_booking.formatted_reservation_number,
+        href: routes.pack_hotel_booking_reservation_voucher_path(hotel, booking)
+      )
+    end
+
+    def quick_summary_row
+      return unless document_permission?("manage_bookings")
+
+      subject = booking.group_booking || booking
+      quick_row(
+        key: "quick-booking-summary-#{subject.class.name.underscore}-#{subject.id}",
+        type: "Booking summary",
+        number: subject.formatted_reservation_number,
+        href: routes.hotel_booking_booking_summary_path(hotel, booking)
+      )
+    end
+
+    def quick_row(key:, type:, number:, href:)
+      DocumentRow.new(
+        key: key, type: type, number: number,
+        booking: nil, room: nil, payer: nil, currency: nil, amount: nil,
+        status: "Available", issued_at: nil, href: href,
+        context_type: type, revision_actions: []
+      )
     end
 
     def build_documents
       load_document_records
       rows = document_folio_invoice_rows + document_ar_invoice_rows + document_ledger_rows +
-        document_receipt_rows + document_reservation_voucher_rows + document_tourism_tax_voucher_rows +
-        document_registration_card_rows + document_statement_rows
+        document_receipt_rows + document_reservation_voucher_rows + document_reservation_voucher_pack_rows +
+        document_tourism_tax_voucher_rows + document_registration_card_rows +
+        document_booking_summary_rows + document_statement_rows
       rows.sort_by do |row|
         [ @document_booking_positions.fetch(row.booking, [ -1, 0 ]), DOCUMENT_TYPE_ORDER.fetch(row.type), row.issued_at || Time.zone.at(0), row.key ]
       end
@@ -1572,6 +1639,58 @@ module HotelPortal
           revision_actions: []
         )
       end
+    end
+
+    # One row for the group, not one per room: the pack is the whole group in one file.
+    def document_reservation_voucher_pack_rows
+      return [] unless booking.group_booking_id? && document_permission?("manage_bookings")
+
+      [
+        DocumentRow.new(
+          key: "reservation-voucher-pack-#{booking.group_booking_id}",
+          type: "Reservation voucher pack",
+          number: booking.group_booking.formatted_reservation_number,
+          booking: booking.group_booking.name,
+          room: rooms_label_for_group,
+          payer: booking.group_booking.organizer_guest&.name.presence || "-",
+          currency: nil,
+          amount: nil,
+          status: "Available",
+          issued_at: nil,
+          href: routes.pack_hotel_booking_reservation_voucher_path(hotel, booking),
+          context_type: "Reservation voucher pack",
+          revision_actions: []
+        )
+      ]
+    end
+
+    # A group settles one position, so a group has one summary however many rooms it holds.
+    def document_booking_summary_rows
+      return [] unless document_permission?("manage_bookings")
+
+      subject = booking.group_booking || booking
+      [
+        DocumentRow.new(
+          key: "booking-summary-#{subject.class.name.underscore}-#{subject.id}",
+          type: "Booking summary",
+          number: subject.formatted_reservation_number,
+          booking: booking.group_booking ? booking.group_booking.name : document_booking_label(booking),
+          room: booking.group_booking ? rooms_label_for_group : document_booking_room_label(booking),
+          payer: document_primary_guest_name(booking),
+          currency: booking.currency,
+          amount: @document_bookings.sum { |child| child.total_amount.to_d },
+          status: "Available",
+          issued_at: nil,
+          href: routes.hotel_booking_booking_summary_path(hotel, booking),
+          context_type: "Booking summary",
+          revision_actions: []
+        )
+      ]
+    end
+
+    def rooms_label_for_group
+      count = @document_bookings.sum { |child| child.booking_rooms.size }
+      "#{count} #{count == 1 ? 'room' : 'rooms'}"
     end
 
     def document_tourism_tax_voucher_rows

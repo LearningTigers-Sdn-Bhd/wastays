@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe TourismTaxVoucherPdfService do
+RSpec.describe Reports::Bookings::GenerateTourismTaxVoucher do
   let(:hotel) { create(:hotel, name: "Seaview Hotel", city: "Kuala Lumpur", country: "Malaysia", tourism_tax_enabled: true, tourism_tax_amount: 10.0) }
   let(:staff) { create(:user, name: "Trial") }
 
