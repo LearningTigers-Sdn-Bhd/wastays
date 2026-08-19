@@ -2,8 +2,9 @@ module AiConcierge
   module Orchestration
     module Conversation
       class ResponsePersister
-        def initialize(hotel:)
+        def initialize(hotel:, conversation: nil)
           @hotel = hotel
+          @conversation = conversation
         end
 
         def persist_response(prospect:, conversation_state:, interpretation:, slots_payload:, reply_type:, active_topic:, active_flow:, pending_question:, action_name:, extra_context: {}, flow_status: nil, end_reason: nil)
@@ -56,7 +57,7 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel
+        attr_reader :hotel, :conversation
 
         def persist_state(conversation_state, slots_payload:, interpretation:, active_topic:, active_flow:, pending_question:, action_name:, flow_status: nil, end_reason: nil)
           patch = State::StatePatchBuilder.new(
@@ -74,8 +75,16 @@ module AiConcierge
           conversation_state.update!(patch)
         end
 
+        # `sender_role` is stated rather than left to the direction default: once
+        # staff can reply, "outbound" stops implying the bot wrote it, and a
+        # message that guessed its own author would be wrong from that day on.
         def record_outbound_message(prospect, body)
-          prospect&.prospect_messages&.create!(direction: "outbound", body: body)
+          prospect&.prospect_messages&.create!(
+            conversation: conversation,
+            direction: "outbound",
+            sender_role: "bot",
+            body: body
+          )
           prospect&.touch_last_contact!
         end
       end

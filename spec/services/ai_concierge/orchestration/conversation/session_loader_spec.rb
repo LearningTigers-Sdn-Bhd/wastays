@@ -68,3 +68,67 @@ RSpec.describe AiConcierge::Orchestration::Conversation::SessionLoader do
     expect(loader.max_turns_exceeded?(state)).to be(true)
   end
 end
+
+RSpec.describe AiConcierge::Orchestration::Conversation::SessionLoader, "conversation threading" do
+  let(:hotel) { create(:hotel, :with_ai_concierge) }
+  let(:prospect) { create(:prospect, hotel: hotel, phone_number: "+60123456789") }
+
+  def load_session(message: "hello", channel: nil)
+    described_class.new(
+      hotel: hotel,
+      message: message,
+      prospect_public_id: prospect.public_id,
+      **(channel ? { channel: channel } : {})
+    ).with_locked_session { |session| return session }
+  end
+
+  it "opens a conversation on the first message and files the message under it" do
+    session = load_session
+
+    expect(session.conversation).to be_present
+    expect(session.conversation.hotel).to eq(hotel)
+    expect(session.conversation.channel).to eq("whatsapp")
+    expect(session.conversation).to be_open
+    expect(prospect.prospect_messages.last.conversation).to eq(session.conversation)
+  end
+
+  it "records the guest as the author rather than leaving it to be guessed" do
+    load_session
+
+    expect(prospect.prospect_messages.last.sender_role).to eq("guest")
+  end
+
+  it "continues the same conversation on the next message" do
+    first = load_session(message: "hello")
+    second = load_session(message: "still here")
+
+    expect(second.conversation).to eq(first.conversation)
+    expect(first.conversation.messages.count).to eq(2)
+  end
+
+  it "starts a new conversation when the previous one was closed" do
+    first = load_session(message: "hello")
+    first.conversation.close!
+
+    second = load_session(message: "back again")
+
+    expect(second.conversation).not_to eq(first.conversation)
+    expect(second.conversation).to be_open
+    expect(prospect.conversations.count).to eq(2)
+  end
+
+  it "keeps a web thread separate from a whatsapp thread" do
+    whatsapp = load_session(channel: "whatsapp")
+    web = load_session(channel: "web")
+
+    expect(web.conversation).not_to eq(whatsapp.conversation)
+    expect(web.conversation.channel).to eq("web")
+  end
+
+  it "moves the conversation's last_message_at forward as the guest writes" do
+    session = load_session
+
+    expect(session.conversation.reload.last_message_at).to be_present
+    expect(session.conversation.last_guest_message_at).to eq(session.conversation.last_message_at)
+  end
+end

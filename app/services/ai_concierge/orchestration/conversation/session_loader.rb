@@ -2,26 +2,30 @@ module AiConcierge
   module Orchestration
     module Conversation
       class SessionLoader
-        Session = Struct.new(:prospect, :conversation_state, keyword_init: true)
+        Session = Struct.new(:prospect, :conversation, :conversation_state, keyword_init: true)
 
-        def initialize(hotel:, message:, phone: nil, prospect_public_id: nil)
+        DEFAULT_CHANNEL = "whatsapp"
+
+        def initialize(hotel:, message:, phone: nil, prospect_public_id: nil, channel: DEFAULT_CHANNEL)
           @hotel = hotel
           @message = message.to_s.strip
           @phone = phone.to_s.strip.presence
           @prospect_public_id = prospect_public_id.to_s.strip.presence
+          @channel = channel.presence || DEFAULT_CHANNEL
         end
 
         def with_locked_session
           prospect = resolve_prospect
 
           prospect.with_lock do
+            conversation = resolve_conversation(prospect)
             conversation_state = load_conversation_state(prospect)
             ActiveRecord::Base.transaction do
               reactivate_state!(conversation_state)
-              record_inbound_message(prospect)
+              record_inbound_message(prospect, conversation)
             end
 
-            yield Session.new(prospect: prospect, conversation_state: conversation_state)
+            yield Session.new(prospect: prospect, conversation: conversation, conversation_state: conversation_state)
           end
         end
 
@@ -31,7 +35,7 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :message, :phone, :prospect_public_id
+        attr_reader :hotel, :message, :phone, :prospect_public_id, :channel
 
         def resolve_prospect
           return resolve_prospect_by_phone if phone.present?
@@ -57,6 +61,19 @@ module AiConcierge
           )
         end
 
+        # A thread the guest is still in gets continued; anything already closed
+        # starts a fresh one, so a guest returning months later is not dropped
+        # back into the middle of an old exchange. `prospect.with_lock` upstream
+        # serialises this, and the partial unique index is the backstop.
+        #
+        # `::Conversation` is spelled absolutely because this file lives inside
+        # `AiConcierge::Orchestration::Conversation` -- a bare constant would
+        # resolve to that module, not the model.
+        def resolve_conversation(prospect)
+          prospect.conversations.open.find_by(channel: channel) ||
+            prospect.conversations.create!(hotel: prospect.hotel, channel: channel)
+        end
+
         def load_conversation_state(prospect)
           prospect.prospect_conversation_state || ProspectConversationState.create_or_find_by!(prospect: prospect)
         end
@@ -74,8 +91,13 @@ module AiConcierge
           conversation_state.update!(flow_status: "active", slots_payload: payload)
         end
 
-        def record_inbound_message(prospect)
-          prospect&.prospect_messages&.create!(direction: "inbound", body: message)
+        def record_inbound_message(prospect, conversation)
+          prospect&.prospect_messages&.create!(
+            conversation: conversation,
+            direction: "inbound",
+            sender_role: "guest",
+            body: message
+          )
           prospect&.touch_last_contact!
         end
 

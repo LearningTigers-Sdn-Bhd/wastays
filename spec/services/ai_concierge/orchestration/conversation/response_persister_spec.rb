@@ -38,3 +38,45 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister do
     )
   end
 end
+
+RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister, "conversation threading" do
+  let(:hotel) { create(:hotel, :with_ai_concierge) }
+  let(:prospect) { create(:prospect, hotel: hotel) }
+  let(:conversation) { create(:conversation, :whatsapp, hotel: hotel, prospect: prospect) }
+  let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect) }
+
+  def persist(persister)
+    persister.persist_response(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      interpretation: { "intent" => "greeting" },
+      slots_payload: conversation_state.slots_payload,
+      reply_type: :greeting,
+      active_topic: nil,
+      active_flow: nil,
+      pending_question: nil,
+      action_name: nil
+    )
+  end
+
+  it "files the bot's reply under the conversation it was given" do
+    persist(described_class.new(hotel: hotel, conversation: conversation))
+
+    message = prospect.prospect_messages.where(direction: "outbound").last
+    expect(message.conversation).to eq(conversation)
+  end
+
+  it "names the bot as the author instead of relying on the direction default" do
+    persist(described_class.new(hotel: hotel, conversation: conversation))
+
+    expect(prospect.prospect_messages.where(direction: "outbound").last.sender_role).to eq("bot")
+  end
+
+  it "advances last_message_at but not last_guest_message_at" do
+    persist(described_class.new(hotel: hotel, conversation: conversation))
+
+    conversation.reload
+    expect(conversation.last_message_at).to be_present
+    expect(conversation.last_guest_message_at).to be_nil
+  end
+end

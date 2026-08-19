@@ -3,11 +3,12 @@ module AiConcierge
     class TurnOrchestrator
       MAX_TURNS = 50
 
-      def initialize(hotel:, message:, phone: nil, prospect_public_id: nil)
+      def initialize(hotel:, message:, phone: nil, prospect_public_id: nil, channel: nil)
         @hotel = hotel
         @message = message.to_s.strip
         @phone = phone.to_s.strip.presence
         @prospect_public_id = prospect_public_id.to_s.strip.presence
+        @channel = channel.presence
         @tool_registry = Tools::ToolRegistry.new
       end
 
@@ -27,9 +28,15 @@ module AiConcierge
 
       private
 
-      attr_reader :hotel, :message, :phone, :prospect_public_id, :tool_registry
+      attr_reader :hotel, :message, :phone, :prospect_public_id, :channel, :tool_registry
 
+      # The thread is captured before anything else runs because the persisters
+      # below are memoised with it, and this is the only way into them -- read
+      # it as "the turn now belongs to this conversation", not as bookkeeping
+      # that can be moved further down.
       def process_session(session)
+        @conversation = session.conversation
+
         if control_handler.wait_time_end?(session.conversation_state)
           return control_handler.wait_time_end_response(prospect: session.prospect, conversation_state: session.conversation_state)
         end
@@ -129,7 +136,8 @@ module AiConcierge
           hotel: hotel,
           message: message,
           phone: phone,
-          prospect_public_id: prospect_public_id
+          prospect_public_id: prospect_public_id,
+          channel: channel
         )
       end
 
@@ -142,7 +150,7 @@ module AiConcierge
       end
 
       def response_persister
-        @response_persister ||= Conversation::ResponsePersister.new(hotel: hotel)
+        @response_persister ||= Conversation::ResponsePersister.new(hotel: hotel, conversation: @conversation)
       end
     end
   end
