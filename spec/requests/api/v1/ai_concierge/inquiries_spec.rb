@@ -455,7 +455,14 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["needs_human_support"]).to be(true)
       expect(parsed_body["action_name"]).to be_nil
 
-      state = Prospect.lookup_by_phone(phone).first.prospect_conversation_state
+      prospect = Prospect.lookup_by_phone(phone).first
+
+      # The web chat's job reads only `success?` and discards the payload, so a
+      # reply that never becomes a message is a reply that guest never sees.
+      expect(prospect.prospect_messages.where(direction: "outbound").last.body)
+        .to eq("Unable to generate quote right now.")
+
+      state = prospect.prospect_conversation_state
       expect(state.flow_status).not_to eq("ended")
       expect(state.slots_payload.dig("conversation", "end_reason")).not_to eq("booking_url_generated")
       expect(state.slots_payload.dig("booking_task", "status")).to eq("waiting_for_confirmation")

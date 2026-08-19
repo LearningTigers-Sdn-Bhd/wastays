@@ -54,7 +54,6 @@ module AiConcierge
               active_branch: branch,
               pending_question: "select_option"
             )
-            return resolved_interpretation if direct_payload_response?(resolved_interpretation)
             return resolved_interpretation if domain_response?(resolved_interpretation)
 
             resume_slots = if resolved_interpretation.dig("slots", "selection_id").present?
@@ -165,10 +164,6 @@ module AiConcierge
 
         def slot_collection_resume?(resumed)
           %w[booking_timing specific_timing duration guest_count party_split rate_plan_selection].include?(resumed&.dig("pending_question"))
-        end
-
-        def direct_payload_response?(value)
-          value.is_a?(Hash) && value.key?(:direct_payload)
         end
 
         def domain_response?(value)

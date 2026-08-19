@@ -24,18 +24,24 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister do
     expect(conversation_state.reload.last_intent).to eq("greeting")
   end
 
-  it "preserves direct payload shape while adding prospect public id" do
-    payload = described_class.new(hotel: hotel).public_direct_payload(
-      { reply_message: "Unable right now", needs_human_support: true, action_name: nil },
-      prospect
+  it "carries a domain result's escalation flag into the payload" do
+    conversation_state = create(:prospect_conversation_state, prospect: prospect)
+
+    payload = described_class.new(hotel: hotel).persist_domain_response(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      interpretation: { "intent" => "booking_search" },
+      domain_result: {
+        slots_payload: {},
+        reply_type: nil,
+        extra_context: { message: "Unable right now" },
+        needs_human_support: true
+      }
     )
 
-    expect(payload).to eq(
-      reply_message: "Unable right now",
-      needs_human_support: true,
-      action_name: nil,
-      prospect_public_id: prospect.public_id
-    )
+    expect(payload[:reply_message]).to eq("Unable right now")
+    expect(payload[:needs_human_support]).to be(true)
+    expect(prospect.prospect_messages.where(direction: "outbound").last.body).to eq("Unable right now")
   end
 end
 

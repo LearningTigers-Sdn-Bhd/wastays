@@ -129,8 +129,6 @@ module AiConcierge
           tool_registry: tool_registry
         ).call
 
-        return response_persister.public_direct_payload(domain_result[:direct_payload], prospect) if domain_result.is_a?(Hash) && domain_result.key?(:direct_payload)
-
         response_persister.persist_domain_response(prospect:, conversation_state:, interpretation:, domain_result:)
       end
 

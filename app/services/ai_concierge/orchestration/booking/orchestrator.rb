@@ -28,7 +28,7 @@ module AiConcierge
           active_branch: active_branch,
           pending_question: pending_question
         )
-        return selection_follow_up if direct_payload_response?(selection_follow_up) || domain_response?(selection_follow_up)
+        return selection_follow_up if domain_response?(selection_follow_up)
         return selection_handler.handle_selection(conversation_state: conversation_state, interpretation: selection_follow_up, active_branch: active_branch) if selection_follow_up.dig("slots", "selection_id").present?
 
         process_booking_action(booking_action)
@@ -171,7 +171,7 @@ module AiConcierge
         pending_question: "select_option"
       )
 
-      return selection_follow_up if direct_payload_response?(selection_follow_up) || domain_response?(selection_follow_up)
+      return selection_follow_up if domain_response?(selection_follow_up)
       return selection_handler.handle_selection(conversation_state: conversation_state, interpretation: selection_follow_up, active_branch: branch) if selection_follow_up.dig("slots", "selection_id").present?
 
       ask_for_option_revision(branch, conversation_state: conversation_state)
@@ -349,10 +349,6 @@ module AiConcierge
         search_params["check_out"] = first_opt["check_out"]
       end
       search_params
-    end
-
-    def direct_payload_response?(value)
-      value.is_a?(Hash) && value.key?(:direct_payload)
     end
 
     def domain_response?(value)

@@ -7,7 +7,7 @@ module AiConcierge
           @conversation = conversation
         end
 
-        def persist_response(prospect:, conversation_state:, interpretation:, slots_payload:, reply_type:, active_topic:, active_flow:, pending_question:, action_name:, extra_context: {}, flow_status: nil, end_reason: nil)
+        def persist_response(prospect:, conversation_state:, interpretation:, slots_payload:, reply_type:, active_topic:, active_flow:, pending_question:, action_name:, extra_context: {}, flow_status: nil, end_reason: nil, needs_human_support: false)
           messenger_context = { reply_type: reply_type }.merge(extra_context)
           reply_message = Agents::MessengerAgent.new(hotel: hotel, context: messenger_context).call.fetch("reply_message")
           persist_static_response(
@@ -16,7 +16,7 @@ module AiConcierge
             interpretation: interpretation,
             slots_payload: slots_payload,
             reply_message: reply_message,
-            needs_human_support: false,
+            needs_human_support: needs_human_support,
             action_name: action_name,
             active_topic: active_topic,
             active_flow: active_flow,
@@ -39,7 +39,8 @@ module AiConcierge
             action_name: domain_result[:action_name],
             extra_context: domain_result[:extra_context] || {},
             flow_status: domain_result[:flow_status],
-            end_reason: domain_result[:end_reason]
+            end_reason: domain_result[:end_reason],
+            needs_human_support: domain_result[:needs_human_support] || false
           )
         end
 
@@ -49,10 +50,6 @@ module AiConcierge
             record_outbound_message(prospect, reply_message)
           end
           Core::ResponsePayloadBuilder.new(reply_message: reply_message, needs_human_support: needs_human_support, action_name: action_name, prospect_public_id: prospect.public_id).call
-        end
-
-        def public_direct_payload(payload, prospect)
-          payload.merge(prospect_public_id: prospect.public_id)
         end
 
         private

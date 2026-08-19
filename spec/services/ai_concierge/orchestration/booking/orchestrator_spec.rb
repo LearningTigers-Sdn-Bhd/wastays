@@ -90,7 +90,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     expect(result.dig(:slots_payload, "booking_task", "branch", "pending_selection")).to be_nil
   end
 
-  it "returns a safe fallback when booking url generation fails without a completion payload" do
+  it "keeps a failed quote on the thread so the guest can answer again" do
       failure_tool = Class.new do
         def initialize(hotel:, selected_option:, guest_phone:, rate_plan_id: nil); end
 
@@ -113,9 +113,10 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
       decision: { action: :booking, pending_question: "confirm_selection" }
     )
 
-    expect(result[:direct_payload][:reply_message]).to eq("Unable to generate quote right now.")
-    expect(result[:direct_payload][:needs_human_support]).to be(true)
-    expect(result).not_to have_key(:slots_payload)
+    expect(result.dig(:extra_context, :message)).to eq("Unable to generate quote right now.")
+    expect(result[:needs_human_support]).to be(true)
+    expect(result[:pending_question]).to eq("confirm_selection")
+    expect(result).to have_key(:slots_payload)
     expect(result).not_to include(flow_status: "ended", end_reason: "booking_url_generated")
   end
 

@@ -19,7 +19,14 @@ module AiConcierge
       builder_message(reply_type) || context[:message].presence || MessageBuilders::FallbackBuilder::DEFAULT_MESSAGE
     end
 
+    # Every builder dispatches on `reply_type.to_sym`, so a nil one used to
+    # raise here rather than fall through -- which meant the fallback replies,
+    # the ones that exist precisely for when nothing else fits, reached the
+    # guest as the generic "temporarily unavailable" from TurnOrchestrator's
+    # rescue. No reply type simply means no builder can render it.
     def builder_message(reply_type)
+      return if reply_type.nil?
+
       booking_builder.call(reply_type) || hotel_info_builder.call(reply_type) || room_info_builder.call(reply_type)
     end
 

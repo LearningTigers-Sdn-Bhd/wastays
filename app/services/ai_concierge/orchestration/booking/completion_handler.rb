@@ -20,7 +20,7 @@ module AiConcierge
             guest_phone: phone || prospect.phone_number,
             rate_plan_id: selected_rate_plan["rate_plan_id"]
           ).call
-          return { direct_payload: MessageBuilders::FallbackBuilder.new(message: result["error"]).call } unless result["success"]
+          return quote_failure_response(conversation_state: conversation_state, active_branch: active_branch, error: result["error"]) unless result["success"]
 
           active_branch["selected_option"] = selected_option
           active_branch["confirmation_candidate"] = nil
@@ -43,6 +43,28 @@ module AiConcierge
         private
 
         attr_reader :hotel, :prospect, :phone, :tool_registry
+
+        # A quote that failed to generate still owes the guest a sentence.
+        #
+        # This used to hand a payload straight back to the caller, skipping the
+        # persister -- survivable on the API path, which renders whatever it is
+        # given, but `Concierge::AnswerWebMessageJob` reads only `success?` and
+        # throws the payload away. A web guest therefore watched their "yes"
+        # vanish into silence at the one moment money was involved.
+        #
+        # The thread stays on `confirm_selection` with the candidate intact:
+        # the failure is the hotel's, not the guest's, so "yes" should still
+        # work when they try again.
+        def quote_failure_response(conversation_state:, active_branch:, error:)
+          booking_response(
+            conversation_state: conversation_state,
+            active_branch: active_branch,
+            reply_type: nil,
+            pending_question: "confirm_selection",
+            extra_context: { message: error },
+            action_name: nil
+          ).merge(needs_human_support: true)
+        end
 
         def booking_response(conversation_state:, active_branch:, reply_type:, pending_question:, extra_context: {}, action_name: "request_quote")
           {
