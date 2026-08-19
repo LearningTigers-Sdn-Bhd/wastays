@@ -8,8 +8,8 @@
 <%= render layout: "public/concierge/shared/page_shell",
            locals: {
              root_class: "bg-background flex h-dvh flex-col overflow-hidden md:flex-row",
-             content_class: "flex min-h-0 flex-1 justify-center",
-             container_class: "flex w-full min-h-0 max-w-3xl flex-col"
+             content_class: "flex min-h-0 flex-1",
+             container_class: "flex w-full min-h-0 flex-col"
            } do %>
   <%= render "public/concierge/chats/conversation", conversation: @conversation, messages: @messages, hotel: @hotel %>
 <% end %>

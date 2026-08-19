@@ -16,6 +16,10 @@
        author labels at 4.60:1 on the bare thread, a tenth over the line, so any
        pattern at all took them under; they moved to --muted-foreground-strong,
        which holds 6.5:1 at this setting. Past about 0.15 that gives out too. */
+    /* Flat, not a tint. bg-secondary/15 was the same colour but translucent,
+       which was invisible against a plain thread and is not against a
+       patterned one -- the doodle came through the hotel's own bubbles. */
+    --public-chat-bubble: oklch(0.8965 0.0083 152.00);
     --public-chat-doodle-ink: var(--secondary);
     --public-chat-doodle-strength: 0.08;
     --public-chat-doodle-scale: 27rem;
@@ -44,8 +48,17 @@
     mask-size: var(--public-chat-doodle-scale) auto;
   }
 
-  .public-chat > * {
+  /* The three rows are lifted over the pattern -- but not to the same height.
+     A tie is decided by document order, so a bar and a thread both at z-10 put
+     the thread on top, and anything the bar opens (the menu) is painted over by
+     the next message that arrives. The chrome outranks the conversation. */
+  .public-chat__log {
     @apply relative z-10;
+  }
+
+  .public-chat__bar,
+  .public-chat__footer {
+    @apply relative z-20;
   }
 
   /* ─── Bar ───
@@ -165,8 +178,11 @@
      all -- and a bubble is the only thing saying where one message stops and
      the next starts. The tint is carried by the fill rather than an outline so
      the tail can inherit it. */
+  /* The cap is a pair, not a percentage: 85% of a phone is a bubble, 85% of a
+     full-width desktop column is a paragraph running the width of a page. */
   .public-chat__bubble {
-    @apply relative max-w-[85%] whitespace-pre-wrap rounded-2xl bg-secondary/15 px-4 py-2.5 text-sm text-foreground;
+    @apply relative max-w-[min(85%,34rem)] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm text-foreground;
+    background-color: var(--public-chat-bubble);
   }
 
   /* Mid-run bubbles tuck the corner nearest the speaker; the last one squares it
