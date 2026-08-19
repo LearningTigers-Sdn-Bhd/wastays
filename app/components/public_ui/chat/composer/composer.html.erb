@@ -1,8 +1,13 @@
 <%= form_with url: url, method: :post, **form_attributes do %>
-  <div>
-    <%= label_tag param, label, class: "public-chat__label" %>
+  <%= label_tag param, label, class: "sr-only" %>
+
+  <div class="public-chat__composer-field">
     <%= text_area_tag param, nil, rows: rows, required: true, class: "public-chat__input",
-          placeholder: placeholder, data: { concierge_chat_target: "input" } %>
+          placeholder: placeholder,
+          data: { concierge_chat_target: "input", action: input_actions } %>
+
+    <button type="submit" class="public-chat__send" aria-label="<%= submit_label %>">
+      <%= helpers.app_icon "arrow-up", class: "size-5", stroke_width: 2.5, aria: { hidden: "true" } %>
+    </button>
   </div>
-  <%= submit_tag submit_label, class: "public-chat__send" %>
 <% end %>

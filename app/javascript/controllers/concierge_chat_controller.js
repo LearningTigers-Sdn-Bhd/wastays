@@ -20,6 +20,7 @@ export default class extends Controller {
     document.addEventListener("turbo:before-stream-render", this.onBeforeStreamRender)
     this.scrollToLatest()
     this.markScrollPosition()
+    this.growInput()
   }
 
   disconnect() {
@@ -34,7 +35,30 @@ export default class extends Controller {
     if (!this.hasInputTarget) return
 
     this.inputTarget.value = ""
+    this.growInput()
     this.scrollToLatest()
+  }
+
+  // Enter sends, Shift+Enter breaks the line. Not while an IME is composing:
+  // for anyone typing Chinese or Japanese, Enter is how a candidate is chosen,
+  // and sending on it would post half a word.
+  onInputKeydown(event) {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return
+
+    event.preventDefault()
+    this.element.querySelector("form")?.requestSubmit()
+  }
+
+  // The box grows with what is being written, up to the max-height the
+  // stylesheet sets, where it becomes its own small scroller. Measured from
+  // zero every time: a box that has already grown reports its current height
+  // as its content height, so it could never shrink again.
+  growInput() {
+    if (!this.hasInputTarget) return
+
+    const input = this.inputTarget
+    input.style.height = "auto"
+    input.style.height = `${input.scrollHeight}px`
   }
 
   onBeforeStreamRender(event) {
