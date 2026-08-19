@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_143731) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1376,12 +1376,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_143731) do
   create_table "hotel_knowledge_chunks", force: :cascade do |t|
     t.integer "chunk_index", null: false
     t.text "content", null: false
+    t.virtual "content_tsv", type: :tsvector, as: "to_tsvector('simple'::regconfig, content)", stored: true
     t.datetime "created_at", null: false
     t.vector "embedding", limit: 1536
     t.bigint "hotel_knowledge_document_id", null: false
     t.jsonb "metadata", default: {}
     t.integer "token_count"
     t.datetime "updated_at", null: false
+    t.index ["content_tsv"], name: "index_hotel_knowledge_chunks_on_content_tsv", using: :gin
     t.index ["embedding"], name: "index_hotel_knowledge_chunks_on_embedding", opclass: :vector_cosine_ops, using: :ivfflat
     t.index ["hotel_knowledge_document_id", "chunk_index"], name: "idx_knowledge_chunks_on_document_and_index", unique: true
     t.index ["hotel_knowledge_document_id"], name: "index_hotel_knowledge_chunks_on_hotel_knowledge_document_id"

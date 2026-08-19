@@ -54,4 +54,59 @@ RSpec.describe HotelKnowledges::SearchService do
 
     expect(result).to eq([])
   end
+
+  describe "fusing keyword search with vector search" do
+    def indexed_document(category: "general_info", title: "Rooms")
+      create(:hotel_knowledge_document, hotel: hotel, category: category, title: title, embedding_status: "indexed")
+    end
+
+    # The case hybrid retrieval exists for: the guest names a thing, the
+    # nearest vector is a chunk about the same subject that does not name it.
+    it "surfaces the chunk that names the thing even when the nearest vector does not" do
+      document = indexed_document
+      create(:hotel_knowledge_chunk, document: document, chunk_index: 0,
+        content: "All rooms include air conditioning.", embedding: query_vector)
+      create(:hotel_knowledge_chunk, document: document, chunk_index: 1,
+        content: "The Deluxe Seaview has a private balcony.", embedding: ([ 0.1 ] * 768) + ([ -0.1 ] * 768))
+
+      result = described_class.new(hotel: hotel, query: "Deluxe Seaview balcony", categories: [ "general_info" ]).call
+
+      expect(result.map { |row| row["content"] }).to include("The Deluxe Seaview has a private balcony.")
+    end
+
+    it "says which retrievers found each chunk" do
+      document = indexed_document
+      create(:hotel_knowledge_chunk, document: document, chunk_index: 0,
+        content: "Parking is free in the basement.", embedding: query_vector)
+
+      result = described_class.new(hotel: hotel, query: "parking", categories: [ "general_info" ]).call
+
+      expect(result.first["retrieval"]).to contain_exactly("vector", "keyword")
+    end
+
+    # A cosine distance is the only real number here. Inventing one for a row
+    # keyword search found would be putting words in the retriever's mouth.
+    it "leaves distance nil on a chunk only keyword search found" do
+      document = indexed_document
+      create(:hotel_knowledge_chunk, document: document, chunk_index: 0,
+        content: "The Deluxe Seaview has a private balcony.", embedding: nil)
+
+      result = described_class.new(hotel: hotel, query: "Deluxe Seaview", categories: [ "general_info" ]).call
+
+      expect(result.first).to include("retrieval" => [ "keyword" ], "distance" => nil)
+    end
+
+    # Losing the embedding provider used to lose the whole answer.
+    it "still finds by words when the question cannot be embedded" do
+      allow_any_instance_of(HotelKnowledges::EmbeddingService)
+        .to receive(:call).and_raise(HotelKnowledges::EmbeddingError, "provider down")
+
+      document = indexed_document
+      create(:hotel_knowledge_chunk, document: document, chunk_index: 0, content: "Parking is free in the basement.")
+
+      result = described_class.new(hotel: hotel, query: "parking", categories: [ "general_info" ]).call
+
+      expect(result.first["content"]).to eq("Parking is free in the basement.")
+    end
+  end
 end

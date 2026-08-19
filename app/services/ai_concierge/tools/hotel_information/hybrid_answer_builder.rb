@@ -92,8 +92,22 @@ module AiConcierge
           nil
         end
 
+        # Returning a chunk verbatim is the strongest thing this class does, so
+        # it wants a strong reason.
+        #
+        # Two retrievers agreeing is the best one available -- better than any
+        # distance threshold, because they fail differently. A chunk only
+        # keyword search found is the opposite: it matched some words, which is
+        # how it got here, but nothing has vouched for what it means. Those go
+        # on to the fallback search and synthesis rather than being quoted at
+        # the guest, which is exactly where they would have ended up before
+        # keyword search existed.
         def deterministic_match?(matches)
           return false unless matches.one?
+
+          retrieval = Array(matches.first["retrieval"])
+          return true if retrieval.uniq.many?
+          return false if retrieval == [ "keyword" ]
 
           distance = matches.first["distance"]
           distance.blank? || distance.to_f <= STRONG_MATCH_DISTANCE

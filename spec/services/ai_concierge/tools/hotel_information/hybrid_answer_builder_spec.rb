@@ -229,4 +229,44 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       expect(embedding_service).to have_received(:call).once
     end
   end
+
+  # Two retrievers agreeing is a better reason to quote a chunk verbatim than
+  # any distance threshold, because they fail differently.
+  it "quotes a chunk both retrievers found, even without a strong distance" do
+    agreed = match.merge("distance" => 0.9, "retrieval" => [ "vector", "keyword" ])
+
+    result = described_class.new(
+      hotel: hotel,
+      query: "what time is breakfast?",
+      intent: "hotel_information",
+      topic: "hotel_faq",
+      categories: [ "faq" ],
+      source: "hotel_faq",
+      search_service: search_service_returning([ agreed ]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to include("answer_mode" => "deterministic", "answer" => match["content"])
+  end
+
+  # A chunk only keyword search found matched some words -- that is how it got
+  # here -- but nothing has vouched for what it means, so it is not quoted at
+  # the guest on its own.
+  it "does not quote a chunk only keyword search found" do
+    keyword_only = match.merge("distance" => nil, "retrieval" => [ "keyword" ])
+
+    result = described_class.new(
+      hotel: hotel,
+      query: "what time is breakfast?",
+      intent: "hotel_information",
+      topic: "hotel_faq",
+      categories: [ "faq" ],
+      source: "hotel_faq",
+      fallback_text: "Please ask the front desk.",
+      search_service: search_service_returning([ keyword_only ]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result["answer_mode"]).not_to eq("deterministic")
+  end
 end
