@@ -8,7 +8,6 @@ RSpec.describe "Service spec coverage" do
     "ai_concierge/orchestration/agent_loop/build_chat" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/build_instructions" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/outcome" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
-    "ai_concierge/orchestration/agent_loop/run_without_tools" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/tool_recorder" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/turn_context" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     # The model-facing tools are one surface and are specced as one.

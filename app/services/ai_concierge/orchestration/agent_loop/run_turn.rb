@@ -58,12 +58,8 @@ module AiConcierge
         attr_reader :context, :recorder
 
         def run
-          return RunWithoutTools.new(context: context, tools: tools).call unless native_tool_calling?
-
           BuildChat.new(context: context, tools: tools, recorder: recorder, max_hops: MAX_HOPS).call.ask(context.message)
         end
-
-        def native_tool_calling? = context.hotel.ai_concierge_tool_calling_supported?
 
         # The model answered without reaching for a tool: a greeting, or a
         # question back. MessengerAgent already renders a bare message when it

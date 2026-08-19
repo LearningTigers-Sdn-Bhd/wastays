@@ -61,23 +61,13 @@ module AiConcierge
     LLM_TIMEOUT = 30
 
     def call
-      client = Providers::RubyLlmClient.new(hotel: hotel)
-      chat = client.chat
+      chat = Providers::RubyLlmClient.new(hotel: hotel).chat
 
       response = Timeout.timeout(LLM_TIMEOUT) do
-        if client.structured_output_supported?
-          chat.with_schema(InterpretationSchema).ask(prompt)
-        else
-          chat.ask(prompt)
-        end
+        chat.with_schema(InterpretationSchema).ask(prompt)
       end
-      content = response&.content || raise("Empty response from LLM")
 
-      if client.structured_output_supported?
-        content
-      else
-        parse_fallback_response(content)
-      end
+      response&.content || raise("Empty response from LLM")
     rescue Timeout::Error
       raise "LLM request timed out after #{LLM_TIMEOUT}s"
     end
@@ -85,33 +75,6 @@ module AiConcierge
     private
 
     attr_reader :hotel, :message, :conversation_summary, :today
-
-    def parse_fallback_response(raw)
-      parsed = JSON.parse(raw.to_s)
-      return parsed if Schemas::InterpretationSchema.new.valid?(parsed)
-
-      default_interpretation
-    rescue JSON::ParserError
-      default_interpretation
-    end
-
-    def default_interpretation
-      {
-        "message_type" => "greeting_or_unknown",
-        "intent" => "greeting",
-        "topic" => "general",
-        "confidence" => 0,
-        "slots" => {},
-        "tool_hints" => [],
-        "conversation_signals" => {
-          "is_reset" => false,
-          "is_resume" => false,
-          "is_correction" => false,
-          "starts_new_booking_branch" => false,
-          "end_conversation" => false
-        }
-      }
-    end
 
     def prompt
       <<~PROMPT

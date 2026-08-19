@@ -8,7 +8,6 @@ class Hotel < ApplicationRecord
   enum :ai_provider_name, {
     openai: "openai",
     claude: "claude",
-    deepseek: "deepseek",
     gemini: "gemini"
   }, prefix: true, validate: { allow_nil: true }
 
@@ -21,7 +20,6 @@ class Hotel < ApplicationRecord
   AI_CONCIERGE_MODEL_NAMES = {
     "openai" => "gpt-4o-mini",
     "claude" => "claude-haiku-4-5",
-    "deepseek" => "deepseek-chat",
     "gemini" => "gemini-2.5-flash"
   }.freeze
 
@@ -475,18 +473,6 @@ class Hotel < ApplicationRecord
 
   def ai_concierge_api_key
     ai_provider_key
-  end
-
-  def ai_concierge_structured_output_supported?
-    ai_provider_name != "deepseek"
-  end
-
-  # Judged here rather than read off the model registry: the registry claims
-  # DeepSeek supports tool calling, and nothing in this codebase has confirmed
-  # that. A provider we are unsure about gets the single-hop JSON path, which
-  # runs the same tools by a different transport.
-  def ai_concierge_tool_calling_supported?
-    ai_provider_name != "deepseek"
   end
 
   def ai_concierge_agent_loop?

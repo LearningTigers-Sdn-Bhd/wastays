@@ -16,10 +16,6 @@ module AiConcierge
         )
       end
 
-      def structured_output_supported?
-        hotel.ai_concierge_structured_output_supported?
-      end
-
       private
 
       attr_reader :hotel
@@ -33,8 +29,6 @@ module AiConcierge
             config.anthropic_api_key = hotel.ai_concierge_api_key
           when "gemini"
             config.gemini_api_key = hotel.ai_concierge_api_key
-          when "deepseek"
-            config.deepseek_api_key = hotel.ai_concierge_api_key
           end
         end
       end
