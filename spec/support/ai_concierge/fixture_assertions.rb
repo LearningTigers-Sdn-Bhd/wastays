@@ -32,7 +32,6 @@ module AiConciergeEval
       state = outcome.conversation_state
 
       case key
-      when "intent" then expect(state.last_intent).to eq(value)
       when "flow" then expect(state.active_flow).to eq(value)
       when "topic" then expect(state.active_topic).to eq(value)
       when "pending_question" then expect(state.pending_question).to eq(value)

@@ -6,8 +6,6 @@ FactoryBot.define do
     flow_status { "active" }
     pending_question { nil }
     slots_payload { {} }
-    last_intent { nil }
-    last_action_name { nil }
     last_user_message_at { nil }
 
     # Mid-booking states are built *through* ConversationTaskManager rather than

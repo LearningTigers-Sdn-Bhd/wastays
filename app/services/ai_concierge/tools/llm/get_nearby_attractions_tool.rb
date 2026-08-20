@@ -20,8 +20,7 @@ module AiConcierge
             active_branch: context.booking_branch
           ).call
 
-          record(domain_result, intent: "nearby_attractions", topic: "nearby_attractions",
-                 digest: { answered: true })
+          record(domain_result, digest: { answered: true })
         end
       end
     end

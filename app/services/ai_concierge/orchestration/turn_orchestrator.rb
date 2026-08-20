@@ -99,7 +99,6 @@ module AiConcierge
           payload: response_persister.persist_domain_response(
             prospect: session.prospect,
             conversation_state: outcome.conversation_state,
-            interpretation: outcome.interpretation,
             domain_result: outcome.domain_result
           )
         )

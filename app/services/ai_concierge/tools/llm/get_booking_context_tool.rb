@@ -16,8 +16,7 @@ module AiConcierge
             phone: context.phone
           ).call(prospect: context.prospect, conversation_state: context.conversation_state)
 
-          record(domain_result, intent: "booking_context", topic: "booking_context",
-                 digest: { answered: true })
+          record(domain_result, digest: { answered: true })
         end
       end
     end

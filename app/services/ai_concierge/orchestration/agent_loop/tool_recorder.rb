@@ -20,13 +20,8 @@ module AiConcierge
 
         def count_hop! = @hops += 1
 
-        def record(domain_result, conversation_state:, intent:, topic: nil)
-          @outcome = Outcome.new(
-            conversation_state: conversation_state,
-            domain_result: domain_result,
-            intent: intent,
-            topic: topic
-          )
+        def record(domain_result, conversation_state:)
+          @outcome = Outcome.new(conversation_state: conversation_state, domain_result: domain_result)
         end
 
         def recorded? = !@outcome.nil?

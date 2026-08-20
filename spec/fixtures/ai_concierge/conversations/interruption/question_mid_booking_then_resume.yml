@@ -16,7 +16,6 @@ turns:
       pending_question: guest_count
   - guest: "is there parking?"
     expect:
-      intent: hotel_information
       reply_matches: ["Parking is free"]
       creates_quote: false
   # The booking was put down, not lost. It is in Postgres, not in a context

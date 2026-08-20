@@ -13,6 +13,5 @@ turns:
     # The model gets this one wrong -- that mistake is why the rule exists.
     model:
     expect:
-      intent: hotel_policy
       reply_matches: ["48 hours"]
       creates_quote: false

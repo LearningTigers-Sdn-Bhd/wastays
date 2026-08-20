@@ -78,8 +78,7 @@ module AiConcierge
             phone: context.phone
           ).call
 
-          record(domain_result, intent: interpretation["intent"], topic: "booking_search",
-                 digest: { advanced: true })
+          record(domain_result, digest: { advanced: true })
           halt("The booking system has answered the guest. Stop.")
         end
 

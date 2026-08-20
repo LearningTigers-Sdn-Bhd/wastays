@@ -88,7 +88,7 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
 
       allow(turn).to receive(:run).and_raise(Timeout::Error)
 
-      expect(turn.call.intent).to eq("booking_search")
+      expect(turn.call.domain_result[:active_flow]).to eq("booking_search")
     end
   end
 

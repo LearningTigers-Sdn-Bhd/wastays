@@ -35,8 +35,8 @@ module AiConcierge
         # travel back through the context window: a model that can see the
         # reply can rewrite it, and a model that can see a price can invent a
         # different one.
-        def record(domain_result, intent:, topic: nil, digest: {})
-          recorder.record(domain_result, conversation_state: context.conversation_state, intent: intent, topic: topic)
+        def record(domain_result, digest: {})
+          recorder.record(domain_result, conversation_state: context.conversation_state)
           digest
         end
 

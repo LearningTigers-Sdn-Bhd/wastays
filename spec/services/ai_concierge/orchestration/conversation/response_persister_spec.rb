@@ -9,7 +9,6 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister do
     payload = described_class.new(hotel: hotel).persist_response(
       prospect: prospect,
       conversation_state: conversation_state,
-      interpretation: { "intent" => "greeting" },
       slots_payload: conversation_state.slots_payload,
       reply_type: :greeting,
       active_topic: nil,
@@ -21,7 +20,7 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister do
     expect(payload[:reply_message]).to include("Hello, welcome to")
     expect(payload[:prospect_public_id]).to eq(prospect.public_id)
     expect(prospect.prospect_messages.where(direction: "outbound").last.body).to eq(payload[:reply_message])
-    expect(conversation_state.reload.last_intent).to eq("greeting")
+    expect(conversation_state.reload.pending_question).to be_nil
   end
 
   it "carries a domain result's escalation flag into the payload" do
@@ -30,7 +29,6 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister do
     payload = described_class.new(hotel: hotel).persist_domain_response(
       prospect: prospect,
       conversation_state: conversation_state,
-      interpretation: { "intent" => "booking_search" },
       domain_result: {
         slots_payload: {},
         reply_type: nil,
@@ -55,7 +53,6 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister, "con
     persister.persist_response(
       prospect: prospect,
       conversation_state: conversation_state,
-      interpretation: { "intent" => "greeting" },
       slots_payload: conversation_state.slots_payload,
       reply_type: :greeting,
       active_topic: nil,

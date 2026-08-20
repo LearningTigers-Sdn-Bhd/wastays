@@ -15,7 +15,6 @@ turns:
         arguments:
           query: "how much is a room here?"
     expect:
-      intent: booking_search
       flow: booking_search
       pending_question: booking_timing
       reply_matches: ["room rates depend on the booking dates"]

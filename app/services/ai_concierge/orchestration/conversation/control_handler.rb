@@ -16,7 +16,6 @@ module AiConcierge
           payload = response_persister.persist_static_response(
             prospect: prospect,
             conversation_state: conversation_state,
-            interpretation: { "intent" => "end_conversation" },
             slots_payload: conversation_state.slots_payload,
             reply_message: TURN_LIMIT_REACHED_MESSAGE,
             needs_human_support: true,
@@ -42,7 +41,6 @@ module AiConcierge
           payload = response_persister.persist_static_response(
             prospect: prospect,
             conversation_state: conversation_state,
-            interpretation: { "intent" => "end_conversation" },
             slots_payload: slots_payload,
             reply_message: reply_message,
             needs_human_support: false,
@@ -60,28 +58,20 @@ module AiConcierge
           conversation_control = conversation_control(conversation_state: conversation_state, interpretation: interpretation)
 
           if conversation_control.cancel_attempt?
-            return Core::Result.success(payload: handle_cancel_booking_attempt(prospect:, conversation_state:, interpretation: interpretation))
+            return Core::Result.success(payload: handle_cancel_booking_attempt(prospect:, conversation_state:))
           end
 
           if end_confirmation_pending?(conversation_state)
-            return handle_end_confirmation_response(prospect:, conversation_state:, interpretation: interpretation, conversation_control: conversation_control)
+            return handle_end_confirmation_response(prospect:, conversation_state:, conversation_control: conversation_control)
           end
 
           return unless conversation_control.explicit_end?
 
           if conversation_control.end_confirmation_mode == :generic
-            Core::Result.success(payload: handle_end_conversation(prospect:, conversation_state:, interpretation: interpretation))
+            Core::Result.success(payload: handle_end_conversation(prospect:, conversation_state:))
           else
             Core::Result.success(payload: request_end_confirmation(prospect:, conversation_state:, interpretation: interpretation))
           end
-        end
-
-        def request_end_confirmation_response(prospect:, conversation_state:, interpretation:)
-          request_end_confirmation(prospect:, conversation_state:, interpretation:)
-        end
-
-        def end_conversation_response(prospect:, conversation_state:, interpretation:)
-          handle_end_conversation(prospect:, conversation_state:, interpretation:)
         end
 
         private
@@ -93,7 +83,6 @@ module AiConcierge
           response_persister.persist_response(
             prospect: prospect,
             conversation_state: conversation_state,
-            interpretation: interpretation,
             slots_payload: conversation_state.slots_payload,
             reply_type: :confirm_to_end_conversation,
             active_topic: conversation_state.active_topic,
@@ -105,12 +94,11 @@ module AiConcierge
           )
         end
 
-        def handle_cancel_booking_attempt(prospect:, conversation_state:, interpretation:)
+        def handle_cancel_booking_attempt(prospect:, conversation_state:)
           slots_payload = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).reset_booking_task
           response_persister.persist_response(
             prospect: prospect,
             conversation_state: conversation_state,
-            interpretation: interpretation,
             slots_payload: slots_payload,
             reply_type: :booking_attempt_cancelled_next_step,
             active_topic: nil,
@@ -121,14 +109,13 @@ module AiConcierge
           )
         end
 
-        def handle_end_confirmation_response(prospect:, conversation_state:, interpretation:, conversation_control:)
+        def handle_end_confirmation_response(prospect:, conversation_state:, conversation_control:)
           if conversation_control.end_confirmation_yes? || conversation_control.explicit_end?
-            Core::Result.success(payload: handle_end_conversation(prospect:, conversation_state:, interpretation:))
+            Core::Result.success(payload: handle_end_conversation(prospect:, conversation_state:))
           else
             Core::Result.success(payload: response_persister.persist_response(
               prospect: prospect,
               conversation_state: conversation_state,
-              interpretation: interpretation,
               slots_payload: conversation_state.slots_payload,
               reply_type: :end_conversation_declined,
               active_topic: conversation_state.active_topic,
@@ -140,12 +127,11 @@ module AiConcierge
           end
         end
 
-        def handle_end_conversation(prospect:, conversation_state:, interpretation:)
+        def handle_end_conversation(prospect:, conversation_state:)
           slots_payload = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).archive_completed_booking
           response_persister.persist_static_response(
             prospect: prospect,
             conversation_state: conversation_state,
-            interpretation: interpretation,
             slots_payload: slots_payload,
             reply_message: END_CONVERSATION_MESSAGE,
             needs_human_support: false,

@@ -47,12 +47,7 @@ module AiConcierge
             active_branch: context.booking_branch
           ).call
 
-          record(
-            domain_result,
-            intent: intent,
-            topic: topic_for(category),
-            digest: digest_for(domain_result)
-          )
+          record(domain_result, digest: digest_for(domain_result))
         end
 
         private

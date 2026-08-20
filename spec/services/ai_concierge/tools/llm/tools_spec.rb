@@ -32,7 +32,7 @@ RSpec.describe "AI concierge tools the model can see" do
         .execute(question: "how much is a room here?")
 
       expect(result).to be_a(RubyLLM::Tool::Halt)
-      expect(recorder.outcome.intent).to eq("booking_search")
+      expect(recorder.outcome.domain_result[:active_flow]).to eq("booking_search")
       expect(recorder.outcome.domain_result[:pending_question]).to eq("booking_timing")
     end
 
@@ -40,7 +40,7 @@ RSpec.describe "AI concierge tools the model can see" do
       tool(AiConcierge::Tools::Llm::GetRoomTypeDetailsTool, "what is the price of the ocean villa per night?")
         .execute(query: "what is the price of the ocean villa per night?")
 
-      expect(recorder.outcome.intent).to eq("booking_search")
+      expect(recorder.outcome.domain_result[:pending_question]).to eq("booking_timing")
     end
 
     # "Room service" contains the word room and is never a room.
@@ -48,7 +48,7 @@ RSpec.describe "AI concierge tools the model can see" do
       tool(AiConcierge::Tools::Llm::AnswerHotelQuestionTool, "how much is room service?")
         .execute(question: "how much is room service?")
 
-      expect(recorder.outcome.intent).to eq("hotel_information")
+      expect(recorder.outcome.domain_result[:pending_question]).to be_nil
     end
   end
 

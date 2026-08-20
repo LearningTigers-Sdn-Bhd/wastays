@@ -11,6 +11,5 @@ turns:
     # The model gets this one wrong -- that mistake is why the rule exists.
     model:
     expect:
-      intent: hotel_information
       reply_matches: ["Room service runs from 7 AM to 11 PM"]
       creates_quote: false
