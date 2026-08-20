@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister do
+RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel) }
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect) }
@@ -43,7 +43,7 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister do
   end
 end
 
-RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister, "conversation threading" do
+RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversation threading" do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel) }
   let(:conversation) { create(:conversation, :whatsapp, hotel: hotel, prospect: prospect) }

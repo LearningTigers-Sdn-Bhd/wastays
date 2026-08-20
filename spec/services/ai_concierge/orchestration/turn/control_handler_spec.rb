@@ -1,10 +1,10 @@
 require "rails_helper"
 
-RSpec.describe AiConcierge::Orchestration::Conversation::ControlHandler do
+RSpec.describe AiConcierge::Orchestration::Turn::ControlHandler do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel) }
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect) }
-  let(:response_persister) { AiConcierge::Orchestration::Conversation::ResponsePersister.new(hotel: hotel) }
+  let(:response_persister) { AiConcierge::Orchestration::Turn::ResponsePersister.new(hotel: hotel) }
 
   before do
     create(:property_policy, hotel: hotel)

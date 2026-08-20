@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe AiConcierge::Orchestration::Conversation::SessionLoader do
+RSpec.describe AiConcierge::Orchestration::Turn::SessionLoader do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
 
   it "resolves an existing prospect by public id inside a lock and records the inbound message" do
@@ -69,7 +69,7 @@ RSpec.describe AiConcierge::Orchestration::Conversation::SessionLoader do
   end
 end
 
-RSpec.describe AiConcierge::Orchestration::Conversation::SessionLoader, "conversation threading" do
+RSpec.describe AiConcierge::Orchestration::Turn::SessionLoader, "conversation threading" do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel, phone_number: "+60123456789") }
 

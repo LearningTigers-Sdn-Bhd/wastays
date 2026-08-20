@@ -11,7 +11,7 @@ module AiConcierge
         DESCRIPTION
 
         def execute
-          domain_result = Orchestration::Conversation::BookingContextHandler.new(
+          domain_result = Orchestration::Turn::BookingContextHandler.new(
             hotel: hotel,
             phone: context.phone
           ).call(prospect: context.prospect, conversation_state: context.conversation_state)

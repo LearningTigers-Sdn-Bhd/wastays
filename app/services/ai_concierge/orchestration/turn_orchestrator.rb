@@ -106,7 +106,7 @@ module AiConcierge
       end
 
       def session_loader
-        @session_loader ||= Conversation::SessionLoader.new(
+        @session_loader ||= Turn::SessionLoader.new(
           hotel: hotel,
           message: message,
           phone: phone,
@@ -117,11 +117,11 @@ module AiConcierge
       end
 
       def control_handler
-        @control_handler ||= Conversation::ControlHandler.new(message: message, response_persister: response_persister)
+        @control_handler ||= Turn::ControlHandler.new(message: message, response_persister: response_persister)
       end
 
       def response_persister
-        @response_persister ||= Conversation::ResponsePersister.new(hotel: hotel, conversation: @conversation, message: message)
+        @response_persister ||= Turn::ResponsePersister.new(hotel: hotel, conversation: @conversation, message: message)
       end
     end
   end

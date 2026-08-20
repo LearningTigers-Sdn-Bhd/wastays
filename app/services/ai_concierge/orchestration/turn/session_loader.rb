@@ -1,6 +1,6 @@
 module AiConcierge
   module Orchestration
-    module Conversation
+    module Turn
       class SessionLoader
         Session = Struct.new(:prospect, :conversation, :conversation_state, keyword_init: true)
 
@@ -74,10 +74,6 @@ module AiConcierge
         # starts a fresh one, so a guest returning months later is not dropped
         # back into the middle of an old exchange. `prospect.with_lock` upstream
         # serialises this, and the partial unique index is the backstop.
-        #
-        # `::Conversation` is spelled absolutely because this file lives inside
-        # `AiConcierge::Orchestration::Conversation` -- a bare constant would
-        # resolve to that module, not the model.
         def resolve_conversation(prospect)
           prospect.conversations.open.find_by(channel: channel) ||
             prospect.conversations.create!(hotel: prospect.hotel, channel: channel)

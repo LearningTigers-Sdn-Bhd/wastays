@@ -1,6 +1,6 @@
 module AiConcierge
   module Orchestration
-    module Conversation
+    module Turn
       class BookingContextHandler
         def initialize(hotel:, phone:, tool_registry: Tools::ToolRegistry.new)
           @hotel = hotel

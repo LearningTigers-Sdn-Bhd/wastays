@@ -1,6 +1,6 @@
 module AiConcierge
   module Orchestration
-    module Conversation
+    module Turn
       class ResponsePersister
         def initialize(hotel:, conversation: nil, message: nil)
           @hotel = hotel

@@ -1,6 +1,6 @@
 module AiConcierge
   module Orchestration
-    module Conversation
+    module Turn
       class ControlHandler
         END_CONVERSATION_MESSAGE = "No problem, please let me know if you need anything.".freeze
         TURN_LIMIT_REACHED_MESSAGE = "I've reached my limit for this conversation. Please contact the hotel directly for further assistance.".freeze
