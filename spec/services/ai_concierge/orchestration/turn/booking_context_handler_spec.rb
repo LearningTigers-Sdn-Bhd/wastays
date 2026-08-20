@@ -30,6 +30,25 @@ RSpec.describe AiConcierge::Orchestration::Turn::BookingContextHandler do
     )
   end
 
+  # Nothing exercised this handler's result all the way to the persister, so
+  # the shape it returns was free to drift from every other turn's and the
+  # suite stayed green. It reaches a guest through
+  # `Tools::Llm::GetBookingContextTool` -> `ToolRecorder` -> `TurnOrchestrator`,
+  # and that is the path this walks.
+  it "returns a result the persister can write" do
+    conversation = create(:conversation, :whatsapp, hotel: hotel, prospect: prospect)
+    result = described_class.new(hotel: hotel, phone: prospect.phone_number).call(
+      prospect: prospect,
+      conversation_state: conversation_state
+    )
+
+    payload = AiConcierge::Orchestration::Turn::ResponsePersister
+      .new(hotel: hotel, conversation: conversation)
+      .persist_domain_response(prospect: prospect, conversation_state: conversation_state, domain_result: result)
+
+    expect(payload[:reply_message]).to be_present
+  end
+
   def booking_context_tool(expected_phone:)
     Class.new do
       define_method(:initialize) do |hotel:, phone:|

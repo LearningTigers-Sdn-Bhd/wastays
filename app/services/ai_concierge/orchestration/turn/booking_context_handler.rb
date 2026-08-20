@@ -11,15 +11,11 @@ module AiConcierge
         def call(prospect:, conversation_state:)
           result = tool_registry.fetch("get_booking_context").new(hotel: hotel, phone: phone || prospect.phone_number).call
 
-          {
+          Core::DomainResponse.new(
             slots_payload: conversation_state.slots_payload,
             reply_type: :booking_context,
-            active_topic: nil,
-            active_flow: nil,
-            pending_question: nil,
-            action_name: nil,
             extra_context: result.symbolize_keys
-          }
+          )
         end
 
         private
