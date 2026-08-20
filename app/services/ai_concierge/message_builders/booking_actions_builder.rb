@@ -26,7 +26,19 @@ module AiConcierge
         end_conversation_declined
       ].freeze
 
+      # Said before the question, not instead of it: the guest still needs the
+      # list in front of them, and repeating the question word for word is what
+      # made a thread feel like a wall.
+      NOT_UNDERSTOOD = "Sorry, I didn't catch that."
+
       def call(reply_type)
+        message = build(reply_type)
+        return message unless context[:retry] && message.present?
+
+        "#{NOT_UNDERSTOOD}\n\n#{message}"
+      end
+
+      def build(reply_type)
         case reply_type.to_sym
         when :greeting
           "Hello, welcome to #{hotel.name}! I can help with bookings, stay details, and more about the hotel. What would you like to inquire about?"

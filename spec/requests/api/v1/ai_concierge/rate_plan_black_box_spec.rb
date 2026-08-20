@@ -300,6 +300,73 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     [ standard, non_refundable ]
   end
 
+  # A guest naming the plan is not being difficult -- it is the natural way to
+  # answer, and since the list stopped reading names it is also the way that
+  # never lands. Before this the thread just asked again, unchanged, until the
+  # fifty-turn limit hung up on them.
+  it "says the answer did not land, then puts the thread in front of staff" do
+    seed_rate_plan_options(standard_name: "Standard Rate", non_refundable_name: "Flexible Rate")
+
+    run_to_rate_plan_prompt
+
+    post_message("standard")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
+    expect(parsed_body["reply_message"]).not_to include("didn't catch that")
+    expect(conversation.reload.human_requested_at).to be_nil
+
+    post_message("the standard one please")
+    expect(parsed_body["reply_message"]).to include("didn't catch that")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
+    expect(conversation.reload.human_requested_at).to be_nil
+
+    post_message("standard rate")
+    expect(parsed_body["needs_human_support"]).to be(true)
+    expect(conversation.reload.human_requested_at).to be_present
+    # Asking for a person does not silence the bot: the guest is still owed an
+    # answer while they wait.
+    expect(conversation.mode).to eq("bot")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
+  end
+
+  it "forgets the count as soon as the guest answers something" do
+    seed_rate_plan_options
+
+    run_to_rate_plan_prompt
+
+    post_message("standard")
+    post_message("no 1")
+    expect(active_branch["selected_rate_plan_id"]).to be_present
+
+    expect(booking_task["reask_count"]).to eq(0)
+    expect(conversation.reload.human_requested_at).to be_nil
+  end
+
+  # Stopping to ask about the hotel is not failing to answer the rate
+  # question. The interruption suspends the booking with a branch of its own
+  # shape, which reads as movement and puts the count back to nothing -- so a
+  # guest who breaks off and comes back gets the question fresh rather than
+  # arriving one strike down.
+  it "does not count an interruption against the guest" do
+    seed_rate_plan_options
+
+    run_to_rate_plan_prompt
+
+    post_message("standard")
+    post_message("what time is check in?")
+    expect(parsed_body["reply_message"]).to include("Check-in starts")
+
+    expect(booking_task["reask_count"]).to eq(0)
+    expect(conversation.reload.human_requested_at).to be_nil
+  end
+
+  def booking_task
+    Prospect.lookup_by_phone(phone).first.prospect_conversation_state.reload.slots_payload["booking_task"]
+  end
+
+  def conversation
+    Prospect.lookup_by_phone(phone).first.conversations.last
+  end
+
   def run_to_rate_plan_prompt
     post_message("mid august")
     post_message("3 days 2 nights")

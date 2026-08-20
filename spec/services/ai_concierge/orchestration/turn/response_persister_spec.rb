@@ -42,6 +42,40 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
     expect(payload[:needs_human_support]).to be(true)
     expect(prospect.prospect_messages.where(direction: "outbound").last.body).to eq("Unable right now")
   end
+
+  # The flag used to travel out in the payload and stop there, so on the web
+  # chat -- where there is no relay to interpret it -- a guest whose quote
+  # failed reached nobody at all.
+  it "puts a thread that needs a person in front of staff" do
+    described_class.new(hotel: hotel, conversation: conversation).persist_domain_response(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      domain_result: {
+        slots_payload: {},
+        reply_type: nil,
+        extra_context: { message: "Unable right now" },
+        needs_human_support: true
+      }
+    )
+
+    expect(conversation.reload.human_requested_at).to be_present
+    expect(conversation.mode).to eq("bot")
+  end
+
+  it "leaves the thread alone when the reply does not need one" do
+    described_class.new(hotel: hotel, conversation: conversation).persist_response(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      slots_payload: conversation_state.slots_payload,
+      reply_type: :greeting,
+      active_topic: nil,
+      active_flow: nil,
+      pending_question: nil,
+      action_name: nil
+    )
+
+    expect(conversation.reload.human_requested_at).to be_nil
+  end
 end
 
 RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversation threading" do

@@ -68,7 +68,7 @@ module AiConcierge
         end
 
         def booking_payload(conversation_state, active_branch, pending_question:)
-          State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question)
+          State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, count_reask: true)
         end
       end
     end

@@ -36,11 +36,26 @@ module AiConcierge
       suspended_booking? && !expired?(booking_task)
     end
 
-    def activate_booking(branch, pending_question:, status: nil)
+    # `count_reask` is what tells a repeat from a refresh.
+    #
+    # A question asked again with the branch unmoved is a question the guest
+    # answered in words nothing here could read -- and until this counter
+    # existed the ladder would ask it, unchanged, until the fifty-turn wall.
+    # But most calls into here are not the hotel asking anything: PrepareTurn,
+    # the knowledge interruption and a resume all re-activate a question as
+    # bookkeeping, and a guest who stopped to ask about the pool has not failed
+    # to answer. So counting is opt-in, and a caller that forgets behaves
+    # exactly as it did before. An interruption goes further and clears the
+    # count outright, because it suspends the booking with a branch of its own
+    # shape -- which is the lenient direction, and the one to be lenient in.
+    def activate_booking(branch, pending_question:, status: nil, count_reask: false)
+      normalized = normalize_branch(branch)
+
       update_booking_task(
         "status" => status.presence || status_for_pending_question(pending_question),
         "pending_question" => pending_question,
-        "branch" => normalize_branch(branch),
+        "branch" => normalized,
+        "reask_count" => next_reask_count(pending_question, normalized, count_reask),
         "suspended" => false,
         "suspended_at" => nil,
         "expires_at" => nil
@@ -186,6 +201,24 @@ module AiConcierge
       without_legacy(payload.merge("booking_task" => booking_task.merge(attributes)))
     end
 
+    # The branch is the whole answer to "did anything move?". A guest who
+    # changed a date, named a room or picked a rate wrote it down here, and
+    # that is progress however unreadable the words were; only a branch that
+    # came back identical means the turn achieved nothing. `branch_id` is
+    # excluded because `default_branch` mints a fresh one every time it is
+    # called, so an absent id would read as a change that never happened.
+    def next_reask_count(pending_question, branch, counting)
+      return 0 unless booking_task["pending_question"].to_s == pending_question.to_s
+      return 0 unless comparable_branch(booking_task["branch"]) == comparable_branch(branch)
+
+      previous = booking_task["reask_count"].to_i
+      counting ? previous + 1 : previous
+    end
+
+    def comparable_branch(branch)
+      branch.is_a?(Hash) ? branch.except("branch_id") : {}
+    end
+
     def normalize_branch(value)
       branch = value.is_a?(Hash) ? value.deep_dup : {}
       default_branch.merge(branch)
@@ -234,6 +267,7 @@ module AiConcierge
         "suspended" => false,
         "suspended_at" => nil,
         "expires_at" => nil,
+        "reask_count" => 0,
         "interruption_count" => 0,
         "last_interruption_intent" => nil,
         "last_interruption_topic" => nil

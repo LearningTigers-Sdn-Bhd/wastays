@@ -14,7 +14,27 @@ module AiConcierge
       @tool_registry = tool_registry
     end
 
+    # A question the guest keeps failing to answer.
+    #
+    # Nothing in the ladder used to notice. A guest who answers the rate
+    # question with a plan's name -- the natural way to answer it, and no
+    # longer a way in -- got the same list back, and again, and again, until
+    # the fifty-turn limit ended the conversation on the hotel's terms.
+    #
+    # The second ask says out loud that the answer did not land. The third
+    # stops pretending the bot can get there and asks for a person, without
+    # silencing the bot: `request_human!` leaves the thread answering while it
+    # waits, which at 2am is the difference between a slow reply and none.
+    REASK_NUDGE = 1
+    REASK_HANDOVER = 2
+
     def call
+      escalate(resolve)
+    end
+
+    private
+
+    def resolve
       case decision[:action]
       when :resume
         resume_handler.call
@@ -35,9 +55,17 @@ module AiConcierge
       end
     end
 
-    private
-
     attr_reader :hotel, :prospect, :conversation_state, :interpretation, :active_branch, :decision, :message, :phone, :tool_registry
+
+    def escalate(result)
+      return result unless domain_response?(result)
+
+      reasks = result.dig(:slots_payload, "booking_task", "reask_count").to_i
+      return result if reasks < REASK_NUDGE
+
+      nudged = result.merge(extra_context: (result[:extra_context] || {}).merge(retry: true))
+      reasks >= REASK_HANDOVER ? nudged.merge(needs_human_support: true) : nudged
+    end
 
     def process_booking_action(action, conversation_state: self.conversation_state, active_branch: self.active_branch)
       case action
@@ -339,7 +367,7 @@ module AiConcierge
     end
 
     def booking_payload(conversation_state, active_branch, pending_question:, status: nil)
-      State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, status: status)
+      State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, status: status, count_reask: true)
     end
 
     def temporary_state(conversation_state, slots_payload)

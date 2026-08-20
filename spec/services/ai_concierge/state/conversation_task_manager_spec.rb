@@ -1,6 +1,52 @@
 require "rails_helper"
 
 RSpec.describe AiConcierge::State::ConversationTaskManager do
+  describe "counting a question the guest keeps not answering" do
+    let(:branch) { { "branch_id" => "branch-1", "target_month" => 8, "target_year" => 2026 } }
+
+    def asked(payload, question, branch, count_reask: true)
+      described_class.new(slots_payload: payload).activate_booking(branch, pending_question: question, count_reask: count_reask)
+    end
+
+    it "counts the same question asked again over an unmoved branch" do
+      first = asked({}, "rate_plan_selection", branch)
+      second = asked(first, "rate_plan_selection", branch)
+      third = asked(second, "rate_plan_selection", branch)
+
+      expect(first.dig("booking_task", "reask_count")).to eq(0)
+      expect(second.dig("booking_task", "reask_count")).to eq(1)
+      expect(third.dig("booking_task", "reask_count")).to eq(2)
+    end
+
+    it "forgets the count when the branch moves" do
+      first = asked({}, "rate_plan_selection", branch)
+      second = asked(first, "rate_plan_selection", branch)
+      moved = asked(second, "rate_plan_selection", branch.merge("selected_rate_plan_name" => "Standard Rate"))
+
+      expect(second.dig("booking_task", "reask_count")).to eq(1)
+      expect(moved.dig("booking_task", "reask_count")).to eq(0)
+    end
+
+    it "forgets the count when the question changes" do
+      first = asked({}, "rate_plan_selection", branch)
+      second = asked(first, "rate_plan_selection", branch)
+      next_question = asked(second, "confirm_selection", branch)
+
+      expect(next_question.dig("booking_task", "reask_count")).to eq(0)
+    end
+
+    # PrepareTurn re-activates the open question at the top of every turn.
+    # Counting there would strike the guest for the hotel's own bookkeeping.
+    it "does not count a caller that is only refreshing the task" do
+      first = asked({}, "rate_plan_selection", branch)
+      refreshed = asked(first, "rate_plan_selection", branch, count_reask: false)
+      still_counted = asked(refreshed, "rate_plan_selection", branch)
+
+      expect(refreshed.dig("booking_task", "reask_count")).to eq(0)
+      expect(still_counted.dig("booking_task", "reask_count")).to eq(1)
+    end
+  end
+
   it "normalizes legacy active state into a v2 booking task" do
     branch = { "branch_id" => "branch-1", "target_month" => 8 }
 

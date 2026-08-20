@@ -45,11 +45,19 @@ module AiConcierge
           )
         end
 
+        # `needs_human_support` used to travel out in the API payload and stop
+        # there: a booking that could not be quoted, or a question the guest had
+        # now failed to answer three times, reached whatever the relay decided
+        # to do with a flag -- and on the web chat, nobody at all. This is the
+        # one place holding both the flag and the thread, so this is where the
+        # thread is put in front of staff. `request_human!` deliberately leaves
+        # `mode` alone: the bot keeps answering until a person actually arrives.
         def persist_static_response(prospect:, conversation_state:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:)
           reply = style(reply_message)
           ActiveRecord::Base.transaction do
             persist_state(conversation_state, slots_payload:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:)
             record_outbound_message(prospect, reply)
+            conversation.request_human! if needs_human_support
           end
           Core::ResponsePayloadBuilder.new(reply_message: reply.body, needs_human_support: needs_human_support, action_name: action_name, prospect_public_id: prospect.public_id).call
         end
