@@ -91,7 +91,8 @@ module AiConcierge
             name -- write in #{thread_language}.
 
           RULES:
-          - Keep every number, price, time and currency exactly as written.
+          - Keep every number, price, time and currency exactly as written, in
+            digits. Never spell a number out in words.
           - Keep every link character for character. Never shorten or relabel one.
           - Keep the line breaks, the list shape and the *asterisks* around bold text.
           - Do not add, remove or soften any fact. Do not add a greeting or a
