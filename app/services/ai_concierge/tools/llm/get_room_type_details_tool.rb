@@ -16,17 +16,17 @@ module AiConcierge
           answer_hotel_question.
         DESCRIPTION
 
-        param :query, type: "string",
-          desc: "The guest's question, word for word."
+        # The guest's question is not a parameter -- the tool already has the
+        # message. Only the room type is something the model has to read.
         param :room_type_name, type: "string", required: false,
           desc: "The room type the guest named, if they named one."
 
-        def execute(query:, room_type_name: nil)
+        def execute(room_type_name: nil)
           return advance_booking_instead if rate_question?
 
           domain_result = Orchestration::HotelKnowledge::Orchestrator.new(
             hotel: hotel,
-            message: query.to_s,
+            message: context.message,
             interpretation: {
               "intent" => "room_information",
               "topic" => "room_information",

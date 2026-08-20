@@ -12,8 +12,6 @@ turns:
     model:
       agent_loop:
         tool: get_room_type_details
-        arguments:
-          query: "how much is a room here?"
     expect:
       flow: booking_search
       pending_question: booking_timing

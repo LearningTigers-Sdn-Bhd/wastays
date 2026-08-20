@@ -73,9 +73,9 @@ module AiConciergeEval
       def call
         case interpretation["intent"]
         when "hotel_policy"
-          { tool: "answer_hotel_question", arguments: { "question" => message, "category" => "policy" } }
+          { tool: "answer_hotel_question", arguments: { "category" => "policy" } }
         when "hotel_information"
-          { tool: "answer_hotel_question", arguments: { "question" => message, "category" => category_for_topic } }
+          { tool: "answer_hotel_question", arguments: { "category" => category_for_topic } }
         when "nearby_attractions"
           { tool: "get_nearby_attractions", arguments: {} }
         when "room_information"
@@ -94,7 +94,7 @@ module AiConciergeEval
       def category_for_topic = interpretation["topic"] == "hotel_faq" ? "faq" : "general_info"
 
       def room_arguments
-        { "query" => message, "room_type_name" => interpretation.dig("slots", "room_type_name") }.compact
+        { "room_type_name" => interpretation.dig("slots", "room_type_name") }.compact
       end
 
       def booking_arguments

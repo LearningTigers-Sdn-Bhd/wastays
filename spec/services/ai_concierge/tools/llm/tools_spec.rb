@@ -29,7 +29,7 @@ RSpec.describe "AI concierge tools the model can see" do
     # expensive kind of wrong, so it is not left to the model's judgement.
     it "hands the turn to the booking machine instead of answering it" do
       result = tool(AiConcierge::Tools::Llm::AnswerHotelQuestionTool, "how much is a room here?")
-        .execute(question: "how much is a room here?")
+        .execute
 
       expect(result).to be_a(RubyLLM::Tool::Halt)
       expect(recorder.outcome.domain_result[:active_flow]).to eq("booking_search")
@@ -38,7 +38,7 @@ RSpec.describe "AI concierge tools the model can see" do
 
     it "does the same when the guest asks the price of a named room" do
       tool(AiConcierge::Tools::Llm::GetRoomTypeDetailsTool, "what is the price of the ocean villa per night?")
-        .execute(query: "what is the price of the ocean villa per night?")
+        .execute
 
       expect(recorder.outcome.domain_result[:pending_question]).to eq("booking_timing")
     end
@@ -46,7 +46,7 @@ RSpec.describe "AI concierge tools the model can see" do
     # "Room service" contains the word room and is never a room.
     it "leaves room service alone" do
       tool(AiConcierge::Tools::Llm::AnswerHotelQuestionTool, "how much is room service?")
-        .execute(question: "how much is room service?")
+        .execute
 
       expect(recorder.outcome.domain_result[:pending_question]).to be_nil
     end

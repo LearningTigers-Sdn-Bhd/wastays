@@ -27,8 +27,11 @@ module AiConcierge
           answer depends on dates, and belongs to advance_booking.
         DESCRIPTION
 
-        param :question, type: "string",
-          desc: "The guest's question, word for word. Do not rephrase, translate or summarise it."
+        # The guest's question is not a parameter. Asking the model to repeat a
+        # message the tool already has costs output tokens on every turn and
+        # puts a paraphrase between the guest and the search -- one that also
+        # changes HybridAnswerBuilder's cache key. What the model is asked for
+        # below is judgement it alone can supply.
         param :category, type: "string", required: false,
           desc: "Where the answer is most likely to live: policy, general_info or faq. " \
                 "A wrong guess is recovered automatically, so omit it rather than forcing one."
@@ -42,14 +45,14 @@ module AiConcierge
                 "guest is asking exactly that. The hotel answers those from its own " \
                 "records, so naming one is faster and cannot be wrong."
 
-        def execute(question:, category: nil, search_terms: nil, fact: nil)
+        def execute(category: nil, search_terms: nil, fact: nil)
           return advance_booking_instead if rate_question?
 
           intent = intent_for(category)
 
           domain_result = Orchestration::HotelKnowledge::Orchestrator.new(
             hotel: hotel,
-            message: question.to_s,
+            message: context.message,
             interpretation: {
               "intent" => intent,
               "topic" => topic_for(category),
