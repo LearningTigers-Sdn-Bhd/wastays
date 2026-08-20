@@ -59,7 +59,10 @@ module AiConcierge
         attr_reader :context, :recorder
 
         def run
-          BuildChat.new(context: context, tools: tools, recorder: recorder, max_hops: MAX_HOPS).call.ask(context.message)
+          response = BuildChat.new(context: context, tools: tools, recorder: recorder, max_hops: MAX_HOPS)
+            .call.ask(context.message)
+          Providers::UsageLog.call(response, hotel: context.hotel, stage: :loop)
+          response
         end
 
         # A guest who wants to book gets the booking ladder, not the model's

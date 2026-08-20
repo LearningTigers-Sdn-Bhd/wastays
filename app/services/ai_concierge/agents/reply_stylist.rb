@@ -56,6 +56,7 @@ module AiConcierge
 
       def call
         response = Timeout.timeout(LLM_TIMEOUT) { chat.ask(prompt) }
+        Providers::UsageLog.call(response, hotel: hotel, stage: :stylist)
         parse(response&.content.to_s)
       rescue Timeout::Error
         raise ReplyStylistError, "Reply stylist timed out after #{LLM_TIMEOUT}s"
