@@ -32,13 +32,25 @@ module AiConcierge
 
             Never state a price, a date, a room's availability or a policy from
             your own knowledge. You do not have that information; the tools do.
-            #{room_types}#{open_question}
+            #{room_types}#{knowledge_languages}#{open_question}
           INSTRUCTIONS
         end
 
         private
 
         attr_reader :context
+
+        # Search matches words, and the hotel chose which language to file each
+        # document under. A guest asking in one language about an answer written
+        # in another needs the question looked up in both, and the model is the
+        # only part of this that can say the same thing twice.
+        def knowledge_languages
+          languages = context.knowledge_languages
+          return "" if languages.empty?
+
+          "\nThe hotel's documents are written in: #{languages.join(', ')}. " \
+            "When you look something up, give search_terms in each of those languages.\n"
+        end
 
         def room_types
           names = context.room_type_names

@@ -47,6 +47,45 @@ RSpec.describe HotelKnowledges::SearchService do
     expect(result.map { |match| match["content"] }).to eq([ "Breakfast is from 7 AM." ])
   end
 
+  # A hotel that published the same policy twice answers in the language the
+  # guest is already speaking.
+  it "breaks a tie toward the guest's language" do
+    seed_same_policy_in_two_languages
+
+    # Chinese, so keyword search contributes nothing and both chunks arrive on
+    # the vector engine alone -- which is exactly when language should decide.
+    prefers_malay = search("入住时间", preferred_language: "ms")
+    prefers_english = search("入住时间", preferred_language: "en")
+
+    expect(prefers_malay.first["language"]).to eq("ms")
+    expect(prefers_english.first["language"]).to eq("en")
+  end
+
+  it "still offers the other language rather than filtering it away" do
+    seed_same_policy_in_two_languages
+
+    expect(search("入住时间", preferred_language: "ms").map { |row| row["language"] }).to contain_exactly("ms", "en")
+  end
+
+  # Preferred, never decisive. A chunk both engines found says more about the
+  # question than the language it happens to be written in.
+  it "does not outrank both engines agreeing on the other language" do
+    seed_same_policy_in_two_languages
+
+    expect(search("daftar masuk?", preferred_language: "en").first["language"]).to eq("ms")
+  end
+
+  def seed_same_policy_in_two_languages
+    english = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "House Rules", embedding_status: "indexed", language: "en")
+    malay = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Peraturan", embedding_status: "indexed", language: "ms")
+    create(:hotel_knowledge_chunk, document: english, chunk_index: 0, content: "Check-in starts at 3 PM.", embedding: query_vector)
+    create(:hotel_knowledge_chunk, document: malay, chunk_index: 0, content: "Daftar masuk bermula 3 PM.", embedding: query_vector)
+  end
+
+  def search(query, preferred_language:)
+    described_class.new(hotel: hotel, query: query, categories: [ "policy" ], preferred_language: preferred_language).call
+  end
+
   it "returns an empty list when embedding generation fails" do
     allow_any_instance_of(HotelKnowledges::EmbeddingService).to receive(:call).and_raise(HotelKnowledges::EmbeddingError, "no key")
 

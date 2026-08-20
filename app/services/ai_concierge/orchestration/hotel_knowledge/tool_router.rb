@@ -12,11 +12,11 @@ module AiConcierge
         def call
           case interpretation["intent"]
           when "hotel_policy"
-            result = tool_registry.fetch("get_hotel_policy").new(hotel: hotel, policy_topic: interpretation["topic"], query: message).call
+            result = tool_registry.fetch("get_hotel_policy").new(hotel: hotel, policy_topic: interpretation["topic"], query: message, hints: hints).call
             { reply_type: :hotel_policy, active_topic: "hotel_policy", active_flow: "hotel_policy", result: result }
           when "hotel_information"
             tool_name, reply_type = hotel_information_tool_and_reply_type
-            result = tool_registry.fetch(tool_name).new(hotel: hotel, query: message).call
+            result = tool_registry.fetch(tool_name).new(hotel: hotel, query: message, hints: hints).call
             { reply_type: reply_type, active_topic: interpretation["topic"], active_flow: "hotel_information", result: result }
           when "nearby_attractions"
             result = tool_registry.fetch("get_nearby_attractions").new(hotel: hotel).call
@@ -37,6 +37,11 @@ module AiConcierge
         private
 
         attr_reader :hotel, :message, :interpretation, :tool_registry
+
+        # The interpretation is the one thing already threaded through every
+        # layer between the model and the search, so the hints ride along in it
+        # rather than adding a parameter to four constructors.
+        def hints = @hints ||= Retrieval::QueryHints.from(interpretation["retrieval_hints"])
 
         def hotel_information_tool_and_reply_type
           case interpretation["topic"]

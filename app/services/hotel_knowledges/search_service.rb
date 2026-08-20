@@ -10,16 +10,24 @@ module HotelKnowledges
     # and there is no reason here to invent a different one.
     RRF_K = 60
 
+    # Half a first-place vote. Enough to order two chunks that say the same
+    # thing in different languages, never enough to overturn both engines
+    # agreeing on a chunk in another one -- a guest asking in Malay about a
+    # policy the hotel only published in English must still be answered.
+    LANGUAGE_BONUS = 1.0 / (2 * (RRF_K + 1))
+
     # `query_vector:` lets a caller that is about to search the same question
     # more than once embed it a single time. Without one, the service embeds
     # for itself, so every existing caller keeps working unchanged.
     def initialize(hotel:, query:, categories:, limit: DEFAULT_LIMIT, query_vector: nil,
-                   keyword_search: KeywordSearchService)
+                   keyword_terms: [], preferred_language: nil, keyword_search: KeywordSearchService)
       @hotel = hotel
       @query = query.to_s.strip
       @categories = Array(categories).map(&:to_s).reject(&:blank?)
       @limit = limit.to_i.positive? ? limit.to_i : DEFAULT_LIMIT
       @query_vector = query_vector
+      @keyword_terms = Array(keyword_terms)
+      @preferred_language = preferred_language.to_s.presence
       @keyword_search = keyword_search
     end
 
@@ -31,7 +39,7 @@ module HotelKnowledges
 
     private
 
-    attr_reader :hotel, :query, :categories, :limit, :query_vector, :keyword_search
+    attr_reader :hotel, :query, :categories, :limit, :query_vector, :keyword_terms, :preferred_language, :keyword_search
 
     def vector_matches
       vector = query_vector || EmbedQuery.new(hotel: hotel, query: query).call
@@ -45,7 +53,7 @@ module HotelKnowledges
     end
 
     def keyword_matches
-      keyword_search.new(hotel: hotel, query: query, categories: categories, limit: limit).call
+      keyword_search.new(hotel: hotel, query: query, categories: categories, limit: limit, extra_terms: keyword_terms).call
     end
 
     # Two ranked lists, fused by position rather than by score, because a cosine
@@ -71,9 +79,17 @@ module HotelKnowledges
         end
       end
 
+      scores.each_key { |key| scores[key] += LANGUAGE_BONUS if preferred_language?(rows[key]) }
+
       scores
         .sort_by { |key, score| [ -score, rows[key]["chunk_index"].to_i ] }
         .map { |key, _score| rows[key].merge("retrieval" => found_by[key]) }
+    end
+
+    # A hotel that published the same policy twice should answer in the
+    # language the guest is already speaking. Preferred, never required.
+    def preferred_language?(row)
+      preferred_language.present? && row["language"].to_s == preferred_language
     end
 
     def identity(row) = [ row["document_title"], row["chunk_index"], row["content"] ]

@@ -2,9 +2,10 @@ module AiConcierge
   module Tools
     module HotelInformation
       class GetGeneralHotelInfoTool
-        def initialize(hotel:, query: nil)
+        def initialize(hotel:, query: nil, hints: Retrieval::QueryHints.none)
           @hotel = hotel
           @query = query.to_s
+          @hints = hints
         end
 
         def call
@@ -17,7 +18,8 @@ module AiConcierge
             source: "general_hotel_info",
             structured_facts: structured_facts,
             fallback_text: general_fallback_text,
-            unavailable_answer: "I couldn't find general hotel information right now."
+            unavailable_answer: "I couldn't find general hotel information right now.",
+            hints: hints
           ).call
 
           {
@@ -40,7 +42,7 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :query
+        attr_reader :hotel, :query, :hints
 
         def summary_text
           parts = [ hotel.name ]

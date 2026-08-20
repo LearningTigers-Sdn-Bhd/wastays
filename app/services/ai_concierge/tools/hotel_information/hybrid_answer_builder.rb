@@ -9,7 +9,7 @@ module AiConcierge
         CACHE_VERSION = "v1"
         ANSWER_TTL = 6.hours
 
-        def initialize(hotel:, query:, intent:, topic:, categories:, source:, structured_facts: {}, fallback_text: nil, unavailable_answer: nil, search_service: HotelKnowledges::SearchService, answer_agent: AiConcierge::Agents::KnowledgeAnswerAgent)
+        def initialize(hotel:, query:, intent:, topic:, categories:, source:, structured_facts: {}, fallback_text: nil, unavailable_answer: nil, hints: Retrieval::QueryHints.none, search_service: HotelKnowledges::SearchService, answer_agent: AiConcierge::Agents::KnowledgeAnswerAgent)
           @hotel = hotel
           @query = query.to_s
           @intent = intent.to_s
@@ -19,6 +19,7 @@ module AiConcierge
           @structured_facts = structured_facts.to_h
           @fallback_text = fallback_text.to_s.presence
           @unavailable_answer = unavailable_answer.presence || "The hotel has not provided that information yet."
+          @hints = Retrieval::QueryHints.from(hints)
           @search_service = search_service
           @answer_agent = answer_agent
         end
@@ -79,20 +80,26 @@ module AiConcierge
             source,
             categories.map(&:to_s).sort.join(","),
             Digest::SHA256.hexdigest(query.downcase.squish),
-            Digest::SHA256.hexdigest([ structured_facts, fallback_text ].to_json),
+            Digest::SHA256.hexdigest([ structured_facts, fallback_text, hints.digest ].to_json),
             hotel.knowledge_documents.maximum(:updated_at).to_i
           ].join("/")
         end
 
         attr_reader :hotel, :query, :intent, :topic, :categories, :source, :structured_facts,
-          :fallback_text, :unavailable_answer, :search_service, :answer_agent
+          :fallback_text, :unavailable_answer, :hints, :search_service, :answer_agent
 
         # A thin first pass sends this same question through a second search
         # over the fallback categories. Both passes embed the identical string,
         # so the vector is resolved through HotelKnowledges::EmbedQuery, whose
         # cache turns the second one into a lookup instead of a round-trip.
         def search_matches(search_categories = categories)
-          search_service.new(hotel: hotel, query: query, categories: search_categories).call
+          search_service.new(
+            hotel: hotel,
+            query: query,
+            categories: search_categories,
+            keyword_terms: hints.terms,
+            preferred_language: hints.preferred_language
+          ).call
         end
 
         def fallback_search_matches
@@ -103,21 +110,35 @@ module AiConcierge
           search_matches(FALLBACK_CATEGORIES)
         end
 
+        # The certain answers: no searching, no synthesis, straight off the row
+        # the booking engine charges from.
+        #
+        # Which fact was asked for used to be decided by matching English words
+        # in the question, so "几点入住" reached none of them. The model naming
+        # the fact is the same reading, done by the half of the system that can
+        # read every language -- and the English match stays in front of it, so
+        # an English question behaves exactly as it did.
         def direct_structured_answer
+          fact = asked_fact
+          return if fact.blank?
+
+          value = structured_facts[fact]
+          return if value.blank?
+
+          case fact
+          when "check_in_time" then "Check-in starts at #{value}."
+          when "check_out_time" then "Check-out is at #{value}."
+          when "cancellation_policy" then "Cancellation policy: #{value.to_s.chomp('.')}."
+          end
+        end
+
+        def asked_fact
           normalized = query.downcase
-          if normalized.match?(/\bcheck[ -]?in\b/) && structured_facts["check_in_time"].present?
-            return "Check-in starts at #{structured_facts['check_in_time']}."
-          end
+          return "check_in_time" if normalized.match?(/\bcheck[ -]?in\b/)
+          return "check_out_time" if normalized.match?(/\bcheck[ -]?out\b/)
+          return "cancellation_policy" if normalized.match?(/\bcancell?ation|cancel\b/)
 
-          if normalized.match?(/\bcheck[ -]?out\b/) && structured_facts["check_out_time"].present?
-            return "Check-out is at #{structured_facts['check_out_time']}."
-          end
-
-          if normalized.match?(/\bcancell?ation|cancel\b/) && structured_facts["cancellation_policy"].present?
-            return "Cancellation policy: #{structured_facts['cancellation_policy'].to_s.chomp('.')}."
-          end
-
-          nil
+          hints.fact
         end
 
         # Returning a chunk verbatim is the strongest thing this class does, so

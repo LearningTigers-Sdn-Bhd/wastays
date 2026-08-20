@@ -30,6 +30,30 @@ RSpec.describe HotelKnowledges::KeywordSearchService do
     expect(result.first["content"]).to eq("Parking is free in the basement.")
   end
 
+  # A Chinese question has no spaces in it, so it tokenises into one long
+  # non-word and matches nothing -- and would match nothing even against a
+  # Chinese document, because the index cannot split it either.
+  it "finds nothing for a question written in another language" do
+    document = indexed_document
+    create(:hotel_knowledge_chunk, document: document, chunk_index: 0, content: "Parking is free in the basement.")
+
+    expect(described_class.new(hotel: hotel, query: "停车费多少钱", categories: [ "general_info" ]).call).to eq([])
+  end
+
+  it "finds it once the question arrives with terms in the document's language" do
+    document = indexed_document
+    create(:hotel_knowledge_chunk, document: document, chunk_index: 0, content: "Parking is free in the basement.")
+
+    result = described_class.new(
+      hotel: hotel,
+      query: "停车费多少钱",
+      categories: [ "general_info" ],
+      extra_terms: [ "parking cost" ]
+    ).call
+
+    expect(result.first["content"]).to eq("Parking is free in the basement.")
+  end
+
   it "returns nothing when the question carries no searchable words" do
     document = indexed_document
     create(:hotel_knowledge_chunk, document: document, chunk_index: 0, content: "Parking is free in the basement.")

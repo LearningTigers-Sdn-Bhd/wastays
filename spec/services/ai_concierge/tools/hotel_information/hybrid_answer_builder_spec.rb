@@ -115,6 +115,43 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
     expect(result["answer_mode"]).to eq("fallback")
   end
 
+  # The same question in Chinese reaches none of the English word matches, and
+  # this is the fastest and most certain answer the concierge has.
+  it "answers a structured question the model named, in any language" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "几点入住?",
+      intent: "hotel_policy",
+      topic: "hotel_policy",
+      categories: [ "policy" ],
+      source: "property_policy",
+      structured_facts: { "check_in_time" => "3:00 PM" },
+      hints: AiConcierge::Retrieval::QueryHints.new(fact: "check_in_time"),
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result["answer"]).to eq("Check-in starts at 3:00 PM.")
+    expect(result["answer_mode"]).to eq("fallback")
+  end
+
+  it "ignores a named fact the hotel has not filled in" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "几点入住?",
+      intent: "hotel_policy",
+      topic: "hotel_policy",
+      categories: [ "policy" ],
+      source: "property_policy",
+      structured_facts: {},
+      hints: AiConcierge::Retrieval::QueryHints.new(fact: "check_in_time"),
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result["answer_mode"]).to eq("unavailable")
+  end
+
   it "falls back to the best deterministic match when synthesis fails" do
     failing_agent = Class.new do
       def initialize(*)

@@ -31,11 +31,12 @@ module HotelKnowledges
       how why there here about into out per via yes
     ].freeze
 
-    def initialize(hotel:, query:, categories:, limit: DEFAULT_LIMIT)
+    def initialize(hotel:, query:, categories:, limit: DEFAULT_LIMIT, extra_terms: [])
       @hotel = hotel
       @query = query.to_s.strip
       @categories = Array(categories).map(&:to_s).reject(&:blank?)
       @limit = limit.to_i.positive? ? limit.to_i : DEFAULT_LIMIT
+      @extra_terms = Array(extra_terms)
     end
 
     def call
@@ -46,7 +47,7 @@ module HotelKnowledges
 
     private
 
-    attr_reader :hotel, :query, :categories, :limit
+    attr_reader :hotel, :query, :categories, :limit, :extra_terms
 
     def matching_chunks
       HotelKnowledgeChunk
@@ -70,8 +71,17 @@ module HotelKnowledges
     # Punctuation is stripped rather than escaped: what reaches to_tsquery is
     # only ever alphanumeric words, so nothing a guest types can be read as
     # query syntax.
+    # Supplied terms come first so that the cap cannot spend itself on the
+    # guest's own words before reaching them. That matters most where they
+    # matter most: a question with no spaces in it tokenises into one long
+    # non-word, which survives the length test and would otherwise take a slot
+    # while matching nothing.
     def terms
-      @terms ||= query
+      @terms ||= tokenize([ *extra_terms, query ].join(" "))
+    end
+
+    def tokenize(text)
+      text
         .downcase
         .gsub(/[^[:alnum:]\s]/, " ")
         .split

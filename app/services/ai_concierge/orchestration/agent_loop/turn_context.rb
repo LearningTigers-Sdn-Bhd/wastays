@@ -11,15 +11,16 @@ module AiConcierge
       # open -- these are facts in Postgres. A model asked to restate them can
       # get them wrong, so it is not asked.
       class TurnContext
-        def initialize(hotel:, prospect:, phone:, conversation_state:, message:)
+        def initialize(hotel:, prospect:, phone:, conversation_state:, message:, thread_language: nil)
           @hotel = hotel
           @prospect = prospect
           @phone = phone
           @conversation_state = conversation_state
           @message = message.to_s
+          @thread_language = thread_language.presence
         end
 
-        attr_reader :hotel, :prospect, :phone, :conversation_state, :message
+        attr_reader :hotel, :prospect, :phone, :conversation_state, :message, :thread_language
 
         def task_manager
           State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
@@ -52,6 +53,14 @@ module AiConcierge
 
         def room_type_names
           @room_type_names ||= hotel.room_types.pluck(:name)
+        end
+
+        # Which languages this hotel actually wrote its knowledge base in.
+        # Keyword search matches words, so a question has to be looked up in the
+        # language the answer was filed under, and only the hotel knows what
+        # that is -- it picks one per document on upload.
+        def knowledge_languages
+          @knowledge_languages ||= hotel.knowledge_documents.distinct.pluck(:language).compact_blank.sort
         end
 
         private

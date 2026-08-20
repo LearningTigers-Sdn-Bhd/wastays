@@ -30,10 +30,11 @@ module AiConcierge
           # when Postgres says a confirmation was the open question.
         ].freeze
 
-        def initialize(hotel:, prospect:, phone:, conversation_state:, message:)
+        def initialize(hotel:, prospect:, phone:, conversation_state:, message:, thread_language: nil)
           @context = TurnContext.new(
             hotel: hotel, prospect: prospect, phone: phone,
-            conversation_state: conversation_state, message: message
+            conversation_state: conversation_state, message: message,
+            thread_language: thread_language
           )
           @recorder = ToolRecorder.new
         end
