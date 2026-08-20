@@ -16,9 +16,14 @@ module AiConciergeEval
       def booking_task = slots_payload["booking_task"] || {}
     end
 
-    def run_fixture(fixture)
+    # `stylist` is how a fixture run says what the reply stylist gives back --
+    # the same keywords stub_concierge_stylist takes. Left out, replies come
+    # through as the templates wrote them, which is what a hotel on the default
+    # tone answering an English guest gets.
+    def run_fixture(fixture, stylist: nil)
       world = build_fixture_world(fixture)
       install_model_fake(fixture, world)
+      stub_concierge_stylist(**stylist) if stylist
 
       fixture.turns.each_with_index do |turn, index|
         yield turn, post_fixture_turn(world, turn), index

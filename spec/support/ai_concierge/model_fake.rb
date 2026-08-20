@@ -33,10 +33,12 @@ module AiConciergeEval
     # Passing the template through is what a hotel on the default tone gets, so
     # this is the real behaviour rather than a convenience. A spec about the
     # stylist scripts it.
-    def stub_concierge_stylist(text: nil, language: nil)
+    def stub_concierge_stylist(text: nil, language: nil, transform: nil)
       allow_any_instance_of(AiConcierge::Agents::ReplyStylist).to receive(:call) do |stylist|
+        template = stylist.send(:template)
+
         AiConcierge::Agents::ReplyStylist::Styled.new(
-          text: text || stylist.send(:template),
+          text: text || transform&.call(template) || template,
           language: language || stylist.send(:thread_language)
         )
       end
