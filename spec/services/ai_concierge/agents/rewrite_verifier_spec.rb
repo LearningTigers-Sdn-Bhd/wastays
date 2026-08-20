@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe AiConcierge::Agents::RewriteVerifier do
-  def verify(template, candidate)
-    described_class.new(template: template, candidate: candidate)
+  def verify(template, candidate, protected_names: [])
+    described_class.new(template: template, candidate: candidate, protected_names: protected_names)
   end
 
   let(:quote) do
@@ -78,6 +78,34 @@ RSpec.describe AiConcierge::Agents::RewriteVerifier do
     candidate = "Selamat datang ke KLCC Suites! Daftar masuk bermula 3:00 PM."
 
     expect(verify(template, candidate).call).to eq(candidate)
+  end
+
+  it "refuses a translated room type name" do
+    checker = verify(
+      "For *Garden Prestige Suite* on 28 August 2026, which rate plan would you like?",
+      "Untuk *Suite Taman Prestij* pada 28 Ogos 2026, pelan kadar mana yang anda mahu?",
+      protected_names: [ "Garden Prestige Suite", "Standard Rate" ]
+    )
+
+    expect(checker.call).to be_nil
+    expect(checker.failure).to eq(:names)
+  end
+
+  it "allows a translated reply that leaves the room name standing" do
+    candidate = "Untuk *Garden Prestige Suite* pada 28 Ogos 2026, pelan kadar mana yang anda mahu?"
+    checker = verify(
+      "For *Garden Prestige Suite* on 28 August 2026, which rate plan would you like?",
+      candidate,
+      protected_names: [ "Garden Prestige Suite", "Standard Rate" ]
+    )
+
+    expect(checker.call).to eq(candidate)
+  end
+
+  it "does not demand names the reply never used" do
+    candidate = "Baik, beritahu saya jika perlu apa-apa."
+
+    expect(verify("No problem, please let me know if you need anything.", candidate, protected_names: [ "Ocean Villa King" ]).call).to eq(candidate)
   end
 
   it "passes a reply with nothing to protect" do

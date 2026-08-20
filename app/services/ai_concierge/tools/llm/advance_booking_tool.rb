@@ -21,6 +21,10 @@ module AiConcierge
           costs, pick from options you have shown them, choose a rate plan, or
           answer a question the hotel asked them about their booking.
 
+          Use it even when the message states nothing to extract -- "can I make
+          a booking" is a booking turn, and the booking system will ask the
+          first question itself.
+
           Extract only what this message actually states. Never invent or carry
           over dates, party size or duration -- anything you do not pass is
           remembered from earlier turns. Do not decide what to ask next and do
@@ -46,6 +50,12 @@ module AiConcierge
             string :room_type_name
             string :rate_plan_name
           end
+          object :evidence, description: "Quote the guest's own words, copied exactly from their message, for each thing you filled in. Whatever language they wrote in. Leave a field out when the message does not say it." do
+            string :timing, description: "The words that say when they arrive"
+            string :checkout, description: "The words that say when they leave"
+            string :duration, description: "The words that say how long they stay"
+            string :party, description: "The words that say how many people"
+          end
           object :signals do
             boolean :is_reset, description: "They want to start over"
             boolean :is_correction, description: "They are correcting something they said before"
@@ -53,13 +63,13 @@ module AiConcierge
           end
         end
 
-        def execute(slots: {}, signals: {})
+        def execute(slots: {}, signals: {}, evidence: {})
           return ALREADY_ADVANCED if recorder.booking_advanced?
 
           recorder.mark_booking_advanced!
 
           interpretation = SyntheticInterpretation.new(
-            slots: slots, signals: signals, pending_question: context.pending_question
+            slots: slots, signals: signals, evidence: evidence, pending_question: context.pending_question
           ).call
           prepared = Orchestration::Booking::PrepareTurn.new(
             conversation_state: context.conversation_state,
@@ -99,9 +109,10 @@ module AiConcierge
             "starts_new_booking_branch" => false, "end_conversation" => false
           }.freeze
 
-          def initialize(slots:, signals:, pending_question:)
+          def initialize(slots:, signals:, pending_question:, evidence: {})
             @slots = (slots || {}).deep_stringify_keys.compact
             @signals = (signals || {}).deep_stringify_keys.compact
+            @evidence = (evidence || {}).deep_stringify_keys.compact
             @pending_question = pending_question
           end
 
@@ -112,6 +123,7 @@ module AiConcierge
               "topic" => "booking_search",
               "confidence" => 1.0,
               "slots" => slots,
+              "evidence" => evidence,
               "tool_hints" => [],
               "conversation_signals" => DEFAULT_SIGNALS.merge(signals)
             }
@@ -119,7 +131,7 @@ module AiConcierge
 
           private
 
-          attr_reader :slots, :signals, :pending_question
+          attr_reader :slots, :signals, :evidence, :pending_question
 
           def intent
             return "confirmation" if pending_question == "confirm_selection" && slots["confirmation"].present?

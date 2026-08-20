@@ -24,7 +24,11 @@ module AiConcierge
             do not call a second tool to check the first.
 
             Only greet or ask for a clarification in your own words when no tool
-            fits at all.
+            fits at all. A guest who wants to book, reserve, check availability
+            or price a stay is never that case: call advance_booking even when
+            they have given you nothing to extract yet, and let the booking
+            system ask the first question. Never ask a guest which room type
+            they want -- they choose one from a list you have shown them.
 
             Never state a price, a date, a room's availability or a policy from
             your own knowledge. You do not have that information; the tools do.

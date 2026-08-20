@@ -121,15 +121,46 @@ module AiConcierge
         intro = "#{intro} for #{context[:guest_label]}" if context[:guest_label].present?
         intro = "#{intro} in #{context[:month_label]}" if context[:month_label].present?
 
-        sections = groups.map { |group| option_group_lines(group) }
+        sections = groups.map { |group| option_group_lines(group, rates: :from) }
         url = public_hotel_url(context[:search_params] || {})
 
         [
           "#{intro}:",
+          search_summary_line,
           sections.join("\n\n"),
           'Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"',
           "You may visit this link for more details:\n#{url}"
-        ].join("\n\n")
+        ].compact_blank.join("\n\n")
+      end
+
+      # What the search actually ran on, spelled out before any price. A party
+      # size the guest never gave is invisible until it is written down.
+      def search_summary_line
+        params = context[:search_params]
+        return if params.blank?
+
+        check_in = params["check_in"]
+        check_out = params["check_out"]
+        rooms = params["room_count"].to_i
+
+        nights = nights_between(check_in, check_out).to_i
+
+        parts = []
+        parts << format_full_date_range(check_in, check_out) if check_in.present? && check_out.present?
+        parts << "#{nights} #{'night'.pluralize(nights)}" if nights.positive?
+        parts << context[:guest_label] if context[:guest_label].present?
+        parts << "#{rooms} #{'room'.pluralize(rooms)}" if rooms.positive?
+        return if parts.empty?
+
+        "_#{parts.join(' · ')}_"
+      end
+
+      def nights_between(check_in, check_out)
+        return if check_in.blank? || check_out.blank?
+
+        (Date.parse(check_out.to_s) - Date.parse(check_in.to_s)).to_i
+      rescue Date::Error
+        nil
       end
 
       def ask_confirmation_message

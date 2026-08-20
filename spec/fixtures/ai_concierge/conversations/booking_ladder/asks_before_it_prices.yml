@@ -1,0 +1,58 @@
+id: asks_before_it_prices
+description: "a live thread that went wrong: the bot improvised the first question, then priced one adult it never asked about"
+origin: "Booking::ActionResolver owns the order of these questions -- the model reads, the system decides"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [26, 27, 28, 29, 30, 31]
+      rate_plans:
+        - name: Non-Refundable Rate
+          price: 190
+turns:
+  # The model finds nothing to extract and answers in its own words, asking for
+  # a room type the guest has no way of knowing. It never reaches the guest.
+  - guest: "can i make booking"
+    model:
+      agent_loop:
+        prose: "Could you please provide me with the dates, number of guests, and room type you are interested in?"
+    expect:
+      flow: booking_search
+      pending_question: booking_timing
+      reply_excludes: ["room type"]
+
+  - guest: "i want to book on 28 august"
+    expect:
+      pending_question: duration
+      booking_status: collecting_slots
+
+  # The model gets this one wrong -- it invents one adult from a message about
+  # nights. That mistake is why the guard exists, and the hotel must still ask.
+  - guest: "3 nights"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            nights: 3
+            adults: 1
+    expect:
+      pending_question: guest_count
+      booking_status: collecting_slots
+      creates_quote: false
+
+  # The catalogue says what it searched on, so a party size nobody agreed to
+  # cannot reach a price unseen.
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+      booking_status: waiting_for_option_selection
+      reply_matches: ["2 adults", "Garden Prestige Suite", "From"]
+
+  # A room and a rate plan in one breath is ordinary speech, and answering only
+  # half of it asks the guest to repeat themselves.
+  - guest: "i want to book at garden prestige for non-refundable rate"
+    expect:
+      pending_question: confirm_selection
+      booking_status: waiting_for_confirmation
+      reply_matches: ["Non-Refundable Rate"]

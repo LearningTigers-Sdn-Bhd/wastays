@@ -23,6 +23,49 @@ RSpec.describe AiConcierge::Orchestration::Booking::SelectionHandler do
     expect(result.dig(:slots_payload, "booking_task", "branch", "selected_option", "selection_id")).to eq("garden_1")
   end
 
+  it "takes the rate plan from the same message as the room" do
+    selected_option = option.merge("room_type_name" => "Garden Suite", "rate_plans" => two_rate_plans)
+    handler = described_class.new(tool_registry: registry_with(success_result(selected_option)), message: "garden suite for standard rate")
+
+    result = handler.handle_selection(
+      conversation_state: conversation_state,
+      interpretation: interpretation,
+      active_branch: active_branch
+    )
+
+    expect(result[:reply_type]).to eq(:ask_confirmation)
+    expect(result[:pending_question]).to eq("confirm_selection")
+    expect(result.dig(:slots_payload, "booking_task", "branch", "selected_rate_plan_name")).to eq("Standard Rate")
+  end
+
+  it "does not read an option number on the turn as a rate plan" do
+    selected_option = option.merge("room_type_name" => "Garden Suite", "rate_plans" => two_rate_plans)
+    handler = described_class.new(tool_registry: registry_with(success_result(selected_option)), message: "garden suite option 2")
+
+    result = handler.handle_selection(
+      conversation_state: conversation_state,
+      interpretation: interpretation(slots: { "option_number" => 2 }),
+      active_branch: active_branch
+    )
+
+    expect(result[:reply_type]).to eq(:ask_rate_plan)
+    expect(result.dig(:slots_payload, "booking_task", "branch", "selected_rate_plan_name")).to be_nil
+  end
+
+  it "does not read the room's own name as a rate plan" do
+    selected_option = option.merge("room_type_name" => "Standard Room", "rate_plans" => two_rate_plans)
+    handler = described_class.new(tool_registry: registry_with(success_result(selected_option)), message: "standard room")
+
+    result = handler.handle_selection(
+      conversation_state: conversation_state,
+      interpretation: interpretation,
+      active_branch: active_branch
+    )
+
+    expect(result[:reply_type]).to eq(:ask_rate_plan)
+    expect(result.dig(:slots_payload, "booking_task", "branch", "selected_rate_plan_name")).to be_nil
+  end
+
   it "carries selection disambiguation context when the tool cannot choose" do
     handler = described_class.new(
       tool_registry: registry_with({
@@ -67,6 +110,13 @@ RSpec.describe AiConcierge::Orchestration::Booking::SelectionHandler do
     end
 
     { "select_booking_option" => tool }
+  end
+
+  def two_rate_plans
+    [
+      { "rate_plan_id" => 10, "name" => "Standard Rate" },
+      { "rate_plan_id" => 11, "name" => "Flexible Rate" }
+    ]
   end
 
   def success_result(selected_option)

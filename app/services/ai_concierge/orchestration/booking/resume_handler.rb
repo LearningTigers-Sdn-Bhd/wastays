@@ -35,7 +35,8 @@ module AiConcierge
                 extra_context: {
                   options: branch["suggested_options"],
                   month_label: month_label(branch),
-                  guest_label: guest_label(branch)
+                  guest_label: guest_label(branch),
+                  search_params: search_params_for(branch)
                 }
               )
             end

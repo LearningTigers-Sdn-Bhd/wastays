@@ -348,6 +348,29 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
     expect(result).not_to have_key("adults")
   end
 
+  it "drops a party size the message never stated" do
+    result = described_class.new(
+      message: "3 nights",
+      slots: { "nights" => 3, "adults" => 1 },
+      pending_question: "duration",
+      conversation_signals: signals
+    ).call
+
+    expect(result["nights"]).to eq(3)
+    expect(result).not_to have_key("adults")
+  end
+
+  it "keeps a party size stated without a number when guest count was asked" do
+    result = described_class.new(
+      message: "me and my wife",
+      slots: { "adults" => 2 },
+      pending_question: "guest_count",
+      conversation_signals: signals
+    ).call
+
+    expect(result["adults"]).to eq(2)
+  end
+
   it "does not filter correction turns" do
     result = described_class.new(
       message: "actually late august",

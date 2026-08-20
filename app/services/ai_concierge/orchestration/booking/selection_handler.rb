@@ -52,6 +52,19 @@ module AiConcierge
             rate_plans = Array(selected_option["rate_plans"])
 
             if rate_plans.size > 1
+              same_turn_rate_plan = same_turn_rate_plan(interpretation, selected_option, rate_plans)
+
+              if same_turn_rate_plan
+                ApplyRatePlan.new(active_branch: active_branch, selected_option: selected_option, rate_plan: same_turn_rate_plan).call
+                return booking_response(
+                  conversation_state: conversation_state,
+                  active_branch: active_branch,
+                  reply_type: :ask_confirmation,
+                  pending_question: "confirm_selection",
+                  extra_context: { selected_option: selected_option }
+                )
+              end
+
               active_branch["selected_option"] = selected_option
               active_branch["pending_selection"] = nil
               return booking_response(
@@ -89,6 +102,45 @@ module AiConcierge
         private
 
         attr_reader :tool_registry, :message
+
+        # "Garden Prestige, standard rate" names a room and a rate plan in one
+        # breath, and answering only the first half asks the guest to repeat
+        # the second.
+        #
+        # The message is only safe to read for the rate plan when it carries no
+        # option ordinal: RatePlanMatcher reads a bare "1" as the first rate
+        # plan, so "Ocean Villa King option 1" would otherwise pick a rate plan
+        # the guest never mentioned. With an ordinal on the turn, only the
+        # model's own rate_plan_name is trusted.
+        def same_turn_rate_plan(interpretation, selected_option, rate_plans)
+          rate_plan_name = interpretation.dig("slots", "rate_plan_name")
+          readable_message = option_ordinal_on_turn?(interpretation) ? "" : message_without_room_name(selected_option)
+          return if rate_plan_name.blank? && readable_message.blank?
+
+          Matching::RatePlanMatcher.new(
+            message: readable_message,
+            rate_plan_name: rate_plan_name,
+            rate_plans: rate_plans
+          ).call
+        end
+
+        # The room's own name is not evidence about a rate plan. Left in, a
+        # "Standard Room" would select the "Standard Rate" the guest never
+        # asked for.
+        def message_without_room_name(selected_option)
+          normalized = message.downcase.gsub(/[^a-z0-9]+/, " ").squish
+          room_tokens = selected_option["room_type_name"].to_s.downcase.gsub(/[^a-z0-9]+/, " ").split
+
+          (normalized.split - room_tokens).join(" ")
+        end
+
+        def option_ordinal_on_turn?(interpretation)
+          return true if interpretation.dig("slots", "option_number").present?
+
+          normalized = message.downcase.gsub(/[^a-z0-9]+/, " ").squish
+          normalized.match?(/\b(?:option|number|choice)\s*\d+\b/) ||
+            normalized.match?(/\b(?:choose|chose|picked|pick|take|go with)\s+(?:option\s*)?\d+\b/)
+        end
 
         def selection_tool
           tool_registry.fetch("select_booking_option")

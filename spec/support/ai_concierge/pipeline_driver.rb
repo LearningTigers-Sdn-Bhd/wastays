@@ -64,13 +64,36 @@ module AiConciergeEval
 
       month = room.fetch("month")
       year = fixture_year_for(month)
-      Array(room.fetch("days")).each_with_index do |day, index|
-        date = Date.new(year, month, day)
+      dates = Array(room.fetch("days")).map { |day| Date.new(year, month, day) }
+
+      dates.each_with_index do |date, index|
         create(:room_rate, room_type: room_type, date: date, price: 220 + index, currency: "MYR")
         create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
       end
 
+      # Without this a room has exactly one rate plan, and the ladder skips the
+      # rate question entirely -- so no fixture could reach the turn where a
+      # guest names a room and a rate plan together.
+      Array(room["rate_plans"]).each do |plan|
+        seed_fixture_rate_plan(hotel, room_type, plan, dates)
+      end
+
       room_type.name
+    end
+
+    def seed_fixture_rate_plan(hotel, room_type, plan, dates)
+      rate_plan = create(
+        :rate_plan, :custom,
+        hotel: hotel,
+        name: plan.fetch("name"),
+        room_type: room_type
+      )
+
+      dates.each do |date|
+        create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: date, price: plan.fetch("price", 200), currency: "MYR")
+      end
+
+      rate_plan
     end
 
     def seed_fixture_knowledge(hotel, document)

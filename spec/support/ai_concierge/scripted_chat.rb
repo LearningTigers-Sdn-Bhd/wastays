@@ -30,6 +30,11 @@ module AiConciergeEval
       call = tool_call_for(message)
       return Response.new(content: "Hello! How can I help you today?") unless call
 
+      # `prose:` scripts the model reaching for no tool and answering in its
+      # own words. Left to the classifier a fixture cannot express that, and
+      # the guards that exist to catch it would have nothing to catch.
+      return Response.new(content: call[:prose]) if call[:prose].present?
+
       tool = tools.find { |candidate| candidate.name == call.fetch(:tool) }
       raise ArgumentError, "fixture asked for unknown tool #{call[:tool]}" unless tool
 

@@ -13,11 +13,7 @@ module AiConcierge
           matched = Matching::RatePlanMatcher.new(message: message, rate_plan_name: rate_plan_name, rate_plans: rate_plans).call
 
           if matched
-            active_branch["selected_rate_plan_id"] = matched["rate_plan_id"]
-            active_branch["selected_rate_plan_name"] = matched["name"]
-            selected_option["selected_rate_plan"] = matched
-            active_branch["confirmation_candidate"] = selected_option
-            active_branch["pending_selection"] = nil
+            ApplyRatePlan.new(active_branch: active_branch, selected_option: selected_option, rate_plan: matched).call
             return booking_response(
               conversation_state: conversation_state,
               active_branch: active_branch,

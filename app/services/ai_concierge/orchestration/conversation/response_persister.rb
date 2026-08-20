@@ -93,10 +93,16 @@ module AiConcierge
         # usable, and forgetting it would ask the same question again next turn.
         def verified(template, styled)
           conversation.record_language!(styled.language)
-          checker = Agents::RewriteVerifier.new(template: template, candidate: styled.text)
+          checker = Agents::RewriteVerifier.new(template: template, candidate: styled.text, protected_names: protected_names)
           checker.call.tap do |text|
             Rails.logger.warn("AiConcierge::ReplyStylist rejected (#{checker.failure}) for conversation #{conversation.id}") if text.nil?
           end
+        end
+
+        # The words the guest will type back at us. Fetched once per turn, and
+        # only on a turn the stylist actually runs on.
+        def protected_names
+          @protected_names ||= hotel.room_types.pluck(:name) + hotel.rate_plans.pluck(:name)
         end
 
         def persist_state(conversation_state, slots_payload:, active_topic:, active_flow:, pending_question:, flow_status: nil, end_reason: nil)

@@ -32,6 +32,19 @@ RSpec.describe AiConcierge::Tools::Booking::SelectBookingOptionTool do
     expect(result.dig("selected_option", "selection_id")).to eq("room_type_1_option_2")
   end
 
+  it "finds the room type when the guest wraps its name in a sentence" do
+    result = described_class.new(
+      option_number: nil,
+      suggested_options: suggested_options,
+      suggestion_set_version: 3,
+      message: "i want to book at garden prestige for the standard rate"
+    ).call
+
+    expect(result["success"]).to be(false)
+    expect(result["error"]).to eq("room_type_requires_option_number")
+    expect(result["room_type_name"]).to eq("Garden Prestige Suite")
+  end
+
   it "returns an ambiguous option result when multiple groups share the same number" do
     result = described_class.new(
       option_number: 2,

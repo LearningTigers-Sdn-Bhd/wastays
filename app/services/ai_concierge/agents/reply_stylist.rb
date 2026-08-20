@@ -107,6 +107,9 @@ module AiConcierge
           - Keep every number, price, time and currency exactly as written, in
             digits. Never spell a number out in words.
           - Keep every link character for character. Never shorten or relabel one.
+          - Keep room type and rate plan names exactly as written, in their
+            original language. The guest types these back to us, and a
+            translated name matches nothing.
           - Keep the line breaks, the list shape and the *asterisks* around bold text.
           - Do not add, remove or soften any fact. Do not add a greeting or a
             sign-off that is not already there.

@@ -2,11 +2,12 @@ module AiConcierge
   module Orchestration
     module Booking
       class InputNormalizer
-    def initialize(message:, slots:, pending_question:, conversation_signals:, active_branch: {})
+    def initialize(message:, slots:, pending_question:, conversation_signals:, evidence: {}, active_branch: {})
       @message = message.to_s
       @slots = slots.is_a?(Hash) ? slots.deep_dup : {}
       @pending_question = pending_question
       @conversation_signals = conversation_signals.to_h
+      @evidence = evidence.is_a?(Hash) ? evidence : {}
       @active_branch = active_branch.is_a?(Hash) ? active_branch : {}
     end
 
@@ -17,10 +18,12 @@ module AiConcierge
 
       timing_keys = %w[target_month target_year month_segment check_in check_out]
       duration_keys = %w[days nights]
+      party_keys = %w[party_size_total adults children]
 
-      timing_keys.each { |key| slots.delete(key) } unless explicit_timing_in_message?
-      duration_keys.each { |key| slots.delete(key) } unless explicit_duration_in_message?
-      slots.delete("check_out") unless explicit_checkout_in_message?
+      timing_keys.each { |key| slots.delete(key) } unless explicit_timing_in_message? || quoted?("timing")
+      duration_keys.each { |key| slots.delete(key) } unless explicit_duration_in_message? || quoted?("duration")
+      party_keys.each { |key| slots.delete(key) } unless party_evidence_in_message? || quoted?("party")
+      slots.delete("check_out") unless explicit_checkout_in_message? || quoted?("checkout")
       apply_relative_month_timing!
       apply_guest_count_guards!
 
@@ -41,7 +44,28 @@ module AiConcierge
 
     private
 
-    attr_reader :message, :slots, :pending_question, :conversation_signals, :active_branch
+    attr_reader :message, :slots, :pending_question, :conversation_signals, :evidence, :active_branch
+
+    # Every other guard here re-reads the message in English, which is why a
+    # guest writing Malay or Chinese has correct slots deleted and is asked the
+    # same question forever. This asks the model to quote the guest instead,
+    # and only checks the quote is really there.
+    #
+    # Deliberately no digit test: "两位大人" says two adults without a 2 in it,
+    # and a check for numerals would rebuild the same wall in a new place. What
+    # this catches is the model filling a slot from nothing -- asked which
+    # words say the party size, a message that never mentioned people has
+    # nothing to quote.
+    def quoted?(kind)
+      span = normalize_for_quote(evidence[kind])
+      return false if span.blank?
+
+      normalize_for_quote(message).include?(span)
+    end
+
+    def normalize_for_quote(value)
+      value.to_s.downcase.gsub(/\s+/, " ").strip
+    end
 
     def apply_date_range_answer!
       range = parse_complete_date_range
@@ -378,6 +402,18 @@ module AiConcierge
       end
 
       slots["children"] = extracted_children_count if explicit_children_in_message? && !explicit_adults_in_message? && extracted_children_count.positive?
+    end
+
+    # A party size is only believed when the turn actually carries one: the
+    # guest said it, or the hotel asked and this is the answer. Without this
+    # the model's "adults: 1" on a message about nights becomes a price nobody
+    # was asked to agree to.
+    def party_evidence_in_message?
+      return true if explicit_people_total_in_message?
+      return true if explicit_adults_in_message?
+      return true if explicit_children_in_message?
+
+      %w[guest_count party_split].include?(pending_question)
     end
 
     def explicit_people_total_in_message?

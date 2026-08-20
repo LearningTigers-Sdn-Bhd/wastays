@@ -77,18 +77,37 @@ module AiConcierge
         [ "#{protocol}://#{host}", port ].compact.join(port ? ":" : "")
       end
 
-      def option_group_lines(group)
+      # `rates: :from` shows one cheapest-price line instead of every plan, so
+      # the catalogue grows as rooms + rates rather than rooms x rates. The
+      # plans themselves come back once a room is chosen.
+      def option_group_lines(group, rates: :all)
         return "" unless group.is_a?(Hash)
 
         lines = Array(group["options"]).map do |option|
           date_line = "  Option #{option['position']}: #{format_full_date(option['check_in'])} - #{format_full_date(option['check_out'])} (#{option['nights']} #{'night'.pluralize(option['nights'].to_i)})"
-          rate_lines = Array(option["rate_plans"]).map do |rp|
-            "    • #{format_option_price(rp['currency'], rp['total_price'])} (#{rp['name']})"
-          end
+          rate_lines = rates == :from ? Array(from_price_line(option)) : rate_plan_lines(option)
           rate_lines.present? ? [ date_line, rate_lines.join("\n") ].join("\n") : date_line
         end
 
         [ "*#{group['room_type_name']}*", lines.join("\n") ].join("\n")
+      end
+
+      def rate_plan_lines(option)
+        Array(option["rate_plans"]).map do |rp|
+          "    • #{format_option_price(rp['currency'], rp['total_price'])} (#{rp['name']})"
+        end
+      end
+
+      def from_price_line(option)
+        rate_plans = Array(option["rate_plans"]).select { |rp| rp["total_price"].present? }
+        cheapest = rate_plans.min_by { |rp| rp["total_price"].to_f }
+
+        price = cheapest&.dig("total_price") || option["total_price"]
+        return if price.blank?
+
+        currency = cheapest&.dig("currency") || option["currency"]
+        suffix = rate_plans.many? ? ", #{rate_plans.size} rate plans" : nil
+        "    • From #{format_option_price(currency, price)}#{suffix}"
       end
     end
   end

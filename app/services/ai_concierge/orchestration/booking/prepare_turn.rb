@@ -42,6 +42,7 @@ module AiConcierge
             slots: interpretation["slots"],
             pending_question: pending_question,
             conversation_signals: interpretation["conversation_signals"],
+            evidence: interpretation["evidence"],
             active_branch: base_branch
           ).call
 

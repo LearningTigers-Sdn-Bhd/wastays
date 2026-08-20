@@ -11,6 +11,12 @@ module AiConcierge
     # order and month names are free: "August 21" legitimately becomes
     # "21 Ogos". Digits, links and the currency in front of a price are not.
     #
+    # Room type and rate plan names are checked too, and for a different
+    # reason: they are not facts the guest reads, they are words the guest is
+    # about to type back. A translated "Garden Prestige Suite" is echoed in
+    # translation, and matching compares it against the name in Postgres --
+    # which never moved -- so the guest is told their own room does not exist.
+    #
     # Deliberately not checked: the *asterisks* around bold text and the shape
     # of an option list. Those are prompt instructions, because losing one is
     # cosmetic and losing a price is not, and a check that fails over
@@ -23,9 +29,10 @@ module AiConcierge
       # fail a reply over a hotel's own initials.
       PRICED_CURRENCY = /\b(RM|[A-Z]{3})\s*(?=\d)/
 
-      def initialize(template:, candidate:)
+      def initialize(template:, candidate:, protected_names: [])
         @template = template.to_s
         @candidate = candidate.to_s
+        @protected_names = Array(protected_names).map(&:to_s).reject(&:blank?)
       end
 
       # The candidate when it is safe to send, nil when it is not. A caller with
@@ -39,14 +46,26 @@ module AiConcierge
 
       private
 
-      attr_reader :template, :candidate
+      attr_reader :template, :candidate, :protected_names
 
       def first_failure
         return :urls unless urls(template).sort == urls(candidate).sort
         return :numbers unless template.scan(NUMBER).sort == candidate.scan(NUMBER).sort
         return :currency unless currencies(template).sort == currencies(candidate).sort
+        return :names unless names_kept?
 
         nil
+      end
+
+      # Only names the template actually used have to survive; the hotel's whole
+      # catalogue is not a promise about one sentence. Case is ignored because
+      # matching downcases anyway -- what must not happen is the words changing.
+      def names_kept?
+        haystack = candidate.downcase
+
+        protected_names.none? do |name|
+          template.downcase.include?(name.downcase) && !haystack.include?(name.downcase)
+        end
       end
 
       # Trailing sentence punctuation is stripped from both sides rather than

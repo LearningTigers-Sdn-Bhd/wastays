@@ -100,7 +100,8 @@ module AiConcierge
           extra_context: {
             options: active_branch["suggested_options"],
             month_label: month_label(active_branch),
-            guest_label: guest_label(active_branch)
+            guest_label: guest_label(active_branch),
+            search_params: search_params_for(active_branch)
           }
         )
       when :search_options
@@ -297,14 +298,7 @@ module AiConcierge
     end
 
     def room_rate_question?
-      normalized = message.downcase.gsub(/[^a-z0-9]+/, " ").squish
-      return false if normalized.match?(/\broom service\b/)
-
-      return true if normalized.match?(/\brooms?\s+(?:rates?|prices?|pricing|cost)\b/)
-      return true if normalized.match?(/\b(?:rates?|prices?|pricing|cost)\s+(?:for|of)\s+(?:a\s+)?rooms?\b/)
-      return true if normalized.match?(/\bhow much\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
-
-      normalized.match?(/\b(?:rates?|prices?|pricing|cost)\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
+      Matching::BookingIntentMatcher.new(message: message).rate_question?
     end
 
     def booking_payload(conversation_state, active_branch, pending_question:, status: nil)

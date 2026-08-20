@@ -212,11 +212,24 @@ module AiConcierge
           room_tokens = significant_tokens(room_type_name)
           return 0 if room_tokens.empty? || room_type_message_tokens.empty?
 
+          return 5 if room_name_stated_in_message?(room_tokens)
           return 4 if consecutive_token_match?(room_tokens)
           return 3 if all_tokens_prefix_match?(room_tokens)
           return 2 if all_tokens_fuzzy_match?(room_tokens)
 
           0
+        end
+
+        # Every other rule here asks whether the whole message is the room's
+        # name, so a guest who wraps it in a sentence -- "i want to book at
+        # garden prestige for the standard rate" -- matches nothing at all.
+        # This asks the question the other way round: does the message name
+        # this room? Two rooms that both answer yes stay ambiguous, which is
+        # what the caller already does with a tie.
+        def room_name_stated_in_message?(room_tokens)
+          room_tokens.all? do |room_token|
+            room_type_message_tokens.any? { |token| token.start_with?(room_token) }
+          end
         end
 
         def consecutive_token_match?(room_tokens)

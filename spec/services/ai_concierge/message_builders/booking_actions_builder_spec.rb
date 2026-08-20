@@ -21,6 +21,37 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
     expect(message).to eq("Sure, which date or month do you plan to arrive for check-in?")
   end
 
+  it "says what it searched on, and prices rooms from their cheapest plan" do
+    hotel = create(:hotel, name: "Demo Hotel")
+    context = {
+      options: [
+        {
+          "room_type_name" => "Garden Prestige Suite",
+          "options" => [
+            {
+              "position" => 1,
+              "check_in" => "2026-08-28",
+              "check_out" => "2026-08-31",
+              "nights" => 3,
+              "rate_plans" => [
+                { "rate_plan_id" => 1, "name" => "Standard Rate", "total_price" => 2940, "currency" => "MYR" },
+                { "rate_plan_id" => 2, "name" => "Non-Refundable Rate", "total_price" => 2646, "currency" => "MYR" }
+              ]
+            }
+          ]
+        }
+      ],
+      guest_label: "2 adults",
+      search_params: { "check_in" => "2026-08-28", "check_out" => "2026-08-31", "adults" => 2, "room_count" => 1 }
+    }
+
+    message = described_class.new(hotel: hotel, context: context).call(:suggest_options)
+
+    expect(message).to include("_28 August 2026 - 31 August 2026 · 3 nights · 2 adults · 1 room_")
+    expect(message).to include("From RM 2646.00, 2 rate plans")
+    expect(message).not_to include("Standard Rate")
+  end
+
   it "asks which month for a monthless date range" do
     hotel = build_stubbed(:hotel, name: "Demo Hotel")
 
