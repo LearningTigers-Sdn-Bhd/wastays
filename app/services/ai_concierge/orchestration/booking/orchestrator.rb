@@ -78,7 +78,7 @@ module AiConcierge
     # list back in front of them.
     def resume_framing(result)
       return result unless resumed? && domain_response?(result)
-      return clear_reask(result) unless result[:reply_type] == :invalid_selection
+      return clear_reask(result) unless result.reply_type == :invalid_selection
 
       clear_reask(options_response(active_branch: resumed_branch(result), reply_type: :resume_options))
     end
@@ -87,7 +87,7 @@ module AiConcierge
       task = result.dig(:slots_payload, "booking_task")
       return result unless task.is_a?(Hash)
 
-      result.merge(slots_payload: result[:slots_payload].merge("booking_task" => task.merge("reask_count" => 0)))
+      result.with(slots_payload: result.slots_payload.merge("booking_task" => task.merge("reask_count" => 0)))
     end
 
     # The branch the turn actually ran on, read back off the payload it wrote
@@ -103,8 +103,8 @@ module AiConcierge
       reasks = result.dig(:slots_payload, "booking_task", "reask_count").to_i
       return result if reasks < REASK_NUDGE
 
-      nudged = result.merge(extra_context: (result[:extra_context] || {}).merge(retry: true))
-      reasks >= REASK_HANDOVER ? nudged.merge(needs_human_support: true) : nudged
+      nudged = result.with(extra_context: result.extra_context.merge(retry: true))
+      reasks >= REASK_HANDOVER ? nudged.with(needs_human_support: true) : nudged
     end
 
     def process_booking_action(action, conversation_state: self.conversation_state, active_branch: self.active_branch)
@@ -333,33 +333,17 @@ module AiConcierge
     end
 
     def booking_response(conversation_state: self.conversation_state, active_branch: self.active_branch, reply_type:, pending_question:, extra_context: {}, status: nil, action_name: "request_quote")
-      domain_response(
+      Core::DomainResponse.booking(
         slots_payload: booking_payload(conversation_state, active_branch, pending_question: pending_question, status: status),
         reply_type: reply_type,
-        active_topic: "booking_search",
-        active_flow: "booking_search",
         pending_question: pending_question,
         action_name: action_name,
         extra_context: extra_context
       )
     end
 
-    def domain_response(slots_payload:, reply_type:, active_topic: nil, active_flow: nil, pending_question: nil, action_name: nil, extra_context: {}, flow_status: nil, end_reason: nil)
-      {
-        slots_payload: slots_payload,
-        reply_type: reply_type,
-        active_topic: active_topic,
-        active_flow: active_flow,
-        pending_question: pending_question,
-        action_name: action_name,
-        extra_context: extra_context,
-        flow_status: flow_status,
-        end_reason: end_reason
-      }
-    end
-
     def fallback_response
-      domain_response(
+      Core::DomainResponse.new(
         slots_payload: conversation_state.slots_payload,
         reply_type: nil,
         extra_context: { message: MessageBuilders::DEFAULT_MESSAGE }
@@ -423,7 +407,7 @@ module AiConcierge
     end
 
     def domain_response?(value)
-      value.is_a?(Hash) && value.key?(:slots_payload) && value.key?(:reply_type)
+      value.is_a?(Core::DomainResponse)
     end
 
     def empty_branch

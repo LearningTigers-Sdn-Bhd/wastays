@@ -15,7 +15,7 @@ module AiConcierge
       def call
         tool_result = route_tool
         record_knowledge_diagnostic(tool_result[:result])
-        domain_response(
+        Core::DomainResponse.new(
           slots_payload: information_slots_payload,
           reply_type: tool_result[:reply_type],
           active_topic: pause ? tool_result[:active_topic] : nil,
@@ -45,20 +45,6 @@ module AiConcierge
           pause: pause,
           active_branch: active_branch
         ).slots_payload
-      end
-
-      def domain_response(slots_payload:, reply_type:, active_topic: nil, active_flow: nil, pending_question: nil, action_name: nil, extra_context: {}, flow_status: nil, end_reason: nil)
-        {
-          slots_payload: slots_payload,
-          reply_type: reply_type,
-          active_topic: active_topic,
-          active_flow: active_flow,
-          pending_question: pending_question,
-          action_name: action_name,
-          extra_context: extra_context,
-          flow_status: flow_status,
-          end_reason: end_reason
-        }
       end
 
       def record_knowledge_diagnostic(result)

@@ -27,17 +27,13 @@ module AiConcierge
           payload = booking_payload(conversation_state, active_branch, pending_question: nil, status: "completed")
           payload = State::ConversationTaskManager.new(slots_payload: payload).archive_completed_booking
 
-          {
+          Core::DomainResponse.new(
             slots_payload: payload,
             reply_type: :booking_link_ready,
-            active_topic: nil,
-            active_flow: nil,
-            pending_question: nil,
-            action_name: nil,
             extra_context: { result: result.merge("selected_option" => selected_option) },
             flow_status: "ended",
             end_reason: "booking_url_generated"
-          }
+          )
         end
 
         private
@@ -63,19 +59,17 @@ module AiConcierge
             pending_question: "confirm_selection",
             extra_context: { message: error },
             action_name: nil
-          ).merge(needs_human_support: true)
+          ).with(needs_human_support: true)
         end
 
         def booking_response(conversation_state:, active_branch:, reply_type:, pending_question:, extra_context: {}, action_name: "request_quote")
-          {
+          Core::DomainResponse.booking(
             slots_payload: booking_payload(conversation_state, active_branch, pending_question: pending_question),
             reply_type: reply_type,
-            active_topic: "booking_search",
-            active_flow: "booking_search",
             pending_question: pending_question,
             action_name: action_name,
             extra_context: extra_context
-          }
+          )
         end
 
         def booking_payload(conversation_state, active_branch, pending_question:, status: nil)

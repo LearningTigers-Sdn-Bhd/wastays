@@ -30,12 +30,11 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
     payload = described_class.new(hotel: hotel, conversation: conversation).persist_domain_response(
       prospect: prospect,
       conversation_state: conversation_state,
-      domain_result: {
+      domain_result: AiConcierge::Orchestration::Core::DomainResponse.new(
         slots_payload: {},
-        reply_type: nil,
         extra_context: { message: "Unable right now" },
         needs_human_support: true
-      }
+      )
     )
 
     expect(payload[:reply_message]).to eq("Unable right now")
@@ -50,12 +49,11 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
     described_class.new(hotel: hotel, conversation: conversation).persist_domain_response(
       prospect: prospect,
       conversation_state: conversation_state,
-      domain_result: {
+      domain_result: AiConcierge::Orchestration::Core::DomainResponse.new(
         slots_payload: {},
-        reply_type: nil,
         extra_context: { message: "Unable right now" },
         needs_human_support: true
-      }
+      )
     )
 
     expect(conversation.reload.human_requested_at).to be_present

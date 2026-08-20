@@ -90,8 +90,9 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     expect(result.dig(:extra_context, :message)).to eq("Unable to generate quote right now.")
     expect(result[:needs_human_support]).to be(true)
     expect(result[:pending_question]).to eq("confirm_selection")
-    expect(result).to have_key(:slots_payload)
-    expect(result).not_to include(flow_status: "ended", end_reason: "booking_url_generated")
+    expect(result.slots_payload).to be_present
+    expect(result.flow_status).to be_nil
+    expect(result.end_reason).to be_nil
   end
 
   it "selects the rate plan the guest numbered" do
@@ -363,7 +364,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
       expect(result[:pending_question]).to eq("select_option")
       expect(result.dig(:extra_context, :options)).to be_present
       expect(result.dig(:slots_payload, "booking_task", "reask_count")).to eq(0)
-      expect(result[:needs_human_support]).to be_nil
+      expect(result[:needs_human_support]).to be(false)
     end
 
     # A question already asked twice over a branch that did not move: one more

@@ -81,15 +81,13 @@ module AiConcierge
         end
 
         def booking_response(conversation_state:, active_branch:, reply_type:, pending_question:, extra_context: {}, action_name: "request_quote")
-          {
+          Core::DomainResponse.booking(
             slots_payload: booking_payload(conversation_state, active_branch, pending_question: pending_question),
             reply_type: reply_type,
-            active_topic: "booking_search",
-            active_flow: "booking_search",
             pending_question: pending_question,
             action_name: action_name,
             extra_context: extra_context
-          }
+          )
         end
 
         def booking_payload(conversation_state, active_branch, pending_question:)

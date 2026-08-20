@@ -32,16 +32,16 @@ module AiConcierge
           persist_response(
             prospect: prospect,
             conversation_state: conversation_state,
-            slots_payload: domain_result.fetch(:slots_payload),
-            reply_type: domain_result[:reply_type],
-            active_topic: domain_result[:active_topic],
-            active_flow: domain_result[:active_flow],
-            pending_question: domain_result[:pending_question],
-            action_name: domain_result[:action_name],
-            extra_context: domain_result[:extra_context] || {},
-            flow_status: domain_result[:flow_status],
-            end_reason: domain_result[:end_reason],
-            needs_human_support: domain_result[:needs_human_support] || false
+            slots_payload: domain_result.slots_payload,
+            reply_type: domain_result.reply_type,
+            active_topic: domain_result.active_topic,
+            active_flow: domain_result.active_flow,
+            pending_question: domain_result.pending_question,
+            action_name: domain_result.action_name,
+            extra_context: domain_result.extra_context,
+            flow_status: domain_result.flow_status,
+            end_reason: domain_result.end_reason,
+            needs_human_support: domain_result.needs_human_support
           )
         end
 

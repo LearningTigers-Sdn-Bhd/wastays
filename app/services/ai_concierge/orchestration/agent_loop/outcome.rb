@@ -13,15 +13,10 @@ module AiConcierge
         def self.fallback(conversation_state:, message: nil)
           new(
             conversation_state: conversation_state,
-            domain_result: {
+            domain_result: Core::DomainResponse.new(
               slots_payload: conversation_state.slots_payload,
-              reply_type: nil,
-              active_topic: nil,
-              active_flow: nil,
-              pending_question: nil,
-              action_name: nil,
               extra_context: { message: message.presence || MessageBuilders::DEFAULT_MESSAGE }
-            }
+            )
           )
         end
       end
