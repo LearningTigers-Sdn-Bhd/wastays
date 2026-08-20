@@ -2,6 +2,8 @@ module AiConcierge
   module Orchestration
     module Booking
       class RatePlanSelectionHandler
+        include Responses
+
         def initialize(message:)
           @message = message.to_s
         end
@@ -53,20 +55,6 @@ module AiConcierge
 
           position = Matching::OptionReference.new(message: message).number.to_i
           rate_plans[position - 1] if position.positive?
-        end
-
-        def booking_response(conversation_state:, active_branch:, reply_type:, pending_question:, extra_context: {}, action_name: "request_quote")
-          Core::DomainResponse.booking(
-            slots_payload: booking_payload(conversation_state, active_branch, pending_question: pending_question),
-            reply_type: reply_type,
-            pending_question: pending_question,
-            action_name: action_name,
-            extra_context: extra_context
-          )
-        end
-
-        def booking_payload(conversation_state, active_branch, pending_question:)
-          State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, count_reask: true)
         end
       end
     end

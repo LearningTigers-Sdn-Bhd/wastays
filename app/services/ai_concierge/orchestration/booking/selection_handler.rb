@@ -2,6 +2,8 @@ module AiConcierge
   module Orchestration
     module Booking
       class SelectionHandler
+        include Responses
+
         def initialize(tool_registry:, message:)
           @tool_registry = tool_registry
           @message = message.to_s
@@ -78,20 +80,6 @@ module AiConcierge
 
         def selection_tool
           tool_registry.fetch("select_booking_option")
-        end
-
-        def booking_response(conversation_state:, active_branch:, reply_type:, pending_question:, extra_context: {}, action_name: "request_quote")
-          Core::DomainResponse.booking(
-            slots_payload: booking_payload(conversation_state, active_branch, pending_question: pending_question),
-            reply_type: reply_type,
-            pending_question: pending_question,
-            action_name: action_name,
-            extra_context: extra_context
-          )
-        end
-
-        def booking_payload(conversation_state, active_branch, pending_question:)
-          State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, count_reask: true)
         end
 
         def resolved_selection_interpretation(interpretation, result)

@@ -2,6 +2,8 @@ module AiConcierge
   module Orchestration
     module Booking
       class CompletionHandler
+        include Responses
+
         def initialize(hotel:, prospect:, phone:, tool_registry:)
           @hotel = hotel
           @prospect = prospect
@@ -51,6 +53,13 @@ module AiConcierge
         # The thread stays on `confirm_selection` with the candidate intact:
         # the failure is the hotel's, not the guest's, so "yes" should still
         # work when they try again.
+        #
+        # It now counts as a re-ask too, along with everything else that comes
+        # through `Responses`. That is redundant here on purpose -- the flag
+        # below already puts the thread in front of staff on the first failure,
+        # where the counter would take three -- but a path that quietly opted
+        # out of counting is what made the four copies of this method worth
+        # merging, so it does not opt out again.
         def quote_failure_response(conversation_state:, active_branch:, error:)
           booking_response(
             conversation_state: conversation_state,
@@ -60,20 +69,6 @@ module AiConcierge
             extra_context: { message: error },
             action_name: nil
           ).with(needs_human_support: true)
-        end
-
-        def booking_response(conversation_state:, active_branch:, reply_type:, pending_question:, extra_context: {}, action_name: "request_quote")
-          Core::DomainResponse.booking(
-            slots_payload: booking_payload(conversation_state, active_branch, pending_question: pending_question),
-            reply_type: reply_type,
-            pending_question: pending_question,
-            action_name: action_name,
-            extra_context: extra_context
-          )
-        end
-
-        def booking_payload(conversation_state, active_branch, pending_question:, status: nil)
-          State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, status: status)
         end
       end
     end

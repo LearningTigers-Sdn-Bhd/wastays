@@ -2,6 +2,8 @@ module AiConcierge
   module Orchestration
     module Booking
       class Orchestrator
+    include Responses
+
     def initialize(hotel:, prospect:, conversation_state:, interpretation:, active_branch:, decision:, message:, phone: nil, tool_registry: Tools::ToolRegistry.new)
       @hotel = hotel
       @prospect = prospect
@@ -332,16 +334,6 @@ module AiConcierge
       )
     end
 
-    def booking_response(conversation_state: self.conversation_state, active_branch: self.active_branch, reply_type:, pending_question:, extra_context: {}, status: nil, action_name: "request_quote")
-      Core::DomainResponse.booking(
-        slots_payload: booking_payload(conversation_state, active_branch, pending_question: pending_question, status: status),
-        reply_type: reply_type,
-        pending_question: pending_question,
-        action_name: action_name,
-        extra_context: extra_context
-      )
-    end
-
     def fallback_response
       Core::DomainResponse.new(
         slots_payload: conversation_state.slots_payload,
@@ -364,10 +356,6 @@ module AiConcierge
 
     def booking_intent
       @booking_intent ||= Matching::BookingIntentMatcher.new(message: message)
-    end
-
-    def booking_payload(conversation_state, active_branch, pending_question:, status: nil)
-      State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, status: status, count_reask: true)
     end
 
     def month_label(branch)
