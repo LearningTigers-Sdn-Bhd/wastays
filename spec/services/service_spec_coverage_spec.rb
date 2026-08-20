@@ -10,13 +10,19 @@ RSpec.describe "Service spec coverage" do
     "ai_concierge/orchestration/agent_loop/outcome" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/tool_recorder" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/turn_context" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
-    # The model-facing tools are one surface and are specced as one.
-    "ai_concierge/tools/llm/advance_booking_tool" => "ai_concierge/tools/llm/tools_spec.rb",
-    "ai_concierge/tools/llm/answer_hotel_question_tool" => "ai_concierge/tools/llm/tools_spec.rb",
-    "ai_concierge/tools/llm/base_tool" => "ai_concierge/tools/llm/tools_spec.rb",
-    "ai_concierge/tools/llm/get_booking_context_tool" => "ai_concierge/tools/llm/tools_spec.rb",
-    "ai_concierge/tools/llm/get_nearby_attractions_tool" => "ai_concierge/tools/llm/tools_spec.rb",
-    "ai_concierge/tools/llm/get_room_type_details_tool" => "ai_concierge/tools/llm/tools_spec.rb",
+    # The model-facing functions are one surface and are specced as one.
+    "ai_concierge/tools/llm/advance_booking_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/answer_hotel_question_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/base_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/get_booking_context_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/get_nearby_attractions_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/get_room_type_details_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    # The turn's shared vocabulary -- the response shape, the one place a
+    # booking reply is built, the informational intent list. A spec for any of
+    # these apart from a turn would be asserting the literal it was given.
+    "ai_concierge/orchestration/core/domain_response" => "ai_concierge/orchestration/booking/orchestrator_spec.rb",
+    "ai_concierge/orchestration/booking/responses" => "ai_concierge/orchestration/booking/orchestrator_spec.rb",
+    "ai_concierge/orchestration/core/intents" => "ai_concierge/orchestration/booking/revision_policy_spec.rb",
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",
