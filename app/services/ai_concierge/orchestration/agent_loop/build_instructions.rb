@@ -3,20 +3,30 @@
 module AiConcierge
   module Orchestration
     module AgentLoop
-      # The whole prompt.
+      # The whole prompt, in two halves.
       #
       # It is short because the tools are where the knowledge lives now: each
       # one describes when it is for, so the model reads the menu rather than a
       # decision tree. The 200 lines this replaces existed to describe a choice
       # the model was never allowed to make.
+      #
+      # The split is about cost, not content. Providers cache a *prefix*: the
+      # tool schemas and everything up to the first byte that changed. Today's
+      # date used to sit in the opening sentence, so once a day the whole
+      # prefix behind it -- including 3,878 characters of tool schema -- was a
+      # cache miss for every hotel at once. `stable` is what is true for this
+      # hotel until someone edits its room types; `volatile` is what is true
+      # for this turn. Nothing that changes per turn may move up.
       class BuildInstructions
         def initialize(context:)
           @context = context
         end
 
-        def call
+        # Constant for the hotel. This is the half that is worth caching, and
+        # the half a breakpoint is placed after.
+        def stable
           <<~INSTRUCTIONS.strip
-            You are the concierge for #{context.hotel.name}. Today is #{Date.current.iso8601}.
+            You are the concierge for #{context.hotel.name}.
 
             Pick the tool that fits what the guest wants. Every tool writes the
             reply itself, so once you have called one you are finished -- do not
@@ -32,8 +42,13 @@ module AiConcierge
 
             Never state a price, a date, a room's availability or a policy from
             your own knowledge. You do not have that information; the tools do.
-            #{room_types}#{knowledge_languages}#{open_question}
+            #{room_types}#{knowledge_languages}
           INSTRUCTIONS
+        end
+
+        # True for this turn only. Sent as its own block after the cached one.
+        def volatile
+          "Today is #{Date.current.iso8601}.#{open_question}"
         end
 
         private

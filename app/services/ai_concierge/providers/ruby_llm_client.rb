@@ -18,6 +18,24 @@ module AiConcierge
         chat
       end
 
+      # Marks a prompt block as the one worth keeping.
+      #
+      # openai and gemini cache a stable prefix on their own -- there is
+      # nothing to write, only something to stop breaking. claude does not:
+      # its caching is opt-in, and `cache_control` is written per system
+      # content block, which is the whole reason the instructions are built in
+      # two halves rather than one string. The breakpoint sits at the end of
+      # this block, so everything before it -- the tool schemas included -- is
+      # what gets read back next turn.
+      #
+      # Returns the text untouched for the other two, so the caller does not
+      # have to know which provider it is talking to.
+      def cacheable(text)
+        return text unless hotel.ai_provider_name == "claude"
+
+        RubyLLM::Providers::Anthropic::Content.new(text, cache: true)
+      end
+
       private
 
       attr_reader :hotel

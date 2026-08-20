@@ -16,8 +16,13 @@ module AiConcierge
         end
 
         def call
-          chat = Providers::RubyLlmClient.new(hotel: context.hotel).chat
-          chat.with_instructions(BuildInstructions.new(context: context).call)
+          client = Providers::RubyLlmClient.new(hotel: context.hotel)
+          chat = client.chat
+          instructions = BuildInstructions.new(context: context)
+          # Two blocks, not one string: the cache breakpoint goes at the end of
+          # the first, so what changes every turn has to arrive after it.
+          chat.with_instructions(client.cacheable(instructions.stable))
+          chat.with_instructions(instructions.volatile, append: true)
           # `calls: :one` disables parallel tool calls, so a single response
           # cannot contain two advance_booking calls.
           chat.with_tools(*tools, calls: :one)

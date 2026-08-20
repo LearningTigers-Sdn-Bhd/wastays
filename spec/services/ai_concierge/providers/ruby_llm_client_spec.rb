@@ -43,4 +43,28 @@ RSpec.describe AiConcierge::Providers::RubyLlmClient do
       expect(chat).not_to have_received(:with_thinking)
     end
   end
+
+  describe "#cacheable" do
+    # claude is the only one that has to be asked. The other two cache a stable
+    # prefix on their own, so there is nothing to write -- only something to
+    # stop breaking, which is why the instructions are split at all.
+    it "marks the block for claude to keep" do
+      hotel = build(:hotel, ai_provider_enabled: true, ai_provider_name: "claude", ai_provider_key: "test-key")
+
+      result = described_class.new(hotel: hotel).cacheable("the stable half")
+
+      expect(result).to be_a(RubyLLM::Content::Raw)
+      expect(result.value).to eq(
+        [ { type: "text", text: "the stable half", cache_control: { type: "ephemeral" } } ]
+      )
+    end
+
+    it "hands the other providers the text unchanged" do
+      %w[openai gemini].each do |provider|
+        hotel = build(:hotel, ai_provider_enabled: true, ai_provider_name: provider, ai_provider_key: "test-key")
+
+        expect(described_class.new(hotel: hotel).cacheable("the stable half")).to eq("the stable half")
+      end
+    end
+  end
 end
