@@ -11,10 +11,12 @@ module AiConcierge
       @active_branch = active_branch.is_a?(Hash) ? active_branch : {}
     end
 
-    TIMING_SLOT_KEYS = %w[target_month target_year month_segment check_in check_out].freeze
-    DURATION_SLOT_KEYS = %w[days nights].freeze
-    PARTY_SLOT_KEYS = %w[party_size_total adults children].freeze
-    SEARCH_SLOT_KEYS = (TIMING_SLOT_KEYS + DURATION_SLOT_KEYS + PARTY_SLOT_KEYS + %w[room_count]).freeze
+    # Named against the branch schema rather than restated here -- see
+    # `State::SlotMerger`, which owns the shape these are keys of.
+    TIMING_SLOT_KEYS = State::SlotMerger::DATE_KEYS
+    DURATION_SLOT_KEYS = State::SlotMerger::DURATION_KEYS
+    PARTY_SLOT_KEYS = State::SlotMerger::GUEST_KEYS
+    SEARCH_SLOT_KEYS = State::SlotMerger::SEARCH_KEYS
 
     def call
       return slots if conversation_signals["is_correction"]

@@ -1,9 +1,22 @@
 module AiConcierge
   module State
     class SlotMerger
+    # The branch's keys, grouped once.
+    #
+    # "Timing" used to mean seven keys here and five in `InputNormalizer`,
+    # which had a `DURATION_SLOT_KEYS` of its own -- two vocabularies for one
+    # shape, under the same word. Both groupings are real (the normalizer needs
+    # to strip dates without stripping a stated duration), so both are kept,
+    # but they are built from the same parts and named apart.
+    DATE_KEYS = %w[target_month target_year month_segment check_in check_out].freeze
+    DURATION_KEYS = %w[nights days].freeze
+    GUEST_KEYS = %w[party_size_total adults children].freeze
+    ROOM_KEYS = %w[room_count].freeze
+
+    TIMING_KEYS = (DATE_KEYS + DURATION_KEYS).freeze
+    PARTY_KEYS = (GUEST_KEYS + ROOM_KEYS).freeze
+    SEARCH_KEYS = (TIMING_KEYS + PARTY_KEYS).freeze
     DOWNSTREAM_KEYS = %w[suggested_options confirmation_candidate selected_option suggestion_set_version selected_rate_plan_id selected_rate_plan_name].freeze
-    TIMING_KEYS = %w[target_month target_year month_segment check_in check_out nights days].freeze
-    PARTY_KEYS = %w[party_size_total adults children room_count].freeze
 
     def self.empty_branch
       {

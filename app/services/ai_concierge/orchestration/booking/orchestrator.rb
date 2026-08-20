@@ -9,7 +9,7 @@ module AiConcierge
       @prospect = prospect
       @conversation_state = conversation_state
       @interpretation = interpretation
-      @active_branch = active_branch || empty_branch
+      @active_branch = active_branch || State::SlotMerger.empty_branch
       @decision = decision
       @message = message.to_s
       @phone = phone.to_s.presence
@@ -396,10 +396,6 @@ module AiConcierge
 
     def domain_response?(value)
       value.is_a?(Core::DomainResponse)
-    end
-
-    def empty_branch
-      State::SlotMerger.empty_branch
     end
 
     def selection_handler

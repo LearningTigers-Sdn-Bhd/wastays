@@ -271,29 +271,10 @@ module AiConcierge
       }
     end
 
-    def default_branch
-      {
-        "branch_id" => SecureRandom.uuid,
-        "target_month" => nil,
-        "target_year" => nil,
-        "month_segment" => nil,
-        "check_in" => nil,
-        "check_out" => nil,
-        "nights" => nil,
-        "days" => nil,
-        "room_count" => 1,
-        "party_size_total" => nil,
-        "adults" => nil,
-        "children" => nil,
-        "clarification_needed" => nil,
-        "suggested_options" => [],
-        "suggestion_set_version" => 0,
-        "confirmation_candidate" => nil,
-        "selected_option" => nil,
-        "selected_rate_plan_id" => nil,
-        "selected_rate_plan_name" => nil
-      }
-    end
+    # One definition, in `SlotMerger`. This was a character-for-character copy
+    # of it, which is how a nineteen-key schema ends up with two owners and no
+    # answer to "did anyone add a key to both?".
+    def default_branch = SlotMerger.empty_branch
     end
   end
 end
