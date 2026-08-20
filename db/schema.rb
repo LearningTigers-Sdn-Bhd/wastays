@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1593,7 +1593,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_140000) do
   create_table "hotels", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "address"
-    t.boolean "ai_concierge_agent_loop_enabled", default: false, null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.boolean "ai_provider_enabled", default: false
     t.text "ai_provider_key"

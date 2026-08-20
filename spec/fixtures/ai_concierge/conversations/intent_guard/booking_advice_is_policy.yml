@@ -10,9 +10,6 @@ turns:
   - guest: "what should i be aware of during booking in this hotel?"
     # The model gets this one wrong -- that mistake is why the rule exists.
     model:
-      legacy:
-        intent: booking_search
-        topic: booking_search
     expect:
       intent: hotel_policy
       reply_matches: ["quiet hours start at 10 PM"]

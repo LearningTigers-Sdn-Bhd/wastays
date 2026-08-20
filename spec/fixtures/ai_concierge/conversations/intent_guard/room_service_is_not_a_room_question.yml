@@ -10,9 +10,6 @@ turns:
   - guest: "do you have room service?"
     # The model gets this one wrong -- that mistake is why the rule exists.
     model:
-      legacy:
-        intent: room_information
-        topic: room_information
     expect:
       intent: hotel_information
       reply_matches: ["Room service runs from 7 AM to 11 PM"]

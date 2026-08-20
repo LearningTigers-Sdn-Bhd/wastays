@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
-  let(:hotel) { create(:hotel, :with_ai_concierge, ai_concierge_agent_loop_enabled: true) }
+  let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel) }
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect) }
 

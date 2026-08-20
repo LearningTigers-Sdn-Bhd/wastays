@@ -564,167 +564,16 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     end
   end
 
+  # ReferenceClassifier decides every message here. It is deliberately stricter
+  # than the private router this replaced: it extracts only what the sentence
+  # states, so a guest who names a month gets asked for a duration instead of
+  # having one invented for them.
+  ROOM_VOCABULARY = [
+    "Executive Suite", "Executive Penthouse", "Ocean Villa King", "Garden Prestige Suite", "Deluxe Room"
+  ].freeze
+
   def stub_interpreter
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call) do |agent|
-      build_interpretation(
-        message: agent.instance_variable_get(:@message),
-        conversation_summary: agent.instance_variable_get(:@conversation_summary)
-      )
-    end
-  end
-
-  def build_interpretation(message:, conversation_summary:)
-    normalized = message.to_s.downcase.strip
-
-    if normalized.match?(/\bpolic(?:y|ies)\b/)
-      return interpretation(intent: "hotel_policy", topic: "hotel_policy")
-    end
-
-    if normalized.match?(/\b(attractions?|nearby|places?)\b/)
-      return interpretation(intent: "nearby_attractions", topic: "nearby_attractions")
-    end
-
-    if normalized.match?(/\bfaq\b/)
-      return interpretation(intent: "hotel_information", topic: "hotel_faq")
-    end
-
-    if normalized.match?(/\b(amenit(?:y|ies)|facilit(?:y|ies))\b/) && normalized.match?(/\b(hotel|property)\b/)
-      return interpretation(intent: "hotel_information", topic: "general_hotel_info")
-    end
-
-    if normalized.match?(/\b(tell me about|details for|about the)\b/) && normalized.match?(/\b(exec|executive|ocean|villa|suite|room)\b/)
-      return interpretation(intent: "room_information", topic: "room_information", slots: { "room_type_name" => inferred_room_type_name(normalized) })
-    end
-
-    if normalized.include?("tell me about the hotel")
-      return interpretation(intent: "hotel_information", topic: "general_hotel_info")
-    end
-
-    if normalized.include?("another booking")
-      return interpretation(
-        intent: "booking_search",
-        topic: "booking_search",
-        signals: { "starts_new_booking_branch" => true }
-      )
-    end
-
-    if normalized.match?(/\b(option|suite|room)\b/) && normalized.match?(/\boption\s*\d+\b/)
-      return interpretation(
-        intent: "option_selection",
-        topic: "booking_search",
-        slots: { "option_number" => normalized[/\boption\s*(\d+)\b/, 1] }
-      )
-    end
-
-    if normalized == "yes"
-      return interpretation(intent: "confirmation", topic: "booking_search", slots: { "confirmation" => "yes" })
-    end
-
-    if normalized.include?("2 adults")
-      if normalized.include?("hello, is there any booking")
-        return interpretation(
-          intent: "booking_search",
-          topic: "booking_search",
-          slots: month_slots(5, "early").merge("adults" => 2, "children" => 0)
-        )
-      end
-
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "adults" => 2, "children" => 0 })
-    end
-
-    if normalized.include?("2 people")
-      if normalized.include?("early june")
-        return interpretation(intent: "booking_search", topic: "booking_search", slots: month_slots(6, "early").merge("adults" => 2, "party_size_total" => 2))
-      end
-
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "party_size_total" => 2 })
-    end
-
-    if normalized == "adults"
-      return interpretation(intent: "booking_search", topic: "booking_search")
-    end
-
-    if normalized.include?("3 days 2 nights")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "days" => 3, "nights" => 2 })
-    end
-
-    if normalized.include?("5 days 4 nights")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "days" => 5, "nights" => 4 })
-    end
-
-    if normalized.include?("2 days 1 night")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "days" => 2, "nights" => 1 })
-    end
-
-    if normalized.include?("4 days 3 nights")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "days" => 4, "nights" => 3 })
-    end
-
-    if normalized.include?("3 adults 3 children")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "adults" => 3, "children" => 3 })
-    end
-
-    if normalized.include?("early june")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: month_slots(6, "early").merge("days" => 5, "nights" => 4))
-    end
-
-    if normalized.include?("early july")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: month_slots(7, "early").merge("days" => 3, "nights" => 2, "adults" => 2, "children" => 0))
-    end
-
-    if normalized.include?("early august")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: month_slots(8, "early").merge("days" => 3, "nights" => 2))
-    end
-
-    if normalized.include?("mid august")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: month_slots(8, "mid").merge("days" => 3, "nights" => 2))
-    end
-
-    if normalized.include?("late august")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: month_slots(8, "late").merge("days" => 2, "nights" => 1))
-    end
-
-    if normalized.include?("late may")
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: month_slots(5, "late").merge("days" => 4, "nights" => 3))
-    end
-
-    if normalized.match?(/may\s+\d+/)
-      day = normalized[/may\s+(\d+)/, 1].to_i
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "check_in" => Date.new(infer_year(5), 5, day).iso8601 })
-    end
-
-    if normalized.match?(/august\s+\d+/)
-      day = normalized[/august\s+(\d+)/, 1].to_i
-      return interpretation(intent: "booking_search", topic: "booking_search", slots: { "check_in" => Date.new(infer_year(8), 8, day).iso8601 })
-    end
-
-    interpretation(intent: "greeting", topic: "general")
-  end
-
-  def interpretation(intent:, topic:, slots: {}, signals: {}, message_type: "booking_request")
-    {
-      "message_type" => message_type,
-      "intent" => intent,
-      "topic" => topic,
-      "confidence" => 1.0,
-      "slots" => slots,
-      "tool_hints" => [],
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }.merge(signals)
-    }
-  end
-
-  def month_slots(month, segment)
-    {
-      "target_month" => month,
-      "target_year" => infer_year(month),
-      "month_segment" => segment
-    }
+    stub_concierge_model(room_type_names: ROOM_VOCABULARY)
   end
 
   def seed_room_type_options(room_type_name, month:, days:, max_adults: 2)
@@ -747,12 +596,5 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
   def parsed_body
     JSON.parse(response.body)
-  end
-
-  def inferred_room_type_name(normalized)
-    return "Executive Suite" if normalized.include?("exec") || normalized.include?("executive")
-    return "Ocean Villa" if normalized.include?("ocean villa")
-
-    nil
   end
 end

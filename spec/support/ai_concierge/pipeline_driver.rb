@@ -9,11 +9,6 @@
 # catch.
 module AiConciergeEval
   module PipelineDriver
-    # Both columns run the same fixtures under the same assertions. That is the
-    # whole safety argument for the rewrite -- not "green with adjusted
-    # expectations", green against the same file.
-    PIPELINES = %i[legacy agent_loop].freeze
-
     TurnResult = Struct.new(:result, :prospect, :conversation_state, :quotes_created, keyword_init: true) do
       def payload = result.payload || {}
       def reply = payload[:reply_message]
@@ -21,11 +16,9 @@ module AiConciergeEval
       def booking_task = slots_payload["booking_task"] || {}
     end
 
-    def self.available?(pipeline) = PIPELINES.include?(pipeline.to_sym)
-
-    def run_fixture(fixture, pipeline:)
-      world = build_fixture_world(fixture, pipeline: pipeline)
-      install_model_fake(fixture, world, pipeline: pipeline)
+    def run_fixture(fixture)
+      world = build_fixture_world(fixture)
+      install_model_fake(fixture, world)
 
       fixture.turns.each_with_index do |turn, index|
         yield turn, post_fixture_turn(world, turn), index
@@ -34,8 +27,8 @@ module AiConciergeEval
 
     private
 
-    def build_fixture_world(fixture, pipeline:)
-      hotel = create(:hotel, :with_ai_concierge, ai_concierge_agent_loop_enabled: pipeline == :agent_loop)
+    def build_fixture_world(fixture)
+      hotel = create(:hotel, :with_ai_concierge)
       policy = fixture.setup["policy"] || {}
       create(
         :property_policy,
@@ -120,30 +113,11 @@ module AiConciergeEval
       end
     end
 
-    def install_model_fake(fixture, world, pipeline:)
-      raise ArgumentError, "unsupported pipeline #{pipeline}" unless PipelineDriver.available?(pipeline)
-
-      scripted = fixture.turns.to_h { |turn| [ turn.guest, turn.model_for(pipeline) ] }
-      summary = { "room_type_names" => world[:room_type_names] }
-
-      return install_scripted_chat(scripted, summary) if pipeline == :agent_loop
-
-      allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call) do |agent|
-        message = agent.send(:message)
-        override = scripted[message]
-        interpretation = ReferenceClassifier.call(message: message, conversation_summary: summary)
-        override ? interpretation.deep_merge(override.deep_stringify_keys) : interpretation
-      end
-    end
-
-    # The fake stands where the provider stands. Tool dispatch, the halt, the
-    # hop cap and every orchestrator underneath are real.
-    def install_scripted_chat(scripted, summary)
-      turns = scripted.compact.transform_values { |script| script.deep_symbolize_keys }
-
-      allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat) do
-        ScriptedChat.new(classifier_summary: summary, scripted_turns: turns)
-      end
+    def install_model_fake(fixture, world)
+      stub_concierge_model(
+        room_type_names: world[:room_type_names],
+        scripted: fixture.turns.to_h { |turn| [ turn.guest, turn.model ] }
+      )
     end
 
     def post_fixture_turn(world, turn)

@@ -219,20 +219,8 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       }
     )
 
-    # We mock the interpreter to ensure it returns end_conversation=true
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "conversation_control",
-      "intent" => "greeting",
-      "topic" => "greeting",
-      "slots" => {},
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => true
-      }
-    })
+    # No model fake: "nevermind" is caught by the control handler before the
+    # loop ever runs, which is the point of settling control deterministically.
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "nevermind", prospect_public_id: prospect.public_id).call
 
@@ -249,19 +237,9 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       "active" => { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" }
     })
 
-    # We mock the interpreter to return no slots, but the guardrail should extract '4'
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_request",
-      "intent" => "booking_search",
-      "topic" => "booking_search",
-      "slots" => {},
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }
+    # The model passes no slots; InputNormalizer is what finds the 4.
+    stub_concierge_model(scripted: {
+      "4" => { tool: "advance_booking", arguments: { "slots" => {}, "signals" => {} } }
     })
 
     AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "4", prospect_public_id: prospect.public_id).call
@@ -275,15 +253,9 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
     prospect = create(:prospect, hotel: hotel)
     conversation_state = create(:prospect_conversation_state, prospect: prospect)
 
-    # Mock LLM hallucinating month_segment="early" for "june"
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_request",
-      "intent" => "booking_search",
-      "topic" => "booking_search",
-      "slots" => { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" },
-      "conversation_signals" => {
-        "is_reset" => false, "is_resume" => false, "is_correction" => false, "starts_new_booking_branch" => false, "end_conversation" => false
-      }
+    # The model hallucinates month_segment="early" for a bare "june".
+    stub_concierge_model(scripted: {
+      "can i book on june" => { tool: "advance_booking", arguments: { "slots" => { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" }, "signals" => {} } }
     })
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "can i book on june", prospect_public_id: prospect.public_id).call
@@ -302,15 +274,9 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       "active" => { "target_month" => 6, "target_year" => 2026 }
     })
 
-    # LLM correctly extracts mid
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_request",
-      "intent" => "booking_search",
-      "topic" => "booking_search",
-      "slots" => { "month_segment" => "mid" },
-      "conversation_signals" => {
-        "is_reset" => false, "is_resume" => false, "is_correction" => false, "starts_new_booking_branch" => false, "end_conversation" => false
-      }
+    # The model gets this one right.
+    stub_concierge_model(scripted: {
+      "mid" => { tool: "advance_booking", arguments: { "slots" => { "month_segment" => "mid" }, "signals" => {} } }
     })
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "mid", prospect_public_id: prospect.public_id).call
@@ -329,18 +295,10 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       "active" => { "target_month" => 6, "target_year" => 2026 }
     })
 
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_confirmation",
-      "intent" => "confirmation",
-      "topic" => "booking_search",
-      "slots" => { "confirmation" => "yes" },
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }
+    # The model reads the trailing "ok?" as a yes. pending_question is what
+    # decides a "yes" is not on offer here, so the date wins.
+    stub_concierge_model(scripted: {
+      "23 june ok?" => { tool: "advance_booking", arguments: { "slots" => { "confirmation" => "yes" }, "signals" => {} } }
     })
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "23 june ok?", prospect_public_id: prospect.public_id).call
@@ -354,18 +312,9 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
   it "does not attach request quote action to clarification replies" do
     prospect = create(:prospect, hotel: hotel)
 
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_request",
-      "intent" => "booking_search",
-      "topic" => "booking_search",
-      "slots" => {},
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }
+    # A booking attempt that states nothing yet.
+    stub_concierge_model(scripted: {
+      "can i make booking?" => { tool: "advance_booking", arguments: { "slots" => {}, "signals" => {} } }
     })
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "can i make booking?", prospect_public_id: prospect.public_id).call

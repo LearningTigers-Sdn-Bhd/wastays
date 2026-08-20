@@ -126,6 +126,11 @@ module AiConcierge
             return "confirmation" if pending_question == "confirm_selection" && slots["confirmation"].present?
             return "option_selection" if slots["option_number"].present?
 
+            # Options are on the table, so whatever the guest just said is an
+            # answer to them -- a date, a room name, an ordinal. Reading that as
+            # a fresh search would show the same list again and strand them.
+            return "option_selection" if pending_question == "select_option"
+
             "booking_search"
           end
         end

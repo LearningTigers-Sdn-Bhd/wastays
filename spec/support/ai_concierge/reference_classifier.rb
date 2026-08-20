@@ -157,9 +157,27 @@ module AiConciergeEval
     def booking?(slots)
       return true if booking_verb?
       return true if rate_question?
+      return true if revision?
       return true if normalized.match?(/\b(?:availability|available)\b/) && room_or_stay?
 
+      # A guest who has been shown options and answers "executive one" or
+      # "ocean villa king" is picking one, not making conversation. Anything
+      # descriptive was already claimed by room_information? above, which is
+      # checked first, so what reaches here is a bare name.
+      return true if room_scoped?
+
       slots.except("room_type_name").any?
+    end
+
+    # "change rate", "different room", "changed my mind" state no slots at all,
+    # so nothing above catches them -- but a model that did not reach for
+    # advance_booking here would strand the guest, because Booking::RevisionPolicy
+    # reads the raw message and is only reached through that tool.
+    def revision?
+      return true if normalized.match?(/\bchanged my mind\b/)
+
+      normalized.match?(/\b(?:change|switch|different|another|other|new)\b/) &&
+        normalized.match?(/\b(?:rates?|rate plans?|plans?|rooms?|options?|choices?|suite|villa|dates?|booking)\b/)
     end
 
     def booking_verb? = normalized.match?(/\b(?:book|booking|reserve|reservation|quote)\b/)
@@ -202,9 +220,13 @@ module AiConciergeEval
     # August -- so a number that belongs to a following noun is not a day.
     COUNTED_NOUNS = "days?|nights?|adults?|child|children|kids?|people|persons?|pax|guests?|rooms?"
 
+    # "August 3rd" and "the 3rd of August" are how people write dates out loud,
+    # and a model reads both as the third.
+    ORDINAL_SUFFIX = "(?:st|nd|rd|th)?"
+
     def date_slots
-      if (match = normalized.match(/\b(#{MONTH_PATTERN}) (\d{1,2})\b(?! (?:#{COUNTED_NOUNS}))/)) ||
-         (match = normalized.match(/\b(\d{1,2}) (#{MONTH_PATTERN})\b/))
+      if (match = normalized.match(/\b(#{MONTH_PATTERN}) (\d{1,2})#{ORDINAL_SUFFIX}\b(?! (?:#{COUNTED_NOUNS}))/)) ||
+         (match = normalized.match(/\b(\d{1,2})#{ORDINAL_SUFFIX} (#{MONTH_PATTERN})\b/))
         name, day = match[1].match?(/\d/) ? [ match[2], match[1] ] : [ match[1], match[2] ]
         month = month_number(name)
         return { "check_in" => Date.new(year_for(month), month, day.to_i).iso8601 } if month

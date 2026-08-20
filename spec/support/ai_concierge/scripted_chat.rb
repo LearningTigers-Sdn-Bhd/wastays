@@ -8,9 +8,10 @@
 # than the loop.
 module AiConciergeEval
   class ScriptedChat
-    def initialize(scripted_turns: {}, classifier_summary: {})
+    def initialize(scripted_turns: {}, classifier_summary: {}, interpretation: nil)
       @scripted_turns = scripted_turns
       @classifier_summary = classifier_summary
+      @interpretation = interpretation
       @tools = []
       @callbacks = Hash.new { |hash, key| hash[key] = [] }
     end
@@ -40,17 +41,18 @@ module AiConciergeEval
 
     private
 
-    attr_reader :tools, :scripted_turns, :classifier_summary
+    attr_reader :tools, :scripted_turns, :classifier_summary, :interpretation
 
-    # A fixture that scripts a tool call gets exactly that. Otherwise the
-    # reference classifier decides, and its answer is translated into the tool
-    # a well-behaved model would have reached for.
+    # A fixture that scripts a tool call gets exactly that. A spec that pins one
+    # interpretation for the whole conversation gets that interpretation on every
+    # turn. Otherwise the reference classifier decides. All three end up as the
+    # tool a model holding that reading would have reached for.
     def tool_call_for(message)
       scripted = scripted_turns[message]
       return scripted if scripted
 
       ToolChoice.new(
-        interpretation: ReferenceClassifier.call(message: message, conversation_summary: classifier_summary),
+        interpretation: interpretation || ReferenceClassifier.call(message: message, conversation_summary: classifier_summary),
         message: message
       ).call
     end

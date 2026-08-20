@@ -49,29 +49,7 @@ module AiConcierge
           return control_handler.max_turns_response(prospect: session.prospect, conversation_state: session.conversation_state)
         end
 
-        return run_agent_loop(session) if hotel.ai_concierge_agent_loop?
-
-        interpretation = interpretation_pipeline.interpret(conversation_state: session.conversation_state)
-        control_response = control_handler.handle(
-          prospect: session.prospect,
-          conversation_state: session.conversation_state,
-          interpretation: interpretation
-        )
-        return control_response if control_response
-
-        prepared_turn = interpretation_pipeline.prepare(
-          conversation_state: session.conversation_state,
-          interpretation: interpretation
-        )
-        response = process_decision(
-          prospect: session.prospect,
-          conversation_state: prepared_turn.conversation_state,
-          interpretation: prepared_turn.interpretation,
-          active_branch: prepared_turn.active_branch,
-          decision: prepared_turn.decision
-        )
-
-        Core::Result.success(payload: response)
+        run_agent_loop(session)
       end
 
       # A person is holding this thread, so the assistant has nothing to say.
@@ -96,11 +74,11 @@ module AiConcierge
         )
       end
 
-      # The tool-calling loop. Everything above it in `process_session` still
-      # runs first and still costs nothing: a staff member holding the thread,
-      # a turn limit, a guest saying goodbye. Control is settled deterministically
-      # here rather than after the model, so those turns no longer buy a
-      # round-trip to answer a question regex already answered.
+      # The tool-calling loop. Everything above it in `process_session` runs
+      # first and still costs nothing: a staff member holding the thread, a turn
+      # limit, a guest saying goodbye. Control is settled deterministically here
+      # rather than after the model, so those turns no longer buy a round-trip
+      # to answer a question a regex already answered.
       def run_agent_loop(session)
         control_response = control_handler.handle(
           prospect: session.prospect,
@@ -127,67 +105,6 @@ module AiConcierge
         )
       end
 
-      def process_decision(prospect:, conversation_state:, interpretation:, active_branch:, decision:)
-        case decision[:action]
-        when :greeting
-          response_persister.persist_response(prospect:, conversation_state:, interpretation:, slots_payload: conversation_state.slots_payload, reply_type: :greeting, active_topic: nil, active_flow: nil, pending_question: nil, action_name: nil)
-        when :confirm_to_end_conversation
-          control_handler.request_end_confirmation_response(prospect:, conversation_state:, interpretation:)
-        when :end_conversation
-          control_handler.end_conversation_response(prospect:, conversation_state:, interpretation:)
-        when :reset
-          payload = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).reset_tasks
-          response_persister.persist_response(prospect:, conversation_state:, interpretation:, slots_payload: payload, reply_type: :reset, active_topic: nil, active_flow: nil, pending_question: nil, action_name: nil)
-        when :resume, :booking
-          handle_booking_decision(prospect:, conversation_state:, interpretation:, active_branch:, decision:)
-        when :librarian
-          handle_librarian_decision(prospect:, conversation_state:, interpretation:, active_branch:, decision:)
-        when :booking_context
-          handle_booking_context(prospect:, conversation_state:, interpretation:)
-        else
-          response_persister.persist_response(prospect:, conversation_state:, interpretation:, slots_payload: conversation_state.slots_payload, reply_type: nil, active_topic: nil, active_flow: nil, pending_question: nil, action_name: nil, extra_context: { message: MessageBuilders::FallbackBuilder::DEFAULT_MESSAGE })
-        end
-      end
-
-      def handle_booking_decision(prospect:, conversation_state:, interpretation:, active_branch:, decision:)
-        domain_result = Booking::Orchestrator.new(
-          hotel: hotel,
-          prospect: prospect,
-          conversation_state: conversation_state,
-          interpretation: interpretation,
-          active_branch: active_branch,
-          decision: decision,
-          message: message,
-          phone: phone,
-          tool_registry: tool_registry
-        ).call
-
-        response_persister.persist_domain_response(prospect:, conversation_state:, interpretation:, domain_result:)
-      end
-
-      def handle_librarian_decision(prospect:, conversation_state:, interpretation:, active_branch:, decision:)
-        domain_result = HotelKnowledge::Orchestrator.new(
-          hotel: hotel,
-          message: message,
-          interpretation: interpretation,
-          conversation_state: conversation_state,
-          pause: decision[:pause],
-          active_branch: active_branch,
-          tool_registry: tool_registry
-        ).call
-
-        response_persister.persist_domain_response(prospect:, conversation_state:, interpretation:, domain_result:)
-      end
-
-      def handle_booking_context(prospect:, conversation_state:, interpretation:)
-        domain_result = Conversation::BookingContextHandler.new(
-          hotel: hotel,
-          phone: phone,
-          tool_registry: tool_registry
-        ).call(prospect: prospect, conversation_state: conversation_state)
-        response_persister.persist_domain_response(prospect:, conversation_state:, interpretation:, domain_result:)
-      end
-
       def session_loader
         @session_loader ||= Conversation::SessionLoader.new(
           hotel: hotel,
@@ -197,10 +114,6 @@ module AiConcierge
           channel: channel,
           record_inbound: record_inbound
         )
-      end
-
-      def interpretation_pipeline
-        @interpretation_pipeline ||= Conversation::InterpretationPipeline.new(hotel: hotel, message: message)
       end
 
       def control_handler

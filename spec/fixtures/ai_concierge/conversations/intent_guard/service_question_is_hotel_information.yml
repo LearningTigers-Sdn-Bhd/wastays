@@ -10,9 +10,6 @@ turns:
   - guest: "is there parking?"
     # The model gets this one wrong -- that mistake is why the rule exists.
     model:
-      legacy:
-        intent: booking_search
-        topic: booking_search
     expect:
       intent: hotel_information
       reply_matches: ["Parking is free"]

@@ -13,7 +13,7 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
   before do
     create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00", cancellation_policy: "24 hours")
     allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
-    stub_interpreter
+    stub_concierge_conversation
   end
 
   it "selects the first rate plan by ordinal language" do
@@ -207,57 +207,31 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     prospect.prospect_conversation_state.reload.slots_payload.dig("booking_task", "branch")
   end
 
-  def stub_interpreter
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call) do |agent|
-      build_interpretation(agent.instance_variable_get(:@message))
-    end
+  # ReferenceClassifier reads every message here except the rate-plan choices:
+  # picking a plan by price or by ordinal is not slot extraction from the
+  # sentence, it is the model naming one of the options it was just shown.
+  def stub_concierge_conversation
+    stub_concierge_model(
+      room_type_names: [ room_name, "Deluxe Room" ],
+      scripted: {
+        "first one" => rate_plan_choice("first one"),
+        "cheapest" => rate_plan_choice("cheapest"),
+        "refundable" => rate_plan_choice("refundable"),
+        "standard" => rate_plan_choice("standard"),
+        "the cheaper one" => rate_plan_choice("Non-Refundable Rate"),
+        "early september" => {
+          tool: "advance_booking",
+          arguments: {
+            "slots" => month_slots(9, "early"),
+            "signals" => { "is_correction" => true }
+          }
+        }
+      }
+    )
   end
 
-  def build_interpretation(message)
-    normalized = message.to_s.downcase.strip
-
-    return interpretation(intent: "hotel_policy", topic: "hotel_policy") if normalized.include?("check in")
-    return interpretation(slots: month_slots(8, "mid").merge("days" => 3, "nights" => 2)) if normalized.include?("mid august")
-    return interpretation(slots: { "days" => 3, "nights" => 2 }) if normalized.include?("3 days 2 nights")
-    return interpretation(slots: { "adults" => 2, "children" => 0 }) if normalized.include?("2 adults")
-    return interpretation(slots: month_slots(9, "early"), signals: { "is_correction" => true }) if normalized.include?("early september")
-    return interpretation(intent: "confirmation", slots: { "confirmation" => "yes" }) if normalized == "yes"
-    return interpretation(intent: "confirmation", slots: { "confirmation" => "no" }) if normalized == "no"
-
-    if normalized.match?(/\boption\s*\d+\b/)
-      return interpretation(
-        intent: "option_selection",
-        slots: { "option_number" => normalized[/\boption\s*(\d+)\b/, 1] }
-      )
-    end
-
-    if normalized.include?("the cheaper one")
-      return interpretation(intent: "option_selection", slots: { "rate_plan_name" => "Non-Refundable Rate" })
-    end
-
-    if normalized.match?(/\b(first|cheapest|refundable|standard)\b/)
-      return interpretation(intent: "option_selection", slots: { "rate_plan_name" => normalized })
-    end
-
-    interpretation(intent: "greeting", topic: "general")
-  end
-
-  def interpretation(intent: "booking_search", topic: "booking_search", slots: {}, signals: {})
-    {
-      "message_type" => "booking_request",
-      "intent" => intent,
-      "topic" => topic,
-      "confidence" => 1.0,
-      "slots" => slots,
-      "tool_hints" => [],
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }.merge(signals)
-    }
+  def rate_plan_choice(name)
+    { tool: "advance_booking", arguments: { "slots" => { "rate_plan_name" => name }, "signals" => {} } }
   end
 
   def month_slots(month, segment)

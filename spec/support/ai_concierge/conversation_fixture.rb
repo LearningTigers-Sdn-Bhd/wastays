@@ -20,7 +20,7 @@ module AiConciergeEval
       # What the model is scripted to do, per pipeline. Omitted means "let
       # ReferenceClassifier decide", which is the common case -- scripting is
       # for turns where the point of the fixture is a specific model choice.
-      def model_for(pipeline) = @attributes.dig("model", pipeline.to_s)
+      def model = @attributes.dig("model", "agent_loop")
 
       def expectations = @attributes["expect"] || {}
     end

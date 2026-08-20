@@ -10,9 +10,6 @@ turns:
   - guest: "what amenities does the hotel have?"
     # The model gets this one wrong -- that mistake is why the rule exists.
     model:
-      legacy:
-        intent: room_information
-        topic: room_information
     expect:
       intent: hotel_information
       reply_matches: ["spa"]

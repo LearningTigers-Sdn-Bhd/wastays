@@ -475,10 +475,6 @@ class Hotel < ApplicationRecord
     ai_provider_key
   end
 
-  def ai_concierge_agent_loop?
-    ai_concierge_agent_loop_enabled? && ai_concierge_ready?
-  end
-
   def effective_margin_rate(room_type = nil)
     # 1. Check room-type override
     if room_type

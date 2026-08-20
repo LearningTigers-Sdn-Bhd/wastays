@@ -10,9 +10,6 @@ turns:
   - guest: "how much is a room here?"
     # The model gets this one wrong -- that mistake is why the rule exists.
     model:
-      legacy:
-        intent: room_information
-        topic: room_information
       agent_loop:
         tool: get_room_type_details
         arguments:
