@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2308,12 +2308,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_170000) do
     t.string "flow_status", default: "active", null: false
     t.string "last_action_name"
     t.string "last_intent"
-    t.datetime "last_topic_switch_at"
     t.datetime "last_user_message_at"
     t.integer "lock_version", default: 0, null: false
     t.text "pending_question"
     t.bigint "prospect_id", null: false
-    t.integer "reset_count", default: 0, null: false
     t.jsonb "slots_payload", default: {}, null: false
     t.datetime "updated_at", null: false
     t.index ["active_topic"], name: "index_prospect_conversation_states_on_active_topic"

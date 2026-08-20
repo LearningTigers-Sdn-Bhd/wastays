@@ -9,8 +9,6 @@ FactoryBot.define do
     last_intent { nil }
     last_action_name { nil }
     last_user_message_at { nil }
-    last_topic_switch_at { nil }
-    reset_count { 0 }
 
     # Mid-booking states are built *through* ConversationTaskManager rather than
     # by hand-writing the jsonb, so a change to the payload shape moves these
