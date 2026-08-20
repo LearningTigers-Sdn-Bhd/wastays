@@ -10,6 +10,16 @@ module HotelPortal
     CHANNEL_LABELS = { "web" => "Web", "whatsapp" => "WhatsApp", "api" => "API" }.freeze
     CHANNEL_ICONS = { "web" => "globe", "whatsapp" => "message-circle", "api" => "webhook" }.freeze
 
+    # Enough of the languages a Malaysian hotel actually sees to spell one out.
+    # Anything else shows its code rather than nothing: "PT" is still more use
+    # to a reader than a row that keeps quiet about being in Portuguese.
+    LANGUAGE_LABELS = {
+      "ms" => "Malay", "id" => "Indonesian", "zh" => "Chinese", "ta" => "Tamil",
+      "ar" => "Arabic", "th" => "Thai", "vi" => "Vietnamese", "ja" => "Japanese",
+      "ko" => "Korean", "hi" => "Hindi", "fr" => "French", "de" => "German",
+      "es" => "Spanish", "ru" => "Russian"
+    }.freeze
+
     def initialize(conversation, view:)
       @conversation = conversation
       @view = view
@@ -17,8 +27,8 @@ module HotelPortal
 
     attr_reader :conversation
 
-    delegate :id, :mode, :status, :channel, :prospect, :assigned_user,
-             :last_message_at, :human?, :open?, :human_requested?, to: :conversation
+    delegate :id, :mode, :status, :channel, :prospect, :assigned_user, :language,
+             :last_message_at, :human?, :open?, :human_requested?, :translated?, to: :conversation
 
     def display_name
       prospect.name.presence || prospect.phone_number.presence || "Unnamed guest"
@@ -35,6 +45,14 @@ module HotelPortal
     # A prospect linked to a guest has booked before. That is the single most
     # useful thing a staff member can know before they read a word.
     def returning_guest? = prospect.guest_id.present?
+
+    # Nil for a thread in English, so the row says nothing in the ordinary case
+    # and the chip means "this one is not in your language".
+    def language_label
+      return unless translated?
+
+      LANGUAGE_LABELS.fetch(language, language.upcase)
+    end
 
     def last_activity
       return "No messages yet" if last_message_at.blank?

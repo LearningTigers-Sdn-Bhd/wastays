@@ -38,6 +38,30 @@ RSpec.describe HotelPortal::Inbox::ListItemBody, type: :component do
     expect(page).to have_no_css("span.sr-only", text: "unread")
   end
 
+  describe "a thread the guest is not writing in English" do
+    it "says which language, before anyone opens it" do
+      conversation.language = "ms"
+
+      render_body
+
+      expect(page).to have_text("Malay")
+    end
+
+    it "falls back to the code for a language it cannot name" do
+      conversation.language = "pt"
+
+      render_body
+
+      expect(page).to have_text("PT")
+    end
+
+    it "says nothing on an English thread" do
+      render_body
+
+      expect(page).to have_no_text("Malay")
+    end
+  end
+
   it "says who is holding the thread" do
     render_body
 

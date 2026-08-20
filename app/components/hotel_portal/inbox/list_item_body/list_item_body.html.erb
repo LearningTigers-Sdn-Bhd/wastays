@@ -19,6 +19,12 @@
   <span class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
     <%= helpers.app_icon presenter.channel_icon, class: "size-3.5", aria: { hidden: "true" } %>
     <span><%= presenter.channel_label %></span>
+    <%# Shown before a staff member opens the thread, because whether they can
+        read it is the thing they need to know before they take it over. %>
+    <% if presenter.language_label %>
+      <span aria-hidden="true">·</span>
+      <%= render PanelsUI::Badge.new(label: presenter.language_label, variant: :neutral, size: :xs) %>
+    <% end %>
     <span aria-hidden="true">·</span>
     <span><%= presenter.last_activity %></span>
   </span>
