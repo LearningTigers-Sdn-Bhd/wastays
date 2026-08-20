@@ -54,8 +54,7 @@ module Concierge
     end
 
     def resolve_conversation(prospect)
-      prospect.conversations.open.find_by(channel: CHANNEL) ||
-        prospect.conversations.create!(hotel: hotel, channel: CHANNEL)
+      OpenConversation.new(prospect: prospect, channel: CHANNEL).call
     end
 
     def bot_answers?(conversation)

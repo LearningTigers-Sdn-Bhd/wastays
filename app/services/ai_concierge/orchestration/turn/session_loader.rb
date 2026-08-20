@@ -70,13 +70,12 @@ module AiConcierge
           )
         end
 
-        # A thread the guest is still in gets continued; anything already closed
-        # starts a fresh one, so a guest returning months later is not dropped
-        # back into the middle of an old exchange. `prospect.with_lock` upstream
-        # serialises this, and the partial unique index is the backstop.
+        # A guest returning months later is not dropped back into the middle of
+        # an old exchange -- see Concierge::OpenConversation, which also owns
+        # what a new thread does to the assistant's state. `prospect.with_lock`
+        # upstream serialises this, and the partial unique index is the backstop.
         def resolve_conversation(prospect)
-          prospect.conversations.open.find_by(channel: channel) ||
-            prospect.conversations.create!(hotel: prospect.hotel, channel: channel)
+          ::Concierge::OpenConversation.new(prospect: prospect, channel: channel).call
         end
 
         def load_conversation_state(prospect)

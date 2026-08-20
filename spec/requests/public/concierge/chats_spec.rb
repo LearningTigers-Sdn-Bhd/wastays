@@ -285,6 +285,22 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       }.to change(Conversation, :count).by(1).and change(Prospect, :count).by(0)
     end
 
+    # The bug: the assistant's state is keyed to the visitor, not the thread, so
+    # the open question survived clearing and the first message of the new chat
+    # was answered as an answer to it ("I couldn't match that option...").
+    it "does not carry the old thread's open question into the new one" do
+      post chat_path, params: { message: "First thread" }
+      state = Prospect.last.prospect_conversation_state ||
+        ProspectConversationState.create!(prospect: Prospect.last)
+      state.update!(pending_question: "select_option", active_flow: "booking_search")
+
+      delete clear_path
+      post chat_path, params: { message: "hello" }
+
+      expect(state.reload.pending_question).to be_nil
+      expect(state.active_flow).to be_nil
+    end
+
     it "is harmless for a visitor who has never written" do
       delete clear_path
 
