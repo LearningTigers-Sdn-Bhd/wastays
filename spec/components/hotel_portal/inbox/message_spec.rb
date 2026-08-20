@@ -81,6 +81,24 @@ RSpec.describe HotelPortal::Inbox::Message, type: :component do
     expect(page).to have_css("time[datetime='#{message.sent_at.iso8601}']")
   end
 
+  describe "a reply that was rewritten for the guest" do
+    it "keeps the English the assistant computed within reach" do
+      message = message_for("bot", body: "Selamat datang!", source_body: "Welcome!")
+
+      render_inline(described_class.new(message: message))
+
+      expect(page).to have_text("Selamat datang!")
+      expect(page).to have_text("Show original")
+      expect(page).to have_text("Welcome!")
+    end
+
+    it "says nothing about an original on a reply nobody rewrote" do
+      render_inline(described_class.new(message: message_for("bot", body: "Welcome!")))
+
+      expect(page).to have_no_text("Show original")
+    end
+  end
+
   # The bubble is whitespace-pre-wrap: template indentation around the body would
   # render as a literal indent.
   it "renders the body without leading whitespace" do

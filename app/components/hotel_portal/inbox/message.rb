@@ -60,7 +60,7 @@ module HotelPortal
             run_end: @last_in_run.to_s
           )
         )) do
-          safe_join([ author_label, bubble ].compact)
+          safe_join([ author_label, bubble, source_disclosure ].compact)
         end
       end
 
@@ -99,6 +99,30 @@ module HotelPortal
       # Built in Ruby rather than ERB on purpose: the bubble is whitespace-pre-wrap,
       # so template indentation around the body would render as a literal indent.
       def bubble = tag.div(@message.body, class: tw_merge(BUBBLE_BASE, BUBBLE_SIDES.fetch(side)))
+
+      # What the assistant computed, before it was rewritten in the guest's
+      # language. Only present on a message the stylist actually replaced.
+      #
+      # Folded away rather than shown, because the thread is what the guest
+      # read: a staff member scanning it should see the conversation, and reach
+      # for the English only when the language in front of them is not one they
+      # have.
+      def source_disclosure
+        return if @message.source_body.blank?
+
+        render PanelsUI::Collapsible.new(
+          id: "#{ActionView::RecordIdentifier.dom_id(@message)}-source",
+          class: "max-w-[85%]",
+          trigger_class: "text-xs text-muted-foreground",
+          content_class: "pt-1",
+          region: true
+        ) do |collapsible|
+          collapsible.with_trigger { "Show original" }
+          collapsible.with_body do
+            tag.p(@message.source_body, class: "whitespace-pre-wrap rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground")
+          end
+        end
+      end
     end
   end
 end

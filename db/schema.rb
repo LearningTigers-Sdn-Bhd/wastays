@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2331,6 +2331,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_160000) do
     t.string "sender_role"
     t.bigint "sender_user_id"
     t.datetime "sent_at"
+    t.text "source_body"
     t.datetime "updated_at", null: false
     t.index ["conversation_id", "sent_at"], name: "index_prospect_messages_on_conversation_id_and_sent_at"
     t.index ["conversation_id"], name: "index_prospect_messages_on_conversation_when_unread", where: "(read_at IS NULL)"

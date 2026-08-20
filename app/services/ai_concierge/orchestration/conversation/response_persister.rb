@@ -46,17 +46,21 @@ module AiConcierge
         end
 
         def persist_static_response(prospect:, conversation_state:, interpretation:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:)
-          reply_message = style(reply_message)
+          reply = style(reply_message)
           ActiveRecord::Base.transaction do
             persist_state(conversation_state, slots_payload:, interpretation:, active_topic:, active_flow:, pending_question:, action_name:, flow_status:, end_reason:)
-            record_outbound_message(prospect, reply_message)
+            record_outbound_message(prospect, reply)
           end
-          Core::ResponsePayloadBuilder.new(reply_message: reply_message, needs_human_support: needs_human_support, action_name: action_name, prospect_public_id: prospect.public_id).call
+          Core::ResponsePayloadBuilder.new(reply_message: reply.body, needs_human_support: needs_human_support, action_name: action_name, prospect_public_id: prospect.public_id).call
         end
 
         private
 
         attr_reader :hotel, :conversation, :message
+
+        # What the guest is sent, and -- only when a rewrite replaced it -- what
+        # the hotel's own code had written.
+        Reply = Struct.new(:body, :source_body, keyword_init: true)
 
         # The hotel's tone and the guest's language, applied once, here.
         #
@@ -69,17 +73,18 @@ module AiConcierge
         # price, a date or a link, because those were computed before it was
         # asked, and anything it did change is caught below.
         def style(template)
-          return template if template.blank? || conversation.blank?
-          return template unless Agents::ReplyStylist.styles?(hotel: hotel, thread_language: conversation.reply_language, guest_message: message)
+          return Reply.new(body: template) if template.blank? || conversation.blank?
+          return Reply.new(body: template) unless Agents::ReplyStylist.styles?(hotel: hotel, thread_language: conversation.reply_language, guest_message: message)
 
           styled = Agents::ReplyStylist.new(
             hotel: hotel, template: template, guest_message: message, thread_language: conversation.reply_language
           ).call
+          text = verified(template, styled)
 
-          verified(template, styled) || template
+          text ? Reply.new(body: text, source_body: template) : Reply.new(body: template)
         rescue Agents::ReplyStylist::ReplyStylistError => e
           Rails.logger.warn("AiConcierge::ReplyStylist skipped: #{e.message}")
-          template
+          Reply.new(body: template)
         end
 
         # A rewrite the verifier rejects is not repaired and not retried: the
@@ -115,12 +120,13 @@ module AiConcierge
         # `sender_role` is stated rather than left to the direction default: once
         # staff can reply, "outbound" stops implying the bot wrote it, and a
         # message that guessed its own author would be wrong from that day on.
-        def record_outbound_message(prospect, body)
+        def record_outbound_message(prospect, reply)
           prospect&.prospect_messages&.create!(
             conversation: conversation,
             direction: "outbound",
             sender_role: "bot",
-            body: body
+            body: reply.body,
+            source_body: reply.source_body
           )
           prospect&.touch_last_contact!
         end
