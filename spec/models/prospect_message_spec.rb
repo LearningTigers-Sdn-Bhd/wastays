@@ -7,15 +7,16 @@ RSpec.describe ProspectMessage, type: :model do
 
   describe "sender_role" do
     it "derives the author from the direction when a caller omits it" do
-      expect(create(:prospect_message, prospect: prospect, direction: "inbound").sender_role).to eq("guest")
-      expect(create(:prospect_message, prospect: prospect, direction: "outbound").sender_role).to eq("bot")
-      expect(create(:prospect_message, prospect: prospect, direction: "system").sender_role).to eq("system")
+      expect(create(:prospect_message, prospect: prospect, conversation: conversation, direction: "inbound").sender_role).to eq("guest")
+      expect(create(:prospect_message, prospect: prospect, conversation: conversation, direction: "outbound").sender_role).to eq("bot")
+      expect(create(:prospect_message, prospect: prospect, conversation: conversation, direction: "system").sender_role).to eq("system")
     end
 
     it "keeps an explicit staff role rather than assuming the bot wrote it" do
       user = create(:user)
       message = create(:prospect_message,
                        prospect: prospect,
+                       conversation: conversation,
                        direction: "outbound",
                        sender_role: "staff",
                        sender_user: user)
@@ -27,6 +28,15 @@ RSpec.describe ProspectMessage, type: :model do
 
     it "rejects a role outside the known set" do
       expect(build(:prospect_message, prospect: prospect, sender_role: "manager")).not_to be_valid
+    end
+  end
+
+  # Not a nicety: the broadcasts, the WhatsApp delivery and the inbox's sort
+  # order all read the thread off the message, and a row without one would be
+  # invisible everywhere it matters.
+  describe "the thread" do
+    it "refuses a message that belongs to no conversation" do
+      expect(build(:prospect_message, prospect: prospect, conversation: nil)).not_to be_valid
     end
   end
 
@@ -54,10 +64,6 @@ RSpec.describe ProspectMessage, type: :model do
         conversation.reload
         expect(conversation.last_message_at).to be > conversation.last_guest_message_at
       end
-    end
-
-    it "does not blow up for a message with no thread yet" do
-      expect { create(:prospect_message, prospect: prospect, conversation: nil) }.not_to raise_error
     end
   end
 
@@ -123,12 +129,6 @@ RSpec.describe ProspectMessage, type: :model do
              body: "Yes, we have parking.")
 
       expect(turbo_broadcasts_to(conversation, :guest).join).to include("Farah Idris")
-    end
-
-    it "stays quiet for a message with no thread yet" do
-      expect {
-        create(:prospect_message, prospect: prospect, conversation: nil)
-      }.not_to raise_error
     end
   end
 end

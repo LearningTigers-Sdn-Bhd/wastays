@@ -4,7 +4,8 @@ RSpec.describe AiConcierge::Orchestration::Turn::ControlHandler do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel) }
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect) }
-  let(:response_persister) { AiConcierge::Orchestration::Turn::ResponsePersister.new(hotel: hotel) }
+  let(:conversation) { create(:conversation, :whatsapp, hotel: hotel, prospect: prospect) }
+  let(:response_persister) { AiConcierge::Orchestration::Turn::ResponsePersister.new(hotel: hotel, conversation: conversation) }
 
   before do
     create(:property_policy, hotel: hotel)

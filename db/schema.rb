@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2319,7 +2319,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_190000) do
 
   create_table "prospect_messages", force: :cascade do |t|
     t.text "body", null: false
-    t.bigint "conversation_id"
+    t.bigint "conversation_id", null: false
     t.datetime "created_at", null: false
     t.string "direction", null: false
     t.bigint "prospect_id", null: false

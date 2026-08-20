@@ -4,9 +4,10 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel) }
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect) }
+  let(:conversation) { create(:conversation, :whatsapp, hotel: hotel, prospect: prospect) }
 
   it "runs messenger, persists state, records outbound message, and builds public payload" do
-    payload = described_class.new(hotel: hotel).persist_response(
+    payload = described_class.new(hotel: hotel, conversation: conversation).persist_response(
       prospect: prospect,
       conversation_state: conversation_state,
       slots_payload: conversation_state.slots_payload,
@@ -26,7 +27,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
   it "carries a domain result's escalation flag into the payload" do
     conversation_state = create(:prospect_conversation_state, prospect: prospect)
 
-    payload = described_class.new(hotel: hotel).persist_domain_response(
+    payload = described_class.new(hotel: hotel, conversation: conversation).persist_domain_response(
       prospect: prospect,
       conversation_state: conversation_state,
       domain_result: {

@@ -2,7 +2,9 @@ module AiConcierge
   module Orchestration
     module Turn
       class ResponsePersister
-        def initialize(hotel:, conversation: nil, message: nil)
+        # The thread is required, not optional: every reply this writes is a row
+        # in it, and the column no longer takes a message without one.
+        def initialize(hotel:, conversation:, message: nil)
           @hotel = hotel
           @conversation = conversation
           @message = message.to_s
@@ -71,7 +73,7 @@ module AiConcierge
         # price, a date or a link, because those were computed before it was
         # asked, and anything it did change is caught below.
         def style(template)
-          return Reply.new(body: template) if template.blank? || conversation.blank?
+          return Reply.new(body: template) if template.blank?
           return Reply.new(body: template) unless Agents::ReplyStylist.styles?(hotel: hotel, thread_language: conversation.reply_language, guest_message: message)
 
           styled = Agents::ReplyStylist.new(

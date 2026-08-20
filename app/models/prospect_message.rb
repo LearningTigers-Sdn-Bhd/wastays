@@ -13,7 +13,7 @@ class ProspectMessage < ApplicationRecord
   }.freeze
 
   belongs_to :prospect
-  belongs_to :conversation, optional: true
+  belongs_to :conversation
   belongs_to :sender_user, class_name: "User", optional: true
   has_many :hotel_knowledge_diagnostics, dependent: :nullify
 
@@ -55,8 +55,6 @@ class ProspectMessage < ApplicationRecord
   # signed stream and its own renderer. Appending rather than refreshing: a
   # refresh would fight the reader's scroll position and wipe half-typed text.
   def broadcast_to_both_sides
-    return if conversation.blank?
-
     broadcast_to_guest
     broadcast_to_staff
     broadcast_to_inbox
@@ -70,8 +68,6 @@ class ProspectMessage < ApplicationRecord
   # passes through, so a second way of writing a staff reply cannot forget to
   # send it.
   def deliver_to_guest_channel
-    return if conversation.blank?
-
     Concierge::DeliverStaffReply.call(message: self)
   end
 
@@ -109,8 +105,6 @@ class ProspectMessage < ApplicationRecord
   # The inbox sorts on the conversation row, so it has to learn about the
   # message. Left to callers this drifts the first time one of them forgets.
   def touch_conversation
-    return if conversation.blank?
-
     attributes = { last_message_at: sent_at }
     attributes[:last_guest_message_at] = sent_at if from_guest?
     conversation.update_columns(**attributes, updated_at: Time.current)
