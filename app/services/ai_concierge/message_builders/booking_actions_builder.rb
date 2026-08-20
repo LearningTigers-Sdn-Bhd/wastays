@@ -51,7 +51,7 @@ module AiConcierge
         when :timing_in_the_past
           timing_in_the_past_message
         when :ask_date_range_month
-          "You said #{context[:date_range_label]}, but which month?"
+          "You said #{date_range_label}, but which month?"
         when :ask_specific_timing
           ask_specific_timing_message
         when :ask_duration
@@ -122,8 +122,8 @@ module AiConcierge
         check_in = context[:check_in]
         suffix = if check_in.present?
                    " on #{format_date(check_in)}"
-        elsif context[:month_label].present?
-                   " in #{context[:month_label]}"
+        elsif month_label.present?
+                   " in #{month_label}"
         else
                    ""
         end
@@ -131,7 +131,7 @@ module AiConcierge
       end
 
       def ask_specific_timing_message
-        "You want to make a booking in #{context[:month_label]}. May I know the exact check-in date or assumption range, e.g: *early*, *mid*, and *late*?"
+        "You want to make a booking in #{month_label}. May I know the exact check-in date or assumption range, e.g: *early*, *mid*, and *late*?"
       end
 
       def ask_party_split_message
@@ -153,8 +153,8 @@ module AiConcierge
       def suggest_options_message
         groups = Array(context[:options])
         intro = "Here are the available options"
-        intro = "#{intro} for #{context[:guest_label]}" if context[:guest_label].present?
-        intro = "#{intro} in #{context[:month_label]}" if context[:month_label].present?
+        intro = "#{intro} for #{guest_label}" if guest_label.present?
+        intro = "#{intro} in #{month_label}" if month_label.present?
 
         url = public_hotel_url(context[:search_params] || {})
 
@@ -192,7 +192,7 @@ module AiConcierge
         parts = []
         parts << format_full_date_range(check_in, check_out) if check_in.present? && check_out.present?
         parts << "#{nights} #{'night'.pluralize(nights)}" if nights.positive?
-        parts << context[:guest_label] if context[:guest_label].present?
+        parts << guest_label if guest_label.present?
         parts << "#{rooms} #{'room'.pluralize(rooms)}" if rooms.positive?
         return if parts.empty?
 
@@ -262,7 +262,7 @@ module AiConcierge
       end
 
       def no_options_message
-        label = context[:month_label].presence || "those dates"
+        label = month_label.presence || "those dates"
         "Sorry, I couldn't find any rooms available for #{label}. If you want, send another date or month and I'll check again."
       end
 

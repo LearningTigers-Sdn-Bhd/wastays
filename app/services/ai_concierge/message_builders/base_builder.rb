@@ -12,6 +12,40 @@ module AiConcierge
 
       attr_reader :hotel, :context
 
+      # The branch the turn ran on. The orchestrator used to render these three
+      # labels itself and pass the strings down, which put forty lines of
+      # presentation inside a class whose job is deciding what happens next --
+      # and next to `format_date_range` and `format_price`, which were already
+      # here. It passes the branch now; the sentences are written where every
+      # other sentence is written.
+      def branch = context[:branch] || {}
+
+      def month_label
+        month = branch["target_month"]
+        year = branch["target_year"]
+        return if month.blank? || year.blank?
+
+        [ branch["month_segment"].presence, Date::MONTHNAMES[month.to_i], year ].compact.join(" ")
+      end
+
+      def guest_label
+        adults = branch["adults"].to_i
+        children = branch["children"].to_i
+        parts = []
+        parts << "#{adults} adult#{'s' unless adults == 1}" if adults.positive?
+        parts << "#{children} child#{'ren' unless children == 1}" if children.positive?
+        parts.join(" and ").presence
+      end
+
+      def date_range_label
+        clarification = branch["clarification_needed"]
+        return unless clarification.is_a?(Hash)
+
+        start_day = clarification["start_day"]
+        end_day = clarification["end_day"]
+        [ start_day, end_day ].all?(&:present?) ? "#{start_day}-#{end_day}" : nil
+      end
+
       def format_date(value)
         return value.to_s if value.blank?
 

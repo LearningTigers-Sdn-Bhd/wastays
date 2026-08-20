@@ -121,21 +121,21 @@ module AiConcierge
       when :past_timing
         handle_past_timing(conversation_state: conversation_state, active_branch: active_branch)
       when :ask_specific_timing
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", extra_context: { month_label: month_label(active_branch) })
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", extra_context: { branch: active_branch })
       when :ask_date_range_month
         booking_response(
           conversation_state: conversation_state,
           active_branch: active_branch,
           reply_type: :ask_date_range_month,
           pending_question: "date_range_month",
-          extra_context: { date_range_label: date_range_label(active_branch) }
+          extra_context: { branch: active_branch }
         )
       when :ask_duration
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_duration, pending_question: "duration")
       when :ask_adult_count
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_adult_count, pending_question: "guest_count")
       when :ask_guest_count
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_guest_count, pending_question: "guest_count", extra_context: { month_label: month_label(active_branch), check_in: active_branch["check_in"] })
+        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_guest_count, pending_question: "guest_count", extra_context: { branch: active_branch, check_in: active_branch["check_in"] })
       when :ask_party_split
         active_branch["clarification_needed"] = "party_split"
         booking_response(
@@ -264,8 +264,7 @@ module AiConcierge
         pending_question: "select_option",
         extra_context: {
           options: options,
-          month_label: month_label(active_branch),
-          guest_label: guest_label(active_branch),
+          branch: active_branch,
           search_params: search_params_for(active_branch, options: options)
         }
       )
@@ -329,7 +328,7 @@ module AiConcierge
         active_branch: active_branch,
         reply_type: :no_options,
         pending_question: "booking_timing",
-        extra_context: { month_label: month_label(active_branch) }
+        extra_context: { branch: active_branch }
       )
     end
 
@@ -355,32 +354,6 @@ module AiConcierge
 
     def booking_intent
       @booking_intent ||= Matching::BookingIntentMatcher.new(message: message)
-    end
-
-    def month_label(branch)
-      month = branch["target_month"]
-      year = branch["target_year"]
-      return if month.blank? || year.blank?
-
-      [ branch["month_segment"].presence, Date::MONTHNAMES[month.to_i], year ].compact.join(" ")
-    end
-
-    def guest_label(branch)
-      adults = branch["adults"].to_i
-      children = branch["children"].to_i
-      parts = []
-      parts << "#{adults} adult#{'s' unless adults == 1}" if adults.positive?
-      parts << "#{children} child#{'ren' unless children == 1}" if children.positive?
-      parts.join(" and ").presence
-    end
-
-    def date_range_label(branch)
-      clarification = branch["clarification_needed"]
-      return unless clarification.is_a?(Hash)
-
-      start_day = clarification["start_day"]
-      end_day = clarification["end_day"]
-      [ start_day, end_day ].all?(&:present?) ? "#{start_day}-#{end_day}" : nil
     end
 
     def search_params_for(branch, options: branch["suggested_options"])

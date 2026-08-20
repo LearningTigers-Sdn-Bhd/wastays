@@ -12,8 +12,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
   it "renders one numbered row per option, across every room type" do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :suggest_options,
-      month_label: "early August 2026",
-      guest_label: "2 adults",
+      branch: { "target_month" => 8, "target_year" => 2026, "month_segment" => "early", "adults" => 2 },
       options: [
         {
           "room_type_name" => "Garden Prestige Suite",
@@ -76,7 +75,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :booking_context,
       bookings: [
-        { "date_range" => "May 21 - May 23", "room_type_name" => "Executive Penthouse" }
+        { "check_in" => Date.new(2026, 5, 21), "check_out" => Date.new(2026, 5, 23), "room_type_name" => "Executive Penthouse" }
       ]
     }).call
 
@@ -155,7 +154,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
   it "renders the guest count message with a month label fallback" do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :ask_guest_count,
-      month_label: "May 2026"
+      branch: { "target_month" => 5, "target_year" => 2026 }
     }).call
 
     expect(result["reply_message"]).to eq("How many guests should I check for in May 2026?")
@@ -164,7 +163,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
   it "renders the specific timing clarification message" do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :ask_specific_timing,
-      month_label: "May 2026"
+      branch: { "target_month" => 5, "target_year" => 2026 }
     }).call
 
     expect(result["reply_message"]).to eq("You want to make a booking in May 2026. May I know the exact check-in date or assumption range, e.g: *early*, *mid*, and *late*?")

@@ -65,7 +65,7 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
           ]
         }
       ],
-      guest_label: "2 adults",
+      branch: { "adults" => 2 },
       search_params: { "check_in" => "2026-08-28", "check_out" => "2026-08-31", "adults" => 2, "room_count" => 1 }
     }
 
@@ -80,7 +80,7 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
   it "asks which month for a monthless date range" do
     hotel = build_stubbed(:hotel, name: "Demo Hotel")
 
-    message = described_class.new(hotel: hotel, context: { date_range_label: "16-18" }).call(:ask_date_range_month)
+    message = described_class.new(hotel: hotel, context: { branch: { "clarification_needed" => { "start_day" => 16, "end_day" => 18 } } }).call(:ask_date_range_month)
 
     expect(message).to eq("You said 16-18, but which month?")
   end

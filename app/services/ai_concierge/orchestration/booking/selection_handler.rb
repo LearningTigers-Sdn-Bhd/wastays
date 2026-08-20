@@ -12,7 +12,7 @@ module AiConcierge
           return interpretation if interpretation.dig("conversation_signals", "end_conversation")
           return interpretation unless pending_question == "select_option"
           return interpretation unless Array(active_branch&.dig("suggested_options")).present?
-          return interpretation if informational_intent?(interpretation["intent"])
+          return interpretation if Core::Intents.informational?(interpretation["intent"])
 
           result = Tools::Booking::SelectBookingOptionTool.new(
             option_number: interpretation.dig("slots", "option_number"),
@@ -82,10 +82,6 @@ module AiConcierge
             value["intent"] = "option_selection"
             value["slots"] = value.fetch("slots", {}).merge("selection_id" => result.dig("selected_option", "selection_id"))
           end
-        end
-
-        def informational_intent?(intent)
-          %w[hotel_policy hotel_information nearby_attractions room_information booking_context].include?(intent.to_s)
         end
       end
     end
