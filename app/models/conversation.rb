@@ -114,9 +114,8 @@ class Conversation < ApplicationRecord
 
   # The language the bot answers this thread in.
   #
-  # Most of a booking is answered with numbers and room names -- "1", "yes",
-  # "Ocean Villa King option 2" -- and none of those are written in any
-  # language. So the thread remembers what the guest last wrote a sentence in,
+  # Most of a booking is answered with a number or a yes -- "1", "no 2",
+  # "yes" -- and none of those are written in any language. So the thread remembers what the guest last wrote a sentence in,
   # and a message carrying no signal of its own keeps it rather than snapping
   # everyone back to English halfway down the ladder.
   def reply_language = language.presence || DEFAULT_LANGUAGE

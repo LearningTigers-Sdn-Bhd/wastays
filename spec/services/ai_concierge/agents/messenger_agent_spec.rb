@@ -9,7 +9,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
     expect(result["reply_message"]).to eq("Hello, welcome to #{hotel.name}! I can help with bookings, stay details, and more about the hotel. What would you like to inquire about?")
   end
 
-  it "renders grouped booking suggestions by room type" do
+  it "renders one numbered row per option, across every room type" do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :suggest_options,
       month_label: "early August 2026",
@@ -25,30 +25,10 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       ]
     }).call
 
-    expect(result["reply_message"]).to include("*Garden Prestige Suite*")
-    expect(result["reply_message"]).to include("  Option 1: 3 August 2026 - 5 August 2026 (2 nights)")
-    expect(result["reply_message"]).to include("  Option 2: 4 August 2026 - 6 August 2026 (2 nights)")
-    expect(result["reply_message"]).to include('Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"')
+    expect(result["reply_message"]).to include("*1. Garden Prestige Suite* · August 3 to August 5 — from RM 520.00")
+    expect(result["reply_message"]).to include("*2. Garden Prestige Suite* · August 4 to August 6 — from $ 120.00")
+    expect(result["reply_message"]).to include('Reply with the number of the option you want, e.g. "1".')
     expect(result["reply_message"]).to include("You may visit this link for more details:")
-  end
-
-  it "renders the narrowed room type options when asking for an option number" do
-    result = described_class.new(hotel: hotel, context: {
-      reply_type: :room_type_requires_option_number,
-      room_type_name: "Executive Penthouse",
-      room_options: {
-        "room_type_name" => "Executive Penthouse",
-        "options" => [
-          { "position" => 1, "check_in" => "2026-08-03", "check_out" => "2026-08-05", "nights" => 2, "currency" => "MYR", "total_price" => 520.0 },
-          { "position" => 2, "check_in" => "2026-08-04", "check_out" => "2026-08-06", "nights" => 2, "currency" => "MYR", "total_price" => 540.0 }
-        ]
-      }
-    }).call
-
-    expect(result["reply_message"]).to include("I found multiple options under Executive Penthouse:")
-    expect(result["reply_message"]).to include("*Executive Penthouse*")
-    expect(result["reply_message"]).to include("  Option 1: 3 August 2026 - 5 August 2026 (2 nights)")
-    expect(result["reply_message"]).to include("  Option 2: 4 August 2026 - 6 August 2026 (2 nights)")
   end
 
   it "renders confirmation with yes and no prompt" do
@@ -110,7 +90,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       end_confirmation_mode: :cancel_booking_attempt
     }).call
 
-    expect(result["reply_message"]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(result["reply_message"]).to eq("Your booking isn't finished yet. Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
   end
 
   it "renders the cancelled booking attempt next-step prompt" do
@@ -127,7 +107,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       end_confirmation_mode: :generic
     }).call
 
-    expect(result["reply_message"]).to eq("Dear guest, do you have anything else to ask?")
+    expect(result["reply_message"]).to eq("Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
   end
 
   it "renders the smart party split message when adults are partially known" do
@@ -158,7 +138,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
 
     expect(result["reply_message"]).to include("Great, I've prepared your booking quote:")
     expect(result["reply_message"]).to include("- Date: *3 July 2026 - 7 July 2026*")
-    expect(result["reply_message"]).to include("- Total: *RM 7040.00*")
+    expect(result["reply_message"]).to include("- Total: *RM 7,040.00*")
     expect(result["reply_message"]).to include("Please note that the quotation link will expire at 8:04 AM.")
     expect(result["reply_message"]).to include("http://test.com")
   end
@@ -227,7 +207,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "nevermind", prospect_public_id: prospect.public_id).call
 
-    expect(result.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(result.payload[:reply_message]).to eq("Your booking isn't finished yet. Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
     state = prospect.prospect_conversation_state.reload
     expect(state.pending_question).to eq("confirm_to_end_conversation")
     expect(state.flow_status).to eq("active")
@@ -322,7 +302,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "can i make booking?", prospect_public_id: prospect.public_id).call
 
-    expect(result.payload[:reply_message]).to eq("Sure, which date or month do you plan to arrive for check-in?")
+    expect(result.payload[:reply_message]).to eq("Hello! I can help you book right here. Which date or month do you plan to arrive for check-in?")
     expect(result.payload[:action_name]).to eq("request_quote")
   end
 end

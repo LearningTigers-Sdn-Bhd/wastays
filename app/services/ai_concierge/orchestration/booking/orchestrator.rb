@@ -23,12 +23,10 @@ module AiConcierge
         return revision_response if revision_response
 
         selection_follow_up = selection_handler.resolve_follow_up(
-          conversation_state: conversation_state,
           interpretation: interpretation,
           active_branch: active_branch,
           pending_question: pending_question
         )
-        return selection_follow_up if domain_response?(selection_follow_up)
         return selection_handler.handle_selection(conversation_state: conversation_state, interpretation: selection_follow_up, active_branch: active_branch) if selection_follow_up.dig("slots", "selection_id").present?
 
         process_booking_action(booking_action)
@@ -44,7 +42,13 @@ module AiConcierge
     def process_booking_action(action, conversation_state: self.conversation_state, active_branch: self.active_branch)
       case action
       when :ask_booking_timing
-        booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: booking_timing_reply_type, pending_question: "booking_timing")
+        booking_response(
+          conversation_state: conversation_state,
+          active_branch: active_branch,
+          reply_type: booking_timing_reply_type,
+          pending_question: "booking_timing",
+          extra_context: { how_to_question: how_to_booking_question? }
+        )
       when :ask_specific_timing
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", extra_context: { month_label: month_label(active_branch) })
       when :ask_date_range_month
@@ -76,6 +80,14 @@ module AiConcierge
         )
       when :option_selection
         selection_handler.handle_selection(conversation_state: conversation_state, interpretation: interpretation, active_branch: active_branch)
+      when :ask_confirmation
+        booking_response(
+          conversation_state: conversation_state,
+          active_branch: active_branch,
+          reply_type: :ask_confirmation,
+          pending_question: "confirm_selection",
+          extra_context: { selected_option: active_branch["confirmation_candidate"] || active_branch["selected_option"] }
+        )
       when :ask_rate_plan
         selected_option = active_branch["selected_option"] || active_branch["confirmation_candidate"]
         rate_plans = Array(selected_option&.dig("rate_plans"))
@@ -87,7 +99,8 @@ module AiConcierge
           extra_context: { selected_option: selected_option, rate_plans: rate_plans }
         )
       when :rate_plan_selection
-        rate_plan_selection_handler.call(conversation_state: conversation_state, interpretation: interpretation, active_branch: active_branch)
+        rate_plan_selection_handler.call(conversation_state: conversation_state, active_branch: active_branch) ||
+          handle_search_options(conversation_state: conversation_state, active_branch: active_branch)
       when :confirmation_yes
         completion_handler.call(conversation_state: conversation_state, active_branch: active_branch)
       when :confirmation_no
@@ -166,13 +179,11 @@ module AiConcierge
     def handle_option_revision(conversation_state:, active_branch:)
       branch = clear_selected_booking_option(active_branch.deep_dup)
       selection_follow_up = selection_handler.resolve_follow_up(
-        conversation_state: conversation_state,
         interpretation: interpretation,
         active_branch: branch,
         pending_question: "select_option"
       )
 
-      return selection_follow_up if domain_response?(selection_follow_up)
       return selection_handler.handle_selection(conversation_state: conversation_state, interpretation: selection_follow_up, active_branch: branch) if selection_follow_up.dig("slots", "selection_id").present?
 
       ask_for_option_revision(branch, conversation_state: conversation_state)
@@ -198,7 +209,6 @@ module AiConcierge
       branch["selected_rate_plan_id"] = nil
       branch["selected_rate_plan_name"] = nil
       branch["confirmation_candidate"] = nil
-      branch["pending_selection"] = nil
       branch
     end
 
@@ -298,7 +308,15 @@ module AiConcierge
     end
 
     def room_rate_question?
-      Matching::BookingIntentMatcher.new(message: message).rate_question?
+      booking_intent.rate_question?
+    end
+
+    def how_to_booking_question?
+      booking_intent.how_to_question?
+    end
+
+    def booking_intent
+      @booking_intent ||= Matching::BookingIntentMatcher.new(message: message)
     end
 
     def booking_payload(conversation_state, active_branch, pending_question:, status: nil)

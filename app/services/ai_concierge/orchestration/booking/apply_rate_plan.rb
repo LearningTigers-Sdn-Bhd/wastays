@@ -22,7 +22,6 @@ module AiConcierge
           active_branch["selected_rate_plan_id"] = rate_plan["rate_plan_id"]
           active_branch["selected_rate_plan_name"] = rate_plan["name"]
           active_branch["confirmation_candidate"] = selected_option
-          active_branch["pending_selection"] = nil
           active_branch
         end
 

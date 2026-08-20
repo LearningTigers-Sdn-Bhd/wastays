@@ -47,12 +47,20 @@ turns:
     expect:
       pending_question: select_option
       booking_status: waiting_for_option_selection
-      reply_matches: ["2 adults", "Garden Prestige Suite", "From"]
+      reply_matches: ["2 adults", "Garden Prestige Suite", "from RM"]
 
-  # A room and a rate plan in one breath is ordinary speech, and answering only
-  # half of it asks the guest to repeat themselves.
-  - guest: "i want to book at garden prestige for non-refundable rate"
+  # The catalogue is answered by its number, and nothing else -- a room name is
+  # not a second way in. Naming the rate in the same breath is not read either:
+  # the number in a message about the catalogue is a row of the catalogue.
+  - guest: "1"
+    expect:
+      pending_question: rate_plan_selection
+      booking_status: waiting_for_rate_plan_selection
+      reply_matches: ["Which rate would you like?", "Non-Refundable Rate"]
+
+  # The rate list is numbered the same way, and read the same way.
+  - guest: "no 1"
     expect:
       pending_question: confirm_selection
       booking_status: waiting_for_confirmation
-      reply_matches: ["Non-Refundable Rate"]
+      reply_matches: ["Garden Prestige Suite"]

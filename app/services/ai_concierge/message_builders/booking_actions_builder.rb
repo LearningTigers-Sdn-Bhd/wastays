@@ -16,9 +16,6 @@ module AiConcierge
         ask_confirmation
         decline_confirmation
         invalid_selection
-        ambiguous_option_selection
-        ambiguous_date_selection
-        room_type_requires_option_number
         booking_link_ready
         no_options
         ask_specific_timing
@@ -35,7 +32,7 @@ module AiConcierge
         when :reset
           "Sure, let's start over. What dates or month would you like to book?"
         when :ask_booking_timing
-          "Sure, which date or month do you plan to arrive for check-in?"
+          ask_booking_timing_message
         when :ask_room_rate_timing
           "Dear guest, room rates depend on the booking dates and room types. Which date or month do you plan to arrive for check-in?"
         when :ask_date_range_month
@@ -57,15 +54,9 @@ module AiConcierge
         when :ask_confirmation
           ask_confirmation_message
         when :decline_confirmation
-          "No problem. Please tell me the room type name and option number you would like instead."
+          "No problem. Please tell me the number of the option you would like instead."
         when :invalid_selection
-          "I couldn't match that option. Please tell me the room type name and option number from the list I shared."
-        when :ambiguous_option_selection
-          ambiguous_option_selection_message
-        when :ambiguous_date_selection
-          ambiguous_date_selection_message
-        when :room_type_requires_option_number
-          room_type_requires_option_number_message
+          %(I couldn't match that. Please reply with the number from the list, e.g. "1".)
         when :booking_link_ready
           booking_link_ready_message
         when :no_options
@@ -77,11 +68,40 @@ module AiConcierge
         when :booking_attempt_cancelled_next_step
           booking_attempt_cancelled_next_step_message
         when :end_conversation_declined
-          "No problem, please let me know if you need anything."
+          end_conversation_declined_message
         end
       end
 
       private
+
+      TIMING_QUESTION = "Which date or month do you plan to arrive for check-in?"
+
+      # One question, and a sentence in front of it that answers what the guest
+      # actually said.
+      #
+      # Three things vary and nothing else: whether the hotel has spoken in
+      # this thread yet, and whether the guest asked *how* to book rather than
+      # asking to book. Written as combinations these are four near-identical
+      # sentences that drift apart the first time one is edited, so the
+      # question is stated once and only its opening changes.
+      def ask_booking_timing_message
+        return "Sure, #{TIMING_QUESTION.downcase_first}" if timing_preface.blank?
+
+        "#{timing_preface} #{TIMING_QUESTION}"
+      end
+
+      def timing_preface
+        [ ("Hello!" if context[:opening_reply]), timing_offer ].compact.join(" ")
+      end
+
+      # What the hotel can do about it, said before anything is asked back.
+      # "How do I book?" is answered by "you book here, with me" -- which is
+      # true of a plain booking request too, just less necessary to say.
+      def timing_offer
+        return "I can help you book right here." if context[:how_to_question]
+
+        "I can help you with your booking." if context[:opening_reply]
+      end
 
       def ask_guest_count_message
         check_in = context[:check_in]
@@ -121,16 +141,25 @@ module AiConcierge
         intro = "#{intro} for #{context[:guest_label]}" if context[:guest_label].present?
         intro = "#{intro} in #{context[:month_label]}" if context[:month_label].present?
 
-        sections = groups.map { |group| option_group_lines(group, rates: :from) }
         url = public_hotel_url(context[:search_params] || {})
 
         [
           "#{intro}:",
           search_summary_line,
-          sections.join("\n\n"),
-          'Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"',
+          option_catalogue_lines(groups),
+          selection_instruction(groups),
           "You may visit this link for more details:\n#{url}"
         ].compact_blank.join("\n\n")
+      end
+
+      # The example is taken from the list the guest is looking at, so the one
+      # answer offered is one that will actually match. The number is the only
+      # answer the catalogue accepts -- a room name is not a second way in.
+      def selection_instruction(groups)
+        first = catalogue_options(groups).first
+        return "Reply with the number of the option you want." if first.blank?
+
+        %(Reply with the number of the option you want, e.g. "#{first['position']}".)
       end
 
       # What the search actually ran on, spelled out before any price. A party
@@ -190,21 +219,6 @@ module AiConcierge
         ].join("\n")
       end
 
-      def ambiguous_option_selection_message
-        "I found option #{context[:option_number]} under #{join_names(context[:room_type_names])}. Please tell me the room type name and option number."
-      end
-
-      def ambiguous_date_selection_message
-        "I found #{format_date(context[:check_in])} under #{join_names(context[:room_type_names])}. Please tell me which room type you want."
-      end
-
-      def room_type_requires_option_number_message
-        lines = [ "I found multiple options under #{context[:room_type_name]}:" ]
-        lines << option_group_lines(context[:room_options]) if context[:room_options].present?
-        lines << "Please tell me the option number you want."
-        lines.join("\n\n")
-      end
-
       def booking_link_ready_message
         result = context[:result] || {}
         selected_option = result["selected_option"] || {}
@@ -233,24 +247,44 @@ module AiConcierge
 
         date_range = "#{format_full_date(option['check_in'])} - #{format_full_date(option['check_out'])}"
         rate_lines = rate_plans.each_with_index.map do |rp, i|
-          "#{i + 1}. #{format_option_price(rp['currency'], rp['total_price'])} (#{rp['name']})"
+          "#{i + 1}. #{format_option_price(rp['currency'], rp['total_price'])} — #{rp['name']}"
         end
 
         [
-          "For #{option['room_type_name']} on #{date_range}, which rate plan would you like?",
+          "*#{option['room_type_name']}*\n_#{date_range}_",
+          "Which rate would you like?",
           rate_lines.join("\n"),
-          "Please reply with the rate plan name or number."
+          "Please reply with the number."
         ].join("\n\n")
       end
 
+      # One question, answerable by the one word the guest is about to send.
+      #
+      # This used to offer three choices in a sentence -- start over, ask about
+      # policies, or end -- and then be answered by a reader that knows only
+      # yes and no, so a guest who picked one of the three was heard as neither.
+      # Worse, the generic wording asked whether they had anything else, where
+      # "yes" means carry on, while "yes" here has always meant end.
+      END_QUESTION = "Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on."
+
       def confirm_to_end_conversation_message
         case context[:end_confirmation_mode].to_s
-        when "cancel_booking_attempt"
-          "Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?"
-        when "continue_booking"
-          "Dear guest, do you have anything else to ask or do you want to continue with your booking?"
+        when "cancel_booking_attempt", "continue_booking"
+          "Your booking isn't finished yet. #{END_QUESTION}"
         else
-          "Dear guest, do you have anything else to ask?"
+          END_QUESTION
+        end
+      end
+
+      # What "no" leaves the guest in the middle of. A booking they were part
+      # way through is worth naming, so the next thing they send has somewhere
+      # obvious to go.
+      def end_conversation_declined_message
+        case context[:end_confirmation_mode].to_s
+        when "cancel_booking_attempt", "continue_booking"
+          "No problem, let's carry on with your booking."
+        else
+          "No problem, I'm here if you need anything else."
         end
       end
 

@@ -34,7 +34,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ControlHandler do
       interpretation: interpretation
     )
 
-    expect(result.payload[:reply_message]).to include("end the conversation")
+    expect(result.payload[:reply_message]).to include("Would you like to end this chat?")
     expect(conversation_state.reload.pending_question).to eq("confirm_to_end_conversation")
   end
 
@@ -45,7 +45,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ControlHandler do
       interpretation: interpretation
     )
 
-    expect(result.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
+    expect(result.payload[:reply_message]).to eq("Thank you for chatting with us. Message us any time.")
     expect(conversation_state.reload.flow_status).to eq("ended")
   end
 
@@ -58,8 +58,49 @@ RSpec.describe AiConcierge::Orchestration::Turn::ControlHandler do
       interpretation: interpretation(intent: "confirmation", slots: { "confirmation" => "no" })
     )
 
-    expect(result.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
+    expect(result.payload[:reply_message]).to eq("No problem, I'm here if you need anything else.")
     expect(conversation_state.reload.flow_status).to eq("active")
+  end
+
+  # "No thanks" answering "would you like to end this chat?" is a refusal to
+  # end, even though the same words on any other turn are a goodbye.
+  it "reads a polite no as declining rather than as another goodbye" do
+    conversation_state.update!(pending_question: "confirm_to_end_conversation")
+
+    result = described_class.new(message: "no thanks", response_persister: response_persister).handle(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      interpretation: {}
+    )
+
+    expect(conversation_state.reload.flow_status).to eq("active")
+    expect(result.payload[:reply_message]).to include("No problem")
+  end
+
+  # A question asked on the way out is still a question. It used to be met with
+  # "no problem" and dropped.
+  it "hands an answer that is neither yes nor no to the model" do
+    conversation_state.update!(pending_question: "confirm_to_end_conversation")
+
+    result = described_class.new(message: "what time is check in?", response_persister: response_persister).handle(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      interpretation: {}
+    )
+
+    expect(result).to be_nil
+  end
+
+  it "ends the conversation on a yes read straight from the message" do
+    conversation_state.update!(pending_question: "confirm_to_end_conversation")
+
+    described_class.new(message: "yes please", response_persister: response_persister).handle(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      interpretation: {}
+    )
+
+    expect(conversation_state.reload.flow_status).to eq("ended")
   end
 
   it "builds max-turn response and marks the conversation ended" do

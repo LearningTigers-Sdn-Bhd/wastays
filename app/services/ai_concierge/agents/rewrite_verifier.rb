@@ -24,6 +24,7 @@ module AiConcierge
     class RewriteVerifier
       URL = %r{https?://\S+}
       NUMBER = /\d+/
+      THOUSANDS_SEPARATOR = /(?<=\d),(?=\d)/
       # Only a currency sitting in front of a number, which is the one shape
       # `BaseBuilder#format_price` produces. Matching bare uppercase words would
       # fail a reply over a hotel's own initials.
@@ -50,7 +51,7 @@ module AiConcierge
 
       def first_failure
         return :urls unless urls(template).sort == urls(candidate).sort
-        return :numbers unless template.scan(NUMBER).sort == candidate.scan(NUMBER).sort
+        return :numbers unless numbers(template).sort == numbers(candidate).sort
         return :currency unless currencies(template).sort == currencies(candidate).sort
         return :names unless names_kept?
 
@@ -72,6 +73,12 @@ module AiConcierge
       # neither: a link at the end of a line and the same link before a full
       # stop are the same link, and the guest can click either.
       def urls(text) = text.scan(URL).map { |url| url.sub(/[.,;:!?)\]]+\z/, "") }
+
+      # The separator inside a price is punctuation, not arithmetic. Left in,
+      # "RM 4,455.00" reads as three numbers and the same price written without
+      # the comma reads as two, so a rewrite would be thrown away over a
+      # thousands separator the guest cannot see the loss of.
+      def numbers(text) = text.gsub(THOUSANDS_SEPARATOR, "").scan(NUMBER)
 
       def currencies(text) = text.scan(PRICED_CURRENCY).flatten
     end

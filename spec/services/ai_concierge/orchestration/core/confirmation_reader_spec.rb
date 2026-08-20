@@ -24,4 +24,22 @@ RSpec.describe AiConcierge::Orchestration::Core::ConfirmationReader do
     expect(read("yes please tell me about the pool")["intent"]).to be_nil
     expect(read("i want to book")["intent"]).to be_nil
   end
+
+  it "reads a yes softened by politeness" do
+    [ "yes please", "ok thanks", "sure la" ].each do |message|
+      expect(read(message).dig("slots", "confirmation")).to eq("yes")
+    end
+  end
+
+  # The replies the guest reads are written in their own language, so the
+  # answers come back in it too.
+  it "reads a yes and a no in the guest's own language" do
+    [ "ya", "betul", "好的", "可以" ].each do |message|
+      expect(read(message).dig("slots", "confirmation")).to eq("yes")
+    end
+
+    [ "tak", "tidak", "不要" ].each do |message|
+      expect(read(message).dig("slots", "confirmation")).to eq("no")
+    end
+  end
 end

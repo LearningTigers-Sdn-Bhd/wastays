@@ -57,7 +57,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     result = described_class.new(hotel: hotel, message: "hello, is there any booking for 2 adults", phone: "+60123456789").call
 
     expect(result).to be_success
-    expect(result.payload[:reply_message]).to include("which date or month")
+    expect(result.payload[:reply_message]).to include("date or month")
     expect(result.payload[:reply_message]).not_to include("May")
   end
 
@@ -92,7 +92,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
       range_reply = described_class.new(hotel: hotel, message: "16-18 June", phone: "+60123456789").call
       state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
-      expect(first_reply.payload[:reply_message]).to include("which date or month")
+      expect(first_reply.payload[:reply_message]).to include("date or month")
       expect(range_reply.payload[:reply_message]).to include("How many guests")
       expect(state.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-16")
       expect(state.slots_payload.dig("booking_task", "branch", "check_out")).to eq("2026-06-18")
@@ -262,10 +262,10 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     script_model("stop", interpretation(intent: "greeting"))
 
     prompt = described_class.new(hotel: hotel, message: "stop", phone: "+60123456789").call
-    expect(prompt.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(prompt.payload[:reply_message]).to eq("Your booking isn't finished yet. Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
 
     finish = described_class.new(hotel: hotel, message: "stop", phone: "+60123456789").call
-    expect(finish.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
+    expect(finish.payload[:reply_message]).to eq("Thank you for chatting with us. Message us any time.")
   end
 
   it "preserves people as a split clarification when the interpreter invents adults" do
@@ -303,7 +303,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
 
     # If party_size_total was 1, it would ask for adult/child split or timing.
     # If party_size_total is nil, it will ask for timing.
-    expect(result.payload[:reply_message]).to include("which date or month")
+    expect(result.payload[:reply_message]).to include("date or month")
 
     # Let's verify that it doesn't ask "For 1 people" in the next turn if we give it a month window.
     script_model("early july", interpretation(slots: { "target_month" => 7, "target_year" => 2026, "month_segment" => "early" }))
@@ -325,7 +325,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     # 2. Ask to end the conversation
     script_model("nevermind", interpretation(intent: "greeting", slots: {}))
     end_reply = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789").call
-    expect(end_reply.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(end_reply.payload[:reply_message]).to eq("Your booking isn't finished yet. Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
 
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
     expect(state.pending_question).to eq("confirm_to_end_conversation")
@@ -333,23 +333,23 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     # 3. Decline the end prompt and keep the flow alive
     script_model("no", interpretation(intent: "confirmation", slots: { "confirmation" => "no" }))
     no_reply = described_class.new(hotel: hotel, message: "no", phone: "+60123456789").call
-    expect(no_reply.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
+    expect(no_reply.payload[:reply_message]).to eq("No problem, let's carry on with your booking.")
 
     # 4. Ask again and confirm the end prompt, then reactivate with a greeting/booking request
     script_model("nevermind", interpretation(intent: "greeting", slots: {}))
     second_prompt = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789").call
-    expect(second_prompt.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(second_prompt.payload[:reply_message]).to eq("Your booking isn't finished yet. Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
 
     script_model("yes", interpretation(intent: "confirmation", slots: { "confirmation" => "yes" }))
     yes_reply = described_class.new(hotel: hotel, message: "yes", phone: "+60123456789").call
-    expect(yes_reply.payload[:reply_message]).to include("let me know if you need anything")
+    expect(yes_reply.payload[:reply_message]).to include("Thank you for chatting with us")
 
     # No slots, just "can i book"
     script_model("hello, can i make booking", interpretation(slots: {}))
     reactivation_reply = described_class.new(hotel: hotel, message: "hello, can i make booking", phone: "+60123456789").call
 
     # It should ask for timing because the previous branch (with July) was archived
-    expect(reactivation_reply.payload[:reply_message]).to include("which date or month")
+    expect(reactivation_reply.payload[:reply_message]).to include("date or month")
   end
 
   it "cancels the booking attempt and asks for the next step" do
@@ -358,7 +358,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
 
     script_model("nevermind", interpretation(intent: "greeting", slots: {}))
     prompt = described_class.new(hotel: hotel, message: "nevermind", phone: "+60123456789").call
-    expect(prompt.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(prompt.payload[:reply_message]).to eq("Your booking isn't finished yet. Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
 
     cancel_reply = described_class.new(hotel: hotel, message: "cancel attempt", phone: "+60123456789").call
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
@@ -371,7 +371,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     script_model("i want to make booking", interpretation(slots: {}))
     fresh_reply = described_class.new(hotel: hotel, message: "i want to make booking", phone: "+60123456789").call
 
-    expect(fresh_reply.payload[:reply_message]).to include("which date or month")
+    expect(fresh_reply.payload[:reply_message]).to include("date or month")
     expect(fresh_reply.payload[:reply_message]).not_to include("couldn't find any rooms")
   end
 
@@ -387,7 +387,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     end_reply = described_class.new(hotel: hotel, message: "end conversation", phone: "+60123456789").call
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
-    expect(end_reply.payload[:reply_message]).to eq("No problem, please let me know if you need anything.")
+    expect(end_reply.payload[:reply_message]).to eq("Thank you for chatting with us. Message us any time.")
     expect(state.flow_status).to eq("ended")
   end
 
@@ -602,7 +602,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
   end
 
-  it "preserves resumed room selection clarifications" do
+  it "resumes a saved list and selects the row the guest numbered" do
     prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
     room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
     option_one = {
@@ -636,15 +636,16 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     suspended_payload = AiConcierge::State::ConversationTaskManager.new(slots_payload: active_payload).suspend_booking_for_information(intent: "hotel_policy", topic: "hotel_policy", pending_question: "select_option")
     create(:prospect_conversation_state, prospect: prospect, pending_question: nil, slots_payload: suspended_payload)
 
-    script_model("Deluxe Room", interpretation(intent: "booking_search", slots: {}))
+    # Nothing has told the model a list is waiting -- the thread is suspended --
+    # so the row has to be read out of the message itself.
+    script_model("no 2", interpretation(intent: "booking_search", slots: {}))
 
-    result = described_class.new(hotel: hotel, message: "Deluxe Room", phone: "+60123456789").call
+    result = described_class.new(hotel: hotel, message: "no 2", phone: "+60123456789").call
     state = prospect.reload.prospect_conversation_state
 
-    expect(result.payload[:reply_message]).to include("I found multiple options under Deluxe Room")
-    expect(result.payload[:reply_message]).to include("Please tell me the option number")
-    expect(state.slots_payload.dig("booking_task", "branch", "pending_selection", "room_type_name")).to eq("Deluxe Room")
-    expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("select_option")
+    expect(result.payload[:reply_message]).to include("Would you like to confirm")
+    expect(state.slots_payload.dig("booking_task", "branch", "selected_option", "selection_id")).to eq("sel_2")
+    expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("confirm_selection")
   end
 
   it "keeps named room amenity questions on room information" do

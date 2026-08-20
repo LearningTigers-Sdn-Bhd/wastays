@@ -27,14 +27,17 @@ module AiConcierge
 
           Extract only what this message actually states. Never invent or carry
           over dates, party size or duration -- anything you do not pass is
-          remembered from earlier turns. Do not decide what to ask next and do
-          not write the reply: the booking system owns both. Call this at most
-          once per turn.
+          remembered from earlier turns. Today's date is context for reading
+          what the guest wrote, never a value to fall back on: a message that
+          names no month has no month, and passing this month because it is the
+          one you know puts a date in front of the guest that they never chose.
+          Do not decide what to ask next and do not write the reply: the booking
+          system owns both. Call this at most once per turn.
         DESCRIPTION
 
         params do
           object :slots, description: "Only what this message states. Omit anything it does not." do
-            integer :target_month, description: "1-12, when the guest names a month without a date"
+            integer :target_month, description: "1-12, only when the guest names a month without a date. Never today's month by default."
             integer :target_year
             string :month_segment, enum: %w[early mid late]
             integer :nights
@@ -45,10 +48,9 @@ module AiConcierge
             integer :room_count
             string :option_number, description: "Which of the shown options they picked"
             string :confirmation, enum: %w[yes no], description: "Only when answering a yes/no the hotel asked"
-            string :check_in, description: "ISO 8601 date"
+            string :check_in, description: "ISO 8601 date, only when the guest states one. Never today's date by default."
             string :check_out, description: "ISO 8601 date"
             string :room_type_name
-            string :rate_plan_name
           end
           object :evidence, description: "Quote the guest's own words, copied exactly from their message, for each thing you filled in. Whatever language they wrote in. Leave a field out when the message does not say it." do
             string :timing, description: "The words that say when they arrive"
@@ -69,7 +71,8 @@ module AiConcierge
           recorder.mark_booking_advanced!
 
           interpretation = SyntheticInterpretation.new(
-            slots: slots, signals: signals, evidence: evidence, pending_question: context.pending_question
+            slots: slots, signals: signals, evidence: evidence,
+            pending_question: context.pending_question, message: context.message
           ).call
           prepared = Orchestration::Booking::PrepareTurn.new(
             conversation_state: context.conversation_state,
@@ -109,11 +112,12 @@ module AiConcierge
             "starts_new_booking_branch" => false, "end_conversation" => false
           }.freeze
 
-          def initialize(slots:, signals:, pending_question:, evidence: {})
+          def initialize(slots:, signals:, pending_question:, evidence: {}, message: nil)
             @slots = (slots || {}).deep_stringify_keys.compact
             @signals = (signals || {}).deep_stringify_keys.compact
             @evidence = (evidence || {}).deep_stringify_keys.compact
             @pending_question = pending_question
+            @message = message.to_s
           end
 
           def call
@@ -131,15 +135,44 @@ module AiConcierge
 
           private
 
-          attr_reader :slots, :signals, :evidence, :pending_question
+          attr_reader :signals, :evidence, :pending_question, :message
+
+          # The model is asked for a `confirmation` and does not always send
+          # one: a bare "yes" comes back as a booking turn with nothing in it,
+          # and the guest who had just chosen a room is shown the catalogue
+          # again with their choice gone.
+          #
+          # Read here rather than trusted from the model, and only while a
+          # yes/no is the open question -- the same lock the intent below has
+          # always used. Both questions that ask one are covered: the
+          # confirmation, and the party split, whose own reply tells the guest
+          # in as many words to answer *Yes*.
+          def slots
+            return @slots if @slots["confirmation"].present?
+            return @slots if spoken_confirmation.blank?
+
+            @slots.merge("confirmation" => spoken_confirmation)
+          end
+
+          YES_NO_QUESTIONS = %w[confirm_selection party_split].freeze
+
+          # The same words the control handler reads a goodbye by, asked of the
+          # same message. One vocabulary, so a yes the hotel accepts in one
+          # place is a yes in the other.
+          def spoken_confirmation
+            return unless YES_NO_QUESTIONS.include?(pending_question)
+
+            @spoken_confirmation ||= Orchestration::Core::ConfirmationReader.new(message: message).confirmation
+          end
 
           def intent
             return "confirmation" if pending_question == "confirm_selection" && slots["confirmation"].present?
+
             return "option_selection" if slots["option_number"].present?
 
             # Options are on the table, so whatever the guest just said is an
-            # answer to them -- a date, a room name, an ordinal. Reading that as
-            # a fresh search would show the same list again and strand them.
+            # answer to them -- a row, an ordinal, a date. Reading that as a
+            # fresh search would show the same list again and strand them.
             return "option_selection" if pending_question == "select_option"
 
             "booking_search"

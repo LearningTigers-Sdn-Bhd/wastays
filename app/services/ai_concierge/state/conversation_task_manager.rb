@@ -267,7 +267,6 @@ module AiConcierge
         "clarification_needed" => nil,
         "suggested_options" => [],
         "suggestion_set_version" => 0,
-        "pending_selection" => nil,
         "confirmation_candidate" => nil,
         "selected_option" => nil,
         "selected_rate_plan_id" => nil,

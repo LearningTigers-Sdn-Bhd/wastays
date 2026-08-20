@@ -111,4 +111,26 @@ RSpec.describe AiConcierge::Agents::RewriteVerifier do
   it "passes a reply with nothing to protect" do
     expect(verify("No problem, please let me know if you need anything.", "Baik, beritahu saya jika perlu apa-apa.").call).to be_present
   end
+
+  # The separator is punctuation, not a number. Without this the delimited
+  # price the builders write would disagree with the same price written plainly
+  # and the rewrite would be thrown away.
+  it "accepts a rewrite that drops the thousands separator from a price" do
+    result = described_class.new(
+      template: "Your stay is RM 4,455.00 for 3 nights.",
+      candidate: "Your stay comes to RM 4455.00 for 3 nights."
+    ).call
+
+    expect(result).to eq("Your stay comes to RM 4455.00 for 3 nights.")
+  end
+
+  it "still rejects a rewrite that changes the price itself" do
+    checker = described_class.new(
+      template: "Your stay is RM 4,455.00 for 3 nights.",
+      candidate: "Your stay is RM 4,555.00 for 3 nights."
+    )
+
+    expect(checker.call).to be_nil
+    expect(checker.failure).to eq(:numbers)
+  end
 end

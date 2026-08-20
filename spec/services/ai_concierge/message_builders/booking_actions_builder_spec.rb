@@ -21,6 +21,30 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
     expect(message).to eq("Sure, which date or month do you plan to arrive for check-in?")
   end
 
+  it "says hello and what it can do when the booking question opens the thread" do
+    hotel = build_stubbed(:hotel, name: "Demo Hotel")
+
+    message = described_class.new(hotel: hotel, context: { opening_reply: true }).call(:ask_booking_timing)
+
+    expect(message).to eq("Hello! I can help you with your booking. Which date or month do you plan to arrive for check-in?")
+  end
+
+  it "answers a how-to question before asking anything back" do
+    hotel = build_stubbed(:hotel, name: "Demo Hotel")
+
+    message = described_class.new(hotel: hotel, context: { how_to_question: true }).call(:ask_booking_timing)
+
+    expect(message).to eq("I can help you book right here. Which date or month do you plan to arrive for check-in?")
+  end
+
+  it "greets and answers at once when a how-to question opens the thread" do
+    hotel = build_stubbed(:hotel, name: "Demo Hotel")
+
+    message = described_class.new(hotel: hotel, context: { opening_reply: true, how_to_question: true }).call(:ask_booking_timing)
+
+    expect(message).to eq("Hello! I can help you book right here. Which date or month do you plan to arrive for check-in?")
+  end
+
   it "says what it searched on, and prices rooms from their cheapest plan" do
     hotel = create(:hotel, name: "Demo Hotel")
     context = {
@@ -48,8 +72,9 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
     message = described_class.new(hotel: hotel, context: context).call(:suggest_options)
 
     expect(message).to include("_28 August 2026 - 31 August 2026 · 3 nights · 2 adults · 1 room_")
-    expect(message).to include("From RM 2646.00, 2 rate plans")
+    expect(message).to include("*1. Garden Prestige Suite* — from RM 2,646.00")
     expect(message).not_to include("Standard Rate")
+    expect(message).not_to include("rate plans")
   end
 
   it "asks which month for a monthless date range" do

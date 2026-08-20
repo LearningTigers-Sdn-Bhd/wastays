@@ -64,9 +64,10 @@ turns:
       reply_matches: ["2 adults", "Garden Prestige Suite"]
       creates_quote: false
 
-  # Room names are never translated -- the verifier now refuses a rewrite that
-  # moves one -- so the guest types it back exactly as shown.
-  - guest: "saya mahu Garden Prestige Suite"
+  # The catalogue is answered by its number, and a guest wraps that number in
+  # their own words: "saya mahu no 1" has to read as row 1, though not one of
+  # those words is English.
+  - guest: "saya mahu no 1"
     model:
       agent_loop:
         tool: advance_booking

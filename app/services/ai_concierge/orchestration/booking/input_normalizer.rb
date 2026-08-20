@@ -11,20 +11,27 @@ module AiConcierge
       @active_branch = active_branch.is_a?(Hash) ? active_branch : {}
     end
 
+    TIMING_SLOT_KEYS = %w[target_month target_year month_segment check_in check_out].freeze
+    DURATION_SLOT_KEYS = %w[days nights].freeze
+    PARTY_SLOT_KEYS = %w[party_size_total adults children].freeze
+    SEARCH_SLOT_KEYS = (TIMING_SLOT_KEYS + DURATION_SLOT_KEYS + PARTY_SLOT_KEYS + %w[room_count]).freeze
+
     def call
       return slots if conversation_signals["is_correction"]
+      return strip_search_slots! if row_reference_answer?
 
       apply_date_range_answer!
 
-      timing_keys = %w[target_month target_year month_segment check_in check_out]
-      duration_keys = %w[days nights]
-      party_keys = %w[party_size_total adults children]
+      timing_keys = TIMING_SLOT_KEYS
+      duration_keys = DURATION_SLOT_KEYS
+      party_keys = PARTY_SLOT_KEYS
 
-      timing_keys.each { |key| slots.delete(key) } unless explicit_timing_in_message? || quoted?("timing")
+      timing_keys.each { |key| slots.delete(key) } unless explicit_timing_in_message? || time_quoted?("timing")
       duration_keys.each { |key| slots.delete(key) } unless explicit_duration_in_message? || quoted?("duration")
-      party_keys.each { |key| slots.delete(key) } unless party_evidence_in_message? || quoted?("party")
-      slots.delete("check_out") unless explicit_checkout_in_message? || quoted?("checkout")
+      party_keys.each { |key| slots.delete(key) } unless party_evidence_in_message? || party_quoted?("party")
+      slots.delete("check_out") unless explicit_checkout_in_message? || time_quoted?("checkout")
       apply_relative_month_timing!
+      apply_duration_answer!
       apply_guest_count_guards!
 
       case pending_question
@@ -61,6 +68,82 @@ module AiConcierge
       return false if span.blank?
 
       normalize_for_quote(message).include?(span)
+    end
+
+    # A quote about time has to be about time.
+    #
+    # `quoted?` proves only that the words are the guest's own, and the model
+    # is told today's date: "how to make booking" comes back as this month
+    # with "booking" quoted as the words that say when they arrive. True, and
+    # nothing to do with time. A date only survives here when the words behind
+    # it carry a number, a month or a word for when.
+    #
+    # The vocabulary below is exactly the cost `quoted?` was written to avoid,
+    # and it is accepted here because it is short, additive, and can only ever
+    # fail safe: a language missing from it loses a date the guest really did
+    # give, and the ladder asks for it again. It cannot invent one.
+    TIME_MARKERS = %w[
+      0 1 2 3 4 5 6 7 8 9
+      〇 零 一 二 三 四 五 六 七 八 九 十
+      jan feb mar apr may jun jul aug sep oct nov dec
+      januari februari mac mei julai ogos oktober disember
+      today tonight tomorrow day night week weekend month year
+      hari esok malam minggu bulan tahun hb
+      月 日 号 號 今天 明天 后天 週 周末 下周
+    ].freeze
+
+    # The two questions whose answer is a row number.
+    LIST_PENDING_QUESTIONS = %w[select_option rate_plan_selection].freeze
+
+    # "no 2" answering "which rate would you like?" is the second rate, and
+    # nothing else. Read as slots it has been two nights, two rooms and two
+    # adults on different turns -- each of which changes the search, which
+    # discards the room the guest had already chosen and leaves the rate
+    # question with no room to ask about.
+    #
+    # A message that says nothing but a row cannot change what was searched
+    # for, so none of it is read as a slot. Anything else in the message --
+    # "2 nights", "change to september" -- has words in it and takes the
+    # ordinary path below.
+    def row_reference_answer?
+      return false unless LIST_PENDING_QUESTIONS.include?(pending_question)
+
+      option_reference.only_reference?
+    end
+
+    def option_reference
+      @option_reference ||= Matching::OptionReference.new(message: message)
+    end
+
+    def strip_search_slots!
+      SEARCH_SLOT_KEYS.each { |key| slots.delete(key) }
+      slots
+    end
+
+    # A quote about the party has to name people.
+    #
+    # Same shape as `time_quoted?` and the same reason: `quoted?` proves only
+    # that the words are the guest's own. "option 1" is the guest's own words
+    # and comes back quoted as the ones that say how many are staying -- so the
+    # catalogue is thrown away as a party change and the guest, who was picking
+    # a room, is asked how many of them are children.
+    #
+    # Digits alone cannot say who is staying; in the middle of an option list
+    # they say which row. Anything else in the span -- in any language, which
+    # is the point -- is taken as a word about people.
+    def party_quoted?(kind)
+      return false unless quoted?(kind)
+
+      remainder = normalize_for_quote(evidence[kind]).gsub(/\d+/, " ")
+      Matching::OptionReference::FILLER.each { |token| remainder = remainder.gsub(/\b#{token}\b/, " ") }
+      remainder.match?(/[[:alpha:]]/)
+    end
+
+    def time_quoted?(kind)
+      return false unless quoted?(kind)
+
+      span = normalize_for_quote(evidence[kind])
+      TIME_MARKERS.any? { |marker| span.include?(marker) }
     end
 
     def normalize_for_quote(value)
@@ -367,11 +450,34 @@ module AiConcierge
     def explicit_duration_in_message?
       normalized = message.downcase
 
-      normalized.match?(/\b\d+\s*nights?\b/) ||
+      bare_duration_answer.present? ||
+        normalized.match?(/\b\d+\s*nights?\b/) ||
         normalized.match?(/\b\d+\s*days?\b/) ||
         parse_complete_date_range.present? ||
         normalized.match?(/\bstay(?:ing)?\s+for\s+\d+\s*(?:days?|nights?)\b/) ||
         normalized.match?(/\bfor\s+\d+\s*(?:days?|nights?)\b/)
+    end
+
+    # "2" answering "how many days and nights will you be staying?" is two
+    # nights, the same way "2" answering the guest count is two guests.
+    #
+    # Without this the number says nothing the guards recognise, the duration
+    # is dropped as unevidenced, and the hotel asks the same question again --
+    # for as long as the guest keeps answering it the short way. Nights rather
+    # than days because nights are what the search runs on, and the catalogue
+    # states the stay it found back to the guest, so a wrong reading is visible
+    # and can be corrected.
+    def apply_duration_answer!
+      return if bare_duration_answer.blank?
+
+      slots["nights"] = bare_duration_answer
+      slots.delete("days")
+    end
+
+    def bare_duration_answer
+      return unless pending_question == "duration"
+
+      @bare_duration_answer ||= message.strip[/\A(\d+)\z/, 1]&.to_i
     end
 
     def explicit_checkout_in_message?

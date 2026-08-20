@@ -235,7 +235,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "hello, is there any booking for 2 adults", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("which date or month")
+      expect(parsed_body["reply_message"]).to include("date or month")
       expect(parsed_body["reply_message"]).not_to include("May")
       expect(parsed_body["reply_message"]).not_to include("August")
     end
@@ -257,7 +257,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["reply_message"]).to include("adults and how many are children")
     end
 
-    it "renders grouped room type options" do
+    it "renders one numbered row per option" do
       seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 1, 2, 3, 4 ])
 
       post path, params: { message: "hello, any booking for early august?", phone: phone }.to_json, headers: headers
@@ -265,37 +265,105 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("  Option 1: 1 August 2026 - 3 August 2026 (2 nights)")
-      expect(parsed_body["reply_message"]).to include('Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"')
+      expect(parsed_body["reply_message"]).to include("*1. Garden Prestige Suite* · August 1 to August 3 — from RM")
+      expect(parsed_body["reply_message"]).to include("*2. Garden Prestige Suite* · August 2 to August 4 — from RM")
+      expect(parsed_body["reply_message"]).to include('Reply with the number of the option you want, e.g. "1".')
     end
 
-    it "selects a unique shown option by date text" do
+    # The thread from a live chat: two room types on the same fixed dates, both
+    # of them "Option 1" under the old per-room-type numbering, so the guest
+    # was asked twice for something they had already said.
+    it "resolves a number and a room name on fixed dates, without asking again" do
+      seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 28, 29, 30, 31 ], max_adults: 3)
+      seed_room_type_options("Executive Penthouse", month: 8, days: [ 28, 29, 30, 31 ], max_adults: 3, base_price: 900)
+
+      post path, params: { message: "book 28 august to 31 august", phone: phone }.to_json, headers: headers
+      post path, params: { message: "3 adults", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("*1. Garden Prestige Suite*")
+      expect(parsed_body["reply_message"]).to include("*2. Executive Penthouse*")
+
+      post path, params: { message: "2", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include("Executive Penthouse")
+      expect(parsed_body["reply_message"]).not_to include("I couldn't match that option")
+      expect(parsed_body["reply_message"]).not_to include("I found option")
+    end
+
+    # The model reading "option 1" as one adult is a reading it really returned:
+    # the 1 came back quoted as the words that say the party size. A booking for
+    # three then became a booking for one, which threw the catalogue away and
+    # asked the guest how many of the remaining two were children.
+    it "does not read the option number as a party size" do
+      seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 28, 29, 30, 31 ], max_adults: 3)
+      seed_room_type_options("Executive Penthouse", month: 8, days: [ 28, 29, 30, 31 ], max_adults: 3, base_price: 900)
+      stub_concierge_model(
+        room_type_names: ROOM_VOCABULARY,
+        scripted: {
+          "option 1" => {
+            tool: "advance_booking",
+            arguments: {
+              "slots" => { "adults" => 1 },
+              "evidence" => { "party" => "1" }
+            }
+          }
+        }
+      )
+
+      post path, params: { message: "book 28 august to 31 august", phone: phone }.to_json, headers: headers
+      post path, params: { message: "3 adults", phone: phone }.to_json, headers: headers
+      post path, params: { message: "option 1", phone: phone }.to_json, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
+      expect(parsed_body["reply_message"]).not_to include("are they children")
+      expect(parsed_body["reply_message"]).not_to include("I've noted 1 adults")
+    end
+
+    # Both of these answered a question the hotel had just asked, and both used
+    # to be met with the same question again: the ladder asks for days and
+    # nights, and the party split tells the guest in as many words to reply Yes.
+    it "takes a bare number as the answer to the duration question" do
+      seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 11, 12, 13, 14 ])
+
+      post path, params: { message: "mid august", phone: phone }.to_json, headers: headers
+      post path, params: { message: "2", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("How many guests")
+      expect(parsed_body["reply_message"]).not_to include("How many days and nights")
+    end
+
+    it "takes yes as the answer to the party split, even when the model sends nothing" do
+      seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 11, 12, 13, 14 ], max_adults: 4)
+      stub_concierge_model(
+        room_type_names: ROOM_VOCABULARY,
+        scripted: { "yes" => { tool: "advance_booking", arguments: { "slots" => {} } } }
+      )
+
+      post path, params: { message: "mid august", phone: phone }.to_json, headers: headers
+      post path, params: { message: "3 days 2 nights", phone: phone }.to_json, headers: headers
+      post path, params: { message: "4 people", phone: phone }.to_json, headers: headers
+      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
+      expect(parsed_body["reply_message"]).to include("are they children")
+
+      post path, params: { message: "yes", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).not_to include("are they children")
+      expect(parsed_body["reply_message"]).to include("2 adults and 2 children")
+    end
+
+    it "selects a shown option by its number" do
       seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 1, 2, 3, 4 ])
 
       post path, params: { message: "hello, any booking for early august?", phone: phone }.to_json, headers: headers
       post path, params: { message: "3 days 2 nights", phone: phone }.to_json, headers: headers
       post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
-      post path, params: { message: "August 3rd", phone: phone }.to_json, headers: headers
+      post path, params: { message: "option 2", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
       expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
-    end
-
-    it "mentions room type names when a date is ambiguous across room types" do
-      seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 1, 2, 3, 4 ])
-      seed_room_type_options("Deluxe Room", month: 8, days: [ 1, 2, 3, 4 ])
-
-      post path, params: { message: "hello, any booking for early august?", phone: phone }.to_json, headers: headers
-      post path, params: { message: "3 days 2 nights", phone: phone }.to_json, headers: headers
-      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
-      post path, params: { message: "August 3rd", phone: phone }.to_json, headers: headers
-
-      expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("Deluxe Room")
-      expect(parsed_body["reply_message"]).to include("Please tell me which room type you want")
     end
 
     it "resumes the saved option set after a hotel policy interruption" do
@@ -310,10 +378,9 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(parsed_body["reply_message"]).to include("Here is our hotel policy")
 
-      post path, params: { message: "ok i want to book executive on may 22", phone: phone }.to_json, headers: headers
+      post path, params: { message: "no 2", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Executive Penthouse")
       expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
@@ -331,14 +398,16 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(parsed_body["reply_message"]).to include("Here are the details for Executive Suite")
 
-      post path, params: { message: "ok i want executive suite on may 22", phone: phone }.to_json, headers: headers
+      post path, params: { message: "no 1", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Executive Suite")
       expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
     end
 
-    it "selects the only visible option when the guest replies with just the room type name" do
+    # The catalogue is answered by number, and a room name is not a second way
+    # in: it only ever guessed at which row was meant.
+    it "asks for the number when the guest replies with just the room type name" do
       seed_room_type_options("Executive Penthouse", month: 6, days: [ 6, 7, 8, 9 ], max_adults: 3)
       seed_room_type_options("Garden Prestige Suite", month: 6, days: [ 6, 7, 8, 9 ], max_adults: 3)
 
@@ -348,8 +417,8 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "can i chose executive penthouse", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Executive Penthouse")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
+      expect(parsed_body["reply_message"]).to include("Please reply with the number from the list")
+      expect(parsed_body["reply_message"]).not_to include("Please reply *Yes* to confirm")
     end
 
     it "selects an option when the guest says i chose option 1" do
@@ -363,58 +432,6 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
       expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
-    end
-
-    it "uses the pending date context to avoid looping after the guest names the room type" do
-      seed_room_type_options("Ocean Villa King", month: 5, days: [ 21, 22, 23, 24, 25, 26 ])
-      seed_room_type_options("Executive Penthouse", month: 5, days: [ 21, 22, 23, 24, 25, 26 ])
-      seed_room_type_options("Garden Prestige Suite", month: 5, days: [ 21, 22, 23, 24, 25, 26 ])
-
-      post path, params: { message: "hello, any booking for late may?", phone: phone }.to_json, headers: headers
-      post path, params: { message: "4 days 3 nights", phone: phone }.to_json, headers: headers
-      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
-      post path, params: { message: "may 21", phone: phone }.to_json, headers: headers
-      expect(parsed_body["reply_message"]).to include("Please tell me which room type you want")
-
-      post path, params: { message: "ocean villa king", phone: phone }.to_json, headers: headers
-
-      expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Ocean Villa King")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
-    end
-
-    it "accepts a unique partial room type name after ambiguous date follow-up" do
-      seed_room_type_options("Executive Penthouse", month: 5, days: [ 21, 22, 23, 24, 25 ])
-      seed_room_type_options("Garden Prestige Suite", month: 5, days: [ 21, 22, 23, 24, 25 ])
-
-      post path, params: { message: "hello, any booking for late may?", phone: phone }.to_json, headers: headers
-      post path, params: { message: "4 days 3 nights", phone: phone }.to_json, headers: headers
-      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
-      post path, params: { message: "may 21", phone: phone }.to_json, headers: headers
-      expect(parsed_body["reply_message"]).to include("Please tell me which room type you want")
-
-      post path, params: { message: "garden prestige suit", phone: phone }.to_json, headers: headers
-
-      expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Garden Prestige Suite")
-      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book and *No* to reconsider the choices.")
-    end
-
-    it "treats executive one as room type shorthand and asks for the option number" do
-      seed_room_type_options("Ocean Villa King", month: 7, days: [ 1, 2, 3, 4 ])
-      seed_room_type_options("Executive Penthouse", month: 7, days: [ 1, 2, 3, 4 ])
-      seed_room_type_options("Garden Prestige Suite", month: 7, days: [ 1, 2, 3, 4 ])
-
-      post path, params: { message: "early july", phone: phone }.to_json, headers: headers
-      post path, params: { message: "3 days 2 nights", phone: phone }.to_json, headers: headers
-      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
-      post path, params: { message: "executive one", phone: phone }.to_json, headers: headers
-
-      expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Executive Penthouse")
-      expect(parsed_body["reply_message"]).to include("I found multiple options under Executive Penthouse:")
-      expect(parsed_body["reply_message"]).to include("  Option 1:")
-      expect(parsed_body["reply_message"]).to include("Please tell me the option number you want.")
     end
 
     it "returns a booking url with total and expiry after yes" do
@@ -482,7 +499,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "another booking", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("which date or month")
+      expect(parsed_body["reply_message"]).to include("date or month")
       expect(parsed_body["reply_message"]).not_to include("Quotation link:")
       expect(parsed_body["reply_message"]).not_to include("Please reply *Yes* to confirm the book")
       expect(parsed_body["action_name"]).to eq("request_quote")
@@ -548,7 +565,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       post path, params: { message: "stop", prospect_public_id: prospect_public_id }.to_json, headers: headers
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("No problem, please let me know if you need anything.")
+      expect(parsed_body["reply_message"]).to eq("Thank you for chatting with us. Message us any time.")
 
       state = Prospect.find_by!(public_id: prospect_public_id).prospect_conversation_state
       expect(state.flow_status).to eq("ended")
@@ -576,13 +593,13 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
     stub_concierge_model(room_type_names: ROOM_VOCABULARY)
   end
 
-  def seed_room_type_options(room_type_name, month:, days:, max_adults: 2)
+  def seed_room_type_options(room_type_name, month:, days:, max_adults: 2, base_price: 180)
     year = infer_year(month)
-    room_type = create(:room_type, hotel: hotel, name: room_type_name, base_price: 180, max_adults: max_adults)
+    room_type = create(:room_type, hotel: hotel, name: room_type_name, base_price: base_price, max_adults: max_adults)
 
     days.each_with_index do |day, index|
       date = Date.new(year, month, day)
-      create(:room_rate, room_type: room_type, date: date, price: 220 + index, currency: "MYR")
+      create(:room_rate, room_type: room_type, date: date, price: base_price + 40 + index, currency: "MYR")
       create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
     end
 

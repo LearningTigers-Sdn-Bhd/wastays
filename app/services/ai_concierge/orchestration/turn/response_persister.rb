@@ -11,7 +11,7 @@ module AiConcierge
         end
 
         def persist_response(prospect:, conversation_state:, slots_payload:, reply_type:, active_topic:, active_flow:, pending_question:, action_name:, extra_context: {}, flow_status: nil, end_reason: nil, needs_human_support: false)
-          messenger_context = { reply_type: reply_type }.merge(extra_context)
+          messenger_context = { reply_type: reply_type, opening_reply: opening_reply? }.merge(extra_context)
           reply_message = Agents::MessengerAgent.new(hotel: hotel, context: messenger_context).call.fetch("reply_message")
           persist_static_response(
             prospect: prospect,
@@ -57,6 +57,11 @@ module AiConcierge
         private
 
         attr_reader :hotel, :conversation, :message
+
+        # Whether the assistant has said anything in this thread yet. Read
+        # before the reply being built is written, so the reply that answers a
+        # guest's opening message is the one that sees true.
+        def opening_reply? = conversation.messages.where(direction: "outbound").none?
 
         # What the guest is sent, and -- only when a rewrite replaced it -- what
         # the hotel's own code had written.

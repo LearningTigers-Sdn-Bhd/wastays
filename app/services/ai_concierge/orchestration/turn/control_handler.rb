@@ -2,7 +2,11 @@ module AiConcierge
   module Orchestration
     module Turn
       class ControlHandler
-        END_CONVERSATION_MESSAGE = "No problem, please let me know if you need anything.".freeze
+        # A goodbye, and said as one. It used to be word for word what a guest
+        # who declined to end was told, so the two outcomes of the same
+        # question read identically -- and only the flow status, which no guest
+        # can see, said which had happened.
+        END_CONVERSATION_MESSAGE = "Thank you for chatting with us. Message us any time.".freeze
         TURN_LIMIT_REACHED_MESSAGE = "I've reached my limit for this conversation. Please contact the hotel directly for further assistance.".freeze
         WAIT_TIME_END_MESSAGE = "Thank you for reaching out. Please come back again.".freeze
         WAIT_TIME_END_BOOKING_MESSAGE = "It seems you are no longer making a booking quotation. Thank you for reaching out. Please come back again.".freeze
@@ -109,22 +113,40 @@ module AiConcierge
           )
         end
 
+        # Three answers, not two.
+        #
+        # "No" is read before the goodbye words, because at this question a "no
+        # thanks" is a refusal to end rather than another way of leaving.
+        #
+        # And a message that is neither is not a refusal either: it used to be
+        # answered "no problem" and dropped, so a guest who asked something on
+        # their way out was never answered. Returning nil hands the turn to the
+        # model, which is what would have happened had the question never been
+        # asked.
         def handle_end_confirmation_response(prospect:, conversation_state:, conversation_control:)
-          if conversation_control.end_confirmation_yes? || conversation_control.explicit_end?
-            Core::Result.success(payload: handle_end_conversation(prospect:, conversation_state:))
-          else
-            Core::Result.success(payload: response_persister.persist_response(
-              prospect: prospect,
-              conversation_state: conversation_state,
-              slots_payload: conversation_state.slots_payload,
-              reply_type: :end_conversation_declined,
-              active_topic: conversation_state.active_topic,
-              active_flow: conversation_state.active_flow,
-              pending_question: nil,
-              action_name: nil,
-              flow_status: "active",
-            ))
-          end
+          return decline_end(prospect:, conversation_state:) if conversation_control.end_confirmation_no?
+          return Core::Result.success(payload: handle_end_conversation(prospect:, conversation_state:)) if conversation_control.end_confirmation_yes? || conversation_control.explicit_end?
+
+          nil
+        end
+
+        def decline_end(prospect:, conversation_state:)
+          Core::Result.success(payload: response_persister.persist_response(
+            prospect: prospect,
+            conversation_state: conversation_state,
+            slots_payload: conversation_state.slots_payload,
+            reply_type: :end_conversation_declined,
+            active_topic: conversation_state.active_topic,
+            active_flow: conversation_state.active_flow,
+            pending_question: nil,
+            action_name: nil,
+            flow_status: "active",
+            extra_context: { end_confirmation_mode: end_confirmation_mode(conversation_state) }
+          ))
+        end
+
+        def end_confirmation_mode(conversation_state)
+          Core::ConversationControlPolicy.new(message: message, conversation_state: conversation_state, interpretation: {}).end_confirmation_mode
         end
 
         def handle_end_conversation(prospect:, conversation_state:)

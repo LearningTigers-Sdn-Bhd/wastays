@@ -66,6 +66,66 @@ RSpec.describe "AI concierge tools the model can see" do
       expect(interpretation["intent"]).to eq("confirmation")
     end
 
+    # The model is asked for a confirmation and does not always send one. A
+    # bare "yes" then arrived as a booking turn with nothing in it, and the
+    # ladder answered it with the catalogue the guest had already chosen from.
+    it "reads the guest's own yes when the model sends no confirmation" do
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+        slots: {}, signals: {}, pending_question: "confirm_selection", message: "yes"
+      ).call
+
+      expect(interpretation["intent"]).to eq("confirmation")
+      expect(interpretation.dig("slots", "confirmation")).to eq("yes")
+    end
+
+    it "reads the guest's own no the same way" do
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+        slots: {}, signals: {}, pending_question: "confirm_selection", message: "no thanks"
+      ).call
+
+      expect(interpretation.dig("slots", "confirmation")).to eq("no")
+    end
+
+    it "reads a yes written in the guest's own language" do
+      %w[baik 好的 可以].each do |word|
+        interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+          slots: {}, signals: {}, pending_question: "confirm_selection", message: word
+        ).call
+
+        expect(interpretation.dig("slots", "confirmation")).to eq("yes")
+      end
+    end
+
+    # The word only means a confirmation where a confirmation was asked for,
+    # and a message that is not one is never read as a yes.
+    it "reads nothing from a message that answers something else" do
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+        slots: {}, signals: {}, pending_question: "confirm_selection", message: "what time is check in"
+      ).call
+
+      expect(interpretation.dig("slots", "confirmation")).to be_nil
+      expect(interpretation["intent"]).to eq("booking_search")
+    end
+
+    # The party split asks a yes/no too -- its own reply tells the guest to
+    # answer *Yes* -- and a yes the model did not pass along left the hotel
+    # asking the same question again.
+    it "reads the guest's own yes when the party split is the open question" do
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+        slots: {}, signals: {}, pending_question: "party_split", message: "yes"
+      ).call
+
+      expect(interpretation.dig("slots", "confirmation")).to eq("yes")
+    end
+
+    it "does not read a yes when no confirmation is pending" do
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+        slots: {}, signals: {}, pending_question: "select_option", message: "yes"
+      ).call
+
+      expect(interpretation.dig("slots", "confirmation")).to be_nil
+    end
+
     it "reads the same yes as nothing in particular when no confirmation is pending" do
       interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
         slots: { "confirmation" => "yes" }, signals: {}, pending_question: "guest_count"

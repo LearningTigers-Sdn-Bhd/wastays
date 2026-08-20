@@ -40,6 +40,19 @@ module AiConcierge
         normalized.match?(/\b(?:rates?|prices?|pricing|cost)\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
       end
 
+      # "How do I book?" is a question before it is a booking request.
+      #
+      # The ladder still opens -- the honest answer is that they book here,
+      # with the first question -- but a reply that only asks for a date has
+      # walked past what the guest actually said.
+      HOW_TO_TOKENS = /\b(?:how|can|could|may|where)\b/
+
+      def how_to_question?
+        return false unless booking?
+
+        normalized.match?(HOW_TO_TOKENS)
+      end
+
       private
 
       attr_reader :message

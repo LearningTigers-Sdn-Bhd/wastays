@@ -48,14 +48,12 @@ module AiConcierge
             return process_booking_action.call(action_resolver.call, conversation_state: resumed_state, active_branch: active_branch)
           end
 
-          if selection_like_resume_message?(interpretation, branch)
+          if selection_like_resume_message?(interpretation)
             resolved_interpretation = selection_handler.resolve_follow_up(
-              conversation_state: resumed_state,
               interpretation: interpretation,
               active_branch: branch,
               pending_question: "select_option"
             )
-            return resolved_interpretation if domain_response?(resolved_interpretation)
 
             resume_slots = if resolved_interpretation.dig("slots", "selection_id").present?
               { "selection_id" => resolved_interpretation.dig("slots", "selection_id") }
@@ -148,19 +146,21 @@ module AiConcierge
           search_params
         end
 
-        def selection_like_resume_message?(interpretation, active_branch)
+        # A saved list is picked up again by the same signals that answer a live
+        # one: the intent, a row, or a date. A room name is not among them --
+        # the catalogue is answered by number, here as everywhere else.
+        #
+        # The row is read from the message as well as from the model's slots.
+        # Nothing has told the model a list is waiting -- the thread is
+        # suspended, with no open question on it -- so "no 2" arrives as an
+        # ordinary sentence, and the number in it is the only sign that the
+        # guest is answering a list at all.
+        def selection_like_resume_message?(interpretation)
           return true if interpretation["intent"] == "option_selection"
           return true if interpretation.dig("slots", "check_in").present?
           return true if interpretation.dig("slots", "option_number").present?
 
-          room_type_names = Array(active_branch["suggested_options"]).filter_map { |group| group["room_type_name"] if group.is_a?(Hash) }
-          normalized_message = message.downcase.gsub(/[^a-z0-9]+/, " ").squish
-
-          room_type_names.any? do |name|
-            name.to_s.downcase.gsub(/[^a-z0-9]+/, " ").squish.split.any? do |token|
-              token.length > 2 && normalized_message.include?(token)
-            end
-          end
+          Matching::OptionReference.new(message: message).number.present?
         end
 
         def slot_collection_resume?(resumed)

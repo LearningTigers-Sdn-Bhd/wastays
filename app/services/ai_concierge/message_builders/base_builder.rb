@@ -40,17 +40,22 @@ module AiConcierge
         "#{format_full_date(check_in)} - #{format_full_date(check_out)}"
       end
 
+      # The same money the rest of the app prints, so a price read in a chat
+      # and the same price read in the portal are not written two ways.
+      #
+      # `to_f` rather than the raw value: a missing price is nothing to say "-"
+      # about here, where every caller has already decided it has a price worth
+      # printing.
       def format_price(currency, amount)
-        [ display_currency(currency), format("%.2f", amount.to_f) ].join(" ")
+        CurrencyFormatter.format(amount.to_f, currency: currency_code(currency))
       end
 
       def format_option_price(currency, amount)
         format_price(currency, amount)
       end
 
-      def display_currency(currency)
-        value = currency.presence || hotel.try(:default_currency) || "MYR"
-        value == "MYR" ? "RM" : value
+      def currency_code(currency)
+        currency.presence || hotel.try(:default_currency) || "MYR"
       end
 
       def format_time(value)
@@ -80,34 +85,50 @@ module AiConcierge
       # `rates: :from` shows one cheapest-price line instead of every plan, so
       # the catalogue grows as rooms + rates rather than rooms x rates. The
       # plans themselves come back once a room is chosen.
-      def option_group_lines(group, rates: :all)
-        return "" unless group.is_a?(Hash)
+      # One numbered row per option, across every room type.
+      #
+      # The dates are written on the row only when the catalogue holds more
+      # than one stay to choose between. A search for exact dates gives every
+      # room the same three nights, already stated in the summary line above,
+      # and repeating them under each room says nothing the guest has not just
+      # read.
+      def option_catalogue_lines(groups)
+        options = catalogue_options(groups)
+        return "" if options.empty?
 
-        lines = Array(group["options"]).map do |option|
-          date_line = "  Option #{option['position']}: #{format_full_date(option['check_in'])} - #{format_full_date(option['check_out'])} (#{option['nights']} #{'night'.pluralize(option['nights'].to_i)})"
-          rate_lines = rates == :from ? Array(from_price_line(option)) : rate_plan_lines(option)
-          rate_lines.present? ? [ date_line, rate_lines.join("\n") ].join("\n") : date_line
-        end
-
-        [ "*#{group['room_type_name']}*", lines.join("\n") ].join("\n")
+        with_dates = distinct_stays(options).many?
+        options.map { |option| option_row(option, with_dates: with_dates) }.join("\n")
       end
 
-      def rate_plan_lines(option)
-        Array(option["rate_plans"]).map do |rp|
-          "    • #{format_option_price(rp['currency'], rp['total_price'])} (#{rp['name']})"
+      def option_row(option, with_dates:)
+        parts = [ "*#{option['position']}. #{option['room_type_name']}*" ]
+        parts << format_date_range(option["check_in"], option["check_out"]) if with_dates
+        [ parts.join(" · "), from_price(option) ].compact.join(" — ")
+      end
+
+      def catalogue_options(groups)
+        Array(groups).flat_map do |group|
+          next [] unless group.is_a?(Hash)
+
+          Array(group["options"]).map { |option| option.merge("room_type_name" => group["room_type_name"]) }
         end
       end
 
-      def from_price_line(option)
+      def distinct_stays(options)
+        options.map { |option| [ option["check_in"], option["check_out"] ] }.uniq
+      end
+
+      # The cheapest rate plan, named as a floor rather than a price: which
+      # plan it is becomes a question of its own once a room is chosen, so the
+      # catalogue does not open it.
+      def from_price(option)
         rate_plans = Array(option["rate_plans"]).select { |rp| rp["total_price"].present? }
         cheapest = rate_plans.min_by { |rp| rp["total_price"].to_f }
 
         price = cheapest&.dig("total_price") || option["total_price"]
         return if price.blank?
 
-        currency = cheapest&.dig("currency") || option["currency"]
-        suffix = rate_plans.many? ? ", #{rate_plans.size} rate plans" : nil
-        "    • From #{format_option_price(currency, price)}#{suffix}"
+        "from #{format_option_price(cheapest&.dig('currency') || option['currency'], price)}"
       end
     end
   end

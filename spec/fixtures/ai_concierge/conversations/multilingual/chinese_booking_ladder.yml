@@ -63,7 +63,10 @@ turns:
 
   # A quote gets made in Chinese exactly as it does in English: the model never
   # touched the price, and confirmation is still gated on the open question.
-  - guest: "Garden Prestige Suite"
+  #
+  # The row is written the way it is on every other thread -- the catalogue is
+  # answered by its number, and a number is not written in any language.
+  - guest: "我要 1"
     model:
       agent_loop:
         tool: advance_booking
