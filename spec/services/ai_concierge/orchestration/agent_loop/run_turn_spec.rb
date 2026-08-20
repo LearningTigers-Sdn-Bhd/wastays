@@ -51,7 +51,7 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       second = tool.call({})
 
       expect(first).to be_a(RubyLLM::Tool::Halt)
-      expect(second).to eq(AiConcierge::Tools::Llm::AdvanceBookingTool::ALREADY_ADVANCED)
+      expect(second).to eq(AiConcierge::Tools::Llm::AdvanceBookingFunction::ALREADY_ADVANCED)
     end
   end
 

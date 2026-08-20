@@ -3,7 +3,7 @@
 module AiConcierge
   module Tools
     module Llm
-      class GetRoomTypeDetailsTool < BaseTool
+      class GetRoomTypeDetailsFunction < BaseFunction
         description <<~DESCRIPTION
           Describe one of the hotel's room types: what is in it, how many people
           it sleeps, its amenities.

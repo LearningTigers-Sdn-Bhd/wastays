@@ -20,12 +20,12 @@ module AiConcierge
         LLM_TIMEOUT = 30
 
         TOOL_CLASSES = [
-          Tools::Llm::AnswerHotelQuestionTool,
-          Tools::Llm::GetNearbyAttractionsTool,
-          Tools::Llm::GetRoomTypeDetailsTool,
-          Tools::Llm::GetBookingContextTool,
-          Tools::Llm::AdvanceBookingTool
-          # GenerateBookingUrlTool is deliberately absent. The only way to a
+          Tools::Llm::AnswerHotelQuestionFunction,
+          Tools::Llm::GetNearbyAttractionsFunction,
+          Tools::Llm::GetRoomTypeDetailsFunction,
+          Tools::Llm::GetBookingContextFunction,
+          Tools::Llm::AdvanceBookingFunction
+          # GenerateBookingUrlTool has no function here on purpose. The only way to a
           # payable quote is Booking::CompletionHandler, which is only reached
           # when Postgres says a confirmation was the open question.
         ].freeze
@@ -88,7 +88,7 @@ module AiConcierge
         def booking_words? = Matching::BookingIntentMatcher.new(message: context.message).booking?
 
         def advance_booking_tool
-          tools.find { |tool| tool.is_a?(Tools::Llm::AdvanceBookingTool) }
+          tools.find { |tool| tool.is_a?(Tools::Llm::AdvanceBookingFunction) }
         end
 
         # The model answered without reaching for a tool: a greeting, or a

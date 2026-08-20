@@ -3,7 +3,7 @@
 module AiConcierge
   module Tools
     module Llm
-      class GetNearbyAttractionsTool < BaseTool
+      class GetNearbyAttractionsFunction < BaseFunction
         description <<~DESCRIPTION
           List the places near the hotel -- attractions, landmarks, and things
           worth going to see. Use this when the guest asks what is nearby or

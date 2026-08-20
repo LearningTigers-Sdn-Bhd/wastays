@@ -12,7 +12,7 @@ module AiConcierge
       # questions, because that order is a product decision, and
       # `pending_question` still owns what a "yes" means, because that lock
       # lives in Postgres.
-      class AdvanceBookingTool < BaseTool
+      class AdvanceBookingFunction < BaseFunction
         ALREADY_ADVANCED = { advanced: false, reason: "already advanced this turn" }.freeze
 
         description <<~DESCRIPTION

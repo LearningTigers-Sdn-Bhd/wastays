@@ -3,7 +3,7 @@
 module AiConcierge
   module Tools
     module Llm
-      class GetBookingContextTool < BaseTool
+      class GetBookingContextFunction < BaseFunction
         description <<~DESCRIPTION
           Look up the booking this guest already has with the hotel -- their
           dates and room. Use this when they ask about "my booking", "my

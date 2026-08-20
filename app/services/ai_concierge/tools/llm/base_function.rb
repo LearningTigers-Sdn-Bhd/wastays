@@ -12,7 +12,13 @@ module AiConcierge
       # classify-then-route pipeline used, so the booking ladder, the knowledge
       # short-circuits and the state writes are all the code that was already
       # in production.
-      class BaseTool < RubyLLM::Tool
+      #
+      # `Function`, not `Tool`, because three of these used to have exactly the
+      # name of the domain tool they call -- `GetRoomTypeDetailsTool` was both
+      # this and `Tools::RoomInformation::GetRoomTypeDetailsTool` -- so a
+      # backtrace or a grep landed on the wrong one half the time. The suffix
+      # the model sees is unchanged; `#name` strips this one instead.
+      class BaseFunction < RubyLLM::Tool
         def initialize(context:, recorder:)
           @context = context
           @recorder = recorder
@@ -21,7 +27,7 @@ module AiConcierge
         # RubyLLM derives a tool's name from its full class name, which here
         # would produce "ai_concierge--tools--llm--advance_booking". The model
         # sees this string and has to be able to say it back.
-        def name = self.class.name.demodulize.underscore.delete_suffix("_tool")
+        def name = self.class.name.demodulize.underscore.delete_suffix("_function")
 
         private
 
@@ -51,7 +57,7 @@ module AiConcierge
         def rate_question? = Orchestration::Core::RateQuestion.new(message: context.message).call
 
         def advance_booking_instead
-          AdvanceBookingTool.new(context: context, recorder: recorder).execute
+          AdvanceBookingFunction.new(context: context, recorder: recorder).execute
         end
       end
     end

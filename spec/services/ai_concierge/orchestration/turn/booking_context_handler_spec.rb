@@ -30,7 +30,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::BookingContextHandler do
   # Nothing exercised this handler's result all the way to the persister, so
   # the shape it returns was free to drift from every other turn's and the
   # suite stayed green. It reaches a guest through
-  # `Tools::Llm::GetBookingContextTool` -> `ToolRecorder` -> `TurnOrchestrator`,
+  # `Tools::Llm::GetBookingContextFunction` -> `ToolRecorder` -> `TurnOrchestrator`,
   # and that is the path this walks.
   it "returns a result the persister can write" do
     conversation = create(:conversation, :whatsapp, hotel: hotel, prospect: prospect)

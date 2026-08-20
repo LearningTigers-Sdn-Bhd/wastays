@@ -11,7 +11,7 @@ module AiConcierge
       # InformationIntentGuard had to exist. Here the shelf is a hint, and
       # HybridAnswerBuilder already searches the other shelves when the hint
       # turns out to be wrong.
-      class AnswerHotelQuestionTool < BaseTool
+      class AnswerHotelQuestionFunction < BaseFunction
         CATEGORIES = %w[policy general_info faq].freeze
 
         description <<~DESCRIPTION

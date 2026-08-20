@@ -28,7 +28,7 @@ RSpec.describe "AI concierge tools the model can see" do
     # room description instead of taking the guest into a booking is the
     # expensive kind of wrong, so it is not left to the model's judgement.
     it "hands the turn to the booking machine instead of answering it" do
-      result = tool(AiConcierge::Tools::Llm::AnswerHotelQuestionTool, "how much is a room here?")
+      result = tool(AiConcierge::Tools::Llm::AnswerHotelQuestionFunction, "how much is a room here?")
         .execute
 
       expect(result).to be_a(RubyLLM::Tool::Halt)
@@ -37,7 +37,7 @@ RSpec.describe "AI concierge tools the model can see" do
     end
 
     it "does the same when the guest asks the price of a named room" do
-      tool(AiConcierge::Tools::Llm::GetRoomTypeDetailsTool, "what is the price of the ocean villa per night?")
+      tool(AiConcierge::Tools::Llm::GetRoomTypeDetailsFunction, "what is the price of the ocean villa per night?")
         .execute
 
       expect(recorder.outcome.domain_result[:pending_question]).to eq("booking_timing")
@@ -45,7 +45,7 @@ RSpec.describe "AI concierge tools the model can see" do
 
     # "Room service" contains the word room and is never a room.
     it "leaves room service alone" do
-      tool(AiConcierge::Tools::Llm::AnswerHotelQuestionTool, "how much is room service?")
+      tool(AiConcierge::Tools::Llm::AnswerHotelQuestionFunction, "how much is room service?")
         .execute
 
       expect(recorder.outcome.domain_result[:pending_question]).to be_nil
@@ -59,7 +59,7 @@ RSpec.describe "AI concierge tools the model can see" do
     # At any other moment it is just a word, and the lock that decides which
     # moment it is lives in Postgres.
     it "reads a yes as confirmation only while a confirmation is pending" do
-      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: { "confirmation" => "yes" }, signals: {}, pending_question: "confirm_selection"
       ).call
 
@@ -70,7 +70,7 @@ RSpec.describe "AI concierge tools the model can see" do
     # bare "yes" then arrived as a booking turn with nothing in it, and the
     # ladder answered it with the catalogue the guest had already chosen from.
     it "reads the guest's own yes when the model sends no confirmation" do
-      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: {}, signals: {}, pending_question: "confirm_selection", message: "yes"
       ).call
 
@@ -79,7 +79,7 @@ RSpec.describe "AI concierge tools the model can see" do
     end
 
     it "reads the guest's own no the same way" do
-      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: {}, signals: {}, pending_question: "confirm_selection", message: "no thanks"
       ).call
 
@@ -88,7 +88,7 @@ RSpec.describe "AI concierge tools the model can see" do
 
     it "reads a yes written in the guest's own language" do
       %w[baik 好的 可以].each do |word|
-        interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+        interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
           slots: {}, signals: {}, pending_question: "confirm_selection", message: word
         ).call
 
@@ -99,7 +99,7 @@ RSpec.describe "AI concierge tools the model can see" do
     # The word only means a confirmation where a confirmation was asked for,
     # and a message that is not one is never read as a yes.
     it "reads nothing from a message that answers something else" do
-      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: {}, signals: {}, pending_question: "confirm_selection", message: "what time is check in"
       ).call
 
@@ -111,7 +111,7 @@ RSpec.describe "AI concierge tools the model can see" do
     # answer *Yes* -- and a yes the model did not pass along left the hotel
     # asking the same question again.
     it "reads the guest's own yes when the party split is the open question" do
-      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: {}, signals: {}, pending_question: "party_split", message: "yes"
       ).call
 
@@ -119,7 +119,7 @@ RSpec.describe "AI concierge tools the model can see" do
     end
 
     it "does not read a yes when no confirmation is pending" do
-      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: {}, signals: {}, pending_question: "select_option", message: "yes"
       ).call
 
@@ -127,7 +127,7 @@ RSpec.describe "AI concierge tools the model can see" do
     end
 
     it "reads the same yes as nothing in particular when no confirmation is pending" do
-      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: { "confirmation" => "yes" }, signals: {}, pending_question: "guest_count"
       ).call
 
@@ -135,7 +135,7 @@ RSpec.describe "AI concierge tools the model can see" do
     end
 
     it "never takes an action or a next question from the model" do
-      interpretation = AiConcierge::Tools::Llm::AdvanceBookingTool::SyntheticInterpretation.new(
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: { "adults" => 2 }, signals: {}, pending_question: nil
       ).call
 
@@ -147,8 +147,8 @@ RSpec.describe "AI concierge tools the model can see" do
 
   describe "the names the model sees" do
     it "uses short names rather than ruby namespaces" do
-      expect(tool(AiConcierge::Tools::Llm::AdvanceBookingTool, "hi").name).to eq("advance_booking")
-      expect(tool(AiConcierge::Tools::Llm::AnswerHotelQuestionTool, "hi").name).to eq("answer_hotel_question")
+      expect(tool(AiConcierge::Tools::Llm::AdvanceBookingFunction, "hi").name).to eq("advance_booking")
+      expect(tool(AiConcierge::Tools::Llm::AnswerHotelQuestionFunction, "hi").name).to eq("answer_hotel_question")
     end
   end
 end
