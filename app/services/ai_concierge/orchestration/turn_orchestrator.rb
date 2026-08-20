@@ -121,7 +121,7 @@ module AiConcierge
       end
 
       def response_persister
-        @response_persister ||= Conversation::ResponsePersister.new(hotel: hotel, conversation: @conversation)
+        @response_persister ||= Conversation::ResponsePersister.new(hotel: hotel, conversation: @conversation, message: message)
       end
     end
   end

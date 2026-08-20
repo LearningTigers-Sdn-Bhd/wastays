@@ -30,8 +30,21 @@ module AiConcierge
         "cheerful" => "Warm and upbeat. Sound pleased to help, but stay brief -- one friendly touch, not three."
       }.freeze
 
-      def self.styles?(hotel:, thread_language:)
-        TONES.key?(hotel.ai_concierge_tone) || thread_language != Conversation::DEFAULT_LANGUAGE
+      # A message with no letters in it cannot be written in any language, so
+      # there is nothing here to notice and nothing to translate -- "1", "2",
+      # "21/08" keep the thread exactly as it is, for free.
+      #
+      # Anything the guest actually wrote gets read, even for a hotel that never
+      # picked a tone. The alternative gate -- run only once the thread is
+      # already non-English -- can never come true, because this is the only
+      # thing that ever sets a thread's language.
+      WORDED = /[[:alpha:]]/
+
+      def self.styles?(hotel:, thread_language:, guest_message:)
+        return true if TONES.key?(hotel.ai_concierge_tone)
+        return true if thread_language != Conversation::DEFAULT_LANGUAGE
+
+        guest_message.to_s.match?(WORDED)
       end
 
       def initialize(hotel:, template:, guest_message:, thread_language:)

@@ -219,8 +219,11 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       }
     )
 
-    # No model fake: "nevermind" is caught by the control handler before the
-    # loop ever runs, which is the point of settling control deterministically.
+    # No model fake for the loop: "nevermind" is caught by the control handler
+    # before it ever runs, which is the point of settling control
+    # deterministically. The stylist still runs afterwards -- it reads the
+    # finished sentence, and a control reply is a sentence like any other.
+    stub_concierge_stylist
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "nevermind", prospect_public_id: prospect.public_id).call
 

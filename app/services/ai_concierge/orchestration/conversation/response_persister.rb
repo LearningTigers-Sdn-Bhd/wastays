@@ -2,9 +2,10 @@ module AiConcierge
   module Orchestration
     module Conversation
       class ResponsePersister
-        def initialize(hotel:, conversation: nil)
+        def initialize(hotel:, conversation: nil, message: nil)
           @hotel = hotel
           @conversation = conversation
+          @message = message.to_s
         end
 
         def persist_response(prospect:, conversation_state:, interpretation:, slots_payload:, reply_type:, active_topic:, active_flow:, pending_question:, action_name:, extra_context: {}, flow_status: nil, end_reason: nil, needs_human_support: false)
@@ -45,6 +46,7 @@ module AiConcierge
         end
 
         def persist_static_response(prospect:, conversation_state:, interpretation:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:)
+          reply_message = style(reply_message)
           ActiveRecord::Base.transaction do
             persist_state(conversation_state, slots_payload:, interpretation:, active_topic:, active_flow:, pending_question:, action_name:, flow_status:, end_reason:)
             record_outbound_message(prospect, reply_message)
@@ -54,7 +56,45 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :conversation
+        attr_reader :hotel, :conversation, :message
+
+        # The hotel's tone and the guest's language, applied once, here.
+        #
+        # Every reply the assistant has ever sent passes through this method --
+        # the builders above and the four control replies that arrive with their
+        # sentence already written -- which is why it is the only place that
+        # knows how the hotel sounds.
+        #
+        # It runs on a finished string. Nothing the model returns can change a
+        # price, a date or a link, because those were computed before it was
+        # asked, and anything it did change is caught below.
+        def style(template)
+          return template if template.blank? || conversation.blank?
+          return template unless Agents::ReplyStylist.styles?(hotel: hotel, thread_language: conversation.reply_language, guest_message: message)
+
+          styled = Agents::ReplyStylist.new(
+            hotel: hotel, template: template, guest_message: message, thread_language: conversation.reply_language
+          ).call
+
+          verified(template, styled) || template
+        rescue Agents::ReplyStylist::ReplyStylistError => e
+          Rails.logger.warn("AiConcierge::ReplyStylist skipped: #{e.message}")
+          template
+        end
+
+        # A rewrite the verifier rejects is not repaired and not retried: the
+        # template says the same thing correctly, and the guest is waiting.
+        #
+        # The language is recorded either way. What the guest wrote in is a fact
+        # about the guest, not about whether this particular rewrite came back
+        # usable, and forgetting it would ask the same question again next turn.
+        def verified(template, styled)
+          conversation.record_language!(styled.language)
+          checker = Agents::RewriteVerifier.new(template: template, candidate: styled.text)
+          checker.call.tap do |text|
+            Rails.logger.warn("AiConcierge::ReplyStylist rejected (#{checker.failure}) for conversation #{conversation.id}") if text.nil?
+          end
+        end
 
         def persist_state(conversation_state, slots_payload:, interpretation:, active_topic:, active_flow:, pending_question:, action_name:, flow_status: nil, end_reason: nil)
           patch = State::StatePatchBuilder.new(

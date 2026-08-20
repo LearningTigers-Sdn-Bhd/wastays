@@ -14,6 +14,10 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
   before do
     create(:property_policy, hotel: hotel)
     allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
+    # Every reply now passes the stylist on its way out, including the control
+    # replies below that never consult the loop. Passing the template through is
+    # what a hotel on the default tone answering in English gets.
+    stub_concierge_stylist
   end
 
   it "serializes a prospect turn with a row lock" do

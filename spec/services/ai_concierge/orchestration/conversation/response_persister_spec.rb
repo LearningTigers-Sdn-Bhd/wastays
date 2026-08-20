@@ -85,4 +85,61 @@ RSpec.describe AiConcierge::Orchestration::Conversation::ResponsePersister, "con
     expect(conversation.last_message_at).to be_present
     expect(conversation.last_guest_message_at).to be_nil
   end
+
+  describe "the hotel's voice" do
+    def persist_with(message)
+      persist(described_class.new(hotel: hotel, conversation: conversation, message: message))
+    end
+
+    def last_body = prospect.prospect_messages.where(direction: "outbound").last.body
+
+    it "sends what the stylist wrote and remembers the language it was in" do
+      styled = "Selamat datang ke #{hotel.name}! Saya boleh bantu dengan tempahan."
+      stub_concierge_stylist(text: styled, language: "ms")
+
+      payload = persist_with("ada bilik kosong?")
+
+      expect(payload[:reply_message]).to eq(styled)
+      expect(last_body).to eq(styled)
+      expect(conversation.reload.language).to eq("ms")
+    end
+
+    # The one that matters: a rewrite the verifier rejects must never reach the
+    # guest, and the template says the same thing correctly.
+    it "sends the template when the rewrite changed something the guest could act on" do
+      allow_any_instance_of(AiConcierge::Agents::ReplyStylist).to receive(:call).and_return(
+        AiConcierge::Agents::ReplyStylist::Styled.new(text: "Book at https://elsewhere.test now!", language: "ms")
+      )
+
+      payload = persist_with("boleh tempah?")
+
+      expect(payload[:reply_message]).to include("Hello, welcome to")
+      expect(last_body).to include("Hello, welcome to")
+    end
+
+    # What the guest wrote in is a fact about the guest, not about whether this
+    # particular rewrite came back usable.
+    it "still remembers the language when the rewrite is rejected" do
+      allow_any_instance_of(AiConcierge::Agents::ReplyStylist).to receive(:call).and_return(
+        AiConcierge::Agents::ReplyStylist::Styled.new(text: "Book at https://elsewhere.test now!", language: "ms")
+      )
+
+      persist_with("boleh tempah?")
+
+      expect(conversation.reload.language).to eq("ms")
+    end
+
+    it "sends the template when the stylist fails outright" do
+      allow_any_instance_of(AiConcierge::Agents::ReplyStylist).to receive(:call)
+        .and_raise(AiConcierge::Agents::ReplyStylist::ReplyStylistError, "timed out")
+
+      expect(persist_with("hello there")[:reply_message]).to include("Hello, welcome to")
+    end
+
+    it "does not reach for the stylist when the guest answered with a bare number" do
+      expect_any_instance_of(AiConcierge::Agents::ReplyStylist).not_to receive(:call)
+
+      persist_with("2")
+    end
+  end
 end

@@ -18,20 +18,26 @@ RSpec.describe AiConcierge::Agents::ReplyStylist do
   end
 
   describe "whether it runs at all" do
-    it "stays out of the way for a basic hotel answering in English" do
-      hotel.ai_concierge_tone = "basic"
-
-      expect(described_class.styles?(hotel: hotel, thread_language: "en")).to be(false)
+    def styles?(tone: "basic", thread_language: "en", guest_message: "1")
+      hotel.ai_concierge_tone = tone
+      described_class.styles?(hotel: hotel, thread_language: thread_language, guest_message: guest_message)
     end
 
-    it "runs for a basic hotel once the thread is in another language" do
-      hotel.ai_concierge_tone = "basic"
-
-      expect(described_class.styles?(hotel: hotel, thread_language: "ms")).to be(true)
+    it "stays out of the way when the guest answered with nothing but a number" do
+      expect(styles?(guest_message: "1")).to be(false)
+      expect(styles?(guest_message: "21/08")).to be(false)
     end
 
-    it "runs for a hotel that picked a tone" do
-      expect(described_class.styles?(hotel: hotel, thread_language: "en")).to be(true)
+    it "reads anything the guest actually wrote, even for a hotel with no tone set" do
+      expect(styles?(guest_message: "ada bilik kosong?")).to be(true)
+    end
+
+    it "keeps running once the thread is in another language" do
+      expect(styles?(thread_language: "ms", guest_message: "2")).to be(true)
+    end
+
+    it "always runs for a hotel that picked a tone" do
+      expect(styles?(tone: "cheerful", guest_message: "1")).to be(true)
     end
   end
 
