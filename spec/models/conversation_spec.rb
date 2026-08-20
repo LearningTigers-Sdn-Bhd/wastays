@@ -73,6 +73,30 @@ RSpec.describe Conversation, type: :model do
     end
   end
 
+  describe "the language the bot answers in" do
+    it "is English until a guest establishes something else" do
+      expect(create(:conversation, hotel: hotel).reply_language).to eq("en")
+    end
+
+    it "keeps what was established when a turn carries no language of its own" do
+      conversation = create(:conversation, hotel: hotel, language: "ms")
+
+      conversation.record_language!(nil)
+
+      expect(conversation.reload.reply_language).to eq("ms")
+      expect(conversation).to be_translated
+    end
+
+    it "follows a guest who switches" do
+      conversation = create(:conversation, hotel: hotel, language: "ms")
+
+      conversation.record_language!("en")
+
+      expect(conversation.reload.language).to eq("en")
+      expect(conversation).not_to be_translated
+    end
+  end
+
   describe "where a reply can reach the guest" do
     let(:reachable_guest) { create(:prospect, hotel: hotel, phone_number: "+60123456789") }
 

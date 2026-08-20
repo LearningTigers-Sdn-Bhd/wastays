@@ -35,6 +35,9 @@ class Conversation < ApplicationRecord
   # The one line under the hotel's name in the chat bar. Deliberately about who
   # answers rather than a status light -- "online" would be a promise the page
   # cannot keep at 3am.
+  # What the bot answers in when nobody has established anything else.
+  DEFAULT_LANGUAGE = "en"
+
   BOT_STATUS = "Ask about your stay, any time"
   FRONT_DESK_STATUS = "Our front desk replies here"
   HUMAN_REQUESTED_STATUS = "A team member has been asked to join"
@@ -107,6 +110,25 @@ class Conversation < ApplicationRecord
   # to ask. Only the hotel is known at that point.
   def self.guest_status_for(hotel)
     { text: hotel.ai_concierge_ready? ? BOT_STATUS : FRONT_DESK_STATUS }
+  end
+
+  # The language the bot answers this thread in.
+  #
+  # Most of a booking is answered with numbers and room names -- "1", "yes",
+  # "Ocean Villa King option 2" -- and none of those are written in any
+  # language. So the thread remembers what the guest last wrote a sentence in,
+  # and a message carrying no signal of its own keeps it rather than snapping
+  # everyone back to English halfway down the ladder.
+  def reply_language = language.presence || DEFAULT_LANGUAGE
+  def translated? = language.present? && language != DEFAULT_LANGUAGE
+
+  # Only a message that actually established a language writes one. Nothing is
+  # recorded for a bare option number, which is the point of storing it at all.
+  def record_language!(value)
+    return self if value.blank? || value == language
+
+    update!(language: value)
+    self
   end
 
   def bot? = mode == "bot"
