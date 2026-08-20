@@ -16,6 +16,7 @@ class Booking < ApplicationRecord
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
+  has_many :guest_registration_cards, dependent: :destroy
   has_one :guest_registration_card, dependent: :destroy
   has_one :refund_request, dependent: :destroy
   has_many :booking_folios, dependent: :destroy

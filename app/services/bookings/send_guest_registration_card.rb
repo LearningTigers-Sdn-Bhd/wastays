@@ -29,7 +29,7 @@ module Bookings
       recipient = recipient_email
       return failure("This booking has no guest email address to send to.") if recipient.blank?
 
-      card = @booking.guest_registration_card
+      card = target_card
       return failure("The registration card has not been created yet.") if card.blank?
       return failure("Set a Terms & Conditions policy in Settings before sending this card.") unless card.ready_for_guest?
 
@@ -47,7 +47,9 @@ module Bookings
           recipient_email: recipient,
           hotel_name: @booking.hotel.name,
           guest_name: recipient_name,
-          requested_by_name: @user&.name
+          requested_by_name: @user&.name,
+          booking_guest_id: active_booking_guest&.id,
+          guest_registration_card_id: card.id
         }
       )
 
@@ -62,6 +64,15 @@ module Bookings
         @booking.booking_guests.find { |bg| bg.id.to_s == @booking_guest_id.to_s }
       else
         @booking.booking_guests.find(&:primary?)
+      end
+    end
+
+    def target_card
+      guest = active_booking_guest
+      if guest
+        guest.guest_registration_card || @booking.guest_registration_cards.find_by(booking_guest_id: [ guest.id, nil ]) || @booking.guest_registration_card
+      else
+        @booking.guest_registration_card
       end
     end
 
