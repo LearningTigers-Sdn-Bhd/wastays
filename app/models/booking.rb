@@ -16,6 +16,7 @@ class Booking < ApplicationRecord
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
+  has_many :guest_registration_cards, dependent: :destroy
   has_one :guest_registration_card, dependent: :destroy
   has_one :refund_request, dependent: :destroy
   has_many :booking_folios, dependent: :destroy
@@ -100,6 +101,16 @@ class Booking < ApplicationRecord
       booking_guests.find { |bg| bg.is_primary? }&.guest
     else
       booking_guests.find_by(is_primary: true)&.guest
+    end
+  end
+
+  def find_booking_guest(booking_guest_id)
+    return nil if booking_guest_id.blank?
+
+    if booking_guests.loaded?
+      booking_guests.find { |bg| bg.id.to_s == booking_guest_id.to_s }
+    else
+      booking_guests.find_by(id: booking_guest_id)
     end
   end
 

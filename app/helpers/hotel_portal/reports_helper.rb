@@ -42,6 +42,22 @@ module HotelPortal::ReportsHelper
     end
   end
 
+  GUEST_REPORT_TAB_LABELS = {
+    "arrivals" => "Arrivals",
+    "in_house" => "In-house",
+    "departures" => "Departures",
+    "checkout" => "Checkout",
+    "police_report" => "Police report",
+    "registration_cards" => "Registration cards",
+    "bibo" => "Boat transfers",
+    "meal_prep" => "Meal prep"
+  }.freeze
+
+  def guest_report_tab_label(tab_value)
+    GUEST_REPORT_TAB_LABELS.fetch(tab_value.to_s, tab_value.to_s.titleize)
+  end
+
+
   # Every report is passed in already built. Running one here would mean the
   # tab strip re-querying on every tab just to put a number on a badge.
   def guest_report_tabs_data(report:, bibo_report:, police_report:, meal_prep_report:, active_tab:, grc_total_count:, current_hotel:, date_preset:)
@@ -184,5 +200,13 @@ module HotelPortal::ReportsHelper
 
   def display_latest_note(note)
     note.presence || "-"
+  end
+
+  def meal_prep_popover_id(meal_type, row)
+    "meal-prep-#{meal_type}-#{row[:confirmation_token]}-#{row[:type].to_s.parameterize}-booking"
+  end
+
+  def meal_prep_row_meals_text(meals)
+    Array(meals).join(", ").presence || "—"
   end
 end

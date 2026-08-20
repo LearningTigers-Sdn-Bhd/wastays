@@ -86,7 +86,7 @@ class NotificationMailer < ApplicationMailer
   # a background job to reach the guest at all.
   def guest_registration_card(delivery)
     assign_delivery(delivery)
-    @card = @booking.guest_registration_card
+    @card = find_guest_registration_card
     @card_url = guest_registration_card_url(@card.public_token)
     @nights = (@booking.check_out.to_date - @booking.check_in.to_date).to_i
 
@@ -116,5 +116,22 @@ class NotificationMailer < ApplicationMailer
     attachments.inline["long-logo.png"] = File.read(
       Rails.root.join("app/assets/images/logo/long-logo.png")
     )
+  end
+
+  def find_guest_registration_card
+    card_id = @payload[:guest_registration_card_id]
+    if card_id.present?
+      card = GuestRegistrationCard.find_by(id: card_id)
+      return card if card
+    end
+
+    booking_guest_id = @payload[:booking_guest_id]
+    if booking_guest_id.present?
+      bg = @booking.find_booking_guest(booking_guest_id)
+      return bg.guest_registration_card if bg&.guest_registration_card
+    end
+
+    primary = @booking.booking_guests.find(&:primary?)
+    primary&.guest_registration_card || @booking.guest_registration_cards.find_by(booking_guest_id: nil) || @booking.guest_registration_card
   end
 end

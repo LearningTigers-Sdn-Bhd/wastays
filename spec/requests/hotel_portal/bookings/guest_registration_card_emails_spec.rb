@@ -72,4 +72,21 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCardEmails", type: :requ
     expect(mail.html_part.body.decoded).to include("/guest-registration-card/#{card.public_token}")
     expect(NotificationDelivery.last.reload.status).to eq("sent")
   end
+
+  it "sends the specific guest's registration card token when another guest on the same booking has already signed" do
+    primary_guest = create(:booking_guest, booking: booking, is_primary: true, name_snapshot: "Lee Ji-eun", email_snapshot: "lee@example.com")
+    additional_guest = create(:booking_guest, booking: booking, is_primary: false, name_snapshot: "Jong Suk", email_snapshot: "jongsuk@example.com")
+
+    primary_card = create(:guest_registration_card, hotel: hotel, booking: booking, booking_guest: primary_guest, status: "draft")
+    _signed_card = create(:guest_registration_card, :signed, hotel: hotel, booking: booking, booking_guest: additional_guest, signer_name: "Jong Suk")
+
+    post hotel_booking_guest_registration_card_email_path(hotel, booking, booking_guest_id: primary_guest.id)
+
+    perform_enqueued_jobs
+    mail = ActionMailer::Base.deliveries.last
+
+    expect(mail.to).to eq([ "lee@example.com" ])
+    expect(mail.html_part.body.decoded).to include("/guest-registration-card/#{primary_card.public_token}")
+    expect(mail.html_part.body.decoded).not_to include("This card was signed by Jong Suk")
+  end
 end

@@ -14,7 +14,7 @@ RSpec.describe HotelPortal::Reports::TourismTaxReport, type: :service do
         :booking,
         hotel: hotel,
         status: "checked_in",
-        check_in: start_date - 1.day,
+        check_in: start_date - 2.days,
         check_out: end_date + 1.day,
         guest_name: "Kenji Sato",
         guest_country: "Japan",
