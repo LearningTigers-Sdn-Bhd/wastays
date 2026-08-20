@@ -60,31 +60,37 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
     end
   end
 
+  # Frozen because the date on the branch has to be a date still to come:
+  # a June the guest is standing in front of, not one they have walked past.
   it "extracts a specific date answer with an affirmative suffix" do
-    result = described_class.new(
-      message: "23 june ok?",
-      slots: { "confirmation" => "yes" },
-      pending_question: "specific_timing",
-      conversation_signals: signals,
-      active_branch: { "target_month" => 6, "target_year" => 2026 }
-    ).call
+    with_frozen_time Date.new(2026, 6, 3) do
+      result = described_class.new(
+        message: "23 june ok?",
+        slots: { "confirmation" => "yes" },
+        pending_question: "specific_timing",
+        conversation_signals: signals,
+        active_branch: { "target_month" => 6, "target_year" => 2026 }
+      ).call
 
-    expect(result["check_in"]).to eq("2026-06-23")
-    expect(result["target_month"]).to eq(6)
-    expect(result["target_year"]).to eq(2026)
-    expect(result).not_to include("confirmation")
+      expect(result["check_in"]).to eq("2026-06-23")
+      expect(result["target_month"]).to eq(6)
+      expect(result["target_year"]).to eq(2026)
+      expect(result).not_to include("confirmation")
+    end
   end
 
   it "extracts a day-only answer from the active month context" do
-    result = described_class.new(
-      message: "23",
-      slots: {},
-      pending_question: "specific_timing",
-      conversation_signals: signals,
-      active_branch: { "target_month" => 6, "target_year" => 2026 }
-    ).call
+    with_frozen_time Date.new(2026, 6, 3) do
+      result = described_class.new(
+        message: "23",
+        slots: {},
+        pending_question: "specific_timing",
+        conversation_signals: signals,
+        active_branch: { "target_month" => 6, "target_year" => 2026 }
+      ).call
 
-    expect(result["check_in"]).to eq("2026-06-23")
+      expect(result["check_in"]).to eq("2026-06-23")
+    end
   end
 
   it "extracts a same-month dashed date range" do
@@ -591,5 +597,85 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
     ).call
 
     expect(result).not_to include("nights")
+  end
+
+  # Every example above could pass in any year. These cannot: the bug they
+  # cover only exists in August looking at January, and it made every
+  # cross-year enquiry -- the whole high season -- answer "no rooms available".
+  describe "a year the guest did not say" do
+    def normalize(message, pending_question: nil, slots: {})
+      described_class.new(
+        message: message,
+        slots: slots,
+        pending_question: pending_question,
+        conversation_signals: signals
+      ).call
+    end
+
+    it "reads a month already past this year as next year" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        [ "3-5 january", "january 3-5", "3 jan to 5 jan" ].each do |message|
+          result = normalize(message)
+
+          expect(result["check_in"]).to eq("2027-01-03"), message
+          expect(result["check_out"]).to eq("2027-01-05"), message
+          expect(result["target_year"]).to eq(2027), message
+        end
+      end
+    end
+
+    it "reads days already past this month as next year" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        expect(normalize("3-5 august")["check_in"]).to eq("2027-08-03")
+      end
+    end
+
+    it "leaves dates still to come this year alone" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        expect(normalize("25-27 august")["check_in"]).to eq("2026-08-25")
+        expect(normalize("3-5 september")["check_in"]).to eq("2026-09-03")
+      end
+    end
+
+    # A year the guest said is theirs, wrong or not. The ladder says so out
+    # loud rather than moving it behind their back.
+    it "does not move a year the guest stated" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        expect(normalize("3-5 january 2026")["check_in"]).to eq("2026-01-03")
+        expect(normalize("3-5 january 2027")["check_in"]).to eq("2027-01-03")
+      end
+    end
+
+    it "still carries a stay across new year" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = normalize("30 december to 2 january")
+
+        expect(result["check_in"]).to eq("2026-12-30")
+        expect(result["check_out"]).to eq("2027-01-02")
+        expect(result["nights"]).to eq(3)
+      end
+    end
+
+    it "reads a past date answering the specific timing question as next year" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        expect(normalize("3 january", pending_question: "specific_timing")["check_in"]).to eq("2027-01-03")
+      end
+    end
+
+    # The year on the branch was derived, not stated -- and may itself be a
+    # year this bug wrote.
+    it "rolls a past date built from the year already on the branch" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "the 3rd",
+          slots: { "target_month" => 1, "target_year" => 2026 },
+          pending_question: "specific_timing",
+          conversation_signals: signals,
+          active_branch: { "target_month" => 1, "target_year" => 2026 }
+        ).call
+
+        expect(result["check_in"]).to eq("2027-01-03")
+      end
+    end
   end
 end

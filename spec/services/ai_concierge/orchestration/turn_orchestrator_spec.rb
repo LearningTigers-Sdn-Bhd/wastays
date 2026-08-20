@@ -525,7 +525,10 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(confirm_reply.payload[:reply_message]).to include("https://example.test/quotes/token")
   end
 
-  it "resumes slot collection with a date after a hotel information interruption" do
+  # Frozen so "next month" is the June the scripted slots name, and 23 June
+  # is still to come: an implicit year now rolls forward, and a wall-clock
+  # June would make this thread a booking for a date already gone.
+  it "resumes slot collection with a date after a hotel information interruption", frozen_time: Date.new(2026, 5, 15) do
     hotel.update!(amenities: [ "swimming_pool" ])
 
     script_messages(
@@ -550,7 +553,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(state.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")
   end
 
-  it "suspends active booking for guarded hotel knowledge and resumes afterward" do
+  it "suspends active booking for guarded hotel knowledge and resumes afterward", frozen_time: Date.new(2026, 5, 15) do
     stub_knowledge_search(
       "general_info" => [],
       "faq,general_info,policy" => [

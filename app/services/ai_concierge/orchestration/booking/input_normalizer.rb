@@ -220,8 +220,9 @@ module AiConcierge
       return unless match
 
       month = month_number(match[3])
-      year = year_from_message(normalized) || Date.current.year
-      build_date_range(start_day: match[1].to_i, start_month: month, start_year: year, end_day: match[2].to_i, end_month: month, end_year: year)
+      stated_year = year_from_message(normalized)
+      year = stated_year || Date.current.year
+      build_date_range(start_day: match[1].to_i, start_month: month, start_year: year, end_day: match[2].to_i, end_month: month, end_year: year, implicit_year: stated_year.nil?)
     end
 
     def parse_day_month_to_day_month_range(normalized)
@@ -231,7 +232,7 @@ module AiConcierge
       start_month = month_number(match[2])
       end_month = month_number(match[4])
       years = date_range_years(start_month: start_month, end_month: end_month, explicit_end_year: match[5], normalized: normalized)
-      build_date_range(start_day: match[1].to_i, start_month: start_month, start_year: years[:start_year], end_day: match[3].to_i, end_month: end_month, end_year: years[:end_year])
+      build_date_range(start_day: match[1].to_i, start_month: start_month, start_year: years[:start_year], end_day: match[3].to_i, end_month: end_month, end_year: years[:end_year], implicit_year: years[:implicit])
     end
 
     def parse_month_day_to_month_day_range(normalized)
@@ -241,7 +242,7 @@ module AiConcierge
       start_month = month_number(match[1])
       end_month = month_number(match[3])
       years = date_range_years(start_month: start_month, end_month: end_month, explicit_end_year: match[5], normalized: normalized)
-      build_date_range(start_day: match[2].to_i, start_month: start_month, start_year: years[:start_year], end_day: match[4].to_i, end_month: end_month, end_year: years[:end_year])
+      build_date_range(start_day: match[2].to_i, start_month: start_month, start_year: years[:start_year], end_day: match[4].to_i, end_month: end_month, end_year: years[:end_year], implicit_year: years[:implicit])
     end
 
     def parse_month_day_to_day_range(normalized)
@@ -249,8 +250,9 @@ module AiConcierge
       return unless match
 
       month = month_number(match[1])
-      year = (match[4] || year_from_message(normalized) || Date.current.year).to_i
-      build_date_range(start_day: match[2].to_i, start_month: month, start_year: year, end_day: match[3].to_i, end_month: month, end_year: year)
+      stated_year = match[4] || year_from_message(normalized)
+      year = (stated_year || Date.current.year).to_i
+      build_date_range(start_day: match[2].to_i, start_month: month, start_year: year, end_day: match[3].to_i, end_month: month, end_year: year, implicit_year: stated_year.nil?)
     end
 
     def parse_day_month_to_day_range(normalized)
@@ -258,8 +260,9 @@ module AiConcierge
       return unless match
 
       month = month_number(match[2])
-      year = (match[4] || year_from_message(normalized) || Date.current.year).to_i
-      build_date_range(start_day: match[1].to_i, start_month: month, start_year: year, end_day: match[3].to_i, end_month: month, end_year: year)
+      stated_year = match[4] || year_from_message(normalized)
+      year = (stated_year || Date.current.year).to_i
+      build_date_range(start_day: match[1].to_i, start_month: month, start_year: year, end_day: match[3].to_i, end_month: month, end_year: year, implicit_year: stated_year.nil?)
     end
 
     def parse_partial_day_range
@@ -283,11 +286,28 @@ module AiConcierge
       slots["clarification_needed"] = ""
     end
 
-    def build_date_range(start_day:, start_month:, start_year:, end_day:, end_month:, end_year:)
+    # A year the guest did not say is the year that has not happened yet.
+    #
+    # "3-5 january" said in August is next January, and filling in this year
+    # instead asks Postgres for inventory rows that cannot exist: the search
+    # comes back empty and the guest is told the hotel is full. Every
+    # cross-year enquiry -- the whole high season -- failed that way.
+    #
+    # Only an implicit year rolls. "3-5 january 2026" is the guest's own
+    # statement, wrong or not, and moving it silently would answer a question
+    # they did not ask; that date is caught further up the ladder and said out
+    # loud instead. Both ends move together, so the stay keeps its length and
+    # the December-to-January wrap below survives the roll.
+    def build_date_range(start_day:, start_month:, start_year:, end_day:, end_month:, end_year:, implicit_year: false)
       check_in = Date.new(start_year.to_i, start_month.to_i, start_day.to_i)
       check_out = Date.new(end_year.to_i, end_month.to_i, end_day.to_i)
       check_out = check_out.next_year if check_out <= check_in && end_month.to_i < start_month.to_i
       return if check_out <= check_in
+
+      if implicit_year && check_in < Date.current
+        check_in = check_in.next_year
+        check_out = check_out.next_year
+      end
 
       { check_in: check_in, check_out: check_out }
     rescue Date::Error
@@ -295,10 +315,11 @@ module AiConcierge
     end
 
     def date_range_years(start_month:, end_month:, explicit_end_year:, normalized:)
-      year = (explicit_end_year || year_from_message(normalized) || Date.current.year).to_i
+      stated_year = explicit_end_year.presence || year_from_message(normalized)
+      year = (stated_year || Date.current.year).to_i
       start_year = explicit_end_year.present? && end_month.to_i < start_month.to_i ? year - 1 : year
 
-      { start_year: start_year, end_year: year }
+      { start_year: start_year, end_year: year, implicit: stated_year.nil? }
     end
 
     def date_range_clarification_allowed?
@@ -323,10 +344,15 @@ module AiConcierge
       return unless day
 
       month ||= active_branch["target_month"].presence || slots["target_month"].presence
-      year = year_from_message(normalized) || active_branch["target_year"].presence || slots["target_year"].presence || Date.current.year
+      stated_year = year_from_message(normalized)
+      year = stated_year || active_branch["target_year"].presence || slots["target_year"].presence || Date.current.year
       return unless month
 
-      Date.new(year.to_i, month.to_i, day.to_i)
+      date = Date.new(year.to_i, month.to_i, day.to_i)
+      # Same rule as the ranges above, and a year carried on the branch counts
+      # as implicit: it was derived, and may itself be a year this bug wrote.
+      date = date.next_year if stated_year.nil? && date < Date.current
+      date
     rescue Date::Error
       nil
     end

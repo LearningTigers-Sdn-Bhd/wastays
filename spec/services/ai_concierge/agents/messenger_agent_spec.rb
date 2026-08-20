@@ -271,7 +271,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
     expect(payload).not_to have_key("active")
   end
 
-  it "treats a date with ok as a specific timing answer, not confirmation" do
+  it "treats a date with ok as a specific timing answer, not confirmation", frozen_time: Date.new(2026, 6, 3) do
     prospect = create(:prospect, hotel: hotel)
     conversation_state = create(:prospect_conversation_state, prospect: prospect, pending_question: "specific_timing")
     conversation_state.update!(slots_payload: {
