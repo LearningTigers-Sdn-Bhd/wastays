@@ -127,7 +127,7 @@ class NotificationMailer < ApplicationMailer
 
     booking_guest_id = @payload[:booking_guest_id]
     if booking_guest_id.present?
-      bg = @booking.booking_guests.find { |g| g.id.to_s == booking_guest_id.to_s }
+      bg = @booking.find_booking_guest(booking_guest_id)
       return bg.guest_registration_card if bg&.guest_registration_card
     end
 

@@ -53,11 +53,7 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   end
 
   def set_card
-    booking_guest = if params[:booking_guest_id].present?
-                      @booking.booking_guests.find { |bg| bg.id.to_s == params[:booking_guest_id].to_s }
-    else
-                      @booking.booking_guests.find(&:primary?)
-    end
+    booking_guest = @booking.find_booking_guest(params[:booking_guest_id]) || @booking.booking_guests.find(&:primary?)
 
     @card = if booking_guest
               booking_guest.guest_registration_card || booking_guest.build_guest_registration_card(hotel: current_hotel, booking: @booking)

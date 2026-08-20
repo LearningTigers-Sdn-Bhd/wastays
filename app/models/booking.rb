@@ -104,6 +104,16 @@ class Booking < ApplicationRecord
     end
   end
 
+  def find_booking_guest(booking_guest_id)
+    return nil if booking_guest_id.blank?
+
+    if booking_guests.loaded?
+      booking_guests.find { |bg| bg.id.to_s == booking_guest_id.to_s }
+    else
+      booking_guests.find_by(id: booking_guest_id)
+    end
+  end
+
   def vip?
     primary_guest&.vip? || self[:vip] || false
   end
