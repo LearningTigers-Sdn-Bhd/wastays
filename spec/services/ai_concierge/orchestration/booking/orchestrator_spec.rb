@@ -307,6 +307,28 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     expect(branch["selected_rate_plan_id"]).to be_nil
   end
 
+  # The date has to leave the branch as it is named, or the ladder says the
+  # same sentence every turn and the guest cannot get past it.
+  it "names a check-in date that has passed and forgets it", frozen_time: Date.new(2026, 8, 20) do
+    result = orchestrate(
+      message: "3-5 january 2026",
+      interpretation: interpretation,
+      active_branch: {
+        "check_in" => "2026-01-03", "check_out" => "2026-01-05",
+        "target_month" => 1, "target_year" => 2026, "nights" => 2, "adults" => 2
+      },
+      decision: { action: :booking, pending_question: nil }
+    )
+
+    expect(result[:reply_type]).to eq(:timing_in_the_past)
+    expect(result[:pending_question]).to eq("booking_timing")
+    expect(result.dig(:extra_context, :check_in)).to eq("2026-01-03")
+
+    branch = result.dig(:slots_payload, "booking_task", "branch")
+    expect(branch["check_in"]).to be_blank
+    expect(branch["target_month"]).to be_blank
+  end
+
   def orchestrate(message:, interpretation:, active_branch:, decision: self.decision)
     described_class.new(
       hotel: hotel,

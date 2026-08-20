@@ -19,6 +19,7 @@ module AiConcierge
           return :confirmation_no if confirmation_no?
           return :option_selection if selecting_from_options?
           return :ask_date_range_month if pending_date_range_month?
+          return :past_timing if past_check_in?
           return :ask_booking_timing if missing_timing?
           return :ask_specific_timing if missing_specific_timing?
           return :ask_duration if missing_duration?
@@ -83,6 +84,24 @@ module AiConcierge
 
         def missing_timing?
           active_branch["check_in"].blank? && active_branch["target_month"].blank?
+        end
+
+        # A date the hotel cannot sell.
+        #
+        # The normalizer rolls a year the guest left out, so what reaches here
+        # is a date somebody meant: a year the guest stated, or one the model
+        # returned in its own slots. Either way the search has no inventory
+        # rows to find, and the reply the guest used to get -- "I couldn't find
+        # any rooms available" -- said the hotel was full when it was not.
+        #
+        # Today counts as arriving today.
+        def past_check_in?
+          check_in = active_branch["check_in"]
+          return false if check_in.blank?
+
+          Date.parse(check_in.to_s) < Date.current
+        rescue Date::Error
+          false
         end
 
         def pending_date_range_month?

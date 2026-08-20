@@ -49,6 +49,8 @@ module AiConcierge
           pending_question: "booking_timing",
           extra_context: { how_to_question: how_to_booking_question? }
         )
+      when :past_timing
+        handle_past_timing(conversation_state: conversation_state, active_branch: active_branch)
       when :ask_specific_timing
         booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :ask_specific_timing, pending_question: "specific_timing", extra_context: { month_label: month_label(active_branch) })
       when :ask_date_range_month
@@ -218,6 +220,23 @@ module AiConcierge
         active_branch: active_branch,
         pending_question: pending_question
       ).call
+    end
+
+    # The date is cleared as it is named. Leaving it on the branch would make
+    # the ladder say the same thing every turn, and the guest cannot correct a
+    # date the hotel keeps holding on to.
+    def handle_past_timing(conversation_state:, active_branch:)
+      branch = active_branch.deep_dup
+      stale_check_in = branch["check_in"]
+      %w[check_in check_out target_month target_year month_segment nights days].each { |key| branch.delete(key) }
+
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: branch,
+        reply_type: :timing_in_the_past,
+        pending_question: "booking_timing",
+        extra_context: { check_in: stale_check_in }
+      )
     end
 
     def handle_search_options(conversation_state: self.conversation_state, active_branch: self.active_branch)

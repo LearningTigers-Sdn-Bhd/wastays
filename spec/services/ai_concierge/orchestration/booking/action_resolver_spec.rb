@@ -125,6 +125,30 @@ RSpec.describe AiConcierge::Orchestration::Booking::ActionResolver do
     expect(action).to eq(:ask_confirmation)
   end
 
+  # A year the guest stated, or one the model returned in its own slots. The
+  # normalizer cannot roll either, and the search used to answer both with
+  # "I couldn't find any rooms available" -- the hotel saying it was full when
+  # it was open.
+  it "says so when the check-in date has already passed", frozen_time: Date.new(2026, 8, 20) do
+    action = described_class.new(
+      interpretation: interpretation(intent: "booking_search", slots: {}),
+      active_branch: branch_with_required_booking_slots.merge("check_in" => "2026-01-03", "check_out" => "2026-01-05"),
+      pending_question: nil
+    ).call
+
+    expect(action).to eq(:past_timing)
+  end
+
+  it "treats today as a date the guest can still arrive on", frozen_time: Date.new(2026, 8, 20) do
+    action = described_class.new(
+      interpretation: interpretation(intent: "booking_search", slots: {}),
+      active_branch: branch_with_required_booking_slots.merge("check_in" => "2026-08-20", "check_out" => "2026-08-22"),
+      pending_question: nil
+    ).call
+
+    expect(action).not_to eq(:past_timing)
+  end
+
   def interpretation(intent:, slots:)
     { "intent" => intent, "slots" => slots }
   end

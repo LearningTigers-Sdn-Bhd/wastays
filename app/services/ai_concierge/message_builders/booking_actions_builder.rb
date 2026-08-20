@@ -6,6 +6,7 @@ module AiConcierge
         reset
         ask_booking_timing
         ask_room_rate_timing
+        timing_in_the_past
         ask_date_range_month
         ask_duration
         ask_guest_count
@@ -35,6 +36,8 @@ module AiConcierge
           ask_booking_timing_message
         when :ask_room_rate_timing
           "Dear guest, room rates depend on the booking dates and room types. Which date or month do you plan to arrive for check-in?"
+        when :timing_in_the_past
+          timing_in_the_past_message
         when :ask_date_range_month
           "You said #{context[:date_range_label]}, but which month?"
         when :ask_specific_timing
@@ -234,6 +237,16 @@ module AiConcierge
           "",
           "Please let me know if you need anything."
         ].join("\n")
+      end
+
+      # Naming the date is the whole point: the guest wrote a year, or the
+      # model read one, and until somebody says it out loud they have no way to
+      # know which date the hotel is looking at.
+      def timing_in_the_past_message
+        date = context[:check_in]
+        return "That date has already passed. Which date or month would you like to check in?" if date.blank?
+
+        "#{format_full_date(date)} has already passed. Which date or month would you like to check in?"
       end
 
       def no_options_message
