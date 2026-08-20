@@ -4,13 +4,11 @@ RSpec.describe AiConcierge::Orchestration::Turn::BookingContextHandler do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel, phone_number: "+60123456789") }
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect) }
-  let(:tool_registry) { instance_double(AiConcierge::Tools::ToolRegistry) }
 
   it "fetches booking context using the explicit phone when present" do
-    tool = booking_context_tool(expected_phone: "+60999999999")
-    allow(tool_registry).to receive(:fetch).with("get_booking_context").and_return(tool)
+    expect_booking_context_phone("+60999999999")
 
-    result = described_class.new(hotel: hotel, phone: "+60999999999", tool_registry: tool_registry).call(
+    result = described_class.new(hotel: hotel, phone: "+60999999999").call(
       prospect: prospect,
       conversation_state: conversation_state
     )
@@ -21,10 +19,9 @@ RSpec.describe AiConcierge::Orchestration::Turn::BookingContextHandler do
   end
 
   it "falls back to prospect phone when explicit phone is absent" do
-    tool = booking_context_tool(expected_phone: prospect.phone_number)
-    allow(tool_registry).to receive(:fetch).with("get_booking_context").and_return(tool)
+    expect_booking_context_phone(prospect.phone_number)
 
-    described_class.new(hotel: hotel, phone: nil, tool_registry: tool_registry).call(
+    described_class.new(hotel: hotel, phone: nil).call(
       prospect: prospect,
       conversation_state: conversation_state
     )
@@ -49,16 +46,12 @@ RSpec.describe AiConcierge::Orchestration::Turn::BookingContextHandler do
     expect(payload[:reply_message]).to be_present
   end
 
-  def booking_context_tool(expected_phone:)
-    Class.new do
-      define_method(:initialize) do |hotel:, phone:|
-        raise "unexpected hotel" unless hotel
-        raise "unexpected phone #{phone}" unless phone == expected_phone
-      end
+  def expect_booking_context_phone(expected)
+    klass = AiConcierge::Tools::HotelInformation::GetBookingContextTool
+    allow(klass).to receive(:new) do |phone:, **|
+      raise "unexpected phone #{phone}" unless phone == expected
 
-      def call
-        { "success" => true, "bookings" => [] }
-      end
+      instance_double(klass, call: { "success" => true, "bookings" => [] })
     end
   end
 end

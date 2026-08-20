@@ -10,7 +10,8 @@ RSpec.describe AiConcierge::Orchestration::Booking::SelectionHandler do
         { "rate_plan_id" => 11, "name" => "Flexible Rate" }
       ]
     )
-    handler = described_class.new(tool_registry: registry_with(success_result(selected_option)), message: "option 1")
+    stub_selection(success_result(selected_option))
+    handler = described_class.new(message: "option 1")
 
     result = handler.handle_selection(
       conversation_state: conversation_state,
@@ -29,7 +30,8 @@ RSpec.describe AiConcierge::Orchestration::Booking::SelectionHandler do
   it "always asks which rate when the room has more than one plan" do
     [ "option 1", "garden suite for standard rate", "standard room", "1 non refundable" ].each do |message|
       selected_option = option.merge("room_type_name" => "Garden Suite", "rate_plans" => two_rate_plans)
-      handler = described_class.new(tool_registry: registry_with(success_result(selected_option)), message: message)
+      stub_selection(success_result(selected_option))
+    handler = described_class.new(message: message)
 
       result = handler.handle_selection(
         conversation_state: conversation_state,
@@ -44,7 +46,8 @@ RSpec.describe AiConcierge::Orchestration::Booking::SelectionHandler do
 
   it "goes straight to confirmation when the room has a single plan" do
     selected_option = option.merge("rate_plans" => [ { "rate_plan_id" => 10, "name" => "Standard Rate" } ])
-    handler = described_class.new(tool_registry: registry_with(success_result(selected_option)), message: "1")
+    stub_selection(success_result(selected_option))
+    handler = described_class.new(message: "1")
 
     result = handler.handle_selection(
       conversation_state: conversation_state,
@@ -58,10 +61,8 @@ RSpec.describe AiConcierge::Orchestration::Booking::SelectionHandler do
   end
 
   it "asks for the number again when the tool cannot match the message" do
-    handler = described_class.new(
-      tool_registry: registry_with({ "success" => false, "error" => "invalid_selection" }),
-      message: "garden suite"
-    )
+    stub_selection({ "success" => false, "error" => "invalid_selection" })
+    handler = described_class.new(message: "garden suite")
 
     result = handler.handle_selection(
       conversation_state: conversation_state,
@@ -74,7 +75,8 @@ RSpec.describe AiConcierge::Orchestration::Booking::SelectionHandler do
   end
 
   it "resolves a follow-up selection into an option_selection interpretation" do
-    handler = described_class.new(tool_registry: registry_with(success_result(option)), message: "1")
+    stub_selection(success_result(option))
+    handler = described_class.new(message: "1")
 
     result = handler.resolve_follow_up(
       interpretation: interpretation,
@@ -86,13 +88,11 @@ RSpec.describe AiConcierge::Orchestration::Booking::SelectionHandler do
     expect(result.dig("slots", "selection_id")).to eq("garden_1")
   end
 
-  def registry_with(result)
-    tool = Class.new do
-      define_method(:initialize) { |**| }
-      define_method(:call) { result }
-    end
-
-    { "select_booking_option" => tool }
+  # The matcher itself has its own spec; here the handler's branching is what
+  # is under test, so the tool is stubbed by name rather than by string key.
+  def stub_selection(result)
+    klass = AiConcierge::Tools::Booking::SelectBookingOptionTool
+    allow(klass).to receive(:new).and_return(instance_double(klass, call: result))
   end
 
   def two_rate_plans

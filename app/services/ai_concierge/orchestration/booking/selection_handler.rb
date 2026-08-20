@@ -4,8 +4,7 @@ module AiConcierge
       class SelectionHandler
         include Responses
 
-        def initialize(tool_registry:, message:)
-          @tool_registry = tool_registry
+        def initialize(message:)
           @message = message.to_s
         end
 
@@ -15,7 +14,7 @@ module AiConcierge
           return interpretation unless Array(active_branch&.dig("suggested_options")).present?
           return interpretation if informational_intent?(interpretation["intent"])
 
-          result = selection_tool.new(
+          result = Tools::Booking::SelectBookingOptionTool.new(
             option_number: interpretation.dig("slots", "option_number"),
             suggested_options: active_branch["suggested_options"],
             suggestion_set_version: active_branch["suggestion_set_version"],
@@ -27,7 +26,7 @@ module AiConcierge
         end
 
         def handle_selection(conversation_state:, interpretation:, active_branch:)
-          result = selection_tool.new(
+          result = Tools::Booking::SelectBookingOptionTool.new(
             option_number: interpretation.dig("slots", "option_number"),
             suggested_options: active_branch["suggested_options"],
             suggestion_set_version: active_branch["suggestion_set_version"],
@@ -76,11 +75,7 @@ module AiConcierge
 
         private
 
-        attr_reader :tool_registry, :message
-
-        def selection_tool
-          tool_registry.fetch("select_booking_option")
-        end
+        attr_reader :message
 
         def resolved_selection_interpretation(interpretation, result)
           interpretation.deep_dup.tap do |value|

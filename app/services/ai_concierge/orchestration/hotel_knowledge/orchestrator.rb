@@ -2,14 +2,13 @@ module AiConcierge
   module Orchestration
     module HotelKnowledge
       class Orchestrator
-      def initialize(hotel:, message:, interpretation:, conversation_state:, pause:, active_branch: nil, tool_registry: Tools::ToolRegistry.new)
+      def initialize(hotel:, message:, interpretation:, conversation_state:, pause:, active_branch: nil)
         @hotel = hotel
         @message = message.to_s
         @interpretation = interpretation
         @conversation_state = conversation_state
         @pause = pause
         @active_branch = active_branch
-        @tool_registry = tool_registry
       end
 
       def call
@@ -26,15 +25,10 @@ module AiConcierge
 
       private
 
-      attr_reader :hotel, :message, :interpretation, :conversation_state, :pause, :active_branch, :tool_registry
+      attr_reader :hotel, :message, :interpretation, :conversation_state, :pause, :active_branch
 
       def route_tool
-        ToolRouter.new(
-          hotel: hotel,
-          message: message,
-          interpretation: interpretation,
-          tool_registry: tool_registry
-        ).call
+        ToolRouter.new(hotel: hotel, message: message, interpretation: interpretation).call
       end
 
       def information_slots_payload

@@ -9,12 +9,6 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(default_active_branch, pending_question: pending_question)
   end
   let(:decision) { { action: :booking, pending_question: pending_question } }
-  let(:tool_registry) { instance_double(AiConcierge::Tools::ToolRegistry) }
-
-  before do
-    allow(tool_registry).to receive(:fetch).with("select_booking_option").and_return(AiConcierge::Tools::Booking::SelectBookingOptionTool)
-  end
-
   # A list with one row on it has only one answer, whatever words arrive.
   it "selects the only visible option whatever the guest replies with" do
     result = orchestrate(
@@ -65,15 +59,10 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
   end
 
   it "keeps a failed quote on the thread so the guest can answer again" do
-      failure_tool = Class.new do
-        def initialize(hotel:, selected_option:, guest_phone:, rate_plan_id: nil); end
-
-      def call
-        { "success" => false, "error" => "Unable to generate quote right now." }
-      end
-    end
-
-    allow(tool_registry).to receive(:fetch).with("generate_booking_url").and_return(failure_tool)
+    quote_tool = AiConcierge::Tools::Booking::GenerateBookingUrlTool
+    allow(quote_tool).to receive(:new).and_return(
+      instance_double(quote_tool, call: { "success" => false, "error" => "Unable to generate quote right now." })
+    )
 
     selected_option = option(1, "garden_1", "2026-08-01")
     active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge(
@@ -391,8 +380,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
       active_branch: active_branch,
       decision: decision,
       message: message,
-      phone: prospect.phone_number,
-      tool_registry: tool_registry
+      phone: prospect.phone_number
     ).call
   end
 

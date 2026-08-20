@@ -2,14 +2,13 @@ module AiConcierge
   module Orchestration
     module Turn
       class BookingContextHandler
-        def initialize(hotel:, phone:, tool_registry: Tools::ToolRegistry.new)
+        def initialize(hotel:, phone:)
           @hotel = hotel
           @phone = phone.to_s.presence
-          @tool_registry = tool_registry
         end
 
         def call(prospect:, conversation_state:)
-          result = tool_registry.fetch("get_booking_context").new(hotel: hotel, phone: phone || prospect.phone_number).call
+          result = Tools::HotelInformation::GetBookingContextTool.new(hotel: hotel, phone: phone || prospect.phone_number).call
 
           Core::DomainResponse.new(
             slots_payload: conversation_state.slots_payload,
@@ -20,7 +19,7 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :phone, :tool_registry
+        attr_reader :hotel, :phone
       end
     end
   end

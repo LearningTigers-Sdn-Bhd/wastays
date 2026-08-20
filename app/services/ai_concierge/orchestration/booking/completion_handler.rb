@@ -4,11 +4,10 @@ module AiConcierge
       class CompletionHandler
         include Responses
 
-        def initialize(hotel:, prospect:, phone:, tool_registry:)
+        def initialize(hotel:, prospect:, phone:)
           @hotel = hotel
           @prospect = prospect
           @phone = phone.to_s.presence
-          @tool_registry = tool_registry
         end
 
         def call(conversation_state:, active_branch:)
@@ -16,7 +15,7 @@ module AiConcierge
           return booking_response(conversation_state: conversation_state, active_branch: active_branch, reply_type: :invalid_selection, pending_question: "select_option") unless selected_option
 
           selected_rate_plan = selected_option&.dig("selected_rate_plan") || {}
-          result = tool_registry.fetch("generate_booking_url").new(
+          result = Tools::Booking::GenerateBookingUrlTool.new(
             hotel: hotel,
             selected_option: selected_option,
             guest_phone: phone || prospect.phone_number,
@@ -40,7 +39,7 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :prospect, :phone, :tool_registry
+        attr_reader :hotel, :prospect, :phone
 
         # A quote that failed to generate still owes the guest a sentence.
         #

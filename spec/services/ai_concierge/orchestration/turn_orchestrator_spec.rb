@@ -505,10 +505,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
         }
       end
     end
-    original_fetch = AiConcierge::Tools::ToolRegistry.instance_method(:fetch)
-    allow_any_instance_of(AiConcierge::Tools::ToolRegistry).to receive(:fetch) do |registry, name|
-      name == "generate_booking_url" ? fake_generate_tool : original_fetch.bind_call(registry, name)
-    end
+    allow(AiConcierge::Tools::Booking::GenerateBookingUrlTool).to receive(:new).and_return(fake_generate_tool.new)
 
     info_reply = described_class.new(hotel: hotel, message: "what time is check in?", phone: "+60123456789").call
     state_after_info = prospect.reload.prospect_conversation_state

@@ -4,7 +4,7 @@ module AiConcierge
       class Orchestrator
     include Responses
 
-    def initialize(hotel:, prospect:, conversation_state:, interpretation:, active_branch:, decision:, message:, phone: nil, tool_registry: Tools::ToolRegistry.new)
+    def initialize(hotel:, prospect:, conversation_state:, interpretation:, active_branch:, decision:, message:, phone: nil)
       @hotel = hotel
       @prospect = prospect
       @conversation_state = conversation_state
@@ -13,7 +13,6 @@ module AiConcierge
       @decision = decision
       @message = message.to_s
       @phone = phone.to_s.presence
-      @tool_registry = tool_registry
     end
 
     # A question the guest keeps failing to answer.
@@ -66,7 +65,7 @@ module AiConcierge
       end
     end
 
-    attr_reader :hotel, :prospect, :conversation_state, :interpretation, :active_branch, :decision, :message, :phone, :tool_registry
+    attr_reader :hotel, :prospect, :conversation_state, :interpretation, :active_branch, :decision, :message, :phone
 
     def resumed? = decision[:action] == :resume
 
@@ -306,7 +305,7 @@ module AiConcierge
     end
 
     def handle_search_options(conversation_state: self.conversation_state, active_branch: self.active_branch)
-      options = tool_registry.fetch("search_booking_options").new(
+      options = Tools::Booking::SearchBookingOptionsTool.new(
         hotel: hotel,
         target_month: active_branch["target_month"],
         target_year: active_branch["target_year"],
@@ -399,7 +398,7 @@ module AiConcierge
     end
 
     def selection_handler
-      @selection_handler ||= SelectionHandler.new(tool_registry: tool_registry, message: message)
+      @selection_handler ||= SelectionHandler.new(message: message)
     end
 
     def rate_plan_selection_handler
@@ -407,7 +406,7 @@ module AiConcierge
     end
 
     def completion_handler
-      @completion_handler ||= CompletionHandler.new(hotel: hotel, prospect: prospect, phone: phone, tool_registry: tool_registry)
+      @completion_handler ||= CompletionHandler.new(hotel: hotel, prospect: prospect, phone: phone)
     end
 
     def pending_question

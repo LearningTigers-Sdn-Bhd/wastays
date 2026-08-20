@@ -11,7 +11,6 @@ module AiConcierge
         @prospect_public_id = prospect_public_id.to_s.strip.presence
         @channel = channel.presence
         @record_inbound = record_inbound
-        @tool_registry = Tools::ToolRegistry.new
       end
 
       def call
@@ -30,7 +29,7 @@ module AiConcierge
 
       private
 
-      attr_reader :hotel, :message, :phone, :prospect_public_id, :channel, :record_inbound, :tool_registry
+      attr_reader :hotel, :message, :phone, :prospect_public_id, :channel, :record_inbound
 
       # The thread is captured before anything else runs because the persisters
       # below are memoised with it, and this is the only way into them -- read

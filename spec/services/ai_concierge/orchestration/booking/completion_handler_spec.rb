@@ -12,15 +12,9 @@ RSpec.describe AiConcierge::Orchestration::Booking::CompletionHandler do
   end
 
   it "generates a booking link and archives the completed booking task" do
-    tool = Class.new do
-      def initialize(hotel:, selected_option:, guest_phone:, rate_plan_id:)
-        @guest_phone = guest_phone
-        @rate_plan_id = rate_plan_id
-      end
-
-      def call
-        { "success" => true, "booking_url" => "https://example.test/book", "guest_phone" => @guest_phone, "rate_plan_id" => @rate_plan_id }
-      end
+    klass = AiConcierge::Tools::Booking::GenerateBookingUrlTool
+    allow(klass).to receive(:new) do |guest_phone:, rate_plan_id:, **|
+      instance_double(klass, call: { "success" => true, "booking_url" => "https://example.test/book", "guest_phone" => guest_phone, "rate_plan_id" => rate_plan_id })
     end
     active_branch = { "confirmation_candidate" => selected_option }
 
@@ -28,7 +22,6 @@ RSpec.describe AiConcierge::Orchestration::Booking::CompletionHandler do
       hotel: hotel,
       prospect: prospect,
       phone: nil,
-      tool_registry: { "generate_booking_url" => tool }
     ).call(conversation_state: conversation_state, active_branch: active_branch)
 
     expect(result[:reply_type]).to eq(:booking_link_ready)
@@ -51,7 +44,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::CompletionHandler do
         .new(slots_payload: {})
         .activate_booking(branch, pending_question: "select_option")
     )
-    handler = described_class.new(hotel: hotel, prospect: prospect, phone: nil, tool_registry: {})
+    handler = described_class.new(hotel: hotel, prospect: prospect, phone: nil)
 
     first = handler.call(conversation_state: conversation_state, active_branch: branch)
     expect(first[:reply_type]).to eq(:invalid_selection)
@@ -66,8 +59,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::CompletionHandler do
     result = described_class.new(
       hotel: hotel,
       prospect: prospect,
-      phone: prospect.phone_number,
-      tool_registry: {}
+      phone: prospect.phone_number
     ).call(conversation_state: conversation_state, active_branch: {})
 
     expect(result[:reply_type]).to eq(:invalid_selection)
