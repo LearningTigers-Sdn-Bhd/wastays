@@ -391,9 +391,9 @@
     <section class="flex justify-end p-2.5">
       <div class="min-h-25 w-full rounded-md border border-border-interactive p-3 sm:w-1/2">
         <p class="mb-4 text-xs font-bold uppercase text-muted-foreground">Guest signature</p>
-        <% if @card.signed? && @card.signature_data_url.present? %>
-          <img src="<%= @card.signature_data_url %>" alt="Guest signature" class="h-16 max-w-full bg-card" />
-          <p class="mt-2 text-xs text-muted-foreground">Signed by <%= @card.signer_name %> at <%= l(@card.signed_at, format: :long) %></p>
+        <% if @presenter.signed_for_active_guest? %>
+          <img src="<%= @presenter.signature_data_url %>" alt="Guest signature" class="h-16 max-w-full bg-card" />
+          <p class="mt-2 text-xs text-muted-foreground">Signed by <%= @presenter.signer_name %> at <%= @presenter.signed_at ? l(@presenter.signed_at, format: :long) : "-" %></p>
         <% else %>
           <div class="mt-8 border-t border-border-interactive pt-1 text-xs text-muted-foreground">Signature</div>
         <% end %>

@@ -30,7 +30,7 @@ class GuestRegistrationCardPdfService
         Title: "Guest Registration Card - #{@booking.guest_registration_card_number_display}",
         Author: "WAStays",
         Creator: "WAStays",
-        CreationDate: Time.now
+        CreationDate: Time.current
       }
     )
     THEME.configure_font(pdf)

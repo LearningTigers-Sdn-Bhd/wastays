@@ -69,11 +69,11 @@ class GuestRegistrationCard < ApplicationRecord
     signed? || hotel.guest_registration_card_terms.present?
   end
 
-  def signed_for_guest?(_booking_guest_id = nil)
+  def signed_for_guest?
     signed? && signature_data_url.present?
   end
 
-  def save_signature_for_guest!(signer_name:, signature_data_url:, booking_guest_id: nil, signed_at: Time.current)
+  def save_signature_for_guest!(signer_name:, signature_data_url:, signed_at: Time.current)
     assign_attributes(
       signer_name: signer_name,
       signature_data_url: signature_data_url,
@@ -85,7 +85,7 @@ class GuestRegistrationCard < ApplicationRecord
     save!
   end
 
-  def remove_signature_for_guest!(_booking_guest_id = nil)
+  def remove_signature_for_guest!
     update!(
       status: "draft",
       signer_name: nil,

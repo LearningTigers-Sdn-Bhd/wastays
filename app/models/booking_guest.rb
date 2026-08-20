@@ -24,7 +24,7 @@ class BookingGuest < ApplicationRecord
   before_validation :synchronize_role
   before_validation :capture_guest_snapshot, on: :create
   after_create :ensure_guest_billing_party
-  after_commit :sync_booking_vip_status, on: [ :create, :update ]
+  after_save :sync_booking_vip_status
 
   def primary?
     role == "primary"
@@ -68,9 +68,9 @@ class BookingGuest < ApplicationRecord
   end
 
   def sync_booking_vip_status
-    if guest.vip?
-      booking.update!(vip: true)
-    end
+    return unless guest&.vip? && booking_id.present?
+
+    Booking.where(id: booking_id, vip: false).update_all(vip: true)
   end
 
   def boat_out_after_boat_in

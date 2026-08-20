@@ -68,7 +68,7 @@ module HotelPortal
     end
 
     def folios_charges
-      @folios_charges ||= @booking.booking_folios.sum { |f| f.total_charges.to_d + f.projected_forecasts.sum(:amount).to_d }
+      @folios_charges ||= @booking.booking_folios.sum { |f| f.total_charges.to_d + f.projected_forecasts.sum(&:amount).to_d }
     end
 
     def total_charges
@@ -100,7 +100,7 @@ module HotelPortal
     end
 
     def room_price
-      booking.booking_rooms.sum(:subtotal)
+      booking.booking_rooms.sum(&:subtotal)
     end
 
     def room_price_display

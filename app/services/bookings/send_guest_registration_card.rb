@@ -1,12 +1,20 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
 module Bookings
   # Emails a guest their registration card on request from the front desk.
   # Sending rides the notification pipeline rather than a bespoke job, so it
   # inherits delivery status, retries and the training-mode hold for free.
   class SendGuestRegistrationCard
+    Result = Data.define(:success?, :delivery, :recipient, :error) do
+      def self.success(delivery:, recipient:)
+        new(success?: true, delivery: delivery, recipient: recipient, error: nil)
+      end
+
+      def self.failure(error)
+        new(success?: false, delivery: nil, recipient: nil, error: error)
+      end
+    end
+
     def self.call(booking:, user: nil, booking_guest_id: nil)
       new(booking: booking, user: user, booking_guest_id: booking_guest_id).call
     end
@@ -44,7 +52,7 @@ module Bookings
       )
 
       Notifications::DeliverJob.perform_later(delivery.id)
-      OpenStruct.new(success?: true, delivery: delivery, recipient: recipient)
+      Result.success(delivery: delivery, recipient: recipient)
     end
 
     private
@@ -66,7 +74,7 @@ module Bookings
     end
 
     def failure(message)
-      OpenStruct.new(success?: false, error: message)
+      Result.failure(message)
     end
   end
 end

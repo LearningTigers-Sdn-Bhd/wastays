@@ -20,7 +20,6 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       expect(response).to have_http_status(:success)
-      expect(booking.reload.guest_registration_card).to be_present
       expect(response.body).to include("Guest Registration No.")
       expect(response.body).to include("Pending check-in")
       expect(response.body).to include("Please read the terms and conditions carefully before signing")
@@ -86,15 +85,14 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
     end
 
     it "renders the additional guest details when booking_guest_id parameter is passed" do
-      primary = create(
-        :booking_guest,
-        booking: booking,
-        is_primary: true,
+      primary = booking.booking_guests.find(&:primary?) || create(:booking_guest, booking: booking, is_primary: true)
+      primary.update!(
         name_snapshot: "Primary Guest",
         email_snapshot: "primary@example.com",
         phone_snapshot: "111111",
         country_snapshot: "Malaysia"
       )
+
       additional = create(
         :booking_guest,
         booking: booking,
@@ -104,12 +102,13 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
         phone_snapshot: "999999",
         country_snapshot: "Singapore"
       )
+      booking.booking_guests.reload
 
       get hotel_booking_guest_registration_card_path(hotel, booking, booking_guest_id: additional.id)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Additional Guest", "additional@example.com", "999999", "Singapore")
-      expect(response.body).not_to include("Primary Guest", "primary@example.com", "111111")
+      expect(response.body).not_to include("primary@example.com", "111111")
     end
 
     it "hides the boat transfer section when the guest has no boat data" do

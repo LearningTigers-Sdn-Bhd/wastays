@@ -38,10 +38,7 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   end
 
   def destroy
-    Bookings::RemoveRegistrationCardSignature.call(
-      card: @card,
-      booking_guest_id: params[:booking_guest_id]
-    )
+    Bookings::RemoveRegistrationCardSignature.call(card: @card)
     redirect_to grc_redirect_path, notice: "Guest registration card signature removed."
   end
 
@@ -52,21 +49,21 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   end
 
   def set_booking
-    @booking = current_hotel.bookings.find(params[:booking_id])
+    @booking = current_hotel.bookings.includes(:guest_registration_card, booking_guests: :guest_registration_card).find(params[:booking_id])
   end
 
   def set_card
     booking_guest = if params[:booking_guest_id].present?
                       @booking.booking_guests.find { |bg| bg.id.to_s == params[:booking_guest_id].to_s }
-                    else
+    else
                       @booking.booking_guests.find(&:primary?)
-                    end
+    end
 
     @card = if booking_guest
-              booking_guest.guest_registration_card || booking_guest.create_guest_registration_card!(hotel: current_hotel, booking: @booking)
-            else
-              @booking.guest_registration_card || @booking.create_guest_registration_card!(hotel: current_hotel)
-            end
+              booking_guest.guest_registration_card || booking_guest.build_guest_registration_card(hotel: current_hotel, booking: @booking)
+    else
+              @booking.guest_registration_card || @booking.build_guest_registration_card(hotel: current_hotel)
+    end
   end
 
   def guest_registration_card_params
