@@ -24,8 +24,6 @@ module AiConcierge
           @outcome = Outcome.new(conversation_state: conversation_state, domain_result: domain_result)
         end
 
-        def recorded? = !@outcome.nil?
-
         # RubyLLM executes every tool call in a response before it notices the
         # halt, so a provider that ignores `calls: :one` could otherwise run the
         # booking twice in a single turn. This flag, not the halt, is what makes

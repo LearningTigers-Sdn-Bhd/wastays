@@ -84,10 +84,6 @@ module AiConcierge
         CurrencyFormatter.format(amount.to_f, currency: currency_code(currency))
       end
 
-      def format_option_price(currency, amount)
-        format_price(currency, amount)
-      end
-
       def currency_code(currency)
         currency.presence || hotel.try(:default_currency) || "MYR"
       end
@@ -162,7 +158,7 @@ module AiConcierge
         price = cheapest&.dig("total_price") || option["total_price"]
         return if price.blank?
 
-        "from #{format_option_price(cheapest&.dig('currency') || option['currency'], price)}"
+        "from #{format_price(cheapest&.dig('currency') || option['currency'], price)}"
       end
     end
   end

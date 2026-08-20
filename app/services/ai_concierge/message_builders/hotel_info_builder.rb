@@ -1,8 +1,6 @@
 module AiConcierge
   module MessageBuilders
     class HotelInfoBuilder < BaseBuilder
-      HANDLED_REPLY_TYPES = %i[hotel_policy booking_context general_hotel_info hotel_faq nearby_attractions].freeze
-
       def call(reply_type)
         case reply_type.to_sym
         when :hotel_policy

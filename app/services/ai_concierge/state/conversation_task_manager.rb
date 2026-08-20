@@ -111,16 +111,6 @@ module AiConcierge
       )
     end
 
-    def reset_tasks
-      without_legacy(
-        payload.merge(
-          "booking_task" => default_booking_task,
-          "information_task" => default_information_task,
-          "completed_booking_branches" => []
-        )
-      )
-    end
-
     def reset_booking_task
       without_legacy(payload.merge("booking_task" => default_booking_task))
     end

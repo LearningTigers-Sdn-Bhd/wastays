@@ -1,31 +1,6 @@
 module AiConcierge
   module MessageBuilders
     class BookingActionsBuilder < BaseBuilder
-      HANDLED_REPLY_TYPES = %i[
-        greeting
-        reset
-        ask_booking_timing
-        ask_room_rate_timing
-        timing_in_the_past
-        ask_date_range_month
-        ask_duration
-        ask_guest_count
-        ask_adult_count
-        ask_party_split
-        suggest_options
-        resume_options
-        ask_confirmation
-        decline_confirmation
-        invalid_selection
-        booking_link_ready
-        no_options
-        ask_specific_timing
-        ask_rate_plan
-        confirm_to_end_conversation
-        booking_attempt_cancelled_next_step
-        end_conversation_declined
-      ].freeze
-
       # Said before the question, not instead of it: the guest still needs the
       # list in front of them, and repeating the question word for word is what
       # made a thread feel like a wall.
@@ -40,10 +15,6 @@ module AiConcierge
 
       def build(reply_type)
         case reply_type.to_sym
-        when :greeting
-          "Hello, welcome to #{hotel.name}! I can help with bookings, stay details, and more about the hotel. What would you like to inquire about?"
-        when :reset
-          "Sure, let's start over. What dates or month would you like to book?"
         when :ask_booking_timing
           ask_booking_timing_message
         when :ask_room_rate_timing
@@ -68,8 +39,6 @@ module AiConcierge
           "Here are the booking options we saved for you:\n\n#{suggest_options_message}"
         when :ask_confirmation
           ask_confirmation_message
-        when :decline_confirmation
-          "No problem. Please tell me the number of the option you would like instead."
         when :invalid_selection
           %(I couldn't match that. Please reply with the number from the list, e.g. "1".)
         when :booking_link_ready
@@ -272,7 +241,7 @@ module AiConcierge
 
         date_range = "#{format_full_date(option['check_in'])} - #{format_full_date(option['check_out'])}"
         rate_lines = rate_plans.each_with_index.map do |rp, i|
-          "#{i + 1}. #{format_option_price(rp['currency'], rp['total_price'])} — #{rp['name']}"
+          "#{i + 1}. #{format_price(rp['currency'], rp['total_price'])} — #{rp['name']}"
         end
 
         [

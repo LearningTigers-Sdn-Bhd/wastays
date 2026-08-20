@@ -11,14 +11,14 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
       prospect: prospect,
       conversation_state: conversation_state,
       slots_payload: conversation_state.slots_payload,
-      reply_type: :greeting,
+      reply_type: :ask_duration,
       active_topic: nil,
       active_flow: nil,
       pending_question: nil,
       action_name: nil
     )
 
-    expect(payload[:reply_message]).to include("Hello, welcome to")
+    expect(payload[:reply_message]).to eq("How many days and nights will you be staying?")
     expect(payload[:prospect_public_id]).to eq(prospect.public_id)
     expect(prospect.prospect_messages.where(direction: "outbound").last.body).to eq(payload[:reply_message])
     expect(conversation_state.reload.pending_question).to be_nil
@@ -65,7 +65,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
       prospect: prospect,
       conversation_state: conversation_state,
       slots_payload: conversation_state.slots_payload,
-      reply_type: :greeting,
+      reply_type: :ask_duration,
       active_topic: nil,
       active_flow: nil,
       pending_question: nil,
@@ -87,7 +87,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
       prospect: prospect,
       conversation_state: conversation_state,
       slots_payload: conversation_state.slots_payload,
-      reply_type: :greeting,
+      reply_type: :ask_duration,
       active_topic: nil,
       active_flow: nil,
       pending_question: nil,
@@ -124,7 +124,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
     def last_body = prospect.prospect_messages.where(direction: "outbound").last.body
 
     it "sends what the stylist wrote and remembers the language it was in" do
-      styled = "Selamat datang ke #{hotel.name}! Saya boleh bantu dengan tempahan."
+      styled = "Berapa hari dan malam anda akan menginap?"
       stub_concierge_stylist(text: styled, language: "ms")
 
       payload = persist_with("ada bilik kosong?")
@@ -143,8 +143,8 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
 
       payload = persist_with("boleh tempah?")
 
-      expect(payload[:reply_message]).to include("Hello, welcome to")
-      expect(last_body).to include("Hello, welcome to")
+      expect(payload[:reply_message]).to eq("How many days and nights will you be staying?")
+      expect(last_body).to eq("How many days and nights will you be staying?")
     end
 
     # What the guest wrote in is a fact about the guest, not about whether this
@@ -163,7 +163,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
       allow_any_instance_of(AiConcierge::Agents::ReplyStylist).to receive(:call)
         .and_raise(AiConcierge::Agents::ReplyStylist::ReplyStylistError, "timed out")
 
-      expect(persist_with("hello there")[:reply_message]).to include("Hello, welcome to")
+      expect(persist_with("hello there")[:reply_message]).to eq("How many days and nights will you be staying?")
     end
 
     it "does not reach for the stylist when the guest answered with a bare number" do

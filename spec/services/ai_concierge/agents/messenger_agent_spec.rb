@@ -3,10 +3,13 @@ require "rails_helper"
 RSpec.describe AiConcierge::Agents::MessengerAgent do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
 
-  it "renders the hotel-specific greeting" do
-    result = described_class.new(hotel: hotel, context: { reply_type: :greeting }).call
+  # A greeting has no reply type: nothing routes to a tool, so the model's own
+  # words are the reply and MessengerAgent renders the bare message. There used
+  # to be a `:greeting` branch in the builder that nothing could reach.
+  it "renders the message when there is no reply type to dispatch on" do
+    result = described_class.new(hotel: hotel, context: { message: "Hi there!" }).call
 
-    expect(result["reply_message"]).to eq("Hello, welcome to #{hotel.name}! I can help with bookings, stay details, and more about the hotel. What would you like to inquire about?")
+    expect(result["reply_message"]).to eq("Hi there!")
   end
 
   it "renders one numbered row per option, across every room type" do
