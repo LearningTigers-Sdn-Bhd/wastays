@@ -29,16 +29,25 @@ module AiConcierge
     REASK_HANDOVER = 2
 
     def call
-      escalate(resolve)
+      escalate(resume_framing(resolve))
     end
 
     private
 
+    # A booking put down and picked up again is one turn, not one mode.
+    #
+    # It used to be a class of its own, handed five bound methods off this one
+    # and the branch out of Postgres -- while the branch the guest's own message
+    # had just been merged into sat unread. Five of its six exits answered the
+    # turn before last: a changed search was answered out of the list that
+    # change had already invalidated, and the stale branch was written back
+    # over the guest's own words. The ordinary path already loads a
+    # suspended booking, already knows which question was open on it, and
+    # already clears the suspension on the way out, so resume is that path with
+    # a different opening line.
     def resolve
       case decision[:action]
-      when :resume
-        resume_handler.call
-      when :booking
+      when :booking, :resume
         revision_response = handle_booking_revision
         return revision_response if revision_response
 
@@ -56,6 +65,37 @@ module AiConcierge
     end
 
     attr_reader :hotel, :prospect, :conversation_state, :interpretation, :active_branch, :decision, :message, :phone, :tool_registry
+
+    def resumed? = decision[:action] == :resume
+
+    # Where the guest left off, said as that.
+    #
+    # A guest coming back from a question of their own is not a guest failing
+    # to answer, so the turn re-asks nothing: the count goes back to zero and
+    # the nudge `escalate` would otherwise put in front of the reply stays off.
+    # And a message that matches no row -- "hello again" -- is not a misread
+    # answer to a list they cannot see any more, it is the moment to put the
+    # list back in front of them.
+    def resume_framing(result)
+      return result unless resumed? && domain_response?(result)
+      return clear_reask(result) unless result[:reply_type] == :invalid_selection
+
+      clear_reask(options_response(active_branch: resumed_branch(result), reply_type: :resume_options))
+    end
+
+    def clear_reask(result)
+      task = result.dig(:slots_payload, "booking_task")
+      return result unless task.is_a?(Hash)
+
+      result.merge(slots_payload: result[:slots_payload].merge("booking_task" => task.merge("reask_count" => 0)))
+    end
+
+    # The branch the turn actually ran on, read back off the payload it wrote
+    # rather than off `active_branch`, which the handlers below take copies of.
+    def resumed_branch(result)
+      branch = result.dig(:slots_payload, "booking_task", "branch")
+      branch.is_a?(Hash) ? branch : active_branch
+    end
 
     def escalate(result)
       return result unless domain_response?(result)
@@ -135,18 +175,7 @@ module AiConcierge
         completion_handler.call(conversation_state: conversation_state, active_branch: active_branch)
       when :confirmation_no
         active_branch["confirmation_candidate"] = nil
-        booking_response(
-          conversation_state: conversation_state,
-          active_branch: active_branch,
-          reply_type: :suggest_options,
-          pending_question: "select_option",
-          extra_context: {
-            options: active_branch["suggested_options"],
-            month_label: month_label(active_branch),
-            guest_label: guest_label(active_branch),
-            search_params: search_params_for(active_branch)
-          }
-        )
+        options_response(conversation_state: conversation_state, active_branch: active_branch)
       when :search_options
         handle_search_options(conversation_state: conversation_state, active_branch: active_branch)
       else
@@ -220,16 +249,23 @@ module AiConcierge
     end
 
     def ask_for_option_revision(branch, conversation_state:)
+      options_response(conversation_state: conversation_state, active_branch: branch)
+    end
+
+    # The catalogue, said the same way every time it is put in front of the
+    # guest -- after a search, after a "no", after a change of room, and when
+    # a booking is picked back up. Four copies of this used to drift.
+    def options_response(active_branch:, conversation_state: self.conversation_state, reply_type: :suggest_options, options: active_branch["suggested_options"])
       booking_response(
         conversation_state: conversation_state,
-        active_branch: branch,
-        reply_type: :suggest_options,
+        active_branch: active_branch,
+        reply_type: reply_type,
         pending_question: "select_option",
         extra_context: {
-          options: branch["suggested_options"],
-          month_label: month_label(branch),
-          guest_label: guest_label(branch),
-          search_params: search_params_for(branch)
+          options: options,
+          month_label: month_label(active_branch),
+          guest_label: guest_label(active_branch),
+          search_params: search_params_for(active_branch, options: options)
         }
       )
     end
@@ -285,35 +321,15 @@ module AiConcierge
       active_branch["suggested_options"] = options
       active_branch["suggestion_set_version"] = active_branch["suggestion_set_version"].to_i + 1
 
-      pending_question = options.empty? ? "booking_timing" : "select_option"
-      payload = booking_payload(conversation_state, active_branch, pending_question: pending_question)
+      return options_response(conversation_state: conversation_state, active_branch: active_branch, options: options) if options.any?
 
-      if options.empty?
-        domain_response(
-          slots_payload: payload,
-          reply_type: :no_options,
-          active_topic: "booking_search",
-          active_flow: "booking_search",
-          pending_question: "booking_timing",
-          action_name: "request_quote",
-          extra_context: { month_label: month_label(active_branch) }
-        )
-      else
-        domain_response(
-          slots_payload: payload,
-          reply_type: :suggest_options,
-          active_topic: "booking_search",
-          active_flow: "booking_search",
-          pending_question: "select_option",
-          action_name: "request_quote",
-          extra_context: {
-            options: options,
-            month_label: month_label(active_branch),
-            guest_label: guest_label(active_branch),
-            search_params: search_params_for(active_branch, options: options)
-          }
-        )
-      end
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        reply_type: :no_options,
+        pending_question: "booking_timing",
+        extra_context: { month_label: month_label(active_branch) }
+      )
     end
 
     def booking_response(conversation_state: self.conversation_state, active_branch: self.active_branch, reply_type:, pending_question:, extra_context: {}, status: nil, action_name: "request_quote")
@@ -370,10 +386,6 @@ module AiConcierge
       State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).activate_booking(active_branch, pending_question: pending_question, status: status, count_reask: true)
     end
 
-    def temporary_state(conversation_state, slots_payload)
-      conversation_state.tap { |state| state.assign_attributes(slots_payload: slots_payload) }
-    end
-
     def month_label(branch)
       month = branch["target_month"]
       year = branch["target_year"]
@@ -428,22 +440,6 @@ module AiConcierge
 
     def completion_handler
       @completion_handler ||= CompletionHandler.new(hotel: hotel, prospect: prospect, phone: phone, tool_registry: tool_registry)
-    end
-
-    def resume_handler
-      @resume_handler ||= ResumeHandler.new(
-        conversation_state: conversation_state,
-        interpretation: interpretation,
-        active_branch: active_branch,
-        message: message,
-        selection_handler: selection_handler,
-        completion_handler: completion_handler,
-        action_resolver: method(:booking_action),
-        process_booking_action: method(:process_booking_action),
-        handle_booking_revision: method(:handle_booking_revision),
-        handle_search_options: method(:handle_search_options),
-        domain_response: method(:domain_response)
-      )
     end
 
     def pending_question

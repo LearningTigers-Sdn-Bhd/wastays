@@ -72,7 +72,8 @@ module AiConcierge
 
           interpretation = SyntheticInterpretation.new(
             slots: slots, signals: signals, evidence: evidence,
-            pending_question: context.pending_question, message: context.message
+            pending_question: context.pending_question, message: context.message,
+            resumed: context.resumable_booking?
           ).call
           prepared = Orchestration::Booking::PrepareTurn.new(
             conversation_state: context.conversation_state,
@@ -112,12 +113,13 @@ module AiConcierge
             "starts_new_booking_branch" => false, "end_conversation" => false
           }.freeze
 
-          def initialize(slots:, signals:, pending_question:, evidence: {}, message: nil)
+          def initialize(slots:, signals:, pending_question:, evidence: {}, message: nil, resumed: false)
             @slots = (slots || {}).deep_stringify_keys.compact
             @signals = (signals || {}).deep_stringify_keys.compact
             @evidence = (evidence || {}).deep_stringify_keys.compact
             @pending_question = pending_question
             @message = message.to_s
+            @resumed = resumed
           end
 
           def call
@@ -135,7 +137,7 @@ module AiConcierge
 
           private
 
-          attr_reader :signals, :evidence, :pending_question, :message
+          attr_reader :signals, :evidence, :pending_question, :message, :resumed
 
           # The model is asked for a `confirmation` and does not always send
           # one: a bare "yes" comes back as a booking turn with nothing in it,
@@ -169,6 +171,14 @@ module AiConcierge
             return "confirmation" if pending_question == "confirm_selection" && slots["confirmation"].present?
 
             return "option_selection" if slots["option_number"].present?
+
+            # A booking picked up after an interruption is picked up in mid-air.
+            # Nothing has told the model a list is waiting -- the thread was
+            # suspended, and whatever question was open on it went quiet -- so
+            # "2" arrives as an ordinary sentence. A message that is a row and
+            # nothing else can be about nothing else, whichever question the
+            # booking was put down on.
+            return "option_selection" if resumed && Matching::OptionReference.new(message: message).only_reference?
 
             # Options are on the table, so whatever the guest just said is an
             # answer to them -- a row, an ordinal, a date. Reading that as a

@@ -44,12 +44,10 @@ module AiConcierge
         # TransitionPolicy, and also a fact rather than a judgement: what the
         # model contributes is whether the guest is talking about booking at
         # all, which is the part a model is actually good at.
-        def resumable_booking?
-          task = booking_task
-          return false if task["status"] == "expired" || suspended_booking_expired?
-
-          task["status"] == "suspended" || task["suspended"] == true
-        end
+        #
+        # The rule and its expiry live on the task manager, which owns the
+        # column -- this was a second copy of both, down to its own parser.
+        def resumable_booking? = task_manager.suspended_booking_resumable?
 
         def room_type_names
           @room_type_names ||= hotel.room_types.pluck(:name)
@@ -61,15 +59,6 @@ module AiConcierge
         # that is -- it picks one per document on upload.
         def knowledge_languages
           @knowledge_languages ||= hotel.knowledge_documents.distinct.pluck(:language).compact_blank.sort
-        end
-
-        private
-
-        def suspended_booking_expired?
-          expires_at = Time.zone.parse(booking_task["expires_at"].to_s)
-          expires_at.present? && expires_at <= Time.current
-        rescue ArgumentError
-          false
         end
       end
     end

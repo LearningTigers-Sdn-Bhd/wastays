@@ -1,0 +1,43 @@
+id: resume_with_nothing_new
+description: "a guest who comes back saying nothing in particular is shown the list again, and is not told off for it"
+origin: "the returning guest was away, not failing to answer -- the re-ask nudge must not fire on a resume"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 9
+      days: [10, 11, 12]
+    - name: Ocean Villa
+      month: 9
+      days: [10, 11, 12]
+  knowledge:
+    - category: general_info
+      title: Getting Here
+      chunks: ["Parking is free for registered guests in the basement car park."]
+turns:
+  - guest: "book 10 september to 12 september"
+    expect:
+      pending_question: guest_count
+
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+
+  - guest: "is there parking?"
+    expect:
+      reply_matches: ["Parking is free"]
+      booking_status: suspended
+
+  # Nothing to act on, so the list comes back with the sentence that says where
+  # they are -- not "I couldn't match that", and not "Sorry, I didn't catch
+  # that", which is what a re-ask counter that counted this turn would add.
+  - guest: "hello again"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots: {}
+    expect:
+      pending_question: select_option
+      reply_matches: ["Here are the booking options we saved for you", "Garden Prestige Suite"]
+      reply_excludes: ["Sorry, I didn't catch that", "I couldn't match that"]
+      creates_quote: false

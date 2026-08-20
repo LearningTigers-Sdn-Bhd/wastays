@@ -92,19 +92,6 @@ module AiConcierge
       without_legacy(payload.merge("information_task" => compact_blank_values(task)))
     end
 
-    def resume_booking
-      return [ payload, nil ] unless suspended_booking_resumable?
-
-      resumed_task = booking_task.merge(
-        "status" => status_for_pending_question(booking_task["pending_question"]),
-        "suspended" => false,
-        "suspended_at" => nil,
-        "expires_at" => nil
-      )
-
-      [ without_legacy(payload.merge("booking_task" => resumed_task)), resumed_task ]
-    end
-
     def archive_completed_booking
       return payload unless booking_branch_present?
 

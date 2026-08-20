@@ -329,6 +329,58 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     expect(branch["target_month"]).to be_blank
   end
 
+  # A booking picked up after an interruption used to be answered by a class of
+  # its own, which read the branch out of Postgres and never looked at the one
+  # the guest's own message had just been merged into.
+  describe "a booking picked up after an interruption" do
+    let(:decision) { { action: :resume, pending_question: "select_option" } }
+
+    it "answers on the branch it was handed, not the one in the record" do
+      result = orchestrate(
+        message: "1",
+        interpretation: interpretation(intent: "option_selection", slots: {}),
+        active_branch: branch_with_options([
+          group("Deluxe Room", [ option(1, "deluxe_1", "2026-08-01") ])
+        ])
+      )
+
+      expect(result[:reply_type]).to eq(:ask_confirmation)
+      expect(result.dig(:extra_context, :selected_option, "selection_id")).to eq("deluxe_1")
+    end
+
+    # The guest was away, not failing to answer. "Sorry, I didn't catch that."
+    # is what a counter that counted this turn would put in front of the reply.
+    it "offers the saved list again rather than telling the guest off" do
+      conversation_state.update!(slots_payload: reasked_payload(saved_branch))
+
+      result = orchestrate(
+        message: "hello again",
+        interpretation: interpretation(intent: "option_selection", slots: {}),
+        active_branch: saved_branch
+      )
+
+      expect(result[:reply_type]).to eq(:resume_options)
+      expect(result[:pending_question]).to eq("select_option")
+      expect(result.dig(:extra_context, :options)).to be_present
+      expect(result.dig(:slots_payload, "booking_task", "reask_count")).to eq(0)
+      expect(result[:needs_human_support]).to be_nil
+    end
+
+    # A question already asked twice over a branch that did not move: one more
+    # count and the thread asks for a person.
+    def reasked_payload(branch)
+      AiConcierge::State::ConversationTaskManager
+        .new(slots_payload: AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(branch, pending_question: "select_option"))
+        .activate_booking(branch, pending_question: "select_option", count_reask: true)
+    end
+
+    def saved_branch
+      @saved_branch ||= branch_with_options([
+        group("Garden Prestige Suite", [ option(1, "garden_1", "2026-08-01"), option(2, "garden_2", "2026-08-02") ])
+      ])
+    end
+  end
+
   def orchestrate(message:, interpretation:, active_branch:, decision: self.decision)
     described_class.new(
       hotel: hotel,

@@ -78,7 +78,7 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
     expect(payload).not_to have_key("paused_flows")
   end
 
-  it "suspends and resumes booking without losing confirmation candidate" do
+  it "suspends a booking without losing the confirmation candidate, and says it can be picked up" do
     selected_option = { "selection_id" => "sel_1", "room_type_name" => "Deluxe Room" }
     branch = {
       "branch_id" => "branch-1",
@@ -94,15 +94,15 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
       topic: "hotel_policy",
       pending_question: "confirm_selection"
     )
-    resumed_payload, resumed_task = described_class.new(slots_payload: suspended).resume_booking
+    manager = described_class.new(slots_payload: suspended)
 
     expect(suspended["booking_task"]["status"]).to eq("suspended")
-    expect(resumed_task["pending_question"]).to eq("confirm_selection")
-    expect(resumed_task.dig("branch", "confirmation_candidate")).to eq(selected_option)
-    expect(resumed_payload["booking_task"]["status"]).to eq("waiting_for_confirmation")
+    expect(manager).to be_suspended_booking_resumable
+    expect(manager.booking_pending_question).to eq("confirm_selection")
+    expect(manager.booking_branch["confirmation_candidate"]).to eq(selected_option)
   end
 
-  it "does not resume expired suspended booking" do
+  it "does not pick up an expired suspended booking" do
     payload = described_class.new(slots_payload: {}).activate_booking({ "target_month" => 8 }, pending_question: "select_option")
     suspended = described_class.new(slots_payload: payload, now: 2.hours.ago).suspend_booking_for_information(
       intent: "hotel_information",
@@ -110,8 +110,6 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
       pending_question: "select_option"
     )
 
-    _payload, resumed_task = described_class.new(slots_payload: suspended, now: Time.current).resume_booking
-
-    expect(resumed_task).to be_nil
+    expect(described_class.new(slots_payload: suspended, now: Time.current)).not_to be_suspended_booking_resumable
   end
 end
