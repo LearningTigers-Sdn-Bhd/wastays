@@ -289,7 +289,7 @@ module AiConcierge
       domain_response(
         slots_payload: conversation_state.slots_payload,
         reply_type: nil,
-        extra_context: { message: MessageBuilders::FallbackBuilder::DEFAULT_MESSAGE }
+        extra_context: { message: MessageBuilders::DEFAULT_MESSAGE }
       )
     end
 

@@ -20,7 +20,7 @@ module AiConcierge
               active_flow: nil,
               pending_question: nil,
               action_name: nil,
-              extra_context: { message: message.presence || MessageBuilders::FallbackBuilder::DEFAULT_MESSAGE }
+              extra_context: { message: message.presence || MessageBuilders::DEFAULT_MESSAGE }
             }
           )
         end

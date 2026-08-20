@@ -16,7 +16,7 @@ module AiConcierge
 
     def render_message
       reply_type = context[:reply_type]&.to_sym
-      builder_message(reply_type) || context[:message].presence || MessageBuilders::FallbackBuilder::DEFAULT_MESSAGE
+      builder_message(reply_type) || context[:message].presence || MessageBuilders::DEFAULT_MESSAGE
     end
 
     # Every builder dispatches on `reply_type.to_sym`, so a nil one used to

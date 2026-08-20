@@ -75,7 +75,7 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       outcome = run.call
 
       expect(outcome.domain_result.dig(:extra_context, :message))
-        .to eq(AiConcierge::MessageBuilders::FallbackBuilder::DEFAULT_MESSAGE)
+        .to eq(AiConcierge::MessageBuilders::DEFAULT_MESSAGE)
       expect(outcome.conversation_state.slots_payload).to eq(before_payload)
     end
 
