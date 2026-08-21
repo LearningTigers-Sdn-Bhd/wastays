@@ -87,6 +87,14 @@ RSpec.describe Concierge::DeliverStaffReply do
       expect { staff_reply(conversation) }.not_to have_enqueued_job(WebhookBroadcastJob)
     end
 
+    # Meta rejects it, the relay logs a 4xx and drops it. Better not to send.
+    it "sends nothing once WhatsApp's 24-hour window has passed" do
+      conversation = conversation_on("whatsapp")
+      conversation.update!(last_guest_message_at: Conversation::REPLY_WINDOW.ago - 1.minute)
+
+      expect { staff_reply(conversation) }.not_to have_enqueued_job(WebhookBroadcastJob)
+    end
+
     it "sends nothing when the guest has no number to send to" do
       prospect.update!(phone_number: nil)
       conversation = conversation_on("whatsapp")

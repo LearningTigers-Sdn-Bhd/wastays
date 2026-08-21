@@ -28,7 +28,12 @@ module HotelPortal
     attr_reader :conversation
 
     delegate :id, :mode, :status, :channel, :prospect, :assigned_user, :language,
-             :last_message_at, :human?, :open?, :human_requested?, :translated?, to: :conversation
+             :last_message_at, :human?, :open?, :human_requested?, :translated?,
+             :reply_window_closes_at, to: :conversation
+
+    # Below this, the clock is the thing a reader should act on rather than a
+    # detail of the row, so the chip stops being quiet furniture.
+    REPLY_WINDOW_URGENT = 4.hours
 
     def display_name
       prospect.name.presence || prospect.phone_number.presence || "Unnamed guest"
@@ -71,6 +76,31 @@ module HotelPortal
       { label: "Bot handling", variant: :outline }
     end
 
+    # How long WhatsApp will still carry a reply, or nil where there is no such
+    # clock -- which is most threads, so the row says nothing in the ordinary
+    # case and the chip means "this one is running out".
+    #
+    # Whole hours, computed at render. It goes stale between messages, because
+    # nothing re-renders a row purely because time passed. That is safe by
+    # design: `Concierge::PostStaffReply` recomputes the blocker when the reply
+    # is actually sent, so this is advice and the refusal is the authority.
+    def reply_window_label
+      closes_at = reply_window_closes_at
+      return nil if closes_at.blank?
+      return "Reply window closed" if closes_at.past?
+
+      hours = ((closes_at - Time.current) / 1.hour).floor
+      hours.zero? ? "Under 1h left" : "#{hours}h left"
+    end
+
+    # Shaped like `status_badge` so a row renders both the same way.
+    def reply_window_badge
+      label = reply_window_label
+      return nil if label.blank? || !open?
+
+      { label: label, variant: reply_window_variant }
+    end
+
     def assignee_label
       assigned_user&.name.presence || "Unassigned"
     end
@@ -84,5 +114,13 @@ module HotelPortal
     private
 
     attr_reader :view
+
+    def reply_window_variant
+      closes_at = reply_window_closes_at
+      return :destructive if closes_at.past?
+      return :warning if closes_at < REPLY_WINDOW_URGENT.from_now
+
+      :neutral
+    end
   end
 end

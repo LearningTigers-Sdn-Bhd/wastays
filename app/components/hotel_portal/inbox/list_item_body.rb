@@ -29,6 +29,7 @@ module HotelPortal
       attr_reader :hotel
 
       def badge = presenter.status_badge
+      def reply_window_badge = @reply_window_badge ||= presenter.reply_window_badge
     end
   end
 end

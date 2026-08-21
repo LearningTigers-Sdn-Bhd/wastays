@@ -29,7 +29,14 @@
     <span><%= presenter.last_activity %></span>
   </span>
 
-  <span>
+  <span class="flex flex-wrap items-center gap-1.5">
     <%= render PanelsUI::Badge.new(label: badge[:label], variant: badge[:variant], size: :xs) %>
+    <%# WhatsApp stops carrying a reply 24 hours after the guest last wrote, so
+        a reader scanning the list can see which threads are running out before
+        they open one and start typing. %>
+    <% if reply_window_badge %>
+      <%= render PanelsUI::Badge.new(label: reply_window_badge[:label],
+                                     variant: reply_window_badge[:variant], size: :xs) %>
+    <% end %>
   </span>
 <% end %>

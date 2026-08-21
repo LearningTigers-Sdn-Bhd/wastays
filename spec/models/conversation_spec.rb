@@ -155,6 +155,62 @@ RSpec.describe Conversation, type: :model do
       expect(thread).not_to be_replies_reach_guest
       expect(thread.reply_blocker_message).to eq(described_class::REPLY_BLOCKERS[:unsupported_channel])
     end
+
+    # Meta's rule, and the app used to accept replies it could not send: the
+    # message was filed, the bot was muted, and the guest got nothing.
+    describe "WhatsApp's 24-hour window" do
+      before { create(:webhook_endpoint, hotel: hotel, event_types: [ Concierge::DeliverStaffReply::EVENT ]) }
+
+      it "accepts a reply inside the window" do
+        thread = whatsapp_thread
+        thread.update!(last_guest_message_at: described_class::REPLY_WINDOW.ago + 1.minute)
+
+        expect(thread).to be_replies_reach_guest
+      end
+
+      it "refuses a reply once the window has passed" do
+        thread = whatsapp_thread
+        thread.update!(last_guest_message_at: described_class::REPLY_WINDOW.ago - 1.minute)
+
+        expect(thread).not_to be_replies_reach_guest
+        expect(thread.reply_blocker).to eq(:window_lapsed)
+        expect(thread.reply_blocker_message).to include("24 hours")
+      end
+
+      # No inbound message means the window has never opened, so a reply has
+      # never been allowed. Blocking is the safe read of an absent clock.
+      it "refuses a thread the guest has never written on" do
+        thread = whatsapp_thread
+        thread.update!(last_guest_message_at: nil)
+
+        expect(thread).not_to be_replies_reach_guest
+        expect(thread.reply_blocker).to eq(:window_lapsed)
+      end
+
+      # The window reopens on the guest writing, and nothing else does it.
+      it "reopens when the guest writes again" do
+        thread = whatsapp_thread
+        thread.update!(last_guest_message_at: described_class::REPLY_WINDOW.ago - 1.hour)
+        create(:prospect_message, conversation: thread, prospect: thread.prospect, direction: "inbound")
+
+        expect(thread.reload).to be_replies_reach_guest
+      end
+
+      it "reports a missing relay ahead of the clock, because one is fixable and the other is not" do
+        WebhookEndpoint.delete_all
+        thread = whatsapp_thread
+        thread.update!(last_guest_message_at: described_class::REPLY_WINDOW.ago - 1.minute)
+
+        expect(thread.reply_blocker).to eq(:no_relay)
+      end
+
+      it "leaves the web chat alone, which has no window at all" do
+        thread = create(:conversation, hotel: hotel, channel: "web", last_guest_message_at: 3.years.ago)
+
+        expect(thread).to be_replies_reach_guest
+        expect(thread.reply_window_closes_at).to be_nil
+      end
+    end
   end
 
   describe "reopening" do

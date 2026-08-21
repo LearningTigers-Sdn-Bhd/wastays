@@ -34,16 +34,38 @@ module HotelPortal
 
       def closed? = !conversation.open?
       def deliverable? = conversation.replies_reach_guest?
-      def channel_label = helpers.conversation_presenter(conversation).channel_label
+      def presenter = @presenter ||= helpers.conversation_presenter(conversation)
+      def channel_label = presenter.channel_label
 
       # How the reply travels, said plainly, because the two routes behave
       # differently enough to matter: a web guest has the reply before the page
-      # settles, a WhatsApp guest gets it whenever the relay sends it on.
+      # settles, a WhatsApp guest gets it whenever the relay sends it on -- and
+      # only for as long as WhatsApp still carries one.
       def delivery_note
         return "The guest sees this on their chat page straight away." if conversation.channel == "web"
 
-        "Sent to the guest on #{channel_label}."
+        [ "Sent to the guest on #{channel_label}.", window_note ].compact.join(" ")
       end
+
+      def window_note
+        label = presenter.reply_window_label
+
+        "#{label} to reply." if label.present?
+      end
+
+      # A lapsed window is not the same refusal as a channel with no route out.
+      # Nothing is missing here and nothing needs connecting -- the clock ran
+      # out, and only the guest writing again restarts it -- so it says so, and
+      # says it as a warning rather than as information about the product.
+      def window_lapsed? = conversation.reply_blocker == :window_lapsed
+
+      def blocker_title
+        return "The 24-hour reply window on this thread has closed" if window_lapsed?
+
+        "You cannot reply to #{channel_label} here yet"
+      end
+
+      def blocker_tone = window_lapsed? ? :warning : :info
     end
   end
 end

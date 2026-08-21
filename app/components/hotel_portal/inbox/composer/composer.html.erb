@@ -34,7 +34,7 @@
       </div>
     <% end %>
   <% else %>
-    <%= render PanelsUI::Alert.new(tone: :info, title: "You cannot reply to #{channel_label} here yet") do |alert| %>
+    <%= render PanelsUI::Alert.new(tone: blocker_tone, title: blocker_title) do |alert| %>
       <% alert.with_description do %>
         You can read everything on this thread. <%= conversation.reply_blocker_message %>
       <% end %>

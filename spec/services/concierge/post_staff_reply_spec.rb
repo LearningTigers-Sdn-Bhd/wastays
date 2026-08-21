@@ -91,5 +91,31 @@ RSpec.describe Concierge::PostStaffReply do
       expect(result.error).to include("No WhatsApp relay")
       expect(whatsapp.messages.reload).to be_empty
     end
+
+    describe "past WhatsApp's 24-hour window" do
+      let!(:relay) do
+        create(:webhook_endpoint, hotel: hotel, event_types: [ Concierge::DeliverStaffReply::EVENT ])
+      end
+
+      before { whatsapp.update!(last_guest_message_at: Conversation::REPLY_WINDOW.ago - 1.minute) }
+
+      it "refuses the reply and says the guest has to write first" do
+        result = reply("Sorry for the wait -- yes, we have parking.", on: whatsapp)
+
+        expect(result).not_to be_success
+        expect(result.error).to include("24 hours")
+        expect(whatsapp.messages.reload).to be_empty
+      end
+
+      # The worst half of the old bug, and the reason the refusal has to come
+      # before the transaction: replying took the thread, so a reply nobody
+      # could deliver also silenced the bot that could still have answered.
+      it "leaves the bot holding the thread" do
+        reply("Sorry for the wait.", on: whatsapp)
+
+        expect(whatsapp.reload).not_to be_human
+        expect(whatsapp.assigned_user).to be_nil
+      end
+    end
   end
 end

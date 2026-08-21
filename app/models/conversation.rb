@@ -29,8 +29,18 @@ class Conversation < ApplicationRecord
   REPLY_BLOCKERS = {
     unsupported_channel: "Replies to this channel cannot be delivered yet.",
     no_guest_number: "This guest has no phone number on file, so a WhatsApp reply has nowhere to go.",
-    no_relay: "No WhatsApp relay is connected for this hotel, so a reply would not reach the guest."
+    no_relay: "No WhatsApp relay is connected for this hotel, so a reply would not reach the guest.",
+    window_lapsed: "WhatsApp only carries a reply for 24 hours after the guest's last message, " \
+                   "and that time has passed. The guest has to write again before a reply can reach them."
   }.freeze
+
+  # How long WhatsApp lets the hotel answer for free after the guest writes.
+  #
+  # Meta's rule, not the app's: outside it a free-form message is rejected
+  # outright, and only the guest writing again reopens the window -- sending an
+  # approved template does not. Nothing else here has a clock, because the web
+  # chat is a page the hotel owns and is reachable whenever the guest opens it.
+  REPLY_WINDOW = 24.hours
 
   # The one line under the hotel's name in the chat bar. Deliberately about who
   # answers rather than a status light -- "online" would be a promise the page
@@ -82,12 +92,37 @@ class Conversation < ApplicationRecord
     return :unsupported_channel unless REPLYABLE_CHANNELS.include?(channel)
     return :no_guest_number if prospect.phone_number.blank?
     return :no_relay unless staff_replies_relayed?
+    return :window_lapsed unless reply_window_open?
 
     nil
   end
 
   def staff_replies_relayed?
     WebhookEndpoint.listening_for(Concierge::DeliverStaffReply::EVENT, hotel_id: hotel_id).exists?
+  end
+
+  # When the hotel's chance to answer for free runs out, or nil where no such
+  # clock exists -- any channel but WhatsApp, and a WhatsApp thread the guest
+  # has never written on.
+  #
+  # Computed rather than stored: `last_guest_message_at` is already written on
+  # every guest message, and a column would only be a second copy of it that
+  # can disagree.
+  def reply_window_closes_at
+    return nil unless channel == "whatsapp"
+    return nil if last_guest_message_at.blank?
+
+    last_guest_message_at + REPLY_WINDOW
+  end
+
+  # False where there is no window at all, which is the answer `reply_blocker`
+  # wants: a WhatsApp thread with no inbound message has never opened one, so a
+  # reply has never been allowed. `reply_blocker` returns before this for every
+  # channel that has no window to begin with.
+  def reply_window_open?
+    closes_at = reply_window_closes_at
+
+    closes_at.present? && closes_at.future?
   end
 
   # What the guest is told about who is answering them.

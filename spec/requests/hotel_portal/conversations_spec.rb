@@ -146,6 +146,24 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
       expect(conversation.messages.reload).to be_empty
     end
 
+    # The reply was filed, the guest never got it, and taking the thread muted
+    # the bot that could still have answered them.
+    it "reports a lapsed WhatsApp window instead of filing a reply nobody sends" do
+      create(:webhook_endpoint, hotel: hotel, event_types: [ Concierge::DeliverStaffReply::EVENT ])
+      prospect = create(:prospect, hotel: hotel, name: "Aisyah Rahman", phone_number: "+60123456789")
+      conversation = create(
+        :conversation, :whatsapp, hotel: hotel, prospect: prospect,
+        last_guest_message_at: Conversation::REPLY_WINDOW.ago - 1.minute
+      )
+
+      post reply_hotel_conversation_path(hotel, conversation), params: { body: "Sorry for the wait." }
+      follow_redirect!
+
+      expect(response.body).to include("24 hours")
+      expect(conversation.messages.reload).to be_empty
+      expect(conversation.reload).not_to be_human
+    end
+
     it "refuses a user without the concierge permission" do
       conversation = conversation_for(hotel, name: "Aisyah Rahman")
       role.permissions.destroy_all

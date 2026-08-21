@@ -67,4 +67,26 @@ RSpec.describe HotelPortal::Inbox::ListItemBody, type: :component do
 
     expect(page).to have_text("Bot handling")
   end
+
+  # WhatsApp stops carrying a reply 24 hours after the guest last wrote, and a
+  # reader scanning the list should see which threads are running out before
+  # they open one and start typing.
+  describe "the reply window" do
+    it "shows how long is left on a WhatsApp thread" do
+      conversation.channel = "whatsapp"
+      conversation.last_guest_message_at = 6.hours.ago - 30.minutes
+
+      render_body
+
+      expect(page).to have_text("17h left")
+    end
+
+    it "says nothing on the web chat, which has no window" do
+      conversation.last_guest_message_at = 3.years.ago
+
+      render_body
+
+      expect(page).to have_no_text("left")
+    end
+  end
 end

@@ -108,12 +108,16 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
     expect(prospect.prospect_messages.where(direction: "outbound").last.sender_role).to eq("bot")
   end
 
+  # The guest's clock is what WhatsApp's 24-hour reply window is measured
+  # from, so the bot answering must never look like the guest writing.
   it "advances last_message_at but not last_guest_message_at" do
+    conversation.update!(last_guest_message_at: 3.hours.ago)
+
     persist(described_class.new(hotel: hotel, conversation: conversation))
 
     conversation.reload
     expect(conversation.last_message_at).to be_present
-    expect(conversation.last_guest_message_at).to be_nil
+    expect(conversation.last_guest_message_at).to be_within(1.second).of(3.hours.ago)
   end
 
   describe "the hotel's voice" do
