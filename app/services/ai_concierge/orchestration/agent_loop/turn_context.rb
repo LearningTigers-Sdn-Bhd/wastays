@@ -11,16 +11,45 @@ module AiConcierge
       # open -- these are facts in Postgres. A model asked to restate them can
       # get them wrong, so it is not asked.
       class TurnContext
-        def initialize(hotel:, prospect:, phone:, conversation_state:, message:, thread_language: nil)
+        # How much of the thread the model is shown. Three exchanges is enough
+        # for "the cheaper one" and "make it 3 nights instead" to mean
+        # something, and short enough that the cost of a turn does not grow
+        # with the length of the conversation.
+        HISTORY_LIMIT = 6
+
+        # A catalogue reply is the longest thing in any thread and the least
+        # worth carrying in full: which row the guest meant is answered from
+        # Postgres by Matching::OptionReference, not by re-reading the list.
+        MAX_HISTORY_BODY = 500
+
+        def initialize(hotel:, prospect:, phone:, conversation_state:, message:,
+                       thread_language: nil, conversation: nil)
           @hotel = hotel
           @prospect = prospect
           @phone = phone
           @conversation_state = conversation_state
           @message = message.to_s
           @thread_language = thread_language.presence
+          @conversation = conversation
         end
 
-        attr_reader :hotel, :prospect, :phone, :conversation_state, :message, :thread_language
+        attr_reader :hotel, :prospect, :phone, :conversation_state, :message, :thread_language,
+                    :conversation
+
+        # The last few turns, as the model should read them.
+        #
+        # Reading material, not truth. Everything the system decides -- which
+        # question is open, which branch is live, which option was picked --
+        # still comes from the columns above, and a model that reads this
+        # differently is still overruled by them. It is here so that a guest
+        # who says "the cheaper one" is saying something, rather than something
+        # a new deterministic reader has to be written for.
+        #
+        # Empty when there is no conversation, which is every spec that builds
+        # a context without one and the only reason the argument is optional.
+        def recent_messages
+          @recent_messages ||= build_recent_messages
+        end
 
         def task_manager
           State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
@@ -59,6 +88,39 @@ module AiConcierge
         # that is -- it picks one per document on upload.
         def knowledge_languages
           @knowledge_languages ||= hotel.knowledge_documents.distinct.pluck(:language).compact_blank.sort
+        end
+
+        private
+
+        def build_recent_messages
+          return [] if conversation.blank?
+
+          rows = conversation.messages
+            .where.not(direction: "system")
+            .where.not(body: [ nil, "" ])
+            .reorder(sent_at: :desc, created_at: :desc)
+            .limit(HISTORY_LIMIT + 1)
+            .to_a
+            .reverse
+
+          drop_current_message!(rows)
+
+          rows.last(HISTORY_LIMIT).map do |row|
+            {
+              role: row.from_guest? ? :user : :assistant,
+              content: row.body.to_s.strip[0, MAX_HISTORY_BODY]
+            }
+          end
+        end
+
+        # The message being answered is already filed by the time the loop runs
+        # -- PostWebMessage on the web, SessionLoader on WhatsApp -- and
+        # RubyLLM::Chat#ask adds it again as the user turn. Without this the
+        # model is handed the same message twice, and the second copy reads as
+        # the guest repeating themselves.
+        def drop_current_message!(rows)
+          last = rows.last
+          rows.pop if last&.from_guest? && last.body.to_s.strip == message.strip
         end
       end
     end

@@ -13,6 +13,7 @@ module AiConciergeEval
       @classifier_summary = classifier_summary
       @interpretation = interpretation
       @tools = []
+      @seeded_messages = []
       @callbacks = Hash.new { |hash, key| hash[key] = [] }
     end
 
@@ -25,6 +26,11 @@ module AiConciergeEval
     def with_temperature(*) = self
     def before_tool_call(&block) = tap { @callbacks[:before] << block }
     def after_tool_result(&block) = tap { @callbacks[:after] << block }
+
+    # Recorded rather than ignored so a spec can assert what the model was
+    # shown. Inert to the decision: this chat picks its tool from the message
+    # alone, which keeps every existing fixture answering exactly as before.
+    def add_message(attributes) = tap { @seeded_messages << attributes }
 
     def ask(message)
       call = tool_call_for(message)
@@ -43,6 +49,8 @@ module AiConciergeEval
       @callbacks[:after].each(&:call)
       result
     end
+
+    attr_reader :seeded_messages
 
     private
 

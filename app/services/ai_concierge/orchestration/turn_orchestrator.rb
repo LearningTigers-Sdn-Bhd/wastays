@@ -92,7 +92,8 @@ module AiConcierge
           phone: phone,
           conversation_state: session.conversation_state,
           message: message,
-          thread_language: @conversation&.reply_language
+          thread_language: @conversation&.reply_language,
+          conversation: @conversation
         ).call
 
         Core::Result.success(

@@ -27,6 +27,7 @@ module AiConcierge
           # cannot contain two advance_booking calls.
           chat.with_tools(*tools, calls: :one)
           chat.with_temperature(TEMPERATURE)
+          seed_history(chat)
 
           cap_hops(chat)
           chat
@@ -35,6 +36,18 @@ module AiConcierge
         private
 
         attr_reader :context, :tools, :recorder, :max_hops
+
+        # The last few turns, added after the instructions and before the
+        # message being answered -- which is where RubyLLM::Chat#ask puts it,
+        # so the model reads the thread in the order it happened.
+        #
+        # Safe for caching: providers cache a prefix of tools + system, and
+        # messages come after both. Nothing that changes per turn moved up.
+        def seed_history(chat)
+          context.recent_messages.each do |entry|
+            chat.add_message(role: entry[:role], content: entry[:content])
+          end
+        end
 
         def cap_hops(chat)
           chat.before_tool_call { raise RunTurn::HopLimitExceeded if recorder.hops >= max_hops }
