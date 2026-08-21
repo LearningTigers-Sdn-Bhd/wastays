@@ -47,6 +47,7 @@ module AiConcierge
       end
 
       strip_hallucinated_specific_dates!
+      roll_implicit_past_check_in!
       slots.delete("month_segment") if slots["month_segment"].present? && !message_contains_month_segment?
       slots
     end
@@ -400,7 +401,7 @@ module AiConcierge
     end
 
     def strip_hallucinated_specific_dates!
-      return unless slots["check_in"].present? && !message_contains_specific_date?
+      return unless slots["check_in"].present? && !message_names_a_day?
       return if resolving_pending_date_range?
 
       begin
@@ -414,16 +415,94 @@ module AiConcierge
       slots.delete("check_out")
     end
 
+    # A date the model handed over is read the same way as one parsed here.
+    #
+    # `build_date_range` already rolls a year the guest did not say, and says
+    # why. But it only ever ran on dates this class read out of the message: a
+    # check_in that arrived in the model's slots went round it, kept the year
+    # nobody stated, and landed in the past -- where the ladder stops the thread
+    # to say the date has gone. Same rule, same reason, the other door.
+    #
+    # A year the guest did state is left alone here too. That date is theirs,
+    # wrong or not, and it is named out loud further up the ladder.
+    def roll_implicit_past_check_in!
+      check_in = slot_date("check_in")
+      return if check_in.blank? || check_in >= Date.current
+      return if year_from_message(message.downcase)
+
+      rolled = check_in.next_year
+      slots["check_in"] = rolled.iso8601
+      slots["target_year"] = rolled.year if slots["target_year"].present?
+      check_out = slot_date("check_out")
+      slots["check_out"] = check_out.next_year.iso8601 if check_out
+    end
+
+    def slot_date(key)
+      value = slots[key]
+      return if value.blank?
+
+      Date.parse(value.to_s)
+    rescue Date::Error
+      nil
+    end
+
     def resolving_pending_date_range?
       clarification = active_branch["clarification_needed"]
       pending_question == "date_range_month" && clarification.is_a?(Hash) && clarification["type"] == "date_range_month"
     end
 
-    def message_contains_specific_date?
-      normalized = message.downcase
-      return true if normalized.match?(/\d/)
+    # Nouns that spend a number on something other than a date.
+    #
+    # Kept as words rather than as a rule because there is no rule: "3 days 2
+    # nights" and "2 dewasa" are the same shape as "3 january", and the only
+    # thing that tells them apart is knowing what the noun counts. Additive and
+    # fail-safe in the same way TIME_MARKERS is -- a noun missing from here
+    # leaves its number unexplained, which keeps a date rather than losing one.
+    COUNTED_NOUNS = %w[
+      days? nights? weeks? months? pax
+      adults? child children kids? guests? persons? people rooms?
+      hari malam minggu bulan dewasa kanak budak orang bilik
+      天 晚 夜 周 位 人 大人 小孩 儿童 兒童 间 間 房 泊
+    ].freeze
 
-      normalized.match?(/\b(?:tomorrow|today|tonight|next week|this weekend|next weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/)
+    # Whether the guest named a day of the month.
+    #
+    # This used to ask whether the message had a digit anywhere in it, which is
+    # true of every duration and every party size ever written down. So "early
+    # august for 3 days 2 nights" counted as a stated date, the day the model
+    # invented to go with it was believed, and a guest who named a month was
+    # told the first of it had already passed -- to which the only answer is to
+    # say the month again, which reproduces it exactly.
+    #
+    # The reading is subtraction rather than recognition: take away the numbers
+    # the message has already spent on nights and guests, and a day is what is
+    # left over. That works in languages this file cannot otherwise read, and
+    # when it does not, it fails towards keeping the date.
+    def message_names_a_day?
+      normalized = message.downcase
+      return true if day_named_alongside_a_month?(normalized)
+      return true if normalized.match?(/\b(?:tomorrow|today|tonight|next week|this weekend|next weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/)
+      # A bare number answering "which day?" is a day, and that is the whole of
+      # what those two questions asked for.
+      return true if %w[specific_timing date_range_month].include?(pending_question.to_s) && normalized.match?(/\d/)
+
+      unspent_number?(normalized)
+    end
+
+    def day_named_alongside_a_month?(normalized)
+      normalized.match?(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:#{month_pattern})\b/) ||
+        normalized.match?(/\b(?:#{month_pattern})\s+\d{1,2}(?:st|nd|rd|th)?\b/) ||
+        normalized.match?(/\b\d{1,2}\s*[\/-]\s*\d{1,2}(?:\s*[\/-]\s*\d{2,4})?\b/) ||
+        normalized.match?(/\d{1,2}\s*[日号號]/) ||
+        normalized.match?(/\b\d{1,2}(?:st|nd|rd|th)\b/)
+    end
+
+    def unspent_number?(normalized)
+      normalized.gsub(/\d+\s*(?:#{counted_noun_pattern})/, " ").match?(/\d/)
+    end
+
+    def counted_noun_pattern
+      @counted_noun_pattern ||= COUNTED_NOUNS.join("|")
     end
 
     def message_contains_month_segment?
@@ -454,7 +533,7 @@ module AiConcierge
       slots["target_month"] = target.month
       slots["target_year"] = target.year
       slots["month_segment"] = message_contains_month_segment? ? message.downcase[/\b(early|mid|late)\b/, 1] : ""
-      slots.delete("check_in") unless message_contains_specific_date?
+      slots.delete("check_in") unless message_names_a_day?
       slots.delete("check_out") unless explicit_checkout_in_message?
     end
 

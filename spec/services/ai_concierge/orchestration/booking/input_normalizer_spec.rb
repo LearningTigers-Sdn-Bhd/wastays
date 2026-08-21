@@ -428,24 +428,131 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
     expect(result).not_to include("check_in", "check_out")
   end
 
-  it "keeps a date quoted in a language the English guards cannot read" do
-    malay = described_class.new(
-      message: "28 Ogos",
-      slots: { "check_in" => "2026-08-28" },
-      pending_question: nil,
-      conversation_signals: signals,
-      evidence: { "timing" => "28 Ogos" }
-    ).call
-    chinese = described_class.new(
-      message: "8月28号",
-      slots: { "check_in" => "2026-08-28" },
-      pending_question: nil,
-      conversation_signals: signals,
-      evidence: { "timing" => "8月28号" }
-    ).call
+  describe "a day the guest never named" do
+    # The live thread this is taken from: a month, a length of stay, and a
+    # first-of-the-month the model supplied to go with them. Read as a stated
+    # date it is in the past, and the guest is told the month has gone.
+    it "drops a model's arrival day when every number in the message is spent on something else" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "early august for 3 days 2 nights",
+          slots: { "target_month" => 8, "target_year" => 2026, "month_segment" => "early", "check_in" => "2026-08-01", "nights" => 2 },
+          pending_question: nil,
+          conversation_signals: signals,
+          evidence: { "timing" => "early august", "duration" => "3 days 2 nights" }
+        ).call
 
-    expect(malay["check_in"]).to eq("2026-08-28")
-    expect(chinese["check_in"]).to eq("2026-08-28")
+        expect(result).not_to include("check_in")
+        expect(result).to include("target_month" => 8, "month_segment" => "early")
+      end
+    end
+
+    it "keeps a day named next to its month, and one written in ordinal" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        named = described_class.new(
+          message: "26 august for 3 days 2 nights",
+          slots: { "check_in" => "2026-08-26", "nights" => 2 },
+          pending_question: nil,
+          conversation_signals: signals,
+          evidence: { "timing" => "26 august" }
+        ).call
+        ordinal = described_class.new(
+          message: "the 26th, 2 nights",
+          slots: { "target_month" => 8, "target_year" => 2026, "check_in" => "2026-08-26", "nights" => 2 },
+          pending_question: nil,
+          conversation_signals: signals,
+          evidence: { "timing" => "the 26th" }
+        ).call
+
+        expect(named["check_in"]).to eq("2026-08-26")
+        expect(ordinal["check_in"]).to eq("2026-08-26")
+      end
+    end
+
+    # The nouns that spend a number are English here and Malay and Chinese in
+    # the guards below. A language missing from that list leaves its number
+    # unexplained, which keeps the date -- the direction it has to fail in.
+    it "keeps a day written in a language the counted nouns do not cover" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "28 tháng 8",
+          slots: { "check_in" => "2026-08-28" },
+          pending_question: nil,
+          conversation_signals: signals,
+          evidence: { "timing" => "28 tháng 8" }
+        ).call
+
+        expect(result["check_in"]).to eq("2026-08-28")
+      end
+    end
+
+    it "drops a model's arrival day from a Chinese message about length of stay" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "住3晚",
+          slots: { "target_month" => 8, "target_year" => 2026, "check_in" => "2026-08-01", "nights" => 3 },
+          pending_question: nil,
+          conversation_signals: signals,
+          evidence: { "timing" => "住3晚", "duration" => "住3晚" }
+        ).call
+
+        expect(result).not_to include("check_in")
+      end
+    end
+
+    # Same rule as the ranges this class parses itself, through the other door.
+    it "rolls a model's past arrival day into the year still to come" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "3 januari hingga 5 januari",
+          slots: { "target_month" => 1, "target_year" => 2026, "check_in" => "2026-01-03", "check_out" => "2026-01-05" },
+          pending_question: nil,
+          conversation_signals: signals,
+          evidence: { "timing" => "3 januari", "checkout" => "5 januari" }
+        ).call
+
+        expect(result).to include("check_in" => "2027-01-03", "check_out" => "2027-01-05", "target_year" => 2027)
+      end
+    end
+
+    it "leaves a past year the guest stated alone" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "3 januari 2026",
+          slots: { "target_month" => 1, "target_year" => 2026, "check_in" => "2026-01-03" },
+          pending_question: nil,
+          conversation_signals: signals,
+          evidence: { "timing" => "3 januari 2026" }
+        ).call
+
+        expect(result["check_in"]).to eq("2026-01-03")
+      end
+    end
+  end
+
+  # Frozen for the same reason as the specific-date examples above, and now for
+  # one more: a date with no year in it that has been walked past rolls into
+  # the year still to come, so an August assertion has to be made in August.
+  it "keeps a date quoted in a language the English guards cannot read" do
+    with_frozen_time Date.new(2026, 8, 20) do
+      malay = described_class.new(
+        message: "28 Ogos",
+        slots: { "check_in" => "2026-08-28" },
+        pending_question: nil,
+        conversation_signals: signals,
+        evidence: { "timing" => "28 Ogos" }
+      ).call
+      chinese = described_class.new(
+        message: "8月28号",
+        slots: { "check_in" => "2026-08-28" },
+        pending_question: nil,
+        conversation_signals: signals,
+        evidence: { "timing" => "8月28号" }
+      ).call
+
+      expect(malay["check_in"]).to eq("2026-08-28")
+      expect(chinese["check_in"]).to eq("2026-08-28")
+    end
   end
 
   it "keeps a relative month named without a digit" do
