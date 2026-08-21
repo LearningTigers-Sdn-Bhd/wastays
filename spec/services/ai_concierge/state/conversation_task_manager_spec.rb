@@ -112,4 +112,25 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
 
     expect(described_class.new(slots_payload: suspended, now: Time.current)).not_to be_suspended_booking_resumable
   end
+
+  # Expiry used to be a fact about the greeting and not about the dates: the
+  # booking could not be resumed, but its branch was still what the next turn
+  # merged the guest's words into, so an enquiry abandoned last month came back
+  # and quietly searched the month it had named.
+  it "takes the dates with it when a suspended booking expires" do
+    payload = described_class.new(slots_payload: {}).activate_booking(
+      { "target_month" => 8, "target_year" => 2026 }, pending_question: "select_option"
+    )
+    suspended = described_class.new(slots_payload: payload, now: 2.hours.ago).suspend_booking_for_information(
+      intent: "hotel_information",
+      topic: "hotel_faq",
+      pending_question: "select_option"
+    )
+
+    manager = described_class.new(slots_payload: suspended, now: Time.current)
+
+    expect(manager.booking_pending_question).to be_nil
+    expect(manager.booking_branch["target_month"]).to be_nil
+    expect(manager.booking_task["status"]).to eq("expired")
+  end
 end

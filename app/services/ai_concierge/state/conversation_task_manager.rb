@@ -4,9 +4,11 @@ module AiConcierge
     STATE_VERSION = 2
     SUSPENDED_BOOKING_TTL = ProspectConversationState::PAUSED_FLOW_TTL
 
+    # `now` is set first because normalizing reads it: whether a suspension has
+    # lapsed is part of what the payload says, not something asked afterwards.
     def initialize(slots_payload:, now: Time.current)
-      @payload = normalize_payload(slots_payload)
       @now = now
+      @payload = normalize_payload(slots_payload)
     end
 
     attr_reader :payload
@@ -161,11 +163,25 @@ module AiConcierge
       source.merge("booking_task" => booking_task, "information_task" => default_information_task)
     end
 
+    # A lapsed suspension takes its dates with it.
+    #
+    # Expiry used to decide only whether the booking could be picked up again,
+    # and the branch it named was still there afterwards -- still the thing the
+    # next turn merged the guest's words into. So an enquiry abandoned a week
+    # ago came back as the month a September guest never mentioned. There is
+    # nothing to resume and nothing to merge into; both facts are the same one.
     def normalize_booking_task(value)
       task = value.is_a?(Hash) ? value.deep_dup : {}
       default_booking_task.merge(task).tap do |normalized|
         normalized["branch"] = normalize_branch(normalized["branch"])
-        normalized["status"] = "expired" if normalized["status"] == "suspended" && expired?(normalized)
+        next unless normalized["status"] == "suspended" && expired?(normalized)
+
+        normalized.merge!(
+          "status" => "expired",
+          "pending_question" => nil,
+          "branch" => default_branch,
+          "suspended" => false
+        )
       end
     end
 
