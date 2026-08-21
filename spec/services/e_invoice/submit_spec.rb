@@ -2,9 +2,9 @@ require "rails_helper"
 
 RSpec.describe EInvoice::Submit, type: :service do
   describe ".call" do
-    let(:hotel) { create(:hotel) }
+    let(:hotel) { create(:hotel, tin: "C9988776655", ssm_number: "202399887766") }
     let!(:e_invoice_setting) do
-      create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+      create(:e_invoice_setting, hotel: hotel)
     end
     let(:booking) { create(:booking, hotel: hotel, booking_quote: nil, payment_status: "captured") }
     let!(:folio) { create(:booking_folio, booking: booking, status: "closed") }
@@ -210,13 +210,17 @@ RSpec.describe EInvoice::Submit, type: :service do
         })
       end
 
-      it "uses self-billed document type and taxpayer submission mode" do
+      it "uses self-billed document type and taxpayer submission mode, authenticated as WAStays" do
         result = described_class.call(submission)
 
+        # WAStays self-bills the hotel here, so WAStays - not the hotel -
+        # must be the authenticated party (confirmed live against LHDN
+        # preprod: it rejects the submission otherwise). `setting: nil`
+        # sends MyInvois::Client down WAStays' own-credentials path.
         expect(MyInvois::ClientFactory).to have_received(:build).with(
           mode: :taxpayer,
           represented_taxpayer_tin: nil,
-          setting: e_invoice_setting
+          setting: nil
         )
         expect(result[:submission]).to have_attributes(
           document_scenario: "payout_self_billed_invoice",

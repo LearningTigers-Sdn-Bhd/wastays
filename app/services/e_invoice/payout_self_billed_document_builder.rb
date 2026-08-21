@@ -108,7 +108,10 @@ module EInvoice
           ],
           "Country" => [ { "IdentificationCode" => [ { "_" => @setting.supplier_country_code_value.to_s } ] } ]
         } ],
-        "PartyLegalEntity" => [ { "CompanyID" => [ { "_" => @setting.hotel_brn.to_s } ] } ],
+        "PartyLegalEntity" => [ {
+          "RegistrationName" => [ { "_" => @setting.supplier_name } ],
+          "CompanyID" => [ { "_" => @setting.hotel_brn.to_s } ]
+        } ],
         "Contact" => [ {
           "Telephone" => [ { "_" => format_phone(@setting.supplier_contact_phone_value) } ],
           "ElectronicMail" => [ { "_" => @setting.supplier_contact_email_value.to_s } ]
@@ -121,7 +124,7 @@ module EInvoice
       {
         "PartyIdentification" => [
           { "ID" => [ { "_" => wastays_tin, "schemeID" => "TIN" } ] },
-          { "ID" => [ { "_" => wastays_brn, "schemeID" => "BRN" } ] }
+          { "ID" => [ wastays_secondary_id ] }
         ],
         "PostalAddress" => [ {
           "CityName" => [ { "_" => @creds[:city].to_s.presence || "Kota Kinabalu" } ],
@@ -134,7 +137,10 @@ module EInvoice
           ],
           "Country" => [ { "IdentificationCode" => [ { "_" => @creds[:country_code].to_s.presence || "MYS" } ] } ]
         } ],
-        "PartyLegalEntity" => [ { "CompanyID" => [ { "_" => wastays_brn } ] } ],
+        "PartyLegalEntity" => [ {
+          "RegistrationName" => [ { "_" => wastays_name } ],
+          "CompanyID" => [ { "_" => wastays_secondary_id.fetch("_") } ]
+        } ],
         "Contact" => [ {
           "Telephone" => [ { "_" => format_phone(@creds[:phone].to_s.presence || "+60111234567") } ],
           "ElectronicMail" => [ { "_" => @creds[:email].to_s.presence || "finance@wastays.com" } ]
@@ -148,7 +154,7 @@ module EInvoice
 
       {
         "ID" => [ { "_" => "1" } ],
-        "InvoiceQuantity" => [ { "_" => 1, "unitCode" => "NIT" } ],
+        "InvoicedQuantity" => [ { "_" => 1, "unitCode" => "C62" } ],
         "LineExtensionAmount" => [ { "_" => amount, "currencyID" => currency } ],
         "AllowanceCharge" => [ {
           "ChargeIndicator" => [ { "_" => false } ],
@@ -211,8 +217,15 @@ module EInvoice
       @creds[:tin].to_s.presence || raise(ArgumentError, "myinvois.tin not configured in credentials")
     end
 
-    def wastays_brn
-      @creds[:brn].to_s.presence || raise(ArgumentError, "myinvois.brn not configured in credentials")
+    # WAStays is filed as a company (BRN) once it incorporates and registers
+    # its own SSM number. Until then, testing needs a way to represent it as
+    # an individual instead, the same way a guest without a BRN is identified
+    # by NRIC rather than a business registration number.
+    def wastays_secondary_id
+      return { "_" => @creds[:brn].to_s, "schemeID" => "BRN" } if @creds[:brn].to_s.presence
+
+      nric = @creds[:nric].to_s.presence || raise(ArgumentError, "myinvois.brn or myinvois.nric must be configured in credentials")
+      { "_" => nric, "schemeID" => "NRIC" }
     end
 
     def wastays_name

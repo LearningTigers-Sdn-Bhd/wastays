@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe EInvoice::ConsolidatedBatchBuilder, type: :service do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, tin: "C1234567890", ssm_number: "202301012345") }
   let!(:e_invoice_setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
   let(:credentials_hash) do
     {

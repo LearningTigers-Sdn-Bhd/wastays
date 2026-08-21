@@ -112,14 +112,34 @@ class EInvoiceSubmission < ApplicationRecord
     # Validated without a timestamp is a data anomaly, not a closed window; we
     # cannot tell whether LHDN would still accept it, so we do not offer it.
     return false if validated_at.blank?
+    # Cancellation calls LHDN with this UUID in the URL - without one there is
+    # nothing to cancel, and offering the button anyway just produces a
+    # confusing 404 from LHDN instead of "there's nothing to cancel here".
+    return false if uuid.blank?
+    return false if referenced_by_active_adjustment?
 
     Time.current <= validated_at + CANCELLATION_WINDOW
   end
 
   def cancellation_window_closed?
     return false if validated_at.blank?
+    return false if referenced_by_active_adjustment?
 
-    validated? && cancelled_at.nil? && !cancellable?
+    validated? && cancelled_at.nil? && Time.current > validated_at + CANCELLATION_WINDOW
+  end
+
+  # Confirmed live against LHDN (MyInvois API error 400: "The document cannot
+  # be cancelled or requested for rejection"): a document can't be cancelled
+  # once an active (non-cancelled) credit or debit note references it via
+  # BillingReference - cancelling the original would orphan that reference.
+  # Checked separately from the time window so the UI can explain the real
+  # reason instead of a generic "window closed" message when it isn't.
+  def referenced_by_active_adjustment?
+    return false if internal_id.blank?
+
+    EInvoiceSubmission.where(original_invoice_internal_id: internal_id)
+                       .where.not(status: "cancelled")
+                       .exists?
   end
 
   def cancellation_deadline
@@ -147,17 +167,44 @@ class EInvoiceSubmission < ApplicationRecord
   end
 
   def error_message
-    return if error_details.blank?
+    error_messages.join(", ").presence
+  end
 
-    direct_message = error_details["message"].presence || error_details[:message].presence
-    return direct_message if direct_message.present?
+  # As a list rather than one run-on string, so the UI can show each
+  # rejection reason as its own line instead of a single dense paragraph.
+  def error_messages
+    return [] if error_details.blank?
 
     messages = Array(error_details.dig("rejected", "error", "details")).filter_map do |detail|
       detail["message"].presence || detail[:message].presence
     end
-    return messages.join(", ") if messages.any?
+    return messages if messages.any?
 
-    nil
+    direct_message = error_details["message"].presence || error_details[:message].presence
+    return [ direct_message ] if direct_message.present?
+
+    []
+  end
+
+  # Layman-facing description of who sent this and why, for hotel staff who
+  # don't know LHDN's own terminology ("taxpayer"/"intermediary" mode).
+  def flow_label
+    requested_by_guest? ? "Requested by guest" : "Sent automatically"
+  end
+
+  def submission_mode_label
+    intermediary_submission? ? "Filed by WAStays on the hotel's behalf" : "Filed by the hotel"
+  end
+
+  # Rough visual grouping so a hotel staffer can tell document types apart at
+  # a glance: a fresh invoice, a positive adjustment (owed more), a negative
+  # one (owed less), or a self-billed record that isn't guest-facing at all.
+  def document_type_badge_variant
+    { "01" => :neutral, "02" => :success, "03" => :warning, "11" => :accent }.fetch(document_type, :neutral)
+  end
+
+  def document_scenario_badge_variant
+    ota_commission_self_billed? || document_scenario == "payout_self_billed_invoice" ? :outline : :info
   end
 
   def intermediary_submission?

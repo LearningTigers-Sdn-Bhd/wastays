@@ -34,7 +34,7 @@ RSpec.describe PayoutEngine::GenerateWeeklyBatches do
   end
 
   it "prepares a self-billed e-invoice submission for each batched booking" do
-    hotel = create(:hotel)
+    hotel = create(:hotel, tin: "C1234567890", ssm_number: "202301012345")
     create(:e_invoice_setting, :intermediary_ready, hotel: hotel)
     create(:booking, hotel: hotel, fund_collector: "wastays", status: "completed", checked_out_at: Date.new(2026, 4, 17).end_of_day, net_amount: 120.0, payout_batch_id: nil)
     create(:booking, hotel: hotel, fund_collector: "wastays", status: "completed", checked_out_at: Date.new(2026, 4, 16).end_of_day, net_amount: 80.0, payout_batch_id: nil)

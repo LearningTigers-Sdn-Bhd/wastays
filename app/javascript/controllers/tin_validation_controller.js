@@ -7,6 +7,16 @@ export default class extends Controller {
   static targets = ["tin", "idValue", "documentType", "feedback"]
   static values = { url: String }
 
+  // For a manually-triggered "Test connection" button rather than a field
+  // blur: the tin/idValue here are fixed hidden values that never change
+  // between clicks, so the de-dupe guard in check() (which exists to avoid
+  // re-checking a field the guest hasn't finished editing) would otherwise
+  // silently no-op every click after the first.
+  forceCheck() {
+    this.lastChecked = null
+    this.check()
+  }
+
   check() {
     const tin = this.hasTinTarget ? this.tinTarget.value.trim() : ""
     const idValue = this.hasIdValueTarget ? this.idValueTarget.value.trim() : ""

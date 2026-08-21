@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe EInvoice::PayoutSelfBilledDocumentBuilder, type: :service do
-  let(:hotel) { create(:hotel, default_currency: "MYR") }
-  let(:setting) { create(:e_invoice_setting, :intermediary_ready, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766") }
+  let(:hotel) { create(:hotel, default_currency: "MYR", tin: "C9988776655", ssm_number: "202399887766") }
+  let(:setting) { create(:e_invoice_setting, :intermediary_ready, hotel: hotel) }
   let(:booking) do
     create(:booking,
       hotel: hotel,

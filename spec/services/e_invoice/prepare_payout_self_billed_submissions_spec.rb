@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe EInvoice::PreparePayoutSelfBilledSubmissions, type: :service do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, tin: "C1234567890", ssm_number: "202301012345") }
   let!(:setting) { create(:e_invoice_setting, :intermediary_ready, hotel: hotel) }
   let(:batch) { create(:payout_batch, hotel: hotel) }
   let!(:wastays_booking) do

@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe EInvoice::AutoIssueJob, type: :job do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, tin: "C1234567890", ssm_number: "202301012345") }
   let!(:e_invoice_setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
 
   before do
@@ -276,7 +276,7 @@ RSpec.describe EInvoice::AutoIssueJob, type: :job do
 end
 
 RSpec.describe EInvoice::AutoIssueJob, "OTA bookings", type: :job do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, tin: "C1234567890", ssm_number: "202301012345") }
   let!(:setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
 
   before { BookingSource.seed_defaults! }

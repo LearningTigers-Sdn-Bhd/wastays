@@ -17,6 +17,49 @@ RSpec.describe EInvoiceSubmission, type: :model do
     end
   end
 
+  describe "#cancellable?" do
+    let(:hotel) { create(:hotel) }
+    let(:booking) { create(:booking, hotel: hotel) }
+    let(:original) do
+      create(:e_invoice_submission, hotel: hotel, booking: booking,
+        status: "valid", validated_at: 1.hour.ago, internal_id: "INV-001", uuid: "LHDN-UUID-1")
+    end
+
+    it "is cancellable when nothing references it" do
+      expect(original.cancellable?).to be(true)
+    end
+
+    # A blank uuid means there is nothing at LHDN to cancel - offering the
+    # button anyway calls MyInvois::Client#cancel_document with an empty
+    # UUID in the URL, which LHDN answers with a 404 rather than something
+    # actionable.
+    it "is not cancellable without a uuid" do
+      original.update_columns(uuid: nil)
+
+      expect(original.cancellable?).to be(false)
+    end
+
+    # Confirmed live against LHDN preprod: cancelling a document another
+    # active document refers to is rejected with a 400
+    # ("The document cannot be cancelled or requested for rejection").
+    it "is not cancellable while an active credit or debit note references it" do
+      create(:e_invoice_submission, hotel: hotel, booking: booking,
+        status: "valid", document_type: "02", original_invoice_internal_id: "INV-001")
+
+      expect(original.reload.cancellable?).to be(false)
+      expect(original.referenced_by_active_adjustment?).to be(true)
+      expect(original.cancellation_window_closed?).to be(false)
+    end
+
+    it "is cancellable again once the referencing adjustment is cancelled" do
+      adjustment = create(:e_invoice_submission, hotel: hotel, booking: booking,
+        status: "valid", document_type: "02", original_invoice_internal_id: "INV-001")
+      adjustment.update!(status: "cancelled")
+
+      expect(original.reload.cancellable?).to be(true)
+    end
+  end
+
   describe "#validation_url" do
     let(:hotel) { create(:hotel) }
     let(:booking) { create(:booking, hotel: hotel) }

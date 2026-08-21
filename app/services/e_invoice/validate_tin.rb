@@ -69,14 +69,17 @@ module EInvoice
       ID_TYPES.fetch(@document_type.to_s.downcase, DEFAULT_ID_TYPE)
     end
 
+    # LHDN's real preprod answer to this endpoint is a 200 with an empty body
+    # for a match, and a 404 (already turned into invalid_result above) for a
+    # mismatch - there is no "status" field on a genuine response. Reaching
+    # here at all means the client didn't raise, i.e. LHDN said yes. An
+    # explicit "invalid" status is kept as a fallback in case a future or
+    # differently-configured endpoint ever sends one.
     def interpret(response)
-      return unknown("LHDN did not answer clearly. It will be checked again when the e-invoice is filed.") if response.blank?
+      status = response.is_a?(Hash) ? response["status"].to_s.downcase : ""
+      return invalid_result if status == "invalid"
 
-      status = response["status"].to_s.downcase
-      return Result.new(status: :valid, message: "Tax number matches this #{id_type_label}.") if status == "valid"
-      return invalid_result if status.present?
-
-      unknown("LHDN did not answer clearly. It will be checked again when the e-invoice is filed.")
+      Result.new(status: :valid, message: "Tax number matches this #{id_type_label}.")
     end
 
     def invalid_result

@@ -28,7 +28,12 @@ module EInvoice
       Context.new(
         booking: submission.booking,
         hotel: submission.hotel,
-        setting: submission.hotel.e_invoice_setting,
+        # A payout self-billed document is WAStays self-billing the hotel, so
+        # WAStays - not the hotel - must be the authenticated party (confirmed
+        # live: LHDN rejects a self-billed submission unless the buyer, i.e.
+        # the self-biller, is who authenticated). `setting: nil` routes
+        # MyInvois::Client to WAStays' own credentials instead of the hotel's.
+        setting: submission.document_scenario == "payout_self_billed_invoice" ? nil : submission.hotel.e_invoice_setting,
         fund_collector: submission.fund_collector,
         submission_mode: submission.submission_mode,
         supplier_name: submission.supplier_name,
@@ -89,7 +94,12 @@ module EInvoice
       Context.new(
         booking: @booking,
         hotel: @hotel,
-        setting: @setting,
+        # WAStays self-bills the hotel here, so WAStays must authenticate as
+        # itself, not as the hotel - see the comment on .for_submission.
+        # `setting: nil` sends MyInvois::Client down its own-credentials path
+        # (Rails.application.credentials.myinvois), which is exactly what it
+        # already exists for.
+        setting: nil,
         fund_collector: "wastays",
         submission_mode: "taxpayer",
         supplier_name: @setting.supplier_name,

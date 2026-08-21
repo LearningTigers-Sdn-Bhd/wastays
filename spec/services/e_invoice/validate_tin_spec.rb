@@ -45,10 +45,13 @@ RSpec.describe EInvoice::ValidateTin do
     expect(result.message).to include("filed")
   end
 
-  it "stays out of the way when LHDN answers with nothing useful" do
+  # Confirmed against LHDN preprod: a match is a 200 with an empty body, not a
+  # JSON payload with a status field. Reaching here at all means LHDN did not
+  # reject the pairing.
+  it "treats an empty response as a match, since that is what LHDN sends for one" do
     allow(client).to receive(:validate_tin).and_return({})
 
-    expect(validate).to be_unknown
+    expect(validate).to be_valid
   end
 
   it "sends the identity type LHDN expects for a passport" do

@@ -16,6 +16,34 @@ module EInvoice
   #
   # This exists so that the day LHDN mandates 1.1, the change is a setting per
   # hotel rather than a rewrite of every builder.
+  #
+  # KNOWN BROKEN as of 2026-08-20 - do not enable signature_enabled for a real
+  # hotel yet. Tested live against LHDN preprod with a real self-signed cert:
+  # the submission is accepted, but async validation rejects it at
+  # Step08-Document Signature Validator with DS300 "Failed to parse input
+  # document". The signing UI has been removed from the hotel settings form
+  # for this reason (see _e_invoice_section.html.erb) - unsigned 1.0 filing is
+  # unaffected and is what LHDN accepts today regardless.
+  #
+  # Compared against LHDN's own spec
+  # (https://sdk.myinvois.hasil.gov.my/signature-creation-json/), this class
+  # is missing/wrong in at least these ways:
+  #   1. `apply` never builds a `SignedProperties` block at all (SigningTime,
+  #      SigningCertificate/CertDigest, IssuerSerial) - the spec requires it
+  #      nested under Signature.Object[0].QualifyingProperties[0].
+  #   2. `signed_properties_digest` hashes the document digest string a
+  #      second time; the spec instead hashes the minified
+  #      `{"Target": "signature", "SignedProperties": [...]}` wrapper built
+  #      in point 1.
+  #   3. `signature_value` signs the raw document digest; the spec signs the
+  #      minified `SignedInfo` structure, which itself carries both digests
+  #      as two References.
+  #   4. The `Reference` entries below use `Id`/`URI` keys; the spec uses
+  #      `Type`/`URI`, with the SignedProperties reference needing
+  #      `Type: "http://uri.etsi.org/01903/v1.3.2#SignedProperties"`.
+  # Fixing this means rewriting `apply` and most of the private methods below
+  # against that spec, then re-verifying live the same way - a signature that
+  # merely "parses" is not proof it's cryptographically correct.
   class DocumentSigner
     class ConfigurationError < StandardError; end
 

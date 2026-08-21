@@ -8,4 +8,4 @@
   else [ :neutral, submission.status_label ]
   end
 %>
-<%= render PanelsUI::Badge.new(variant: variant, size: :sm) do %><%= label %><% end %>
+<%= render PanelsUI::Badge.new(variant: variant, shape: :rounded, size: :sm) do %><%= label %><% end %>

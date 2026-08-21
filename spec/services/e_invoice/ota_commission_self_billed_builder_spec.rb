@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe EInvoice::OtaCommissionSelfBilledBuilder do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, tin: "C9988776655", ssm_number: "202399887766") }
   let!(:setting) do
-    create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+    create(:e_invoice_setting, hotel: hotel)
   end
   let(:source) { BookingSource.find_by_source("agoda") }
   let(:period_start) { Date.new(2026, 7, 1) }

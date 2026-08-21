@@ -10,7 +10,11 @@ module EInvoice
     INVOICE_TYPE_CODE        = "01"
     ACCOMMODATION_CLASS_CODE = "022"
     WASTAYS_MSIC_CODE        = "63120"
-    GENERAL_CONSUMER_TIN     = "EI00000000010"
+    # LHDN's general-public placeholder (010) is confirmed, by LHDN's own
+    # validator (ERR228 "General TIN (010) is not allowed for NON-consolidated
+    # e-invoice"), to be usable only on consolidated e-invoices. This builder
+    # never builds a consolidated document, so it must never fall back to it.
+    FOREIGN_BUYER_TIN        = "EI00000000020"
     DEFAULT_CURRENCY         = "MYR"
     ORIGIN_COUNTRY_CODE      = "MYS"
     COUNTRY_LIST_ID          = "ISO3166-1"
@@ -31,7 +35,6 @@ module EInvoice
       @booking = booking
       @hotel = booking.hotel
       @rooms = booking.booking_rooms.includes(:room_type)
-      @creds = Rails.application.credentials.myinvois.to_h
       @context = context
       @setting = booking.hotel&.e_invoice_setting
       validate_required_data!
@@ -341,10 +344,18 @@ module EInvoice
       ) || raise(ArgumentError, "Booking needs a buyer state before it can be filed with LHDN")
     end
 
-    # A buyer who supplies their own TIN can claim the invoice; everyone else
-    # is filed under LHDN's general public TIN, which is what it is for.
+    # A buyer who supplies their own TIN can claim the invoice. A foreign
+    # guest without one is filed under LHDN's foreign-buyer placeholder. A
+    # local guest without one has no valid placeholder at all - the request
+    # should already have been blocked upstream by
+    # Booking#e_invoice_buyer_details_missing, so reaching this case means
+    # something let a booking through it shouldn't have.
     def buyer_tin
-      @booking.buyer_tin_for_e_invoice.presence || GENERAL_CONSUMER_TIN
+      tin = @booking.buyer_tin_for_e_invoice.presence
+      return tin if tin
+      return FOREIGN_BUYER_TIN if @booking.foreign_guest?
+
+      raise ArgumentError, "This guest has no tax number on file. LHDN's general public TIN cannot be used on an individual (non-consolidated) e-invoice."
     end
 
     def buyer_postal_code
@@ -368,7 +379,6 @@ module EInvoice
     def validate_required_data!
       raise ArgumentError, "Booking must have an associated hotel" unless @hotel
       raise ArgumentError, "Booking has no rooms" if @rooms.blank?
-      raise ArgumentError, "MyInvois credentials not configured" if @creds.blank?
     end
 
     def zero_allowance_charge

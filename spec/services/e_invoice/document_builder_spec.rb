@@ -2,9 +2,9 @@ require "rails_helper"
 
 RSpec.describe EInvoice::DocumentBuilder, type: :service do
   describe "#build" do
-    let(:hotel) { create(:hotel, default_currency: "MYR") }
+    let(:hotel) { create(:hotel, default_currency: "MYR", tin: "C9988776655", ssm_number: "202399887766") }
     let!(:e_invoice_setting) do
-      create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655", hotel_brn: "202399887766")
+      create(:e_invoice_setting, hotel: hotel)
     end
     let(:booking) do
       create(:booking,
@@ -14,6 +14,7 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
         guest_email: "john@example.com",
         guest_phone: "+60123456789",
         guest_city: "Kuala Lumpur",
+        guest_tin: "IG12345678901",
         guest_document_type: "passport",
         check_in: 2.days.ago,
         check_out: Date.today,
@@ -95,7 +96,7 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
       city = buyer.dig("PostalAddress", 0, "CityName", 0, "_")
       state_code = buyer.dig("PostalAddress", 0, "CountrySubentityCode", 0, "_")
 
-      expect(buyer_ids.first.dig("ID", 0, "_")).to eq("EI00000000010")
+      expect(buyer_ids.first.dig("ID", 0, "_")).to eq("IG12345678901")
       expect(buyer_ids.second.dig("ID", 0, "schemeID")).to eq("PASSPORT")
       expect(buyer_ids.second.dig("ID", 0, "_")).to eq("A12345678")
       expect(city).to eq("Kuala Lumpur")
@@ -135,6 +136,7 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
           guest_email: "john@example.com",
           guest_phone: "+60123456789",
           guest_city: "Kuala Lumpur",
+          guest_tin: "IG12345678901",
           guest_document_type: "passport",
           check_in: 2.days.ago,
           check_out: Date.today,
@@ -175,15 +177,17 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
       end
     end
 
-    context "when MyInvois credentials are blank" do
-      before do
-        allow(Rails.application.credentials).to receive(:myinvois).and_return(double(to_h: {}))
-      end
-
+    # The hotel files under its own LHDN registration, so a document without a
+    # setting to draw the supplier's identity from cannot be built - there is
+    # no separate global credential to fall back to.
+    context "when the hotel has no e-invoice setting" do
       it "raises an argument error" do
+        unconfigured_hotel = create(:hotel, default_currency: "MYR")
+        unconfigured_booking = create(:booking, hotel: unconfigured_hotel, booking_quote: nil, total_amount: 100.0)
+        create(:booking_room, booking: unconfigured_booking, subtotal: 100.0)
         context = EInvoice::SubmissionContext::Context.new(
-          booking: booking,
-          hotel: hotel,
+          booking: unconfigured_booking,
+          hotel: unconfigured_hotel,
           setting: nil,
           fund_collector: "wastays",
           submission_mode: "taxpayer",
@@ -192,8 +196,8 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
           represented_taxpayer_tin: nil
         )
 
-        expect { described_class.new(booking, context: context).build }
-          .to raise_error(ArgumentError, "MyInvois credentials not configured")
+        expect { described_class.new(unconfigured_booking, context: context).build }
+          .to raise_error(ArgumentError, "Hotel e-invoice setting is missing.")
       end
     end
   end

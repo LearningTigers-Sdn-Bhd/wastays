@@ -3,10 +3,9 @@
 require "rails_helper"
 
 RSpec.describe EInvoice::MonthlyOtaCommissionJob, type: :job do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, tin: "C9988776655", ssm_number: "202399887766") }
   let!(:setting) do
-    create(:e_invoice_setting, hotel: hotel, enabled: true,
-      hotel_tin: "C9988776655", hotel_brn: "202399887766")
+    create(:e_invoice_setting, hotel: hotel, enabled: true)
   end
   let(:last_month) { Date.current.prev_month.beginning_of_month }
   let(:run_date) { Date.current.beginning_of_month }

@@ -87,8 +87,11 @@ module MyInvois
       { "uuid" => uuid, "status" => "Cancelled" }
     end
 
+    # Confirmed against LHDN preprod: a match answers 200 with an empty body,
+    # not a JSON payload with a status field. A mismatch is a 404, which is
+    # raised as ApiError elsewhere, not returned from here.
     def validate_tin(tin, id_type:, id_value:)
-      { "tin" => tin, "status" => "Valid" }
+      {}
     end
 
     private

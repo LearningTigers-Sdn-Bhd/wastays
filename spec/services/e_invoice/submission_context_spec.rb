@@ -3,13 +3,13 @@
 require "rails_helper"
 
 RSpec.describe EInvoice::SubmissionContext do
-  let(:hotel) { create(:hotel) }
+  let(:hotel) { create(:hotel, tin: "C9988776655", ssm_number: "202399887766") }
   let(:booking) { create(:booking, hotel: hotel, payment_status: "captured") }
 
   # WAStays is under the RM1m threshold and files nothing as its own supplier.
   # Each hotel files under its own LHDN registration.
   context "when the hotel is set up to file" do
-    let!(:setting) { create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655") }
+    let!(:setting) { create(:e_invoice_setting, hotel: hotel) }
 
     it "files as the hotel, in taxpayer mode" do
       context = described_class.for(booking)
@@ -52,7 +52,7 @@ RSpec.describe EInvoice::SubmissionContext do
 
   # Kept for when WAStays crosses the threshold and registers.
   context "when filing on the hotel's behalf as an intermediary" do
-    let!(:setting) { create(:e_invoice_setting, :intermediary_ready, hotel: hotel, hotel_tin: "C9988776655") }
+    let!(:setting) { create(:e_invoice_setting, :intermediary_ready, hotel: hotel) }
 
     it "names the hotel as the represented taxpayer" do
       context = described_class.for(booking, document_scenario: "hotel_intermediary_guest_invoice")

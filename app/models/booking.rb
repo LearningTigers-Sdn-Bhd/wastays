@@ -130,7 +130,11 @@ class Booking < ApplicationRecord
     e_invoice_requestable?
   end
 
-  # LHDN needs a resolvable state on the buyer address. Better to say so while
+  # LHDN needs a resolvable state on the buyer address, and - confirmed
+  # against LHDN's own validator (ERR228, "General TIN (010) is not allowed
+  # for NON-consolidated e-invoice") - a local guest needs an actual tax
+  # number, since there is no general-public placeholder for an individual
+  # e-invoice the way there is for a consolidated one. Better to say so while
   # the guest is still here to fix it than to accept the request and fail at
   # submission days later.
   def e_invoice_buyer_details_missing
@@ -139,7 +143,16 @@ class Booking < ApplicationRecord
     if EInvoice::MalaysiaStates.resolve(state_code: guest_state_code, city: guest_city, country_code: nil).blank?
       missing << "state"
     end
+    missing << "tax number" if buyer_tin_for_e_invoice.blank? && !foreign_guest?
     missing
+  end
+
+  def foreign_guest?
+    country = guest_country.presence || hotel.country
+    return false if country.blank?
+
+    found = ISO3166::Country.find_country_by_any_name(country)
+    found.present? && found.alpha3 != "MYS"
   end
 
   def e_invoice_buyer_details_ready?

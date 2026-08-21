@@ -1,6 +1,8 @@
 FactoryBot.define do
   factory :e_invoice_setting do
-    association :hotel
+    # TIN and BRN are the hotel's own identity, not the setting's - the setting
+    # reads them through from the hotel record.
+    association :hotel, tin: "C1234567890", ssm_number: "202301012345"
     enabled { true }
     intermediary_enabled { false }
     # The hotel files under its own LHDN registration, so a usable setting
@@ -8,8 +10,6 @@ FactoryBot.define do
     api_environment { "mock" }
     client_id { "hotel-client-id" }
     client_secret { "hotel-client-secret" }
-    hotel_tin { "C1234567890" }
-    hotel_brn { "202301012345" }
     supplier_msic_code { "55101" }
     supplier_business_description { "Hotel accommodation services" }
     supplier_address_line1 { "1 Jalan Hotel" }

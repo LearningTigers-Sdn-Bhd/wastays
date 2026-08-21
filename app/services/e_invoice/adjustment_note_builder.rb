@@ -10,7 +10,11 @@ module EInvoice
     DEBIT_NOTE_TYPE_CODE     = "03"
     CREDIT_NOTE_TYPE_CODE    = "02"
     ACCOMMODATION_CLASS_CODE = "022"
-    GENERAL_CONSUMER_TIN     = "EI00000000010"
+    # LHDN's general-public placeholder (010) is confirmed, by LHDN's own
+    # validator, to be usable only on consolidated e-invoices. An adjustment
+    # note is never consolidated, so it must never fall back to it - see
+    # DocumentBuilder for the same fix and the confirming ERR228 rejection.
+    FOREIGN_BUYER_TIN        = "EI00000000020"
     DEFAULT_CURRENCY         = "MYR"
     ORIGIN_COUNTRY_CODE      = "MYS"
     COUNTRY_LIST_ID          = "ISO3166-1"
@@ -33,7 +37,6 @@ module EInvoice
       @original_submission = original_submission
       @adjustment_amount = adjustment_amount.to_d.abs
       @document_type = document_type
-      @creds = Rails.application.credentials.myinvois.to_h
       @context = EInvoice::SubmissionContext.for(booking)
       @setting = booking.hotel&.e_invoice_setting
       validate_required_data!
@@ -178,7 +181,7 @@ module EInvoice
       {
         "PartyIdentification" => [
           { "ID" => [ { "_" => buyer_tin, "schemeID" => "TIN" } ] },
-          { "ID" => [ { "_" => "NA", "schemeID" => "BRN" } ] }
+          { "ID" => [ buyer_identifier ] }
         ],
         "PostalAddress" => [ {
           "CityName" => [ { "_" => buyer_city } ],
@@ -274,9 +277,27 @@ module EInvoice
     end
 
     # An adjustment note must carry the same buyer identity as the invoice it
-    # references, or LHDN cannot match the two.
+    # references, or LHDN cannot match the two (confirmed live: DR308 "Buyer
+    # of document ... is not the same as referenced document").
     def buyer_tin
-      @booking.buyer_tin_for_e_invoice.presence || GENERAL_CONSUMER_TIN
+      tin = @booking.buyer_tin_for_e_invoice.presence
+      return tin if tin
+      return FOREIGN_BUYER_TIN if @booking.foreign_guest?
+
+      raise ArgumentError, "This guest has no tax number on file. LHDN's general public TIN cannot be used on an individual (non-consolidated) e-invoice."
+    end
+
+    def buyer_identifier
+      value = @booking.guest_government_id.to_s.gsub(/[^A-Za-z0-9]/, "").presence || "NA"
+      { "_" => value, "schemeID" => buyer_identifier_scheme }
+    end
+
+    def buyer_identifier_scheme
+      case @booking.guest_document_type.to_s
+      when "ic" then "NRIC"
+      when "passport" then "PASSPORT"
+      else "BRN"
+      end
     end
 
     def buyer_postal_code

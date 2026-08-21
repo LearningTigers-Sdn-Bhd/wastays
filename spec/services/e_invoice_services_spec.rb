@@ -8,7 +8,7 @@ RSpec.describe "E-Invoice & MyInvois Services" do
     describe ".call" do
       # LHDN stamps validated_at when it validates, and the 72-hour
       # cancellation window runs from there.
-      let(:submission) { create(:e_invoice_submission, status: "valid", validated_at: 1.hour.ago) }
+      let(:submission) { create(:e_invoice_submission, status: "valid", validated_at: 1.hour.ago, uuid: "LHDN-UUID-1") }
 
       before do
         allow(MyInvois::ClientFactory).to receive(:build).and_return(
@@ -47,9 +47,9 @@ RSpec.describe "E-Invoice & MyInvois Services" do
   # EInvoice::SubmissionContext
   describe EInvoice::SubmissionContext do
     describe ".for" do
-      let(:hotel) { create(:hotel, status: "live") }
+      let(:hotel) { create(:hotel, status: "live", tin: "C9988776655", ssm_number: "202399887766") }
       # The hotel files under its own registration, so it needs a setting.
-      let!(:setting) { create(:e_invoice_setting, hotel: hotel, hotel_tin: "C9988776655") }
+      let!(:setting) { create(:e_invoice_setting, hotel: hotel) }
       let(:booking) { create(:booking, hotel: hotel, fund_collector: "wastays") }
 
       before do

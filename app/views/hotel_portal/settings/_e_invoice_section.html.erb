@@ -39,36 +39,30 @@
               variant: :card,
               label: "Enable e-invoicing",
               description: "Turn this on before your team sends the first record to LHDN.") %>
-
-        <%= render PanelsUI::Switch.new(
-              form: f,
-              attribute: :signature_enabled,
-              variant: :card,
-              label: "Sign documents digitally",
-              description: "Leave off to file version 1.0, which LHDN accepts today. Turn on once this hotel has its signing certificate, or when LHDN makes 1.1 mandatory.",
-              data: {
-                e_invoice_settings_target: "signatureToggle",
-                action: "change->e-invoice-settings#toggleSigningFields"
-              }) %>
       </div>
 
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" data-e-invoice-settings-target="signingFields" hidden>
-        <%= render PanelsUI::FormField.new(
-              form: f,
-              attribute: :signing_certificate,
-              label: "Signing certificate (PEM)",
-              hint: "The hotel's LHDN-issued certificate.") do |field| %>
-          <% field.with_text_area(rows: 4, autocomplete: "off") %>
-        <% end %>
+      <%#
+        Digital signing (document version 1.1) is deliberately hidden from this
+        form for now - it does not work yet. Confirmed live against LHDN
+        preprod on 2026-08-20: a signed submission is rejected at the
+        signature-parsing step (Step08-Document Signature Validator, DS300
+        "Failed to parse input document"). The cause is understood - see the
+        comments in EInvoice::DocumentSigner and
+        https://sdk.myinvois.hasil.gov.my/signature-creation-json/ - it needs
+        a near-full rewrite of that class (the SignedProperties block is
+        missing entirely, and both digests plus the final signature are
+        computed over the wrong bytes), which is cryptographically sensitive
+        enough to deserve its own careful pass rather than a quick patch.
 
-        <%= render PanelsUI::FormField.new(
-              form: f,
-              attribute: :signing_private_key,
-              label: "Signing private key (PEM)",
-              hint: @e_invoice_setting.signing_private_key.present? ? "Saved. Leave blank to keep the current key." : "Stored encrypted.") do |field| %>
-          <% field.with_text_area(rows: 4, value: nil, autocomplete: "off") %>
-        <% end %>
-      </div>
+        `signature_enabled`, `signing_certificate` and `signing_private_key`
+        still exist on EInvoiceSetting and DocumentSigner still branches on
+        them - nothing there was removed, only this form's ability to turn
+        signing on. Unsigned version 1.0 documents are unaffected and are
+        what LHDN accepts today regardless. Once DocumentSigner is fixed and
+        re-verified live, restore the "Sign documents digitally" Switch (see
+        git history for this file around 2026-08-20 for the removed markup)
+        and its two signing_certificate / signing_private_key FormFields.
+      %>
 
       <%= render PanelsUI::FormField.new(
             form: f,
@@ -76,8 +70,37 @@
             label: "LHDN environment",
             hint: "Use sandbox until the connection is proven, then switch to production.") do |field| %>
         <% field.with_native_select(
-             EInvoiceSetting::API_ENVIRONMENTS.map { |value| [ value.titleize, value ] }) %>
+             EInvoiceSetting::API_ENVIRONMENTS.map { |value| [ value.titleize, value ] },
+             data: {
+               e_invoice_settings_target: "environmentSelect",
+               action: "change->e-invoice-settings#toggleProductionWarning"
+             }) %>
       <% end %>
+
+      <%#
+        Shown only when "production" is selected - switching here means every
+        submission from this point on files a real e-invoice with LHDN, not a
+        sandbox one. The checkbox is enforced server-side in
+        HotelPortal::EInvoiceSettingsForm#save regardless of whether this JS
+        ran, so it can't be bypassed by skipping the UI.
+      %>
+      <div
+        class="lg:col-span-2 rounded-lg border border-amber-300 bg-amber-50 p-4"
+        data-e-invoice-settings-target="productionWarning"
+        hidden>
+        <p class="text-sm font-medium text-amber-900">This switches the hotel to production</p>
+        <p class="mt-1 text-sm text-amber-800">
+          Every e-invoice this hotel submits from now on goes to the real LHDN tax authority, not the sandbox.
+          Confirm this hotel's credentials and details have already been proven working in sandbox.
+        </p>
+        <label class="mt-3 flex items-start gap-2 text-sm font-medium text-amber-900">
+          <%= check_box_tag "e_invoice_setting[confirm_production]", "1", false,
+                id: "e_invoice_setting_confirm_production",
+                class: "mt-0.5",
+                data: { e_invoice_settings_target: "confirmProductionCheckbox" } %>
+          I understand this hotel will file real e-invoices with LHDN.
+        </label>
+      </div>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <%= render PanelsUI::FormField.new(
@@ -97,17 +120,44 @@
         <% end %>
       </div>
 
-      <%= render PanelsUI::FormField.new(form: f, attribute: :hotel_tin, label: "Hotel TIN", hint: "Tax identification number issued by LHDN.") do |field| %>
-        <% field.with_input(autocomplete: "off") %>
-      <% end %>
+      <div class="rounded-lg border border-gray-200 p-4 text-sm text-gray-600" data-controller="tin-validation" data-tin-validation-url-value="<%= hotel_validate_tin_path(@e_invoice_setting.hotel) %>">
+        <p class="font-medium text-gray-900">Hotel TIN, BRN and SST registration number</p>
+        <p class="mt-1">
+          These are filed exactly as entered on the hotel's own
+          <%= link_to "profile", edit_hotel_profile_path(@e_invoice_setting.hotel), class: "text-primary-600 underline" %>
+          (TIN, BRN) and
+          <%= link_to "taxes & fees", hotel_taxes_fees_path(@e_invoice_setting.hotel), class: "text-primary-600 underline" %>
+          (SST) settings, so there is one number on file, not two that can disagree.
+        </p>
+        <dl class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div>
+            <dt class="text-gray-500">TIN</dt>
+            <dd class="font-mono text-gray-900"><%= @e_invoice_setting.hotel_tin.presence || "Not set" %></dd>
+          </div>
+          <div>
+            <dt class="text-gray-500">BRN</dt>
+            <dd class="font-mono text-gray-900"><%= @e_invoice_setting.hotel_brn.presence || "Not set" %></dd>
+          </div>
+          <div>
+            <dt class="text-gray-500">SST registration number</dt>
+            <dd class="font-mono text-gray-900"><%= @e_invoice_setting.supplier_sst_registration_number.presence || "Not registered" %></dd>
+          </div>
+        </dl>
 
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <%= render PanelsUI::FormField.new(form: f, attribute: :hotel_brn, label: "Business registration number") do |field| %>
-          <% field.with_input(autocomplete: "off") %>
-        <% end %>
+        <%# Hidden inputs feed the shared tin-validation Stimulus controller (also used on the guest form) the values it needs; the button below fires it on demand instead of on blur. %>
+        <input type="hidden" data-tin-validation-target="tin" value="<%= @e_invoice_setting.hotel_tin %>">
+        <input type="hidden" data-tin-validation-target="idValue" value="<%= @e_invoice_setting.hotel_brn %>">
+        <input type="hidden" data-tin-validation-target="documentType" value="brn">
 
-        <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_sst_registration_number, label: "SST registration number", hint: "Leave blank if not SST registered.") do |field| %>
-          <% field.with_input(autocomplete: "off") %>
+        <% if @e_invoice_setting.api_credentials_ready? && @e_invoice_setting.hotel_tin.present? && @e_invoice_setting.hotel_brn.present? %>
+          <button type="button"
+                  class="mt-3 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                  data-action="click->tin-validation#forceCheck">
+            Test connection
+          </button>
+          <p data-tin-validation-target="feedback" class="mt-2 text-xs text-muted-foreground" hidden></p>
+        <% else %>
+          <p class="mt-3 text-xs text-gray-500">Save a client ID, client secret, TIN and BRN first to test the connection.</p>
         <% end %>
       </div>
 
@@ -145,13 +195,23 @@
           <% field.with_input(inputmode: "numeric", autocomplete: "postal-code") %>
         <% end %>
 
-        <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_state_code, label: "State code", hint: "e.g. 12 for Sabah.") do |field| %>
-          <% field.with_input(autocomplete: "off") %>
+        <%# A free-text field here let a typo through to a real LHDN submission -
+            this is now the same code list EInvoice::MalaysiaStates validates
+            against, so an invalid state simply cannot be selected. %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_state_code, label: "State") do |field| %>
+          <% field.with_native_select(EInvoice::MalaysiaStates.options, include_blank: "Select a state") %>
         <% end %>
 
-        <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_country_code, label: "Country code", hint: "e.g. MYS.") do |field| %>
-          <% field.with_input(autocomplete: "country") %>
-        <% end %>
+        <%# Every hotel on this platform is a Malaysian entity (see
+            EInvoiceSetting::COUNTRY_CODE_MAP), so this is shown rather than
+            typed - EInvoiceSetting#supplier_country_code_value already
+            resolves it, and supplier_country_code is no longer a permitted
+            form param (see EInvoiceSettingsForm). If WAStays ever operates
+            in another country, make this editable again then. %>
+        <div>
+          <p class="text-xs font-medium text-muted-foreground">Country code</p>
+          <p class="mt-1 font-mono text-sm text-foreground"><%= @e_invoice_setting.supplier_country_code_value %></p>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

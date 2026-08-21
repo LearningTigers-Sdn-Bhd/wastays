@@ -26,6 +26,23 @@ class EInvoiceSetting < ApplicationRecord
   validates :hotel_brn, length: { maximum: 20 }, allow_blank: true
   validates :supplier_contact_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
 
+  # The hotel's TIN, BRN and SST registration number are the hotel's own
+  # identity, entered once on its profile/tax settings and used everywhere the
+  # hotel is named on a document - not just this one. Reading through to
+  # `hotel` instead of storing a copy here is what stops the e-invoice value
+  # and the hotel's own record from silently disagreeing.
+  def hotel_tin
+    hotel&.tin
+  end
+
+  def hotel_brn
+    hotel&.ssm_number
+  end
+
+  def supplier_sst_registration_number
+    hotel&.sst_registration_number
+  end
+
   with_options if: :intermediary_enabled? do
     validates :hotel_tin, :hotel_brn, :supplier_msic_code, :supplier_business_description,
       :supplier_address_line1, :supplier_city, :supplier_postal_code, :supplier_state_code,

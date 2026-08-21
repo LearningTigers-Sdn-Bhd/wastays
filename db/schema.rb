@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_015731) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -894,9 +894,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_180000) do
     t.datetime "created_at", null: false
     t.datetime "effective_from"
     t.boolean "enabled", default: false, null: false
-    t.string "hotel_brn"
     t.bigint "hotel_id", null: false
-    t.string "hotel_tin"
     t.boolean "intermediary_enabled", default: false, null: false
     t.boolean "signature_enabled", default: false, null: false
     t.text "signing_certificate"
@@ -910,7 +908,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_180000) do
     t.string "supplier_country_code"
     t.string "supplier_msic_code"
     t.string "supplier_postal_code"
-    t.string "supplier_sst_registration_number"
     t.string "supplier_state_code"
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_e_invoice_settings_on_hotel_id", unique: true

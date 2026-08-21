@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account) }
-  let(:hotel) { create(:hotel, account: account, status: "live") }
+  let(:hotel) { create(:hotel, account: account, status: "live", tin: "C1234567890", ssm_number: "202301012345") }
   let(:room_type) { create(:room_type, hotel: hotel, name: "Standard") }
   # Default booking uses amount >= RM10,000 to pass the low-value policy check
   let(:booking) do
@@ -59,7 +59,24 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("E-Invoice")
       expect(response.body).to include("Open E-Invoice Settings")
+    end
+
+    # A fully-configured hotel doesn't need to be told so every time it opens
+    # this page - "Configuration health" is only worth a section when there's
+    # something to act on.
+    it "does not show a configuration health section once everything is ready" do
+      get hotel_e_invoice_submissions_path(hotel)
+
+      expect(response.body).not_to include("Configuration health")
+    end
+
+    it "shows a configuration health section when e-invoicing is off" do
+      hotel.e_invoice_setting.update!(enabled: false)
+
+      get hotel_e_invoice_submissions_path(hotel)
+
       expect(response.body).to include("Configuration health")
+      expect(response.body).to include("E-Invoice is turned off")
     end
   end
 

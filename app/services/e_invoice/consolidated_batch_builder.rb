@@ -9,7 +9,11 @@ module EInvoice
     include PhoneFormatter
 
     INVOICE_TYPE_CODE        = "01"
-    ACCOMMODATION_CLASS_CODE = "022"
+    # Confirmed live (ERR236, CV317): a consolidated e-invoice line must carry
+    # LHDN's "004 - Consolidated e-Invoice" classification, not the ordinary
+    # accommodation code - it's what makes the general-public TIN and the
+    # buyer's "not applicable" state code (17) valid on this document type.
+    CONSOLIDATED_CLASS_CODE  = "004"
     GENERAL_CONSUMER_TIN     = "EI00000000010"
     GENERAL_CONSUMER_NAME    = "General Public"
     DEFAULT_CURRENCY         = "MYR"
@@ -31,7 +35,6 @@ module EInvoice
 
     def initialize(hotel:, context: nil)
       @hotel = hotel
-      @creds = Rails.application.credentials.myinvois.to_h
       @context = context
       @setting = hotel.e_invoice_setting
       validate_required_data!
@@ -152,16 +155,20 @@ module EInvoice
           { "ID" => [ { "_" => GENERAL_CONSUMER_TIN, "schemeID" => "TIN" } ] },
           { "ID" => [ { "_" => NA_VALUE, "schemeID" => "BRN" } ] }
         ],
+        # LHDN's schema requires City/State/Country even for the general
+        # public buyer (confirmed live: CF337/CF340/CF343 reject a blank
+        # value) - it does not accept "no address" the way the AddressLine
+        # and contact fields below do with "NA".
         "PostalAddress" => [ {
-          "CityName" => [ { "_" => "" } ],
+          "CityName" => [ { "_" => NA_VALUE } ],
           "PostalZone" => [ { "_" => "" } ],
-          "CountrySubentityCode" => [ { "_" => "" } ],
+          "CountrySubentityCode" => [ { "_" => EInvoice::MalaysiaStates::NOT_APPLICABLE } ],
           "AddressLine" => [
             { "Line" => [ { "_" => NA_VALUE } ] },
             { "Line" => [ { "_" => "" } ] },
             { "Line" => [ { "_" => "" } ] }
           ],
-          "Country" => [ { "IdentificationCode" => [ { "_" => "", "listID" => COUNTRY_LIST_ID, "listAgencyID" => COUNTRY_LIST_AGENCY_ID } ] } ]
+          "Country" => [ { "IdentificationCode" => [ { "_" => ORIGIN_COUNTRY_CODE, "listID" => COUNTRY_LIST_ID, "listAgencyID" => COUNTRY_LIST_AGENCY_ID } ] } ]
         } ],
         "PartyLegalEntity" => [ { "RegistrationName" => [ { "_" => GENERAL_CONSUMER_NAME } ] } ],
         "Contact" => [ {
@@ -190,7 +197,7 @@ module EInvoice
           } ],
           "Item" => [ {
             "CommodityClassification" => [ {
-              "ItemClassificationCode" => [ { "_" => ACCOMMODATION_CLASS_CODE, "listID" => "CLASS" } ]
+              "ItemClassificationCode" => [ { "_" => CONSOLIDATED_CLASS_CODE, "listID" => "CLASS" } ]
             } ],
             "Description" => [ { "_" => "#{hotel_name} - #{ref} - #{amount.to_f}" } ],
             "OriginCountry" => [ { "IdentificationCode" => [ { "_" => ORIGIN_COUNTRY_CODE } ] } ]
@@ -250,7 +257,6 @@ module EInvoice
 
     def validate_required_data!
       raise ArgumentError, "Hotel is required" unless @hotel
-      raise ArgumentError, "MyInvois credentials not configured" if @creds.blank?
       return unless @context&.intermediary?
 
       raise ArgumentError, "Hotel e-invoice setting is missing" unless @setting
