@@ -30,7 +30,7 @@ module AiConcierge
         when :ask_guest_count
           ask_guest_count_message
         when :ask_adult_count
-          "How many adults will be staying?"
+          %(How many adults will be staying? Please reply with the number, e.g. "2 adults".)
         when :ask_party_split
           ask_party_split_message
         when :suggest_options
@@ -87,6 +87,20 @@ module AiConcierge
         "I can help you with your booking." if context[:opening_reply]
       end
 
+      # The example is the question's real content.
+      #
+      # Asked "how many guests", a guest who has never booked online answers
+      # "me and my wife" -- true, and not a number. Nothing downstream can turn
+      # that into a party size, so the answer is thrown away and the same
+      # question comes back, which is how a thread turns into a wall.
+      #
+      # Showing the shape of the answer is cheaper than reading every shape an
+      # answer might take. It also lands the guest on the one phrasing the
+      # message itself can be read for -- "2 adults" and "3 children" are
+      # matched straight out of the text by InputNormalizer, with no model
+      # judgement in between.
+      GUEST_COUNT_FORMAT = %(Please reply with the number of adults and children, e.g. "2 adults 3 children".)
+
       def ask_guest_count_message
         check_in = context[:check_in]
         suffix = if check_in.present?
@@ -96,7 +110,7 @@ module AiConcierge
         else
                    ""
         end
-        "How many guests should I check for#{suffix}?"
+        "How many guests should I check for#{suffix}? #{GUEST_COUNT_FORMAT}"
       end
 
       def ask_specific_timing_message

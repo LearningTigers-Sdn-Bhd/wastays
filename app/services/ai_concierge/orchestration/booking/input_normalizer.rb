@@ -539,15 +539,28 @@ module AiConcierge
     end
 
     # A party size is only believed when the turn actually carries one: the
-    # guest said it, or the hotel asked and this is the answer. Without this
-    # the model's "adults: 1" on a message about nights becomes a price nobody
-    # was asked to agree to.
+    # guest said it, or the model can quote the words they said it in. Without
+    # this the model's "adults: 1" on a message about nights becomes a price
+    # nobody was asked to agree to.
+    #
+    # Having been asked is not itself evidence. This used to return true for
+    # the whole of `guest_count` and `party_split` on the reasoning that the
+    # hotel had just asked, so the answer must be in there -- which holds right
+    # up until the guest answers "just a small one for the family". Then there
+    # is no number in the message, the model supplies one anyway, and the stay
+    # is priced for a party nobody ever stated. That is the one question where
+    # a wrong guess is money, and it was the one question the rule was off for.
+    #
+    # A guest who really did answer is not caught by this: "2 adults" and a
+    # bare "2" are read straight out of the message below, and an answer in any
+    # other language survives on the model's quote of it -- `party_quoted?`
+    # takes "dua dewasa" and "两位大人" without needing a word of English. What
+    # is left over is a model filling the slot from nothing, and the ladder
+    # asking again is the right answer to that.
     def party_evidence_in_message?
-      return true if explicit_people_total_in_message?
-      return true if explicit_adults_in_message?
-      return true if explicit_children_in_message?
-
-      %w[guest_count party_split].include?(pending_question)
+      explicit_people_total_in_message? ||
+        explicit_adults_in_message? ||
+        explicit_children_in_message?
     end
 
     def explicit_people_total_in_message?

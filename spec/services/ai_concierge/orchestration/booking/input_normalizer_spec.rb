@@ -366,15 +366,31 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
     expect(result).not_to have_key("adults")
   end
 
-  it "keeps a party size stated without a number when guest count was asked" do
+  it "keeps a party size stated without a number when the model quotes the words that state it" do
     result = described_class.new(
       message: "me and my wife",
+      slots: { "adults" => 2 },
+      pending_question: "guest_count",
+      conversation_signals: signals,
+      evidence: { "party" => "me and my wife" }
+    ).call
+
+    expect(result["adults"]).to eq(2)
+  end
+
+  # The same question, the same shape of message, and the model quoting
+  # nothing. Being asked used to be evidence in itself here -- the one rung
+  # where a number the message never contained was believed, and the one rung
+  # where believing it prices the stay wrong.
+  it "drops a party size at the guest count question when the model quotes nothing" do
+    result = described_class.new(
+      message: "just a small one for the family",
       slots: { "adults" => 2 },
       pending_question: "guest_count",
       conversation_signals: signals
     ).call
 
-    expect(result["adults"]).to eq(2)
+    expect(result).not_to have_key("adults")
   end
 
   it "does not filter correction turns" do

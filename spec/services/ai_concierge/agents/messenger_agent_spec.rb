@@ -151,7 +151,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       check_in: "2026-05-24"
     }).call
 
-    expect(result["reply_message"]).to eq("How many guests should I check for on May 24?")
+    expect(result["reply_message"]).to eq("How many guests should I check for on May 24? Please reply with the number of adults and children, e.g. \"2 adults 3 children\".")
   end
 
   it "renders the guest count message with a month label fallback" do
@@ -160,7 +160,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       branch: { "target_month" => 5, "target_year" => 2026 }
     }).call
 
-    expect(result["reply_message"]).to eq("How many guests should I check for in May 2026?")
+    expect(result["reply_message"]).to eq("How many guests should I check for in May 2026? Please reply with the number of adults and children, e.g. \"2 adults 3 children\".")
   end
 
   it "renders the specific timing clarification message" do
