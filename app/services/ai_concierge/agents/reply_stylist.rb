@@ -12,16 +12,31 @@ module AiConcierge
     # say it, which is the seam the tool-calling loop was deliberately built to
     # leave open: a model that authored the reply could author the price too.
     #
-    # It decides the language as part of the same call rather than through a
-    # detector of its own. It is already reading the guest's message to know
-    # what register to answer in, and a second round trip to learn the same
-    # thing is a second round trip.
+    # It reads which language the guest wrote in, and that is the only thing
+    # about language it is asked for. Which language the reply goes out in is
+    # worked out in Ruby from what the guest established, and handed down as an
+    # instruction -- a model given a resolved target answers in the right
+    # language far more often than one given a rule to evaluate mid-prompt, and
+    # a model asked to decide has told nobody anything that can be checked.
+    #
+    # The reading rides along on a call that is already reading the message to
+    # know what register to answer in, so it costs no round trip.
     class ReplyStylist
       class ReplyStylistError < StandardError; end
 
       LLM_TIMEOUT = 15
 
-      Styled = Struct.new(:text, :language, keyword_init: true)
+      # Zero, against a provider default of 1.0 that nothing here ever set.
+      # This rewrites a sentence that is already finished and already correct,
+      # so every degree of freedom is a chance to lose a fact or drift into
+      # another language, and none of them is a chance to do better.
+      TEMPERATURE = 0
+
+      # `language` is what the model says it wrote in. `guest_language` is what
+      # it read in the guest's message, and is nil when the message had no
+      # words to read -- "1", "yes", a room name. They are different claims and
+      # only one of them is about the guest, which is why they are separate.
+      Styled = Struct.new(:text, :language, :guest_language, keyword_init: true)
 
       # `basic` is absent on purpose: it means "do not run this at all", and it
       # is the default every hotel has until someone changes it.
@@ -68,7 +83,7 @@ module AiConcierge
 
       attr_reader :hotel, :template, :guest_message, :thread_language
 
-      def chat = Providers::RubyLlmClient.new(hotel: hotel).chat
+      def chat = Providers::RubyLlmClient.new(hotel: hotel).chat.with_temperature(TEMPERATURE)
 
       # Lenient about the wrapper, strict about the contents: models fence JSON
       # in markdown often enough that refusing it would fail turns over
@@ -82,9 +97,22 @@ module AiConcierge
         text = parsed["text"].to_s.strip
         raise ReplyStylistError, "Reply stylist returned an empty reply" if text.blank?
 
-        Styled.new(text: text, language: parsed["language"].to_s.strip.presence || thread_language)
+        Styled.new(
+          text: text,
+          language: parsed["language"].to_s.strip.presence || thread_language,
+          guest_language: language_code(parsed["guest_language"])
+        )
       rescue JSON::ParserError => e
         raise ReplyStylistError, "Reply stylist returned malformed JSON: #{e.message}"
+      end
+
+      # A message with nothing to read establishes nothing, and the thread's
+      # language stays where it was. Models write that absence three ways --
+      # the JSON null, the word, and the ISO code for "undetermined" -- and all
+      # three mean the same thing here.
+      def language_code(value)
+        code = value.to_s.strip.downcase
+        code if code.present? && !%w[null und].include?(code)
       end
 
       def prompt
@@ -100,9 +128,9 @@ module AiConcierge
           TONE: #{tone_instruction}
 
           LANGUAGE:
-          - Write in the language the guest wrote in.
-          - If their message is too short to tell -- a number, "yes", a room
-            name -- write in #{thread_language}.
+          - Write the reply in #{thread_language}.
+          - Unless the guest's message above is itself written in another
+            language. Then write the reply in that language instead.
 
           RULES:
           - Keep every number, price, time and currency exactly as written, in
@@ -115,7 +143,10 @@ module AiConcierge
           - Do not add, remove or soften any fact. Do not add a greeting or a
             sign-off that is not already there.
 
-          Reply with JSON only: {"language": "<ISO 639-1 code>", "text": "<the rewritten reply>"}
+          Reply with JSON only, with all three keys:
+          {"guest_language": "<ISO 639-1 code for the language the guest's message is written in, or null if it is only numbers, punctuation or a name>",
+           "language": "<ISO 639-1 code for the language you wrote the reply in>",
+           "text": "<the rewritten reply>"}
         PROMPT
       end
 

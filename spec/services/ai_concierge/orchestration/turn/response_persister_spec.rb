@@ -138,7 +138,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
     # guest, and the template says the same thing correctly.
     it "sends the template when the rewrite changed something the guest could act on" do
       allow_any_instance_of(AiConcierge::Agents::ReplyStylist).to receive(:call).and_return(
-        AiConcierge::Agents::ReplyStylist::Styled.new(text: "Book at https://elsewhere.test now!", language: "ms")
+        AiConcierge::Agents::ReplyStylist::Styled.new(text: "Book at https://elsewhere.test now!", language: "ms", guest_language: "ms")
       )
 
       payload = persist_with("boleh tempah?")
@@ -151,12 +151,38 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
     # particular rewrite came back usable.
     it "still remembers the language when the rewrite is rejected" do
       allow_any_instance_of(AiConcierge::Agents::ReplyStylist).to receive(:call).and_return(
-        AiConcierge::Agents::ReplyStylist::Styled.new(text: "Book at https://elsewhere.test now!", language: "ms")
+        AiConcierge::Agents::ReplyStylist::Styled.new(text: "Book at https://elsewhere.test now!", language: "ms", guest_language: "ms")
       )
 
       persist_with("boleh tempah?")
 
       expect(conversation.reload.language).to eq("ms")
+    end
+
+    # The live bug this pair was written for: an English thread that answered
+    # "yes" in Malay. The model reported a language it had not been given any
+    # reason to write in, the thread recorded that report as fact, and from
+    # then on every message too short to carry a language of its own was
+    # answered in Malay -- because the fallback the model was handed had become
+    # Malay, and nothing existed that could hand it back.
+    it "does not take the model's word for what language the thread is in" do
+      stub_concierge_stylist(text: "Berapa hari?", language: "ms", guest_language: nil)
+
+      payload = persist_with("do you have any rooms free?")
+
+      expect(conversation.reload.reply_language).to eq("en")
+      expect(payload[:reply_message]).to eq("How many days and nights will you be staying?")
+      expect(last_body).not_to eq("Berapa hari?")
+    end
+
+    it "follows the guest back to English once they write it" do
+      conversation.update!(language: "ms")
+      stub_concierge_stylist(text: "How many days and nights will you be staying?", language: "en", guest_language: "en")
+
+      payload = persist_with("actually, do you have any rooms free?")
+
+      expect(conversation.reload.language).to eq("en")
+      expect(payload[:reply_message]).to eq("How many days and nights will you be staying?")
     end
 
     it "sends the template when the stylist fails outright" do

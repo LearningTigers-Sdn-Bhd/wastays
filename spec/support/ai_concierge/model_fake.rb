@@ -33,13 +33,18 @@ module AiConciergeEval
     # Passing the template through is what a hotel on the default tone gets, so
     # this is the real behaviour rather than a convenience. A spec about the
     # stylist scripts it.
-    def stub_concierge_stylist(text: nil, language: nil, transform: nil)
+    # `guest_language` defaults to whatever `language` was asked for, so a stub
+    # that says "the model answered in Malay" also says why it was entitled to
+    # -- the guest wrote Malay. Naming them apart is how a spec scripts the
+    # model answering in a language the guest never used.
+    def stub_concierge_stylist(text: nil, language: nil, guest_language: :same_as_language, transform: nil)
       allow_any_instance_of(AiConcierge::Agents::ReplyStylist).to receive(:call) do |stylist|
         template = stylist.send(:template)
 
         AiConcierge::Agents::ReplyStylist::Styled.new(
           text: text || transform&.call(template) || template,
-          language: language || stylist.send(:thread_language)
+          language: language || stylist.send(:thread_language),
+          guest_language: guest_language == :same_as_language ? language : guest_language
         )
       end
     end

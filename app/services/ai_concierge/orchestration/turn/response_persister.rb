@@ -87,12 +87,18 @@ module AiConcierge
         # asked, and anything it did change is caught below.
         def style(template)
           return Reply.new(body: template) if template.blank?
-          return Reply.new(body: template) unless Agents::ReplyStylist.styles?(hotel: hotel, thread_language: conversation.reply_language, guest_message: message)
+
+          # Read once, before the stylist runs and before anything records over
+          # it: this is the language the reply is owed unless the guest's own
+          # message establishes a new one, and both the instruction sent down
+          # and the check made afterwards have to mean the same thing by it.
+          thread_language = conversation.reply_language
+          return Reply.new(body: template) unless Agents::ReplyStylist.styles?(hotel: hotel, thread_language: thread_language, guest_message: message)
 
           styled = Agents::ReplyStylist.new(
-            hotel: hotel, template: template, guest_message: message, thread_language: conversation.reply_language
+            hotel: hotel, template: template, guest_message: message, thread_language: thread_language
           ).call
-          text = verified(template, styled)
+          text = verified(template, styled, thread_language: thread_language)
 
           text ? Reply.new(body: text, source_body: template) : Reply.new(body: template)
         rescue Agents::ReplyStylist::ReplyStylistError => e
@@ -106,12 +112,37 @@ module AiConcierge
         # The language is recorded either way. What the guest wrote in is a fact
         # about the guest, not about whether this particular rewrite came back
         # usable, and forgetting it would ask the same question again next turn.
-        def verified(template, styled)
-          conversation.record_language!(styled.language)
+        #
+        # What gets recorded is the language the model read in the *guest's*
+        # message, and never the one it reports having written in. The second is
+        # a claim about its own output, and recording it made the thread's
+        # language self-reinforcing: one wrong claim, and every later message
+        # too short to carry a language of its own -- "yes", a row number --
+        # was answered in a language the guest had never used. Correctly, too,
+        # because by then the thread said so, and nothing could say otherwise.
+        def verified(template, styled, thread_language:)
+          conversation.record_language!(styled.guest_language)
+          return rejected(:language) unless wrote_in_the_decided_language?(styled, thread_language)
+
           checker = Agents::RewriteVerifier.new(template: template, candidate: styled.text, protected_names: protected_names)
-          checker.call.tap do |text|
-            Rails.logger.warn("AiConcierge::ReplyStylist rejected (#{checker.failure}) for conversation #{conversation.id}") if text.nil?
-          end
+          checker.call || rejected(checker.failure)
+        end
+
+        # Ruby decided which language this reply had to go out in; this is the
+        # only thing that checks the model did as it was told.
+        #
+        # It compares the two labels rather than reading the text, so it catches
+        # a model that changed language and said so, and not one that drifted
+        # without noticing. That is the half of the problem available for
+        # nothing, and rejecting costs nothing either -- the template is already
+        # correct, and already in the language the thread was in.
+        def wrote_in_the_decided_language?(styled, thread_language)
+          styled.language == (styled.guest_language.presence || thread_language)
+        end
+
+        def rejected(reason)
+          Rails.logger.warn("AiConcierge::ReplyStylist rejected (#{reason}) for conversation #{conversation.id}")
+          nil
         end
 
         # The words the guest will type back at us. Fetched once per turn, and

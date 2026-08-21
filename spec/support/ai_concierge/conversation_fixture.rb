@@ -22,6 +22,22 @@ module AiConciergeEval
       # for turns where the point of the fixture is a specific model choice.
       def model = @attributes.dig("model", "agent_loop")
 
+      # What the stylist gives back on this turn, as keywords for
+      # `stub_concierge_stylist`. Language is the one thing about a reply that
+      # is decided after the domain has finished, so a fixture that cannot
+      # script it cannot say anything about a thread that changes language --
+      # and a thread's language only ever changes in the middle of one.
+      #
+      # `guest_language: null` is a real value here, not an omission: it is
+      # what the model reads in a message with no words in it, and telling the
+      # two apart is the whole of the guard in ResponsePersister#verified.
+      def stylist
+        script = @attributes["stylist"]
+        return unless script.is_a?(Hash)
+
+        script.symbolize_keys
+      end
+
       def expectations = @attributes["expect"] || {}
     end
 

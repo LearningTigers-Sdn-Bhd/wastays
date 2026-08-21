@@ -11,6 +11,7 @@ RSpec.describe AiConcierge::Agents::ReplyStylist do
   before do
     allow(config).to receive(:openai_api_key=)
     allow(RubyLLM).to receive(:context).and_yield(config).and_return(context)
+    allow(chat).to receive(:with_temperature).and_return(chat)
   end
 
   def style(template: "Your total is RM 480.00.", guest_message: "berapa harga bilik?", thread_language: "en")
@@ -41,25 +42,54 @@ RSpec.describe AiConcierge::Agents::ReplyStylist do
     end
   end
 
-  it "returns the rewritten reply and the language it was written in" do
-    allow(chat).to receive(:ask).and_return(double(content: '{"language":"ms","text":"Jumlah anda RM 480.00."}'))
+  it "returns the rewritten reply, the language it was written in and the one it was read in" do
+    allow(chat).to receive(:ask).and_return(double(content: '{"guest_language":"ms","language":"ms","text":"Jumlah anda RM 480.00."}'))
 
     result = style
 
     expect(context).to have_received(:chat).with(model: hotel.ai_concierge_model_name, provider: hotel.ai_concierge_provider)
     expect(result.text).to eq("Jumlah anda RM 480.00.")
     expect(result.language).to eq("ms")
+    expect(result.guest_language).to eq("ms")
   end
 
-  it "tells the model the tone, the guest's words and which language to fall back to" do
-    allow(chat).to receive(:ask).and_return(double(content: '{"language":"en","text":"Your total is RM 480.00."}'))
+  # Rewriting a finished sentence has no upside left to sample for, and the
+  # providers all default to 1.0.
+  it "asks for no randomness at all" do
+    allow(chat).to receive(:ask).and_return(double(content: '{"guest_language":"ms","language":"ms","text":"Jumlah anda RM 480.00."}'))
+
+    style
+
+    expect(chat).to have_received(:with_temperature).with(0)
+  end
+
+  # An absence, however the model spells it. Recording one of these as a
+  # language is what used to move a thread the guest never moved.
+  it "reads every way a model says the message had no language in it" do
+    %w[null NULL und].each do |absence|
+      allow(chat).to receive(:ask).and_return(double(content: %({"guest_language":"#{absence}","language":"en","text":"Sure."})))
+
+      expect(style(guest_message: "1").guest_language).to be_nil
+    end
+
+    allow(chat).to receive(:ask).and_return(double(content: '{"guest_language":null,"language":"en","text":"Sure."}'))
+
+    expect(style(guest_message: "1").guest_language).to be_nil
+  end
+
+  # An instruction with the answer already in it, not a rule to work out. A
+  # model handed a resolved target writes the right language far more often
+  # than one asked to decide which target applies.
+  it "tells the model the tone, the guest's words and orders a language outright" do
+    allow(chat).to receive(:ask).and_return(double(content: '{"guest_language":null,"language":"ms","text":"Jumlah anda RM 480.00."}'))
 
     style(guest_message: "1", thread_language: "ms")
 
     expect(chat).to have_received(:ask) do |prompt|
       expect(prompt).to include(described_class::TONES.fetch("cheerful"))
       expect(prompt).to include("Your total is RM 480.00.")
-      expect(prompt).to include("write in ms")
+      expect(prompt).to include("Write the reply in ms.")
+      expect(prompt).not_to match(/too short to tell/)
     end
   end
 
@@ -67,7 +97,7 @@ RSpec.describe AiConcierge::Agents::ReplyStylist do
   # JSON instruction, and failing the turn over three backticks would send the
   # guest a template for no reason.
   it "reads JSON the model fenced in markdown" do
-    allow(chat).to receive(:ask).and_return(double(content: "```json\n{\"language\":\"en\",\"text\":\"Sure thing!\"}\n```"))
+    allow(chat).to receive(:ask).and_return(double(content: "```json\n{\"guest_language\":\"en\",\"language\":\"en\",\"text\":\"Sure thing!\"}\n```"))
 
     expect(style.text).to eq("Sure thing!")
   end
@@ -85,7 +115,7 @@ RSpec.describe AiConcierge::Agents::ReplyStylist do
   end
 
   it "raises when the rewritten reply is empty" do
-    allow(chat).to receive(:ask).and_return(double(content: '{"language":"en","text":"   "}'))
+    allow(chat).to receive(:ask).and_return(double(content: '{"guest_language":"en","language":"en","text":"   "}'))
 
     expect { style }.to raise_error(described_class::ReplyStylistError, /empty/)
   end
