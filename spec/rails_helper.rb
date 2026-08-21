@@ -46,21 +46,6 @@ RSpec.configure do |config|
     metadata[:migration] = true
   end
 
-  # The live concierge eval spends real money against a real provider, so it
-  # runs only when asked for by name. Everything else -- bin/test, bin/ci --
-  # never sees it.
-  config.filter_run_excluding(:live_llm) unless ENV["CONCIERGE_LIVE"]
-
-  # webmock/rspec resets before every example, so the hole has to be reopened
-  # per example, and only for the three hosts a concierge turn can legitimately
-  # reach.
-  config.before(:each, :live_llm) do
-    WebMock.disable_net_connect!(
-      allow_localhost: true,
-      allow: %w[api.openai.com api.anthropic.com generativelanguage.googleapis.com]
-    )
-  end
-
   config.around(:each, :migration) do |example|
     previous_verbose = ActiveRecord::Migration.verbose
     ActiveRecord::Migration.verbose = false
