@@ -1,0 +1,49 @@
+id: asks_at_the_money_moment
+description: "a question asked at the confirmation, one word before the quote -- answering it must not cost the guest the room they had already chosen"
+origin: "the confirmation is the one turn where a lost branch is money: 'yes' arriving with no candidate falls through to a fresh search, and the guest is shown the catalogue they had already picked from"
+setup:
+  policy:
+    cancellation_policy: "Free cancellation up to 48 hours before arrival."
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [1, 2, 3, 4, 5]
+  knowledge:
+    - category: policy
+      title: Cancellation
+      chunks: ["Cancellations made within 48 hours of arrival are charged one night."]
+turns:
+  - guest: "early august for 3 days 2 nights"
+    expect:
+      pending_question: guest_count
+      creates_quote: false
+
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+      creates_quote: false
+
+  - guest: "1"
+    expect:
+      pending_question: confirm_selection
+      reply_matches: ["Garden Prestige Suite", "reply *Yes* to confirm"]
+      creates_quote: false
+
+  # The last honest moment to ask. A guest who has never booked online reads
+  # "please reply Yes to confirm" as the point of no return, and asks the
+  # question they have been holding -- which is exactly the right instinct and
+  # exactly the turn where the chosen room is easiest to drop.
+  - guest: "wait, is cancellation free?"
+    expect:
+      reply_matches: ["48 hours"]
+      booking_status: suspended
+      creates_quote: false
+
+  # One word, and it has to mean what it meant before the detour: this room,
+  # already chosen, quoted. Not a fresh search, and not a second list.
+  - guest: "yes"
+    expect:
+      reply_matches: ["Quotation link:"]
+      reply_excludes: ["Here are the available options", "Would you like to confirm"]
+      flow_status: ended
+      creates_quote: true

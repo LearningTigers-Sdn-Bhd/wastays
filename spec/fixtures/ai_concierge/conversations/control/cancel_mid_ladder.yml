@@ -1,0 +1,44 @@
+id: cancel_mid_ladder
+description: "a booking dropped halfway leaves nothing behind -- the next one starts from the guest's new words, not the abandoned ones"
+origin: "ConversationControlPolicy#cancel_attempt? wipes the booking task, and nothing held that the wipe is complete: a leftover month would silently search August for a guest who said September"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [1, 2, 3, 4, 5]
+    - name: Ocean Villa
+      month: 9
+      days: [1, 2, 3, 4, 5]
+turns:
+  - guest: "early august for 3 days 2 nights"
+    expect:
+      flow: booking_search
+      pending_question: guest_count
+      creates_quote: false
+
+  # Read before the goodbye words are, because this is a guest abandoning one
+  # booking, not leaving the conversation.
+  - guest: "forget the room"
+    expect:
+      pending_question: null
+      reply_matches: ["I've cancelled your booking attempt"]
+      flow_status: active
+      creates_quote: false
+
+  # The same guest, a different stay. August is four turns of state that must
+  # not survive into this search -- the ladder has to ask its questions again
+  # rather than answer them from a booking the guest threw away.
+  - guest: "early september for 3 days 2 nights"
+    expect:
+      flow: booking_search
+      pending_question: guest_count
+      reply_matches: ["How many guests should I check for", "September"]
+      reply_excludes: ["August"]
+      creates_quote: false
+
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+      reply_matches: ["Ocean Villa"]
+      reply_excludes: ["Garden Prestige Suite"]
+      creates_quote: false
