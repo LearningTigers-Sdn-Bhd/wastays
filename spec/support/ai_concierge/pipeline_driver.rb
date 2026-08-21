@@ -9,7 +9,7 @@
 # catch.
 module AiConciergeEval
   module PipelineDriver
-    TurnResult = Struct.new(:result, :prospect, :conversation_state, :quotes_created, keyword_init: true) do
+    TurnResult = Struct.new(:result, :prospect, :conversation_state, :quotes_created, :elapsed, keyword_init: true) do
       def payload = result.payload || {}
       def reply = payload[:reply_message]
       def slots_payload = conversation_state.slots_payload
@@ -20,9 +20,13 @@ module AiConciergeEval
     # the same keywords stub_concierge_stylist takes. Left out, replies come
     # through as the templates wrote them, which is what a hotel on the default
     # tone answering an English guest gets.
-    def run_fixture(fixture, stylist: nil)
-      world = build_fixture_world(fixture)
-      install_model_fake(fixture, world)
+    # `live` is a LiveProviders::Provider, and it means every stub between the
+    # fixture and that provider stays uninstalled: the loop, the stylist and
+    # the knowledge synthesis all reach the real model. Retrieval stays faked
+    # either way -- what a live run measures is the model, not the index.
+    def run_fixture(fixture, stylist: nil, live: nil)
+      world = build_fixture_world(fixture, live: live)
+      install_model_fake(fixture, world) unless live
       stub_concierge_stylist(**stylist) if stylist
 
       fixture.turns.each_with_index do |turn, index|
@@ -32,8 +36,8 @@ module AiConciergeEval
 
     private
 
-    def build_fixture_world(fixture)
-      hotel = create(:hotel, :with_ai_concierge)
+    def build_fixture_world(fixture, live: nil)
+      hotel = create(:hotel, :with_ai_concierge, **live_hotel_attributes(live))
       policy = fixture.setup["policy"] || {}
       create(
         :property_policy,
@@ -45,7 +49,8 @@ module AiConciergeEval
 
       room_type_names = Array(fixture.setup["rooms"]).map { |room| seed_fixture_room(hotel, room) }
       corpus = Array(fixture.setup["knowledge"]).flat_map { |document| seed_fixture_knowledge(hotel, document) }
-      install_knowledge_fake(corpus)
+      install_retrieval_fake(corpus)
+      install_synthesis_fake unless live
 
       prospect = create(:prospect, hotel: hotel)
       create_fixture_state(prospect, fixture.setup["state"])
@@ -129,16 +134,29 @@ module AiConciergeEval
     # overlap and hand back the same row shape SearchService produces, distance
     # included, because HybridAnswerBuilder's deterministic short-circuit reads
     # it (STRONG_MATCH_DISTANCE = 0.35).
-    def install_knowledge_fake(corpus)
+    def install_retrieval_fake(corpus)
       allow(HotelKnowledges::SearchService).to receive(:new) do |hotel:, query:, categories:, **|
         FakeKnowledgeSearch.new(corpus: corpus, query: query, categories: categories)
       end
+    end
 
-      # A synthesis step that reaches a real provider is not a unit of anything.
-      # Joining the retrieved chunks keeps `reply_matches` meaningful.
+    # A synthesis step that reaches a real provider is not a unit of anything.
+    # Joining the retrieved chunks keeps `reply_matches` meaningful. A live run
+    # leaves this off, because how a provider synthesises what retrieval found
+    # is one of the things it exists to measure.
+    def install_synthesis_fake
       allow_any_instance_of(AiConcierge::Agents::KnowledgeAnswerAgent).to receive(:call) do |agent|
         Array(agent.instance_variable_get(:@matches)).map { |match| match["content"] }.join(" ")
       end
+    end
+
+    # The factory trait is openai with a fake key; a live run swaps in the
+    # provider under test. The model name is not overridden -- it comes from
+    # Hotel::AI_CONCIERGE_MODEL_NAMES, which is the setting being measured.
+    def live_hotel_attributes(live)
+      return {} unless live
+
+      { ai_provider_name: live.name, ai_provider_key: live.key }
     end
 
     def install_model_fake(fixture, world)
@@ -150,6 +168,7 @@ module AiConciergeEval
 
     def post_fixture_turn(world, turn)
       before = BookingQuote.count
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       result = AiConcierge::Orchestration::Core::InquiryResponder.new(
         hotel: world[:hotel],
         message: turn.guest,
@@ -160,7 +179,8 @@ module AiConciergeEval
         result: result,
         prospect: world[:prospect],
         conversation_state: world[:prospect].prospect_conversation_state.reload,
-        quotes_created: BookingQuote.count - before
+        quotes_created: BookingQuote.count - before,
+        elapsed: Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
       )
     end
 
