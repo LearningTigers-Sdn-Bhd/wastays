@@ -9,6 +9,17 @@
 # catch.
 module AiConciergeEval
   module PipelineDriver
+    # The day every fixture is read as happening on.
+    #
+    # These fixtures assert on dates -- a quote for the 28th, a month that has
+    # not happened yet -- and an assertion about a date cannot be stable against
+    # a moving today. Left on the wall clock they rot on a schedule: a fixture
+    # naming August passes until August, and the inventory `fixture_year_for`
+    # seeds walks into next year the moment the month turns.
+    #
+    # January is chosen so that every month a fixture names is still ahead.
+    FIXTURE_TODAY = "2026-01-15 12:00"
+
     TurnResult = Struct.new(:result, :prospect, :conversation_state, :quotes_created, keyword_init: true) do
       def payload = result.payload || {}
       def reply = payload[:reply_message]
@@ -217,4 +228,10 @@ end
 
 RSpec.configure do |config|
   config.include AiConciergeEval::PipelineDriver, :ai_concierge_eval
+
+  # Every fixture run, not only the ones that remember to ask. A fixture added
+  # next year should not have to know that the harness has a clock in it.
+  config.define_derived_metadata(:ai_concierge_eval) do |metadata|
+    metadata[:frozen_time] ||= -> { Time.zone.parse(AiConciergeEval::PipelineDriver::FIXTURE_TODAY) }
+  end
 end
