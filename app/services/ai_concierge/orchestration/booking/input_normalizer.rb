@@ -38,7 +38,7 @@ module AiConcierge
 
       case pending_question
       when "duration", "guest_count", "party_split", "confirm_selection", "select_option"
-        timing_keys.each { |key| slots.delete(key) }
+        timing_keys.each { |key| slots.delete(key) } unless message_names_a_month?
       when "specific_timing"
         # Keep timing slots when clarifying specific timing.
         apply_specific_timing_answer!
@@ -478,6 +478,29 @@ module AiConcierge
     # the message has already spent on nights and guests, and a day is what is
     # left over. That works in languages this file cannot otherwise read, and
     # when it does not, it fails towards keeping the date.
+    # Whether the message names a month, at a question whose answer is a number.
+    #
+    # These five questions are answered with a count or a row, so a number in
+    # the reply is not a date and the timing the model returned with it is
+    # invented. That was the whole rule, and it threw away "actually 20
+    # september to 22 september" -- a guest looking at a catalogue is exactly
+    # the guest who notices the dates are wrong, and they were told the hotel
+    # could not match that.
+    #
+    # A month, deliberately, and not "does the message have words in it": "3
+    # nights" has words in it, and the model will happily quote them as the
+    # words that say when the guest arrives. A month named in a language this
+    # class cannot read is still dropped -- no better than before, and no worse.
+    def message_names_a_month?
+      normalized = message.downcase
+
+      month_from_message(normalized).present? ||
+        relative_month_date.present? ||
+        parse_complete_date_range.present? ||
+        parse_partial_day_range.present? ||
+        normalized.match?(/\d{1,2}\s*月/)
+    end
+
     def message_names_a_day?
       normalized = message.downcase
       return true if day_named_alongside_a_month?(normalized)

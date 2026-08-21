@@ -428,6 +428,58 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
     expect(result).not_to include("check_in", "check_out")
   end
 
+  describe "a change of dates while a list is on screen" do
+    # The guard this narrows was written when the number in a message about a
+    # list was always a row. It is not: a guest looking at a catalogue is
+    # exactly the guest who realises the dates are wrong.
+    it "keeps dates the guest states while an option list is pending" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "actually 20 september to 22 september",
+          slots: { "check_in" => "2026-09-20", "check_out" => "2026-09-22", "target_month" => 9, "target_year" => 2026 },
+          pending_question: "select_option",
+          conversation_signals: signals,
+          evidence: { "timing" => "20 september", "checkout" => "22 september" },
+          active_branch: { "suggested_options" => [ { "position" => 1 } ] }
+        ).call
+
+        expect(result).to include("check_in" => "2026-09-20", "check_out" => "2026-09-22")
+      end
+    end
+
+    # And what the guard is for stays exactly as it was: a row is a row, and a
+    # model quoting the digit as the words that say when they arrive does not
+    # make it a date.
+    it "still drops timing a bare row number was read as" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "2",
+          slots: { "check_in" => "2026-09-02", "target_month" => 9, "target_year" => 2026 },
+          pending_question: "confirm_selection",
+          conversation_signals: signals,
+          evidence: { "timing" => "2" }
+        ).call
+
+        expect(result).not_to include("check_in", "target_month")
+      end
+    end
+
+    it "still drops timing quoted from a message about length of stay" do
+      with_frozen_time Date.new(2026, 8, 20) do
+        result = described_class.new(
+          message: "3 nights",
+          slots: { "check_in" => "2026-09-02", "target_month" => 9, "nights" => 3 },
+          pending_question: "duration",
+          conversation_signals: signals,
+          evidence: { "timing" => "3 nights", "duration" => "3 nights" }
+        ).call
+
+        expect(result).not_to include("check_in", "target_month")
+        expect(result["nights"]).to eq(3)
+      end
+    end
+  end
+
   describe "a day the guest never named" do
     # The live thread this is taken from: a month, a length of stay, and a
     # first-of-the-month the model supplied to go with them. Read as a stated
