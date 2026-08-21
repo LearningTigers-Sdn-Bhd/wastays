@@ -142,7 +142,7 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
       post reply_hotel_conversation_path(hotel, conversation), params: { body: "Yes, we have parking." }
       follow_redirect!
 
-      expect(response.body).to include("cannot be delivered")
+      expect(response.body).to include("would not reach the guest")
       expect(conversation.messages.reload).to be_empty
     end
 
@@ -221,7 +221,7 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
       get hotel_conversation_path(hotel, conversation)
 
       expect(response.body).not_to include("Send reply")
-      expect(response.body).to include("not switched on yet")
+      expect(response.body).to include("would not reach the guest")
     end
 
     it "is withheld on a closed thread" do

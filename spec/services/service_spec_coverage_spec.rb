@@ -10,6 +10,15 @@ RSpec.describe "Service spec coverage" do
     "ai_concierge/orchestration/agent_loop/outcome" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/tool_recorder" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/turn_context" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    # The fallback sentence is a constant on the namespace: the only thing
+    # worth asserting is that a turn which cannot answer sends it.
+    "ai_concierge/message_builders" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    # What the model hands back about a question, exercised through the search
+    # that consumes it.
+    "ai_concierge/retrieval/query_hints" => "ai_concierge/tools/hotel_information/hybrid_answer_builder_spec.rb",
+    # Writing the chosen plan onto the branch is only meaningful as part of the
+    # turn that chooses it.
+    "ai_concierge/orchestration/booking/apply_rate_plan" => "ai_concierge/orchestration/booking/rate_plan_selection_handler_spec.rb",
     # The model-facing functions are one surface and are specced as one.
     "ai_concierge/tools/llm/advance_booking_function" => "ai_concierge/tools/llm/functions_spec.rb",
     "ai_concierge/tools/llm/answer_hotel_question_function" => "ai_concierge/tools/llm/functions_spec.rb",

@@ -64,7 +64,7 @@ module Public
       # would find nothing.
       def load_thread(conversation = nil)
         @conversation = conversation || current_conversation
-        @messages = @conversation ? @conversation.messages.reload.to_a : []
+        @messages = @conversation ? @conversation.messages.includes(:sender_user).to_a : []
       end
 
       def current_conversation

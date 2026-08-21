@@ -53,7 +53,7 @@ RSpec.describe Bookings::TransitionStatus do
           result = subject.call
           expect(result.success?).to be true
         }.to change(BookingAuditLog, :count).by(1)
-          .and have_enqueued_job(WebhookBroadcastJob).with('booking_checked_in', anything)
+          .and have_enqueued_job(WebhookBroadcastJob).with('booking_checked_in', anything, hotel_id: booking.hotel_id)
           .and have_enqueued_job(Notifications::DeliverJob).exactly(2).times
 
         expect(booking.reload.status).to eq("checked_in")
@@ -328,7 +328,7 @@ RSpec.describe Bookings::TransitionStatus do
           result = subject.call
           expect(result.success?).to be true
         }.to change(BookingAuditLog, :count).by(1)
-          .and have_enqueued_job(WebhookBroadcastJob).with('booking_completed', anything)
+          .and have_enqueued_job(WebhookBroadcastJob).with('booking_completed', anything, hotel_id: booking.hotel_id)
           .and have_enqueued_job(Notifications::DeliverJob).exactly(4).times
 
         expect(booking.reload.status).to eq("completed")
@@ -541,7 +541,7 @@ RSpec.describe Bookings::TransitionStatus do
           result = subject.call
           expect(result.success?).to be true
         }.to change(BookingAuditLog, :count).by(1)
-          .and have_enqueued_job(WebhookBroadcastJob).with('booking_cancelled', anything)
+          .and have_enqueued_job(WebhookBroadcastJob).with('booking_cancelled', anything, hotel_id: booking.hotel_id)
 
         expect(booking.reload.status).to eq("cancelled")
 
