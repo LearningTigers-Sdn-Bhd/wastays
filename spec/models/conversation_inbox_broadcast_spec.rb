@@ -121,4 +121,47 @@ RSpec.describe "Conversation inbox broadcasts", type: :model do
       expect(turbo_broadcasts_to(hotel, :conversations)).to be_empty
     end
   end
+
+  # Each thread's row is its own, but the tab counts belong to the hotel, so a
+  # sweep closing many at once sends them once at the end rather than running a
+  # full count query per thread to send the same correction over and over.
+  describe "while many threads are being closed at once" do
+    it "still pushes each row" do
+      conversation
+      ActionCable.server.pubsub.clear
+
+      Conversation.deferring_inbox_counts { conversation.close! }
+
+      expect(inbox_payloads).to include(HotelPortal::Inbox::ListItem.dom_id_for(conversation))
+    end
+
+    it "holds the counts back" do
+      conversation
+      ActionCable.server.pubsub.clear
+
+      Conversation.deferring_inbox_counts { conversation.close! }
+
+      expect(inbox_payloads).not_to include("conversation-count-")
+    end
+
+    it "sends them again once the sweep is over" do
+      conversation
+      Conversation.deferring_inbox_counts { conversation.close! }
+      ActionCable.server.pubsub.clear
+
+      Conversation.broadcast_counts_to_inbox(hotel)
+
+      expect(inbox_payloads).to include("conversation-count-open")
+    end
+
+    it "puts the counts back even when the sweep blows up" do
+      expect { Conversation.deferring_inbox_counts { raise "boom" } }.to raise_error("boom")
+
+      conversation
+      ActionCable.server.pubsub.clear
+      conversation.close!
+
+      expect(inbox_payloads).to include("conversation-count-open")
+    end
+  end
 end

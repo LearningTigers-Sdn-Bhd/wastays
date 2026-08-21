@@ -77,6 +77,18 @@ class Conversation < ApplicationRecord
   # query, because the guest's page and the tab counts have to agree with it.
   scope :awaiting_staff, -> { open.where(mode: "human").or(open.where.not(human_requested_at: nil)) }
   scope :recent_first, -> { order(last_message_at: :desc, created_at: :desc) }
+  # Open threads nobody has said anything on since the cutoff. A thread with no
+  # messages at all is judged on when it was opened, so an empty row cannot sit
+  # holding the one-open-thread-per-person index forever.
+  #
+  # How long is long enough is not decided here -- see
+  # `Concierge::CloseStaleConversations::STALE_AFTER`.
+  scope :inactive_since, lambda { |cutoff|
+    open.where("COALESCE(conversations.last_message_at, conversations.created_at) < ?", cutoff)
+  }
+  scope :oldest_activity_first, lambda {
+    order(Arel.sql("COALESCE(conversations.last_message_at, conversations.created_at) ASC"))
+  }
 
   def replies_reach_guest? = reply_blocker.nil?
   def reply_blocker_message = REPLY_BLOCKERS[reply_blocker]
@@ -218,24 +230,51 @@ class Conversation < ApplicationRecord
   # cursor of somebody about to click it is worse than a row briefly out of
   # order, and any navigation puts it back.
   def broadcast_to_inbox
+    broadcast_row_to_inbox
+    broadcast_counts_to_inbox
+  end
+
+  def broadcast_row_to_inbox
     broadcast_update_to(
       [ hotel, :conversations ],
       target: HotelPortal::Inbox::ListItem.dom_id_for(self),
       renderable: HotelPortal::Inbox::ListItemBody.new(conversation: self, hotel: hotel)
     )
-    broadcast_counts_to_inbox
   end
 
   def broadcast_counts_to_inbox
-    counts = HotelPortal::ConversationsQuery.new(hotel: hotel).counts
+    return if Thread.current[:skip_conversation_inbox_counts]
 
-    counts.each do |key, value|
-      broadcast_update_to(
+    self.class.broadcast_counts_to_inbox(hotel)
+  end
+
+  # The counts belong to the hotel, not to the thread that happened to change,
+  # so they can be sent without one -- which is what lets a sweep send them
+  # once at the end instead of once per thread it closed.
+  def self.broadcast_counts_to_inbox(hotel)
+    HotelPortal::ConversationsQuery.new(hotel: hotel).counts.each do |key, value|
+      Turbo::StreamsChannel.broadcast_update_to(
         [ hotel, :conversations ],
         target: "conversation-count-#{key}",
         html: value.to_s
       )
     end
+  end
+
+  # Hold the counts back while many threads change at once.
+  #
+  # Every close pushes its own row, which is cheap and specific to that row.
+  # The counts are not: each one runs a full `ConversationsQuery` and lands on
+  # every open inbox, so closing fifty threads one at a time would run fifty
+  # count queries to send forty-nine corrections nobody needed. The caller
+  # sends them once when it is finished.
+  def self.deferring_inbox_counts
+    previous_value = Thread.current[:skip_conversation_inbox_counts]
+    Thread.current[:skip_conversation_inbox_counts] = true
+
+    yield
+  ensure
+    Thread.current[:skip_conversation_inbox_counts] = previous_value
   end
 
   # A thread nobody has seen before, arriving at the top of the list.
