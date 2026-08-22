@@ -15,6 +15,7 @@ module HotelPortal
   class ConversationsController < HotelPortal::BaseController
     WRITES = %i[reply take_over return_to_bot close reopen].freeze
 
+    before_action :ensure_concierge_chat_available!
     before_action :authorize_manage_concierge!
     before_action :set_conversations, only: %i[index show]
     before_action :set_conversation, only: [ :show, *WRITES ]
@@ -102,6 +103,22 @@ module HotelPortal
 
     def authorize_manage_concierge!
       raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_concierge", hotel: current_hotel)
+    end
+
+    # A hotel without the concierge page has no way for a guest to open a
+    # thread, so this inbox can only ever be empty -- and the writes below would
+    # file replies into a channel the guest cannot read. Asked as the same
+    # question the guest chat asks, so the two ends of the feature turn on and
+    # off together.
+    #
+    # Redirects rather than raising: this is the hotel's plan, not the user's
+    # permissions, and "not authorized" would send staff to ask an admin for a
+    # role that would change nothing.
+    def ensure_concierge_chat_available!
+      return if current_hotel&.concierge_chat_available?
+
+      redirect_to hotel_dashboard_path(current_hotel),
+                  alert: "Conversations are not available for this hotel."
     end
 
     def handle_record_not_found

@@ -307,6 +307,19 @@ class Hotel < ApplicationRecord
     active? && concierge_enabled?
   end
 
+  # The guest chat and the staff inbox are two ends of one feature: if a guest
+  # cannot open a thread, there is no thread for staff to answer, and an inbox
+  # that outlives the chat is a screen that can only ever be empty. Both sides
+  # ask this one question so neither can drift from the other.
+  #
+  # Deliberately not `ai_concierge_enabled?`. That column is the *bot*, and a
+  # hotel is meant to be able to switch the bot off and keep answering its
+  # guests by hand -- the whole conversation domain was built to work with no AI
+  # at all. What gates the chat is whether the hotel has the concierge page.
+  def concierge_chat_available?
+    concierge_available? && feature_enabled?("ai_concierge_page")
+  end
+
   def plan_feature_map
     @plan_feature_map ||= if plan_id
       PlanFeature.where(plan_id: plan_id)

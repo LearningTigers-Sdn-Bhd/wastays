@@ -3,8 +3,14 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Conversations", type: :request do
-  let(:hotel) { create(:hotel, status: "live") }
-  let(:other_hotel) { create(:hotel, status: "live") }
+  # The inbox is the staff end of the guest chat, so it is gated on exactly what
+  # the chat is gated on: the hotel has the concierge page, and its plan carries
+  # the feature. Without both, a guest cannot open a thread for staff to answer.
+  let(:feature_group) { create(:feature_group) }
+  let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
+  let(:plan) { create(:plan) }
+  let(:hotel) { create(:hotel, status: "live", concierge_enabled: true, plan: plan) }
+  let(:other_hotel) { create(:hotel, status: "live", concierge_enabled: true, plan: plan) }
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:manage_concierge) do
@@ -12,6 +18,7 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
   end
 
   before do
+    create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
     role.permissions << manage_concierge
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
     sign_in_as(user)
@@ -307,6 +314,51 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
       post reply_hotel_conversation_path(hotel, conversation), params: { body: "Yes." }
 
       expect(response).to redirect_to(hotel_conversation_path(hotel, conversation))
+    end
+  end
+
+  # Permission says whether this user may read the inbox. These say whether the
+  # hotel has an inbox at all -- a different question, and previously nobody
+  # asked it: the tab and every URL under it stayed reachable for a hotel whose
+  # guests had no chat to write into.
+  describe "a hotel without the concierge chat" do
+    it "sends the inbox away when the hotel has the concierge page switched off" do
+      hotel.update!(concierge_enabled: false)
+
+      get hotel_conversations_path(hotel)
+
+      expect(response).to redirect_to(hotel_dashboard_path(hotel))
+      expect(flash[:alert]).to eq("Conversations are not available for this hotel.")
+    end
+
+    it "sends the inbox away when the plan does not carry the feature" do
+      PlanFeature.find_by!(plan: plan, feature: ai_concierge_page_feature).update!(enabled: false)
+
+      get hotel_conversations_path(hotel)
+
+      expect(response).to redirect_to(hotel_dashboard_path(hotel))
+    end
+
+    it "closes the individual thread too, not just the list" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman")
+      hotel.update!(concierge_enabled: false)
+
+      get hotel_conversation_path(hotel, conversation)
+
+      expect(response).to redirect_to(hotel_dashboard_path(hotel))
+    end
+
+    # The writes are the half that matters: a redirect on the list is cosmetic,
+    # but a reply filed into a hotel with no chat is a message no guest reads.
+    it "refuses a reply rather than filing one nobody can receive" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman", channel: "web")
+      hotel.update!(concierge_enabled: false)
+
+      expect do
+        post reply_hotel_conversation_path(hotel, conversation), params: { body: "Hello?" }
+      end.not_to change(ProspectMessage, :count)
+
+      expect(response).to redirect_to(hotel_dashboard_path(hotel))
     end
   end
 end
