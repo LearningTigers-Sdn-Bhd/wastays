@@ -28,7 +28,7 @@ module HotelPortal
       def broadcast
         return unless finished?
 
-        WebhookBroadcastJob.perform_later("#{kind}_#{to}", payload)
+        WebhookBroadcastJob.perform_later("#{kind}_#{to}", payload, hotel_id: hotel_id)
       end
 
       private
@@ -37,6 +37,12 @@ module HotelPortal
 
       def finished?
         from != to && FINISHED_STATUS[kind] == to
+      end
+
+      # Which hotel this belongs to, by the same two routes the payload takes:
+      # the booking normally, the request itself for the kinds that carry one.
+      def hotel_id
+        request.booking&.hotel_id || (request.hotel_id if request.respond_to?(:hotel_id))
       end
 
       def payload

@@ -1,0 +1,45 @@
+<%# Search stays put, the rows scroll under it. The card is the height of its
+    pane, so without a scroll region of its own the list would spill out of it. %>
+<div class="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card">
+  <div class="shrink-0 border-b border-border p-3">
+    <%= form_with url: hotel_conversations_path(current_hotel), method: :get,
+          data: { controller: "auto-submit", turbo_action: "advance" } do |form| %>
+      <%= form.hidden_field :status, value: query.status unless query.status == "open" %>
+      <%= form.hidden_field :filter, value: query.filter unless query.filter == "all" %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search conversations", label_hidden: true) do |field| %>
+        <% field.with_input(
+             value: params[:q],
+             type: :search,
+             placeholder: "Search by name or phone",
+             autocomplete: "off",
+             data: { action: "input->auto-submit#submit" }) %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if conversations.any? %>
+    <%= render PanelsUI::ScrollArea.new(scroll_fade: :y, class: "min-h-0 flex-1") do %>
+      <ul id="conversation-rows" class="divide-y divide-border" role="list">
+        <% conversations.each do |conversation| %>
+          <%= render HotelPortal::Inbox::ListItem.new(
+                conversation: conversation,
+                hotel: current_hotel,
+                selected: selected&.id == conversation.id) %>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <% if conversations.total_pages > 1 %>
+      <div class="shrink-0 border-t border-border p-3">
+        <%= paginate conversations %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="flex min-h-0 flex-1 items-center p-6">
+      <%= render PanelsUI::EmptyState.new(
+            icon: "inbox",
+            title: "Nothing here",
+            description: params[:q].present? ? "No conversation matches that search." : "New guest enquiries will appear here.") %>
+    </div>
+  <% end %>
+</div>

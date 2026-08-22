@@ -1,0 +1,27 @@
+id: question_mid_booking_then_resume
+description: "a hotel question mid-booking is answered, and the half-built booking is still there afterwards"
+origin: "TransitionPolicy#librarian_intent? outranks a pending booking question; the branch survives in slots_payload"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [1, 2, 3, 4, 5]
+  knowledge:
+    - category: general_info
+      title: Getting Here
+      chunks: ["Parking is free for registered guests in the basement car park."]
+turns:
+  - guest: "early august for 3 days 2 nights"
+    expect:
+      pending_question: guest_count
+  - guest: "is there parking?"
+    expect:
+      reply_matches: ["Parking is free"]
+      creates_quote: false
+  # The booking was put down, not lost. It is in Postgres, not in a context
+  # window -- which is the invariant the rewrite must not break.
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+      reply_matches: ["Garden Prestige Suite"]
+      creates_quote: false

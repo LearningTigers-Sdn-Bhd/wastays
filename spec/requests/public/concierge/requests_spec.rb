@@ -112,8 +112,8 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
       follow_redirect!
 
       expect(response).to have_http_status(:ok)
-      expect(response.body.scan("Our team has been notified and will attend to your request shortly.").size).to eq(1)
-      expect(response.body).to include("Submitted Request")
+      expect(response.body.scan("Our team has been notified.").size).to eq(1)
+      expect(response.body).to include("Request Type")
       expect(response.body).to include("Housekeeping")
       expect(response.body).to include("Please bring extra towels")
     end

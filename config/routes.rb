@@ -105,6 +105,10 @@ Rails.application.routes.draw do
     post "requests",               to: "requests#create",      as: :requests
     get  "requests/success",       to: "requests#success",     as: :request_success
     get  "contact",                to: "contact#show",         as: :contact
+    get    "chat",                 to: "chats#show",           as: :chat
+    post   "chat",                 to: "chats#create",         as: :chat_messages
+    delete "chat",                 to: "chats#destroy",        as: :clear_chat
+    post   "chat/agent",           to: "chats#request_agent",  as: :chat_agent
   end
 
   # Public Booking Engine
@@ -476,6 +480,19 @@ Rails.application.routes.draw do
     get "folio-documents/:folio_id/invoice", to: "folios#invoice", as: :folio_invoice
     get "folio-documents/:folio_id/invoice/revisions/:revision_number", to: "folios#invoice", as: :folio_invoice_revision
     get "folio-documents/:folio_id/ledger", to: "folios#ledger", as: :folio_ledger
+
+    # The guest message desk. Sits with the front-desk pages rather than in a
+    # layer: an unanswered guest comes looking for you, which is the opposite
+    # of a report.
+    resources :conversations, only: [ :index, :show ] do
+      member do
+        post  :reply
+        patch :take_over
+        patch :return_to_bot
+        patch :close
+        patch :reopen
+      end
+    end
 
     get "requests", to: "requests#index", as: :requests
     # The rest of one column, read from a cursor rather than a page number.

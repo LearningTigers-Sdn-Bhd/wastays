@@ -10,19 +10,53 @@ module AiConcierge
       end
 
       def chat
-        context.chat(
+        chat = context.chat(
           model: hotel.ai_concierge_model_name,
           provider: hotel.ai_concierge_provider
         )
+        disable_thinking(chat)
+        chat
       end
 
-      def structured_output_supported?
-        hotel.ai_concierge_structured_output_supported?
+      # Marks a prompt block as the one worth keeping.
+      #
+      # openai and gemini cache a stable prefix on their own -- there is
+      # nothing to write, only something to stop breaking. claude does not:
+      # its caching is opt-in, and `cache_control` is written per system
+      # content block, which is the whole reason the instructions are built in
+      # two halves rather than one string. The breakpoint sits at the end of
+      # this block, so everything before it -- the tool schemas included -- is
+      # what gets read back next turn.
+      #
+      # Returns the text untouched for the other two, so the caller does not
+      # have to know which provider it is talking to.
+      def cacheable(text)
+        return text unless hotel.ai_provider_name == "claude"
+
+        RubyLLM::Providers::Anthropic::Content.new(text, cache: true)
       end
 
       private
 
       attr_reader :hotel
+
+      # Gemini 2.5 thinks by default, and nothing here ever told it not to.
+      # Those tokens bill as output -- the dearest tokens gemini sells -- and
+      # they are spent before a word reaches a guest who is waiting on
+      # WhatsApp, twice a turn, on work that is picking a tool and rewriting a
+      # sentence. No accounting exists anywhere in this namespace, so it has
+      # been paid for silently.
+      #
+      # A budget of zero is how gemini is told to stop: `Thinking::Config` is
+      # enabled by any budget including 0, which is what makes the request
+      # carry `thinkingBudget: 0` at all. Gated by provider on purpose --
+      # openai turns the same config into `reasoning_effort`, which the model
+      # in that seat does not take.
+      def disable_thinking(chat)
+        return unless hotel.ai_provider_name == "gemini"
+
+        chat.with_thinking(budget: 0)
+      end
 
       def context
         RubyLLM.context do |config|
@@ -33,8 +67,6 @@ module AiConcierge
             config.anthropic_api_key = hotel.ai_concierge_api_key
           when "gemini"
             config.gemini_api_key = hotel.ai_concierge_api_key
-          when "deepseek"
-            config.deepseek_api_key = hotel.ai_concierge_api_key
           end
         end
       end

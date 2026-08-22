@@ -11,7 +11,8 @@ module AiConcierge
           {
             "bookings" => bookings.map do |booking|
               {
-                "date_range" => date_range(booking),
+                "check_in" => booking.check_in&.to_date,
+                "check_out" => booking.check_out&.to_date,
                 "room_type_name" => room_type_name_for(booking)
               }
             end
@@ -30,22 +31,9 @@ module AiConcierge
                             .order(check_in: :asc)
         end
 
-        def date_range(booking)
-          [ booking.check_in, booking.check_out ].map { |date| format_date(date) }.join(" - ")
-        end
-
         def room_type_name_for(booking)
           room = booking.booking_rooms.first
           room&.room_type&.name.presence || room&.room_type_snapshot&.dig("name").presence || "Room not assigned"
-        end
-
-        def format_date(value)
-          return value.to_s if value.blank?
-
-          date = value.is_a?(Date) ? value : Date.parse(value.to_s)
-          date.strftime("%B %-d")
-        rescue Date::Error
-          value.to_s
         end
       end
     end

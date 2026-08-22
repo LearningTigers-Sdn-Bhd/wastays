@@ -7,9 +7,7 @@ RSpec.describe AiConcierge::State::StatePatchBuilder do
       slots_payload: { "active" => { "branch_id" => "1" } },
       active_topic: "booking_search",
       active_flow: "booking_search",
-      pending_question: "guest_count",
-      last_intent: "booking_search",
-      last_action_name: "request_quote"
+      pending_question: "guest_count"
     ).call
 
     expect(patch[:slots_payload]["state_version"]).to eq(2)
@@ -30,8 +28,6 @@ RSpec.describe AiConcierge::State::StatePatchBuilder do
       active_topic: nil,
       active_flow: nil,
       pending_question: nil,
-      last_intent: "greeting",
-      last_action_name: nil,
       now: now
     ).call
 
@@ -50,8 +46,6 @@ RSpec.describe AiConcierge::State::StatePatchBuilder do
       active_topic: nil,
       active_flow: nil,
       pending_question: nil,
-      last_intent: "greeting",
-      last_action_name: nil,
       flow_status: "ended",
       end_reason: "user_ended",
       now: now

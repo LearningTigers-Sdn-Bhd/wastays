@@ -8,7 +8,6 @@ class Hotel < ApplicationRecord
   enum :ai_provider_name, {
     openai: "openai",
     claude: "claude",
-    deepseek: "deepseek",
     gemini: "gemini"
   }, prefix: true, validate: { allow_nil: true }
 
@@ -19,9 +18,8 @@ class Hotel < ApplicationRecord
   }, prefix: true, validate: true
 
   AI_CONCIERGE_MODEL_NAMES = {
-    "openai" => "gpt-4o-mini",
+    "openai" => "gpt-4.1-mini",
     "claude" => "claude-haiku-4-5",
-    "deepseek" => "deepseek-chat",
     "gemini" => "gemini-2.5-flash"
   }.freeze
 
@@ -309,6 +307,19 @@ class Hotel < ApplicationRecord
     active? && concierge_enabled?
   end
 
+  # The guest chat and the staff inbox are two ends of one feature: if a guest
+  # cannot open a thread, there is no thread for staff to answer, and an inbox
+  # that outlives the chat is a screen that can only ever be empty. Both sides
+  # ask this one question so neither can drift from the other.
+  #
+  # Deliberately not `ai_concierge_enabled?`. That column is the *bot*, and a
+  # hotel is meant to be able to switch the bot off and keep answering its
+  # guests by hand -- the whole conversation domain was built to work with no AI
+  # at all. What gates the chat is whether the hotel has the concierge page.
+  def concierge_chat_available?
+    concierge_available? && feature_enabled?("ai_concierge_page")
+  end
+
   def plan_feature_map
     @plan_feature_map ||= if plan_id
       PlanFeature.where(plan_id: plan_id)
@@ -475,10 +486,6 @@ class Hotel < ApplicationRecord
 
   def ai_concierge_api_key
     ai_provider_key
-  end
-
-  def ai_concierge_structured_output_supported?
-    ai_provider_name != "deepseek"
   end
 
   def effective_margin_rate(room_type = nil)

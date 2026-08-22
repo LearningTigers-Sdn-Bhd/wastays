@@ -59,11 +59,21 @@ module Bookings
 
     private
 
+    # Loaded once, with the card and the card's hotel attached. Both callers
+    # below pick a guest out of the collection in Ruby rather than in SQL, so the
+    # whole set is loaded either way -- and `target_card` then reads
+    # `guest_registration_card` off the one it picked, which is a second query
+    # per guest without the include. `ready_for_guest?` reads the card's hotel
+    # for the T&C policy, which is a third.
+    def booking_guests
+      @booking_guests ||= @booking.booking_guests.includes(guest_registration_card: :hotel).to_a
+    end
+
     def active_booking_guest
       if @booking_guest_id.present?
-        @booking.booking_guests.find { |bg| bg.id.to_s == @booking_guest_id.to_s }
+        booking_guests.find { |bg| bg.id.to_s == @booking_guest_id.to_s }
       else
-        @booking.booking_guests.find(&:primary?)
+        booking_guests.find(&:primary?)
       end
     end
 

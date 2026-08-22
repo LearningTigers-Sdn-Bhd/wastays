@@ -34,8 +34,7 @@ module Public
 
       def success
         @booking = current_concierge_booking
-        return redirect_to concierge_home_path(@hotel) unless @booking
-        render "success_mobile" if mobile_request?
+        redirect_to concierge_home_path(@hotel) unless @booking
       end
 
       private

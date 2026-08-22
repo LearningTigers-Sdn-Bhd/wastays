@@ -1,0 +1,19 @@
+id: room_rate_is_a_booking
+description: "asking what a room costs is an attempt to book, not a request for published information"
+origin: "InformationIntentGuard#room_rate_question?"
+setup:
+  knowledge:
+    - category: general_info
+      title: Facilities
+      chunks: ["The hotel has a rooftop pool and a gym."]
+turns:
+  - guest: "how much is a room here?"
+    # The model gets this one wrong -- that mistake is why the rule exists.
+    model:
+      agent_loop:
+        tool: get_room_type_details
+    expect:
+      flow: booking_search
+      pending_question: booking_timing
+      reply_matches: ["room rates depend on the booking dates"]
+      creates_quote: false

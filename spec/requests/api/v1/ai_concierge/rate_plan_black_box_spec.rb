@@ -13,25 +13,28 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
   before do
     create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00", cancellation_policy: "24 hours")
     allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
-    stub_interpreter
+    stub_concierge_conversation
   end
 
+  # The ordinal counts the list as the guest reads it, and the list opens with
+  # the cheapest plan -- so "first one" is the Non-Refundable Rate here.
   it "selects the first rate plan by ordinal language" do
-    standard, _non_refundable = seed_rate_plan_options
+    _standard, non_refundable = seed_rate_plan_options
 
     run_to_rate_plan_prompt
     post_message("first one")
 
-    expect(parsed_body["reply_message"]).to include("(Standard Rate)")
-    expect(active_branch["selected_rate_plan_id"]).to eq(standard.id)
-    expect(active_branch["selected_rate_plan_name"]).to eq("Standard Rate")
+    expect(parsed_body["reply_message"]).to include("(Non-Refundable Rate)")
+    expect(active_branch["selected_rate_plan_id"]).to eq(non_refundable.id)
+    expect(active_branch["selected_rate_plan_name"]).to eq("Non-Refundable Rate")
   end
 
-  it "selects the unique cheapest rate plan by price intent" do
+  # The list opens with the cheapest plan, so the cheapest is row 1.
+  it "selects a rate plan by its row number" do
     _standard, non_refundable = seed_rate_plan_options(standard_price: 260, non_refundable_price: 210)
 
     run_to_rate_plan_prompt
-    post_message("cheapest")
+    post_message("no 1")
 
     expect(parsed_body["reply_message"]).to include("(Non-Refundable Rate)")
     expect(active_branch["selected_rate_plan_id"]).to eq(non_refundable.id)
@@ -45,13 +48,13 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
 
     expect(parsed_body["reply_message"]).to include("Check-in starts")
 
-    post_message("the cheaper one")
+    post_message("no 1")
 
     expect(parsed_body["reply_message"]).to include("(Non-Refundable Rate)")
     expect(active_branch["selected_rate_plan_id"]).to eq(non_refundable.id)
   end
 
-  it "does not choose Non-Refundable Rate when the guest asks for refundable" do
+  it "does not choose the row above the one the guest numbered" do
     refundable, non_refundable = seed_rate_plan_options(
       standard_name: "Refundable Rate",
       standard_price: 260,
@@ -59,20 +62,21 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     )
 
     run_to_rate_plan_prompt
-    post_message("refundable")
+    post_message("no 2")
 
     expect(active_branch["selected_rate_plan_id"]).to eq(refundable.id)
     expect(active_branch["selected_rate_plan_id"]).not_to eq(non_refundable.id)
     expect(parsed_body["reply_message"]).to include("(Refundable Rate)")
   end
 
-  it "re-asks when standard matches multiple rate plans" do
+  # A rate plan's name is not a way into the list any more.
+  it "re-asks when the guest names a plan instead of numbering a row" do
     seed_rate_plan_options(standard_name: "Standard Rate", non_refundable_name: "Standard Flexible Rate")
 
     run_to_rate_plan_prompt
     post_message("standard")
 
-    expect(parsed_body["reply_message"]).to include("which rate plan would you like?")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
     expect(active_branch["selected_rate_plan_id"]).to be_nil
     expect(active_branch["confirmation_candidate"]).to be_nil
   end
@@ -81,7 +85,7 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     _standard, non_refundable = seed_rate_plan_options(standard_price: 260, non_refundable_price: 210)
 
     run_to_rate_plan_prompt
-    post_message("cheapest")
+    post_message("no 1")
 
     expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm")
     expect(active_branch.dig("selected_option", "selected_rate_plan", "rate_plan_id")).to eq(non_refundable.id)
@@ -107,15 +111,15 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     _standard, non_refundable = seed_rate_plan_options(standard_price: 260, non_refundable_price: 210)
 
     run_to_rate_plan_prompt
-    post_message("first one")
+    post_message("second one")
     expect(active_branch["selected_rate_plan_name"]).to eq("Standard Rate")
 
     post_message("change rate")
-    expect(parsed_body["reply_message"]).to include("which rate plan would you like?")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
     expect(active_branch["selected_rate_plan_id"]).to be_nil
     expect(active_branch["confirmation_candidate"]).to be_nil
 
-    post_message("cheapest")
+    post_message("no 1")
     expect(active_branch["selected_rate_plan_id"]).to eq(non_refundable.id)
 
     post_message("yes")
@@ -138,9 +142,11 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     post_message("what time is check in?")
     expect(parsed_body["reply_message"]).to include("Check-in starts")
 
-    post_message("change room to Deluxe Room option 1")
-    expect(parsed_body["reply_message"]).to include("For Deluxe Room")
-    expect(parsed_body["reply_message"]).to include("which rate plan would you like?")
+    # Option 4 rather than 1: the catalogue numbers every room in one run, and
+    # Deluxe Room's own rows start after Garden Prestige Suite's.
+    post_message("change room to Deluxe Room option 4")
+    expect(parsed_body["reply_message"]).to include("*Deluxe Room*")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
     expect(active_branch["selected_option"]["room_type_name"]).to eq("Deluxe Room")
     expect(active_branch["selected_rate_plan_id"]).to be_nil
 
@@ -148,6 +154,95 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     expect(active_branch["selected_rate_plan_id"]).to eq(deluxe_standard.id)
     expect(parsed_body["reply_message"]).to include("Deluxe Room")
     expect(parsed_body["reply_message"]).to include("(Standard Rate)")
+  end
+
+  # A live thread: "no 2" came back from the model as two nights, the changed
+  # search discarded the chosen room, and the rate question was rendered with
+  # no room name, no dates and no rates in it.
+  it "picks the second rate from no 2, without losing the room" do
+    _standard, non_refundable = seed_rate_plan_options
+
+    run_to_rate_plan_prompt
+    post_message("no 2")
+
+    expect(parsed_body["reply_message"]).to include(room_name)
+    expect(parsed_body["reply_message"]).to include("(Standard Rate)")
+    expect(active_branch["selected_rate_plan_name"]).to eq("Standard Rate")
+    expect(active_branch["selected_rate_plan_id"]).not_to eq(non_refundable.id)
+  end
+
+  # The rate question is written from the chosen option, so once a real slot
+  # change clears it there is nothing left to ask about. The catalogue is the
+  # honest answer, not a question with the room left blank.
+  it "re-lists the options when a slot change clears the room mid rate question" do
+    seed_rate_plan_options
+
+    run_to_rate_plan_prompt
+    post_message("actually 3 rooms")
+
+    expect(parsed_body["reply_message"]).not_to include("Which rate would you like?")
+    expect(parsed_body["reply_message"]).to match(/Here are the available options|couldn't find any rooms/)
+  end
+
+  # A live thread: the model answered "yes" with an advance_booking call that
+  # carried no confirmation, so the confirmed room was never quoted -- the
+  # guest was shown the catalogue again instead.
+  it "quotes the confirmed room when the model sends a yes with no confirmation slot" do
+    seed_rate_plan_options
+    stub_concierge_model(
+      room_type_names: [ room_name ],
+      scripted: {
+        "yes" => { tool: "advance_booking", arguments: { "slots" => {} } }
+      }
+    )
+
+    run_to_rate_plan_prompt
+    post_message("second one")
+    post_message("yes")
+
+    expect(parsed_body["reply_message"]).to include("Quotation link:")
+    expect(parsed_body["reply_message"]).not_to include("Here are the available options")
+  end
+
+  # Picking a room is not picking a rate. "no 1" chose the first room and the
+  # first rate plan with it, so the guest was shown a price -- the dearer one,
+  # on a catalogue built before the plans were sorted -- that nobody had asked
+  # them about.
+  it "asks which rate after a row is picked, whatever words the row was picked in" do
+    seed_rate_plan_options
+
+    [ "no 1", "1", "the first one", "1st" ].each_with_index do |answer, index|
+      @phone = "01288800#{index}0"
+      post_message("mid august")
+      post_message("3 days 2 nights")
+      post_message("2 adults")
+      post_message(answer)
+
+      expect(parsed_body["reply_message"]).to include("Which rate would you like?"), "expected #{answer.inspect} to reach the rate question"
+      expect(parsed_body["reply_message"]).not_to include("Please reply *Yes* to confirm")
+    end
+  end
+
+  # The same turn, with the model volunteering a rate plan the guest never
+  # mentioned. On a message that names nothing but a row it can only have
+  # invented one, and inventing the dearer one is how a guest ends up looking
+  # at a price they were never offered.
+  it "ignores a rate plan the model supplies on a turn that only picks a row" do
+    seed_rate_plan_options(standard_price: 260, non_refundable_price: 210)
+    stub_concierge_model(
+      room_type_names: [ room_name ],
+      scripted: {
+        "no 1" => { tool: "advance_booking", arguments: { "slots" => { "rate_plan_name" => "Standard Rate" } } }
+      }
+    )
+
+    post_message("mid august")
+    post_message("3 days 2 nights")
+    post_message("2 adults")
+    post_message("no 1")
+
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
+    expect(active_branch["selected_rate_plan_name"]).to be_nil
   end
 
   it "still cancels the booking attempt from natural abandonment language" do
@@ -174,6 +269,22 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     expect(Prospect.lookup_by_phone(phone).first.prospect_conversation_state.reload.pending_question).to eq("select_option")
   end
 
+  # The reader this replaced only understood first, second and third.
+  it "reaches a rate plan past the third row" do
+    seed_rate_plan_options
+    room_type = hotel.room_types.find_by(name: room_name)
+    third = create(:rate_plan, room_type: room_type, name: "Long Stay Rate")
+    [ 11, 12, 13, 14 ].each do |day|
+      create(:room_rate, room_type: room_type, rate_plan: third, date: Date.new(infer_year(8), 8, day), price: 300, currency: "MYR")
+    end
+
+    run_to_rate_plan_prompt
+    post_message("option 3")
+
+    expect(parsed_body["reply_message"]).to include("(Long Stay Rate)")
+    expect(active_branch["selected_rate_plan_id"]).to eq(third.id)
+  end
+
   def seed_rate_plan_options(room_name: self.room_name, standard_name: "Standard Rate", non_refundable_name: "Non-Refundable Rate", standard_price: 240, non_refundable_price: 220)
     room_type = create(:room_type, hotel: hotel, name: room_name, base_price: standard_price, max_adults: 3)
     standard = create(:rate_plan, room_type: room_type, name: standard_name)
@@ -189,17 +300,84 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     [ standard, non_refundable ]
   end
 
+  # A guest naming the plan is not being difficult -- it is the natural way to
+  # answer, and since the list stopped reading names it is also the way that
+  # never lands. Before this the thread just asked again, unchanged, until the
+  # fifty-turn limit hung up on them.
+  it "says the answer did not land, then puts the thread in front of staff" do
+    seed_rate_plan_options(standard_name: "Standard Rate", non_refundable_name: "Flexible Rate")
+
+    run_to_rate_plan_prompt
+
+    post_message("standard")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
+    expect(parsed_body["reply_message"]).not_to include("didn't catch that")
+    expect(conversation.reload.human_requested_at).to be_nil
+
+    post_message("the standard one please")
+    expect(parsed_body["reply_message"]).to include("didn't catch that")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
+    expect(conversation.reload.human_requested_at).to be_nil
+
+    post_message("standard rate")
+    expect(parsed_body["needs_human_support"]).to be(true)
+    expect(conversation.reload.human_requested_at).to be_present
+    # Asking for a person does not silence the bot: the guest is still owed an
+    # answer while they wait.
+    expect(conversation.mode).to eq("bot")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
+  end
+
+  it "forgets the count as soon as the guest answers something" do
+    seed_rate_plan_options
+
+    run_to_rate_plan_prompt
+
+    post_message("standard")
+    post_message("no 1")
+    expect(active_branch["selected_rate_plan_id"]).to be_present
+
+    expect(booking_task["reask_count"]).to eq(0)
+    expect(conversation.reload.human_requested_at).to be_nil
+  end
+
+  # Stopping to ask about the hotel is not failing to answer the rate
+  # question. The interruption suspends the booking with a branch of its own
+  # shape, which reads as movement and puts the count back to nothing -- so a
+  # guest who breaks off and comes back gets the question fresh rather than
+  # arriving one strike down.
+  it "does not count an interruption against the guest" do
+    seed_rate_plan_options
+
+    run_to_rate_plan_prompt
+
+    post_message("standard")
+    post_message("what time is check in?")
+    expect(parsed_body["reply_message"]).to include("Check-in starts")
+
+    expect(booking_task["reask_count"]).to eq(0)
+    expect(conversation.reload.human_requested_at).to be_nil
+  end
+
+  def booking_task
+    Prospect.lookup_by_phone(phone).first.prospect_conversation_state.reload.slots_payload["booking_task"]
+  end
+
+  def conversation
+    Prospect.lookup_by_phone(phone).first.conversations.last
+  end
+
   def run_to_rate_plan_prompt
     post_message("mid august")
     post_message("3 days 2 nights")
     post_message("2 adults")
     post_message("#{room_name} option 1")
 
-    expect(parsed_body["reply_message"]).to include("which rate plan would you like?")
+    expect(parsed_body["reply_message"]).to include("Which rate would you like?")
   end
 
   def post_message(message)
-    post path, params: { message: message, phone: phone }.to_json, headers: headers
+    post path, params: { message: message, phone: @phone || phone }.to_json, headers: headers
   end
 
   def active_branch
@@ -207,57 +385,38 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     prospect.prospect_conversation_state.reload.slots_payload.dig("booking_task", "branch")
   end
 
-  def stub_interpreter
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call) do |agent|
-      build_interpretation(agent.instance_variable_get(:@message))
-    end
+  # ReferenceClassifier reads every message here except the rate-plan choices:
+  # picking a plan by price or by ordinal is not slot extraction from the
+  # sentence, it is the model naming one of the options it was just shown.
+  def stub_concierge_conversation
+    stub_concierge_model(
+      room_type_names: [ room_name, "Deluxe Room" ],
+      scripted: {
+        "first one" => rate_plan_choice("first one"),
+        "cheapest" => rate_plan_choice("cheapest"),
+        "refundable" => rate_plan_choice("refundable"),
+        "standard" => rate_plan_choice("standard"),
+        "no 1" => row_choice,
+        "no 2" => row_choice,
+        "option 3" => row_choice,
+        "early september" => {
+          tool: "advance_booking",
+          arguments: {
+            "slots" => month_slots(9, "early"),
+            "signals" => { "is_correction" => true }
+          }
+        }
+      }
+    )
   end
 
-  def build_interpretation(message)
-    normalized = message.to_s.downcase.strip
-
-    return interpretation(intent: "hotel_policy", topic: "hotel_policy") if normalized.include?("check in")
-    return interpretation(slots: month_slots(8, "mid").merge("days" => 3, "nights" => 2)) if normalized.include?("mid august")
-    return interpretation(slots: { "days" => 3, "nights" => 2 }) if normalized.include?("3 days 2 nights")
-    return interpretation(slots: { "adults" => 2, "children" => 0 }) if normalized.include?("2 adults")
-    return interpretation(slots: month_slots(9, "early"), signals: { "is_correction" => true }) if normalized.include?("early september")
-    return interpretation(intent: "confirmation", slots: { "confirmation" => "yes" }) if normalized == "yes"
-    return interpretation(intent: "confirmation", slots: { "confirmation" => "no" }) if normalized == "no"
-
-    if normalized.match?(/\boption\s*\d+\b/)
-      return interpretation(
-        intent: "option_selection",
-        slots: { "option_number" => normalized[/\boption\s*(\d+)\b/, 1] }
-      )
-    end
-
-    if normalized.include?("the cheaper one")
-      return interpretation(intent: "option_selection", slots: { "rate_plan_name" => "Non-Refundable Rate" })
-    end
-
-    if normalized.match?(/\b(first|cheapest|refundable|standard)\b/)
-      return interpretation(intent: "option_selection", slots: { "rate_plan_name" => normalized })
-    end
-
-    interpretation(intent: "greeting", topic: "general")
+  def rate_plan_choice(name)
+    { tool: "advance_booking", arguments: { "slots" => { "rate_plan_name" => name }, "signals" => {} } }
   end
 
-  def interpretation(intent: "booking_search", topic: "booking_search", slots: {}, signals: {})
-    {
-      "message_type" => "booking_request",
-      "intent" => intent,
-      "topic" => topic,
-      "confidence" => 1.0,
-      "slots" => slots,
-      "tool_hints" => [],
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }.merge(signals)
-    }
+  # A row and nothing else: there is no slot in it for the model to fill.
+  def row_choice
+    { tool: "advance_booking", arguments: { "slots" => {}, "signals" => {} } }
   end
 
   def month_slots(month, segment)

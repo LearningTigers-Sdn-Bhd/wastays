@@ -1,0 +1,40 @@
+<%#
+  What the guest sees the moment they press Send.
+
+  Four small replacements rather than one big one. The chat is now the whole
+  screen, so rebuilding it would close an open menu, drop the keyboard and
+  throw away the scroll position -- in the middle of a conversation, for a
+  message the guest can already see.
+
+  The bot's answer arrives later down the subscription, from the job.
+%>
+
+<%# The subscription the guest may not have had a moment ago: until their first
+    message there was no thread to listen to. Replacing it every time is a
+    no-op for a browser that is already subscribed. %>
+<%= turbo_stream.replace "concierge-chat-stream" do %>
+  <div id="concierge-chat-stream">
+    <% if @conversation %>
+      <%= turbo_stream_from @conversation, :guest %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @messages.any? %>
+  <%= turbo_stream.remove "#{PublicUI::Chat::Log::DEFAULT_ID}-empty" %>
+
+  <%# The last message is the one just written: the guest's own words go in
+      the same request, the answer is a job. A browser that was already
+      subscribed gets this twice -- once here, once down the stream -- and the
+      chat controller drops the copy it already shows. %>
+  <%= turbo_stream.append PublicUI::Chat::Log::DEFAULT_ID,
+        renderable: PublicUI::Chat::Message.new(message: @messages.last, hotel: @hotel) %>
+<% end %>
+
+<%# Always replaced, never only added: the region has to be able to clear the
+    last refusal as well as show a new one. %>
+<%= turbo_stream.replace "concierge-chat-error" do %>
+  <div id="concierge-chat-error">
+    <%= render "public/concierge/shared/error_alert", message: @error %>
+  </div>
+<% end %>

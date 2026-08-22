@@ -3,17 +3,19 @@ require "rails_helper"
 RSpec.describe AiConcierge::Agents::MessengerAgent do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
 
-  it "renders the hotel-specific greeting" do
-    result = described_class.new(hotel: hotel, context: { reply_type: :greeting }).call
+  # A greeting has no reply type: nothing routes to a tool, so the model's own
+  # words are the reply and MessengerAgent renders the bare message. There used
+  # to be a `:greeting` branch in the builder that nothing could reach.
+  it "renders the message when there is no reply type to dispatch on" do
+    result = described_class.new(hotel: hotel, context: { message: "Hi there!" }).call
 
-    expect(result["reply_message"]).to eq("Hello, welcome to #{hotel.name}! I can help with bookings, stay details, and more about the hotel. What would you like to inquire about?")
+    expect(result["reply_message"]).to eq("Hi there!")
   end
 
-  it "renders grouped booking suggestions by room type" do
+  it "renders one numbered row per option, across every room type" do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :suggest_options,
-      month_label: "early August 2026",
-      guest_label: "2 adults",
+      branch: { "target_month" => 8, "target_year" => 2026, "month_segment" => "early", "adults" => 2 },
       options: [
         {
           "room_type_name" => "Garden Prestige Suite",
@@ -25,30 +27,10 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       ]
     }).call
 
-    expect(result["reply_message"]).to include("*Garden Prestige Suite*")
-    expect(result["reply_message"]).to include("  Option 1: 3 August 2026 - 5 August 2026 (2 nights)")
-    expect(result["reply_message"]).to include("  Option 2: 4 August 2026 - 6 August 2026 (2 nights)")
-    expect(result["reply_message"]).to include('Reply with the room type name and option number or date you want, for example: "Ocean Villa King option 1" or "Executive Penthouse on May 21"')
+    expect(result["reply_message"]).to include("*1. Garden Prestige Suite* · August 3 to August 5 — from RM 520.00")
+    expect(result["reply_message"]).to include("*2. Garden Prestige Suite* · August 4 to August 6 — from $ 120.00")
+    expect(result["reply_message"]).to include('Reply with the number of the option you want, e.g. "1".')
     expect(result["reply_message"]).to include("You may visit this link for more details:")
-  end
-
-  it "renders the narrowed room type options when asking for an option number" do
-    result = described_class.new(hotel: hotel, context: {
-      reply_type: :room_type_requires_option_number,
-      room_type_name: "Executive Penthouse",
-      room_options: {
-        "room_type_name" => "Executive Penthouse",
-        "options" => [
-          { "position" => 1, "check_in" => "2026-08-03", "check_out" => "2026-08-05", "nights" => 2, "currency" => "MYR", "total_price" => 520.0 },
-          { "position" => 2, "check_in" => "2026-08-04", "check_out" => "2026-08-06", "nights" => 2, "currency" => "MYR", "total_price" => 540.0 }
-        ]
-      }
-    }).call
-
-    expect(result["reply_message"]).to include("I found multiple options under Executive Penthouse:")
-    expect(result["reply_message"]).to include("*Executive Penthouse*")
-    expect(result["reply_message"]).to include("  Option 1: 3 August 2026 - 5 August 2026 (2 nights)")
-    expect(result["reply_message"]).to include("  Option 2: 4 August 2026 - 6 August 2026 (2 nights)")
   end
 
   it "renders confirmation with yes and no prompt" do
@@ -96,7 +78,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :booking_context,
       bookings: [
-        { "date_range" => "May 21 - May 23", "room_type_name" => "Executive Penthouse" }
+        { "check_in" => Date.new(2026, 5, 21), "check_out" => Date.new(2026, 5, 23), "room_type_name" => "Executive Penthouse" }
       ]
     }).call
 
@@ -110,7 +92,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       end_confirmation_mode: :cancel_booking_attempt
     }).call
 
-    expect(result["reply_message"]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(result["reply_message"]).to eq("Your booking isn't finished yet. Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
   end
 
   it "renders the cancelled booking attempt next-step prompt" do
@@ -127,7 +109,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       end_confirmation_mode: :generic
     }).call
 
-    expect(result["reply_message"]).to eq("Dear guest, do you have anything else to ask?")
+    expect(result["reply_message"]).to eq("Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
   end
 
   it "renders the smart party split message when adults are partially known" do
@@ -158,7 +140,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
 
     expect(result["reply_message"]).to include("Great, I've prepared your booking quote:")
     expect(result["reply_message"]).to include("- Date: *3 July 2026 - 7 July 2026*")
-    expect(result["reply_message"]).to include("- Total: *RM 7040.00*")
+    expect(result["reply_message"]).to include("- Total: *RM 7,040.00*")
     expect(result["reply_message"]).to include("Please note that the quotation link will expire at 8:04 AM.")
     expect(result["reply_message"]).to include("http://test.com")
   end
@@ -169,22 +151,22 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       check_in: "2026-05-24"
     }).call
 
-    expect(result["reply_message"]).to eq("How many guests should I check for on May 24?")
+    expect(result["reply_message"]).to eq("How many guests should I check for on May 24? Please reply with the number of adults and children, e.g. \"2 adults 3 children\".")
   end
 
   it "renders the guest count message with a month label fallback" do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :ask_guest_count,
-      month_label: "May 2026"
+      branch: { "target_month" => 5, "target_year" => 2026 }
     }).call
 
-    expect(result["reply_message"]).to eq("How many guests should I check for in May 2026?")
+    expect(result["reply_message"]).to eq("How many guests should I check for in May 2026? Please reply with the number of adults and children, e.g. \"2 adults 3 children\".")
   end
 
   it "renders the specific timing clarification message" do
     result = described_class.new(hotel: hotel, context: {
       reply_type: :ask_specific_timing,
-      month_label: "May 2026"
+      branch: { "target_month" => 5, "target_year" => 2026 }
     }).call
 
     expect(result["reply_message"]).to eq("You want to make a booking in May 2026. May I know the exact check-in date or assumption range, e.g: *early*, *mid*, and *late*?")
@@ -219,24 +201,15 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       }
     )
 
-    # We mock the interpreter to ensure it returns end_conversation=true
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "conversation_control",
-      "intent" => "greeting",
-      "topic" => "greeting",
-      "slots" => {},
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => true
-      }
-    })
+    # No model fake for the loop: "nevermind" is caught by the control handler
+    # before it ever runs, which is the point of settling control
+    # deterministically. The stylist still runs afterwards -- it reads the
+    # finished sentence, and a control reply is a sentence like any other.
+    stub_concierge_stylist
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "nevermind", prospect_public_id: prospect.public_id).call
 
-    expect(result.payload[:reply_message]).to eq("Do you want to start over with a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(result.payload[:reply_message]).to eq("Your booking isn't finished yet. Would you like to end this chat? Please reply *Yes* to end, or *No* to carry on.")
     state = prospect.prospect_conversation_state.reload
     expect(state.pending_question).to eq("confirm_to_end_conversation")
     expect(state.flow_status).to eq("active")
@@ -249,19 +222,9 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       "active" => { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" }
     })
 
-    # We mock the interpreter to return no slots, but the guardrail should extract '4'
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_request",
-      "intent" => "booking_search",
-      "topic" => "booking_search",
-      "slots" => {},
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }
+    # The model passes no slots; InputNormalizer is what finds the 4.
+    stub_concierge_model(scripted: {
+      "4" => { tool: "advance_booking", arguments: { "slots" => {}, "signals" => {} } }
     })
 
     AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "4", prospect_public_id: prospect.public_id).call
@@ -275,15 +238,9 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
     prospect = create(:prospect, hotel: hotel)
     conversation_state = create(:prospect_conversation_state, prospect: prospect)
 
-    # Mock LLM hallucinating month_segment="early" for "june"
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_request",
-      "intent" => "booking_search",
-      "topic" => "booking_search",
-      "slots" => { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" },
-      "conversation_signals" => {
-        "is_reset" => false, "is_resume" => false, "is_correction" => false, "starts_new_booking_branch" => false, "end_conversation" => false
-      }
+    # The model hallucinates month_segment="early" for a bare "june".
+    stub_concierge_model(scripted: {
+      "can i book on june" => { tool: "advance_booking", arguments: { "slots" => { "target_month" => 6, "target_year" => 2026, "month_segment" => "early" }, "signals" => {} } }
     })
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "can i book on june", prospect_public_id: prospect.public_id).call
@@ -302,15 +259,9 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       "active" => { "target_month" => 6, "target_year" => 2026 }
     })
 
-    # LLM correctly extracts mid
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_request",
-      "intent" => "booking_search",
-      "topic" => "booking_search",
-      "slots" => { "month_segment" => "mid" },
-      "conversation_signals" => {
-        "is_reset" => false, "is_resume" => false, "is_correction" => false, "starts_new_booking_branch" => false, "end_conversation" => false
-      }
+    # The model gets this one right.
+    stub_concierge_model(scripted: {
+      "mid" => { tool: "advance_booking", arguments: { "slots" => { "month_segment" => "mid" }, "signals" => {} } }
     })
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "mid", prospect_public_id: prospect.public_id).call
@@ -322,25 +273,17 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
     expect(payload).not_to have_key("active")
   end
 
-  it "treats a date with ok as a specific timing answer, not confirmation" do
+  it "treats a date with ok as a specific timing answer, not confirmation", frozen_time: Date.new(2026, 6, 3) do
     prospect = create(:prospect, hotel: hotel)
     conversation_state = create(:prospect_conversation_state, prospect: prospect, pending_question: "specific_timing")
     conversation_state.update!(slots_payload: {
       "active" => { "target_month" => 6, "target_year" => 2026 }
     })
 
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_confirmation",
-      "intent" => "confirmation",
-      "topic" => "booking_search",
-      "slots" => { "confirmation" => "yes" },
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }
+    # The model reads the trailing "ok?" as a yes. pending_question is what
+    # decides a "yes" is not on offer here, so the date wins.
+    stub_concierge_model(scripted: {
+      "23 june ok?" => { tool: "advance_booking", arguments: { "slots" => { "confirmation" => "yes" }, "signals" => {} } }
     })
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "23 june ok?", prospect_public_id: prospect.public_id).call
@@ -354,23 +297,14 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
   it "does not attach request quote action to clarification replies" do
     prospect = create(:prospect, hotel: hotel)
 
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "booking_request",
-      "intent" => "booking_search",
-      "topic" => "booking_search",
-      "slots" => {},
-      "conversation_signals" => {
-        "is_reset" => false,
-        "is_resume" => false,
-        "is_correction" => false,
-        "starts_new_booking_branch" => false,
-        "end_conversation" => false
-      }
+    # A booking attempt that states nothing yet.
+    stub_concierge_model(scripted: {
+      "can i make booking?" => { tool: "advance_booking", arguments: { "slots" => {}, "signals" => {} } }
     })
 
     result = AiConcierge::Orchestration::TurnOrchestrator.new(hotel: hotel, message: "can i make booking?", prospect_public_id: prospect.public_id).call
 
-    expect(result.payload[:reply_message]).to eq("Sure, which date or month do you plan to arrive for check-in?")
+    expect(result.payload[:reply_message]).to eq("Hello! I can help you book right here. Which date or month do you plan to arrive for check-in?")
     expect(result.payload[:action_name]).to eq("request_quote")
   end
 end

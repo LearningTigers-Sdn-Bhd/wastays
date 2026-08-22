@@ -45,7 +45,7 @@
              selected: @hotel.ai_concierge_tone) %>
       <% end %>
 
-      <% provider_labels = { "openai" => "OpenAI", "claude" => "Claude", "deepseek" => "DeepSeek", "gemini" => "Gemini" } %>
+      <% provider_labels = { "openai" => "OpenAI", "claude" => "Claude", "gemini" => "Gemini" } %>
       <%= render PanelsUI::FormField.new(
             form: f,
             attribute: :ai_provider_name,

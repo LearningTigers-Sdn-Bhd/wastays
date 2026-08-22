@@ -1,8 +1,6 @@
 module AiConcierge
   module MessageBuilders
     class HotelInfoBuilder < BaseBuilder
-      HANDLED_REPLY_TYPES = %i[hotel_policy booking_context general_hotel_info hotel_faq nearby_attractions].freeze
-
       def call(reply_type)
         case reply_type.to_sym
         when :hotel_policy
@@ -42,7 +40,8 @@ module AiConcierge
 
         intro = bookings.one? ? "According to our system, we found your active booking:" : "According to our system, we found your active bookings:"
         lines = bookings.map do |booking|
-          "- *#{booking['date_range']}*: #{booking['room_type_name']}"
+          dates = [ booking["check_in"], booking["check_out"] ].map { |date| format_date(date) }.join(" - ")
+          "- *#{dates}*: #{booking['room_type_name']}"
         end
 
         [ intro, lines.join("\n") ].join("\n")
