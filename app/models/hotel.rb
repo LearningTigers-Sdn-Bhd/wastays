@@ -18,7 +18,7 @@ class Hotel < ApplicationRecord
   }, prefix: true, validate: true
 
   AI_CONCIERGE_MODEL_NAMES = {
-    "openai" => "gpt-4o-mini",
+    "openai" => "gpt-4.1-mini",
     "claude" => "claude-haiku-4-5",
     "gemini" => "gemini-2.5-flash"
   }.freeze
