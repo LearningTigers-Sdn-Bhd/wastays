@@ -29,7 +29,7 @@ module Public
       end
 
       def ensure_concierge_enabled
-        return if @hotel&.concierge_chat_available?
+        return if @hotel&.concierge_page_available?
 
         if @hotel&.concierge_available?
           redirect_to hotel_path(@hotel), alert: "AI concierge is not available for this hotel."
