@@ -25,6 +25,24 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "creates nothing until the visitor actually says something" do
       expect { get chat_path }.not_to change(Prospect, :count)
     end
+
+    it "sends the guest back to the concierge page when chat is switched off" do
+      hotel.update!(guest_chat_enabled: false)
+
+      get chat_path
+
+      expect(response).to redirect_to(concierge_home_path(hotel))
+    end
+
+    it "refuses to record a message posted to a chat that is switched off" do
+      hotel.update!(guest_chat_enabled: false)
+
+      expect {
+        post chat_path, params: { message: "Do you have parking?" }
+      }.not_to change(Conversation, :count)
+
+      expect(response).to redirect_to(concierge_home_path(hotel))
+    end
   end
 
   describe "POST chat" do

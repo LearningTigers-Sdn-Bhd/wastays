@@ -25,6 +25,17 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response.body).to include("Contact Us")
     end
 
+    it "keeps the page but drops the chat tile when guest chat is off" do
+      hotel.update!(guest_chat_enabled: false)
+
+      get concierge_home_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Contact Us")
+      expect(response.body).not_to include("Chat With Us")
+      expect(response.body).not_to include(concierge_chat_path(hotel))
+    end
+
     it "returns 404 for a suspended hotel" do
       hotel.update!(status: "suspended")
       get concierge_home_path(hotel)

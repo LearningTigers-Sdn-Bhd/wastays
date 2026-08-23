@@ -8,6 +8,10 @@ module Public
     class ChatsController < BaseController
       include ConciergeChatSession
 
+      # The one screen the guest-chat switch closes. The rest of the concierge
+      # page is gated a level up, in BaseController.
+      before_action :ensure_guest_chat_available
+
       def show
         load_thread
       end
@@ -58,6 +62,12 @@ module Public
       end
 
       private
+
+      def ensure_guest_chat_available
+        return if @hotel&.concierge_chat_available?
+
+        redirect_to concierge_home_path(@hotel)
+      end
 
       # A write hands over the thread it wrote into -- on a first message that is
       # a conversation the cookie does not know about yet, so looking it up again
