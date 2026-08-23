@@ -35,6 +35,39 @@
     </div>
   <% end %>
 
+  <% if @presenter.outstanding_balance? %>
+    <% can_add_payment = @presenter.can_add_payment?(current_user) %>
+    <%= render PanelsUI::Alert.new(
+          tone: :warning,
+          title: "Outstanding balance: #{@presenter.format_money(@presenter.due_amount)}",
+          class: "grc-no-print mb-4") do |alert| %>
+      <% alert.with_description do %>
+        If payment has already been received, record it before printing or emailing this card.
+        <% unless can_add_payment %>
+          Ask an authorized staff member to record the payment.
+        <% end %>
+      <% end %>
+      <% if can_add_payment %>
+        <% alert.with_actions do %>
+          <%= render PanelsUI::Button.new(
+                href: hotel_folio_action_post_transaction_path(
+                  current_hotel,
+                  @booking,
+                  transaction_type: "payment",
+                  active_folio_id: @presenter.payment_folio.id,
+                  amount: @presenter.due_amount.to_d.round(2).to_s("F"),
+                  return_to: request.fullpath
+                ),
+                variant: :warning,
+                size: :sm,
+                data: { turbo_frame: "folio_action_sheet" }) do %>
+            Add Payment
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
   <section class="grc-no-print grid gap-5 lg:grid-cols-[1fr_380px]">
     <div class="space-y-5">
       <section class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">

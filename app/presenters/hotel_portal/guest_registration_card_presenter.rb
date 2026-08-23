@@ -83,6 +83,24 @@ module HotelPortal
       total_charges - amount_paid
     end
 
+    def outstanding_balance?
+      due_amount.positive?
+    end
+
+    def payment_folio
+      @payment_folio ||= @booking.booking_folios.open
+        .order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc)
+        .first
+    end
+
+    def can_add_payment?(user)
+      return false unless payment_folio
+      return false unless @hotel.current_business_date_record&.allows_normal_posting?
+
+      user.has_permission?("view_bookings", hotel: @hotel) &&
+        user.has_permission?("post_folio_payments", hotel: @hotel)
+    end
+
     def guest_country_display
       guest_country.presence || "-"
     end

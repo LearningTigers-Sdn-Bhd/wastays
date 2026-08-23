@@ -15,6 +15,11 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
     sign_in_as(user)
   end
 
+  def grant_permission(slug)
+    permission = Permission.find_or_create_by!(slug: slug) { |record| record.name = slug.humanize }
+    role.permissions << permission unless role.permissions.exists?(permission.id)
+  end
+
   describe "GET /hotel/:hotel_id/bookings/:booking_id/guest_registration_card" do
     it "creates a draft card on first open and shows the pending registration number" do
       get hotel_booking_guest_registration_card_path(hotel, booking)
@@ -46,6 +51,84 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body.scan("Print official form").size).to eq(1)
       expect(response.body).to include(hotel_booking_guest_registration_card_pdf_path(hotel, booking))
       expect(response.body).to include("grc-print grc-print-page")
+    end
+
+    it "warns about an unpaid balance without blocking document actions" do
+      booking.update!(total_amount: 138.24)
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      document = Nokogiri::HTML(response.body)
+      alert = document.at_css(".panel-alert[data-tone='warning']")
+      expect(alert.text.squish).to include(
+        "Outstanding balance: MYR 138.24",
+        "If payment has already been received, record it before printing or emailing this card.",
+        "Ask an authorized staff member to record the payment."
+      )
+      expect(alert.at_css("a")).to be_nil
+      expect(response.body).to include("Print official form", "Email to guest", "Save Signature")
+      expect(document.at_css("article.grc-print").text).not_to include("Outstanding balance:")
+    end
+
+    it "offers the existing payment sheet with the remaining balance prefilled" do
+      grant_permission("post_folio_payments")
+      booking.update!(total_amount: 138.24)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 50)
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      document = Nokogiri::HTML(response.body)
+      alert = document.at_css(".panel-alert[data-tone='warning']")
+      link = alert.at_xpath(".//a[contains(., 'Add Payment')]")
+      expect(alert.text.squish).to include("Outstanding balance: MYR 88.24")
+      expect(link["href"]).to eq(hotel_folio_action_post_transaction_path(
+        hotel,
+        booking,
+        transaction_type: "payment",
+        active_folio_id: folio.id,
+        amount: "88.24",
+        return_to: hotel_booking_guest_registration_card_path(hotel, booking)
+      ))
+      expect(link["data-turbo-frame"]).to eq("folio_action_sheet")
+    end
+
+    it "removes the warning when payments cover the booking total" do
+      booking.update!(total_amount: 138.24)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 138.24)
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).not_to include("Outstanding balance:", "Add Payment")
+      expect(response.body).to include("Due amount", "MYR 0.00", "Print official form")
+    end
+
+    it "returns from a posted payment to a refreshed settled card" do
+      grant_permission("post_folio_payments")
+      booking.update!(total_amount: 138.24)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      PaymentMethods::EnsureDefaults.call(hotel)
+      payment_method = hotel.hotel_payment_methods.joins(:transaction_code)
+        .find_by!(transaction_codes: { system_key: "cash_payment" })
+      return_to = hotel_booking_guest_registration_card_path(hotel, booking)
+
+      post hotel_folio_action_post_transaction_path(hotel, booking), params: {
+        return_to: return_to,
+        folio_transaction: {
+          transaction_type: "payment",
+          booking_folio_id: folio.id,
+          hotel_payment_method_id: payment_method.id,
+          amount: "138.24",
+          description: "Payment received at front desk",
+          posting_date: hotel.current_business_date
+        }
+      }
+
+      expect(response).to redirect_to(return_to)
+      follow_redirect!
+      expect(response.body).not_to include("Outstanding balance:", "Add Payment")
+      expect(response.body).to include("Amount paid", "MYR 138.24", "Due amount", "MYR 0.00")
     end
 
     it "shows profile managers where to configure displayed details" do
