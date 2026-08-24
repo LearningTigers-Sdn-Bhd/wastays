@@ -16,7 +16,8 @@ module Reports
         period_label: @selected_date.strftime("%d %b %Y"),
         period_label_title: "Selected date",
         prepared_by: @prepared_by,
-        page_layout: :landscape
+        page_layout: :landscape,
+        frame_variant: :compact
       )
       builder.add_header
       builder.add_table(
