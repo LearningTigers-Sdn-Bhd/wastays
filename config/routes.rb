@@ -262,6 +262,18 @@ Rails.application.routes.draw do
         get :icon_preview
       end
     end
+    resources :attractions, except: [ :show, :destroy ] do
+      collection do
+        post :preview
+      end
+      member do
+        patch :approve
+        patch :reject
+        patch :archive
+        patch :restore
+        patch :merge
+      end
+    end
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
@@ -684,7 +696,9 @@ Rails.application.routes.draw do
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do
           get :autocomplete, on: :collection
         end
-        resources :nearby_attractions, path: "nearby-attractions", except: [ :show ]
+        resources :nearby_attractions, path: "nearby-attractions", except: [ :show ] do
+          post :preview, on: :collection
+        end
       end
 
       scope "finance" do

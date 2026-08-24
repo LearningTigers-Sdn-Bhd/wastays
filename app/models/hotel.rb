@@ -48,7 +48,8 @@ class Hotel < ApplicationRecord
   has_many :rate_plans, dependent: :destroy
   has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
   has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
-  has_many :nearby_attractions, dependent: :destroy
+  has_many :hotel_nearby_attractions, dependent: :destroy
+  has_many :nearby_attractions, through: :hotel_nearby_attractions, source: :attraction
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
@@ -724,11 +725,11 @@ class Hotel < ApplicationRecord
   end
 
   def latitude
-    extract_coordinate("3d", /@(-?\d+\.\d+)/)
+    parsed_google_maps_location&.latitude&.to_f
   end
 
   def longitude
-    extract_coordinate("4d", /@(?:-?\d+\.\d+),(-?\d+\.\d+)/)
+    parsed_google_maps_location&.longitude&.to_f
   end
 
   # Only ever on create. A slug that followed the hotel name would invalidate every
@@ -866,13 +867,11 @@ class Hotel < ApplicationRecord
       onboarding_sessions.where(notes: "FINAL_ONBOARDING_COMPLETION").order(updated_at: :desc).first
   end
 
-  def extract_coordinate(prefix, fallback_regex)
-    return nil if google_map_link.blank?
+  def parsed_google_maps_location
+    return if google_map_link.blank?
 
-    matches = google_map_link.scan(/!#{prefix}(-?\d+\.\d+)/).flatten
-    return matches.last.to_f if matches.any?
-
-    google_map_link[fallback_regex, 1]&.to_f
+    result = Attractions::GoogleMapsUrlParser.call(google_map_link)
+    result.parsed if result.success?
   end
 
   # The charging model determines the shape and meaning of every price stored

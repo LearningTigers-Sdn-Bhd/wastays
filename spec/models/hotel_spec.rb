@@ -6,6 +6,8 @@ RSpec.describe Hotel, type: :model do
     it { should have_many(:user_hotel_accesses).dependent(:destroy) }
     it { should have_many(:users).through(:user_hotel_accesses) }
     it { should have_many(:room_groups).dependent(:destroy) }
+    it { should have_many(:hotel_nearby_attractions).dependent(:destroy) }
+    it { should have_many(:nearby_attractions).through(:hotel_nearby_attractions) }
   end
 
   describe 'validations' do

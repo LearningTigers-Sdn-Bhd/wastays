@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_093000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_24_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -204,6 +204,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_093000) do
     t.index ["hotel_id", "reference_number"], name: "index_ar_payments_on_hotel_id_and_reference_number"
     t.index ["hotel_id"], name: "index_ar_payments_on_hotel_id"
     t.check_constraint "amount > 0::numeric", name: "ar_payments_amount_positive"
+  end
+
+  create_table "attractions", force: :cascade do |t|
+    t.text "address"
+    t.string "archived_from_status"
+    t.string "city"
+    t.string "coordinate_fingerprint"
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.text "google_maps_url"
+    t.decimal "latitude", precision: 10, scale: 7
+    t.decimal "longitude", precision: 10, scale: 7
+    t.bigint "merged_into_id"
+    t.string "name", null: false
+    t.string "normalized_name"
+    t.text "review_note"
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.text "shared_summary"
+    t.bigint "source_hotel_id"
+    t.string "status", default: "pending", null: false
+    t.bigint "submitted_by_id"
+    t.datetime "updated_at", null: false
+    t.index ["coordinate_fingerprint"], name: "index_active_attractions_on_fingerprint", unique: true, where: "((coordinate_fingerprint IS NOT NULL) AND ((status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying])::text[])))"
+    t.index ["latitude", "longitude"], name: "index_attractions_on_latitude_and_longitude"
+    t.index ["merged_into_id"], name: "index_attractions_on_merged_into_id"
+    t.index ["normalized_name"], name: "index_attractions_on_normalized_name"
+    t.index ["reviewed_by_id"], name: "index_attractions_on_reviewed_by_id"
+    t.index ["source_hotel_id"], name: "index_attractions_on_source_hotel_id"
+    t.index ["status"], name: "index_attractions_on_status"
+    t.index ["submitted_by_id"], name: "index_attractions_on_submitted_by_id"
+    t.check_constraint "archived_from_status IS NULL OR (archived_from_status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[]))", name: "attractions_archived_from_status_allowed"
+    t.check_constraint "latitude IS NULL OR latitude >= '-90'::integer::numeric AND latitude <= 90::numeric", name: "attractions_latitude_range"
+    t.check_constraint "longitude IS NULL OR longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "attractions_longitude_range"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'archived'::character varying]::text[])", name: "attractions_status_allowed"
   end
 
   create_table "banking_details", force: :cascade do |t|
@@ -1523,6 +1558,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_093000) do
     t.integer "version", default: 1, null: false
     t.index ["hotel_id", "category"], name: "index_hotel_knowledge_documents_on_hotel_id_and_category"
     t.index ["hotel_id"], name: "index_hotel_knowledge_documents_on_hotel_id"
+  end
+
+  create_table "hotel_nearby_attractions", force: :cascade do |t|
+    t.bigint "attraction_id", null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "hotel_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attraction_id"], name: "index_hotel_nearby_attractions_on_attraction_id"
+    t.index ["hotel_id", "attraction_id"], name: "index_hotel_nearby_attractions_uniqueness", unique: true
+    t.index ["hotel_id"], name: "index_hotel_nearby_attractions_on_hotel_id"
   end
 
   create_table "hotel_onboarding_sections", force: :cascade do |t|
@@ -2854,6 +2900,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_093000) do
   add_foreign_key "ar_payment_submissions", "users", column: "submitted_by_id"
   add_foreign_key "ar_payments", "hotel_corporate_accounts"
   add_foreign_key "ar_payments", "hotels"
+  add_foreign_key "attractions", "attractions", column: "merged_into_id"
+  add_foreign_key "attractions", "hotels", column: "source_hotel_id"
+  add_foreign_key "attractions", "users", column: "reviewed_by_id"
+  add_foreign_key "attractions", "users", column: "submitted_by_id"
   add_foreign_key "banking_details", "accounts"
   add_foreign_key "billing_route_batches", "bookings"
   add_foreign_key "billing_route_batches", "hotels"
@@ -3003,6 +3053,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_093000) do
   add_foreign_key "hotel_knowledge_diagnostics", "prospect_messages"
   add_foreign_key "hotel_knowledge_diagnostics", "prospects"
   add_foreign_key "hotel_knowledge_documents", "hotels"
+  add_foreign_key "hotel_nearby_attractions", "attractions"
+  add_foreign_key "hotel_nearby_attractions", "hotels"
   add_foreign_key "hotel_onboarding_sections", "hotels"
   add_foreign_key "hotel_ota_credentials", "hotels"
   add_foreign_key "hotel_payment_methods", "hotel_extra_charges", column: "surcharge_extra_charge_id"
