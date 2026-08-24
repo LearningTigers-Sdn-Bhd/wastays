@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_24_123000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2581,6 +2581,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_100000) do
     t.index ["booking_id"], name: "index_refund_requests_on_booking_id", unique: true
   end
 
+  create_table "report_view_preferences", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.string "report_key", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.jsonb "visible_columns", default: [], null: false
+    t.index ["hotel_id", "user_id", "report_key"], name: "idx_on_hotel_id_user_id_report_key_bec2a64bb5", unique: true
+    t.index ["hotel_id"], name: "index_report_view_preferences_on_hotel_id"
+    t.index ["user_id"], name: "index_report_view_preferences_on_user_id"
+  end
+
   create_table "role_permissions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "permission_id", null: false
@@ -3152,6 +3164,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_100000) do
   add_foreign_key "receipts", "hotels"
   add_foreign_key "receipts", "payment_transactions"
   add_foreign_key "refund_requests", "bookings"
+  add_foreign_key "report_view_preferences", "hotels"
+  add_foreign_key "report_view_preferences", "users"
   add_foreign_key "role_permissions", "permissions"
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "roles", "accounts"

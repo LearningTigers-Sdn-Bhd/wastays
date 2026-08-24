@@ -73,25 +73,31 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       expect(response).to have_http_status(:ok)
       header = response.body[/<thead>.*?<\/thead>/m]
       headers = Nokogiri::HTML.fragment(header).css("th").map { |column| column.text.squish }
-      expect(headers).to include("Pax", "Nights", "Remarks")
-      expect(headers.first).to include("Room type", "All room types")
-      expect(headers[2]).to include("Room status", "All room statuses")
-      expect(headers[3]).to include("Assigned to", "All staff")
-      expect(headers[4]).to include("Booking status", "All booking statuses")
-      expect(headers[5]).to include("Arrival")
-      expect(headers[6]).to include("Departure")
+      expect(headers).to include("Room", "Pax", "Nights", "Remarks")
+      expect(headers[2]).to include("Room type", "All room types")
+      expect(headers[4]).to include("Room status", "All room statuses")
+      expect(headers[5]).to include("Assigned to", "All staff")
+      expect(headers[6]).to include("Booking status", "All booking statuses")
+      expect(headers[7]).to include("Arrival")
+      expect(headers[8]).to include("Departure")
       expect(response.body).to include("2/1", "Guest requested extra towels", "Pending checkout")
       expect(response.body).to include("Clear remarks for #{room_type.name} 101")
       expect(response.body).not_to include("Task status", "Add task", "No task")
-      expect(response.body.scan(/id="hk-group-#{room_type.id}-#{room_type.id}-101"/).size).to eq(1)
+      expect(response.body.scan(/id="hk-room-#{room_type.id}-101"/).size).to eq(1)
+      expect(response.body).to include("Select all visible rooms", "Select #{room_type.name} 101")
 
       document = Nokogiri::HTML(response.body)
-      board_section = document.at_css('section[data-controller~="housekeeping-table"]')
-      expect(board_section["data-action"]).to include("change->housekeeping-table#filterChanged")
-      expect(document.at_css("table")["data-controller"]).to eq("table-group")
+      board = document.at_css('[data-controller~="housekeeping-table"]')
+      expect(board["data-action"]).to include("change->housekeeping-table#changed")
+      expect(document.at_css("table")["data-controller"]).to be_nil
       expect(document.css('a[data-action="click->housekeeping-table#navigate"]')).to all(
         satisfy { |link| link["data-turbo-frame"] == "housekeeping_tasks_results" }
       )
+      expect(document.at_css("#hk-room-status-filter-trigger")["data-variant"]).to eq("ghost")
+      expect(document.at_css("#hk-room-status-filter-trigger")["aria-label"]).to eq("Filter room status, all selected")
+      badge = document.at_css("#hk-room-status-filter-cell .panel-badge")
+      expect(badge.text).to eq("All")
+      expect(badge["data-variant"]).to eq("primary")
     end
 
     it "uses styled selection controls and exact room-keyed mutation routes" do
@@ -144,7 +150,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
 
       table_body = response.body[/<tbody.*?<\/tbody>/m]
       table_document = Nokogiri::HTML.fragment(table_body)
-      room_numbers = table_document.css('tr[data-group] th[scope="row"] > div > span:first-child').map(&:text)
+      room_numbers = table_document.css('tr[data-housekeeping-room-row] th[data-column-key="room_number"] > div > span:first-child').map(&:text)
       expect(room_numbers).to eq([ "101" ])
       expect(table_body).to include("Pending checkout")
       expect(response.body).to include('aria-sort="descending"')
@@ -179,8 +185,8 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       get hotel_housekeeping_tasks_path(hotel, room_statuses: [ "__none__" ])
 
       expect(response.body).to include('id="hk-room-type-filter"', 'id="hk-room-status-filter"', "No rooms found")
-      empty_state = Nokogiri::HTML(response.body).at_css("tbody td[colspan='9']")
-      expect(empty_state.text.squish).to eq("No rooms found Try adjusting your filters.")
+      empty_state = Nokogiri::HTML(response.body).at_css("tbody td[colspan='11']")
+      expect(empty_state.text.squish).to eq("No rooms found Change the filters to show rooms.")
     end
 
     it "exports every filtered room as CSV, XLSX, and PDF" do
@@ -209,6 +215,67 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/pdf")
       expect(text).to include("Housekeeping Tasks", "Inspect balcony", user.name, "Page 1 of 1")
+      expect(text).not_to include("ASSIGNED")
+    end
+
+    it "uses the current user's saved columns in the table and every export" do
+      ReportViewPreference.create!(
+        hotel:, user:, report_key: "housekeeping_tasks", visible_columns: %w[room_number remarks]
+      )
+      room_status("101", notes: "Inspect balcony")
+
+      get hotel_housekeeping_tasks_path(hotel)
+      header = Nokogiri::HTML(response.body).at_css("thead").text.squish
+      expect(header).to include("Room", "Remarks")
+      expect(header).not_to include("Room type", "Booking status", "Arrival")
+
+      get hotel_housekeeping_tasks_path(hotel, format: :csv)
+      expect(response.body.lines.first).to include("Room Number,Remarks")
+      expect(response.body.lines.first).not_to include("Room Type")
+    end
+
+    it "exports only selected composite room identities" do
+      room_status("101", notes: "Selected room")
+      room_status("202", notes: "Not selected")
+
+      get hotel_housekeeping_tasks_path(hotel, format: :csv), params: {
+        selected_rooms: { room_type.id.to_s => [ "101" ] }
+      }
+
+      expect(response.body).to include("101", "Selected room")
+      expect(response.body).not_to include("202", "Not selected")
+    end
+
+    it "returns an empty export when explicit room selections are invalid" do
+      get hotel_housekeeping_tasks_path(hotel, format: :csv), params: {
+        selected_rooms: { room_type.id.to_s => [ "not-a-room" ] }
+      }
+
+      expect(response.body.lines.size).to eq(1)
+    end
+  end
+
+  describe "view preferences" do
+    it "saves and resets the current user's visible columns" do
+      patch hotel_housekeeping_view_preference_path(hotel),
+        params: { visible_columns: %w[remarks room_number unknown] }, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.fetch("visible_columns")).to eq(%w[room_number remarks])
+      preference = ReportViewPreference.find_by!(hotel:, user:, report_key: "housekeeping_tasks")
+      expect(preference.visible_columns).to eq(%w[room_number remarks])
+
+      delete hotel_housekeeping_view_preference_path(hotel), as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.fetch("visible_columns")).to eq(HousekeepingTasks::Columns::KEYS)
+      expect(preference.class.where(id: preference.id)).to be_empty
+    end
+
+    it "rejects an empty visible-column selection" do
+      patch hotel_housekeeping_view_preference_path(hotel), params: { visible_columns: [] }, as: :json
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body.fetch("error")).to eq("Keep at least one column visible.")
     end
   end
 

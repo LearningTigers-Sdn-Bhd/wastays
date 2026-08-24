@@ -2,9 +2,9 @@
 
 module Reports
   class HousekeepingTasksPdfGenerator
-    def initialize(hotel:, room_groups:, selected_date:, prepared_by:)
+    def initialize(hotel:, rooms:, selected_date:, prepared_by:, visible_columns:)
       @hotel = hotel
-      @table = HousekeepingTasksExportTable.new(room_groups: room_groups)
+      @table = HousekeepingTasksExportTable.new(rooms:, visible_columns:)
       @selected_date = selected_date
       @prepared_by = prepared_by
     end
@@ -19,15 +19,15 @@ module Reports
         page_layout: :landscape
       )
       builder.add_header
-      builder.add_summary([ [ "Rooms", @table.room_count.to_s ], [ "Assigned", @table.assigned_count.to_s ] ])
       builder.add_table(
         section_title: "Room Details",
-        headers: HousekeepingTasksExportTable::PDF_HEADERS,
+        section_meta: "#{@table.room_count} #{@table.room_count == 1 ? 'room' : 'rooms'}",
+        headers: @table.pdf_headers,
         rows: @table.pdf_rows,
-        numeric_columns: [],
+        numeric_columns: @table.numeric_columns,
         total_row: nil,
         empty_message: "No rooms found for the selected filters.",
-        column_widths: HousekeepingTasksExportTable::PDF_COLUMN_WIDTHS
+        column_widths: @table.pdf_column_widths(builder.content_width)
       )
       builder.render
     end

@@ -2,48 +2,49 @@
 
 module Reports
   class HousekeepingTasksExportTable
-    HEADERS = [
-      "Room Number", "Room Type", "Pax", "Room Status", "Assigned To",
-      "Booking Status", "Arrival", "Departure", "Nights", "Remarks"
-    ].freeze
-    COLUMN_TYPES = %i[text text text text text text text text integer text].freeze
-    PDF_HEADERS = [ "Room", "Room Type", "Pax", "Room Status", "Assigned To",
-                    "Booking Status", "Arrival", "Departure", "Nights", "Remarks" ].freeze
-    PDF_COLUMN_WIDTHS = [ 48, 80, 38, 75, 80, 85, 75, 75, 42, 140 ].freeze
+    attr_reader :rows, :columns, :rooms
 
-    attr_reader :rows
+    def initialize(rooms:, visible_columns:)
+      @rooms = rooms
+      @columns = HousekeepingTasks::Columns.selected(visible_columns)
+      raise ArgumentError, "at least one visible column is required" if columns.empty?
 
-    def initialize(room_groups:)
-      @rows = build_rows(room_groups)
+      @rows = rooms.map { |room| row_for(room).values_at(*column_keys) }
     end
 
     def room_count = rows.size
-    def assigned_count = rows.count { |row| row[4] != "Unassigned" }
+    def assigned_count = rooms.count { |room| room[:assigned_to].present? }
+    def headers = columns.map(&:export_label)
+    def pdf_headers = columns.map(&:pdf_label)
+    def column_types = columns.map(&:type)
+    def excel_widths = columns.map(&:excel_width)
+    def numeric_columns = column_types.each_index.select { |index| column_types[index] == :integer }
 
     def pdf_rows = rows
 
-    private
-
-    def build_rows(room_groups)
-      room_groups.flat_map do |group|
-        group[:rooms].map { |room| row_for(group, room) }
-      end
+    def pdf_column_widths(content_width)
+      total = columns.sum(&:pdf_width).to_f
+      columns.map { |column| column.pdf_width * content_width / total }
     end
 
-    def row_for(group, room)
+    private
+
+    def column_keys = columns.map(&:key)
+
+    def row_for(room)
       booking = room[:booking]
-      [
-        room[:room_number].to_s,
-        group[:room_type].name.to_s,
-        room[:pax].presence || "—",
-        room[:room_status_label].to_s,
-        room[:assigned_to]&.name.presence || "Unassigned",
-        room[:booking_status_label].to_s,
-        arrival_for(booking),
-        departure_for(booking),
-        booking&.duration_in_nights,
-        room[:notes].to_s
-      ]
+      {
+        "room_number" => room[:room_number].to_s,
+        "room_type" => room[:room_type].name.to_s,
+        "pax" => room[:pax].presence || "—",
+        "room_status" => room[:room_status_label].to_s,
+        "assigned_to" => room[:assigned_to]&.name.presence || "Unassigned",
+        "booking_status" => room[:booking_status_label].to_s,
+        "arrival" => arrival_for(booking),
+        "departure" => departure_for(booking),
+        "nights" => booking&.duration_in_nights,
+        "remarks" => room[:notes].to_s
+      }
     end
 
     def arrival_for(booking)

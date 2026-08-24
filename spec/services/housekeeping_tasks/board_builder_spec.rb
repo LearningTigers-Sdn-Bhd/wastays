@@ -18,8 +18,9 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
   end
 
   def room(room_type_name, number = "101", **filters)
-    group = build_board(**filters).find { |entry| entry[:room_type].name == room_type_name }
-    group&.dig(:rooms)&.find { |entry| entry[:room_number] == number }
+    build_board(**filters).find do |entry|
+      entry[:room_type].name == room_type_name && entry[:room_number] == number
+    end
   end
 
   def stay(room_type: penthouse, room_number: "101", status:, check_in:, check_out:, **attributes)
@@ -29,7 +30,7 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
   end
 
   it "returns exactly one row per physical room without task placeholders" do
-    rows = build_board.flat_map { |group| group[:rooms] }
+    rows = build_board
 
     expect(rows.map { |entry| [ entry[:room_type].name, entry[:room_number] ] }).to contain_exactly(
       [ "Executive Penthouse", "101" ],
@@ -166,14 +167,20 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
       )
 
       expect(results.one?).to be(true)
-      expect(results.first[:rooms].map { |entry| entry[:room_number] }).to eq([ "101" ])
+      expect(results.first[:room_number]).to eq("101")
     end
 
-    it "sorts rooms by arrival or departure without moving room type groups" do
+    it "sorts the flat room list by arrival or departure" do
       results = build_board(sort: "departure", direction: "desc")
 
       expect(results.first[:room_type]).to eq(penthouse)
-      expect(results.first[:rooms].map { |entry| entry[:room_number] }).to eq([ "102", "101" ])
+      expect(results.first(2).map { |entry| entry[:room_number] }).to eq([ "102", "101" ])
+    end
+
+    it "uses natural room-number order across room types by default" do
+      penthouse.update!(quantity: 4, room_numbers: %w[101 102 10 2])
+
+      expect(build_board.map { |entry| entry[:room_number] }).to eq(%w[2 10 101 101 102])
     end
   end
 end

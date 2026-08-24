@@ -534,6 +534,10 @@ Rails.application.routes.draw do
     # the card. One endpoint, so the two gestures cannot mean different things.
     patch "requests/move", to: "requests#move", as: :requests_move
     resources :housekeeping_tasks, only: [ :index ]
+    patch "housekeeping-tasks/view-preference",
+          to: "housekeeping_tasks#update_view_preference", as: :housekeeping_view_preference
+    delete "housekeeping-tasks/view-preference",
+           to: "housekeeping_tasks#reset_view_preference"
     patch "housekeeping-tasks/rooms/:room_type_id/:room_number/status",
           to: "housekeeping_tasks#update_room_status", as: :housekeeping_room_status
     patch "housekeeping-tasks/rooms/:room_type_id/:room_number/assignment",
