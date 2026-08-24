@@ -1,0 +1,96 @@
+<section class="space-y-4" aria-label="Attractions">
+  <%= render PanelsUI::Tabs.new(
+        id: "attraction-status-tabs",
+        active: @active_status,
+        variant: :line,
+        aria_label: "Filter attractions by status") do |tabs| %>
+    <% [ [ "all", "All" ], [ "pending", "Pending" ], [ "approved", "Approved" ], [ "archived", "Archived" ] ].each do |name, label| %>
+      <% tabs.with_tab(
+           name:,
+           label:,
+           count: @status_counts.fetch(name),
+           href: admin_attractions_path(status: (name unless name == "all"), q: params[:q].presence),
+           data: { turbo_action: "advance" }) %>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: admin_attractions_path, method: :get,
+        data: { controller: "auto-submit", turbo_frame: "attractions_list", turbo_action: "advance" } do |form| %>
+    <%= form.hidden_field :status, value: @active_status unless @active_status == "all" %>
+    <%= render PanelsUI::FormField.new(
+          form:,
+          attribute: :q,
+          label: "Search attractions",
+          label_hidden: true) do |field| %>
+      <% field.with_input(
+           type: :search,
+           value: params[:q],
+           placeholder: "Search by attraction, hotel, location, or coordinates",
+           data: { action: "input->auto-submit#submit" }) %>
+    <% end %>
+  <% end %>
+
+  <% if @attractions.any? %>
+    <div class="hidden md:block">
+      <%= render PanelsUI::Table.new(
+            caption: "Attractions matching the current filters",
+            density: :compact,
+            header_style: :sentence,
+            hoverable: true,
+            wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Attraction</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="hidden lg:table-cell">Source hotel</th>
+            <th scope="col" class="hidden xl:table-cell">Coordinates</th>
+            <th scope="col">Hotels</th>
+            <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+          </tr>
+        <% end %>
+
+        <% table.with_body do %>
+          <% @attractions.each do |attraction| %>
+            <tr>
+              <td>
+                <span class="block font-medium text-foreground"><%= attraction.name %></span>
+                <span class="mt-0.5 block text-xs text-muted-foreground"><%= attraction_location(attraction) %></span>
+              </td>
+              <td><%= attraction_status_badge(attraction) %></td>
+              <td class="hidden text-muted-foreground lg:table-cell"><%= attraction.source_hotel&.name || "Admin" %></td>
+              <td class="hidden font-mono text-xs text-muted-foreground xl:table-cell"><%= attraction_coordinates(attraction) %></td>
+              <td><%= attraction.hotels.size %></td>
+              <td class="text-right">
+                <%= render PanelsUI::Button.new(
+                      as: :a,
+                      href: edit_admin_attraction_path(attraction),
+                      variant: :secondary,
+                      size: :sm,
+                      data: { turbo_frame: "admin_attraction_action_sheet" }) do %>
+                  Review
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="grid gap-3 md:hidden">
+      <% @attractions.each do |attraction| %>
+        <%= render "attraction_card", attraction: %>
+      <% end %>
+    </div>
+
+    <% if @attractions.total_pages > 1 %>
+      <div class="flex justify-center sm:justify-end">
+        <%= paginate @attractions, data: { turbo_action: "advance" } %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="rounded-lg border border-border bg-card p-6 text-center">
+      <h2 class="text-base font-semibold">No attractions found</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Change the search term or status filter.</p>
+    </div>
+  <% end %>
+</section>

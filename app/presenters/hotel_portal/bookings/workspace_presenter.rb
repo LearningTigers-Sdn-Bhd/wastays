@@ -50,6 +50,8 @@ module HotelPortal
       "Payment receipt" => :receipts,
       "Deposit receipt" => :receipts,
       "Group deposit receipt" => :receipts,
+      "Security deposit receipt" => :receipts,
+      "Group security deposit receipt" => :receipts,
       "AR payment receipt" => :receipts,
       "Reservation voucher" => :utility,
       "Reservation voucher pack" => :utility,
@@ -1342,7 +1344,8 @@ module HotelPortal
         Deposit.where(hotel_id: hotel.id, booking_id: booking.id).includes(:receipt).filter_map do |deposit|
           next unless deposit.receipt
 
-          document_receipt_row(deposit.receipt, type: "Deposit receipt", child: booking, room: document_booking_room_label(booking))
+          type = Receipts::Presentation.new(deposit.receipt).workspace_type
+          document_receipt_row(deposit.receipt, type:, child: booking, room: document_booking_room_label(booking))
         end
       )
       card = booking.guest_registration_card
@@ -1578,7 +1581,7 @@ module HotelPortal
         next unless deposit.receipt
 
         child = deposit.booking
-        type = deposit.group_booking_id? ? "Group deposit receipt" : "Deposit receipt"
+        type = Receipts::Presentation.new(deposit.receipt).workspace_type
         document_receipt_row(
           deposit.receipt,
           type:,

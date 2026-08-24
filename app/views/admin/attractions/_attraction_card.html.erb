@@ -1,0 +1,35 @@
+<%= render PanelsUI::Card.new(width: :full, density: :compact, variant: :outlined, as: :article) do |card| %>
+  <% card.with_header(title: attraction.name, description: attraction_location(attraction), title_as: :h2) do |header| %>
+    <% header.with_badges do %>
+      <%= attraction_status_badge(attraction) %>
+    <% end %>
+  <% end %>
+
+  <% card.with_card_content do %>
+    <dl class="grid grid-cols-2 gap-3 text-sm">
+      <div>
+        <dt class="text-xs text-muted-foreground">Source hotel</dt>
+        <dd class="mt-0.5"><%= attraction.source_hotel&.name || "Admin" %></dd>
+      </div>
+      <div>
+        <dt class="text-xs text-muted-foreground">Linked hotels</dt>
+        <dd class="mt-0.5"><%= attraction.hotels.size %></dd>
+      </div>
+      <div class="col-span-2">
+        <dt class="text-xs text-muted-foreground">Coordinates</dt>
+        <dd class="mt-0.5 font-mono text-xs"><%= attraction_coordinates(attraction) %></dd>
+      </div>
+    </dl>
+  <% end %>
+
+  <% card.with_footer do %>
+    <%= render PanelsUI::Button.new(
+          as: :a,
+          href: edit_admin_attraction_path(attraction),
+          variant: :secondary,
+          size: :sm,
+          data: { turbo_frame: "admin_attraction_action_sheet" }) do %>
+      Review
+    <% end %>
+  <% end %>
+<% end %>

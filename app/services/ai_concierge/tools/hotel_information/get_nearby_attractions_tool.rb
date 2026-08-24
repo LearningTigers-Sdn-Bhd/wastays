@@ -9,13 +9,16 @@ module AiConcierge
         def call
           {
             "success" => true,
-            "attractions" => attractions.map do |attraction|
+            "attractions" => nearby_links.map do |link|
+              attraction = link.attraction
               {
                 "name" => attraction.name,
-                "description" => attraction.description,
+                "description" => link.guest_description,
                 "address" => attraction.address,
                 "city" => attraction.city,
-                "country" => attraction.country
+                "country" => attraction.country,
+                "google_maps_url" => attraction.google_maps_url,
+                "distance_km" => link.distance_from(hotel)
               }
             end
           }
@@ -25,8 +28,12 @@ module AiConcierge
 
         attr_reader :hotel
 
-        def attractions
-          @attractions ||= hotel.nearby_attractions.order(created_at: :asc)
+        def nearby_links
+          @nearby_links ||= hotel.hotel_nearby_attractions
+            .includes(:attraction)
+            .joins(:attraction)
+            .where(attractions: { status: %w[approved pending] })
+            .order(:created_at)
         end
       end
     end

@@ -10,7 +10,17 @@ RSpec.describe "Public payment receipts", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.media_type).to eq("application/pdf")
-    expect(response.headers.fetch("Content-Disposition")).to include(receipt.public_number)
+    expect(response.headers.fetch("Content-Disposition")).to include("payment-receipt-#{receipt.public_number}.pdf")
+  end
+
+  it "serves a security deposit receipt with a security-specific filename" do
+    receipt = create(:deposit).receipt
+
+    get receipt_path(receipt.access_token)
+
+    expect(response).to have_http_status(:success)
+    expect(response.media_type).to eq("application/pdf")
+    expect(response.headers.fetch("Content-Disposition")).to include("security-deposit-receipt-#{receipt.public_number}.pdf")
   end
 
   it "does not expose receipts by their sequential public number" do

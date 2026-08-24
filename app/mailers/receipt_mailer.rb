@@ -4,14 +4,15 @@ class ReceiptMailer < ApplicationMailer
   def payment_receipt(receipt)
     @receipt = receipt
     @hotel = receipt.hotel
-    attachments["payment-receipt-#{receipt.public_number}.pdf"] = {
+    @presentation = Receipts::Presentation.new(receipt)
+    attachments[@presentation.filename] = {
       mime_type: "application/pdf",
       content: PaymentReceiptPdfService.new(receipt).generate
     }
 
     mail(
       to: receipt.payer_snapshot.to_h.fetch("email"),
-      subject: "Payment receipt #{receipt.public_number}"
+      subject: @presentation.email_subject
     )
   end
 end

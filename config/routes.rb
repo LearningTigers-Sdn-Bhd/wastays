@@ -262,6 +262,18 @@ Rails.application.routes.draw do
         get :icon_preview
       end
     end
+    resources :attractions, except: [ :show, :destroy ] do
+      collection do
+        post :preview
+      end
+      member do
+        patch :approve
+        patch :reject
+        patch :archive
+        patch :restore
+        patch :merge
+      end
+    end
     resources :audit_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
@@ -522,6 +534,10 @@ Rails.application.routes.draw do
     # the card. One endpoint, so the two gestures cannot mean different things.
     patch "requests/move", to: "requests#move", as: :requests_move
     resources :housekeeping_tasks, only: [ :index ]
+    patch "housekeeping-tasks/view-preference",
+          to: "housekeeping_tasks#update_view_preference", as: :housekeeping_view_preference
+    delete "housekeeping-tasks/view-preference",
+           to: "housekeeping_tasks#reset_view_preference"
     patch "housekeeping-tasks/rooms/:room_type_id/:room_number/status",
           to: "housekeeping_tasks#update_room_status", as: :housekeeping_room_status
     patch "housekeeping-tasks/rooms/:room_type_id/:room_number/assignment",
@@ -684,7 +700,9 @@ Rails.application.routes.draw do
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do
           get :autocomplete, on: :collection
         end
-        resources :nearby_attractions, path: "nearby-attractions", except: [ :show ]
+        resources :nearby_attractions, path: "nearby-attractions", except: [ :show ] do
+          post :preview, on: :collection
+        end
       end
 
       scope "finance" do

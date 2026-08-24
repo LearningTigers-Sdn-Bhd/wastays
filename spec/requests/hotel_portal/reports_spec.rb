@@ -1410,6 +1410,13 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 5)
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("h1", exact_text: "Deposit liability report")
+      expect(page).to have_text("Deposits received")
+      expect(page).to have_text("Deposit received")
+      expect(page).to have_text(HotelPortal::Reports::DepositLiabilityReport::SCOPE_NOTE)
+      expect(page).to have_css("p.text-muted-foreground[data-slot='deposit-liability-scope']")
+      expect(page).to have_no_css("[data-slot='deposit-liability-scope'].border-warning")
+      expect(page).to have_no_css("[data-slot='deposit-liability-scope'].bg-warning\\/10")
+      expect(page).to have_no_text("Booking payments")
       expect(page).to have_link("WS-DEP", href: hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(page).to have_text("Deposit Guest")
       expect(page).to have_no_text("Gateway Guest")
@@ -1452,7 +1459,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get deposit_liability_hotel_reports_path(hotel, format: :csv), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
-      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Booking Payment,Earned,Refunds,Remaining Liability,Latest Payment Date")
+      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Deposit Received,Earned,Refunds,Remaining Liability,Latest Deposit Date")
+      expect(response.body).to include(HotelPortal::Reports::DepositLiabilityReport::SCOPE_NOTE)
 
       get deposit_liability_hotel_reports_path(hotel, format: :xlsx), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
@@ -1463,7 +1471,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
       expect(response.headers["Content-Disposition"]).to include(".pdf")
-      expect(extracted_pdf_text(response.body)).to include(user.name)
+      expect(extracted_pdf_text(response.body).squish).to include(user.name, "DEPOSITS RECEIVED", "Deposit Received", "Latest Deposit Date")
     end
 
     it "requires view_reports permission" do

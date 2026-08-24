@@ -37,7 +37,7 @@ RSpec.describe "Housekeeping task filters", type: :system do
     visit hotel_housekeeping_tasks_path(hotel)
     page.execute_script("document.querySelector('h1').dataset.pageMarker = 'preserved'")
 
-    click_button "Room status"
+    find("#hk-room-status-filter-trigger").click
     find("[role='menuitemcheckbox']", text: "All room statuses").click
 
     expect(page).to have_text("No rooms found")
@@ -45,13 +45,13 @@ RSpec.describe "Housekeeping task filters", type: :system do
     expect(all("#hk-room-status-filter-menu [role='menuitemcheckbox']").map { |item| item["aria-checked"] }).to all(eq("false"))
 
     find("[role='menuitemcheckbox']", text: "All room statuses").click
-    expect(page).to have_css("#hk-group-#{room_type.id}-#{room_type.id}-101")
+    expect(page).to have_css("#hk-room-#{room_type.id}-101")
     expect(all("#hk-room-status-filter-menu [role='menuitemcheckbox']").map { |item| item["aria-checked"] }).to all(eq("true"))
 
     find("[role='menuitemcheckbox']", text: "Dirty").click
 
-    expect(page).to have_no_css("#hk-group-#{room_type.id}-#{room_type.id}-101")
-    expect(page).to have_css("#hk-group-#{room_type.id}-#{room_type.id}-202")
+    expect(page).to have_no_css("#hk-room-#{room_type.id}-101")
+    expect(page).to have_css("#hk-room-#{room_type.id}-202")
     expect(page).to have_css("h1[data-page-marker='preserved']")
     expect(page).to have_css("#hk-room-status-filter-menu:popover-open")
     page_filters = Rack::Utils.parse_nested_query(URI.parse(page.current_url).query)
@@ -70,5 +70,22 @@ RSpec.describe "Housekeeping task filters", type: :system do
     expect(page_filters).to include("sort" => "arrival", "direction" => "asc")
     expect(export_filters).to include("sort" => "arrival", "direction" => "asc")
     expect(export_filters.fetch("room_statuses")).to match_array(page_filters.fetch("room_statuses"))
+  end
+
+  it "persists visible columns and clears selected rooms when the table changes" do
+    visit hotel_housekeeping_tasks_path(hotel)
+
+    check "Select #{room_type.name} 101"
+    expect(page).to have_button("Export 1")
+
+    click_button "Columns"
+    find("[role='menuitemcheckbox']", text: "Pax").click
+
+    expect(page).to have_no_css('th[data-column-key="pax"]')
+    expect(page).to have_button("Export")
+
+    refresh
+    expect(page).to have_no_css('th[data-column-key="pax"]')
+    expect(ReportViewPreference.find_by!(hotel:, user:, report_key: "housekeeping_tasks").visible_columns).not_to include("pax")
   end
 end

@@ -63,7 +63,9 @@ module HotelPortal
       "HotelPortal::StayView::RoomBlocksController" => %w[create update destroy finish],
       "HotelPortal::StayView::HousekeepingAssignmentsController" => %w[update],
       "HotelPortal::StayView::HousekeepingStatusesController" => %w[update],
-      "HotelPortal::HousekeepingTasksController" => %w[update_room_status update_room_assignment update_remarks],
+      "HotelPortal::HousekeepingTasksController" => %w[
+        update_room_status update_room_assignment update_remarks update_view_preference reset_view_preference
+      ],
       "HotelPortal::RequestsController" => %w[move update_status cancel_request archive_request unarchive_request],
       "HotelPortal::CheckoutRequestsController" => %w[complete],
       "HotelPortal::RoomLocksController" => %w[create release],

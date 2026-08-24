@@ -74,10 +74,17 @@ module AiConcierge
 
         lines = attractions.map do |attraction|
           details = [ attraction["description"], attraction["address"], attraction["city"], attraction["country"] ].compact_blank.join(". ")
+          details = [ details, distance_text(attraction["distance_km"]) ].compact_blank.join(". ")
           details.present? ? "- *#{attraction['name']}*: #{details}" : "- *#{attraction['name']}*"
         end
 
         [ "Here are the nearby attractions:", lines.join("\n") ].join("\n")
+      end
+
+      def distance_text(distance_km)
+        return if distance_km.blank?
+
+        "About #{format('%.1f', distance_km)} km away in a straight line"
       end
     end
   end
