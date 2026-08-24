@@ -1,0 +1,73 @@
+id: model_invents_a_change
+description: "a real change mid-question, and an answer the hotel cannot read -- neither may throw away what the guest already chose"
+origin: "a live thread: the rate question rendered with no room name, no dates and no rates in it"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [28, 29, 30, 31]
+      max_adults: 4
+      rate_plans:
+        - name: Non-Refundable Rate
+          price: 200
+        - name: Breakfast Rate
+          price: 240
+turns:
+  - guest: "book 28 august to 31 august"
+    expect:
+      pending_question: guest_count
+
+  - guest: "3 adults"
+    expect:
+      pending_question: select_option
+      reply_matches: ["*1. Garden Prestige Suite*"]
+
+  - guest: "1"
+    expect:
+      pending_question: rate_plan_selection
+      reply_matches: ["Which rate would you like?"]
+
+  # A change the guest really did state, in the middle of the rate question.
+  # The room it was about is gone with the search that found it, and the rate
+  # question cannot be asked about a room that no longer exists -- it used to
+  # be asked anyway, and rendered as a blank room with an empty list under it.
+  - guest: "actually 2 rooms"
+    expect:
+      pending_question: select_option
+      reply_matches: ["Here are the available options", "Garden Prestige Suite"]
+      reply_excludes: ["Which rate would you like?"]
+      creates_quote: false
+
+  - guest: "1"
+    expect:
+      pending_question: rate_plan_selection
+
+  - guest: "1"
+    expect:
+      pending_question: confirm_selection
+      reply_matches: ["Please reply *Yes* to confirm"]
+
+  # An answer to the confirmation that is neither a yes nor a no, arriving with
+  # a party size the model invented from the same message. Two ways to lose the
+  # booking: price a party nobody agreed to, or fall past the question onto a
+  # fresh search that shows the guest a catalogue instead of the room they
+  # chose. The question was asked and is still the question.
+  - guest: "sounds good to me"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            adults: 1
+          evidence:
+            party: "1"
+    expect:
+      pending_question: confirm_selection
+      reply_matches: ["Please reply *Yes* to confirm", "Garden Prestige Suite"]
+      reply_excludes: ["Here are the available options", "are they children"]
+      creates_quote: false
+
+  - guest: "yes"
+    expect:
+      reply_matches: ["Quotation link:"]
+      creates_quote: true

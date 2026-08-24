@@ -4,6 +4,7 @@ class Booking < ApplicationRecord
   include Bookings::StatusLifecycle
 
   TOURISM_TAX_KEYS = %w[tourism_tax ttx].freeze
+  FUND_COLLECTORS = %w[unknown wastays hotel].freeze
 
   belongs_to :booking_quote, optional: true
   belongs_to :hotel
@@ -16,6 +17,7 @@ class Booking < ApplicationRecord
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
+  has_many :guest_registration_cards, dependent: :destroy
   has_one :guest_registration_card, dependent: :destroy
   has_one :refund_request, dependent: :destroy
   has_many :booking_folios, dependent: :destroy
@@ -36,6 +38,7 @@ class Booking < ApplicationRecord
   has_many :complaint_requests, dependent: :destroy
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  has_many :e_invoice_submissions, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_one :booking_confirmation_token, dependent: :destroy
   has_many :folio_operation_logs, dependent: :restrict_with_error
@@ -44,6 +47,217 @@ class Booking < ApplicationRecord
 
   def online?
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
+  end
+
+  def direct_hotel_payment?
+    resolved_fund_collector == "hotel"
+  end
+
+  def payment_concluded?
+    payment_status == "captured"
+  end
+
+  def payment_concluded_at
+    payment_transactions.captured.maximum(:captured_at) || checked_out_at || check_out
+  end
+
+  def guest_invoice_submission
+    e_invoice_submissions.guest_facing.where(document_type: "01").recent_first.first
+  end
+
+  def original_ready_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.where(document_type: "01").recent_first.first
+  end
+
+  def latest_ready_adjustment_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.where(document_type: %w[02 03]).recent_first.first
+  end
+
+  def latest_ready_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.valid.recent_first.first
+  end
+  alias_method :ready_guest_e_invoice_submission, :latest_ready_guest_e_invoice_submission
+
+  def latest_pending_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.pending_or_submitted.recent_first.first
+  end
+
+  def latest_failed_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing.where(status: "invalid").recent_first.first
+  end
+  alias_method :failed_guest_e_invoice_submission, :latest_failed_guest_e_invoice_submission
+
+  def pending_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(document_type: "01", status: %w[pending submitted], consolidated: false)
+      .recent_first
+      .first
+  end
+
+  def pending_consolidated_guest_e_invoice_submission
+    e_invoice_submissions.guest_facing
+      .where(document_type: "01", status: "pending", consolidated: true)
+      .recent_first
+      .first
+  end
+
+  def payout_self_billed_submission
+    e_invoice_submissions.for_scenario("payout_self_billed_invoice").recent_first.first
+  end
+
+  def e_invoice_already_issued?
+    e_invoice_submissions.guest_facing.where(status: %w[submitted valid]).exists?
+  end
+  alias_method :e_invoice_already_requested_or_issued?, :e_invoice_already_issued?
+
+  # A consolidated placeholder the guest never asked for must not block them
+  # from requesting an individual e-invoice.
+  def e_invoice_pending_consolidated_unrequested?
+    e_invoice_submissions.guest_facing
+      .where(status: "pending", consolidated: true, requested_by_guest: false)
+      .exists?
+  end
+
+  # Guest may request only within the same calendar month as the payment,
+  # and only while nothing has been issued yet.
+  def e_invoice_guest_request_possible?
+    # Only when the OTA took the money is the guest not the hotel's customer.
+    # A pay-at-hotel guest may request one like any other walk-in.
+    return false if ota_collected?
+    return false unless hotel.e_invoice_setting&.covers?(payment_concluded_at)
+    return false if e_invoice_already_issued?
+    return false unless e_invoice_buyer_details_ready?
+
+    e_invoice_requestable?
+  end
+
+  # LHDN needs a resolvable state on the buyer address, and - confirmed
+  # against LHDN's own validator (ERR228, "General TIN (010) is not allowed
+  # for NON-consolidated e-invoice") - a local guest needs an actual tax
+  # number, since there is no general-public placeholder for an individual
+  # e-invoice the way there is for a consolidated one. Better to say so while
+  # the guest is still here to fix it than to accept the request and fail at
+  # submission days later.
+  def e_invoice_buyer_details_missing
+    missing = []
+    missing << "city" if guest_city.blank?
+    if EInvoice::MalaysiaStates.resolve(state_code: guest_state_code, city: guest_city, country_code: nil).blank?
+      missing << "state"
+    end
+    missing << "tax number" if buyer_tin_for_e_invoice.blank? && !foreign_guest?
+    missing
+  end
+
+  def foreign_guest?
+    country = guest_country.presence || hotel.country
+    return false if country.blank?
+
+    found = ISO3166::Country.find_country_by_any_name(country)
+    found.present? && found.alpha3 != "MYS"
+  end
+
+  def e_invoice_buyer_details_ready?
+    e_invoice_buyer_details_missing.empty?
+  end
+
+  def e_invoice_requestable?
+    return false unless payment_concluded?
+
+    concluded_at = payment_concluded_at
+    return false if concluded_at.blank?
+
+    Time.current.between?(concluded_at.beginning_of_month, concluded_at.end_of_month)
+  end
+
+  # A buyer who gives us a TIN can claim the invoice against their own tax.
+  # A corporate booking files under the company's TIN, since the company is the
+  # one being billed; otherwise it is whatever the guest supplied. Falling back
+  # to nil lets the builder use LHDN's general public TIN.
+  def buyer_tin_for_e_invoice
+    hotel_corporate_account&.tin.presence || guest_tin.presence || primary_guest&.tin.presence
+  end
+
+  def ota_booking?
+    return true if source.to_s == "ota"
+
+    BookingSource.find_by_source(source)&.kind == "ota"
+  end
+
+  # Who the hotel actually sold to, which is not the same question as which
+  # channel the booking arrived through:
+  #
+  #   OTA collected (prepaid)      - the hotel sold to the OTA. No guest-facing
+  #                                  e-invoice; the guest gets theirs from the OTA.
+  #   Hotel collected (pay at hotel) - the hotel sold to the guest, who may
+  #                                  request an individual e-invoice like any
+  #                                  other walk-in.
+  #
+  # Absent settlement data we assume the hotel collected, so a guest is never
+  # silently denied a document they are entitled to.
+  def ota_collected?
+    return false unless ota_booking?
+
+    channel_settlements.any? { |settlement| settlement.collection_by == "ota" }
+  end
+
+  # Filed at what the hotel actually received for the stay. When the OTA
+  # collected, that is the net after commission. When the guest paid the front
+  # desk it is the full amount, and the commission is a separate expense the
+  # hotel self-bills for.
+  def e_invoice_amount
+    return net_amount.to_d if ota_collected? && net_amount.present?
+
+    total_amount.to_d
+  end
+
+  # Commission the OTA keeps. Only meaningful on OTA stays, and it is what the
+  # hotel must self-bill for as an importation of services.
+  def ota_commission_amount
+    return 0.to_d unless ota_booking? && net_amount.present?
+
+    (total_amount.to_d - net_amount.to_d).clamp(0.to_d, total_amount.to_d)
+  end
+
+  # WAStays is not a registered intermediary yet, so unless a hotel has opted
+  # in the hotel files everything itself as an ordinary taxpayer.
+  def e_invoice_document_scenario
+    return "hotel_intermediary_guest_invoice" if direct_hotel_payment? && hotel.e_invoice_setting&.intermediary_enabled?
+
+    "guest_invoice"
+  end
+
+  def create_pending_consolidated_submission!
+    scenario = e_invoice_document_scenario
+    existing = e_invoice_submissions.where.not(status: "cancelled").find_by(document_scenario: scenario)
+    return existing if existing
+
+    e_invoice_submissions.create!(
+      hotel: hotel,
+      document_type: "01",
+      document_scenario: scenario,
+      submission_mode: scenario == "hotel_intermediary_guest_invoice" ? "intermediary" : "taxpayer",
+      fund_collector: resolved_fund_collector,
+      status: "pending",
+      consolidated: true,
+      payment_concluded_at: payment_concluded_at,
+      raw_response: {},
+      error_details: {}
+    )
+  end
+
+  def resolved_fund_collector
+    return fund_collector if fund_collector.present? && fund_collector != "unknown"
+
+    if payment_transactions.any?(&:direct_hotel_payment?) ||
+        source == "walk_in" ||
+        guarantee_method == "manual_at_hotel"
+      "hotel"
+    elsif booking_quote_id.present? ||
+        payment_transactions.any?(&:wastays_collected_payment?)
+      "wastays"
+    else
+      "unknown"
+    end
   end
 
   def check_in=(value)
@@ -94,12 +308,23 @@ class Booking < ApplicationRecord
   validates :pre_checkin_status, inclusion: { in: PRE_CHECKIN_STATUSES, allow_nil: true }
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
+  validates :fund_collector, inclusion: { in: FUND_COLLECTORS }
 
   def primary_guest
     if booking_guests.loaded?
       booking_guests.find { |bg| bg.is_primary? }&.guest
     else
       booking_guests.find_by(is_primary: true)&.guest
+    end
+  end
+
+  def find_booking_guest(booking_guest_id)
+    return nil if booking_guest_id.blank?
+
+    if booking_guests.loaded?
+      booking_guests.find { |bg| bg.id.to_s == booking_guest_id.to_s }
+    else
+      booking_guests.find_by(id: booking_guest_id)
     end
   end
 
@@ -129,6 +354,7 @@ class Booking < ApplicationRecord
   before_validation :assign_confirmation_token, on: :create
   before_create :assign_document_counters
   before_validation :normalize_guest_data
+  before_validation :default_fund_collector
   before_validation :assign_existing_document_references
   after_create :register_confirmation_token
   after_update :sync_confirmation_token, if: :saved_change_to_confirmation_token?
@@ -144,6 +370,7 @@ class Booking < ApplicationRecord
   scope :active, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required" ]) }
   scope :revenue_generating, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required", "completed", "no_show" ]) }
   scope :payout_eligible, -> { completed.where(payout_status: "pending") }
+  scope :wastays_collected, -> { where(fund_collector: "wastays") }
 
   scope :search, ->(query) {
     return all if query.blank?
@@ -176,7 +403,7 @@ class Booking < ApplicationRecord
   }
 
   scope :unbatched_upcoming, ->(cutoff_date) {
-    completed.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)
+    completed.wastays_collected.where(payout_batch_id: nil).where("checked_out_at > ?", cutoff_date)
   }
 
   def self.analytics_summary(start_date, end_date, query: nil, base_scope: nil)
@@ -288,6 +515,18 @@ class Booking < ApplicationRecord
   before_save :set_payout_status, if: :status_changed?
   after_create_commit :enqueue_receipt_email, if: :send_creation_notifications?
   after_create_commit :enqueue_whatsapp_receipt, if: :send_creation_notifications?
+  # Payment concluding is the taxable event, so it is what starts the e-invoice
+  # lifecycle: >=RM10,000 issues immediately, anything smaller is parked as a
+  # consolidated placeholder for the month-end batch. Without this the monthly
+  # consolidation has nothing to collect and quietly files nothing.
+  #
+  # Registered once for both events on purpose. Two separate registrations of
+  # the same method name (after_create_commit + after_update_commit) do not
+  # both survive - the later one replaces the earlier - which silently loses
+  # the create case, and prepaid online bookings are created already captured.
+  after_commit :enqueue_auto_e_invoice,
+               on: %i[create update],
+               if: -> { payment_concluded? && (previously_new_record? || saved_change_to_payment_status?) }
 
   def pre_checkin_display_status
     metadata = pre_checkin&.metadata || {}
@@ -481,6 +720,22 @@ class Booking < ApplicationRecord
 
   private
 
+  def default_fund_collector
+    return if FUND_COLLECTORS.include?(fund_collector)
+
+    self.fund_collector = if source == "walk_in" || guarantee_method == "manual_at_hotel"
+      "hotel"
+    elsif booking_quote_id.present?
+      "wastays"
+    elsif payment_transactions.any?(&:direct_hotel_payment?)
+      "hotel"
+    elsif payment_transactions.any?(&:wastays_collected_payment?)
+      "wastays"
+    else
+      "unknown"
+    end
+  end
+
   def group_booking_belongs_to_hotel
     return if group_booking.blank? || hotel_id.blank? || group_booking.hotel_id == hotel_id
 
@@ -507,6 +762,12 @@ class Booking < ApplicationRecord
 
   def send_creation_notifications?
     status == "confirmed" && !Thread.current[:skip_booking_creation_notifications]
+  end
+
+  def enqueue_auto_e_invoice
+    return unless hotel&.e_invoice_setting&.enabled?
+
+    EInvoice::AutoIssueJob.perform_later(id)
   end
 
   def enqueue_receipt_email

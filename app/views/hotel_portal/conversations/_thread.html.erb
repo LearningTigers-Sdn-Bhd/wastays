@@ -1,0 +1,14 @@
+<%#
+  Subscribed to the staff stream so a message that arrives while this is open
+  lands in the thread without a refresh -- the guest writing again, or the bot
+  answering, or a colleague replying from their own screen.
+
+  Everything else the card is made of lives in HotelPortal::Inbox::Thread, so
+  the page render and a live update cannot draw it two different ways.
+%>
+<%= turbo_stream_from conversation, :staff %>
+
+<%= render HotelPortal::Inbox::Thread.new(
+      conversation: conversation,
+      messages: messages,
+      hotel: current_hotel) %>

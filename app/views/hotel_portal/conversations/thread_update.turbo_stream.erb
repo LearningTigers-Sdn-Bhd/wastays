@@ -1,0 +1,42 @@
+<%#
+  What changed about a conversation somebody just acted on.
+
+  Not the messages: a new message is already on its way down the staff stream
+  from ProspectMessage, and the same row arriving twice is exactly what the
+  chat controller's duplicate check is there to drop. What a broadcast cannot
+  know is that *this* reader is the one who acted, so what is replaced here is
+  the part of the card that answers "what can I do next" -- who is holding the
+  thread, and whether there is a box to type in.
+
+  The row in the list is replaced too, because a reply changes the thread's
+  status badge and clears its unread marker, and the reader is looking straight
+  at both.
+%>
+<%= turbo_stream.replace HotelPortal::Inbox::ModeBar.dom_id_for(@conversation) do %>
+  <%= render HotelPortal::Inbox::ModeBar.new(conversation: @conversation, hotel: current_hotel) %>
+<% end %>
+
+<%# Replaced rather than reset: what belongs here is a different thing entirely
+    once the thread is closed, and the same replace both empties the box and
+    swaps it for the notice when it has to. %>
+<%= turbo_stream.replace HotelPortal::Inbox::Composer.dom_id_for(@conversation) do %>
+  <%= render HotelPortal::Inbox::Composer.new(conversation: @conversation, hotel: current_hotel) %>
+<% end %>
+
+<%# Updated, not replaced -- the row wrapper carries the fact that this reader
+    has the thread open, which is not something to overwrite. %>
+<%= turbo_stream.update HotelPortal::Inbox::ListItem.dom_id_for(@conversation) do %>
+  <%= render HotelPortal::Inbox::ListItemBody.new(conversation: @conversation, hotel: current_hotel) %>
+<% end %>
+
+<%# The same words a redirect would have carried as a flash, said as a toast --
+    there is no page load left to hang a flash on. %>
+<% if (message = flash.now[:alert] || flash.now[:notice]) %>
+  <%= turbo_stream.append PanelsUI::ToastViewport::DEFAULT_ID,
+        partial: "shared/feedback/toast_trigger",
+        locals: {
+          message: message,
+          type: flash.now[:alert].present? ? :error : :default,
+          description: nil
+        } %>
+<% end %>

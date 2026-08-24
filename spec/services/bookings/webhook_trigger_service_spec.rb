@@ -10,7 +10,7 @@ RSpec.describe Bookings::WebhookTriggerService do
     it "enqueues a WebhookBroadcastJob with the correct event and payload" do
       expect {
         service.trigger(:booking_confirmed)
-      }.to have_enqueued_job(WebhookBroadcastJob).with("booking_confirmed", Hash)
+      }.to have_enqueued_job(WebhookBroadcastJob).with("booking_confirmed", Hash, hotel_id: booking.hotel_id)
     end
 
     it "builds a comprehensive payload" do

@@ -1,0 +1,36 @@
+id: timing_to_quote
+description: "the full ladder: timing, party size, option, confirmation, quote -- and a second yes that must not buy twice"
+origin: "Booking::ActionResolver -- the order of these questions is a product decision, not an implementation detail"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [1, 2, 3, 4, 5]
+turns:
+  - guest: "early august for 3 days 2 nights"
+    expect:
+      flow: booking_search
+      pending_question: guest_count
+      booking_status: collecting_slots
+      creates_quote: false
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+      booking_status: waiting_for_option_selection
+      reply_matches: ["Garden Prestige Suite"]
+      creates_quote: false
+  - guest: "option 1"
+    expect:
+      pending_question: confirm_selection
+      booking_status: waiting_for_confirmation
+      creates_quote: false
+  - guest: "yes"
+    expect:
+      reply_matches: ["Quotation link:"]
+      flow_status: ended
+      creates_quote: true
+  # The write path is reachable only while confirm_selection is the open
+  # question. Once it is answered, "yes" means nothing and must buy nothing.
+  - guest: "yes"
+    expect:
+      creates_quote: false

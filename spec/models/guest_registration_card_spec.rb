@@ -2,14 +2,14 @@ require "rails_helper"
 
 RSpec.describe GuestRegistrationCard, type: :model do
   describe "validations" do
-    it "allows one card per booking" do
-      booking = create(:booking)
-      create(:guest_registration_card, booking: booking, hotel: booking.hotel)
+    it "allows one card per booking guest" do
+      booking_guest = create(:booking_guest)
+      create(:guest_registration_card, booking: booking_guest.booking, booking_guest: booking_guest, hotel: booking_guest.booking.hotel)
 
-      duplicate = build(:guest_registration_card, booking: booking, hotel: booking.hotel)
+      duplicate = build(:guest_registration_card, booking: booking_guest.booking, booking_guest: booking_guest, hotel: booking_guest.booking.hotel)
 
       expect(duplicate).not_to be_valid
-      expect(duplicate.errors[:booking_id]).to include("has already been taken")
+      expect(duplicate.errors[:booking_guest_id]).to include("has already been taken")
     end
 
     it "requires hotel to match booking hotel" do

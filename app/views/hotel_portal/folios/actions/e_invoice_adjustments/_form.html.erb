@@ -1,0 +1,45 @@
+<div data-controller="panels-ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "folio-e-invoice-adjustment-sheet",
+        side: :right,
+        size: :sm,
+        title: "Issue adjustment note",
+        description: "Send a debit or credit note to LHDN for the difference against the original e-invoice.",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with url: hotel_folio_action_issue_e_invoice_adjustment_path(current_hotel, @booking),
+            method: :post,
+            class: "flex h-full min-h-0 flex-col" do %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+          <p class="text-sm text-muted-foreground"><%= @preview.message %></p>
+
+          <% if @preview.needed? %>
+            <dl class="space-y-2 rounded-md border border-border p-3 text-sm">
+              <div class="flex items-center justify-between">
+                <dt class="text-muted-foreground">Document</dt>
+                <dd class="font-medium text-foreground">
+                  <%= @preview.document_type == "03" ? "Debit note (03)" : "Credit note (02)" %>
+                </dd>
+              </div>
+              <div class="flex items-center justify-between">
+                <dt class="text-muted-foreground">Difference</dt>
+                <dd class="font-medium text-foreground">
+                  <%= number_to_currency(@preview.delta.abs, unit: "MYR ") %>
+                </dd>
+              </div>
+            </dl>
+          <% end %>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <% if @preview.needed? %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Sending…" }) do %>Issue adjustment note<% end %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

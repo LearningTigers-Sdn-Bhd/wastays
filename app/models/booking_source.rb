@@ -19,11 +19,11 @@ class BookingSource < ApplicationRecord
     { key: "email", label: "Email", kind: "manual", icon: "mail", position: 3 },
     { key: "whatsapp", label: "WhatsApp", kind: "manual", icon: "message-circle", position: 4 },
 
-    { key: "booking_com", label: "Booking.com", kind: "ota", icon: "globe", badge_color: "#003580", badge_text_color: "#FFFFFF", badge_initial: "B", position: 0 },
-    { key: "agoda", label: "Agoda", kind: "ota", icon: "globe", badge_color: "#5392F9", badge_text_color: "#FFFFFF", badge_initial: "A", position: 1 },
-    { key: "expedia", label: "Expedia", kind: "ota", icon: "globe", badge_color: "#FFC72C", badge_text_color: "#111827", badge_initial: "E", position: 2 },
-    { key: "traveloka", label: "Traveloka", kind: "ota", icon: "globe", badge_color: "#37A9E1", badge_text_color: "#FFFFFF", badge_initial: "T", position: 3 },
-    { key: "airbnb", label: "Airbnb", kind: "ota", icon: "globe", badge_color: "#FF5A5F", badge_text_color: "#FFFFFF", badge_initial: "A", position: 4 },
+    { key: "booking_com", label: "Booking.com", kind: "ota", icon: "globe", badge_color: "#003580", badge_text_color: "#FFFFFF", badge_initial: "B", position: 0, legal_name: "Booking.com B.V.", tax_country_code: "NLD", self_bill_commission: true },
+    { key: "agoda", label: "Agoda", kind: "ota", icon: "globe", badge_color: "#5392F9", badge_text_color: "#FFFFFF", badge_initial: "A", position: 1, legal_name: "Agoda Company Pte. Ltd.", tax_country_code: "SGP", self_bill_commission: true },
+    { key: "expedia", label: "Expedia", kind: "ota", icon: "globe", badge_color: "#FFC72C", badge_text_color: "#111827", badge_initial: "E", position: 2, legal_name: "Expedia Lodging Partner Services Sarl", tax_country_code: "CHE", self_bill_commission: true },
+    { key: "traveloka", label: "Traveloka", kind: "ota", icon: "globe", badge_color: "#37A9E1", badge_text_color: "#FFFFFF", badge_initial: "T", position: 3, legal_name: "PT Trinusa Travelindo", tax_country_code: "IDN", self_bill_commission: true },
+    { key: "airbnb", label: "Airbnb", kind: "ota", icon: "globe", badge_color: "#FF5A5F", badge_text_color: "#FFFFFF", badge_initial: "A", position: 4, legal_name: "Airbnb Ireland UC", tax_country_code: "IRL", self_bill_commission: true },
 
     { key: "channel_manager", label: "Channel Manager", kind: "other_channel", icon: "globe", position: 0 },
 

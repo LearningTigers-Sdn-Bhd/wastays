@@ -4,9 +4,11 @@ module AiConcierge
     STATE_VERSION = 2
     SUSPENDED_BOOKING_TTL = ProspectConversationState::PAUSED_FLOW_TTL
 
+    # `now` is set first because normalizing reads it: whether a suspension has
+    # lapsed is part of what the payload says, not something asked afterwards.
     def initialize(slots_payload:, now: Time.current)
-      @payload = normalize_payload(slots_payload)
       @now = now
+      @payload = normalize_payload(slots_payload)
     end
 
     attr_reader :payload
@@ -36,11 +38,26 @@ module AiConcierge
       suspended_booking? && !expired?(booking_task)
     end
 
-    def activate_booking(branch, pending_question:, status: nil)
+    # `count_reask` is what tells a repeat from a refresh.
+    #
+    # A question asked again with the branch unmoved is a question the guest
+    # answered in words nothing here could read -- and until this counter
+    # existed the ladder would ask it, unchanged, until the fifty-turn wall.
+    # But most calls into here are not the hotel asking anything: PrepareTurn,
+    # the knowledge interruption and a resume all re-activate a question as
+    # bookkeeping, and a guest who stopped to ask about the pool has not failed
+    # to answer. So counting is opt-in, and a caller that forgets behaves
+    # exactly as it did before. An interruption goes further and clears the
+    # count outright, because it suspends the booking with a branch of its own
+    # shape -- which is the lenient direction, and the one to be lenient in.
+    def activate_booking(branch, pending_question:, status: nil, count_reask: false)
+      normalized = normalize_branch(branch)
+
       update_booking_task(
         "status" => status.presence || status_for_pending_question(pending_question),
         "pending_question" => pending_question,
-        "branch" => normalize_branch(branch),
+        "branch" => normalized,
+        "reask_count" => next_reask_count(pending_question, normalized, count_reask),
         "suspended" => false,
         "suspended_at" => nil,
         "expires_at" => nil
@@ -77,19 +94,6 @@ module AiConcierge
       without_legacy(payload.merge("information_task" => compact_blank_values(task)))
     end
 
-    def resume_booking
-      return [ payload, nil ] unless suspended_booking_resumable?
-
-      resumed_task = booking_task.merge(
-        "status" => status_for_pending_question(booking_task["pending_question"]),
-        "suspended" => false,
-        "suspended_at" => nil,
-        "expires_at" => nil
-      )
-
-      [ without_legacy(payload.merge("booking_task" => resumed_task)), resumed_task ]
-    end
-
     def archive_completed_booking
       return payload unless booking_branch_present?
 
@@ -105,16 +109,6 @@ module AiConcierge
         payload.merge(
           "booking_task" => default_booking_task,
           "completed_booking_branches" => completed.last(5)
-        )
-      )
-    end
-
-    def reset_tasks
-      without_legacy(
-        payload.merge(
-          "booking_task" => default_booking_task,
-          "information_task" => default_information_task,
-          "completed_booking_branches" => []
         )
       )
     end
@@ -169,11 +163,25 @@ module AiConcierge
       source.merge("booking_task" => booking_task, "information_task" => default_information_task)
     end
 
+    # A lapsed suspension takes its dates with it.
+    #
+    # Expiry used to decide only whether the booking could be picked up again,
+    # and the branch it named was still there afterwards -- still the thing the
+    # next turn merged the guest's words into. So an enquiry abandoned a week
+    # ago came back as the month a September guest never mentioned. There is
+    # nothing to resume and nothing to merge into; both facts are the same one.
     def normalize_booking_task(value)
       task = value.is_a?(Hash) ? value.deep_dup : {}
       default_booking_task.merge(task).tap do |normalized|
         normalized["branch"] = normalize_branch(normalized["branch"])
-        normalized["status"] = "expired" if normalized["status"] == "suspended" && expired?(normalized)
+        next unless normalized["status"] == "suspended" && expired?(normalized)
+
+        normalized.merge!(
+          "status" => "expired",
+          "pending_question" => nil,
+          "branch" => default_branch,
+          "suspended" => false
+        )
       end
     end
 
@@ -184,6 +192,24 @@ module AiConcierge
 
     def update_booking_task(attributes)
       without_legacy(payload.merge("booking_task" => booking_task.merge(attributes)))
+    end
+
+    # The branch is the whole answer to "did anything move?". A guest who
+    # changed a date, named a room or picked a rate wrote it down here, and
+    # that is progress however unreadable the words were; only a branch that
+    # came back identical means the turn achieved nothing. `branch_id` is
+    # excluded because `default_branch` mints a fresh one every time it is
+    # called, so an absent id would read as a change that never happened.
+    def next_reask_count(pending_question, branch, counting)
+      return 0 unless booking_task["pending_question"].to_s == pending_question.to_s
+      return 0 unless comparable_branch(booking_task["branch"]) == comparable_branch(branch)
+
+      previous = booking_task["reask_count"].to_i
+      counting ? previous + 1 : previous
+    end
+
+    def comparable_branch(branch)
+      branch.is_a?(Hash) ? branch.except("branch_id") : {}
     end
 
     def normalize_branch(value)
@@ -234,6 +260,7 @@ module AiConcierge
         "suspended" => false,
         "suspended_at" => nil,
         "expires_at" => nil,
+        "reask_count" => 0,
         "interruption_count" => 0,
         "last_interruption_intent" => nil,
         "last_interruption_topic" => nil
@@ -250,30 +277,10 @@ module AiConcierge
       }
     end
 
-    def default_branch
-      {
-        "branch_id" => SecureRandom.uuid,
-        "target_month" => nil,
-        "target_year" => nil,
-        "month_segment" => nil,
-        "check_in" => nil,
-        "check_out" => nil,
-        "nights" => nil,
-        "days" => nil,
-        "room_count" => 1,
-        "party_size_total" => nil,
-        "adults" => nil,
-        "children" => nil,
-        "clarification_needed" => nil,
-        "suggested_options" => [],
-        "suggestion_set_version" => 0,
-        "pending_selection" => nil,
-        "confirmation_candidate" => nil,
-        "selected_option" => nil,
-        "selected_rate_plan_id" => nil,
-        "selected_rate_plan_name" => nil
-      }
-    end
+    # One definition, in `SlotMerger`. This was a character-for-character copy
+    # of it, which is how a nineteen-key schema ends up with two owners and no
+    # answer to "did anyone add a key to both?".
+    def default_branch = SlotMerger.empty_branch
     end
   end
 end

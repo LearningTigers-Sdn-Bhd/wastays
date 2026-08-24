@@ -4,13 +4,16 @@ class Prospect < ApplicationRecord
   belongs_to :hotel
   belongs_to :guest, optional: true
   has_many :prospect_messages, dependent: :destroy
+  has_many :conversations, dependent: :destroy
   has_many :hotel_knowledge_diagnostics, dependent: :nullify
   has_one :prospect_conversation_state, dependent: :destroy
 
   validates :public_id, presence: true, uniqueness: true
-  validates :phone_number, presence: true
   validates :stage, presence: true, inclusion: { in: STAGES }
-  validates :phone_number, uniqueness: { scope: :hotel_id }
+  # A visitor chatting on the public concierge page has no number to give
+  # yet, so identity falls back to public_id. A real number still cannot be
+  # claimed twice within one hotel.
+  validates :phone_number, uniqueness: { scope: :hotel_id }, allow_nil: true
 
   before_validation :ensure_public_id, on: :create
   before_validation :derive_stage

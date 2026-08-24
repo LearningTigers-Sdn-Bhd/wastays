@@ -1,0 +1,43 @@
+<%= tag.div(**root_attributes) do %>
+  <% if closed? %>
+    <%= render PanelsUI::Alert.new(tone: :default, title: "This conversation is closed") do |alert| %>
+      <% alert.with_description do %>
+        Reopen it to reply. The guest can also start a new conversation at any time.
+      <% end %>
+    <% end %>
+  <% elsif deliverable? %>
+    <%= form_with url: reply_hotel_conversation_path(hotel, conversation),
+          method: :post,
+          class: "space-y-3" do |form| %>
+      <%= render PanelsUI::FormField.new(
+            form: form,
+            attribute: :body,
+            label: "Reply to the guest",
+            label_hidden: true) do |field| %>
+        <% field.with_text_area(
+             rows: 3,
+             required: true,
+             placeholder: "Type your reply…") %>
+      <% end %>
+
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-xs text-muted-foreground">
+          <%= delivery_note %>
+        </p>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              size: :sm,
+              data: { turbo_submits_with: "Sending…" }) do %>
+          Send reply
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <%= render PanelsUI::Alert.new(tone: blocker_tone, title: blocker_title) do |alert| %>
+      <% alert.with_description do %>
+        You can read everything on this thread. <%= conversation.reply_blocker_message %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

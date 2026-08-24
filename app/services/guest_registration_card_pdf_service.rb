@@ -30,7 +30,7 @@ class GuestRegistrationCardPdfService
         Title: "Guest Registration Card - #{@booking.guest_registration_card_number_display}",
         Author: "WAStays",
         Creator: "WAStays",
-        CreationDate: Time.now
+        CreationDate: Time.current
       }
     )
     THEME.configure_font(pdf)
@@ -194,11 +194,12 @@ class GuestRegistrationCardPdfService
     pdf.fill_color TEXT_MUTED
     pdf.text_box "Guest signature", at: [ box_left + 10, top - 14 ], size: 8, style: :bold
 
-    if @card.signed? && @card.signature_data_url.present?
-      signature_io = decode_signature(@card.signature_data_url)
+    if @presenter.signed_for_active_guest?
+      signature_io = decode_signature(@presenter.signature_data_url)
       draw_signature_image(pdf, signature_io, at: [ box_left + 10, top - 26 ], height: 40) if signature_io
       pdf.fill_color TEXT_MUTED
-      pdf.text_box "Signed by #{@card.signer_name} at #{l(@card.signed_at, format: :long)}",
+      signed_at_str = @presenter.signed_at ? l(@presenter.signed_at, format: :long) : ""
+      pdf.text_box "Signed by #{@presenter.signer_name} at #{signed_at_str}",
         at: [ box_left + 10, top - 74 ], width: box_width - 20, size: 8
     else
       pdf.stroke_color BORDER

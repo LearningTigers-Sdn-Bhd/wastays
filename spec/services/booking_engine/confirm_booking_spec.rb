@@ -30,6 +30,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
       guest_name: 'Jane Doe',
       guest_email: 'jane@example.com',
       guest_phone: '+60123456789',
+      guest_city: 'Kuala Lumpur',
       government_id: 'A1234567',
       gender: 'FEMALE',
       country: 'Singapore',
@@ -53,13 +54,15 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect {
         result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
         expect(result.success?).to be(true), result.message
-      }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
+      }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything, hotel_id: anything)
 
       expect(result.success?).to be(true), result.message
       booking = result.booking
       expect(booking).to be_persisted
       expect(booking.status).to eq('confirmed')
       expect(booking.payment_status).to eq('captured')
+      expect(booking.guest_city).to eq('Kuala Lumpur')
+      expect(booking.fund_collector).to eq('wastays')
       expect(booking.total_amount).to eq(200.to_d)
       expect(booking.guest_gender).to eq('female')
       expect(booking.guest_document_type).to eq('passport')

@@ -3,7 +3,7 @@
 module HotelPortal
   class SaveAiSettings
     def self.call(hotel, permitted_params)
-      attrs = permitted_params.slice(:ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key)
+      attrs = permitted_params.slice(:guest_chat_enabled, :ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key)
       enabled = ActiveModel::Type::Boolean.new.cast(attrs[:ai_provider_enabled])
 
       hotel.assign_attributes(attrs)

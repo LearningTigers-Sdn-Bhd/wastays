@@ -39,6 +39,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(result.success?).to be(true)
     expect(result.booking.persisted?).to be(true)
     expect(result.booking.guest_name).to eq("John Doe")
+    expect(result.booking.fund_collector).to eq("unknown")
     expect(result.booking.primary_guest).to have_attributes(name: "John Doe", email: "john@example.com")
     expect(result.booking.primary_guest.metadata).to include(
       "profile_source" => "channel_manager",

@@ -145,5 +145,29 @@ RSpec.describe Payments::TransactionRecorder do
       expect(result.verified_at).to be_present
       expect(result.captured_at).to be_nil
     end
+
+    it "marks the booking as wastays-collected when a gateway capture is linked to it" do
+      booking = create(:booking, booking_quote: quote, hotel: quote.hotel, fund_collector: "unknown")
+
+      described_class.record_verification(
+        quote: quote,
+        gateway: "razorpay",
+        booking: booking,
+        payment_response: {
+          razorpay_order_id: "order_stamp",
+          razorpay_signature: "sig_stamp"
+        },
+        verification_result: {
+          status: "captured",
+          external_reference: "pay_stamp",
+          payment_method: "card",
+          amount: 5000,
+          currency: "MYR",
+          metadata: { quote_token: quote.token }
+        }
+      )
+
+      expect(booking.reload.fund_collector).to eq("wastays")
+    end
   end
 end

@@ -13,7 +13,7 @@ RSpec.describe HotelPortal::Requests::CompletionWebhook do
       request = create(:housekeeping_request, booking: booking, status: "completed", completed_at: Time.current)
 
       expect { broadcast(request, kind: "housekeeping", from: "in_progress", to: "completed") }
-        .to have_enqueued_job(WebhookBroadcastJob).with("housekeeping_completed", hash_including(request_id: request.id))
+        .to have_enqueued_job(WebhookBroadcastJob).with("housekeeping_completed", hash_including(request_id: request.id), hotel_id: hotel.id)
     end
 
     # Each kind spells finished differently.
@@ -21,14 +21,14 @@ RSpec.describe HotelPortal::Requests::CompletionWebhook do
       request = create(:complaint_request, booking: booking, status: "resolved", completed_at: Time.current)
 
       expect { broadcast(request, kind: "complaint", from: "pending", to: "resolved") }
-        .to have_enqueued_job(WebhookBroadcastJob).with("complaint_resolved", anything)
+        .to have_enqueued_job(WebhookBroadcastJob).with("complaint_resolved", anything, hotel_id: hotel.id)
     end
 
     it "announces a completed checkout" do
       request = create(:check_out_request, booking: booking, status: "completed")
 
       expect { broadcast(request, kind: "checkout", from: "in_progress", to: "completed") }
-        .to have_enqueued_job(WebhookBroadcastJob).with("checkout_completed", anything)
+        .to have_enqueued_job(WebhookBroadcastJob).with("checkout_completed", anything, hotel_id: hotel.id)
     end
   end
 
@@ -74,7 +74,8 @@ RSpec.describe HotelPortal::Requests::CompletionWebhook do
           guest_name: "Aisyah",
           guest_phone: "+60123",
           hotel_name: "Seaside"
-        )
+        ),
+        hotel_id: hotel.id
       )
     end
 
@@ -84,7 +85,7 @@ RSpec.describe HotelPortal::Requests::CompletionWebhook do
 
       broadcast(request, kind: "checkout", from: "new", to: "completed")
 
-      expect(WebhookBroadcastJob).to have_been_enqueued.with("checkout_completed", hash_including(external_id: "EXT-CO"))
+      expect(WebhookBroadcastJob).to have_been_enqueued.with("checkout_completed", hash_including(external_id: "EXT-CO"), hotel_id: hotel.id)
     end
   end
 end

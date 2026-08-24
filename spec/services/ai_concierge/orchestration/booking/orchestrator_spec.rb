@@ -9,13 +9,8 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(default_active_branch, pending_question: pending_question)
   end
   let(:decision) { { action: :booking, pending_question: pending_question } }
-  let(:tool_registry) { instance_double(AiConcierge::Tools::ToolRegistry) }
-
-  before do
-    allow(tool_registry).to receive(:fetch).with("select_booking_option").and_return(AiConcierge::Tools::Booking::SelectBookingOptionTool)
-  end
-
-  it "selects the only visible option when the guest replies with the room type" do
+  # A list with one row on it has only one answer, whatever words arrive.
+  it "selects the only visible option whatever the guest replies with" do
     result = orchestrate(
       message: "can i choose executive penthouse",
       interpretation: interpretation,
@@ -30,76 +25,44 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     expect(result.dig(:slots_payload, "booking_task", "branch", "selected_option", "selection_id")).to eq("exec_1")
   end
 
-  it "asks for an option number when the named room type has multiple visible options" do
+  it "selects the row the guest numbered, across room types" do
     result = orchestrate(
-      message: "garden prestige suite",
-      interpretation: interpretation,
+      message: "no 3",
+      interpretation: interpretation(intent: "option_selection", slots: { "option_number" => 3 }),
       active_branch: branch_with_options([
-        group("Garden Prestige Suite", [ option(1, "garden_1", "2026-08-01"), option(2, "garden_2", "2026-08-02") ])
+        group("Garden Prestige Suite", [ option(1, "garden_1", "2026-08-01"), option(2, "garden_2", "2026-08-02") ]),
+        group("Deluxe Room", [ option(3, "deluxe_1", "2026-08-01") ])
       ])
     )
-
-    expect(result[:reply_type]).to eq(:room_type_requires_option_number)
-    expect(result[:pending_question]).to eq("select_option")
-    expect(result.dig(:extra_context, :room_type_name)).to eq("Garden Prestige Suite")
-    expect(result.dig(:slots_payload, "booking_task", "branch", "pending_selection", "room_type_name")).to eq("Garden Prestige Suite")
-  end
-
-  it "asks for room type clarification when an option number is ambiguous" do
-    result = orchestrate(
-      message: "option 1",
-      interpretation: interpretation(slots: { "option_number" => 1 }),
-      active_branch: branch_with_options([
-        group("Garden Prestige Suite", [ option(1, "garden_1", "2026-08-01") ]),
-        group("Deluxe Room", [ option(1, "deluxe_1", "2026-08-01") ])
-      ])
-    )
-
-    expect(result[:reply_type]).to eq(:ambiguous_option_selection)
-    expect(result[:pending_question]).to eq("select_option")
-    expect(result.dig(:extra_context, :room_type_names)).to contain_exactly("Garden Prestige Suite", "Deluxe Room")
-    expect(result.dig(:extra_context, :option_number)).to eq(1)
-  end
-
-  it "asks for room type clarification when a date is ambiguous" do
-    result = orchestrate(
-      message: "august 1",
-      interpretation: interpretation(slots: { "check_in" => "2026-08-01" }),
-      active_branch: branch_with_options([
-        group("Garden Prestige Suite", [ option(1, "garden_1", "2026-08-01") ]),
-        group("Deluxe Room", [ option(1, "deluxe_1", "2026-08-01") ])
-      ])
-    )
-
-    expect(result[:reply_type]).to eq(:ambiguous_date_selection)
-    expect(result[:pending_question]).to eq("select_option")
-    expect(result.dig(:extra_context, :room_type_names)).to contain_exactly("Garden Prestige Suite", "Deluxe Room")
-    expect(result.dig(:slots_payload, "booking_task", "branch", "pending_selection", "check_in")).to eq("2026-08-01")
-  end
-
-  it "uses pending date context when the guest later names the room type" do
-    active_branch = branch_with_options([
-      group("Ocean Villa King", [ option(1, "ocean_1", "2026-05-21"), option(2, "ocean_2", "2026-05-22") ]),
-      group("Executive Penthouse", [ option(1, "exec_1", "2026-05-21") ])
-    ]).merge("pending_selection" => { "check_in" => "2026-05-21" })
-
-    result = orchestrate(message: "ocean villa king", interpretation: interpretation, active_branch: active_branch)
 
     expect(result[:reply_type]).to eq(:ask_confirmation)
-    expect(result.dig(:extra_context, :selected_option, "selection_id")).to eq("ocean_1")
-    expect(result.dig(:slots_payload, "booking_task", "branch", "pending_selection")).to be_nil
+    expect(result.dig(:extra_context, :selected_option, "selection_id")).to eq("deluxe_1")
   end
 
-  it "returns a safe fallback when booking url generation fails without a completion payload" do
-      failure_tool = Class.new do
-        def initialize(hotel:, selected_option:, guest_phone:, rate_plan_id: nil); end
+  # The catalogue is answered by number. A room name or a date is not a second
+  # way in, so the guest is asked again rather than sent a room they did not
+  # pick.
+  it "asks for the number again when the reply names a room or a date" do
+    [ "garden prestige suite", "august 1" ].each do |message|
+      result = orchestrate(
+        message: message,
+        interpretation: interpretation(intent: "option_selection", slots: {}),
+        active_branch: branch_with_options([
+          group("Garden Prestige Suite", [ option(1, "garden_1", "2026-08-01"), option(2, "garden_2", "2026-08-02") ]),
+          group("Deluxe Room", [ option(3, "deluxe_1", "2026-08-01") ])
+        ])
+      )
 
-      def call
-        { "success" => false, "error" => "Unable to generate quote right now." }
-      end
+      expect(result[:reply_type]).to eq(:invalid_selection), "expected #{message.inspect} not to select"
+      expect(result[:pending_question]).to eq("select_option")
     end
+  end
 
-    allow(tool_registry).to receive(:fetch).with("generate_booking_url").and_return(failure_tool)
+  it "keeps a failed quote on the thread so the guest can answer again" do
+    quote_tool = AiConcierge::Tools::Booking::GenerateBookingUrlTool
+    allow(quote_tool).to receive(:new).and_return(
+      instance_double(quote_tool, call: { "success" => false, "error" => "Unable to generate quote right now." })
+    )
 
     selected_option = option(1, "garden_1", "2026-08-01")
     active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge(
@@ -113,13 +76,15 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
       decision: { action: :booking, pending_question: "confirm_selection" }
     )
 
-    expect(result[:direct_payload][:reply_message]).to eq("Unable to generate quote right now.")
-    expect(result[:direct_payload][:needs_human_support]).to be(true)
-    expect(result).not_to have_key(:slots_payload)
-    expect(result).not_to include(flow_status: "ended", end_reason: "booking_url_generated")
+    expect(result.dig(:extra_context, :message)).to eq("Unable to generate quote right now.")
+    expect(result[:needs_human_support]).to be(true)
+    expect(result[:pending_question]).to eq("confirm_selection")
+    expect(result.slots_payload).to be_present
+    expect(result.flow_status).to be_nil
+    expect(result.end_reason).to be_nil
   end
 
-  it "selects the cheapest rate plan from natural price language" do
+  it "selects the rate plan the guest numbered" do
     selected_option = option(1, "garden_1", "2026-08-01").merge(
       "rate_plans" => [
         { "rate_plan_id" => 10, "name" => "Standard Rate", "total_price" => 240.0, "currency" => "MYR" },
@@ -129,7 +94,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge("selected_option" => selected_option)
 
     result = orchestrate(
-      message: "the cheapest one please",
+      message: "no 2",
       interpretation: interpretation(slots: {}),
       active_branch: active_branch,
       decision: { action: :booking, pending_question: "rate_plan_selection" }
@@ -160,7 +125,9 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     expect(result.dig(:extra_context, :selected_option, "selected_rate_plan", "name")).to eq("Flexible Rate")
   end
 
-  it "matches non-refundable without treating refundable as the same plan" do
+  # A rate plan's name is no longer a way in either: it only ever guessed, and
+  # a guess here prices a stay the guest never asked about.
+  it "re-asks the rate question when the reply names a plan instead of a row" do
     selected_option = option(1, "garden_1", "2026-08-01").merge(
       "rate_plans" => [
         { "rate_plan_id" => 10, "name" => "Refundable Rate", "total_price" => 260.0, "currency" => "MYR" },
@@ -169,21 +136,16 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     )
     active_branch = branch_with_options([ group("Garden Prestige Suite", [ selected_option ]) ]).merge("selected_option" => selected_option)
 
-    refundable = orchestrate(
-      message: "refundable",
-      interpretation: interpretation(slots: {}),
-      active_branch: active_branch.deep_dup,
-      decision: { action: :booking, pending_question: "rate_plan_selection" }
-    )
-    non_refundable = orchestrate(
-      message: "non refundable",
-      interpretation: interpretation(slots: {}),
-      active_branch: active_branch.deep_dup,
-      decision: { action: :booking, pending_question: "rate_plan_selection" }
-    )
+    [ "refundable", "non refundable", "the cheapest one please" ].each do |message|
+      result = orchestrate(
+        message: message,
+        interpretation: interpretation(slots: {}),
+        active_branch: active_branch.deep_dup,
+        decision: { action: :booking, pending_question: "rate_plan_selection" }
+      )
 
-    expect(refundable.dig(:extra_context, :selected_option, "selected_rate_plan", "name")).to eq("Refundable Rate")
-    expect(non_refundable.dig(:extra_context, :selected_option, "selected_rate_plan", "name")).to eq("Non-Refundable Rate")
+      expect(result[:reply_type]).to eq(:ask_rate_plan), "expected #{message.inspect} to re-ask"
+    end
   end
 
   it "re-asks for rate plan when a partial provider name is ambiguous" do
@@ -335,6 +297,80 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     expect(branch["selected_rate_plan_id"]).to be_nil
   end
 
+  # The date has to leave the branch as it is named, or the ladder says the
+  # same sentence every turn and the guest cannot get past it.
+  it "names a check-in date that has passed and forgets it", frozen_time: Date.new(2026, 8, 20) do
+    result = orchestrate(
+      message: "3-5 january 2026",
+      interpretation: interpretation,
+      active_branch: {
+        "check_in" => "2026-01-03", "check_out" => "2026-01-05",
+        "target_month" => 1, "target_year" => 2026, "nights" => 2, "adults" => 2
+      },
+      decision: { action: :booking, pending_question: nil }
+    )
+
+    expect(result[:reply_type]).to eq(:timing_in_the_past)
+    expect(result[:pending_question]).to eq("booking_timing")
+    expect(result.dig(:extra_context, :check_in)).to eq("2026-01-03")
+
+    branch = result.dig(:slots_payload, "booking_task", "branch")
+    expect(branch["check_in"]).to be_blank
+    expect(branch["target_month"]).to be_blank
+  end
+
+  # A booking picked up after an interruption used to be answered by a class of
+  # its own, which read the branch out of Postgres and never looked at the one
+  # the guest's own message had just been merged into.
+  describe "a booking picked up after an interruption" do
+    let(:decision) { { action: :resume, pending_question: "select_option" } }
+
+    it "answers on the branch it was handed, not the one in the record" do
+      result = orchestrate(
+        message: "1",
+        interpretation: interpretation(intent: "option_selection", slots: {}),
+        active_branch: branch_with_options([
+          group("Deluxe Room", [ option(1, "deluxe_1", "2026-08-01") ])
+        ])
+      )
+
+      expect(result[:reply_type]).to eq(:ask_confirmation)
+      expect(result.dig(:extra_context, :selected_option, "selection_id")).to eq("deluxe_1")
+    end
+
+    # The guest was away, not failing to answer. "Sorry, I didn't catch that."
+    # is what a counter that counted this turn would put in front of the reply.
+    it "offers the saved list again rather than telling the guest off" do
+      conversation_state.update!(slots_payload: reasked_payload(saved_branch))
+
+      result = orchestrate(
+        message: "hello again",
+        interpretation: interpretation(intent: "option_selection", slots: {}),
+        active_branch: saved_branch
+      )
+
+      expect(result[:reply_type]).to eq(:resume_options)
+      expect(result[:pending_question]).to eq("select_option")
+      expect(result.dig(:extra_context, :options)).to be_present
+      expect(result.dig(:slots_payload, "booking_task", "reask_count")).to eq(0)
+      expect(result[:needs_human_support]).to be(false)
+    end
+
+    # A question already asked twice over a branch that did not move: one more
+    # count and the thread asks for a person.
+    def reasked_payload(branch)
+      AiConcierge::State::ConversationTaskManager
+        .new(slots_payload: AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(branch, pending_question: "select_option"))
+        .activate_booking(branch, pending_question: "select_option", count_reask: true)
+    end
+
+    def saved_branch
+      @saved_branch ||= branch_with_options([
+        group("Garden Prestige Suite", [ option(1, "garden_1", "2026-08-01"), option(2, "garden_2", "2026-08-02") ])
+      ])
+    end
+  end
+
   def orchestrate(message:, interpretation:, active_branch:, decision: self.decision)
     described_class.new(
       hotel: hotel,
@@ -344,8 +380,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
       active_branch: active_branch,
       decision: decision,
       message: message,
-      phone: prospect.phone_number,
-      tool_registry: tool_registry
+      phone: prospect.phone_number
     ).call
   end
 

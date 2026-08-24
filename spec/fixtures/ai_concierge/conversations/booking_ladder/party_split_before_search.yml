@@ -1,0 +1,14 @@
+id: party_split_before_search
+description: "a party size that does not split into adults and children is asked about before searching, or the quote prices the wrong occupancy"
+origin: "Booking::ActionResolver#missing_party_split?"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [1, 2, 3, 4, 5]
+      max_adults: 4
+turns:
+  - guest: "early august for 3 days 2 nights for 4 people"
+    expect:
+      pending_question: party_split
+      creates_quote: false

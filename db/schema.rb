@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_093000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -468,7 +468,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.string "key", null: false
     t.string "kind", default: "ota", null: false
     t.string "label", null: false
+    t.string "legal_name"
     t.integer "position", default: 0, null: false
+    t.boolean "self_bill_commission", default: false, null: false
+    t.string "tax_country_code"
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_booking_sources_on_active"
     t.index ["key"], name: "index_booking_sources_on_key", unique: true
@@ -515,9 +518,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.string "deposit_status"
     t.string "external_reference"
     t.string "folio_account_reference"
+    t.string "fund_collector", default: "unknown", null: false
     t.bigint "group_booking_id"
     t.integer "group_position"
     t.string "guarantee_method"
+    t.string "guest_city"
     t.string "guest_country"
     t.string "guest_document_type"
     t.string "guest_email"
@@ -525,9 +530,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.string "guest_home_address"
     t.string "guest_name", null: false
     t.string "guest_phone", null: false
+    t.string "guest_postal_code"
     t.integer "guest_registration_number"
     t.string "guest_registration_reference"
     t.integer "guest_registration_year"
+    t.string "guest_state_code"
+    t.string "guest_tin"
     t.bigint "hotel_corporate_account_id"
     t.bigint "hotel_id", null: false
     t.jsonb "hotel_snapshot", default: {}, null: false
@@ -568,6 +576,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.index ["check_out"], name: "index_bookings_on_check_out"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
+    t.index ["fund_collector"], name: "index_bookings_on_fund_collector"
     t.index ["group_booking_id", "group_position"], name: "idx_bookings_group_position", unique: true, where: "(group_booking_id IS NOT NULL)"
     t.index ["group_booking_id"], name: "index_bookings_on_group_booking_id"
     t.index ["hotel_corporate_account_id"], name: "index_bookings_on_hotel_corporate_account_id"
@@ -784,6 +793,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
+  create_table "conversations", force: :cascade do |t|
+    t.bigint "assigned_user_id"
+    t.string "channel", default: "web", null: false
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.datetime "human_requested_at"
+    t.string "language"
+    t.datetime "last_guest_message_at"
+    t.datetime "last_message_at"
+    t.string "mode", default: "bot", null: false
+    t.bigint "prospect_id", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assigned_user_id"], name: "index_conversations_on_assigned_user_id"
+    t.index ["hotel_id", "mode", "status"], name: "index_conversations_on_hotel_id_and_mode_and_status"
+    t.index ["hotel_id", "status", "last_message_at"], name: "index_conversations_on_hotel_id_and_status_and_last_message_at"
+    t.index ["prospect_id", "channel"], name: "index_conversations_on_prospect_and_channel_when_open", unique: true, where: "((status)::text = 'open'::text)"
+    t.index ["prospect_id"], name: "index_conversations_on_prospect_id"
+  end
+
   create_table "corporate_ar_payment_intents", force: :cascade do |t|
     t.decimal "amount", precision: 10, scale: 2, null: false
     t.bigint "ar_payment_id"
@@ -876,6 +906,76 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.check_constraint "amount > 0::numeric", name: "deposits_amount_positive"
     t.check_constraint "kind::text = ANY (ARRAY['security'::character varying, 'prepayment'::character varying]::text[])", name: "deposits_kind_allowed"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'held'::character varying, 'available'::character varying, 'settled'::character varying, 'released'::character varying, 'refunded'::character varying, 'cancelled'::character varying, 'failed'::character varying]::text[])", name: "deposits_status_allowed"
+  end
+
+  create_table "e_invoice_settings", force: :cascade do |t|
+    t.string "api_environment", default: "sandbox", null: false
+    t.text "client_id"
+    t.text "client_secret"
+    t.datetime "created_at", null: false
+    t.datetime "effective_from"
+    t.boolean "enabled", default: false, null: false
+    t.bigint "hotel_id", null: false
+    t.boolean "intermediary_enabled", default: false, null: false
+    t.boolean "signature_enabled", default: false, null: false
+    t.text "signing_certificate"
+    t.text "signing_private_key"
+    t.string "supplier_address_line1"
+    t.string "supplier_address_line2"
+    t.string "supplier_business_description"
+    t.string "supplier_city"
+    t.string "supplier_contact_email"
+    t.string "supplier_contact_phone"
+    t.string "supplier_country_code"
+    t.string "supplier_msic_code"
+    t.string "supplier_postal_code"
+    t.string "supplier_state_code"
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_e_invoice_settings_on_hotel_id", unique: true
+  end
+
+  create_table "e_invoice_submissions", force: :cascade do |t|
+    t.bigint "booking_id"
+    t.datetime "cancelled_at"
+    t.boolean "consolidated", default: false, null: false
+    t.uuid "consolidation_batch_id"
+    t.datetime "created_at", null: false
+    t.string "document_scenario", default: "guest_invoice", null: false
+    t.string "document_type", default: "01", null: false
+    t.jsonb "error_details", default: {}
+    t.string "fund_collector", default: "wastays", null: false
+    t.bigint "hotel_id", null: false
+    t.string "internal_id"
+    t.string "long_id"
+    t.string "original_invoice_internal_id"
+    t.string "ota_source_key"
+    t.datetime "payment_concluded_at"
+    t.bigint "payout_batch_id"
+    t.date "period_start"
+    t.jsonb "raw_response", default: {}
+    t.string "represented_taxpayer_tin"
+    t.datetime "requested_at"
+    t.boolean "requested_by_guest", default: false, null: false
+    t.string "status", default: "pending", null: false
+    t.string "submission_mode", default: "taxpayer", null: false
+    t.string "submission_uid"
+    t.datetime "submitted_at"
+    t.string "supplier_name"
+    t.string "supplier_tin"
+    t.datetime "updated_at", null: false
+    t.string "uuid"
+    t.datetime "validated_at"
+    t.index ["booking_id", "document_scenario", "document_type"], name: "index_e_invoice_submissions_on_booking_scenario_type", unique: true, where: "((status)::text <> 'cancelled'::text)"
+    t.index ["booking_id"], name: "index_e_invoice_submissions_on_booking_id"
+    t.index ["consolidation_batch_id"], name: "index_e_invoice_submissions_on_consolidation_batch_id"
+    t.index ["fund_collector"], name: "index_e_invoice_submissions_on_fund_collector"
+    t.index ["hotel_id", "ota_source_key", "period_start"], name: "index_e_invoice_submissions_on_ota_commission_period", unique: true, where: "(((document_scenario)::text = 'ota_commission_self_billed'::text) AND ((status)::text <> 'cancelled'::text))"
+    t.index ["hotel_id"], name: "index_e_invoice_submissions_on_hotel_id"
+    t.index ["payout_batch_id"], name: "index_e_invoice_submissions_on_payout_batch_id"
+    t.index ["status", "consolidated", "payment_concluded_at"], name: "index_e_invoice_submissions_on_status_consolidated_payment"
+    t.index ["status"], name: "index_e_invoice_submissions_on_status"
+    t.index ["uuid"], name: "index_e_invoice_submissions_on_individual_uuid", unique: true, where: "((uuid IS NOT NULL) AND (consolidated = false))"
+    t.index ["uuid"], name: "index_e_invoice_submissions_on_uuid", where: "(uuid IS NOT NULL)"
   end
 
   create_table "exchange_rates", force: :cascade do |t|
@@ -1126,6 +1226,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   end
 
   create_table "guest_registration_cards", force: :cascade do |t|
+    t.bigint "booking_guest_id"
     t.bigint "booking_id", null: false
     t.datetime "created_at", null: false
     t.jsonb "display_fields_snapshot"
@@ -1137,7 +1238,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.string "status", default: "draft", null: false
     t.jsonb "terms_snapshot", default: {}, null: false
     t.datetime "updated_at", null: false
-    t.index ["booking_id"], name: "index_guest_registration_cards_on_booking_id", unique: true
+    t.index ["booking_guest_id"], name: "index_guest_registration_cards_on_booking_guest_id", unique: true
+    t.index ["booking_id"], name: "index_guest_registration_cards_on_booking_id"
     t.index ["hotel_id"], name: "index_guest_registration_cards_on_hotel_id"
     t.index ["public_token"], name: "index_guest_registration_cards_on_public_token", unique: true
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'signed'::character varying]::text[])", name: "guest_registration_cards_status_allowed"
@@ -1154,6 +1256,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
 
   create_table "guests", force: :cascade do |t|
     t.boolean "blacklisted", default: false, null: false
+    t.string "city"
     t.string "country"
     t.datetime "created_at", null: false
     t.bigint "created_by_hotel_id"
@@ -1171,6 +1274,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.string "otp_code_digest"
     t.datetime "otp_sent_at"
     t.string "phone"
+    t.string "postal_code"
+    t.string "state_code"
+    t.string "tin"
     t.datetime "updated_at", null: false
     t.boolean "vip", default: false, null: false
     t.index ["blacklisted"], name: "index_guests_on_blacklisted"
@@ -1251,18 +1357,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.string "account_type", default: "company", null: false
     t.string "agent_code"
     t.boolean "auto_allocate_payments", default: false, null: false
+    t.string "brn"
     t.string "contact_email"
     t.string "contact_phone"
     t.bigint "corporate_account_id", null: false
     t.datetime "created_at", null: false
     t.string "credit_currency", null: false
     t.decimal "credit_limit", precision: 12, scale: 2
+    t.integer "deposit_percentage_override"
     t.boolean "direct_bill_enabled", default: false, null: false
     t.bigint "hotel_id", null: false
     t.integer "payment_terms_days"
     t.string "relationship_type", default: "standard", null: false
+    t.string "sst_registration_number"
     t.string "status", default: "active", null: false
     t.datetime "suspended_at"
+    t.string "tin"
     t.datetime "updated_at", null: false
     t.index ["corporate_account_id", "status"], name: "idx_hotel_corporate_accounts_on_account_and_status"
     t.index ["corporate_account_id"], name: "index_hotel_corporate_accounts_on_corporate_account_id"
@@ -1354,12 +1464,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   create_table "hotel_knowledge_chunks", force: :cascade do |t|
     t.integer "chunk_index", null: false
     t.text "content", null: false
+    t.virtual "content_tsv", type: :tsvector, as: "to_tsvector('simple'::regconfig, content)", stored: true
     t.datetime "created_at", null: false
     t.vector "embedding", limit: 1536
     t.bigint "hotel_knowledge_document_id", null: false
     t.jsonb "metadata", default: {}
     t.integer "token_count"
     t.datetime "updated_at", null: false
+    t.index ["content_tsv"], name: "index_hotel_knowledge_chunks_on_content_tsv", using: :gin
     t.index ["embedding"], name: "index_hotel_knowledge_chunks_on_embedding", opclass: :vector_cosine_ops, using: :ivfflat
     t.index ["hotel_knowledge_document_id", "chunk_index"], name: "idx_knowledge_chunks_on_document_and_index", unique: true
     t.index ["hotel_knowledge_document_id"], name: "index_hotel_knowledge_chunks_on_hotel_knowledge_document_id"
@@ -1591,6 +1703,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.string "fixed_line_number"
     t.boolean "geolocation_enabled", default: true, null: false
     t.string "google_map_link"
+    t.integer "group_booking_deposit_percentage", default: 100, null: false
+    t.integer "group_booking_request_hold_hours", default: 48, null: false
+    t.boolean "guest_chat_enabled", default: true, null: false
     t.jsonb "guest_registration_card_fields"
     t.text "guest_registration_card_terms"
     t.boolean "hide_payout_reports", default: false, null: false
@@ -2150,8 +2265,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.bigint "hotel_id", null: false
-    t.decimal "maximum_amount_per_room_night", precision: 12, scale: 2, default: "10.0", null: false
-    t.decimal "maximum_percentage", precision: 7, scale: 4, default: "1.0", null: false
+    t.decimal "maximum_amount_per_room_night", precision: 15, scale: 2, default: "10.0", null: false
+    t.decimal "maximum_percentage", precision: 8, scale: 4, default: "1.0", null: false
     t.string "mode", default: "recommended", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_ota_rate_variance_policies_on_hotel_id", unique: true
@@ -2281,14 +2396,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.string "active_topic"
     t.datetime "created_at", null: false
     t.string "flow_status", default: "active", null: false
-    t.string "last_action_name"
-    t.string "last_intent"
-    t.datetime "last_topic_switch_at"
     t.datetime "last_user_message_at"
     t.integer "lock_version", default: 0, null: false
     t.text "pending_question"
     t.bigint "prospect_id", null: false
-    t.integer "reset_count", default: 0, null: false
     t.jsonb "slots_payload", default: {}, null: false
     t.datetime "updated_at", null: false
     t.index ["active_topic"], name: "index_prospect_conversation_states_on_active_topic"
@@ -2298,13 +2409,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
 
   create_table "prospect_messages", force: :cascade do |t|
     t.text "body", null: false
+    t.bigint "conversation_id", null: false
     t.datetime "created_at", null: false
     t.string "direction", null: false
     t.bigint "prospect_id", null: false
+    t.datetime "read_at"
+    t.string "sender_role"
+    t.bigint "sender_user_id"
     t.datetime "sent_at"
+    t.text "source_body"
     t.datetime "updated_at", null: false
+    t.index ["conversation_id", "sent_at"], name: "index_prospect_messages_on_conversation_id_and_sent_at"
+    t.index ["conversation_id"], name: "index_prospect_messages_on_conversation_when_unread", where: "(read_at IS NULL)"
     t.index ["prospect_id", "sent_at"], name: "index_prospect_messages_on_prospect_id_and_sent_at"
     t.index ["prospect_id"], name: "index_prospect_messages_on_prospect_id"
+    t.index ["sender_user_id"], name: "index_prospect_messages_on_sender_user_id"
   end
 
   create_table "prospects", force: :cascade do |t|
@@ -2313,7 +2432,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
     t.bigint "hotel_id", null: false
     t.datetime "last_contact"
     t.string "name"
-    t.string "phone_number", null: false
+    t.string "phone_number"
     t.string "public_id", null: false
     t.string "stage", default: "cold", null: false
     t.datetime "updated_at", null: false
@@ -2697,9 +2816,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   create_table "webhook_endpoints", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "enabled"
+    t.text "event_types", default: [], null: false, array: true
+    t.bigint "hotel_id"
     t.string "name"
     t.datetime "updated_at", null: false
     t.string "url"
+    t.index ["hotel_id"], name: "index_webhook_endpoints_on_hotel_id"
   end
 
   create_table "webhook_events", force: :cascade do |t|
@@ -2795,6 +2917,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   add_foreign_key "check_out_requests", "bookings"
   add_foreign_key "check_out_requests", "users", column: "acknowledged_by_user_id"
   add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "conversations", "hotels"
+  add_foreign_key "conversations", "prospects"
+  add_foreign_key "conversations", "users", column: "assigned_user_id"
   add_foreign_key "corporate_ar_payment_intents", "accounts", column: "corporate_account_id"
   add_foreign_key "corporate_ar_payment_intents", "ar_payments"
   add_foreign_key "corporate_ar_payment_intents", "hotel_corporate_accounts"
@@ -2811,6 +2936,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   add_foreign_key "deposits", "hotels"
   add_foreign_key "deposits", "transaction_codes"
   add_foreign_key "deposits", "users", column: "received_by_id"
+  add_foreign_key "e_invoice_settings", "hotels"
+  add_foreign_key "e_invoice_submissions", "bookings"
+  add_foreign_key "e_invoice_submissions", "hotels"
+  add_foreign_key "e_invoice_submissions", "payout_batches"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "features", "feature_groups"
   add_foreign_key "financial_audit_events", "booking_folios"
@@ -2850,6 +2979,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   add_foreign_key "group_billing_change_batches", "users", column: "actor_id"
   add_foreign_key "group_bookings", "guests", column: "organizer_guest_id"
   add_foreign_key "group_bookings", "hotels"
+  add_foreign_key "guest_registration_cards", "booking_guests"
   add_foreign_key "guest_registration_cards", "bookings"
   add_foreign_key "guest_registration_cards", "hotels"
   add_foreign_key "guest_registration_note_templates", "hotels"
@@ -2957,7 +3087,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   add_foreign_key "pre_checkins", "bookings"
   add_foreign_key "property_policies", "hotels"
   add_foreign_key "prospect_conversation_states", "prospects"
+  add_foreign_key "prospect_messages", "conversations"
   add_foreign_key "prospect_messages", "prospects"
+  add_foreign_key "prospect_messages", "users", column: "sender_user_id"
   add_foreign_key "prospects", "guests"
   add_foreign_key "prospects", "hotels"
   add_foreign_key "rate_plan_age_bands", "rate_plans"
@@ -3005,4 +3137,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_100000) do
   add_foreign_key "user_roles", "roles"
   add_foreign_key "user_roles", "users"
   add_foreign_key "users", "accounts"
+  add_foreign_key "webhook_endpoints", "hotels"
 end

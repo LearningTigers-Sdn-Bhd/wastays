@@ -42,6 +42,7 @@ module HotelPortal
             name: guest.name,
             email: guest.email,
             phone: guest.phone,
+            city: guest.city,
             country: guest.country,
             gender: guest.gender,
             date_of_birth: guest.date_of_birth&.iso8601,
@@ -72,7 +73,7 @@ module HotelPortal
     end
 
     def new
-      @guest = Guest.new(country: current_hotel.country)
+      @guest = Guest.new(city: current_hotel.city, country: current_hotel.country)
     end
 
     def create
@@ -198,7 +199,7 @@ module HotelPortal
     end
 
     def guest_params
-      params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth)
+      params.require(:guest).permit(:name, :email, :phone, :city, :state_code, :postal_code, :tin, :country, :gender, :document_type, :government_id, :date_of_birth)
     end
 
 

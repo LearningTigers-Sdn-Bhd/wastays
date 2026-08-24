@@ -1,3 +1,4 @@
+<% date_preset = local_assigns.fetch(:date_preset, @date_preset) %>
 <div class="space-y-5">
   <% report.sections.each do |section| %>
     <% heading_id = "meal-prep-#{section[:meal]}-heading" %>
@@ -23,63 +24,63 @@
         <% table.with_header do %>
           <tr>
             <th scope="col">Guest name</th>
-            <th scope="col" class="w-[80px]">Pax</th>
             <th scope="col" class="w-[140px]">Room number</th>
             <th scope="col" class="w-[140px]">Transfer</th>
             <th scope="col" class="w-[150px]">Transfer date</th>
             <th scope="col" class="w-[140px]">Transfer time</th>
+            <th scope="col" class="w-[80px]">Pax</th>
           </tr>
         <% end %>
         <% table.with_body do %>
           <% if paged_rows.any? %>
-            <% report_rows_grouped_by_month(paged_rows, date_preset: @date_preset) { |row| row[:boat_time] }.each do |month, rows| %>
+            <% report_rows_grouped_by_month(paged_rows, date_preset: date_preset) { |row| row[:boat_time] }.each do |month, rows| %>
               <% if month %>
                 <tr class="bg-muted/55" data-slot="report-month-group">
                   <th scope="rowgroup" colspan="6" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
                 </tr>
               <% end %>
-            <% rows.each do |row| %>
-              <tr>
-                <th scope="row">
-                  <div class="flex items-center gap-1.5">
-                    <p class="font-semibold text-foreground" data-slot="meal-prep-guest-name"><%= row[:guest_name] %></p>
-                    <%= render PanelsUI::Popover.new(
-                          id: "meal-prep-#{section[:meal]}-#{row[:confirmation_token]}-#{row[:type].parameterize}-booking",
-                          trigger_on: :hover,
-                          placement: :top_start,
-                          arrow: true,
-                          root_class: "print:hidden") do |popover| %>
-                      <% popover.with_trigger(
-                           unstyled: true,
-                           aria_label: "Booking details for #{row[:guest_name]}",
-                           class: "inline-flex shrink-0 rounded text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring") do %>
-                        <%= app_icon "info", class: "size-3.5", aria: { hidden: true } %>
+              <% rows.each do |row| %>
+                <tr>
+                  <th scope="row">
+                    <div class="flex items-center gap-1.5">
+                      <p class="font-semibold text-foreground" data-slot="meal-prep-guest-name"><%= row[:guest_name] %></p>
+                      <%= render PanelsUI::Popover.new(
+                            id: meal_prep_popover_id(section[:meal], row),
+                            trigger_on: :hover,
+                            placement: :top_start,
+                            arrow: true,
+                            root_class: "print:hidden") do |popover| %>
+                        <% popover.with_trigger(
+                             unstyled: true,
+                             aria_label: "Booking details for #{row[:guest_name]}",
+                             class: "inline-flex shrink-0 rounded text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring") do %>
+                          <%= app_icon "info", class: "size-3.5", aria: { hidden: true } %>
+                        <% end %>
+                        <dl class="grid w-56 grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left text-xs font-normal">
+                          <dt class="font-medium text-muted-foreground">Booking ref</dt>
+                          <dd class="font-mono text-foreground"><%= row[:confirmation_token] %></dd>
+                          <dt class="font-medium text-muted-foreground">Room type</dt>
+                          <dd class="text-foreground"><%= row[:room_type] %></dd>
+                          <dt class="font-medium text-muted-foreground">Meal preps</dt>
+                          <dd class="text-foreground"><%= meal_prep_row_meals_text(row[:meals]) %></dd>
+                        </dl>
                       <% end %>
-                      <dl class="grid w-56 grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left text-xs font-normal">
-                        <dt class="font-medium text-muted-foreground">Booking ref</dt>
-                        <dd class="font-mono text-foreground"><%= row[:confirmation_token] %></dd>
-                        <dt class="font-medium text-muted-foreground">Room type</dt>
-                        <dd class="text-foreground"><%= row[:room_type] %></dd>
-                        <dt class="font-medium text-muted-foreground">Meal preps</dt>
-                        <dd class="text-foreground"><%= row[:meals].join(", ").presence || "—" %></dd>
-                      </dl>
+                    </div>
+                  </th>
+                  <td class="whitespace-nowrap"><%= row[:room_number] %></td>
+                  <% transfer = transfer_badge(row[:type]) %>
+                  <td>
+                    <%# Fixed width so both directions read as one column, not ragged pills. %>
+                    <%= render PanelsUI::Badge.new(variant: transfer[:variant], size: :md, class: "w-24 justify-start") do %>
+                      <%= app_icon transfer[:icon], class: "size-3.5", aria: { hidden: true } %>
+                      <%= row[:type] %>
                     <% end %>
-                  </div>
-                </th>
-                <td class="tabular-nums"><%= row[:pax] %></td>
-                <td class="whitespace-nowrap"><%= row[:room_number] %></td>
-                <% transfer = transfer_badge(row[:type]) %>
-                <td>
-                  <%# Fixed width so both directions read as one column, not ragged pills. %>
-                  <%= render PanelsUI::Badge.new(variant: transfer[:variant], size: :md, class: "w-24 justify-start") do %>
-                    <%= app_icon transfer[:icon], class: "size-3.5", aria: { hidden: true } %>
-                    <%= row[:type] %>
-                  <% end %>
-                </td>
-                <td class="whitespace-nowrap"><%= row[:transfer_date] %></td>
-                <td class="whitespace-nowrap tabular-nums text-foreground"><%= row[:formatted_boat_time] %></td>
-              </tr>
-            <% end %>
+                  </td>
+                  <td class="whitespace-nowrap"><%= row[:transfer_date] %></td>
+                  <td class="whitespace-nowrap tabular-nums text-foreground"><%= row[:formatted_boat_time] %></td>
+                  <td class="tabular-nums"><%= row[:pax] %></td>
+                </tr>
+              <% end %>
             <% end %>
           <% else %>
             <%= render "table_empty_state", colspan: 6, message: "No boat transfers or meal records found for the selected period." %>

@@ -68,5 +68,21 @@
         </div>
       <% end %>
     </div>
+
+    <%# The one tile that answers rather than routes: full width because it is
+        the thing a guest with a question should reach for first. %>
+    <div class="animate-hero-badge" style="animation-delay: 0.6s;">
+      <% if @hotel.concierge_chat_available? %>
+      <%= link_to concierge_chat_path(@hotel), class: "group flex items-center gap-4 bg-white rounded-3xl p-5 border border-border shadow-sm hover:border-primary/30 hover:shadow-md transition-all duration-300" do %>
+        <div class="w-10 h-10 shrink-0 rounded-2xl bg-muted border border-border flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-colors duration-300">
+          <svg class="w-5 h-5 text-muted-foreground group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 21l1.9-3.8A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <p class="font-black text-xs uppercase tracking-widest text-foreground">Chat With Us</p>
+          <p class="text-[10px] text-muted-foreground mt-1 leading-tight">Ask about rooms, rates or anything else</p>
+        </div>
+      <% end %>
+      <% end %>
+    </div>
   </div>
 <% end %>

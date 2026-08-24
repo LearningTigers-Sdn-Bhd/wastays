@@ -7,7 +7,8 @@ module HotelPortal
       "boat" => [ "Boat Settings", "Configure the daily boat timetable and the meals each transfer slot carries." ],
       "ai" => [ "AI Concierge", "Configure AI concierge behavior and provider settings." ],
       "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
-      "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ]
+      "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ],
+      "e_invoice" => [ "E-Invoice", "Configure LHDN MyInvois submission details for this property." ]
     }.freeze
 
     attr_reader :hotel, :active_page, :current_user

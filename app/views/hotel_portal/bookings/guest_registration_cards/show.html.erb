@@ -1,6 +1,6 @@
 <% content_for :title, "Guest Registration Card #{ @booking.guest_registration_card_number_display }" %>
 
-<div class="mx-auto max-w-5xl px-4 py-6 text-foreground print:p-0" data-controller="registration-card" data-registration-card-url-value="<%= hotel_booking_guest_registration_card_path(current_hotel, @booking) %>">
+<div class="mx-auto max-w-5xl px-4 py-6 text-foreground print:p-0" data-controller="registration-card" data-registration-card-url-value="<%= hotel_booking_guest_registration_card_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id) %>">
   <div class="grc-no-print mb-4">
     <div>
       <p class="text-xs font-semibold uppercase text-muted-foreground">Front desk document</p>
@@ -26,13 +26,46 @@
       <p class="font-semibold">Terms &amp; Conditions required</p>
       <p class="mt-1">
         This card can't be signed, printed, or sent to the guest until the property's Terms &amp; Conditions are set.
-        <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
+        <% if @presenter.can_manage_hotel_profile?(current_user) %>
           <%= link_to "Set it in Settings", "#{hotel_settings_path(current_hotel, tab: "general")}#guest-registration-card", class: "font-semibold underline" %>.
         <% else %>
           Ask a hotel admin to add it.
         <% end %>
       </p>
     </div>
+  <% end %>
+
+  <% if @presenter.outstanding_balance? %>
+    <% can_add_payment = @presenter.can_add_payment?(current_user) %>
+    <%= render PanelsUI::Alert.new(
+          tone: :warning,
+          title: "Outstanding balance: #{@presenter.format_money(@presenter.due_amount)}",
+          class: "grc-no-print mb-4") do |alert| %>
+      <% alert.with_description do %>
+        If payment has already been received, record it before printing or emailing this card.
+        <% unless can_add_payment %>
+          Ask an authorized staff member to record the payment.
+        <% end %>
+      <% end %>
+      <% if can_add_payment %>
+        <% alert.with_actions do %>
+          <%= render PanelsUI::Button.new(
+                href: hotel_folio_action_post_transaction_path(
+                  current_hotel,
+                  @booking,
+                  transaction_type: "payment",
+                  active_folio_id: @presenter.payment_folio.id,
+                  amount: @presenter.due_amount.to_d.round(2).to_s("F"),
+                  return_to: request.fullpath
+                ),
+                variant: :warning,
+                size: :sm,
+                data: { turbo_frame: "folio_action_sheet" }) do %>
+            Add Payment
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
   <% end %>
 
   <section class="grc-no-print grid gap-5 lg:grid-cols-[1fr_380px]">
@@ -99,7 +132,7 @@
                 </div>
               <% end %>
               <% if @card.field_visible?(:room_type) %>
-                <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
+                <div class="grid grid-cols-[5rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Room type</dt>
                   <dd class="text-foreground">: <%= @presenter.room_type_summary %></dd>
                 </div>
@@ -110,20 +143,20 @@
                   <dd class="text-foreground">: <%= @presenter.room_numbers_display %></dd>
                 </div>
               <% end %>
-              <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
+              <div class="grid grid-cols-[5rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Rate type</dt>
                 <dd class="text-foreground">: <%= @presenter.rate_type_display %></dd>
               </div>
-              <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
-                <dt class="text-muted-foreground">Night(s)</dt>
-                <dd class="text-foreground">: <%= @booking.duration_in_nights %></dd>
-              </div>
               <% if @card.field_visible?(:check_in) %>
-                <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
+                <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Check-in</dt>
                   <dd class="text-foreground">: <%= @presenter.check_in_display %></dd>
                 </div>
               <% end %>
+              <div class="grid grid-cols-[5rem_1fr] gap-x-2">
+                <dt class="text-muted-foreground">Night(s)</dt>
+                <dd class="text-foreground">: <%= @booking.duration_in_nights %></dd>
+              </div>
               <% if @card.field_visible?(:check_out) %>
                 <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Check-out</dt>
@@ -140,7 +173,7 @@
                 <dt class="text-muted-foreground">Room price</dt>
                 <dd class="text-foreground">: <%= @presenter.room_price_display %></dd>
               </div>
-              <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
+              <div class="grid grid-cols-[5.5rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Amount paid</dt>
                 <dd class="text-foreground">: <%= @presenter.format_money(@presenter.amount_paid) %></dd>
               </div>
@@ -148,7 +181,7 @@
                 <dt class="text-muted-foreground">Total charges</dt>
                 <dd class="text-foreground">: <%= @presenter.format_money(@presenter.total_charges) %></dd>
               </div>
-              <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
+              <div class="grid grid-cols-[5.5rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Tax</dt>
                 <dd class="text-foreground">: <%= @presenter.format_money(@booking.tax_total) %></dd>
               </div>
@@ -222,22 +255,34 @@
         <% if terms_missing %>
           <p class="mt-4 rounded-md border border-dashed border-border-interactive px-4 py-2.5 text-center text-xs text-muted-foreground">Set Terms &amp; Conditions to enable printing.</p>
         <% else %>
-          <%= link_to "Print official form", hotel_booking_guest_registration_card_pdf_path(current_hotel, @booking), target: "_blank", rel: "noopener", class: "mt-4 flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90" %>
+          <%= render PanelsUI::Button.new(
+                href: hotel_booking_guest_registration_card_pdf_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id),
+                target: "_blank",
+                rel: "noopener",
+                variant: :primary,
+                class: "mt-4 w-full justify-center") do %>Print official form<% end %>
         <% end %>
-        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+        <% if @presenter.can_manage_bookings?(current_user) %>
           <% if terms_missing %>
             <p class="mt-2 rounded-md border border-dashed border-border-interactive px-4 py-2.5 text-center text-xs text-muted-foreground">Set Terms &amp; Conditions to enable sending.</p>
-          <% elsif @booking.guest_email.present? %>
-            <%= button_to "Email to guest", hotel_booking_guest_registration_card_email_path(current_hotel, @booking),
-                  method: :post,
-                  class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted",
-                  form: { data: { turbo_confirm: "Email this registration card to #{@booking.guest_email}?" } } %>
+          <% elsif @presenter.guest_email.present? %>
+            <%= form_with url: hotel_booking_guest_registration_card_email_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id), method: :post, class: "mt-2" do %>
+              <%= render PanelsUI::Button.new(
+                    as: :button,
+                    type: :submit,
+                    variant: :secondary,
+                    class: "w-full justify-center",
+                    data: { turbo_confirm: "Email this registration card to #{@presenter.guest_email}?" }) do %>Email to guest<% end %>
+            <% end %>
           <% else %>
             <p class="mt-2 rounded-md border border-dashed border-border-interactive px-4 py-2.5 text-center text-xs text-muted-foreground">Add a guest email to send this card.</p>
           <% end %>
         <% end %>
-        <% if current_user.has_permission?("manage_hotel_profile", hotel: current_hotel) %>
-          <%= link_to "Configure displayed details", "#{hotel_settings_path(current_hotel, tab: "general")}#guest-registration-card", class: "mt-2 inline-flex w-full items-center justify-center rounded-md border border-border-interactive bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted" %>
+        <% if @presenter.can_manage_hotel_profile?(current_user) %>
+          <%= render PanelsUI::Button.new(
+                href: "#{hotel_settings_path(current_hotel, tab: "general")}#guest-registration-card",
+                variant: :secondary,
+                class: "mt-2 w-full justify-center") do %>Configure displayed details<% end %>
         <% end %>
       </section>
 
@@ -247,20 +292,27 @@
           Please read the terms and conditions carefully before signing. Your signature confirms the guest has reviewed the check-in, check-out, and hotel policy terms shown on this card.
         </p>
 
-        <% if @card.signed? && @card.signature_data_url.present? %>
-          <p class="mt-2 text-sm text-muted-foreground">Signed by <%= @card.signer_name %> at <%= l(@card.signed_at, format: :long) %></p>
-          <div class="mt-4 rounded-md border border-border bg-muted p-3">
-            <img src="<%= @card.signature_data_url %>" alt="Guest signature" class="h-24 max-w-full bg-card" />
+        <% if @presenter.signed_for_active_guest? %>
+          <p class="mt-2 text-sm text-muted-foreground">Signed by <%= @presenter.signer_name %> at <%= @presenter.signed_at ? l(@presenter.signed_at, format: :long) : "-" %></p>
+          <div class="mt-4 rounded-md border border-border-interactive bg-card p-2">
+            <img src="<%= @presenter.signature_data_url %>" alt="Guest signature" class="h-44 w-full object-contain" />
           </div>
-          <%= button_to "Remove signature", hotel_booking_guest_registration_card_path(current_hotel, @booking), method: :delete, class: "mt-4 w-full rounded-md border border-red-200 bg-card px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50", form: { data: { turbo_confirm: "Remove this guest signature? The guest can sign again or sign the printed form." } } %>
+          <%= form_with url: hotel_booking_guest_registration_card_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id), method: :delete, class: "mt-4" do %>
+            <%= render PanelsUI::Button.new(
+                  as: :button,
+                  type: :submit,
+                  variant: :destructive,
+                  class: "w-full justify-center",
+                  data: { turbo_confirm: "Remove this guest signature? The guest can sign again or sign the printed form." }) do %>Remove signature<% end %>
+          <% end %>
         <% elsif terms_missing %>
           <p class="mt-4 rounded-md border border-dashed border-border-interactive bg-muted px-4 py-6 text-center text-sm text-muted-foreground">Set the property's Terms &amp; Conditions before this card can be signed.</p>
         <% else %>
-          <%= form_with model: @card, url: hotel_booking_guest_registration_card_path(current_hotel, @booking), method: :patch, id: "grc-signature-form", class: "mt-4 space-y-4", data: { controller: "signature" } do |form| %>
+          <%= form_with model: @card, url: hotel_booking_guest_registration_card_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id), method: :patch, id: "grc-signature-form", class: "mt-4 space-y-4", data: { controller: "signature" } do |form| %>
             <%= form.hidden_field :special_requests, value: @booking.special_requests, data: { registration_card_target: "remarkHidden" } %>
             <div>
               <%= form.label :signer_name, "Signer name", class: "mb-1 block text-sm font-medium text-foreground" %>
-              <%= form.text_field :signer_name, value: @card.signer_name.presence || @presenter.guest_name, class: "block w-full rounded-md border border-border px-3 py-2 text-sm text-foreground bg-background focus:border-border-interactive focus:outline-none focus:ring-0", required: true %>
+              <%= form.text_field :signer_name, value: @presenter.guest_name, class: "block w-full rounded-md border border-border px-3 py-2 text-sm text-foreground bg-background focus:border-border-interactive focus:outline-none focus:ring-0", required: true %>
             </div>
 
             <div>
@@ -268,8 +320,8 @@
               <canvas data-signature-target="canvas" class="h-44 w-full touch-none rounded-md border border-border-interactive bg-card"></canvas>
               <%= form.hidden_field :signature_data_url, data: { signature_target: "input" }, required: true %>
               <div class="mt-2 grid gap-2 sm:flex">
-                <button type="button" data-action="signature#clear" class="rounded-md border border-border-interactive px-3 py-2 text-sm font-medium text-foreground hover:bg-muted">Clear</button>
-                <%= form.submit "Save Signature", class: "rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90" %>
+                <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, data: { action: "signature#clear" }) do %>Clear<% end %>
+                <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>Save Signature<% end %>
               </div>
             </div>
           <% end %>
@@ -372,9 +424,9 @@
     <section class="flex justify-end p-2.5">
       <div class="min-h-25 w-full rounded-md border border-border-interactive p-3 sm:w-1/2">
         <p class="mb-4 text-xs font-bold uppercase text-muted-foreground">Guest signature</p>
-        <% if @card.signed? && @card.signature_data_url.present? %>
-          <img src="<%= @card.signature_data_url %>" alt="Guest signature" class="h-16 max-w-full bg-card" />
-          <p class="mt-2 text-xs text-muted-foreground">Signed by <%= @card.signer_name %> at <%= l(@card.signed_at, format: :long) %></p>
+        <% if @presenter.signed_for_active_guest? %>
+          <img src="<%= @presenter.signature_data_url %>" alt="Guest signature" class="h-16 max-w-full bg-card" />
+          <p class="mt-2 text-xs text-muted-foreground">Signed by <%= @presenter.signer_name %> at <%= @presenter.signed_at ? l(@presenter.signed_at, format: :long) : "-" %></p>
         <% else %>
           <div class="mt-8 border-t border-border-interactive pt-1 text-xs text-muted-foreground">Signature</div>
         <% end %>

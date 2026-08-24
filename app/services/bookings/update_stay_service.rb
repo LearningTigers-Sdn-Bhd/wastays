@@ -304,6 +304,7 @@ module Bookings
         name: booking.guest_name,
         email: booking.guest_email,
         phone: booking.guest_phone,
+        city: booking.guest_city,
         country: booking.guest_country.presence || @hotel.country,
         gender: booking.guest_gender,
         document_type: booking.guest_document_type,

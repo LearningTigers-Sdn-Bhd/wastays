@@ -8,7 +8,7 @@ module Bookings
 
     def trigger(event_type)
       payload = build_payload(event_type)
-      WebhookBroadcastJob.perform_later(event_type.to_s, payload)
+      WebhookBroadcastJob.perform_later(event_type.to_s, payload, hotel_id: @booking.hotel_id)
     end
 
     private

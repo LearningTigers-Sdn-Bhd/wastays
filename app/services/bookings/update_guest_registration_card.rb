@@ -1,17 +1,26 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
 module Bookings
   class UpdateGuestRegistrationCard
-    def self.call(card:, booking:, params:)
-      new(card: card, booking: booking, params: params).call
+    Result = Data.define(:success?, :error, :message) do
+      def self.success
+        new(success?: true, error: nil, message: nil)
+      end
+
+      def self.failure(error, message)
+        new(success?: false, error: error, message: message)
+      end
     end
 
-    def initialize(card:, booking:, params:)
+    def self.call(card:, booking:, params:, booking_guest_id: nil)
+      new(card: card, booking: booking, params: params, booking_guest_id: booking_guest_id).call
+    end
+
+    def initialize(card:, booking:, params:, booking_guest_id: nil)
       @card = card
       @booking = booking
       @params = params.to_h.deep_symbolize_keys
+      @booking_guest_id = booking_guest_id
     end
 
     def call
@@ -24,7 +33,7 @@ module Bookings
       # 2. If signature params are present
       if @params[:signer_name].present? || @params[:signature_data_url].present?
         result = @card.with_lock do
-          break :already_signed if @card.signed?
+          break :already_signed if @card.signed_for_guest?
           break :terms_missing unless @card.hotel.guest_registration_card_terms.present?
 
           if @params[:signature_data_url].blank?
@@ -32,30 +41,26 @@ module Bookings
             break :invalid
           end
 
-          @card.assign_attributes(
+          @card.save_signature_for_guest!(
             signer_name: @params[:signer_name],
-            signature_data_url: @params[:signature_data_url],
-            status: "signed",
-            signed_at: Time.current,
-            terms_snapshot: @card.capture_terms_snapshot_preview,
-            display_fields_snapshot: @card.capture_display_fields_snapshot
+            signature_data_url: @params[:signature_data_url]
           )
-          @card.save ? :saved : :invalid
+          :saved
         end
 
         case result
         when :already_signed
-          return OpenStruct.new(success?: false, error: :already_signed, message: "Delete the existing signature before signing again.")
+          return Result.failure(:already_signed, "Delete the existing signature before signing again.")
         when :terms_missing
-          return OpenStruct.new(success?: false, error: :terms_missing, message: "This property hasn't set its Terms & Conditions yet. An admin needs to add them in Settings before this card can be signed.")
+          return Result.failure(:terms_missing, "This property hasn't set its Terms & Conditions yet. An admin needs to add them in Settings before this card can be signed.")
         when :invalid
-          return OpenStruct.new(success?: false, error: :invalid, message: @card.errors.full_messages.to_sentence)
+          return Result.failure(:invalid, @card.errors.full_messages.to_sentence)
         end
       end
 
-      OpenStruct.new(success?: true)
+      Result.success
     rescue ActiveRecord::RecordInvalid => e
-      OpenStruct.new(success?: false, error: :invalid, message: e.record.errors.full_messages.to_sentence)
+      Result.failure(:invalid, e.record.errors.full_messages.to_sentence)
     end
   end
 end

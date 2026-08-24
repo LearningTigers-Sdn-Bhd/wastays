@@ -39,7 +39,7 @@ module AiConcierge
       end
 
       def blocked_by_interpretation?
-        informational_intent?(interpretation["intent"]) ||
+        Core::Intents.informational?(interpretation["intent"]) ||
           interpretation.dig("conversation_signals", "end_conversation") ||
           interpretation["intent"] == "confirmation"
       end
@@ -91,9 +91,6 @@ module AiConcierge
         (active_branch["adults"].to_i + active_branch["children"].to_i) != total
       end
 
-      def informational_intent?(intent)
-        %w[hotel_policy hotel_information nearby_attractions room_information booking_context].include?(intent.to_s)
-      end
 
       def normalized_message
         @normalized_message ||= message.downcase.gsub(/[^a-z0-9]+/, " ").squish

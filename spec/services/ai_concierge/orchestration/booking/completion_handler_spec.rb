@@ -12,15 +12,9 @@ RSpec.describe AiConcierge::Orchestration::Booking::CompletionHandler do
   end
 
   it "generates a booking link and archives the completed booking task" do
-    tool = Class.new do
-      def initialize(hotel:, selected_option:, guest_phone:, rate_plan_id:)
-        @guest_phone = guest_phone
-        @rate_plan_id = rate_plan_id
-      end
-
-      def call
-        { "success" => true, "booking_url" => "https://example.test/book", "guest_phone" => @guest_phone, "rate_plan_id" => @rate_plan_id }
-      end
+    klass = AiConcierge::Tools::Booking::GenerateBookingUrlTool
+    allow(klass).to receive(:new) do |guest_phone:, rate_plan_id:, **|
+      instance_double(klass, call: { "success" => true, "booking_url" => "https://example.test/book", "guest_phone" => guest_phone, "rate_plan_id" => rate_plan_id })
     end
     active_branch = { "confirmation_candidate" => selected_option }
 
@@ -28,7 +22,6 @@ RSpec.describe AiConcierge::Orchestration::Booking::CompletionHandler do
       hotel: hotel,
       prospect: prospect,
       phone: nil,
-      tool_registry: { "generate_booking_url" => tool }
     ).call(conversation_state: conversation_state, active_branch: active_branch)
 
     expect(result[:reply_type]).to eq(:booking_link_ready)
@@ -40,12 +33,33 @@ RSpec.describe AiConcierge::Orchestration::Booking::CompletionHandler do
     expect(result.dig(:slots_payload, "completed_booking_branches").last["selected_option"]["selection_id"]).to eq("garden_1")
   end
 
+  # This class was the one copy of `booking_response` that never passed
+  # `count_reask: true`, so a guest looping here advanced no counter and
+  # `Orchestrator#escalate` -- which reads it -- could never nudge them or ask
+  # for a person. Nothing said whether that was a decision or a slip.
+  it "counts a re-ask so a guest looping here can reach a person" do
+    branch = AiConcierge::State::SlotMerger.empty_branch
+    conversation_state.update!(
+      slots_payload: AiConcierge::State::ConversationTaskManager
+        .new(slots_payload: {})
+        .activate_booking(branch, pending_question: "select_option")
+    )
+    handler = described_class.new(hotel: hotel, prospect: prospect, phone: nil)
+
+    first = handler.call(conversation_state: conversation_state, active_branch: branch)
+    expect(first[:reply_type]).to eq(:invalid_selection)
+    expect(first.dig(:slots_payload, "booking_task", "reask_count")).to eq(1)
+
+    conversation_state.update!(slots_payload: first.slots_payload)
+    second = handler.call(conversation_state: conversation_state, active_branch: branch)
+    expect(second.dig(:slots_payload, "booking_task", "reask_count")).to eq(2)
+  end
+
   it "asks the guest to select an option when nothing is selected" do
     result = described_class.new(
       hotel: hotel,
       prospect: prospect,
-      phone: prospect.phone_number,
-      tool_registry: {}
+      phone: prospect.phone_number
     ).call(conversation_state: conversation_state, active_branch: {})
 
     expect(result[:reply_type]).to eq(:invalid_selection)

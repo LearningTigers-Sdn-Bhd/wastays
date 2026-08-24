@@ -127,6 +127,29 @@
                 </div>
 
                 <div>
+                  <%= f.label :guest_city, "City", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+                  <%= f.text_field :guest_city, class: "form-input py-3 px-5 border border-border", required: true, placeholder: "e.g. Petaling Jaya" %>
+                </div>
+
+                <div>
+                  <%= f.label :guest_state_code, "State", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+                  <%= f.select :guest_state_code,
+                        EInvoice::MalaysiaStates.options,
+                        { include_blank: "Select state" },
+                        class: "form-input py-3 px-5 border border-border", required: true %>
+                </div>
+
+                <div>
+                  <%= f.label :guest_postal_code, "Postcode", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+                  <%= f.text_field :guest_postal_code, class: "form-input py-3 px-5 border border-border", inputmode: "numeric", placeholder: "e.g. 88000" %>
+                </div>
+
+                <div>
+                  <%= f.label :guest_tin, "Tax identification number (optional)", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+                  <%= f.text_field :guest_tin, class: "form-input py-3 px-5 border border-border", placeholder: "Only if you need to claim this stay" %>
+                </div>
+
+                <div>
                   <%= f.label :guest_country, "Nationality", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
                   <%= f.select :guest_country,
                         country_options,

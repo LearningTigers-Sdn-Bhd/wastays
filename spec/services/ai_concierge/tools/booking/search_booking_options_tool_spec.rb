@@ -9,6 +9,19 @@ RSpec.describe AiConcierge::Tools::Booking::SearchBookingOptionsTool do
     create(:room_inventory, room_type: room_type, date: date, quantity: quantity, status: "open")
   end
 
+  def run_mid_august_search(hotel)
+    described_class.new(
+      hotel: hotel,
+      target_month: 8,
+      target_year: 2026,
+      month_segment: "mid",
+      adults: 2,
+      children: 0,
+      room_count: 1,
+      nights: 2
+    ).call
+  end
+
   def count_sql_queries
     queries = []
     callback = lambda do |_name, _started, _finished, _unique_id, payload|
@@ -161,6 +174,23 @@ RSpec.describe AiConcierge::Tools::Booking::SearchBookingOptionsTool do
       )
     end
 
+    it "lists the rate plans cheapest first, so the from price is the one on top" do
+      standard = create(:rate_plan, room_type: room_type, name: "Standard Rate")
+      non_refundable = create(:rate_plan, room_type: room_type, name: "Non-Refundable Rate")
+
+      RoomRate.where(room_type: room_type).delete_all
+      [ 11, 12 ].each do |day|
+        date = Date.new(2026, 8, day)
+        create(:room_rate, room_type: room_type, rate_plan: standard, date: date, price: 150, currency: "MYR")
+        create(:room_rate, room_type: room_type, rate_plan: non_refundable, date: date, price: 120, currency: "MYR")
+      end
+
+      result = run_mid_august_search(hotel)
+
+      expect(result.first.dig("options", 0, "rate_plans").map { |plan| plan["name"] })
+        .to eq([ "Non-Refundable Rate", "Standard Rate" ])
+    end
+
     it "keeps SQL query count bounded as room types and rate plans grow" do
       small_hotel = create(:hotel, :with_ai_concierge)
       large_hotel = create(:hotel, :with_ai_concierge)
@@ -254,6 +284,59 @@ RSpec.describe AiConcierge::Tools::Booking::SearchBookingOptionsTool do
 
       # 150 base + 1 extra adult over base_occupancy(2) * 25 = 175
       expect(preview_total).to eq(175.0)
+    end
+  end
+
+  context "catalogue order and numbering" do
+    def seed_room(name, price)
+      room = create(:room_type, hotel: hotel, name: name, max_adults: 2)
+      [ 11, 12, 13, 14 ].each { |day| create_availability(room, date: Date.new(2026, 8, day), price: price) }
+      room
+    end
+
+    it "numbers every option in one run across room types, so no number repeats" do
+      seed_room("Cheap Room", 100)
+      seed_room("Pricey Room", 300)
+
+      result = run_mid_august_search(hotel)
+      positions = result.flat_map { |group| group["options"].map { |option| option["position"] } }
+
+      expect(positions).to eq((1..positions.size).to_a)
+    end
+
+    it "opens with the cheapest room type" do
+      seed_room("Pricey Room", 300)
+      seed_room("Cheap Room", 100)
+
+      result = run_mid_august_search(hotel)
+
+      expect(result.map { |group| group["room_type_name"] }).to eq([ "Cheap Room", "Deluxe Room", "Pricey Room" ])
+    end
+
+    # The cap used to fall on whichever room types had the highest ids, which
+    # could drop the cheapest room from a list the guest is shopping by price.
+    it "keeps the cheapest room types when more exist than the catalogue shows" do
+      seed_room("Pricey Room", 900)
+      seed_room("Dearer Room", 800)
+      seed_room("Cheap Room", 100)
+
+      result = run_mid_august_search(hotel)
+
+      expect(result.size).to eq(described_class::MAX_ROOM_TYPES)
+      expect(result.map { |group| group["room_type_name"] }).to include("Cheap Room")
+      expect(result.map { |group| group["room_type_name"] }).not_to include("Pricey Room")
+    end
+
+    # The key a saved selection is resumed by, so it must not move when the
+    # display order does.
+    it "gives every option a selection id of its own, independent of its position" do
+      seed_room("Cheap Room", 100)
+
+      result = run_mid_august_search(hotel)
+      selection_ids = result.flat_map { |group| group["options"].map { |option| option["selection_id"] } }
+
+      expect(selection_ids).to all(match(/\Aroom_type_\d+_option_\d+\z/))
+      expect(selection_ids.uniq.size).to eq(selection_ids.size)
     end
   end
 end

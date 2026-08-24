@@ -17,6 +17,7 @@ module PayoutEngine
 
       Booking.transaction do
         eligible_bookings = Booking.completed
+                                   .where(fund_collector: "wastays")
                                    .where(payout_batch_id: nil)
                                    .where(checked_out_at: start_date.beginning_of_day..end_date.end_of_day)
 
@@ -46,6 +47,8 @@ module PayoutEngine
               metadata: { "payout_batch_id" => batch.id }
             )
           end
+
+          EInvoice::PreparePayoutSelfBilledSubmissions.call(batch)
 
           batches_created += 1
           puts "Created batch for Hotel ##{hotel_id}: RM #{total_net} (#{bookings.count} bookings)"

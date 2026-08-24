@@ -83,6 +83,7 @@ module Folios
             record_financial_audit_event!(folio, balances.fetch(folio))
             record_direct_bill_audit_event!(folio, ar_invoice, balances.fetch(folio)) if ar_invoice.present?
           end
+          trigger_e_invoice_adjustment!
           success(folio: primary_folio.reload, balance: total_balance(balances))
         end
       rescue ActiveRecord::RecordInvalid => e
@@ -90,6 +91,16 @@ module Folios
       end
 
       private
+
+      # Extras or refunds posted after the original invoice was validated mean
+      # the folio no longer matches it; LHDN wants a debit/credit note for the
+      # difference rather than a reissued invoice.
+      def trigger_e_invoice_adjustment!
+        return unless @booking.hotel.e_invoice_setting&.enabled?
+        return unless @booking.e_invoice_submissions.guest_facing.valid.exists?
+
+        EInvoice::IssueAdjustmentJob.perform_later(@booking.id)
+      end
 
       def validate_checkout_business_date(folio)
         business_date = folio.hotel.current_business_date

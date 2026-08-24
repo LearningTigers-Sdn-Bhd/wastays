@@ -1,0 +1,88 @@
+id: chinese_booking_ladder
+description: "the ladder in Chinese, where the duration and the party size are written with no digit in them at all"
+origin: "InputNormalizer -- every guard here counts on an Arabic numeral next to an English noun, and Chinese gives it neither"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [26, 27, 28, 29, 30, 31]
+turns:
+  - guest: "我想订房"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots: {}
+    expect:
+      flow: booking_search
+      pending_question: booking_timing
+
+  - guest: "8月28号"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            check_in: "2026-08-28"
+          evidence:
+            timing: "8月28号"
+    expect:
+      pending_question: duration
+      booking_status: collecting_slots
+
+  # "住三晚" is three nights. There is no 3 in it -- the numeral is 三 -- so a
+  # guard that looked for a digit next to its evidence would fail right here.
+  - guest: "住三晚"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            nights: 3
+          evidence:
+            duration: "住三晚"
+    expect:
+      pending_question: guest_count
+      booking_status: collecting_slots
+
+  # "两位大人" is two adults, again with no digit.
+  - guest: "两位大人"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            adults: 2
+          evidence:
+            party: "两位大人"
+    expect:
+      pending_question: select_option
+      booking_status: waiting_for_option_selection
+      reply_matches: ["2 adults", "Garden Prestige Suite"]
+      creates_quote: false
+
+  # A quote gets made in Chinese exactly as it does in English: the model never
+  # touched the price, and confirmation is still gated on the open question.
+  #
+  # The row is written the way it is on every other thread -- the catalogue is
+  # answered by its number, and a number is not written in any language.
+  - guest: "我要 1"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots: {}
+    expect:
+      pending_question: confirm_selection
+      booking_status: waiting_for_confirmation
+
+  - guest: "好的"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            confirmation: "yes"
+    expect:
+      flow_status: ended
+      creates_quote: true

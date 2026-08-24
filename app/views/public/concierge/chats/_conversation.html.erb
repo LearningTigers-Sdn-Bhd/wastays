@@ -1,0 +1,55 @@
+<%#
+  The thread and the box to add to it.
+
+  Subscribed to the guest stream, so an answer written by the bot in a
+  background job or by a person in the portal arrives on this page without the
+  guest touching anything. The subscription lives in its own small element
+  because a visitor who has not written yet has no thread to subscribe to: the
+  reply to their first send has to be able to hand them one, and replacing a
+  div is the cheapest way to do that.
+
+  Everything else on this page survives a send. Replacing the whole chat would
+  rebuild the bar, close an open menu and throw away the scroll position in the
+  middle of a conversation.
+%>
+<%= tag.div(id: PublicUI::Chat::Panel::REGION_ID, class: "flex min-h-0 flex-1 flex-col") do %>
+  <div id="concierge-chat-stream">
+    <% if conversation %>
+      <%= turbo_stream_from conversation, :guest %>
+    <% end %>
+  </div>
+
+  <%= render PublicUI::Chat::Panel.new(doodle: concierge_chat_doodle_style) do |panel| %>
+    <% panel.with_bar(title: hotel.name,
+                      status: concierge_chat_status(conversation, hotel),
+                      back_path: concierge_home_path(hotel),
+                      back_label: "Back to concierge",
+                      avatar: conversation&.human? ? :staff : :bot) do |bar| %>
+      <% bar.with_menu do %>
+        <%= render PublicUI::Menu.new(label: "Conversation options") do |menu| %>
+          <%# Nobody can be sent for before the guest has said anything: there
+              would be no thread for them to arrive in. %>
+          <% if conversation && !conversation.human? && !conversation.human_requested? %>
+            <% menu.with_item(href: concierge_chat_agent_path(hotel), method: :post) do %>
+              Ask for a person
+            <% end %>
+          <% end %>
+
+          <% menu.with_item(href: concierge_clear_chat_path(hotel),
+                            method: :delete,
+                            danger: true,
+                            confirm: "Start a new conversation? This one is put away -- the hotel keeps what was said.") do %>
+            Clear conversation
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% panel.with_log(messages: messages, hotel: hotel) %>
+    <% panel.with_alert do %>
+      <div id="concierge-chat-error">
+        <%= render "public/concierge/shared/error_alert", message: flash[:alert] %>
+      </div>
+    <% end %>
+    <% panel.with_composer(url: concierge_chat_messages_path(hotel)) %>
+  <% end %>
+<% end %>
