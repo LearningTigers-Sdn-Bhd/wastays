@@ -1,7 +1,15 @@
-<p>We received your payment to <strong><%= @hotel.name %></strong>.</p>
+<% if @presentation.security_deposit? %>
+  <p>We received your refundable security deposit for <strong><%= @hotel.name %></strong>.</p>
+<% else %>
+  <p>We received your payment to <strong><%= @hotel.name %></strong>.</p>
+<% end %>
 <p>
   Receipt: <strong><%= @receipt.public_number %></strong><br>
-  Amount: <strong><%= @receipt.currency %> <%= format("%.2f", @receipt.amount) %></strong><br>
+  <%= @presentation.amount_label %>: <strong><%= @receipt.currency %> <%= format("%.2f", @receipt.amount) %></strong><br>
   Received: <%= @receipt.received_at.strftime("%d %B %Y %H:%M") %>
 </p>
-<p>Your individual payment receipt is attached.</p>
+<% if @presentation.security_deposit? %>
+  <p>Your security deposit receipt is attached.</p>
+<% else %>
+  <p>Your individual payment receipt is attached.</p>
+<% end %>

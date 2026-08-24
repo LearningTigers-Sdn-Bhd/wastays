@@ -16,7 +16,8 @@ module HotelPortal
           prepared_by: @prepared_by, page_layout: :landscape
         )
         builder.add_header
-        builder.add_summary([ [ "Bookings", @report.totals[:booking_count].to_s ], [ "Booking Payments", amount(:booking_payment_amount) ], [ "Earned", amount(:earned_amount) ], [ "Remaining Liability", amount(:remaining_liability) ] ])
+        builder.add_summary([ [ "Bookings", @report.totals[:booking_count].to_s ], [ "Deposits Received", amount(:booking_payment_amount) ], [ "Earned", amount(:earned_amount) ], [ "Remaining Liability", amount(:remaining_liability) ] ])
+        builder.add_note(DepositLiabilityReport::SCOPE_NOTE)
         builder.add_table(
           section_title: "Open Deposit Liabilities", headers: DepositLiabilityExcelExportService::HEADERS,
           rows: @report.rows.map { |row| [ row[:guest_name], row[:confirmation_token], row[:stay_dates], row[:booking_status], row[:room_details], row[:folio_number], money(row[:booking_payment_amount]), money(row[:earned_amount]), money(row[:refund_amount]), money(row[:remaining_liability]), row[:latest_deposit_posting_date]&.strftime("%d %b %Y") || "-" ] },

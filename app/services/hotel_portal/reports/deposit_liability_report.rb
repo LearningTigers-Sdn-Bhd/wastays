@@ -3,6 +3,7 @@
 module HotelPortal
   module Reports
     class DepositLiabilityReport
+      SCOPE_NOTE = "This report includes booking prepayments and security deposits. Security deposits remain liabilities until staff release or apply them."
       Result = Struct.new(:as_of_date, :rows, :totals, keyword_init: true)
 
       def initialize(hotel:, as_of_date:)
