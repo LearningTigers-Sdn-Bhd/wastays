@@ -17,7 +17,6 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetHotelPolicyTool do
 
     expect(result).to include(
       "success" => true,
-      "answer" => "Pets\nPets are not allowed.",
       "answer_mode" => "fallback",
       "policy_text" => "Pets\nPets are not allowed.",
       "check_in_time" => "15:00",
@@ -25,6 +24,7 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetHotelPolicyTool do
       "cancellation_policy" => "24 hours",
       "source" => "hotel_policy"
     )
+    expect(result["facts"].map { |fact| fact["text"] }).to eq([ "Pets\nPets are not allowed." ])
   end
 
   it "joins multiple policy documents" do
@@ -56,14 +56,14 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetHotelPolicyTool do
 
     expect(result).to include(
       "success" => true,
-      "answer" => "Check-in starts at 15:00.",
-      "answer_mode" => "fallback",
+      "answer_mode" => "structured",
       "policy_text" => nil,
       "check_in_time" => "15:00",
       "check_out_time" => "12:00",
       "cancellation_policy" => "24 hours",
       "source" => "property_policy"
     )
+    expect(result["facts"].map { |fact| fact["text"] }).to eq([ "You can check in from 15:00." ])
   end
 
   it "returns an unavailable payload when both are missing" do
@@ -92,7 +92,7 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetHotelPolicyTool do
 
     expect(result["cancellation_policy"]).to start_with("14+ days before arrival: No charge")
     expect(result["cancellation_policy"]).not_to include("Ask the front desk")
-    expect(result["answer"]).to start_with("Cancellation policy: 14+ days before arrival: No charge")
+    expect(result["facts"].first["text"]).to start_with("You can cancel under these terms: 14+ days before arrival: No charge")
   end
 
   it "ignores documents without chunks" do

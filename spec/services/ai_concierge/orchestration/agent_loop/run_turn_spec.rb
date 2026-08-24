@@ -106,4 +106,94 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       expect(run.call.domain_result.dig(:extra_context, :message)).to eq("Hello! How can I help?")
     end
   end
+
+  describe "hotel knowledge clarifications" do
+    it "asks which facility, then resolves its opening hours without calling the model" do
+      slots = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).update_information_task(
+        intent: "hotel_information",
+        topic: "general_hotel_info",
+        question: "what hour do you open?",
+        pending_question: "opening_hours_subject",
+        context: { "choices" => [ "check-in", "facility" ] }
+      )
+      conversation_state.update!(slots_payload: slots)
+
+      expect_any_instance_of(AiConcierge::Providers::RubyLlmClient).not_to receive(:chat)
+
+      result = run(message: "facility").call.domain_result
+
+      expect(result.dig(:extra_context, :result, "answer"))
+        .to eq("Which facility do you mean, such as the pool, spa, fitness centre, or restaurant?")
+      expect(result.dig(:slots_payload, "information_task", "pending_question")).to eq("facility_opening_hours")
+
+      conversation_state.update!(slots_payload: result[:slots_payload])
+      allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([
+        {
+          "content" => "The swimming pool opens at 7:00 AM.",
+          "document_title" => "Swimming pool",
+          "category" => "general_info",
+          "distance" => 0.1
+        }
+      ])
+
+      resolved = run(message: "pool").call.domain_result
+
+      expect(resolved.dig(:extra_context, :result, "answer")).to eq("The swimming pool opens at 7:00 AM.")
+      expect(resolved.dig(:slots_payload, "information_task", "pending_question")).to be_nil
+    end
+
+    it "resolves an ordinal policy choice without calling the model" do
+      create(:property_policy, hotel: hotel, check_in_time: "3:00 PM", check_out_time: "11:00 AM")
+      allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([])
+      slots = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).update_information_task(
+        intent: "hotel_policy",
+        topic: "hotel_policy",
+        question: "what policy applies?",
+        pending_question: "policy_topic",
+        context: { "choices" => [ "check-in", "check-out", "cancellation", "house rules" ] }
+      )
+      conversation_state.update!(slots_payload: slots)
+
+      expect_any_instance_of(AiConcierge::Providers::RubyLlmClient).not_to receive(:chat)
+
+      result = run(message: "the second one").call.domain_result
+
+      expect(result.dig(:extra_context, :result, "answer")).to eq("Check-out is by 11:00 AM.")
+      expect(result.dig(:slots_payload, "information_task", "pending_question")).to be_nil
+    end
+
+    it "resolves an ordinal room choice without calling the model" do
+      create(:room_type, hotel: hotel, name: "Ocean Villa King", description: "One king bed.")
+      create(:room_type, hotel: hotel, name: "Ocean Villa Twin", description: "Two single beds.")
+      slots = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).update_information_task(
+        intent: "room_information",
+        topic: "room_information",
+        question: "tell me about ocean villa",
+        pending_question: "room_type_choice",
+        context: { "choices" => [ "Ocean Villa King", "Ocean Villa Twin" ] }
+      )
+      conversation_state.update!(slots_payload: slots)
+
+      expect_any_instance_of(AiConcierge::Providers::RubyLlmClient).not_to receive(:chat)
+
+      result = run(message: "the second one").call.domain_result
+
+      expect(result.dig(:extra_context, :result, "room_type_name")).to eq("Ocean Villa Twin")
+      expect(result.dig(:slots_payload, "information_task", "pending_question")).to be_nil
+    end
+
+    it "does not capture a new booking request as a knowledge clarification answer" do
+      slots = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).update_information_task(
+        intent: "hotel_information",
+        topic: "general_hotel_info",
+        question: "what hour do you open?",
+        pending_question: "facility_opening_hours"
+      )
+      conversation_state.update!(slots_payload: slots)
+
+      turn = run(message: "I want to book")
+
+      expect(turn.send(:resolve_knowledge_clarification)).to be_nil
+    end
+  end
 end

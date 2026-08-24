@@ -2,11 +2,12 @@ module AiConcierge
   module Tools
     module HotelInformation
       class GetHotelPolicyTool
-        def initialize(hotel:, policy_topic: nil, query: nil, hints: Retrieval::QueryHints.none)
+        def initialize(hotel:, policy_topic: nil, query: nil, scope: nil, hints: Retrieval::QueryHints.none)
           @hotel = hotel
           @policy_topic = policy_topic
           @query = query.to_s
           @hints = hints
+          @scope = scope
         end
 
         def call
@@ -21,7 +22,7 @@ module AiConcierge
             "check_out_time" => policy&.check_out_time,
             "cancellation_policy" => cancellation.to_line.presence
           }
-          answer_payload = HybridAnswerBuilder.new(
+          reply = HybridAnswerBuilder.new(
             hotel: hotel,
             query: query,
             intent: "hotel_policy",
@@ -30,33 +31,22 @@ module AiConcierge
             source: hotel_policy_text.present? ? "hotel_policy" : "property_policy",
             structured_facts: structured_facts,
             fallback_text: hotel_policy_text.presence,
-            unavailable_answer: "The hotel has not provided its policy details yet.",
+            scope: scope,
             hints: hints
           ).call
-          # A hotel can now have a cancellation policy without a property_policy row,
-          # so "we know something" is no longer only about property_policy.
-          policy_known = policy.present? || cancellation.present?
-          answer_payload["answer"] = nil if answer_payload["answer_mode"] == "unavailable" && policy_known
 
-          {
-            "success" => answer_payload["success"] || hotel_policy_text.present? || policy_known,
-            "answer" => answer_payload["answer"],
-            "answer_mode" => answer_payload["answer_mode"],
+          reply.to_h.merge(
             "policy_text" => hotel_policy_text.presence,
             "check_in_time" => structured_facts["check_in_time"],
             "check_out_time" => structured_facts["check_out_time"],
             "cancellation_policy" => structured_facts["cancellation_policy"],
-            "policy_topic" => policy_topic,
-            "source" => answer_payload["source"],
-            "knowledge_matches" => answer_payload["knowledge_matches"],
-            "searched_categories" => answer_payload["searched_categories"],
-            "fallback_categories" => answer_payload["fallback_categories"]
-          }
+            "policy_topic" => policy_topic
+          )
         end
 
         private
 
-        attr_reader :hotel, :policy_topic, :query, :hints
+        attr_reader :hotel, :policy_topic, :query, :scope, :hints
 
         def format_documents(documents)
           documents.filter_map do |doc|

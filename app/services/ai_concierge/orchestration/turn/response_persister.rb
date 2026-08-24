@@ -24,7 +24,9 @@ module AiConcierge
             active_flow: active_flow,
             pending_question: pending_question,
             flow_status: flow_status,
-            end_reason: end_reason
+            end_reason: end_reason,
+            knowledge_reply: extra_context[:knowledge_reply],
+            guest_language: extra_context[:guest_language]
           )
         end
 
@@ -52,8 +54,8 @@ module AiConcierge
         # one place holding both the flag and the thread, so this is where the
         # thread is put in front of staff. `request_human!` deliberately leaves
         # `mode` alone: the bot keeps answering until a person actually arrives.
-        def persist_static_response(prospect:, conversation_state:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:)
-          reply = style(reply_message)
+        def persist_static_response(prospect:, conversation_state:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:, knowledge_reply: false, guest_language: nil)
+          reply = style(reply_message, knowledge_reply: knowledge_reply, guest_language: guest_language)
           ActiveRecord::Base.transaction do
             persist_state(conversation_state, slots_payload:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:)
             record_outbound_message(prospect, reply)
@@ -85,8 +87,12 @@ module AiConcierge
         # It runs on a finished string. Nothing the model returns can change a
         # price, a date or a link, because those were computed before it was
         # asked, and anything it did change is caught below.
-        def style(template)
+        def style(template, knowledge_reply: false, guest_language: nil)
           return Reply.new(body: template) if template.blank?
+          if knowledge_reply
+            conversation.record_language!(guest_language)
+            return Reply.new(body: template)
+          end
 
           # Read once, before the stylist runs and before anything records over
           # it: this is the language the reply is owed unless the guest's own

@@ -201,5 +201,29 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
 
       persist_with("2")
     end
+
+    it "does not pass an English hotel-knowledge reply through the general stylist" do
+      expect_any_instance_of(AiConcierge::Agents::ReplyStylist).not_to receive(:call)
+
+      payload = described_class.new(hotel: hotel, conversation: conversation, message: "what time is check in?").persist_response(
+        prospect: prospect,
+        conversation_state: conversation_state,
+        slots_payload: conversation_state.slots_payload,
+        reply_type: :hotel_policy,
+        active_topic: nil,
+        active_flow: nil,
+        pending_question: nil,
+        action_name: nil,
+        extra_context: {
+          result: { "answer" => "You can check in from 3:00 PM." },
+          knowledge_reply: true,
+          guest_language: "en"
+        }
+      )
+
+      expect(payload[:reply_message]).to eq("You can check in from 3:00 PM.")
+      expect(last_body).to eq("You can check in from 3:00 PM.")
+      expect(conversation.reload.language).to eq("en")
+    end
   end
 end

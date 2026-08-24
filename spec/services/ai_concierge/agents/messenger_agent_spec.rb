@@ -67,10 +67,10 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
     }).call
 
     expect(result["reply_message"]).to eq([
-      "Welcome to #{hotel.name}! Here is our hotel policy:",
-      "- Check-in starts at: *15:00*",
-      "- Check-out is at: *12:00*",
-      "- Cancellation: *24 hours*"
+      "Here are the available details:",
+      "- You can check in from 15:00.",
+      "- Check-out is by 12:00.",
+      "- You can cancel under these terms: 24 hours."
     ].join("\n"))
   end
 

@@ -20,8 +20,10 @@ module AiConcierge
         # message. Only the room type is something the model has to read.
         param :room_type_name, type: "string", required: false,
           desc: "The room type the guest named, if they named one."
+        param :guest_language, type: "string", required: false,
+          desc: "ISO 639-1 code for the language used in the guest's message."
 
-        def execute(room_type_name: nil)
+        def execute(room_type_name: nil, guest_language: nil)
           return advance_booking_instead if rate_question?
 
           domain_result = Orchestration::HotelKnowledge::Orchestrator.new(
@@ -34,7 +36,9 @@ module AiConcierge
             },
             conversation_state: context.conversation_state,
             pause: context.info_interruption_active?,
-            active_branch: context.booking_branch
+            active_branch: context.booking_branch,
+            language: guest_language.presence || context.thread_language,
+            guest_language: guest_language
           ).call
 
           record(domain_result, digest: { answered: true })
