@@ -46,7 +46,7 @@ module HousekeepingTasks
     end
 
     def call
-      filter_room_groups(build_room_groups)
+      sort_rooms(filter_rooms(build_rooms))
     end
 
     private
@@ -55,10 +55,9 @@ module HousekeepingTasks
       [ room_type_id, room_number.to_s ]
     end
 
-    def build_room_groups
-      room_types.filter_map do |room_type|
-        rooms = room_type.room_numbers.map { |room_number| build_room(room_type, room_number) }
-        { room_type:, rooms: } if rooms.any?
+    def build_rooms
+      room_types.flat_map do |room_type|
+        room_type.room_numbers.map { |room_number| build_room(room_type, room_number) }
       end
     end
 
@@ -182,68 +181,68 @@ module HousekeepingTasks
 
     # -- Filtering ---------------------------------------------------------
 
-    def filter_room_groups(room_groups)
+    def filter_rooms(rooms)
       predicates = [ room_type_predicate, room_status_predicate, assigned_to_predicate, booking_status_predicate ].compact
-      filtered_groups = if predicates.empty?
-        room_groups
-      else
-        room_groups.filter_map do |group|
-          rooms = group[:rooms].select { |room| predicates.all? { |predicate| predicate.call(group, room) } }
-          { room_type: group[:room_type], rooms: } if rooms.any?
-        end
-      end
+      return rooms if predicates.empty?
 
-      sort_room_groups(filtered_groups)
+      rooms.select { |room| predicates.all? { |predicate| predicate.call(room) } }
     end
 
     def room_type_predicate
       return if @room_type_filter.nil?
 
-      ->(group, _room) { @room_type_filter.include?(group[:room_type].id) }
+      ->(room) { @room_type_filter.include?(room[:room_type].id) }
     end
 
     def room_status_predicate
       return if @room_status_filter.nil?
 
-      ->(_group, room) { @room_status_filter.include?(room[:resolved_status]) }
+      ->(room) { @room_status_filter.include?(room[:resolved_status]) }
     end
 
     def assigned_to_predicate
       return if @assigned_to_filter.nil?
 
-      ->(_group, room) { @assigned_to_filter.include?(room[:assigned_to_id]) }
+      ->(room) { @assigned_to_filter.include?(room[:assigned_to_id]) }
     end
 
     def booking_status_predicate
       return if @booking_status_filter.nil?
 
-      ->(_group, room) { @booking_status_filter.include?(room[:booking_status]) }
+      ->(room) { @booking_status_filter.include?(room[:booking_status]) }
     end
 
-    def sort_room_groups(room_groups)
-      return room_groups unless @sort
-
-      room_groups.map do |group|
-        { room_type: group[:room_type], rooms: group[:rooms].sort { |left, right| compare_rooms(left, right) } }
-      end
+    def sort_rooms(rooms)
+      rooms.sort { |left, right| compare_rooms(left, right) }
     end
 
     def compare_rooms(left, right)
-      left_value = sort_value(left)
-      right_value = sort_value(right)
+      return natural_room_key(left) <=> natural_room_key(right) unless @sort
+
+      left_value = booking_sort_value(left)
+      right_value = booking_sort_value(right)
       return 0 if left_value.nil? && right_value.nil?
       return 1 if left_value.nil?
       return -1 if right_value.nil?
 
       comparison = left_value <=> right_value
-      @direction == "desc" ? -comparison : comparison
+      comparison = -comparison if @direction == "desc"
+      comparison.zero? ? natural_room_key(left) <=> natural_room_key(right) : comparison
     end
 
-    def sort_value(room)
+    def booking_sort_value(room)
       booking = room[:booking]
       return if booking.nil?
 
       @sort == "arrival" ? (booking.checked_in_at || booking.check_in) : (booking.checked_out_at || booking.check_out)
+    end
+
+    def natural_room_key(room)
+      room_number = room[:room_number].to_s
+      parts = room_number.scan(/\d+|\D+/).map do |part|
+        part.match?(/\A\d+\z/) ? [ 0, part.to_i, part.length ] : [ 1, part.downcase ]
+      end
+      [ parts, room[:room_type].name.to_s.downcase, room[:room_type].id.to_i ]
     end
 
     def normalize_filter_values(values)

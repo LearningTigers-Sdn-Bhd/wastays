@@ -8,11 +8,16 @@ RSpec.describe Reports::HousekeepingTasksPdfGenerator do
 
   describe "#call" do
     it "renders the selected date and preparer in the shared frame" do
+      expect(HotelPortal::Reports::Exports::PdfReportBuilder).to receive(:new).with(
+        hash_including(frame_variant: :compact)
+      ).and_call_original
+
       pdf = described_class.new(
         hotel: hotel,
-        room_groups: [],
+        rooms: [],
         selected_date: Date.new(2026, 8, 17),
-        prepared_by: "Housekeeping Manager"
+        prepared_by: "Housekeeping Manager",
+        visible_columns: HousekeepingTasks::Columns::KEYS
       ).call
       text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
 

@@ -9,6 +9,7 @@ module HotelPortal
         FOOTER_Y = -9
         PAGE_NUMBER_WIDTH = 90
         HOTEL_LOGO_SIZE = 44
+        COMPACT_HOTEL_LOGO_SIZE = 32
         LOGO_GUTTER = PdfTheme::SPACE[:md]
         NAME_ADDRESS_GAP = PdfTheme::SPACE[:xs]
         # The title binds to the metadata strip it describes, so it sits closer to
@@ -36,8 +37,11 @@ module HotelPortal
         MASTHEAD_BADGE_GUTTER = PdfTheme::SPACE[:md]
         # Sits in the top margin, mirroring how the footer sits below the content box.
         RUNNING_HEAD_Y = 18
+        COMPACT_TITLE_SHARE = 0.36
+        COMPACT_COLUMN_GUTTER = PdfTheme::SPACE[:md]
+        VARIANTS = %i[standard compact].freeze
 
-        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_identifiers: nil, badge: nil, masthead_badge: nil, title_accessory: nil)
+        def initialize(pdf:, hotel:, report_name:, period_label: nil, prepared_by: nil, period_label_title: "Period", subtitle: nil, eyebrow: nil, metadata: nil, generated_at: Time.current, confidential: true, hotel_identifiers: nil, badge: nil, masthead_badge: nil, title_accessory: nil, variant: :standard)
           @pdf = pdf
           @hotel = hotel
           @hotel_identifiers = hotel_identifiers
@@ -53,13 +57,19 @@ module HotelPortal
           @metadata = metadata
           @generated_at = generated_at
           @confidential = confidential
+          @variant = variant.to_sym
+          raise ArgumentError, "Unknown PDF report frame variant: #{variant}" unless VARIANTS.include?(@variant)
         end
 
         def draw_header
           @pdf.line_width PdfTheme::RULE_WIDTH
-          draw_hotel_identity
-          draw_report_identity
-          draw_metadata
+          if @variant == :compact
+            draw_compact_header
+          else
+            draw_hotel_identity
+            draw_report_identity
+            draw_metadata
+          end
         end
 
         # Call once, after all content is drawn. A document that draws a masthead on more
@@ -107,15 +117,14 @@ module HotelPortal
 
         # Advances by what the text actually occupies rather than a fixed constant, so a
         # two-line hotel name or address can never collide with the rule below it.
-        def draw_hotel_identity
+        def draw_hotel_identity(logo_size: HOTEL_LOGO_SIZE, detail_lines: nil, rule_gap: MASTHEAD_RULE_GAP)
           top = @pdf.cursor
           logo = hotel_logo
-          text_left = logo ? HOTEL_LOGO_SIZE + LOGO_GUTTER : 0
+          text_left = logo ? logo_size + LOGO_GUTTER : 0
           text_width = @pdf.bounds.width - text_left - masthead_badge_reserve
           name = @hotel.name.to_s
-          address = hotel_address
 
-          @pdf.image logo, at: [ 0, top ], fit: [ HOTEL_LOGO_SIZE, HOTEL_LOGO_SIZE ] if logo
+          @pdf.image logo, at: [ 0, top ], fit: [ logo_size, logo_size ] if logo
           draw_masthead_badge(top)
 
           @pdf.fill_color PdfTheme::COLORS[:ink]
@@ -128,7 +137,7 @@ module HotelPortal
           # A document that bills in the hotel's name has to print how to reach it, and a
           # tax document how it is registered. The reports need neither, so both lines are
           # the caller's to ask for.
-          [ address, hotel_contact, @hotel_identifiers ].compact_blank.each do |line|
+          (detail_lines || [ hotel_address, hotel_contact, @hotel_identifiers ]).compact_blank.each do |line|
             @pdf.fill_color PdfTheme::COLORS[:muted]
             line_size = PdfTheme::TYPE[:small]
             line_top = text_bottom - NAME_ADDRESS_GAP
@@ -138,8 +147,8 @@ module HotelPortal
             text_bottom = line_top - line_height
           end
 
-          @pdf.move_cursor_to [ text_bottom, logo ? top - HOTEL_LOGO_SIZE : text_bottom ].min
-          @pdf.move_down MASTHEAD_RULE_GAP
+          @pdf.move_cursor_to [ text_bottom, logo ? top - logo_size : text_bottom ].min
+          @pdf.move_down rule_gap
           @pdf.stroke_color PdfTheme::COLORS[:border]
           @pdf.stroke_horizontal_rule
           @pdf.move_down TITLE_GAP_ABOVE
@@ -159,8 +168,7 @@ module HotelPortal
           @pdf.move_down TITLE_GAP_BELOW
         end
 
-        def draw_report_identity_left(top)
-          width = identity_left_width
+        def draw_report_identity_left(top, width: identity_left_width)
           cursor = top
 
           if @eyebrow.present?
@@ -327,12 +335,65 @@ module HotelPortal
           @pdf.fill_color PdfTheme::COLORS[:ink]
         end
 
+        def draw_compact_header
+          details = [ hotel_address, hotel_contact, @hotel_identifiers ].compact_blank.join(" | ")
+          draw_hotel_identity(
+            logo_size: COMPACT_HOTEL_LOGO_SIZE,
+            detail_lines: [ details ],
+            rule_gap: PdfTheme::SPACE[:sm]
+          )
+          draw_compact_report_identity
+        end
+
+        def draw_compact_report_identity
+          top = @pdf.cursor
+          metadata = metadata_pairs
+          metadata_width = metadata.empty? ? 0 : @pdf.bounds.width * (1 - COMPACT_TITLE_SHARE)
+          title_width = @pdf.bounds.width - metadata_width
+          title_width -= COMPACT_COLUMN_GUTTER if metadata_width.positive?
+
+          title = draw_report_identity_left(top, width: title_width)
+          metadata_height = draw_compact_metadata(
+            metadata,
+            left: title_width + COMPACT_COLUMN_GUTTER,
+            top:,
+            width: metadata_width
+          )
+
+          @pdf.move_cursor_to top - [ title[:height], metadata_height ].max
+          @pdf.move_down PdfTheme::SPACE[:sm]
+          @pdf.stroke_color PdfTheme::COLORS[:border]
+          @pdf.stroke_horizontal_rule
+          @pdf.move_down PdfTheme::SPACE[:md]
+          @pdf.fill_color PdfTheme::COLORS[:ink]
+        end
+
+        def draw_compact_metadata(metadata, left:, top:, width:)
+          return 0 if metadata.empty?
+
+          widths = Array.new(metadata.size, width / metadata.size)
+          offsets = widths.each_with_index.map { |_, index| left + widths[0...index].sum }
+          label_height = draw_metadata_row(
+            metadata.map { |(label, _)| label.to_s.upcase }, widths, offsets, top,
+            size: PdfTheme::TYPE[:micro], style: :bold, color: PdfTheme::COLORS[:muted],
+            character_spacing: METADATA_LABEL_TRACKING, gutter: PdfTheme::SPACE[:sm]
+          )
+          value_top = top - label_height - METADATA_LABEL_GAP
+          value_height = draw_metadata_row(
+            metadata.map { |(_, value)| value.to_s }, widths, offsets, value_top,
+            size: PdfTheme::TYPE[:small], style: :normal, color: PdfTheme::COLORS[:ink],
+            gutter: PdfTheme::SPACE[:sm]
+          )
+          top - value_top + value_height
+        end
+
         # Draws one row of the metadata strip and reports the height of its tallest column.
-        def draw_metadata_row(texts, widths, offsets, top, size:, style:, color:, character_spacing: 0)
+        def draw_metadata_row(texts, widths, offsets, top, size:, style:, color:, character_spacing: 0,
+          gutter: METADATA_GUTTER)
           @pdf.fill_color color
           options = { size: size, style: style, character_spacing: character_spacing }
           heights = texts.each_with_index.map do |text, index|
-            width = widths[index] - METADATA_GUTTER
+            width = widths[index] - gutter
             height = @pdf.height_of(text, width: width, **options)
             @pdf.text_box text, at: [ offsets[index], top ], width: width, height: height, **options
             height

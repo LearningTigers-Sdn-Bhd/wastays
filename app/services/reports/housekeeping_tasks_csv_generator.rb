@@ -2,14 +2,14 @@
 
 module Reports
   class HousekeepingTasksCsvGenerator
-    def initialize(room_groups:)
-      @table = HousekeepingTasksExportTable.new(room_groups: room_groups)
+    def initialize(rooms:, visible_columns:)
+      @table = HousekeepingTasksExportTable.new(rooms:, visible_columns:)
       @csv = HotelPortal::Reports::Exports::CsvReportSupport.new
     end
 
     def call
       @csv.generate do |csv|
-        csv << HousekeepingTasksExportTable::HEADERS
+        csv << @table.headers
         @table.rows.each { |row| csv << formatted_row(row) }
       end
     end
@@ -18,7 +18,7 @@ module Reports
 
     def formatted_row(row)
       row.each_with_index.map do |value, index|
-        case HousekeepingTasksExportTable::COLUMN_TYPES[index]
+        case @table.column_types[index]
         when :date then @csv.date(value)
         when :integer then value
         else @csv.text(value)

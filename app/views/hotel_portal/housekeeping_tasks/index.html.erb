@@ -1,16 +1,39 @@
 <% content_for :title, "Housekeeping Tasks | WAStays" %>
 
-<div class="w-full space-y-4">
+<div class="w-full space-y-4"
+     data-controller="housekeeping-table"
+     data-action="change->housekeeping-table#changed"
+     data-housekeeping-table-preference-url-value="<%= hotel_housekeeping_view_preference_path(current_hotel) %>">
   <%= render PanelsUI::PageHeader.new(title: "Housekeeping Tasks", description: "Review today's room readiness, booking status, assignments, and housekeeping remarks.") do |header| %>
     <% header.with_actions do %>
+      <%= render PanelsUI::DropdownMenu.new(id: "housekeeping-columns-menu", placement: :bottom_end, class: "w-56") do |menu| %>
+        <% menu.with_trigger(variant: :neutral, size: :md) do %>
+          <%= cached_icon "columns-3", class: "size-4", aria: { hidden: true } %>
+          Columns
+          <%= app_icon "chevron-down", class: "size-3.5", aria: { hidden: true } %>
+        <% end %>
+        <% menu.with_group(label: "Visible columns") do |group| %>
+          <% HousekeepingTasks::Columns::ALL.each do |column| %>
+            <% group.with_checkbox(
+                  name: "visible_columns[]",
+                  value: column.key,
+                  checked: @visible_columns.include?(column.key),
+                  disabled: @visible_columns.one? && @visible_columns.include?(column.key)
+                ) { column.label } %>
+          <% end %>
+        <% end %>
+        <% menu.with_separator %>
+        <% menu.with_item(data: { action: "click->housekeeping-table#resetColumns" }) { "Restore defaults" } %>
+      <% end %>
+
       <%= render PanelsUI::DropdownMenu.new(id: "housekeeping-tasks-export-menu", placement: :bottom_end, class: "w-48") do |menu| %>
         <% menu.with_trigger(variant: :neutral, size: :md, class: "w-full sm:w-auto") do %>
           <%= cached_icon "download", class: "size-4" %>
-          Export
+          <span data-housekeeping-export-label>Export</span>
         <% end %>
         <%# The board's own filters, so an export straight off a bookmarked URL %>
         <%# carries them. The filter bar keeps these links in step from there on. %>
-        <% export_filters = board_filters.merge("date" => @selected_date.iso8601) %>
+        <% export_filters = effective_board_filters.merge("date" => @selected_date.iso8601) %>
         <% menu.with_item(href: hotel_housekeeping_tasks_path(current_hotel, export_filters.merge(format: :pdf)), id: "export-pdf-link", variant: :default, data: { turbo: false }) do %>
           <%= cached_icon "file-down", class: "size-4 text-muted-foreground" %>
           <span>PDF</span>
@@ -26,6 +49,9 @@
       <% end %>
     <% end %>
   <% end %>
+
+  <p class="sr-only" role="status" aria-live="polite" aria-atomic="true"
+     data-housekeeping-preference-status></p>
 
   <%= render "hotel_portal/housekeeping_tasks/table_view" %>
 </div>

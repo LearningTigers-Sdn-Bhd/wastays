@@ -5,6 +5,8 @@ module HotelPortal
     include HousekeepingBoardFilters
     include HousekeepingTaskAuthorization
 
+    helper_method :effective_board_filters
+
     before_action :authorize_housekeeping_board!
     before_action -> { require_feature!("task_assignment_minibar_log") }
 
@@ -12,14 +14,34 @@ module HotelPortal
       @staff_members = HotelPortal::ActiveHousekeepersQuery.new(hotel: current_hotel).call
       @room_types = current_hotel.room_types.order(:name).to_a
       @selected_date = selected_date
-      @room_groups = board
+      @visible_columns = visible_columns
+      @rooms = board
 
       respond_to do |format|
-        format.html { @room_groups = presented(@room_groups) }
+        format.html { @rooms = presented(@rooms) }
         format.pdf { send_pdf }
         format.xlsx { send_excel }
         format.csv { send_csv }
       end
+    end
+
+    def update_view_preference
+      result = HousekeepingTasks::SaveViewPreference.new(
+        hotel: current_hotel,
+        user: current_user,
+        visible_columns: params[:visible_columns]
+      ).call
+
+      if result.success?
+        render json: { visible_columns: result.visible_columns }
+      else
+        render json: { error: result.error }, status: :unprocessable_content
+      end
+    end
+
+    def reset_view_preference
+      columns = HousekeepingTasks::ViewPreference.new(hotel: current_hotel, user: current_user).reset!
+      render json: { visible_columns: columns }
     end
 
     def update_room_assignment
@@ -116,7 +138,7 @@ module HotelPortal
     end
 
     def board
-      filters = board_filters
+      filters = effective_board_filters
 
       HousekeepingTasks::BoardBuilder.new(
         hotel: current_hotel,
@@ -130,44 +152,75 @@ module HotelPortal
       ).call
     end
 
+    def effective_board_filters
+      filters = board_filters.deep_dup
+      filters.delete("room_type_ids") unless @visible_columns.include?("room_type")
+      filters.delete("room_statuses") unless @visible_columns.include?("room_status")
+      filters.delete("assigned_to_ids") unless @visible_columns.include?("assigned_to")
+      filters.delete("booking_statuses") unless @visible_columns.include?("booking_status")
+      if filters["sort"].present? && @visible_columns.exclude?(filters["sort"])
+        filters.delete("sort")
+        filters.delete("direction")
+      end
+      filters
+    end
+
     # Only the page needs presenters; the exports read the board itself. One view
     # context is built here and handed down, rather than each presenter reaching
     # for Rails to format a date or name a path.
-    def presented(room_groups)
+    def presented(rooms)
       context = view_context
 
-      room_groups.map do |group|
-        {
-          room_type: group[:room_type],
-          rooms: group[:rooms].map do |room|
-            HousekeepingTaskRoomPresenter.new(
-              room,
-              hotel: current_hotel,
-              view_context: context,
-              selected_date: @selected_date
-            )
-          end
-        }
+      rooms.map do |room|
+        HousekeepingTaskRoomPresenter.new(
+          room,
+          hotel: current_hotel,
+          view_context: context,
+          selected_date: @selected_date
+        )
       end
     end
 
     def send_pdf
       send_data ::Reports::HousekeepingTasksPdfGenerator.new(
-        hotel: current_hotel, room_groups: @room_groups, selected_date: @selected_date,
-        prepared_by: current_user.name
+        hotel: current_hotel, rooms: export_rooms, selected_date: @selected_date,
+        prepared_by: current_user.name, visible_columns: @visible_columns
       ).call, filename: export_filename("pdf"), type: "application/pdf"
     end
 
     def send_excel
       send_data ::Reports::HousekeepingTasksExcelGenerator.new(
-        hotel: current_hotel, room_groups: @room_groups, selected_date: @selected_date
+        hotel: current_hotel, rooms: export_rooms, selected_date: @selected_date,
+        visible_columns: @visible_columns
       ).call, filename: export_filename("xlsx"),
               type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     end
 
     def send_csv
-      send_data ::Reports::HousekeepingTasksCsvGenerator.new(room_groups: @room_groups).call,
+      send_data ::Reports::HousekeepingTasksCsvGenerator.new(
+        rooms: export_rooms,
+        visible_columns: @visible_columns
+      ).call,
         filename: export_filename("csv"), type: "text/csv; charset=utf-8"
+    end
+
+    def visible_columns
+      HousekeepingTasks::ViewPreference.new(hotel: current_hotel, user: current_user).visible_columns
+    end
+
+    def export_rooms
+      return @rooms unless params.key?(:selected_rooms)
+
+      selected = selected_room_keys
+      @rooms.select { |room| selected.include?([ room[:room_type].id, room[:room_number].to_s ]) }
+    end
+
+    def selected_room_keys
+      raw = params.fetch(:selected_rooms, ActionController::Parameters.new)
+      raw.to_unsafe_h.flat_map do |room_type_id, room_numbers|
+        id = Integer(room_type_id, exception: false)
+        Array(room_numbers).map { |room_number| [ id, room_number.to_s ] } if id
+      end.compact
     end
 
     def export_filename(extension)

@@ -365,6 +365,14 @@ snapshot hands the frame a hotel carrying live contact details: the identity is 
 it was when the document was issued, but a number the hotel stopped answering
 serves nobody.
 
+Dense operational reports can pass `frame_variant: :compact` to
+`PdfReportBuilder`. The compact frame keeps the hotel identity, report title, and
+default metadata, but places the title and metadata in one measured row. It also
+combines the hotel address and contact details into one wrapping line. The
+standard frame remains the default. Use the compact frame only when the report
+body benefits from more printable rows. Transactional documents keep the standard
+frame.
+
 ## Source of truth
 
 - `app/components/panels_ui/**`
