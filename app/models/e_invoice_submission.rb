@@ -1,0 +1,217 @@
+# frozen_string_literal: true
+
+class EInvoiceSubmission < ApplicationRecord
+  belongs_to :hotel
+  belongs_to :booking, optional: true
+  belongs_to :payout_batch, optional: true
+
+  STATUSES = %w[pending submitted valid invalid cancelled].freeze
+  SUBMISSION_MODES = %w[taxpayer intermediary].freeze
+  FUND_COLLECTORS = Booking::FUND_COLLECTORS
+  DOCUMENT_SCENARIOS = {
+    # The hotel files its own guest e-invoices; WAStays only operates the
+    # submission, so the labels name the hotel as issuer.
+    "guest_invoice" => "Guest e-invoice",
+    "hotel_intermediary_guest_invoice" => "Guest e-invoice filed on the hotel's behalf",
+    "ota_commission_self_billed" => "OTA commission (self-billed)",
+    "payout_self_billed_invoice" => "Hotel payout record",
+    "commission_invoice" => "WAStays service fee invoice",
+    "subscription_invoice" => "WAStays subscription invoice"
+  }.freeze
+  DOCUMENT_TYPES = {
+    "01" => "Standard invoice",
+    "02" => "Credit Note",
+    "03" => "Debit Note",
+    "11" => "Self-billed invoice"
+  }.freeze
+
+  validates :status, inclusion: { in: STATUSES }
+  validates :document_scenario, inclusion: { in: DOCUMENT_SCENARIOS.keys }
+  validates :document_type, inclusion: { in: DOCUMENT_TYPES.keys }
+  validates :submission_mode, inclusion: { in: SUBMISSION_MODES }
+  validates :fund_collector, inclusion: { in: FUND_COLLECTORS }
+  # A commission document covers a period and an OTA, not a stay.
+  validates :booking_id, presence: true, unless: :ota_commission_self_billed?
+  # Only meaningful for booking-scoped documents: ActiveRecord treats two nil
+  # booking_ids as duplicates, which would let one commission document per
+  # month exist across the whole system. Those are kept unique by their own
+  # index on (hotel, OTA, period).
+  validates :booking_id, uniqueness: {
+    scope: [ :document_scenario, :document_type ],
+    conditions: -> { where.not(status: "cancelled") },
+    message: "already has an active submission for this document scenario and type"
+  }, if: -> { booking_id.present? }
+
+  scope :recent_first, -> { order(created_at: :desc) }
+  scope :valid, -> { where(status: "valid") }
+  scope :pending_or_submitted, -> { where(status: %w[pending submitted]) }
+  scope :for_scenario, ->(scenario) { where(document_scenario: scenario) }
+  scope :guest_invoice, -> { for_scenario("guest_invoice") }
+  scope :guest_facing, -> { where(document_scenario: %w[guest_invoice hotel_intermediary_guest_invoice]) }
+  scope :payout_self_billed, -> { for_scenario("payout_self_billed_invoice") }
+  scope :consolidated, -> { where(consolidated: true) }
+  scope :guest_requested, -> { where(requested_by_guest: true) }
+  scope :unrequested, -> { where(requested_by_guest: false) }
+  scope :with_payment_concluded_in_month, ->(month_start, month_end) {
+    where(payment_concluded_at: month_start..month_end)
+  }
+
+  def document_type_label
+    DOCUMENT_TYPES.fetch(document_type, document_type)
+  end
+
+  def document_scenario_label
+    DOCUMENT_SCENARIOS.fetch(document_scenario, document_scenario)
+  end
+
+  def status_label
+    {
+      "valid" => "Ready",
+      "submitted" => "Sent",
+      "pending" => "Preparing",
+      "invalid" => "Rejected",
+      "cancelled" => "Cancelled"
+    }.fetch(status, status.humanize)
+  end
+
+  def validated?
+    status == "valid"
+  end
+
+  def cancelled?
+    status == "cancelled"
+  end
+
+  def invalid?
+    status == "invalid"
+  end
+
+  def submitted?
+    status == "submitted"
+  end
+
+  def pending?
+    status == "pending"
+  end
+
+  def stale_pending?
+    pending? && uuid.blank? && submission_uid.blank? && created_at < 2.minutes.ago
+  end
+
+  def retryable?
+    invalid? || stale_pending?
+  end
+
+  # LHDN accepts a cancellation only within 72 hours of validating the
+  # document. After that the correction has to be a credit or debit note, so
+  # offering "cancel" past the window would just produce a rejection.
+  CANCELLATION_WINDOW = 72.hours
+
+  def cancellable?
+    return false unless validated? && cancelled_at.nil?
+    # Validated without a timestamp is a data anomaly, not a closed window; we
+    # cannot tell whether LHDN would still accept it, so we do not offer it.
+    return false if validated_at.blank?
+    # Cancellation calls LHDN with this UUID in the URL - without one there is
+    # nothing to cancel, and offering the button anyway just produces a
+    # confusing 404 from LHDN instead of "there's nothing to cancel here".
+    return false if uuid.blank?
+    return false if referenced_by_active_adjustment?
+
+    Time.current <= validated_at + CANCELLATION_WINDOW
+  end
+
+  def cancellation_window_closed?
+    return false if validated_at.blank?
+    return false if referenced_by_active_adjustment?
+
+    validated? && cancelled_at.nil? && Time.current > validated_at + CANCELLATION_WINDOW
+  end
+
+  # Confirmed live against LHDN (MyInvois API error 400: "The document cannot
+  # be cancelled or requested for rejection"): a document can't be cancelled
+  # once an active (non-cancelled) credit or debit note references it via
+  # BillingReference - cancelling the original would orphan that reference.
+  # Checked separately from the time window so the UI can explain the real
+  # reason instead of a generic "window closed" message when it isn't.
+  def referenced_by_active_adjustment?
+    return false if internal_id.blank?
+
+    EInvoiceSubmission.where(original_invoice_internal_id: internal_id)
+                       .where.not(status: "cancelled")
+                       .exists?
+  end
+
+  def cancellation_deadline
+    return nil if validated_at.blank?
+
+    validated_at + CANCELLATION_WINDOW
+  end
+
+  def refreshable?
+    %w[submitted pending].include?(status) && uuid.present?
+  end
+
+  def adjustment?
+    %w[02 03].include?(document_type)
+  end
+
+  def guest_requested?
+    requested_by_guest
+  end
+
+  def validation_url
+    return nil unless uuid.present? && long_id.present?
+    base = MyInvois::ClientFactory.sandbox? ? "https://preprod.myinvois.hasil.gov.my" : "https://myinvois.hasil.gov.my"
+    "#{base}/#{uuid}/share/#{long_id}"
+  end
+
+  def error_message
+    error_messages.join(", ").presence
+  end
+
+  # As a list rather than one run-on string, so the UI can show each
+  # rejection reason as its own line instead of a single dense paragraph.
+  def error_messages
+    return [] if error_details.blank?
+
+    messages = Array(error_details.dig("rejected", "error", "details")).filter_map do |detail|
+      detail["message"].presence || detail[:message].presence
+    end
+    return messages if messages.any?
+
+    direct_message = error_details["message"].presence || error_details[:message].presence
+    return [ direct_message ] if direct_message.present?
+
+    []
+  end
+
+  # Layman-facing description of who sent this and why, for hotel staff who
+  # don't know LHDN's own terminology ("taxpayer"/"intermediary" mode).
+  def flow_label
+    requested_by_guest? ? "Requested by guest" : "Sent automatically"
+  end
+
+  def submission_mode_label
+    intermediary_submission? ? "Filed by WAStays on the hotel's behalf" : "Filed by the hotel"
+  end
+
+  # Rough visual grouping so a hotel staffer can tell document types apart at
+  # a glance: a fresh invoice, a positive adjustment (owed more), a negative
+  # one (owed less), or a self-billed record that isn't guest-facing at all.
+  def document_type_badge_variant
+    { "01" => :neutral, "02" => :success, "03" => :warning, "11" => :accent }.fetch(document_type, :neutral)
+  end
+
+  def document_scenario_badge_variant
+    ota_commission_self_billed? || document_scenario == "payout_self_billed_invoice" ? :outline : :info
+  end
+
+  def intermediary_submission?
+    submission_mode == "intermediary"
+  end
+
+  def ota_commission_self_billed?
+    document_scenario == "ota_commission_self_billed"
+  end
+end

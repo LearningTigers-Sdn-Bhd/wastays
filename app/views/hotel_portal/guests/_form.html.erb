@@ -1,4 +1,5 @@
-<%= form_with(model: [current_hotel, guest], local: true, class: "space-y-8", data: { controller: "guest-dob" }) do |f| %>
+<%= form_with(model: [current_hotel, guest], local: true, class: "space-y-8", data: { controller: "guest-dob tin-validation",
+                        tin_validation_url_value: hotel_validate_tin_path(current_hotel) }) do |f| %>
   <% if guest.errors.any? %>
     <div class="rounded-xl bg-red-50 p-4 border border-red-100">
       <div class="flex">
@@ -47,6 +48,32 @@
 
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
+          <%= f.label :city, "City", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :city, placeholder: "e.g. Kota Kinabalu", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div>
+          <%= f.label :state_code, "State", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.select :state_code,
+                EInvoice::MalaysiaStates.options,
+                { include_blank: "Select state" },
+                class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div>
+          <%= f.label :postal_code, "Postcode", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :postal_code, placeholder: "e.g. 88000", inputmode: "numeric", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+        </div>
+
+        <div>
+          <%= f.label :tin, "Tax identification number", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
+          <%= f.text_field :tin, placeholder: "Only if the guest claims their stays", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { tin_validation_target: "tin", action: "blur->tin-validation#check" } %>
+          <%# Checked against LHDN here so a wrong digit is caught now, not when
+              the e-invoice is rejected days later. %>
+          <p data-tin-validation-target="feedback" class="mt-1 text-xs text-muted-foreground" hidden></p>
+        </div>
+
+        <div>
           <%= f.label :country, "Country", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
           <%= f.text_field :country, required: true, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "country", action: "input->guest-dob#autofill" } %>
         </div>
@@ -67,11 +94,11 @@
       <div class="grid sm:grid-cols-2 gap-6">
         <div>
           <%= f.label :document_type, "Document Type", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
-          <%= f.select :document_type, Guest::DOCUMENT_TYPES.map { |dt| [dt.upcase, dt] }, { include_blank: "Select Document Type" }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" } %>
+          <%= f.select :document_type, Guest::DOCUMENT_TYPES.map { |dt| [dt.upcase, dt] }, { include_blank: "Select Document Type" }, class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "documentType", tin_validation_target: "documentType", action: "change->guest-dob#autofill change->tin-validation#check" } %>
         </div>
         <div>
           <%= f.label :government_id, "ID / Passport Number", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
-          <%= f.text_field :government_id, placeholder: "Enter ID number", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+          <%= f.text_field :government_id, placeholder: "Enter ID number", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm", data: { guest_dob_target: "governmentId", tin_validation_target: "idValue", action: "input->guest-dob#autofill blur->tin-validation#check" } %>
         </div>
       </div>
 

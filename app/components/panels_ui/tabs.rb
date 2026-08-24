@@ -10,7 +10,11 @@ module PanelsUI
     class Tab < PanelsUI::BaseComponent
       attr_reader :name, :id, :panel_id, :href
 
-      def initialize(tabs_id:, name:, label:, icon: nil, count: nil,
+      # `count_id` names the count so it can be updated on its own. A count that
+      # goes stale the moment somebody else acts is worse than no count, and
+      # replacing the whole strip to refresh one number would reset every
+      # reader's active tab to the broadcaster's.
+      def initialize(tabs_id:, name:, label:, icon: nil, count: nil, count_id: nil,
                      id: nil, panel_id: nil, href: nil, data: {}, aria: {},
                      active: false, disabled: false, variant: :line, class: nil)
         @tabs_id = tabs_id
@@ -18,6 +22,7 @@ module PanelsUI
         @label = label
         @icon = icon
         @count = count
+        @count_id = count_id
         @id = id || "#{@tabs_id}-tab-#{@name}"
         @panel_id = panel_id || "#{@tabs_id}-panel-#{@name}"
         @href = href
@@ -102,7 +107,7 @@ module PanelsUI
       def count_tag
         return if @count.nil?
 
-        tag.span(@count, class: "tabs-tab__count")
+        tag.span(@count, id: @count_id, class: "tabs-tab__count")
       end
     end
 

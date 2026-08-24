@@ -26,7 +26,7 @@ module AiConcierge
           return [] if target_month <= 0 || target_year <= 0 || target_month > 12
 
           preload_availability
-          grouped_options.first(MAX_ROOM_TYPES)
+          numbered(grouped_options.first(MAX_ROOM_TYPES))
         end
 
         private
@@ -76,21 +76,53 @@ module AiConcierge
           stay_dates.flat_map { |date| rates_by_date[date] || [] }
         end
 
+        # The catalogue is one numbered list, cheapest room type first.
+        #
+        # Positions run across the whole catalogue rather than restarting under
+        # each room type. A number that repeats is a number the guest cannot
+        # use on its own: with one option per room type -- what an explicit date
+        # range always produces -- every room used to be "Option 1", and every
+        # reply of "option 1" was ambiguous by construction.
+        #
+        # `selection_id` deliberately does not follow the display position. It
+        # is the key a saved selection is resumed by, so it stays tied to the
+        # room type and the option's place within it.
         def grouped_options
-          room_types.each_with_object([]) do |room_type, groups|
-            options = options_for_room_type(room_type)
-            next if options.empty?
+          sorted_groups(room_types.filter_map { |room_type| build_group(room_type) })
+        end
 
-            groups << {
-              "room_type_id" => room_type.id,
-              "room_type_name" => room_type.name,
-              "options" => options.each_with_index.map do |option, index|
-                option.merge(
-                  "position" => index + 1,
-                  "selection_id" => selection_id(room_type.id, index + 1)
-                )
-              end
-            }
+        def build_group(room_type)
+          options = options_for_room_type(room_type)
+          return if options.empty?
+
+          {
+            "room_type_id" => room_type.id,
+            "room_type_name" => room_type.name,
+            "options" => options.each_with_index.map do |option, index|
+              option.merge("selection_id" => selection_id(room_type.id, index + 1))
+            end
+          }
+        end
+
+        # Sorted before the cap in `call` runs, so the room types that survive
+        # it are the cheapest ones rather than the ones with the lowest ids.
+        def sorted_groups(groups)
+          groups.sort_by { |group| cheapest_price(group) }
+        end
+
+        def cheapest_price(group)
+          prices = group.fetch("options", []).filter_map { |option| option["total_price"]&.to_f }
+          prices.min || Float::INFINITY
+        end
+
+        # Run after the cap, so the guest never sees a list that skips a number.
+        def numbered(groups)
+          position = 0
+          groups.map do |group|
+            group.merge("options" => group.fetch("options", []).map do |option|
+              position += 1
+              option.merge("position" => position)
+            end)
           end
         end
 
@@ -210,7 +242,14 @@ module AiConcierge
           }
         end
 
+        # Cheapest first, for the same reason the room types are: the "from"
+        # price on the catalogue line is the cheapest plan, so a list that
+        # opens with a dearer one contradicts the line the guest just read.
         def build_rate_plans(room_type, rates, stay_dates)
+          unsorted_rate_plans(room_type, rates, stay_dates).sort_by { |plan| plan["total_price"].to_f }
+        end
+
+        def unsorted_rate_plans(room_type, rates, stay_dates)
           rates.group_by(&:rate_plan_id).filter_map do |rate_plan_id, plan_rates|
             plan_by_date = plan_rates.group_by(&:date)
             next unless stay_dates.all? { |d| plan_by_date.key?(d) }

@@ -122,7 +122,10 @@ module HotelPortal
         :payment_terms_days,
         :contact_email,
         :contact_phone,
-        :auto_allocate_payments
+        :auto_allocate_payments,
+        :tin,
+        :brn,
+        :sst_registration_number
       )
     end
   end

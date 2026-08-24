@@ -16,7 +16,7 @@ module Notifications
       end
 
       def call
-        WebhookBroadcastJob.perform_now(event_name, @delivery.payload)
+        WebhookBroadcastJob.perform_now(event_name, @delivery.payload, hotel_id: @delivery.hotel_id)
       end
 
       private

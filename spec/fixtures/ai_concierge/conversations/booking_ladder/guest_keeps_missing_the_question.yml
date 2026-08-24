@@ -1,0 +1,66 @@
+id: guest_keeps_missing_the_question
+description: "a guest who answers the guest-count question twice without ever giving a number -- the hotel says so, then fetches a person, and still recovers"
+origin: "Booking::Orchestrator::REASK_NUDGE and REASK_HANDOVER -- before the counter existed this question was asked unchanged until the fifty-turn wall ended the thread on the hotel's terms"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [1, 2, 3, 4, 5]
+turns:
+  - guest: "early august for 3 days 2 nights"
+    expect:
+      pending_question: guest_count
+      # The shape of the answer, offered before the guest has to invent one.
+      # Without it the natural reply is "me and my wife", which is true, is not
+      # a number, and costs the two turns below.
+      reply_matches: ["How many guests should I check for", '2 adults 3 children']
+      reply_excludes: ["Sorry, I didn't catch that."]
+      needs_human_support: false
+      creates_quote: false
+
+  # An answer, in the guest's mind. There is no number in it -- and the model
+  # supplies one anyway, quoting nothing, because it has been asked how many
+  # guests and something has to go in the box.
+  #
+  # This is the turn the whole fixture is for. Believed, it prices the family's
+  # stay for two and never asks again; the guest finds out at the quote. The
+  # branch has to come back identical instead, which is the definition of a
+  # question that did not land.
+  - guest: "just a small one for the family"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            adults: 2
+    expect:
+      pending_question: guest_count
+      reply_matches: ["Sorry, I didn't catch that.", "How many guests should I check for"]
+      needs_human_support: false
+      creates_quote: false
+
+  # Twice is where the bot stops pretending it can get there on its own and
+  # puts the thread in front of staff -- without going quiet. A handover that
+  # also silences the bot is, at 2am, no reply at all.
+  - guest: "not too many la"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            party_size_total: 4
+    expect:
+      pending_question: guest_count
+      reply_matches: ["Sorry, I didn't catch that.", "How many guests should I check for"]
+      needs_human_support: true
+      creates_quote: false
+
+  # The count is a count of failed turns, not a verdict on the guest. One
+  # readable answer and the apology stops.
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+      reply_matches: ["Garden Prestige Suite"]
+      reply_excludes: ["Sorry, I didn't catch that."]
+      needs_human_support: false
+      creates_quote: false

@@ -3,12 +3,7 @@
     <%= render PanelsUI::PageHeader.new(title: "Guest reports", description: "Review arrivals, in-house guests, departures, registration cards, and operational guest lists.", class: "print:block") do |header| %>
       <% header.with_caption do %>
         <p class="text-sm font-medium text-muted-foreground print:text-xs">
-          <%= current_hotel.name %> ·
-          <% if @report.start_date == @report.end_date %>
-            <%= @report.start_date.strftime("%A, %d %b %Y") %>
-          <% else %>
-            <%= @report.start_date.strftime("%d %b %Y") %> - <%= @report.end_date.strftime("%d %b %Y") %>
-          <% end %>
+          <%= current_hotel.name %> · <%= guest_reports_date_range_label(@report) %>
         </p>
       <% end %>
       <% header.with_actions do %>
@@ -33,16 +28,6 @@
   </div>
 
   <div class="print:hidden">
-    <% guest_tab_labels = {
-      "arrivals" => "Arrivals",
-      "in_house" => "In-house",
-      "departures" => "Departures",
-      "checkout" => "Checkout",
-      "police_report" => "Police report",
-      "registration_cards" => "Registration cards",
-      "bibo" => "Boat transfers",
-      "meal_prep" => "Meal prep"
-    } %>
     <%= render PanelsUI::Tabs.new(
           id: "guest-reports-tabs",
           active: @active_guest_report_tab,
@@ -61,7 +46,7 @@
          ).each do |tab| %>
         <% tabs.with_tab(
              name: tab[:value],
-             label: guest_tab_labels.fetch(tab[:value]),
+             label: guest_report_tab_label(tab[:value]),
              count: tab[:count],
              href: tab[:path]
            ) %>
@@ -163,7 +148,8 @@
       </div>
 
       <%= render partial: "hotel_portal/reports/meal_prep_section", locals: {
-        report: @meal_prep_report
+        report: @meal_prep_report,
+        date_preset: @date_preset
       } %>
     </div>
   <% elsif @active_guest_report_tab == "police_report" %>

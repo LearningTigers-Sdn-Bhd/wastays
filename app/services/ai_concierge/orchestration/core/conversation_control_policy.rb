@@ -29,7 +29,20 @@ module AiConcierge
       end
 
       def end_confirmation_yes?
-        interpretation["intent"].to_s == "confirmation" && interpretation.dig("slots", "confirmation") != "no"
+        confirmation_answer == "yes"
+      end
+
+      def end_confirmation_no?
+        confirmation_answer == "no"
+      end
+
+      # The reading the caller passed in when it has one, and the guest's own
+      # words when it does not -- so this answers the same way whether the turn
+      # came through the model or straight off the wire.
+      def confirmation_answer
+        return interpretation.dig("slots", "confirmation") if interpretation["intent"].to_s == "confirmation"
+
+        ConfirmationReader.new(message: message).confirmation
       end
 
       def end_confirmation_mode

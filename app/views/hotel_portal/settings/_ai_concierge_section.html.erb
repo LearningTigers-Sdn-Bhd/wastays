@@ -25,15 +25,22 @@
   <section aria-labelledby="ai-concierge-configuration-heading">
     <div>
       <h2 id="ai-concierge-configuration-heading" class="text-base font-semibold text-foreground">AI Concierge Configuration</h2>
-      <p class="mt-2 text-sm text-muted-foreground">Configure the assistant’s availability, tone, and AI provider.</p>
+      <p class="mt-2 text-sm text-muted-foreground">Configure guest chat, the assistant’s tone, and the AI provider.</p>
     </div>
 
     <div class="mt-4 space-y-4">
       <%= render PanelsUI::Switch.new(
             form: f,
+            attribute: :guest_chat_enabled,
+            label: "Guest Chat",
+            description: "Let guests open a chat from the concierge page. Off hides only the chat tile, the Conversations inbox, and its sidebar tab — the rest of the concierge page stays up.",
+            variant: :card) %>
+
+      <%= render PanelsUI::Switch.new(
+            form: f,
             attribute: :ai_provider_enabled,
             label: "Enable AI Assistance",
-            description: "Allow the concierge to answer guests using the configured provider.",
+            description: "Answer guest chats automatically with the configured provider. Off leaves the chat open for staff to answer by hand.",
             variant: :card) %>
 
       <%= render PanelsUI::FormField.new(
@@ -45,7 +52,7 @@
              selected: @hotel.ai_concierge_tone) %>
       <% end %>
 
-      <% provider_labels = { "openai" => "OpenAI", "claude" => "Claude", "deepseek" => "DeepSeek", "gemini" => "Gemini" } %>
+      <% provider_labels = { "openai" => "OpenAI", "claude" => "Claude", "gemini" => "Gemini" } %>
       <%= render PanelsUI::FormField.new(
             form: f,
             attribute: :ai_provider_name,

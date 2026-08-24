@@ -1,0 +1,15 @@
+id: service_question_is_hotel_information
+description: "parking, wifi and breakfast are hotel services, answered from knowledge rather than routed to booking"
+origin: "InformationIntentGuard#hotel_service_question?"
+setup:
+  knowledge:
+    - category: general_info
+      title: Getting Here
+      chunks: ["Parking is free for registered guests in the basement car park."]
+turns:
+  - guest: "is there parking?"
+    # The model gets this one wrong -- that mistake is why the rule exists.
+    model:
+    expect:
+      reply_matches: ["Parking is free"]
+      creates_quote: false

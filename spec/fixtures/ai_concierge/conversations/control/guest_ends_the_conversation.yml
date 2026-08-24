@@ -1,0 +1,11 @@
+id: guest_ends_the_conversation
+description: "a guest who says stop is finished, and the thread records why"
+origin: "ConversationControlPolicy#explicit_end?"
+turns:
+  - guest: "hello"
+    expect:
+      creates_quote: false
+  - guest: "stop"
+    expect:
+      flow_status: ended
+      creates_quote: false

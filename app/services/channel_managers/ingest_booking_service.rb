@@ -86,7 +86,8 @@ module ChannelManagers
           external_reference: @data[:external_reference],
           channel_manager_reference: @data[:channel_manager_reference],
           revision_number: @data[:revision_number],
-          payment_status: payment_status_for(booking)
+          payment_status: payment_status_for(booking),
+          fund_collector: fund_collector_for(booking)
         )
 
         if booking.save
@@ -244,6 +245,12 @@ module ChannelManagers
       status = @data[:payment_status].presence || @data.dig(:payment, :status).presence
       return status if Booking::PAYMENT_STATUSES.include?(status.to_s)
       booking.payment_status.presence || "pending"
+    end
+
+    def fund_collector_for(booking)
+      return booking.fund_collector if booking.persisted? && booking.fund_collector.present? && booking.fund_collector != "unknown"
+
+      "unknown"
     end
 
     def dispatch_lifecycle_event(booking, is_existing_booking, previous_check_in, previous_check_out, previous_status)

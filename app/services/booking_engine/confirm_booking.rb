@@ -58,6 +58,7 @@ module BookingEngine
           guest_name: @payment_details[:guest_name], # From checkout form
           guest_email: @payment_details[:guest_email],
           guest_phone: @payment_details[:guest_phone],
+          guest_city: @payment_details[:guest_city],
           special_requests: @payment_details[:special_requests],
           total_amount: payable_total,
           currency: @quote.currency,
@@ -81,7 +82,8 @@ module BookingEngine
           tourism_tax_applied: tourism_tax_amount.positive?,
           tax_lines: tax_lines,
           tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
-          hotel_corporate_account_id: @quote.hotel_corporate_account_id
+          hotel_corporate_account_id: @quote.hotel_corporate_account_id,
+          fund_collector: "wastays"
         )
 
 
@@ -110,6 +112,7 @@ module BookingEngine
             name: @payment_details[:guest_name],
             email: @payment_details[:guest_email],
             phone: @payment_details[:guest_phone],
+            city: @payment_details[:guest_city],
             government_id: @payment_details[:guest_government_id],
             gender: gender,
             country: guest_country,

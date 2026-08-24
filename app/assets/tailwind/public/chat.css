@@ -1,0 +1,322 @@
+@layer components {
+  /* Guest-facing chat (PublicUI::Chat::*). Public pages are outside DESIGN.md,
+     so this follows the concierge's own language -- uppercase tracking-widest
+     labels, soft rounded bubbles -- not the panel/ theme.
+
+     Three rows filling whatever height the page gives them, and only the middle
+     one scrolls. No card: the chat is the page here, and a panel floating
+     inside a page that cannot scroll is a frame around nothing. */
+  .public-chat {
+    @apply relative flex h-full min-h-0 flex-col bg-background;
+
+    /* The pattern's colour and strength. Change these two rather than the PNG:
+       the file is only ever read for its shape.
+
+       The ceiling on strength is not taste. --muted-foreground was carrying the
+       author labels at 4.60:1 on the bare thread, a tenth over the line, so any
+       pattern at all took them under; they moved to --muted-foreground-strong,
+       which holds 6.5:1 at this setting. Past about 0.15 that gives out too. */
+    /* Flat, not a tint. bg-secondary/15 was the same colour but translucent,
+       which was invisible against a plain thread and is not against a
+       patterned one -- the doodle came through the hotel's own bubbles. */
+    --public-chat-bubble: oklch(0.8965 0.0083 152.00);
+    --public-chat-doodle-ink: var(--secondary);
+    --public-chat-doodle-strength: 0.08;
+    --public-chat-doodle-scale: 27rem;
+  }
+
+  /* The doodle, painted rather than placed.
+     A WhatsApp-style doodle is drawn in white for a dark app, and dropped onto
+     this cream thread as a picture it is simply invisible. Used as a mask it is
+     a stencil instead: the file gives the shape, --public-chat-doodle-ink gives
+     the colour, and the same PNG works in either direction.
+
+     Behind the whole chat rather than inside the thread, because the thread is
+     the scroller -- a layer inside it would scroll away after one screen and
+     leave the rest bare. The bar and the box are lifted over it and are opaque,
+     so the pattern only shows where the conversation is. */
+  .public-chat[data-doodle="true"]::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 z-0;
+    background-color: var(--public-chat-doodle-ink);
+    opacity: var(--public-chat-doodle-strength);
+    -webkit-mask-image: var(--public-chat-doodle);
+    -webkit-mask-repeat: repeat;
+    -webkit-mask-size: var(--public-chat-doodle-scale) auto;
+    mask-image: var(--public-chat-doodle);
+    mask-repeat: repeat;
+    mask-size: var(--public-chat-doodle-scale) auto;
+  }
+
+  /* The three rows are lifted over the pattern -- but not to the same height.
+     A tie is decided by document order, so a bar and a thread both at z-10 put
+     the thread on top, and anything the bar opens (the menu) is painted over by
+     the next message that arrives. The chrome outranks the conversation. */
+  .public-chat__log {
+    @apply relative z-10;
+  }
+
+  .public-chat__bar,
+  .public-chat__footer {
+    @apply relative z-20;
+  }
+
+  /* ─── Bar ───
+     Who the guest is talking to, kept in view while the thread scrolls under
+     it. A long conversation would otherwise carry every clue off the top of a
+     phone: the names above the bubbles only appear at the start of a run.
+
+     The top inset is the phone's, not the design's -- the chat runs to the
+     edge of the screen, so the notch has to be paid for here. It resolves to
+     zero everywhere else.
+
+     The fill is its own rather than the page's: the bar and the box are the
+     chrome the thread scrolls between, and a bar the same colour as what
+     passes under it is a bar you can only find by its hairline. */
+  .public-chat__bar {
+    @apply grid shrink-0 grid-cols-[auto_auto_1fr_auto] items-center gap-3 border-b border-border bg-card px-4 py-3;
+    padding-top: calc(0.75rem + env(safe-area-inset-top));
+  }
+
+  /* Hover tints with the brand rather than with --muted: muted is within a
+     hundredth of white, so on this chrome it is a state you cannot see. */
+  .public-chat__bar-back {
+    @apply -ml-2 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .public-chat__avatar {
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-white;
+  }
+
+  /* min-w-0 is what lets the title truncate instead of pushing the menu off the
+     bar -- a grid child's default min-width is its content. */
+  .public-chat__bar-identity {
+    @apply min-w-0;
+  }
+
+  .public-chat__bar-title {
+    @apply truncate text-xs font-bold uppercase tracking-widest text-foreground;
+  }
+
+  .public-chat__bar-actions {
+    @apply -mr-2 flex items-center;
+  }
+
+  /* ─── Status ───
+     One line, always present. A line that comes and goes would move the hotel's
+     name up and down while the guest reads. */
+  .public-chat__status {
+    @apply truncate text-xs text-muted-foreground;
+  }
+
+  .public-chat__status[data-tone="accent"] {
+    @apply text-primary;
+  }
+
+  /* ─── Thread ───
+     The one scroller on the page. The horizontal padding is not decoration:
+     the tails hang 7px outside the bubble, and without room to hang in they
+     would either be clipped by the scroll container or push a horizontal
+     scrollbar into it. */
+  /* Transparent on purpose: the fill lives on .public-chat so the pattern can
+     sit between the two and stay put while this scrolls over it. */
+  .public-chat__log {
+    @apply flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4;
+  }
+
+  /* The only clue a thread continues above the fold is a bubble sliced in half
+     at the top edge, which reads as a rendering fault rather than as "scroll".
+     Set by the chat controller, so it is off for a thread that fits and off
+     again at the top -- a permanent fade would wash out the first message of a
+     short conversation. */
+  .public-chat__log[data-more-above="true"] {
+    mask-image: linear-gradient(to bottom, transparent 0, black 2rem);
+  }
+
+  /* Centred rather than stacked at the top: with nothing in the thread the
+     prompt is the only thing on a screen-high surface, and a line of text
+     pinned under the bar reads as a message the hotel sent. */
+  .public-chat__empty {
+    @apply m-auto max-w-xs text-center text-sm;
+    color: var(--muted-foreground-strong);
+  }
+
+  .public-chat__message {
+    @apply flex flex-col items-start gap-1;
+  }
+
+  /* A gap between people, a smaller one between two things the same person said. */
+  .public-chat__message + .public-chat__message {
+    @apply mt-3;
+  }
+
+  .public-chat__message + .public-chat__message[data-run-start="false"] {
+    @apply mt-1;
+  }
+
+  .public-chat__message[data-side="guest"] {
+    @apply items-end;
+  }
+
+  .public-chat__message[data-side="system"] {
+    @apply items-center;
+  }
+
+  /* The two things that sit on the thread rather than inside a bubble, and so
+     the two the doodle can reach. --muted-foreground clears 4.5:1 on the bare
+     background by a tenth, which is no headroom at all: at 2% ink it is already
+     failing. This is the same neutral two steps darker, which holds 6.2:1 over
+     the darkest pixel the veil allows while staying well behind the message
+     text at 17:1. */
+  .public-chat__author {
+    @apply px-1 text-[10px] font-bold uppercase tracking-widest;
+    color: var(--muted-foreground-strong);
+  }
+
+  /* Tinted with the brand rather than filled with --muted. Muted is a hundredth
+     of a step from white, so a bubble wearing it on this thread had no edge at
+     all -- and a bubble is the only thing saying where one message stops and
+     the next starts. The tint is carried by the fill rather than an outline so
+     the tail can inherit it. */
+  /* The cap is a pair, not a percentage: 85% of a phone is a bubble, 85% of a
+     full-width desktop column is a paragraph running the width of a page. */
+  .public-chat__bubble {
+    @apply relative max-w-[min(85%,34rem)] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm text-foreground;
+    background-color: var(--public-chat-bubble);
+  }
+
+  /* Mid-run bubbles tuck the corner nearest the speaker; the last one squares it
+     off instead, because that is where the tail joins. */
+  .public-chat__message[data-side="guest"] .public-chat__bubble {
+    @apply rounded-br-md bg-primary text-primary-foreground;
+  }
+
+  .public-chat__message[data-side="hotel"] .public-chat__bubble,
+  .public-chat__message[data-side="staff"] .public-chat__bubble {
+    @apply rounded-bl-md;
+  }
+
+  /* A person answered, not the bot. Carried by the fill rather than an outline so
+     the tail can inherit it -- a 1px ring stops at the bubble and would leave the
+     tail hanging off it unringed. */
+  .public-chat__message[data-side="staff"] .public-chat__bubble {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .public-chat__message[data-side="system"] .public-chat__bubble {
+    @apply max-w-full rounded-none bg-transparent px-0 py-0 text-center text-xs italic;
+  }
+
+  /* ─── Tail ───
+     Only the last bubble of a run gets one. It inherits the bubble's fill and
+     overlaps it by 1px, so it reads as part of the same shape rather than a
+     triangle parked next to it. */
+  .public-chat__message[data-run-end="true"]:not([data-side="system"]) .public-chat__bubble::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: 0.5rem;
+    height: 0.75rem;
+    background-color: inherit;
+  }
+
+  .public-chat__message[data-run-end="true"][data-side="guest"] .public-chat__bubble {
+    @apply rounded-br-none;
+  }
+
+  .public-chat__message[data-run-end="true"][data-side="guest"] .public-chat__bubble::after {
+    right: -0.4375rem;
+    clip-path: polygon(0 0, 0 100%, 100% 100%);
+  }
+
+  .public-chat__message[data-run-end="true"][data-side="hotel"] .public-chat__bubble,
+  .public-chat__message[data-run-end="true"][data-side="staff"] .public-chat__bubble {
+    @apply rounded-bl-none;
+  }
+
+  .public-chat__message[data-run-end="true"][data-side="hotel"] .public-chat__bubble::after,
+  .public-chat__message[data-run-end="true"][data-side="staff"] .public-chat__bubble::after {
+    left: -0.4375rem;
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+
+  /* ─── Footer ───
+     The bottom inset is the phone's home indicator, for the same reason the bar
+     pays for the notch. */
+  .public-chat__footer {
+    @apply shrink-0 border-t border-border bg-card px-4 py-3;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  /* One row: a field that grows with what is being written, and the button
+     beside it. The ring is drawn on the row rather than on the textarea, so
+     focus lights the whole control instead of half of it. */
+  /* Not the thread's fill: the box is chrome, and a box wearing the colour of
+     what scrolls past it reads as part of the conversation.
+
+     What makes it a box is the outline, not a tint -- border-interactive rather
+     than border, which is 1.2:1 against this chrome and says nothing. A tint
+     was the first instinct and does not survive the arithmetic: any fill dark
+     enough to be visible takes the placeholder below 4.5:1, because
+     --muted-foreground only clears it by a tenth on white as it is. */
+  .public-chat__composer-field {
+    @apply flex items-end gap-2 rounded-2xl border border-border-interactive bg-card p-1.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary;
+  }
+
+  /* Height is set by the chat controller as the guest types; the max is here so
+     a pasted essay turns the box into its own small scroller rather than
+     eating the thread. */
+  .public-chat__input {
+    @apply max-h-32 min-h-9 w-full resize-none border-0 bg-transparent px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0;
+  }
+
+  .public-chat__send {
+    @apply inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-transparent bg-primary text-primary-foreground transition-all duration-200 hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+}
+
+@layer components {
+  /* Guest-facing dropdown (PublicUI::Menu). Anchored to the corner it hangs
+     from rather than positioned by script: on the public pages it is only ever
+     used at the end of the chat bar. */
+  .public-menu {
+    @apply relative inline-flex;
+  }
+
+  .public-menu__trigger {
+    @apply inline-flex size-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .public-menu__trigger[aria-expanded="true"] {
+    @apply bg-secondary/15 text-foreground;
+  }
+
+  /* Built to the panel dropdown's measurements -- a hairline border carried by
+     the shadow rather than by its own weight, a pad of its own so the items sit
+     inside it, and items with their own radius so a hover is a rounded block
+     and not a stripe running into the corners. The earlier version had
+     border-interactive around it and items flush to the edge, which read as a
+     box drawn around a list rather than as a menu.
+
+     Only the colours are this side's: --card, the softer public radius, and a
+     hover with something behind it. */
+  .public-menu__list {
+    @apply absolute right-0 top-full z-30 mt-1 flex min-w-52 max-w-[min(22rem,calc(100vw-1rem))] flex-col rounded-xl border border-border bg-card p-1 shadow-lg;
+  }
+
+  /* The focus state is a ring on top of the tint. The panel dropdown marks
+     focus with --muted alone, which over there is a judgement call and here is
+     not one I can make: on --card it is 1.05:1, and a guest arriving by
+     keyboard would have no way of telling which item they were on. */
+  .public-menu__item {
+    @apply flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-foreground transition-colors select-none hover:bg-secondary/10 focus-visible:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .public-menu__item[data-danger="true"] {
+    color: var(--destructive-on-surface);
+  }
+
+  .public-menu__item[data-danger="true"]:is(:hover, :focus-visible) {
+    background: color-mix(in oklab, var(--destructive) 14%, transparent);
+  }
+}

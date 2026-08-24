@@ -1,9 +1,22 @@
 module AiConcierge
   module State
     class SlotMerger
-    DOWNSTREAM_KEYS = %w[suggested_options confirmation_candidate selected_option suggestion_set_version pending_selection selected_rate_plan_id selected_rate_plan_name].freeze
-    TIMING_KEYS = %w[target_month target_year month_segment check_in check_out nights days].freeze
-    PARTY_KEYS = %w[party_size_total adults children room_count].freeze
+    # The branch's keys, grouped once.
+    #
+    # "Timing" used to mean seven keys here and five in `InputNormalizer`,
+    # which had a `DURATION_SLOT_KEYS` of its own -- two vocabularies for one
+    # shape, under the same word. Both groupings are real (the normalizer needs
+    # to strip dates without stripping a stated duration), so both are kept,
+    # but they are built from the same parts and named apart.
+    DATE_KEYS = %w[target_month target_year month_segment check_in check_out].freeze
+    DURATION_KEYS = %w[nights days].freeze
+    GUEST_KEYS = %w[party_size_total adults children].freeze
+    ROOM_KEYS = %w[room_count].freeze
+
+    TIMING_KEYS = (DATE_KEYS + DURATION_KEYS).freeze
+    PARTY_KEYS = (GUEST_KEYS + ROOM_KEYS).freeze
+    SEARCH_KEYS = (TIMING_KEYS + PARTY_KEYS).freeze
+    DOWNSTREAM_KEYS = %w[suggested_options confirmation_candidate selected_option suggestion_set_version selected_rate_plan_id selected_rate_plan_name].freeze
 
     def self.empty_branch
       {
@@ -22,7 +35,6 @@ module AiConcierge
         "clarification_needed" => nil,
         "suggested_options" => [],
         "suggestion_set_version" => 0,
-        "pending_selection" => nil,
         "confirmation_candidate" => nil,
         "selected_option" => nil,
         "selected_rate_plan_id" => nil,
@@ -63,6 +75,7 @@ module AiConcierge
       end
 
       normalize_duration!(branch)
+      derive_month_from_check_in!(branch)
 
       # Only default rooms to 1 if we're in a booking flow
       branch["room_count"] ||= 1 if branch["target_month"].present? || branch["check_in"].present?
@@ -73,8 +86,18 @@ module AiConcierge
       return unless pending_question == "party_split" && branch["party_size_total"].to_i.positive?
 
       total = branch["party_size_total"].to_i
-      is_adults_msg = message.match?(/\badults?\b/i) && !message.match?(/\bchildren?\b/i) && !message.match?(/\bchild\b/i) && !message.match?(/\bkids?\b/i)
-      is_children_msg = (message.match?(/\bchildren?\b/i) || message.match?(/\bchild\b/i) || message.match?(/\bkids?\b/i)) && !message.match?(/\badults?\b/i)
+      says_adults = message.match?(/\badults?\b/i)
+      says_children = message.match?(/\bchildren?\b/i) || message.match?(/\bchild\b/i) || message.match?(/\bkids?\b/i)
+
+      # Which of the two the guest just answered with. The English words are
+      # the reading when they are there; otherwise the shape of what the model
+      # extracted says the same thing, in any language -- a message naming only
+      # adults is a message about adults.
+      says_adults ||= slots.key?("adults") && !slots.key?("children") unless says_children
+      says_children ||= slots.key?("children") && !slots.key?("adults") unless says_adults
+
+      is_adults_msg = says_adults && !says_children
+      is_children_msg = says_children && !says_adults
 
       if is_adults_msg
         adults_count = branch["adults"].to_i
@@ -124,6 +147,21 @@ module AiConcierge
         branch["adults"] = nil
         branch["children"] = nil
       end
+    end
+
+    # A date already says which month it is in. SearchBookingOptionsTool bails
+    # out with no options when target_month is blank, so a model that returns
+    # check_in alone -- perfectly correct extraction -- would have the guest
+    # told there is nothing available.
+    def derive_month_from_check_in!(branch)
+      return if branch["check_in"].blank?
+      return if branch["target_month"].present? && branch["target_year"].present?
+
+      check_in = Date.parse(branch["check_in"].to_s)
+      branch["target_month"] = check_in.month
+      branch["target_year"] = check_in.year
+    rescue Date::Error
+      nil
     end
 
     def clear_downstream!(branch)

@@ -163,9 +163,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(section["class"].to_s).not_to include("lg:col-span-2")
       expect(section.at_css(".space-y-4")).to be_present
       expect(form.css("section.rounded-2xl, section.bg-card, section.shadow-sm")).to be_empty
-      switch = section.at_css(".panel-switch")
-      expect(switch["data-variant"]).to eq("card")
-      expect(switch.at_css("input[name='hotel[ai_provider_enabled]']")).to be_present
+      switches = section.css(".panel-switch")
+      expect(switches.map { |node| node["data-variant"] }).to eq([ "card", "card" ])
+      expect(switches[0].at_css("input[name='hotel[guest_chat_enabled]']")).to be_present
+      expect(switches[1].at_css("input[name='hotel[ai_provider_enabled]']")).to be_present
       expect(section.css(".panel-form-field").size).to eq(3)
       expect(section.css(".panel-select-menu").size).to eq(2)
       expect(section.at_css(".panel-input[name='hotel[ai_provider_key]']")).to be_present
@@ -246,7 +247,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[1].at_css("a, button")).to be_nil
       expect(breadcrumb_items[2].at_css("button[aria-label='Open Banking Details navigation']")).to be_present
       expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "Banking Details", "Transaction Code Reference", "OTA Financials" ]
+        [ "Banking Details", "Transaction Code Reference", "OTA Financials", "E-Invoice" ]
       )
     end
 
@@ -765,6 +766,25 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(hotel.ai_provider_enabled).to be(true)
       expect(hotel.ai_concierge_tone).to eq('cheerful')
       expect(hotel.ai_provider_name).to eq('openai')
+    end
+
+    it 'closes the guest chat without touching the ai provider' do
+      hotel.update!(ai_provider_enabled: true, ai_provider_name: 'openai', ai_provider_key: 'test-api-key')
+
+      patch hotel_ai_concierge_settings_path(hotel), params: {
+        form_id: 'ai_configuration',
+        hotel: {
+          guest_chat_enabled: '0',
+          ai_provider_enabled: '1',
+          ai_concierge_tone: 'basic',
+          ai_provider_name: 'openai',
+          ai_provider_key: 'test-api-key'
+        }
+      }
+
+      hotel.reload
+      expect(hotel.guest_chat_enabled).to be(false)
+      expect(hotel.ai_provider_enabled).to be(true)
     end
   end
 end

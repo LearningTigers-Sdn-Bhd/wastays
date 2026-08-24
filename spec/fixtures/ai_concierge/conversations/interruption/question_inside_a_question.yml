@@ -1,0 +1,49 @@
+id: question_inside_a_question
+description: "two hotel questions in a row, mid-booking -- the second interruption must not overwrite what the first one put down"
+origin: "HotelKnowledge::StateHandler suspends by re-activating the branch and suspending it again; nothing held that a booking already suspended survives that round trip a second time"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [1, 2, 3, 4, 5]
+  knowledge:
+    - category: general_info
+      title: Getting Here
+      chunks: ["Parking is free for registered guests in the basement car park."]
+    - category: general_info
+      title: Connectivity
+      chunks: ["Wifi is included in every room at no extra charge."]
+turns:
+  - guest: "early august for 3 days 2 nights"
+    expect:
+      flow: booking_search
+      pending_question: guest_count
+      creates_quote: false
+
+  - guest: "is there parking?"
+    expect:
+      reply_matches: ["Parking is free"]
+      booking_status: suspended
+      creates_quote: false
+
+  # The second question, asked before the first was ever followed up.
+  #
+  # A guest who has never booked online does not ask one thing and wait. The
+  # booking is already suspended when this turn starts, so suspending it again
+  # re-activates the branch and puts it back down -- and the branch it picks up
+  # is the one the *previous* interruption stored, not the one the guest gave.
+  # A round trip a booking only ever makes when somebody asks twice.
+  - guest: "do you have wifi?"
+    expect:
+      reply_matches: ["Wifi is included"]
+      reply_excludes: ["Parking is free"]
+      booking_status: suspended
+      creates_quote: false
+
+  # August, three days, two nights -- stated once, four turns ago, and never
+  # repeated. If either suspension flattened the branch this searches nothing.
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+      reply_matches: ["Garden Prestige Suite", "2 nights", "2 adults"]
+      creates_quote: false

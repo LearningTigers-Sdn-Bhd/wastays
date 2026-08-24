@@ -15,10 +15,11 @@ class GuestRegistrationCard < ApplicationRecord
 
   belongs_to :hotel
   belongs_to :booking
+  belongs_to :booking_guest, optional: true
 
   enum :status, STATUSES.index_by(&:itself), validate: true
 
-  validates :booking_id, uniqueness: true
+  validates :booking_guest_id, uniqueness: true, allow_nil: true
   validates :signer_name, presence: true, if: :signed?
   validates :signature_data_url, presence: true, if: :signed?
   validates :public_token, presence: true, uniqueness: true
@@ -66,6 +67,32 @@ class GuestRegistrationCard < ApplicationRecord
   # blocked by an edit made after the guest agreed to it.
   def ready_for_guest?
     signed? || hotel.guest_registration_card_terms.present?
+  end
+
+  def signed_for_guest?
+    signed? && signature_data_url.present?
+  end
+
+  def save_signature_for_guest!(signer_name:, signature_data_url:, signed_at: Time.current)
+    assign_attributes(
+      signer_name: signer_name,
+      signature_data_url: signature_data_url,
+      status: "signed",
+      signed_at: signed_at,
+      terms_snapshot: capture_terms_snapshot_preview,
+      display_fields_snapshot: capture_display_fields_snapshot
+    )
+    save!
+  end
+
+  def remove_signature_for_guest!
+    update!(
+      status: "draft",
+      signer_name: nil,
+      signature_data_url: nil,
+      signed_at: nil,
+      display_fields_snapshot: nil
+    )
   end
 
   private

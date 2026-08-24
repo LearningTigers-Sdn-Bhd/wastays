@@ -1,0 +1,75 @@
+id: language_switch_mid_conversation
+description: "a thread that starts in English and turns Malay halfway -- and stays Malay through a turn with no words in it to say so"
+origin: "ResponsePersister#verified records what the model read in the *guest's* message and never what it claims to have written; a thread whose language came from the model's own claim answered later turns in a language the guest had never used"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [26, 27, 28, 29, 30, 31]
+turns:
+  # English, and nothing has established otherwise, so the reply goes out as
+  # the template wrote it.
+  - guest: "i want to book a room"
+    expect:
+      flow: booking_search
+      pending_question: booking_timing
+      reply_matches: ["Which date or month"]
+      creates_quote: false
+
+  # The switch. Same booking, same guest, a different language from here on --
+  # which is the only way a thread's language is ever established, because
+  # nobody announces it at the top.
+  - guest: "28 Ogos"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            check_in: "2026-08-28"
+          evidence:
+            timing: "28 Ogos"
+    stylist:
+      text: "Berapa hari dan malam anda akan menginap?"
+      language: ms
+      guest_language: ms
+    expect:
+      pending_question: duration
+      reply_matches: ["Berapa hari dan malam"]
+      reply_excludes: ["How many days"]
+      creates_quote: false
+
+  # "3" is not written in any language. The model has nothing to read, so it
+  # reports no guest language at all -- and the reply is still owed in Malay,
+  # because the *thread* is Malay and that is a fact in Postgres rather than
+  # something this turn has to re-establish.
+  #
+  # Every digit in the template survives the rewrite: the 28, and the two in
+  # the example answer. Not one more either -- a translation that helpfully
+  # spelled out the year would be thrown away as an invented number, and the
+  # guest would get the English template back.
+  - guest: "3"
+    stylist:
+      text: 'Berapa orang tetamu pada 28 Ogos? Sila balas dengan bilangan dewasa dan kanak-kanak, cth. "2 dewasa 3 kanak-kanak".'
+      language: ms
+      guest_language:
+    expect:
+      pending_question: guest_count
+      reply_matches: ["Berapa orang tetamu", "28 Ogos", "2 dewasa 3 kanak-kanak"]
+      reply_excludes: ["How many guests"]
+      creates_quote: false
+
+  # And the booking underneath never noticed any of it: 28 August, three
+  # nights, two adults, priced in the language the guest is reading.
+  - guest: "2 dewasa"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            adults: 2
+          evidence:
+            party: "2 dewasa"
+    expect:
+      pending_question: select_option
+      reply_matches: ["Garden Prestige Suite", "2 adults"]
+      creates_quote: false

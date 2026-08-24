@@ -67,6 +67,16 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
         expect(response.body).not_to include("offcanvas")
       end
 
+      it "prefills an editable payment amount supplied by a launcher" do
+        open_form(transaction_type: "payment", active_folio_id: folio.id, amount: "88.24")
+
+        document = Nokogiri::HTML(response.body)
+        amount = document.at_css("input[name='folio_transaction[amount]']")
+        expect(amount["value"]).to eq("88.24")
+        expect(amount["readonly"]).to be_nil
+        expect(amount["disabled"]).to be_nil
+      end
+
       it "renders into the secondary frame when launched from a stacked sheet" do
         get hotel_folio_action_post_transaction_path(hotel, booking, transaction_type: "payment", active_folio_id: folio.id),
           headers: { "Turbo-Frame" => "folio_action_sheet_secondary" }

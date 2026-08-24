@@ -27,6 +27,18 @@ RSpec.describe Bookings::SendGuestRegistrationCard do
       }.to have_enqueued_job(Notifications::DeliverJob)
     end
 
+    it "queues a delivery to an additional guest when booking_guest_id is specified" do
+      booking.create_guest_registration_card!(hotel: hotel)
+      additional_guest = create(:booking_guest, booking: booking, is_primary: false, email_snapshot: "additional@example.com", name_snapshot: "Additional Guest")
+
+      result = described_class.call(booking: booking, user: user, booking_guest_id: additional_guest.id)
+
+      expect(result.success?).to be(true)
+      expect(result.recipient).to eq("additional@example.com")
+      expect(result.delivery.payload["guest_name"]).to eq("Additional Guest")
+      expect(result.delivery.payload["recipient_email"]).to eq("additional@example.com")
+    end
+
     it "lets staff send the same card more than once" do
       booking.create_guest_registration_card!(hotel: hotel)
 

@@ -1,0 +1,75 @@
+id: reply_drifts_into_another_language
+description: "an English thread answered in Malay, and a Malay thread answered in English -- neither reaches the guest, both times because the thread was asked and not the model"
+origin: "measured on a live provider: an English guest was answered in Malay. The model's own claim about what language it wrote in is the only thing here that can be wrong, so it is the only thing not trusted"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [26, 27, 28, 29, 30, 31]
+turns:
+  - guest: "i want to book a room"
+    expect:
+      pending_question: booking_timing
+      reply_matches: ["Which date or month"]
+      creates_quote: false
+
+  # The drift. The guest has written nothing but English, and the reply comes
+  # back in Malay -- correctly translated, digits intact, and wrong.
+  #
+  # Nothing reads the text to catch this. The model is asked to say which
+  # language it wrote in, Ruby already decided which one it was owed, and the
+  # two labels not matching is the whole check. It costs a comparison, and the
+  # template it falls back to was already correct.
+  - guest: "28 august"
+    stylist:
+      text: "Berapa hari dan malam anda akan menginap?"
+      language: ms
+      guest_language:
+    expect:
+      pending_question: duration
+      reply_matches: ["How many days and nights"]
+      reply_excludes: ["Berapa hari"]
+      creates_quote: false
+
+  # The guest really does switch, so from here the thread is Malay.
+  - guest: "3 malam"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            nights: 3
+          evidence:
+            duration: "3 malam"
+    stylist:
+      text: 'Berapa orang tetamu pada 28 Ogos? Sila balas dengan bilangan dewasa dan kanak-kanak, cth. "2 dewasa 3 kanak-kanak".'
+      language: ms
+      guest_language: ms
+    expect:
+      pending_question: guest_count
+      reply_matches: ["Berapa orang tetamu"]
+      creates_quote: false
+
+  # And the same guard in the other direction. A thread that is Malay is owed
+  # Malay, so a model that reverts to English on a wordless turn is refused
+  # exactly as it was refused for drifting the other way -- and the guest gets
+  # the English template, which is the one thing this cannot protect them from.
+  # A guard that costs a comparison catches the half of the problem that says
+  # so out loud; a model that drifts quietly is not caught here at all.
+  - guest: "2 dewasa"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            adults: 2
+          evidence:
+            party: "2 dewasa"
+    stylist:
+      text: "Here are the available options"
+      language: en
+      guest_language:
+    expect:
+      pending_question: select_option
+      reply_matches: ["Garden Prestige Suite", "2 adults"]
+      creates_quote: false

@@ -4,18 +4,7 @@ RSpec.describe AiConcierge::Orchestration::Core::InquiryResponder do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
 
   before do
-    # Mock Interpreter
-    allow_any_instance_of(AiConcierge::Agents::InterpreterAgent).to receive(:call).and_return({
-      "message_type" => "greeting_or_unknown",
-      "intent" => "greeting",
-      "topic" => "general",
-      "confidence" => 1.0,
-      "slots" => {},
-      "tool_hints" => [],
-      "conversation_signals" => {
-        "is_reset" => false, "is_resume" => false, "is_correction" => false, "starts_new_booking_branch" => false, "end_conversation" => false
-      }
-    })
+    stub_concierge_model
 
     # Mock Messenger
     allow_any_instance_of(AiConcierge::Agents::MessengerAgent).to receive(:call).and_return({
