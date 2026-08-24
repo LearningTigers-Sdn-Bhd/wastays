@@ -197,6 +197,10 @@ class Guest < ApplicationRecord
     country&.split&.map(&:capitalize)&.join(" ")
   end
 
+  def normalized_city
+    city&.split&.map(&:capitalize)&.join(" ")
+  end
+
   # Guards against ActiveRecord::Encryption::Errors::Decryption for guest
   # records whose encrypted attributes were written under a since-rotated or
   # mismatched encryption key. Callers get nil instead of a raised error, so a
@@ -216,6 +220,7 @@ class Guest < ApplicationRecord
     self.government_id = government_id&.downcase&.strip
     self.gender = gender&.downcase
     self.document_type = document_type&.downcase
+    self.city = normalized_city
     self.country = normalized_country
   end
 

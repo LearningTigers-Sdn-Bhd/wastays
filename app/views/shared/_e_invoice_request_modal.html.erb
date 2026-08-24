@@ -1,0 +1,111 @@
+<dialog
+  data-e-invoice-request-modal-target="dialog"
+  data-action="click->e-invoice-request-modal#closeOnBackdrop"
+  class="fixed inset-0 m-auto w-full max-w-xl rounded-2xl border border-border p-0 shadow-2xl backdrop:bg-foreground/50 backdrop:backdrop-blur-[2px]">
+  <div class="rounded-2xl bg-card text-left">
+    <div class="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">E-Invoice request</p>
+        <h3 class="mt-1 text-xl font-semibold text-foreground">Please review your details first</h3>
+      </div>
+      <button type="button" data-action="e-invoice-request-modal#close" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted">
+        <span class="sr-only">Close</span>
+        <%= cached_icon "x", class: "h-4 w-4" %>
+      </button>
+    </div>
+
+    <div class="px-6 py-5">
+      <div data-e-invoice-request-modal-target="review">
+        <p class="text-sm leading-6 text-muted-foreground">
+          Please check the details below before we send your request to LHDN. Incorrect or incomplete
+          information may delay validation or stop the e-invoice from being generated.
+        </p>
+
+        <dl class="mt-5 grid gap-4 rounded-2xl border border-border bg-muted p-4 sm:grid-cols-2">
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Guest name</dt>
+            <dd class="mt-1 text-sm font-medium text-foreground"><%= booking.guest_name %></dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Email</dt>
+            <dd class="mt-1 break-all text-sm font-medium text-foreground"><%= booking.guest_email %></dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Phone</dt>
+            <dd class="mt-1 text-sm font-medium text-foreground"><%= booking.guest_phone %></dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Document</dt>
+            <dd class="mt-1 text-sm font-medium text-foreground">
+              <%= [ booking.guest_document_type&.upcase, booking.guest_government_id ].compact_blank.join(" • ").presence || "—" %>
+            </dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Address</dt>
+            <dd class="mt-1 text-sm font-medium text-foreground">
+              <%= [ booking.guest_home_address, booking.guest_city, booking.guest_country ].compact_blank.join(", ").presence || "—" %>
+            </dd>
+          </div>
+        </dl>
+
+        <form data-action="submit->e-invoice-request-modal#submit" class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button type="button" data-action="e-invoice-request-modal#close" class="inline-flex items-center justify-center rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+            Review later
+          </button>
+          <button type="submit" data-e-invoice-request-modal-target="submitButton" class="inline-flex items-center justify-center rounded-xl bg-[#0a2e29] px-4 py-2.5 text-sm font-semibold text-[#d9c5a0] hover:bg-[#0d3d35]">
+            Confirm and request e-invoice
+          </button>
+        </form>
+      </div>
+
+      <div data-e-invoice-request-modal-target="progress" class="hidden">
+        <div class="flex flex-col items-center text-center">
+          <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <%= cached_icon "loader-circle", class: "h-7 w-7 animate-spin" %>
+          </div>
+          <p class="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Auto-checking status</p>
+          <h4 data-e-invoice-request-modal-target="progressLabel" class="mt-2 text-2xl font-semibold tracking-tight text-foreground">Preparing your e-invoice</h4>
+          <p data-e-invoice-request-modal-target="message" class="mt-3 max-w-md text-sm leading-6 text-muted-foreground">We are preparing your e-invoice now.</p>
+          <p data-e-invoice-request-modal-target="progressMeta" class="mt-3 text-xs font-medium text-muted-foreground">Checking with LHDN now.</p>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-border bg-muted px-4 py-4">
+          <div class="flex items-start gap-3">
+            <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card text-muted-foreground">
+              <%= cached_icon "clock", class: "h-4 w-4" %>
+            </div>
+            <div class="text-left">
+              <p class="text-sm font-semibold text-foreground">What happens next</p>
+              <p data-e-invoice-request-modal-target="progressHint" class="mt-1 text-sm leading-6 text-muted-foreground">We will keep checking automatically and show the document here once it is ready.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button type="button" data-action="e-invoice-request-modal#close" class="inline-flex items-center justify-center rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+            Close for now
+          </button>
+        </div>
+      </div>
+
+      <div data-e-invoice-request-modal-target="ready" class="hidden text-center">
+        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground">
+          <%= cached_icon "check", class: "h-6 w-6" %>
+        </div>
+        <h4 class="mt-4 text-lg font-semibold text-foreground">Your e-invoice is ready</h4>
+        <p data-e-invoice-request-modal-target="message" class="mt-2 text-sm leading-6 text-muted-foreground">Your e-invoice is ready.</p>
+        <a data-e-invoice-request-modal-target="downloadLink" href="#" target="_blank" rel="noopener" class="mt-6 inline-flex items-center justify-center rounded-xl bg-[#0a2e29] px-4 py-2.5 text-sm font-semibold text-[#d9c5a0] hover:bg-[#0d3d35]">
+          View e-invoice
+        </a>
+      </div>
+
+      <div data-e-invoice-request-modal-target="failed" class="hidden text-center">
+        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <%= cached_icon "triangle-alert", class: "h-6 w-6" %>
+        </div>
+        <h4 class="mt-4 text-lg font-semibold text-foreground">We need a little help to finish this</h4>
+        <p data-e-invoice-request-modal-target="message" class="mt-2 text-sm leading-6 text-muted-foreground">We could not generate the e-invoice yet. The hotel team can retry it for you.</p>
+      </div>
+    </div>
+  </div>
+</dialog>

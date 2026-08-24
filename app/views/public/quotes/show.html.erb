@@ -133,6 +133,16 @@
                                        data: { checkout_details_target: "field", checkout_payment_target: "phoneField", guest_field: "phone" },
                                        disabled: true %>
                 </div>
+                <div>
+                  <label for="city" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">City</label>
+                  <%= f.text_field "guest_details[city]",
+                                   id: "city",
+                                   required: true,
+                                   placeholder: "e.g. Kuala Lumpur",
+                                   class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
+                                   data: { checkout_details_target: "field", guest_field: "city" },
+                                   disabled: true %>
+                </div>
                 <div class="relative">
                   <label for="country" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Country (passport)</label>
                   <%= f.text_field "guest_details[country]",

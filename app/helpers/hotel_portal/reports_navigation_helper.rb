@@ -30,6 +30,7 @@ module HotelPortal
 
       compliance_nav_items = [
         NavItem.new(label: "Tax & Compliance", path: tax_compliance_hotel_reports_path(current_hotel), search_text: "Reports Tax Compliance Tourism Tax SST Non National", active: reports_action?("tax_compliance"), icon: "calculator", permission: "view_reports"),
+        NavItem.new(label: "E-Invoice", path: hotel_e_invoice_submissions_path(current_hotel), search_text: "E-Invoice LHDN MyInvois Submissions Consolidated Adjustment Note", active: controller_name == "e_invoice_submissions", icon: "receipt", permission: "view_bookings"),
         NavItem.new(label: "Night Audit History", path: hotel_reports_night_audits_path(current_hotel), search_text: "Reports Night Audit History Business Date Close", active: controller_path == "hotel_portal/reports/night_audits", icon: "moon", permission: [ "view_reports", "manage_night_audit" ], plan_feature: "no_show_auto_handling")
       ]
 

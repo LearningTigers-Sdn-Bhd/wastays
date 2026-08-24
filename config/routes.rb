@@ -51,6 +51,9 @@ Rails.application.routes.draw do
       member do
         get :receipt
         get :invoice
+        get :e_invoice
+        get :status_e_invoice
+        post :request_e_invoice
         get :voucher_pack, path: "voucher-pack"
         get :summary
         patch :toggle_dnd
@@ -126,6 +129,9 @@ Rails.application.routes.draw do
         get :confirmation
         get :receipt
         get :invoice
+        get :e_invoice
+        get :status_e_invoice
+        post :request_e_invoice
         get :voucher
         get :voucher_pack, path: "voucher-pack"
         get :summary
@@ -469,12 +475,27 @@ Rails.application.routes.draw do
       match "close-window/:booking_id/:folio_id", to: "window_closures#show", via: [ :get, :post ], as: :close_window
       match "reopen-window/:booking_id/:folio_id", to: "window_reopenings#show", via: [ :get, :post ], as: :reopen_window
       match "billing-routes/:booking_id", to: "billing_routes#show", via: [ :get, :post ], as: :billing_routes
+      match "issue-e-invoice-adjustment/:booking_id", to: "e_invoice_adjustments#show", via: [ :get, :post ], as: :issue_e_invoice_adjustment
       match "group-billing-routes/:booking_id", to: "group_billing_routes#show", via: [ :get, :post ], as: :group_billing_routes
     end
 
     resources :folios, only: [ :index, :show ], param: :booking_id do
       collection do
         get "needs-attention", to: "folios#needs_attention", as: :needs_attention
+      end
+    end
+
+    post "e-invoice/validate-tin", to: "tin_validations#create", as: :validate_tin
+
+    resources :e_invoice_submissions, only: [ :index, :show, :create ] do
+      member do
+        get :pdf
+        post :retry
+        post :refresh_status
+        post :cancel
+      end
+      collection do
+        patch :update_payment_receiver
       end
     end
     get "folio-documents/:folio_id/invoice", to: "folios#invoice", as: :folio_invoice
@@ -669,6 +690,8 @@ Rails.application.routes.draw do
       scope "finance" do
         get "banking-details", to: "settings#index", as: :banking_details_settings, defaults: { settings_page: "banking" }
         patch "banking-details", to: "settings#update", defaults: { settings_page: "banking" }
+        get "e-invoice", to: "settings#index", as: :e_invoice_settings, defaults: { settings_page: "e_invoice" }
+        patch "e-invoice", to: "settings#update", defaults: { settings_page: "e_invoice" }
         resource :taxes_fees, path: "taxes-and-fees", only: [ :show, :update ]
         get "taxes-and-fees/system/:tax_key/edit", to: "taxes_fees#edit_system", as: :edit_system_tax
         patch "taxes-and-fees/system/:tax_key", to: "taxes_fees#update_system", as: :system_tax

@@ -62,13 +62,14 @@ RSpec.describe Guest, type: :model do
   end
 
   describe 'normalization' do
-    it 'normalizes gender, document_type and country before validation' do
-      record = build(:guest, gender: 'FEMALE', document_type: 'PASSPORT', country: 'united states')
+    it 'normalizes gender, document_type, city and country before validation' do
+      record = build(:guest, gender: 'FEMALE', document_type: 'PASSPORT', city: 'kota kinabalu', country: 'united states')
 
       record.validate
 
       expect(record.gender).to eq('female')
       expect(record.document_type).to eq('passport')
+      expect(record.city).to eq('Kota Kinabalu')
       expect(record.country).to eq('United States')
     end
 

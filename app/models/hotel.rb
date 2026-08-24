@@ -53,6 +53,8 @@ class Hotel < ApplicationRecord
   has_many :inventory_audit_logs, dependent: :destroy
   has_many :payment_settings, as: :settable, dependent: :destroy
   has_many :bookings, dependent: :destroy
+  has_one :e_invoice_setting, dependent: :destroy
+  has_many :e_invoice_submissions, dependent: :destroy
   has_many :channel_settlements, dependent: :restrict_with_error
   has_many :channel_settlement_receipts, dependent: :restrict_with_error
   has_many :channel_settlement_allocations, through: :channel_settlements

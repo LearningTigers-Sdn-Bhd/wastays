@@ -30,6 +30,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
       guest_name: 'Jane Doe',
       guest_email: 'jane@example.com',
       guest_phone: '+60123456789',
+      guest_city: 'Kuala Lumpur',
       government_id: 'A1234567',
       gender: 'FEMALE',
       country: 'Singapore',
@@ -60,6 +61,8 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(booking).to be_persisted
       expect(booking.status).to eq('confirmed')
       expect(booking.payment_status).to eq('captured')
+      expect(booking.guest_city).to eq('Kuala Lumpur')
+      expect(booking.fund_collector).to eq('wastays')
       expect(booking.total_amount).to eq(200.to_d)
       expect(booking.guest_gender).to eq('female')
       expect(booking.guest_document_type).to eq('passport')

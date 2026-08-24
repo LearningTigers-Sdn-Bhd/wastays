@@ -1,0 +1,132 @@
+<div class="space-y-5">
+  <%= render PanelsUI::PageHeader.new(
+        title: "E-Invoice",
+        description: "Monitor submission health, review guest-requested failures, and follow LHDN validation activity.") do |header| %>
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(href: hotel_e_invoice_settings_path(current_hotel), variant: :secondary, size: :sm) do %>
+        <%= cached_icon "settings", class: "size-4", aria: { hidden: true } %>
+        Open E-Invoice Settings
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <section aria-labelledby="e-invoice-summary-heading" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <h2 id="e-invoice-summary-heading" class="sr-only">Submission summary</h2>
+
+    <% [
+         { label: "Waiting", value: @summary_counts[:pending], hint: "Preparing or awaiting LHDN confirmation.", tone: "text-foreground" },
+         { label: "Rejected", value: @summary_counts[:rejected], hint: "Need correction before retry.", tone: "text-destructive" },
+         { label: "Valid", value: @summary_counts[:valid], hint: "Accepted and validated by LHDN.", tone: "text-foreground" },
+         { label: "Guest waiting", value: @summary_counts[:guest_requested_attention], hint: "Guest-requested rejections to review first.", tone: "text-destructive" }
+       ].each do |stat| %>
+      <div class="rounded-md border border-border bg-card p-4">
+        <div class="flex items-center gap-1">
+          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground"><%= stat[:label] %></p>
+          <%= render PanelsUI::Tooltip.new(text: stat[:hint]) do %>
+            <%= cached_icon "circle-question-mark", class: "size-3.5 text-muted-foreground/70", aria: { hidden: true } %>
+          <% end %>
+        </div>
+        <p class="mt-1 text-2xl font-semibold tabular-nums <%= stat[:tone] %>"><%= stat[:value] %></p>
+      </div>
+    <% end %>
+  </section>
+
+  <%# Only worth a section when there's something to act on - a hotel that's fully configured doesn't need to be told so every time it opens this page. %>
+  <% if !@setting.enabled? || @missing_config.any? %>
+    <section aria-labelledby="e-invoice-config-heading" class="space-y-3">
+      <h2 id="e-invoice-config-heading" class="text-base font-semibold text-foreground">Configuration health</h2>
+
+      <% if !@setting.enabled? %>
+        <%= render PanelsUI::Alert.new(tone: :warning, title: "E-Invoice is turned off") do |alert| %>
+          <% alert.with_description do %>
+            Turn it on in settings before your team sends the first record.
+            <%= link_to "Open E-Invoice settings", hotel_e_invoice_settings_path(current_hotel), class: "font-medium underline underline-offset-2" %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <%= render PanelsUI::Alert.new(tone: :warning, title: "Intermediary filing details are incomplete") do |alert| %>
+          <% alert.with_description do %>
+            <p>These are required before WAStays can file on the hotel's behalf for a directly-paid booking:</p>
+            <ul class="mt-1 list-disc space-y-0.5 ps-5">
+              <% @missing_config.each do |item| %>
+                <li><%= item %></li>
+              <% end %>
+            </ul>
+            <%= link_to "Open E-Invoice settings", hotel_e_invoice_settings_path(current_hotel), class: "mt-1 inline-block font-medium underline underline-offset-2" %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section aria-labelledby="e-invoice-activity-heading" class="space-y-3">
+    <h2 id="e-invoice-activity-heading" class="text-base font-semibold text-foreground">Submission activity</h2>
+
+    <% if @submissions.empty? %>
+      <%= render PanelsUI::EmptyState.new(
+            icon: "file-text",
+            title: "No e-invoice records yet",
+            description: "Records appear here once your team sends the first e-invoice from a closed folio.") %>
+    <% else %>
+      <%= render PanelsUI::Table.new(
+            caption: "E-invoice submissions",
+            header_style: :sentence,
+            striped: true,
+            hoverable: true,
+            bordered: true,
+            wrapper_class: "rounded-md border border-border bg-card",
+            class: "min-w-[900px]",
+            data: { testid: "e-invoice-submissions-table" }) do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Booking / guest</th>
+            <th scope="col">Document</th>
+            <th scope="col">Status</th>
+            <th scope="col">Flow</th>
+            <th scope="col">Updated</th>
+          </tr>
+        <% end %>
+
+        <% table.with_body do %>
+          <% @submissions.each do |submission| %>
+            <tr
+              class="group cursor-pointer transition-colors hover:bg-muted/80 focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/20"
+              role="link"
+              tabindex="0"
+              data-controller="clickable-row"
+              data-clickable-row-url-value="<%= hotel_e_invoice_submission_path(current_hotel, submission) %>"
+              data-action="click->clickable-row#visit keydown->clickable-row#visitFromKeyboard">
+              <td class="align-top">
+                <p class="font-medium text-foreground underline-offset-4 group-hover:underline group-focus-visible:underline"><%= submission.booking&.confirmation_token %></p>
+                <p class="mt-0.5 text-sm text-muted-foreground"><%= submission.booking&.guest_name %></p>
+                <% if submission.requested_by_guest? %>
+                  <%= render PanelsUI::Badge.new(variant: :warning, shape: :rounded, size: :xs, class: "mt-2") do %>Guest requested<% end %>
+                <% end %>
+              </td>
+              <td class="align-top">
+                <p class="font-medium text-foreground"><%= submission.internal_id.presence || "Draft record" %></p>
+                <div class="mt-1.5 flex flex-wrap gap-1">
+                  <%= render PanelsUI::Badge.new(variant: submission.document_type_badge_variant, shape: :rounded, size: :xs) do %><%= submission.document_type_label %><% end %>
+                  <%= render PanelsUI::Badge.new(variant: submission.document_scenario_badge_variant, shape: :rounded, size: :xs) do %><%= submission.document_scenario_label %><% end %>
+                </div>
+                <% if submission.invalid? && submission.error_message.present? %>
+                  <p class="mt-2 text-xs text-destructive"><%= submission.error_message %></p>
+                <% end %>
+              </td>
+              <td class="align-top"><%= render "hotel_portal/e_invoice_submissions/status_badge", submission: submission %></td>
+              <td class="align-top">
+                <p class="text-sm text-foreground"><%= submission.flow_label %></p>
+                <p class="mt-0.5 text-xs text-muted-foreground"><%= submission.submission_mode_label %></p>
+              </td>
+              <td class="align-top text-sm text-muted-foreground">
+                <%= (submission.validated_at || submission.submitted_at || submission.updated_at)&.strftime("%d %b %Y %H:%M") || "—" %>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <div class="flex justify-center"><%= paginate @submissions %></div>
+    <% end %>
+  </section>
+</div>
