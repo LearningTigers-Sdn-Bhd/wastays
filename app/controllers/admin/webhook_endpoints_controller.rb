@@ -5,7 +5,7 @@ module Admin
     before_action :set_webhook_endpoint, only: [ :update, :destroy, :test_ping, :toggle ]
 
     def index
-      @webhook_endpoints = WebhookEndpoint.all.order(created_at: :desc)
+      load_index
       @webhook_endpoint = WebhookEndpoint.new
     end
 
@@ -15,7 +15,7 @@ module Admin
       if @webhook_endpoint.save
         redirect_to admin_webhook_endpoints_path, notice: "Webhook endpoint created successfully."
       else
-        @webhook_endpoints = WebhookEndpoint.all.order(created_at: :desc)
+        load_index
         render :index, status: :unprocessable_entity
       end
     end
@@ -24,7 +24,7 @@ module Admin
       if @webhook_endpoint.update(webhook_endpoint_params)
         redirect_to admin_webhook_endpoints_path, notice: "Webhook endpoint updated successfully."
       else
-        @webhook_endpoints = WebhookEndpoint.all.order(created_at: :desc)
+        load_index
         render :index, status: :unprocessable_entity
       end
     end
@@ -54,12 +54,23 @@ module Admin
 
     private
 
+    def load_index
+      @webhook_endpoints = WebhookEndpoint.includes(:hotel).order(created_at: :desc)
+      @hotel_choices = Hotel.order(:name).pluck(:name, :id)
+    end
+
     def set_webhook_endpoint
       @webhook_endpoint = WebhookEndpoint.find(params[:id])
     end
 
     def webhook_endpoint_params
-      params.require(:webhook_endpoint).permit(:name, :url, :enabled, :event_types)
+      # `event_types` arrives as an array of checkbox/multi-select values, with a
+      # blank first entry from the hidden field that makes "none selected"
+      # submittable at all. Dropping the blank is what keeps "all events" as the
+      # empty array rather than a list containing nothing.
+      permitted = params.require(:webhook_endpoint).permit(:name, :url, :enabled, :hotel_id, event_types: [])
+      permitted[:event_types] = Array(permitted[:event_types]).reject(&:blank?) if permitted.key?(:event_types)
+      permitted
     end
 
     def send_test_ping(url)

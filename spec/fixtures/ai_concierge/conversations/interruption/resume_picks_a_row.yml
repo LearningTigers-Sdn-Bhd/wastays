@@ -1,0 +1,47 @@
+id: resume_picks_a_row
+description: "a bare number after an interruption is a row of the list the guest was last looking at, not an unreadable yes"
+origin: "the only reading resume owns that the live ladder does not: at confirm_selection a lone number picks again, rather than re-asking the confirmation"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 9
+      days: [10, 11, 12]
+    - name: Ocean Villa
+      month: 9
+      days: [10, 11, 12]
+  knowledge:
+    - category: general_info
+      title: Getting Here
+      chunks: ["Parking is free for registered guests in the basement car park."]
+turns:
+  - guest: "book 10 september to 12 september"
+    expect:
+      pending_question: guest_count
+
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+
+  - guest: "1"
+    expect:
+      pending_question: confirm_selection
+
+  - guest: "is there parking?"
+    expect:
+      reply_matches: ["Parking is free"]
+      booking_status: suspended
+
+  # "2" is not a yes and not a no. Nothing has told the model a list is waiting,
+  # so it arrives as an ordinary sentence -- the number in it is the only sign
+  # the guest is answering the catalogue at all.
+  - guest: "2"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots: {}
+    expect:
+      pending_question: confirm_selection
+      reply_matches: ["Ocean Villa"]
+      reply_excludes: ["Garden Prestige Suite"]
+      creates_quote: false

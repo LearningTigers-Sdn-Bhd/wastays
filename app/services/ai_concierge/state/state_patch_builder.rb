@@ -1,14 +1,12 @@
 module AiConcierge
   module State
     class StatePatchBuilder
-    def initialize(conversation_state:, slots_payload:, active_topic:, active_flow:, pending_question:, last_intent:, last_action_name:, flow_status: "active", end_reason: nil, now: Time.current)
+    def initialize(conversation_state:, slots_payload:, active_topic:, active_flow:, pending_question:, flow_status: "active", end_reason: nil, now: Time.current)
       @conversation_state = conversation_state
       @slots_payload = slots_payload
       @active_topic = active_topic
       @active_flow = active_flow
       @pending_question = pending_question
-      @last_intent = last_intent
-      @last_action_name = last_action_name
       @flow_status = flow_status
       @end_reason = end_reason
       @now = now
@@ -19,8 +17,6 @@ module AiConcierge
         active_topic: active_topic,
         active_flow: active_flow,
         pending_question: pending_question,
-        last_intent: last_intent,
-        last_action_name: last_action_name,
         flow_status: flow_status,
         last_user_message_at: now,
         slots_payload: normalized_slots_payload
@@ -29,7 +25,7 @@ module AiConcierge
 
     private
 
-    attr_reader :conversation_state, :slots_payload, :active_topic, :active_flow, :pending_question, :last_intent, :last_action_name, :flow_status, :end_reason, :now
+    attr_reader :conversation_state, :slots_payload, :active_topic, :active_flow, :pending_question, :flow_status, :end_reason, :now
 
     def normalized_slots_payload
       payload = ConversationTaskManager.new(slots_payload: slots_payload, now: now).payload

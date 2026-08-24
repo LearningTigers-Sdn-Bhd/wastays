@@ -1,0 +1,84 @@
+id: model_misreads_the_answer
+description: "the ladder answered correctly by the guest and misread by the model at every step -- the open question decides, not the extraction"
+origin: "a live thread: 'option 1' priced one adult, 'no 2' lost the room, 'yes' re-listed the catalogue"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [28, 29, 30, 31]
+      max_adults: 4
+      rate_plans:
+        - name: Non-Refundable Rate
+          price: 200
+        - name: Breakfast Rate
+          price: 240
+turns:
+  - guest: "book 28 august to 31 august"
+    expect:
+      flow: booking_search
+      pending_question: guest_count
+      creates_quote: false
+
+  - guest: "3 adults"
+    expect:
+      pending_question: select_option
+      reply_matches: ["*1. Garden Prestige Suite*", "from RM"]
+      creates_quote: false
+
+  # Three misreadings of one message. The model quotes the "1" as the words
+  # that say the party size -- read as one adult, the party changes, the
+  # catalogue is discarded, and the guest picking a room is asked how many of
+  # the other two are children. It also volunteers a rate plan the guest never
+  # mentioned, which on a message that names nothing but a row it can only have
+  # invented, and which would price the stay without ever asking. And the date
+  # it sends is one no option holds, which read as decisive ends the search for
+  # the row the guest actually named.
+  - guest: "option 1"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            adults: 1
+            rate_plan_name: "Breakfast Rate"
+            check_in: "2026-08-29"
+          evidence:
+            party: "1"
+    expect:
+      pending_question: rate_plan_selection
+      reply_matches: ["Which rate would you like?"]
+      reply_excludes: ["are they children", "Here are the available options"]
+      creates_quote: false
+
+  # The same digit again, this time read as two nights -- which changes the
+  # search, clears the chosen room, and leaves the rate question with no room
+  # to ask about. It rendered as a room with no name and a list with no rates.
+  - guest: "no 2"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            nights: 2
+          evidence:
+            duration: "2"
+    expect:
+      pending_question: confirm_selection
+      reply_matches: ["Garden Prestige Suite"]
+      reply_excludes: ["Which rate would you like?"]
+      creates_quote: false
+
+  # The model answers the confirmation with an advance_booking call carrying no
+  # confirmation at all. The yes is the guest's to give, and the open question
+  # is what makes it one.
+  - guest: "yes"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots: {}
+    expect:
+      reply_matches: ["Quotation link:"]
+      reply_excludes: ["Here are the available options"]
+      flow_status: ended
+      creates_quote: true

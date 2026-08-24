@@ -87,6 +87,23 @@
         <% end %>
       <% end %>
     </div>
+
+    <%# The one tile that answers rather than routes: full width because it is
+        the thing a guest with a question should reach for first. %>
+    <% if @hotel.concierge_chat_available? %>
+    <%= link_to concierge_chat_path(@hotel),
+          class: "group flex items-center gap-5 bg-white rounded-[2rem] p-5 border border-border/60 shadow-sm active:scale-[0.98] transition-all duration-300" do %>
+      <div class="w-12 h-12 shrink-0 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center group-active:bg-primary group-active:text-white transition-colors duration-200">
+        <svg class="w-6 h-6 text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 21l1.9-3.8A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <p class="font-black text-[12px] uppercase tracking-wider text-foreground leading-tight">Chat With Us</p>
+        <p class="text-[10px] text-muted-foreground mt-1.5 leading-relaxed font-medium">Ask about rooms, rates or anything else</p>
+      </div>
+    <% end %>
+    <% end %>
   </div>
 
   <%# Footer %>

@@ -1,0 +1,8 @@
+<%= tag.div(**root_attributes) do %>
+  <%= bar if bar? %>
+  <%= log %>
+  <div class="public-chat__footer">
+    <%= alert if alert? %>
+    <%= composer %>
+  </div>
+<% end %>

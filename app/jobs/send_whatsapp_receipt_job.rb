@@ -8,7 +8,7 @@ class SendWhatsappReceiptJob < ApplicationJob
     return unless booking
 
     payload = build_payload(booking)
-    WebhookBroadcastJob.perform_now("booking_confirmed", payload)
+    WebhookBroadcastJob.perform_now("booking_confirmed", payload, hotel_id: booking.hotel_id)
   end
 
   private

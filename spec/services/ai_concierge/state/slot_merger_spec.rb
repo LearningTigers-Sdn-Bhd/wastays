@@ -22,6 +22,19 @@ RSpec.describe AiConcierge::State::SlotMerger do
     expect(result["suggested_options"]).to eq([])
   end
 
+  it "derives the target month from a check-in date" do
+    result = described_class.new(
+      active_branch: described_class.empty_branch,
+      slots: { "check_in" => "2026-08-28", "nights" => 3 },
+      pending_question: nil,
+      message: "28 august for 3 nights"
+    ).call
+
+    expect(result["target_month"]).to eq(8)
+    expect(result["target_year"]).to eq(2026)
+    expect(result["check_out"]).to eq("2026-08-31")
+  end
+
   it "leaves children as nil for a partial adult split" do
     branch = {
       "branch_id" => SecureRandom.uuid,

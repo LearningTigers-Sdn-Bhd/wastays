@@ -18,7 +18,8 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetBookingContextTool do
     expect(result).to eq(
       "bookings" => [
         {
-          "date_range" => "May 21 - May 23",
+          "check_in" => Date.new(2026, 5, 21),
+          "check_out" => Date.new(2026, 5, 23),
           "room_type_name" => "Executive Penthouse"
         }
       ]

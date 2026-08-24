@@ -25,6 +25,17 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response.body).to include("Contact Us")
     end
 
+    it "keeps the page but drops the chat tile when guest chat is off" do
+      hotel.update!(guest_chat_enabled: false)
+
+      get concierge_home_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Contact Us")
+      expect(response.body).not_to include("Chat With Us")
+      expect(response.body).not_to include(concierge_chat_path(hotel))
+    end
+
     it "returns 404 for a suspended hotel" do
       hotel.update!(status: "suspended")
       get concierge_home_path(hotel)
@@ -49,6 +60,20 @@ RSpec.describe "Public::Concierge::Home", type: :request do
     it "returns 404 for an unknown slug" do
       get concierge_home_path("does-not-exist")
       expect(response).to have_http_status(:not_found)
+    end
+
+    # The concierge is reached by scanning a QR code in the room, so a tile that
+    # only exists on one of the two home templates is a tile most guests never see.
+    it "offers the chat on every device" do
+      [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].each do |user_agent|
+        get concierge_home_path(hotel), headers: { "HTTP_USER_AGENT" => user_agent }
+
+        expect(response.body).to include(concierge_chat_path(hotel))
+        expect(response.body).to include("Chat With Us")
+      end
     end
 
     context "when request is from a mobile browser" do

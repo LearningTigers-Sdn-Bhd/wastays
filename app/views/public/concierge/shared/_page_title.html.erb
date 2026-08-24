@@ -1,0 +1,16 @@
+<%# One title for both templates: the phone's tight sans headline below sm, the
+    concierge's serif headline above it. Callers own the wording and the tag —
+    the mobile templates are the page's h1, while the desktop shell already
+    spends its h1 on the hotel name in the left panel. %>
+<div class="<%= local_assigns.fetch(:wrapper_class, "mb-6 sm:mb-8") %>">
+  <%= content_tag local_assigns.fetch(:tag, "h2"),
+        class: "mb-2 text-2xl font-black leading-tight text-foreground sm:font-serif sm:text-3xl sm:font-normal" do %>
+    <%= title_prefix %><% if local_assigns[:title_accent].present? %> <span class="text-primary sm:italic"><%= title_accent %></span><% end %>
+  <% end %>
+
+  <% if local_assigns[:subtitle].present? %>
+    <p class="mt-3 text-[13px] font-medium leading-relaxed text-muted-foreground sm:mt-2 sm:text-sm sm:font-normal <%= local_assigns[:subtitle_class] %>">
+      <%= subtitle %>
+    </p>
+  <% end %>
+</div>

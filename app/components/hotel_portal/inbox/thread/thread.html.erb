@@ -1,0 +1,43 @@
+<%= tag.div(**root_attributes) do %>
+  <div class="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-border p-4">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2">
+        <h2 class="text-base font-semibold text-foreground"><%= presenter.display_name %></h2>
+        <% if presenter.returning_guest? %>
+          <%= render PanelsUI::Badge.new(label: "Returning", variant: :info, size: :xs) %>
+        <% end %>
+      </div>
+      <p class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        <%= helpers.app_icon presenter.channel_icon, class: "size-3.5", aria: { hidden: "true" } %>
+        <span><%= presenter.channel_label %></span>
+        <% if presenter.subtitle %>
+          <span aria-hidden="true">·</span>
+          <span><%= presenter.subtitle %></span>
+        <% end %>
+        <span aria-hidden="true">·</span>
+        <span><%= presenter.assignee_label %></span>
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <%= render PanelsUI::Badge.new(label: badge[:label], variant: badge[:variant], size: :sm) %>
+      <%= link_to hotel_conversations_path(hotel),
+            class: "lg:hidden inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground",
+            data: { turbo_frame: "_top" } do %>
+        <%= helpers.app_icon "arrow-left", class: "size-4", aria: { hidden: "true" } %>
+        Back
+      <% end %>
+    </div>
+  </div>
+
+  <%= render HotelPortal::Inbox::ModeBar.new(conversation: conversation, hotel: hotel) %>
+
+  <%# The thread takes whatever the card has left and scrolls inside it. `min-h-0`
+      is what lets it shrink: without it the flex item refuses to go below its
+      content and the log pushes the composer off the bottom of the card. %>
+  <%= render PanelsUI::ScrollArea.new(scroll_fade: :y, class: "min-h-0 flex-1") do %>
+    <%= render HotelPortal::Inbox::Log.new(conversation: conversation, messages: messages) %>
+  <% end %>
+
+  <%= render HotelPortal::Inbox::Composer.new(conversation: conversation, hotel: hotel) %>
+<% end %>

@@ -2,11 +2,9 @@ require "rails_helper"
 
 RSpec.describe AiConcierge::Orchestration::HotelKnowledge::ToolRouter do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
-  let(:tool_registry) { instance_double(AiConcierge::Tools::ToolRegistry) }
 
   it "routes hotel policy intent to the policy tool" do
-    tool = tool_class { { "success" => true, "answer" => "Policy answer" } }
-    allow(tool_registry).to receive(:fetch).with("get_hotel_policy").and_return(tool)
+    stub_tool(AiConcierge::Tools::HotelInformation::GetHotelPolicyTool, "success" => true, "answer" => "Policy answer")
 
     result = route(intent: "hotel_policy", topic: "hotel_policy", message: "what time is check in?")
 
@@ -17,8 +15,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::ToolRouter do
   end
 
   it "routes FAQ topic through hotel information to the FAQ tool" do
-    tool = tool_class { { "success" => true, "answer" => "FAQ answer" } }
-    allow(tool_registry).to receive(:fetch).with("get_hotel_faq").and_return(tool)
+    stub_tool(AiConcierge::Tools::HotelInformation::GetHotelFaqTool, "success" => true, "answer" => "FAQ answer")
 
     result = route(intent: "hotel_information", topic: "hotel_faq", message: "do you have faq?")
 
@@ -28,8 +25,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::ToolRouter do
   end
 
   it "routes general hotel information to the general info tool" do
-    tool = tool_class { { "success" => true, "answer" => "General answer" } }
-    allow(tool_registry).to receive(:fetch).with("get_general_hotel_info").and_return(tool)
+    stub_tool(AiConcierge::Tools::HotelInformation::GetGeneralHotelInfoTool, "success" => true, "answer" => "General answer")
 
     result = route(intent: "hotel_information", topic: "general_hotel_info", message: "tell me about hotel")
 
@@ -38,8 +34,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::ToolRouter do
   end
 
   it "routes nearby attractions to the attractions tool" do
-    tool = tool_class { { "success" => true, "attractions" => [] } }
-    allow(tool_registry).to receive(:fetch).with("get_nearby_attractions").and_return(tool)
+    stub_tool(AiConcierge::Tools::HotelInformation::GetNearbyAttractionsTool, "success" => true, "attractions" => [])
 
     result = route(intent: "nearby_attractions", topic: "nearby_attractions", message: "what is nearby?")
 
@@ -49,8 +44,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::ToolRouter do
   end
 
   it "routes room information and resolves room reply type" do
-    tool = tool_class { { "success" => false, "error" => "ambiguous_room_type" } }
-    allow(tool_registry).to receive(:fetch).with("get_room_type_details").and_return(tool)
+    stub_tool(AiConcierge::Tools::RoomInformation::GetRoomTypeDetailsTool, "success" => false, "error" => "ambiguous_room_type")
 
     result = route(
       intent: "room_information",
@@ -68,15 +62,13 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::ToolRouter do
     described_class.new(
       hotel: hotel,
       message: message,
-      interpretation: { "intent" => intent, "topic" => topic, "slots" => slots },
-      tool_registry: tool_registry
+      interpretation: { "intent" => intent, "topic" => topic, "slots" => slots }
     ).call
   end
 
-  def tool_class(&block)
-    Class.new do
-      define_method(:initialize) { |**_kwargs| }
-      define_method(:call, &block)
-    end
+  # The router's job is picking the class, so the classes are named here rather
+  # than fetched by string: a typo is a NameError now, not a nil.
+  def stub_tool(klass, result)
+    allow(klass).to receive(:new).and_return(instance_double(klass, call: result))
   end
 end

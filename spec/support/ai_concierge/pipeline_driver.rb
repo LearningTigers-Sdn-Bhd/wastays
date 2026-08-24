@@ -1,0 +1,237 @@
+# frozen_string_literal: true
+
+# Drives a conversation fixture through the real concierge entry point.
+#
+# Only the model is faked. Everything below it is real: Postgres conversation
+# state, Booking::Orchestrator, the message builders, the prospect_messages
+# rows. That is deliberate -- a harness that stubs the domain would go green on
+# a rewrite that broke the domain, which is exactly the failure it exists to
+# catch.
+module AiConciergeEval
+  module PipelineDriver
+    # The day every fixture is read as happening on.
+    #
+    # These fixtures assert on dates -- a quote for the 28th, a month that has
+    # not happened yet -- and an assertion about a date cannot be stable against
+    # a moving today. Left on the wall clock they rot on a schedule: a fixture
+    # naming August passes until August, and the inventory `fixture_year_for`
+    # seeds walks into next year the moment the month turns.
+    #
+    # January is chosen so that every month a fixture names is still ahead.
+    FIXTURE_TODAY = "2026-01-15 12:00"
+
+    TurnResult = Struct.new(:result, :prospect, :conversation_state, :quotes_created, keyword_init: true) do
+      def payload = result.payload || {}
+      def reply = payload[:reply_message]
+      def slots_payload = conversation_state.slots_payload
+      def booking_task = slots_payload["booking_task"] || {}
+    end
+
+    # `stylist` is how a fixture run says what the reply stylist gives back --
+    # the same keywords stub_concierge_stylist takes. Left out, replies come
+    # through as the templates wrote them, which is what a hotel on the default
+    # tone answering an English guest gets.
+    def run_fixture(fixture, stylist: nil)
+      world = build_fixture_world(fixture)
+      install_model_fake(fixture, world)
+
+      fixture.turns.each_with_index do |turn, index|
+        # Re-stubbed every turn, not only on the turns that script it: a stub
+        # left standing from turn two would still be answering on turn five,
+        # and the point of these fixtures is that the language moves.
+        stub_concierge_stylist(**(turn.stylist || stylist || {}))
+
+        yield turn, post_fixture_turn(world, turn), index
+      end
+    end
+
+    private
+
+    def build_fixture_world(fixture)
+      hotel = create(:hotel, :with_ai_concierge)
+      policy = fixture.setup["policy"] || {}
+      create(
+        :property_policy,
+        hotel: hotel,
+        check_in_time: policy.fetch("check_in_time", "15:00"),
+        check_out_time: policy.fetch("check_out_time", "12:00"),
+        cancellation_policy: policy.fetch("cancellation_policy", "Free cancellation up to 24 hours before arrival.")
+      )
+
+      room_type_names = Array(fixture.setup["rooms"]).map { |room| seed_fixture_room(hotel, room) }
+      corpus = Array(fixture.setup["knowledge"]).flat_map { |document| seed_fixture_knowledge(hotel, document) }
+      install_retrieval_fake(corpus)
+      install_synthesis_fake
+
+      prospect = create(:prospect, hotel: hotel)
+      create_fixture_state(prospect, fixture.setup["state"])
+
+      { hotel: hotel, prospect: prospect, room_type_names: room_type_names }
+    end
+
+    def seed_fixture_room(hotel, room)
+      room_type = create(
+        :room_type,
+        hotel: hotel,
+        name: room.fetch("name"),
+        base_price: room.fetch("base_price", 180),
+        max_adults: room.fetch("max_adults", 2)
+      )
+
+      month = room.fetch("month")
+      year = fixture_year_for(month)
+      dates = Array(room.fetch("days")).map { |day| Date.new(year, month, day) }
+
+      dates.each_with_index do |date, index|
+        create(:room_rate, room_type: room_type, date: date, price: 220 + index, currency: "MYR")
+        create(:room_inventory, room_type: room_type, date: date, quantity: 2, status: "open")
+      end
+
+      # Without this a room has exactly one rate plan, and the ladder skips the
+      # rate question entirely -- so no fixture could reach the turn where a
+      # guest names a room and a rate plan together.
+      Array(room["rate_plans"]).each do |plan|
+        seed_fixture_rate_plan(hotel, room_type, plan, dates)
+      end
+
+      room_type.name
+    end
+
+    def seed_fixture_rate_plan(hotel, room_type, plan, dates)
+      rate_plan = create(
+        :rate_plan, :custom,
+        hotel: hotel,
+        name: plan.fetch("name"),
+        room_type: room_type
+      )
+
+      dates.each do |date|
+        create(:room_rate, room_type: room_type, rate_plan: rate_plan, date: date, price: plan.fetch("price", 200), currency: "MYR")
+      end
+
+      rate_plan
+    end
+
+    def seed_fixture_knowledge(hotel, document)
+      record = create(
+        :hotel_knowledge_document,
+        hotel: hotel,
+        category: document.fetch("category"),
+        title: document.fetch("title"),
+        embedding_status: "indexed"
+      )
+
+      Array(document.fetch("chunks")).each_with_index.map do |content, index|
+        create(:hotel_knowledge_chunk, document: record, chunk_index: index, content: content)
+        {
+          "content" => content,
+          "document_title" => record.title,
+          "category" => record.category,
+          "language" => record.language,
+          "version" => record.version,
+          "chunk_index" => index
+        }
+      end
+    end
+
+    def create_fixture_state(prospect, state)
+      trait = (state || {})["trait"]&.to_sym
+      return create(:prospect_conversation_state, prospect: prospect) if trait.blank? || trait == :fresh
+
+      create(:prospect_conversation_state, trait, prospect: prospect)
+    end
+
+    # Retrieval without an embedding provider: score the seeded corpus by word
+    # overlap and hand back the same row shape SearchService produces, distance
+    # included, because HybridAnswerBuilder's deterministic short-circuit reads
+    # it (STRONG_MATCH_DISTANCE = 0.35).
+    def install_retrieval_fake(corpus)
+      allow(HotelKnowledges::SearchService).to receive(:new) do |hotel:, query:, categories:, **|
+        FakeKnowledgeSearch.new(corpus: corpus, query: query, categories: categories)
+      end
+    end
+
+    # A synthesis step that reaches a real provider is not a unit of anything.
+    # Joining the retrieved chunks keeps `reply_matches` meaningful.
+    def install_synthesis_fake
+      allow_any_instance_of(AiConcierge::Agents::KnowledgeAnswerAgent).to receive(:call) do |agent|
+        Array(agent.instance_variable_get(:@matches)).map { |match| match["content"] }.join(" ")
+      end
+    end
+
+    def install_model_fake(fixture, world)
+      stub_concierge_model(
+        room_type_names: world[:room_type_names],
+        scripted: fixture.turns.to_h { |turn| [ turn.guest, turn.model ] }
+      )
+    end
+
+    def post_fixture_turn(world, turn)
+      before = BookingQuote.count
+      result = AiConcierge::Orchestration::Core::InquiryResponder.new(
+        hotel: world[:hotel],
+        message: turn.guest,
+        prospect_public_id: world[:prospect].public_id
+      ).call
+
+      TurnResult.new(
+        result: result,
+        prospect: world[:prospect],
+        conversation_state: world[:prospect].prospect_conversation_state.reload,
+        quotes_created: BookingQuote.count - before
+      )
+    end
+
+    def fixture_year_for(month)
+      candidate = Date.new(Date.current.year, month, 1)
+      candidate < Date.current.beginning_of_month ? Date.current.year + 1 : Date.current.year
+    end
+
+    class FakeKnowledgeSearch
+      def initialize(corpus:, query:, categories:)
+        @corpus = corpus
+        @query = query.to_s.downcase.gsub(/[^a-z0-9]+/, " ").squish
+        @categories = Array(categories).map(&:to_s)
+      end
+
+      def call
+        return [] if @query.blank? || @categories.empty?
+
+        @corpus
+          .select { |chunk| @categories.include?(chunk["category"]) }
+          .filter_map { |chunk| scored(chunk) }
+          .sort_by { |chunk| chunk["distance"] }
+          .first(HotelKnowledges::SearchService::DEFAULT_LIMIT)
+      end
+
+      private
+
+      # A real embedding that finds the right chunk returns a strong match, so
+      # one distinctive word in common has to land under HybridAnswerBuilder's
+      # STRONG_MATCH_DISTANCE (0.35). Scoring more timidly than that would send
+      # every fixture down the fallback path and quietly test nothing.
+      def scored(chunk)
+        words = chunk["content"].downcase.gsub(/[^a-z0-9]+/, " ").squish.split
+        overlap = (@query.split & words).reject { |word| STOP_WORDS.include?(word) }
+        return if overlap.empty?
+
+        chunk.merge("distance" => [ 0.30 - (0.08 * overlap.size), 0.05 ].max)
+      end
+
+      STOP_WORDS = %w[
+        the a an is are was were do does did i you we what when how any some
+        of for in to at on and or my your our there here it its this that
+      ].freeze
+    end
+  end
+end
+
+RSpec.configure do |config|
+  config.include AiConciergeEval::PipelineDriver, :ai_concierge_eval
+
+  # Every fixture run, not only the ones that remember to ask. A fixture added
+  # next year should not have to know that the harness has a clock in it.
+  config.define_derived_metadata(:ai_concierge_eval) do |metadata|
+    metadata[:frozen_time] ||= -> { Time.zone.parse(AiConciergeEval::PipelineDriver::FIXTURE_TODAY) }
+  end
+end

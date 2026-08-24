@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./public/theme.css";
+@import "./public/chat.css";
 @import "./panel/theme.css";
 @import "./panel/page.css";
 @import "./panel/page-header.css";

@@ -1,0 +1,20 @@
+<%= tag.div(**@attributes.merge(class: bar_class)) do %>
+  <% if back_path %>
+    <%= link_to back_path, class: "public-chat__bar-back", aria: { label: back_label } do %>
+      <%= helpers.app_icon "chevron-left", class: "size-5", aria: { hidden: "true" } %>
+    <% end %>
+  <% end %>
+
+  <span class="public-chat__avatar" aria-hidden="true">
+    <%= helpers.app_icon avatar_icon, class: "size-5" %>
+  </span>
+
+  <div class="public-chat__bar-identity">
+    <p class="public-chat__bar-title"><%= title %></p>
+    <%= render status_component %>
+  </div>
+
+  <% if menu? %>
+    <div class="public-chat__bar-actions"><%= menu %></div>
+  <% end %>
+<% end %>

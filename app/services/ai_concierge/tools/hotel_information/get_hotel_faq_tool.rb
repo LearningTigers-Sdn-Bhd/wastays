@@ -2,9 +2,10 @@ module AiConcierge
   module Tools
     module HotelInformation
       class GetHotelFaqTool
-        def initialize(hotel:, query: nil)
+        def initialize(hotel:, query: nil, hints: Retrieval::QueryHints.none)
           @hotel = hotel
           @query = query.to_s
+          @hints = hints
         end
 
         def call
@@ -21,7 +22,8 @@ module AiConcierge
             categories: [ "faq" ],
             source: "hotel_faq",
             fallback_text: faq_text.presence,
-            unavailable_answer: "The hotel has not provided FAQ details yet."
+            unavailable_answer: "The hotel has not provided FAQ details yet.",
+            hints: hints
           ).call
 
           {
@@ -38,7 +40,7 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :query
+        attr_reader :hotel, :query, :hints
 
         def format_documents(documents)
           documents.filter_map do |doc|

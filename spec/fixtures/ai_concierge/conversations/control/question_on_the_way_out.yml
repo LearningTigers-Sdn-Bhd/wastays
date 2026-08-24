@@ -1,0 +1,43 @@
+id: question_on_the_way_out
+description: "a guest asked whether they want to end, who answers with a question instead -- it gets answered, and the booking is still there"
+origin: "ControlHandler#handle_end_confirmation_response returns nil on purpose: a message that is neither yes nor no used to be answered 'no problem' and dropped, so a guest who asked something on their way out was never answered"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [1, 2, 3, 4, 5]
+  knowledge:
+    - category: general_info
+      title: Getting Here
+      chunks: ["Parking is free for registered guests in the basement car park."]
+turns:
+  - guest: "early august for 3 days 2 nights"
+    expect:
+      pending_question: guest_count
+      creates_quote: false
+
+  # "thanks" is a goodbye to the regex that reads it, and half a booking is
+  # worth asking about before throwing away.
+  - guest: "thanks"
+    expect:
+      pending_question: confirm_to_end_conversation
+      reply_matches: ["Your booking isn't finished yet.", "reply *Yes* to end"]
+      flow_status: active
+      creates_quote: false
+
+  # Neither yes nor no. The end question is not a trap the guest has to escape
+  # by answering it -- the turn goes to the model exactly as it would have if
+  # the question had never been asked.
+  - guest: "is there parking?"
+    expect:
+      reply_matches: ["Parking is free"]
+      reply_excludes: ["No problem", "Thank you for chatting"]
+      flow_status: active
+      creates_quote: false
+
+  # And the booking that was nearly ended is still the booking.
+  - guest: "2 adults"
+    expect:
+      pending_question: select_option
+      reply_matches: ["Garden Prestige Suite", "2 nights"]
+      creates_quote: false

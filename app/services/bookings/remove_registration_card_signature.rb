@@ -11,13 +11,7 @@ module Bookings
     end
 
     def call
-      @card.update!(
-        status: "draft",
-        signer_name: nil,
-        signature_data_url: nil,
-        signed_at: nil,
-        display_fields_snapshot: nil
-      )
+      @card.remove_signature_for_guest!
     end
   end
 end

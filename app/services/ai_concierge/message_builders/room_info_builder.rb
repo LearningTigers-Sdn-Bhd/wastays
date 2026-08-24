@@ -1,8 +1,6 @@
 module AiConcierge
   module MessageBuilders
     class RoomInfoBuilder < BaseBuilder
-      HANDLED_REPLY_TYPES = %i[room_type_details ambiguous_room_type room_type_not_found].freeze
-
       def call(reply_type)
         case reply_type.to_sym
         when :room_type_details

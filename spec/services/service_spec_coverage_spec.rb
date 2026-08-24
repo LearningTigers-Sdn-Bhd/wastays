@@ -7,6 +7,36 @@ RSpec.describe "Service spec coverage" do
     "e_invoice/submission_context" => "e_invoice_services_spec.rb",
     "my_invois/client" => "e_invoice_services_spec.rb",
     "my_invois/client_factory" => "e_invoice_services_spec.rb",
+    # The agent loop's collaborators are exercised through the loop itself --
+    # a chat builder or a recorder tested apart from the turn it runs in would
+    # be asserting on its own mock.
+    "ai_concierge/orchestration/agent_loop/build_chat" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/build_instructions" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/outcome" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/tool_recorder" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/agent_loop/turn_context" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    # The fallback sentence is a constant on the namespace: the only thing
+    # worth asserting is that a turn which cannot answer sends it.
+    "ai_concierge/message_builders" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    # What the model hands back about a question, exercised through the search
+    # that consumes it.
+    "ai_concierge/retrieval/query_hints" => "ai_concierge/tools/hotel_information/hybrid_answer_builder_spec.rb",
+    # Writing the chosen plan onto the branch is only meaningful as part of the
+    # turn that chooses it.
+    "ai_concierge/orchestration/booking/apply_rate_plan" => "ai_concierge/orchestration/booking/rate_plan_selection_handler_spec.rb",
+    # The model-facing functions are one surface and are specced as one.
+    "ai_concierge/tools/llm/advance_booking_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/answer_hotel_question_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/base_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/get_booking_context_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/get_nearby_attractions_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/get_room_type_details_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    # The turn's shared vocabulary -- the response shape, the one place a
+    # booking reply is built, the informational intent list. A spec for any of
+    # these apart from a turn would be asserting the literal it was given.
+    "ai_concierge/orchestration/core/domain_response" => "ai_concierge/orchestration/booking/orchestrator_spec.rb",
+    "ai_concierge/orchestration/booking/responses" => "ai_concierge/orchestration/booking/orchestrator_spec.rb",
+    "ai_concierge/orchestration/core/intents" => "ai_concierge/orchestration/booking/revision_policy_spec.rb",
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",

@@ -54,7 +54,7 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect {
         result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
         expect(result.success?).to be(true), result.message
-      }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
+      }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything, hotel_id: anything)
 
       expect(result.success?).to be(true), result.message
       booking = result.booking

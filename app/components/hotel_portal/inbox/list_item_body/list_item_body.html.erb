@@ -1,0 +1,42 @@
+<%= link_to hotel_conversation_path(hotel, presenter.id),
+      data: { turbo_frame: "conversation_thread", turbo_action: "advance" },
+      class: link_class do %>
+  <span class="flex items-center gap-2">
+    <% if presenter.unread? %>
+      <span class="size-2 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
+      <span class="sr-only"><%= pluralize(presenter.unread_count, "unread message") %>.</span>
+    <% end %>
+    <span class="truncate text-sm font-medium text-foreground"><%= presenter.display_name %></span>
+    <% if presenter.returning_guest? %>
+      <%= render PanelsUI::Badge.new(label: "Returning", variant: :info, size: :xs) %>
+    <% end %>
+  </span>
+
+  <% if presenter.subtitle %>
+    <span class="truncate text-xs text-muted-foreground"><%= presenter.subtitle %></span>
+  <% end %>
+
+  <span class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+    <%= helpers.app_icon presenter.channel_icon, class: "size-3.5", aria: { hidden: "true" } %>
+    <span><%= presenter.channel_label %></span>
+    <%# Shown before a staff member opens the thread, because whether they can
+        read it is the thing they need to know before they take it over. %>
+    <% if presenter.language_label %>
+      <span aria-hidden="true">·</span>
+      <%= render PanelsUI::Badge.new(label: presenter.language_label, variant: :neutral, size: :xs) %>
+    <% end %>
+    <span aria-hidden="true">·</span>
+    <span><%= presenter.last_activity %></span>
+  </span>
+
+  <span class="flex flex-wrap items-center gap-1.5">
+    <%= render PanelsUI::Badge.new(label: badge[:label], variant: badge[:variant], size: :xs) %>
+    <%# WhatsApp stops carrying a reply 24 hours after the guest last wrote, so
+        a reader scanning the list can see which threads are running out before
+        they open one and start typing. %>
+    <% if reply_window_badge %>
+      <%= render PanelsUI::Badge.new(label: reply_window_badge[:label],
+                                     variant: reply_window_badge[:variant], size: :xs) %>
+    <% end %>
+  </span>
+<% end %>

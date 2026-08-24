@@ -1,0 +1,78 @@
+id: malay_booking_ladder
+description: "the whole ladder in Malay -- every slot guard is written in English, so without evidence spans each of these turns is deleted and re-asked forever"
+origin: "InputNormalizer -- a bot that writes in a language it cannot read asks the same question until the guest leaves"
+setup:
+  rooms:
+    - name: Garden Prestige Suite
+      month: 8
+      days: [26, 27, 28, 29, 30, 31]
+turns:
+  # No English word for booking anywhere, so the intent backstop cannot read
+  # this one. The model choosing the tool is what carries the turn.
+  - guest: "boleh saya tempah bilik?"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots: {}
+    expect:
+      flow: booking_search
+      pending_question: booking_timing
+
+  # "Ogos" is August. No English month name, no ISO date -- the English guard
+  # matches nothing here and would throw the date away.
+  - guest: "28 Ogos"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            check_in: "2026-08-28"
+          evidence:
+            timing: "28 Ogos"
+    expect:
+      pending_question: duration
+      booking_status: collecting_slots
+
+  # "malam" is nights.
+  - guest: "3 malam"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            nights: 3
+          evidence:
+            duration: "3 malam"
+    expect:
+      pending_question: guest_count
+      booking_status: collecting_slots
+
+  # "dewasa" is adults.
+  - guest: "2 dewasa"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots:
+            adults: 2
+          evidence:
+            party: "2 dewasa"
+    expect:
+      pending_question: select_option
+      booking_status: waiting_for_option_selection
+      reply_matches: ["2 adults", "Garden Prestige Suite"]
+      creates_quote: false
+
+  # The catalogue is answered by its number, and a guest wraps that number in
+  # their own words: "saya mahu no 1" has to read as row 1, though not one of
+  # those words is English.
+  - guest: "saya mahu no 1"
+    model:
+      agent_loop:
+        tool: advance_booking
+        arguments:
+          slots: {}
+    expect:
+      pending_question: confirm_selection
+      booking_status: waiting_for_confirmation

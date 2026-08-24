@@ -33,7 +33,7 @@ RSpec.describe SendWhatsappInvoiceJob, type: :job do
       expect(WebhookBroadcastJob).to receive(:perform_now).with("booking_confirmed", hash_including(
         confirmation_token: booking.confirmation_token,
         guest_name: booking.guest_name
-      ))
+      ), hotel_id: booking.hotel_id)
 
       described_class.new.perform(booking.id)
     end

@@ -2,10 +2,11 @@ module AiConcierge
   module Tools
     module HotelInformation
       class GetHotelPolicyTool
-        def initialize(hotel:, policy_topic: nil, query: nil)
+        def initialize(hotel:, policy_topic: nil, query: nil, hints: Retrieval::QueryHints.none)
           @hotel = hotel
           @policy_topic = policy_topic
           @query = query.to_s
+          @hints = hints
         end
 
         def call
@@ -29,7 +30,8 @@ module AiConcierge
             source: hotel_policy_text.present? ? "hotel_policy" : "property_policy",
             structured_facts: structured_facts,
             fallback_text: hotel_policy_text.presence,
-            unavailable_answer: "The hotel has not provided its policy details yet."
+            unavailable_answer: "The hotel has not provided its policy details yet.",
+            hints: hints
           ).call
           # A hotel can now have a cancellation policy without a property_policy row,
           # so "we know something" is no longer only about property_policy.
@@ -54,7 +56,7 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :policy_topic, :query
+        attr_reader :hotel, :policy_topic, :query, :hints
 
         def format_documents(documents)
           documents.filter_map do |doc|

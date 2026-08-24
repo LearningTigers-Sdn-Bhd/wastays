@@ -40,6 +40,9 @@ production:
   monthly_ota_commission_self_billing:
     class: EInvoice::MonthlyOtaCommissionJob
     schedule: "cron 20 0 1 * *"
+  close_stale_conversations:
+    class: Concierge::CloseStaleConversationsJob
+    schedule: every hour at minute 24
 
 demo:
   release_expired_holds:
@@ -69,3 +72,6 @@ demo:
   monthly_ota_commission_self_billing:
     class: EInvoice::MonthlyOtaCommissionJob
     schedule: "cron 20 0 1 * *"
+  close_stale_conversations:
+    class: Concierge::CloseStaleConversationsJob
+    schedule: every hour at minute 24

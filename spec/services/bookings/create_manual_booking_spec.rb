@@ -45,7 +45,7 @@ RSpec.describe Bookings::CreateManualBooking do
       expect(result.booking.hotel_snapshot["room_number"]).to eq("101")
       expect(result.booking.booking_folio).to be_present
       expect(result.booking.booking_folio).to be_open
-    }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything)
+    }.to have_enqueued_job(WebhookBroadcastJob).with('booking_confirmed', anything, hotel_id: anything)
 
     inventory = room_type.room_inventories.find_by(date: Date.current)
     expect(inventory.quantity).to eq(4)

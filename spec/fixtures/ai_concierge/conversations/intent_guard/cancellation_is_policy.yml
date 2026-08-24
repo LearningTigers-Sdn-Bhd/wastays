@@ -1,0 +1,17 @@
+id: cancellation_is_policy
+description: "cancellation asks about the policy even though it sounds like it acts on a booking"
+origin: "InformationIntentGuard#policy_question?"
+setup:
+  policy:
+    cancellation_policy: "Free cancellation up to 48 hours before arrival."
+  knowledge:
+    - category: policy
+      title: Cancellation
+      chunks: ["Cancellations made within 48 hours of arrival are charged one night."]
+turns:
+  - guest: "what is your cancellation policy?"
+    # The model gets this one wrong -- that mistake is why the rule exists.
+    model:
+    expect:
+      reply_matches: ["48 hours"]
+      creates_quote: false
