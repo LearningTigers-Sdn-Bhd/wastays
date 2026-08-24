@@ -5,8 +5,9 @@ class Public::ReceiptsController < ApplicationController
 
   def show
     receipt = Receipt.find_by!(access_token: params[:id])
+    presentation = Receipts::Presentation.new(receipt)
     send_data PaymentReceiptPdfService.new(receipt).generate,
-      filename: "payment-receipt-#{receipt.public_number}.pdf",
+      filename: presentation.filename,
       type: "application/pdf",
       disposition: "inline"
   end

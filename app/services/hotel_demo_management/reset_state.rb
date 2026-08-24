@@ -376,12 +376,29 @@ module HotelDemoManagement
 
     def reset_nearby_attractions
       @logger.puts "Resetting nearby attractions..."
-      @hotel.nearby_attractions.destroy_all
-      @hotel.nearby_attractions.create!([
-        { name: "City Centre", description: "Explore the vibrant city centre with shops, restaurants, and cultural landmarks.", address: "City Centre", city: @hotel.city, country: @hotel.country },
-        { name: "Local Market", description: "Experience local life and find unique souvenirs at the bustling market.", address: "Market Street", city: @hotel.city, country: @hotel.country },
-        { name: "City Park", description: "Enjoy a relaxing day surrounded by nature.", address: "Park Avenue", city: @hotel.city, country: @hotel.country }
-      ])
+      previous_attraction_ids = @hotel.hotel_nearby_attractions.pluck(:attraction_id)
+      @hotel.hotel_nearby_attractions.destroy_all
+      Attraction.where(id: previous_attraction_ids, source_hotel: @hotel)
+        .left_joins(:hotel_nearby_attractions)
+        .where(hotel_nearby_attractions: { id: nil })
+        .destroy_all
+
+      [
+        { name: "City Centre", description: "Explore the vibrant city centre with shops, restaurants, and cultural landmarks.", address: "City Centre" },
+        { name: "Local Market", description: "Experience local life and find unique souvenirs at the bustling market.", address: "Market Street" },
+        { name: "City Park", description: "Enjoy a relaxing day surrounded by nature.", address: "Park Avenue" }
+      ].each do |attributes|
+        description = attributes.delete(:description)
+        attraction = Attraction.create!(
+          **attributes,
+          shared_summary: description,
+          city: @hotel.city,
+          country: @hotel.country,
+          status: "approved",
+          source_hotel: @hotel
+        )
+        @hotel.hotel_nearby_attractions.create!(attraction: attraction, description: description)
+      end
     end
 
     def seed_knowledge_documents

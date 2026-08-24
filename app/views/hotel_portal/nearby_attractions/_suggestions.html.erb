@@ -1,0 +1,40 @@
+<div id="nearby_attractions_suggestions">
+  <div>
+    <h3 class="text-sm font-semibold text-foreground">Suggested near your hotel</h3>
+    <p class="mt-1 text-sm text-muted-foreground">Nearby attractions you can add, ordered by estimated straight-line distance.</p>
+  </div>
+
+  <% if !@hotel_coordinates_available %>
+    <div class="mt-4 rounded-lg border border-border bg-muted/30 p-4">
+      <p class="text-sm font-medium text-foreground">Hotel coordinates are not available.</p>
+      <p class="mt-1 text-sm text-muted-foreground">Add a valid Google Maps link to your hotel details to see nearby suggestions.</p>
+    </div>
+  <% elsif @suggestions.any? %>
+    <div class="mt-4 grid gap-3 lg:grid-cols-2">
+      <% @suggestions.each do |suggestion| %>
+        <% attraction = suggestion.attraction %>
+        <%= render PanelsUI::Card.new(width: :full, density: :compact, variant: :outlined, as: :article) do |card| %>
+          <% card.with_card_content do %>
+            <div class="flex h-full items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p class="font-semibold text-foreground"><%= attraction.name %></p>
+                <p class="mt-1 line-clamp-2 text-sm text-muted-foreground"><%= attraction.display_description %></p>
+                <p class="mt-2 text-xs font-medium text-muted-foreground"><%= number_with_precision(suggestion.distance_km, precision: 1) %> km estimated distance</p>
+              </div>
+              <%= form_with url: hotel_nearby_attractions_path(@hotel), scope: :attraction, class: "shrink-0" do |form| %>
+                <%= form.hidden_field :google_maps_url, value: attraction.google_maps_url %>
+                <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>
+                  Add
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="mt-4 rounded-lg border border-border bg-muted/30 p-4">
+      <p class="text-sm text-muted-foreground">No more nearby attractions are available to add within 25 km.</p>
+    </div>
+  <% end %>
+</div>

@@ -808,6 +808,28 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(documents_presenter.documents.map(&:status)).not_to include("Not issued", "Unavailable", "Historical")
     end
 
+    it "labels security deposits separately from booking prepayments" do
+      create(:deposit, booking: booking, hotel: hotel)
+      create(:deposit, :prepayment, booking: booking, hotel: hotel)
+
+      documents_presenter = described_class.new(booking, params: { tab: "documents" }, hotel: hotel)
+      receipt_types = documents_presenter.document_sections.find { |section| section.key == :receipts }.rows.map(&:type)
+
+      expect(receipt_types).to contain_exactly("Security deposit receipt", "Deposit receipt")
+      expect(documents_presenter.quick_documents.fetch(:receipt).type).to be_in(receipt_types)
+    end
+
+    it "labels a group-owned security deposit as a group security deposit receipt" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      create(:deposit, :group_owned, group_booking: group, hotel: hotel)
+
+      documents_presenter = described_class.new(booking, params: { tab: "documents" }, hotel: hotel)
+      receipt_types = documents_presenter.document_sections.find { |section| section.key == :receipts }.rows.map(&:type)
+
+      expect(receipt_types).to contain_exactly("Group security deposit receipt")
+    end
+
     it "keeps the complete group record set when a legacy child booking parameter is present" do
       group = create(:group_booking, hotel:)
       booking.update!(group_booking: group, group_position: 1)

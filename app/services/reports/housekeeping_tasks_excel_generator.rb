@@ -2,9 +2,9 @@
 
 module Reports
   class HousekeepingTasksExcelGenerator
-    def initialize(hotel:, room_groups:, selected_date:)
+    def initialize(hotel:, rooms:, selected_date:, visible_columns:)
       @hotel = hotel
-      @table = HousekeepingTasksExportTable.new(room_groups: room_groups)
+      @table = HousekeepingTasksExportTable.new(rooms:, visible_columns:)
       @selected_date = selected_date
     end
 
@@ -14,7 +14,7 @@ module Reports
       ).generate do |builder|
         sheet = builder.add_sheet(
           name: "Housekeeping Tasks",
-          widths: [ 15, 22, 10, 24, 24, 10, 36, 22, 22, 22 ],
+          widths: @table.excel_widths,
           orientation: :landscape
         )
         builder.add_header(sheet: sheet)
@@ -25,9 +25,9 @@ module Reports
         builder.add_table(
           sheet: sheet,
           section_title: "Room Details",
-          headers: HousekeepingTasksExportTable::HEADERS,
+          headers: @table.headers,
           rows: @table.rows,
-          column_types: HousekeepingTasksExportTable::COLUMN_TYPES,
+          column_types: @table.column_types,
           total_row: nil,
           empty_message: "No rooms found for the selected filters."
         )

@@ -4,10 +4,10 @@
           id: "nearby-attraction-sheet",
           side: :right,
           size: :md,
-          title: nearby_attraction.new_record? ? "Add Nearby Attraction" : "Edit Nearby Attraction",
-          description: nearby_attraction.new_record? ? "Highlight popular places guests can visit around your hotel." : "Update nearby attraction details for your guests.") do |sheet| %>
+          title: "Add Nearby Attraction",
+          description: "Add a place with its full Google Maps browser URL.") do |sheet| %>
       <% sheet.with_body do %>
-        <%= render "form", nearby_attraction: nearby_attraction %>
+        <%= render "form", attraction: attraction %>
       <% end %>
       <% sheet.with_footer do %>
         <%= render PanelsUI::Button.new(
@@ -15,7 +15,7 @@
               type: :button,
               variant: :secondary,
               size: :sm,
-              data: { action: "panels-ui--sheet#close" }) do %>
+              data: { action: "click->panels-ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <%= render PanelsUI::Button.new(
@@ -24,7 +24,7 @@
               form: "nearby-attraction-form",
               variant: :primary,
               size: :sm) do %>
-          <%= nearby_attraction.new_record? ? "Create Nearby Attraction" : "Update Nearby Attraction" %>
+          Find attraction
         <% end %>
       <% end %>
     <% end %>

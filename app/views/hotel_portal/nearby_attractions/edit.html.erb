@@ -1,1 +1,45 @@
-<%= render "sheet_form", nearby_attraction: @nearby_attraction %>
+<%= turbo_frame_tag "nearby_attraction_form" do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "nearby-attraction-sheet",
+          side: :right,
+          size: :md,
+          title: "Edit Guest Description",
+          description: "Set the description that your guests see for #{@hotel_nearby_attraction.attraction.name}.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @hotel_nearby_attraction,
+                      scope: :hotel_nearby_attraction,
+                      url: hotel_nearby_attraction_path(@hotel, @hotel_nearby_attraction),
+                      id: "nearby-attraction-form" do |form| %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :description,
+                  label: "Guest description",
+                  hint: "Leave this blank to use the shared attraction description.") do |field| %>
+              <% field.with_text_area(rows: 5, placeholder: "Describe why guests can enjoy this place.") %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: "nearby-attraction-form",
+              variant: :primary,
+              size: :sm) do %>
+          Save description
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

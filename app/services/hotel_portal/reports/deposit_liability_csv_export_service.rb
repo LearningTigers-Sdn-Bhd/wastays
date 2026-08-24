@@ -21,13 +21,15 @@ module HotelPortal
           end
 
           csv << [ "TOTAL", nil, nil, nil, nil, nil, *@report.totals.values_at(:booking_payment_amount, :earned_amount, :refund_amount, :remaining_liability).map { |value| @csv.money(value) }, nil ]
+          csv << []
+          csv << [ "Note", DepositLiabilityReport::SCOPE_NOTE ]
         end
       end
 
       private
 
       def headers
-        [ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Booking Payment", "Earned", "Refunds", "Remaining Liability", "Latest Payment Date" ]
+        DepositLiabilityExcelExportService::HEADERS
       end
     end
   end

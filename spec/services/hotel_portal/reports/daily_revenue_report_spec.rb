@@ -71,6 +71,23 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     expect(report.rows.map { |r| r[:date] }).to eq([ Date.new(2026, 5, 6) ])
   end
 
+  it "does not treat a held security deposit as revenue" do
+    booking = create(:booking, hotel: hotel)
+    create(:deposit, booking: booking, hotel: hotel, amount: 250, received_at: start_date.in_time_zone)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.rows).to be_empty
+    expect(report.totals).to include(
+      accommodation: 0.to_d,
+      other_charges: 0.to_d,
+      tax: 0.to_d,
+      total_charges: 0.to_d,
+      adjustments: 0.to_d,
+      net_revenue: 0.to_d
+    )
+  end
+
   it "includes every month in range for the this_year preset, even months with no transactions" do
     booking = create(:booking, hotel: hotel)
     folio = create(:booking_folio, booking: booking, hotel: hotel)

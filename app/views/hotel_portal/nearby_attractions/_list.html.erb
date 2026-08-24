@@ -1,35 +1,47 @@
-<div id="nearby_attractions_list" class="mt-5">
+<div id="nearby_attractions_list" class="mt-4">
   <div class="hidden md:block">
     <%= render PanelsUI::Table.new(
-          caption: "Nearby attractions",
+          caption: "Attractions added to this hotel",
           hoverable: true,
           wrapper_class: "rounded-lg border border-border bg-card") do |table| %>
       <% table.with_header do %>
         <tr>
-          <th scope="col">Attraction / Address</th>
-          <th scope="col">Description</th>
-          <th scope="col">Location</th>
+          <th scope="col">Attraction</th>
+          <th scope="col">Guest description</th>
+          <th scope="col">Distance</th>
           <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
         </tr>
       <% end %>
       <% table.with_body do %>
         <% if @nearby_attractions.any? %>
-          <% @nearby_attractions.each do |nearby_attraction| %>
+          <% @nearby_attractions.each do |hotel_attraction| %>
+            <% attraction = hotel_attraction.attraction %>
+            <% distance = hotel_attraction.distance_from(@hotel) %>
             <tr>
               <th scope="row">
-                <p class="font-semibold text-foreground"><%= nearby_attraction.name %></p>
-                <p class="mt-1 line-clamp-2 text-xs font-normal text-muted-foreground"><%= nearby_attraction.address.presence || "Address not provided" %></p>
+                <p class="font-semibold text-foreground"><%= attraction.name %></p>
+                <p class="mt-1 line-clamp-2 text-xs font-normal text-muted-foreground"><%= [attraction.city, attraction.country].compact_blank.join(", ").presence || "Location details not available" %></p>
               </th>
               <td class="max-w-md text-muted-foreground">
-                <p class="line-clamp-3"><%= nearby_attraction.description.presence || "No description added." %></p>
+                <p class="line-clamp-3"><%= hotel_attraction.guest_description %></p>
               </td>
               <td class="whitespace-nowrap">
-                <p class="font-medium text-foreground"><%= nearby_attraction.city %></p>
-                <p class="mt-1 text-xs text-muted-foreground"><%= nearby_attraction.country %></p>
+                <p class="text-sm text-muted-foreground"><%= distance ? "#{number_with_precision(distance, precision: 1)} km estimated" : "Distance not available" %></p>
+                <% if attraction_issue_label(attraction) %>
+                  <div class="mt-2">
+                    <%= render PanelsUI::Badge.new(
+                          label: attraction_issue_label(attraction),
+                          variant: attraction_issue_variant(attraction),
+                          size: :sm) %>
+                  </div>
+                <% end %>
+                <% if attraction.review_note.present? && (attraction.status_rejected? || attraction.status_archived?) %>
+                  <p class="mt-2 max-w-xs whitespace-normal text-xs text-muted-foreground"><%= attraction.review_note %></p>
+                <% end %>
               </td>
               <td class="text-right">
                 <%= render "hotel_portal/nearby_attractions/record_actions",
-                           nearby_attraction: nearby_attraction,
+                           hotel_attraction: hotel_attraction,
                            id_prefix: "table" %>
               </td>
             </tr>
@@ -37,12 +49,12 @@
         <% else %>
           <tr>
             <td colspan="4" class="h-40 text-center">
-              <p class="font-medium text-foreground">No nearby attractions found.</p>
-              <p class="mt-1 text-muted-foreground">Create the first local recommendation for this property.</p>
+              <p class="font-medium text-foreground">No attractions added.</p>
+              <p class="mt-1 text-muted-foreground">Add an attraction with its Google Maps URL.</p>
               <div class="mt-4">
                 <%= render PanelsUI::Button.new(
-                      label: "Create Nearby Attraction",
-                      href: new_hotel_nearby_attraction_path(current_hotel),
+                      label: "Add attraction",
+                      href: new_hotel_nearby_attraction_path(@hotel),
                       size: :sm,
                       data: { turbo_frame: "nearby_attraction_form" }) %>
               </div>
@@ -55,31 +67,39 @@
 
   <div class="space-y-3 md:hidden">
     <% if @nearby_attractions.any? %>
-      <% @nearby_attractions.each do |nearby_attraction| %>
-        <%= render PanelsUI::Card.new(
-              width: :full,
-              density: :compact,
-              variant: :outlined,
-              as: :article) do |card| %>
-          <% card.with_header(
-               title: nearby_attraction.name,
-               description: nearby_attraction.address.presence || "Address not provided") do |header| %>
+      <% @nearby_attractions.each do |hotel_attraction| %>
+        <% attraction = hotel_attraction.attraction %>
+        <% distance = hotel_attraction.distance_from(@hotel) %>
+        <%= render PanelsUI::Card.new(width: :full, density: :compact, variant: :outlined, as: :article) do |card| %>
+          <% card.with_header(title: attraction.name, description: [attraction.city, attraction.country].compact_blank.join(", ").presence || "Location details not available") do |header| %>
             <% header.with_actions do %>
               <%= render "hotel_portal/nearby_attractions/record_actions",
-                         nearby_attraction: nearby_attraction,
+                         hotel_attraction: hotel_attraction,
                          id_prefix: "card" %>
             <% end %>
           <% end %>
           <% card.with_card_content do %>
             <dl class="space-y-3 text-sm">
+              <% if attraction_issue_label(attraction) %>
+                <div class="flex items-center justify-between gap-3">
+                  <dt class="text-xs text-muted-foreground">Availability</dt>
+                  <dd><%= render PanelsUI::Badge.new(label: attraction_issue_label(attraction), variant: attraction_issue_variant(attraction), size: :sm) %></dd>
+                </div>
+              <% end %>
               <div>
-                <dt class="text-xs text-muted-foreground">Location</dt>
-                <dd class="mt-1 font-medium text-foreground"><%= nearby_attraction.city %>, <%= nearby_attraction.country %></dd>
+                <dt class="text-xs text-muted-foreground">Estimated distance</dt>
+                <dd class="mt-1 font-medium text-foreground"><%= distance ? "#{number_with_precision(distance, precision: 1)} km" : "Not available" %></dd>
               </div>
               <div>
-                <dt class="text-xs text-muted-foreground">Description</dt>
-                <dd class="mt-1 text-muted-foreground"><%= nearby_attraction.description.presence || "No description added." %></dd>
+                <dt class="text-xs text-muted-foreground">Guest description</dt>
+                <dd class="mt-1 text-muted-foreground"><%= hotel_attraction.guest_description %></dd>
               </div>
+              <% if attraction.review_note.present? && (attraction.status_rejected? || attraction.status_archived?) %>
+                <div>
+                  <dt class="text-xs text-muted-foreground">Why it is unavailable</dt>
+                  <dd class="mt-1 text-muted-foreground"><%= attraction.review_note %></dd>
+                </div>
+              <% end %>
             </dl>
           <% end %>
         <% end %>
@@ -88,15 +108,8 @@
       <%= render PanelsUI::Card.new(width: :full, density: :compact, variant: :outlined) do |card| %>
         <% card.with_card_content do %>
           <div class="py-6 text-center">
-            <p class="text-sm font-medium text-foreground">No nearby attractions found.</p>
-            <p class="mt-1 text-sm text-muted-foreground">Create the first local recommendation for this property.</p>
-            <div class="mt-4">
-              <%= render PanelsUI::Button.new(
-                    label: "Create Nearby Attraction",
-                    href: new_hotel_nearby_attraction_path(current_hotel),
-                    size: :sm,
-                    data: { turbo_frame: "nearby_attraction_form" }) %>
-            </div>
+            <p class="text-sm font-medium text-foreground">No attractions added.</p>
+            <p class="mt-1 text-sm text-muted-foreground">Add an attraction with its Google Maps URL.</p>
           </div>
         <% end %>
       <% end %>

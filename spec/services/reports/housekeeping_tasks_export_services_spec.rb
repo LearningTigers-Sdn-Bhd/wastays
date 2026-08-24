@@ -25,6 +25,7 @@ RSpec.describe "Housekeeping task export services" do
         rooms: [
           {
             room_number: "001",
+            room_type: instance_double(RoomType, name: "Ocean Suite"),
             booking: booking,
             resolved_status: "dirty",
             pax: "2/1",
@@ -35,6 +36,7 @@ RSpec.describe "Housekeeping task export services" do
           },
           {
             room_number: "002",
+            room_type: instance_double(RoomType, name: "Ocean Suite"),
             booking: nil,
             resolved_status: "ready",
             pax: "—",
@@ -47,9 +49,13 @@ RSpec.describe "Housekeeping task export services" do
       }
     ]
   end
+  let(:rooms) { room_groups.flat_map { |group| group[:rooms] } }
 
   it "maps the board into typed, reusable export rows" do
-    table = Reports::HousekeepingTasksExportTable.new(room_groups: room_groups)
+    table = Reports::HousekeepingTasksExportTable.new(
+      rooms:,
+      visible_columns: HousekeepingTasks::Columns::KEYS
+    )
 
     expect(table.rows.first).to eq([
       "001", "Ocean Suite", "2/1", "Dirty", "José 陈", "Pending checkout",
@@ -63,12 +69,16 @@ RSpec.describe "Housekeeping task export services" do
   end
 
   it "generates safe CSV, genuine XLSX, and branded PDF output" do
-    csv = Reports::HousekeepingTasksCsvGenerator.new(room_groups: room_groups).call
+    csv = Reports::HousekeepingTasksCsvGenerator.new(
+      rooms:,
+      visible_columns: HousekeepingTasks::Columns::KEYS
+    ).call
     xlsx = Reports::HousekeepingTasksExcelGenerator.new(
-      hotel: hotel, room_groups: room_groups, selected_date: selected_date
+      hotel:, rooms:, selected_date:, visible_columns: HousekeepingTasks::Columns::KEYS
     ).call
     pdf = Reports::HousekeepingTasksPdfGenerator.new(
-      hotel: hotel, room_groups: room_groups, selected_date: selected_date, prepared_by: "Housekeeping Manager"
+      hotel:, rooms:, selected_date:, prepared_by: "Housekeeping Manager",
+      visible_columns: HousekeepingTasks::Columns::KEYS
     ).call
     pdf_text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
 
@@ -80,7 +90,20 @@ RSpec.describe "Housekeeping task export services" do
     expect(pdf).to start_with("%PDF")
     expect(pdf_text).to include(
       "Housekeeping Tasks", "SELECTED DATE", "21 Jul 2026", "PREPARED BY", "Housekeeping Manager",
-      "ROOMS", "2", "José 陈", "002", "Vacant", "Confidential", "Page 1 of 1"
+      "Room Details", "2 rooms", "José 陈", "002", "Vacant", "Confidential", "Page 1 of 1"
     )
+    expect(pdf_text).not_to include("ASSIGNED")
+  end
+
+  it "projects the same selected columns into every export" do
+    selected_columns = %w[room_number remarks]
+    table = Reports::HousekeepingTasksExportTable.new(rooms:, visible_columns: selected_columns)
+
+    expect(table.headers).to eq([ "Room Number", "Remarks" ])
+    expect(table.rows).to eq([ [ "001", "=SUM(A1:A2) towels" ], [ "002", "" ] ])
+
+    csv = Reports::HousekeepingTasksCsvGenerator.new(rooms:, visible_columns: selected_columns).call
+    expect(csv).to include("Room Number,Remarks")
+    expect(csv).not_to include("Room Type")
   end
 end

@@ -16,16 +16,37 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetNearbyAttractionsTool do
           "description" => "Scenic landmark",
           "address" => "Cable Car Station",
           "city" => "Kuala Lumpur",
-          "country" => "Malaysia"
+          "country" => "Malaysia",
+          "google_maps_url" => nil,
+          "distance_km" => nil
         },
         {
           "name" => "Night Market",
           "description" => "Local food and shopping",
           "address" => "Town Square",
           "city" => "Kuala Lumpur",
-          "country" => "Malaysia"
+          "country" => "Malaysia",
+          "google_maps_url" => nil,
+          "distance_km" => nil
         }
       ]
     )
+  end
+
+  it "includes linked pending attractions and excludes rejected or archived attractions" do
+    hotel = create(:hotel)
+    other_hotel = create(:hotel, account: hotel.account)
+    own_pending = create(:attraction, status: "pending", source_hotel: hotel, name: "Own pending")
+    other_pending = create(:attraction, status: "pending", source_hotel: other_hotel, name: "Other pending")
+    rejected = create(:attraction, :rejected, source_hotel: hotel, name: "Rejected")
+    archived = create(:attraction, status: "archived", source_hotel: hotel, name: "Archived")
+
+    [ own_pending, other_pending, rejected, archived ].each do |attraction|
+      create(:hotel_nearby_attraction, hotel: hotel, attraction: attraction)
+    end
+
+    names = described_class.new(hotel: hotel).call.fetch("attractions").pluck("name")
+
+    expect(names).to eq([ "Own pending", "Other pending" ])
   end
 end
