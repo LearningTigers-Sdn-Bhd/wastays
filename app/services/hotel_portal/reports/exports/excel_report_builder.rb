@@ -68,6 +68,11 @@ module HotelPortal
           end
         end
 
+        def add_note(sheet:, text:)
+          last_column = column_letter(column_count(sheet))
+          add_merged_row(sheet, text, @theme.fetch(:metadata), last_column, height: merged_row_height(sheet, text))
+        end
+
         def add_table(sheet:, section_title:, headers:, rows:, column_types:, total_row:, empty_message:)
           validate_table!(headers, column_types)
           last_column = column_letter(headers.size)
@@ -146,6 +151,12 @@ module HotelPortal
             width = [ widths.fetch(index, 12).to_f, 1 ].max
             value.to_s.lines(chomp: true).sum { |line| [ (line.scan(/\X/).size / width).ceil, 1 ].max }
           end.max || 1
+          [ [ lines * 15, MIN_ROW_HEIGHT ].max, MAX_ROW_HEIGHT ].min
+        end
+
+        def merged_row_height(sheet, value)
+          width = @sheet_widths.fetch(sheet.object_id).sum.to_f
+          lines = value.to_s.lines(chomp: true).sum { |line| [ (line.scan(/\X/).size / width).ceil, 1 ].max }
           [ [ lines * 15, MIN_ROW_HEIGHT ].max, MAX_ROW_HEIGHT ].min
         end
 

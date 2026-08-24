@@ -15,6 +15,8 @@ RSpec.describe PaymentReceiptPdfService do
 
   def text_of(pdf) = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
 
+  def info_of(pdf) = PDF::Reader.new(StringIO.new(pdf)).info
+
   it "renders the immutable payment receipt reference and amount" do
     pdf = described_class.new(receipt).generate
 
@@ -51,5 +53,35 @@ RSpec.describe PaymentReceiptPdfService do
 
   it "leaves an issued receipt unbanded" do
     expect(text_of(described_class.new(receipt).generate)).not_to include("VOIDED")
+  end
+
+  it "presents a security deposit as refundable money held" do
+    security_receipt = create(:deposit, hotel: hotel, booking: create(:booking, hotel: hotel), amount: 50).receipt
+    pdf = described_class.new(security_receipt).generate
+    text = text_of(pdf)
+
+    expect(text).to include(
+      "SECURITY DEPOSIT RECEIPT", "AMOUNT HELD", "MYR 50.00",
+      Receipts::Presentation::SECURITY_DEPOSIT_NOTE
+    )
+    expect(text).not_to include("AMOUNT RECEIVED")
+    expect(info_of(pdf)[:Title]).to eq("Security Deposit Receipt - #{security_receipt.public_number}")
+  end
+
+  it "keeps prepayments under the existing payment receipt identity" do
+    prepayment_receipt = create(:deposit, :prepayment, hotel: hotel, booking: create(:booking, hotel: hotel)).receipt
+    text = text_of(described_class.new(prepayment_receipt).generate)
+
+    expect(text).to include("PAYMENT RECEIPT", "AMOUNT RECEIVED", Receipts::Presentation::PAYMENT_NOTE)
+    expect(text).not_to include("SECURITY DEPOSIT RECEIPT", "AMOUNT HELD")
+  end
+
+  it "uses security-deposit wording when a security receipt is voided" do
+    security_receipt = create(:deposit, hotel: hotel, booking: create(:booking, hotel: hotel)).receipt
+    security_receipt.update!(status: "voided")
+    text = text_of(described_class.new(security_receipt).generate)
+
+    expect(text).to include("VOIDED", "no longer evidence of a security deposit received")
+    expect(text.index("VOIDED")).to be < text.index("AMOUNT HELD")
   end
 end

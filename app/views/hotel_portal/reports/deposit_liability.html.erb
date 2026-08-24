@@ -20,15 +20,15 @@
 
   <%= render HotelPortal::Reports::MetricStrip.new(metrics: [
     { label: "Bookings", value: format_number(@report.totals[:booking_count]), detail: "Open liabilities" },
-    { label: "Booking payments", value: "MYR #{format_number(@report.totals[:booking_payment_amount], precision: 2)}", detail: "Held amount", detail_variant: :warning },
+    { label: "Deposits received", value: "MYR #{format_number(@report.totals[:booking_payment_amount], precision: 2)}", detail: "Received amount", detail_variant: :warning },
     { label: "Earned", value: "MYR #{format_number(@report.totals[:earned_amount], precision: 2)}", detail: "Recognised charges" },
     { label: "Refunds", value: "MYR #{format_number(@report.totals[:refund_amount], precision: 2)}", detail: "Released amount" },
     { label: "Remaining liability", value: "MYR #{format_number(@report.totals[:remaining_liability], precision: 2)}", detail: "Still held", detail_variant: :warning }
   ]) %>
 
-  <aside class="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground" aria-label="Deposit liability scope">
-    This report only includes explicit <span class="font-semibold">booking payment</span> folio payments. Security deposits are tracked separately and do not reduce folio balances unless applied later.
-  </aside>
+  <p class="text-sm text-muted-foreground" data-slot="deposit-liability-scope">
+    <%= HotelPortal::Reports::DepositLiabilityReport::SCOPE_NOTE %>
+  </p>
 
   <section class="space-y-3" aria-labelledby="deposit-liabilities-heading">
     <h2 id="deposit-liabilities-heading" class="text-base font-semibold text-foreground">Open deposit liabilities</h2>
@@ -46,7 +46,7 @@
           <th scope="col">Stay</th>
           <th scope="col">Status</th>
           <th scope="col">Rooms / folio</th>
-          <th scope="col" class="text-right">Booking payment</th>
+          <th scope="col" class="text-right">Deposit received</th>
           <th scope="col" class="text-right">Earned</th>
           <th scope="col" class="text-right">Refunds</th>
           <th scope="col" class="text-right">Liability</th>
