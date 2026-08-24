@@ -1,28 +1,38 @@
+<% attraction = hotel_attraction.attraction %>
 <%= render PanelsUI::DropdownMenu.new(
-      id: "#{id_prefix}-nearby-attraction-#{nearby_attraction.id}-actions",
+      id: "#{id_prefix}-nearby-attraction-#{hotel_attraction.id}-actions",
       placement: :bottom_end,
-      class: "w-48") do |menu| %>
+      class: "w-52") do |menu| %>
   <% menu.with_trigger(
        variant: :ghost,
        size: :icon_sm,
-       aria_label: "Actions for #{nearby_attraction.name}") do %>
+       aria_label: "Actions for #{attraction.name}") do %>
     <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
   <% end %>
   <% menu.with_item(
-       href: edit_hotel_nearby_attraction_path(current_hotel, nearby_attraction),
+       href: edit_hotel_nearby_attraction_path(@hotel, hotel_attraction),
        data: { turbo_frame: "nearby_attraction_form" }) do %>
     <%= app_icon "pencil", class: "size-4", aria: { hidden: "true" } %>
-    <span>Edit details</span>
+    <span>Edit guest description</span>
+  <% end %>
+  <% if attraction.google_maps_url.present? %>
+    <% menu.with_item(
+         href: attraction.google_maps_url,
+         target: "_blank",
+         rel: "noopener noreferrer") do %>
+      <%= app_icon "external-link", class: "size-4", aria: { hidden: "true" } %>
+      <span>Open in Google Maps</span>
+    <% end %>
   <% end %>
   <% menu.with_item(
-       href: hotel_nearby_attraction_path(current_hotel, nearby_attraction),
+       href: hotel_nearby_attraction_path(@hotel, hotel_attraction),
        method: :delete,
        variant: :danger,
        data: {
-         turbo_confirm: "Are you sure you want to delete this nearby attraction?",
+         turbo_confirm: "Remove this attraction from your hotel?",
          turbo_confirm_tone: "destructive"
        }) do %>
-    <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
-    <span>Delete attraction</span>
+    <%= app_icon "unlink", class: "size-4", aria: { hidden: "true" } %>
+    <span>Remove from hotel</span>
   <% end %>
 <% end %>

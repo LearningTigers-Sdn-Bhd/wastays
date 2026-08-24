@@ -1,0 +1,84 @@
+<% unavailable = duplicate_attraction&.status.in?(%w[rejected archived]) %>
+<%= turbo_frame_tag "nearby_attraction_form" do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "nearby-attraction-sheet",
+          side: :right,
+          size: :md,
+          title: "Review Nearby Attraction",
+          description: "Make sure that this is the place that you want to add.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="space-y-5">
+          <div class="rounded-lg border border-border bg-card p-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-base font-semibold text-foreground"><%= parsed_attraction.name %></p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                  <%= number_with_precision(parsed_attraction.latitude, precision: 5) %>,
+                  <%= number_with_precision(parsed_attraction.longitude, precision: 5) %>
+                </p>
+              </div>
+              <% if unavailable %>
+                <%= render PanelsUI::Badge.new(
+                      label: "Unavailable",
+                      variant: :destructive,
+                      size: :sm) %>
+              <% elsif duplicate_attraction.nil? %>
+                <%= render PanelsUI::Badge.new(label: "New", variant: :info, size: :sm) %>
+              <% end %>
+            </div>
+
+            <% if estimated_distance_km %>
+              <p class="mt-3 text-xs font-medium text-muted-foreground">
+                <%= number_with_precision(estimated_distance_km, precision: 1) %> km estimated straight-line distance
+              </p>
+            <% end %>
+
+            <%= link_to parsed_attraction.google_maps_url,
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                        class: "mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline" do %>
+              <%= app_icon "external-link", class: "size-4", aria: { hidden: "true" } %>
+              <span>Open in Google Maps</span>
+            <% end %>
+          </div>
+
+          <% if unavailable %>
+            <div class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              This attraction is not available. Contact an administrator if you think that its status is incorrect.
+            </div>
+          <% else %>
+            <div class="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+              <%= duplicate_attraction ? "This place is ready to add to your hotel." : "This place will be available to guests after you add it." %>
+            </div>
+          <% end %>
+
+          <%= form_with url: hotel_nearby_attractions_path(@hotel),
+                        scope: :attraction,
+                        id: "nearby-attraction-create-form" do |form| %>
+            <%= form.hidden_field :google_maps_url, value: parsed_attraction.google_maps_url %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              href: new_hotel_nearby_attraction_path(@hotel),
+              variant: :secondary,
+              size: :sm,
+              data: { turbo_frame: "nearby_attraction_form" }) do %>
+          Back
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: "nearby-attraction-create-form",
+              variant: :primary,
+              size: :sm,
+              disabled: unavailable) do %>
+          <%= duplicate_attraction ? "Add to hotel" : "Create and add" %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

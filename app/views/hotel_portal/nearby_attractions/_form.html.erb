@@ -1,25 +1,19 @@
-<%= form_with model: [@hotel, nearby_attraction], id: "nearby-attraction-form", local: true do |f| %>
+<%= form_with model: attraction,
+              scope: :attraction,
+              url: preview_hotel_nearby_attractions_path(@hotel),
+              id: "nearby-attraction-form",
+              data: { turbo_frame: "nearby_attraction_form" } do |form| %>
   <%= render PanelsUI::FieldGroup.new do %>
-    <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Attraction Name", required: true) do |field| %>
-      <% field.with_input placeholder: "e.g. Batu Caves" %>
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: :google_maps_url,
+          label: "Google Maps URL",
+          hint: "Open the place in Google Maps and copy the full URL from your browser address bar.",
+          required: true) do |field| %>
+      <% field.with_input(
+           type: :url,
+           placeholder: "https://www.google.com/maps/place/...",
+           autocomplete: "url") %>
     <% end %>
-
-    <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
-      <% field.with_text_area rows: 4, placeholder: "Briefly describe what guests can expect here." %>
-    <% end %>
-
-    <%= render PanelsUI::FormField.new(form: f, attribute: :address, label: "Address") do |field| %>
-      <% field.with_text_area rows: 3, placeholder: "Street address or directions." %>
-    <% end %>
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <%= render PanelsUI::FormField.new(form: f, attribute: :city, label: "City", required: true) do |field| %>
-        <% field.with_input placeholder: "Kuala Lumpur" %>
-      <% end %>
-
-      <%= render PanelsUI::FormField.new(form: f, attribute: :country, label: "Country", required: true) do |field| %>
-        <% field.with_input placeholder: "Malaysia" %>
-      <% end %>
-    </div>
   <% end %>
 <% end %>
