@@ -42,10 +42,15 @@ module AiConcierge
                 "one language finds nothing in a document written in another."
         param :fact, type: "string", required: false,
           desc: "Set to check_in_time, check_out_time or cancellation_policy when the " \
-                "guest is asking exactly that. The hotel answers those from its own " \
+                "guest explicitly asks exactly that. Do not infer check-in from open or opening hours. " \
+                "The hotel answers those from its own " \
                 "records, so naming one is faster and cannot be wrong."
+        param :scope, type: "string", required: false,
+          desc: "Use specific or broad. Use broad only when the guest asks for an overview or all policies."
+        param :guest_language, type: "string", required: false,
+          desc: "ISO 639-1 code for the language used in the guest's message. Omit it when the message has no language signal."
 
-        def execute(category: nil, search_terms: nil, fact: nil)
+        def execute(category: nil, search_terms: nil, fact: nil, scope: nil, guest_language: nil)
           return advance_booking_instead if rate_question?
 
           intent = intent_for(category)
@@ -56,11 +61,14 @@ module AiConcierge
             interpretation: {
               "intent" => intent,
               "topic" => topic_for(category),
-              "retrieval_hints" => hints_for(search_terms, fact).to_h
+              "scope" => scope,
+              "retrieval_hints" => hints_for(search_terms, fact, guest_language).to_h
             },
             conversation_state: context.conversation_state,
             pause: context.info_interruption_active?,
-            active_branch: context.booking_branch
+            active_branch: context.booking_branch,
+            language: guest_language.presence || context.thread_language,
+            guest_language: guest_language
           ).call
 
           record(domain_result, digest: digest_for(domain_result))
@@ -70,11 +78,11 @@ module AiConcierge
 
         # The guest's own language is a fact about the thread, so it is read
         # from there rather than asked of the model.
-        def hints_for(search_terms, fact)
+        def hints_for(search_terms, fact, guest_language)
           Retrieval::QueryHints.new(
             terms: search_terms,
             fact: fact,
-            preferred_language: context.thread_language
+            preferred_language: guest_language.presence || context.thread_language
           )
         end
 

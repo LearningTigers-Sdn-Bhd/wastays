@@ -79,6 +79,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
 
     expect(result[:reply_type]).to eq(:nearby_attractions)
     expect(result.dig(:extra_context, :result, "attractions").first["name"]).to eq("Sky Bridge")
+    expect(result.dig(:extra_context, :result, "answer")).to include("- Sky Bridge: Scenic landmark.")
   end
 
   it "returns a room information success domain result" do
@@ -95,6 +96,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result[:reply_type]).to eq(:room_type_details)
     expect(result.dig(:extra_context, :result, "matched_room_type_id")).to eq(room_type.id)
     expect(result.dig(:extra_context, :result, "amenities")).to include("Free WiFi", "Balcony / Terrace")
+    expect(result.dig(:extra_context, :result, "answer").split(/(?<=[.!?])\s+/).size).to be <= 2
   end
 
   it "returns an ambiguous room information domain result" do
@@ -111,6 +113,11 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
 
     expect(result[:reply_type]).to eq(:ambiguous_room_type)
     expect(result.dig(:extra_context, :result, "error")).to eq("ambiguous_room_type")
+    expect(result.dig(:extra_context, :result, "answer")).to include("Ocean Villa King", "Ocean Villa Twin", "Which one")
+    expect(result.dig(:slots_payload, "information_task", "status")).to eq("waiting_for_guest")
+    expect(result.dig(:slots_payload, "information_task", "pending_question")).to eq("room_type_choice")
+    expect(result.dig(:slots_payload, "information_task", "context", "choices"))
+      .to contain_exactly("Ocean Villa King", "Ocean Villa Twin")
   end
 
   it "returns a room type not found domain result" do
@@ -126,6 +133,52 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
 
     expect(result[:reply_type]).to eq(:room_type_not_found)
     expect(result.dig(:extra_context, :result, "error")).to eq("room_type_not_found")
+    expect(result.dig(:extra_context, :result, "answer")).to eq("I could not match that room type. Please send the room type name.")
+    expect(result.dig(:slots_payload, "information_task", "pending_question")).to eq("room_type_name")
+  end
+
+  it "records an opening-hours clarification as an open information question" do
+    result = described_class.new(
+      hotel: hotel,
+      message: "what hour you start open",
+      interpretation: interpretation(intent: "hotel_information", topic: "general_hotel_info").merge("scope" => "specific"),
+      conversation_state: conversation_state,
+      pause: false
+    ).call
+
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to eq("Do you mean the hotel check-in time or the opening hours of a facility?")
+    expect(result.dig(:slots_payload, "information_task", "pending_question")).to eq("opening_hours_subject")
+    expect(result.dig(:slots_payload, "information_task", "context", "choices")).to eq([ "check-in", "facility" ])
+  end
+
+  it "does not repeat the previous restriction when the guest asks what else" do
+    conversation = create(:conversation, hotel: hotel, prospect: prospect)
+    create(
+      :prospect_message,
+      prospect: prospect,
+      conversation: conversation,
+      direction: "outbound",
+      body: "Pets are not allowed."
+    )
+    allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([
+      {
+        "content" => "Pets are not allowed.",
+        "document_title" => "Pets",
+        "category" => "policy",
+        "distance" => 0.1
+      }
+    ])
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "what else is restricted?",
+      interpretation: interpretation(intent: "hotel_policy", topic: "hotel_policy"),
+      conversation_state: conversation_state,
+      pause: false
+    ).call
+
+    expect(result.dig(:extra_context, :result, "answer")).to eq("I could not find another listed restriction.")
   end
 
   it "does not suspend an active booking when pause is false" do
@@ -143,13 +196,16 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
   end
 
   it "returns a domain result and suspends active booking for information" do
-    result = described_class.new(
-      hotel: hotel,
-      message: "what time is check in?",
-      interpretation: interpretation(intent: "hotel_policy", topic: "hotel_policy", tool_hints: [ "get_hotel_policy" ]),
-      conversation_state: conversation_state,
-      pause: true
-    ).call
+    result = nil
+    expect {
+      result = described_class.new(
+        hotel: hotel,
+        message: "what time is check in?",
+        interpretation: interpretation(intent: "hotel_policy", topic: "hotel_policy", tool_hints: [ "get_hotel_policy" ]),
+        conversation_state: conversation_state,
+        pause: true
+      ).call
+    }.to change(HotelKnowledgeDiagnostic, :count).by(1)
 
     expect(result[:reply_type]).to eq(:hotel_policy)
     expect(result[:active_topic]).to eq("hotel_policy")
@@ -157,6 +213,8 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result[:pending_question]).to be_nil
     expect(result[:action_name]).to be_nil
     expect(result.dig(:extra_context, :result, "check_in_time")).to eq("3:00 PM")
+    expect(result.dig(:extra_context, :result, "answer")).to eq("You can check in from 3:00 PM.")
+    expect(HotelKnowledgeDiagnostic.last.answer_mode).to eq("structured")
 
     payload = result[:slots_payload]
     expect(payload.dig("booking_task", "status")).to eq("suspended")

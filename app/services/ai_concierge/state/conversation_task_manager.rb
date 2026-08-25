@@ -82,12 +82,14 @@ module AiConcierge
       end
     end
 
-    def update_information_task(intent:, topic:, question: nil)
+    def update_information_task(intent:, topic:, question: nil, pending_question: nil, context: nil)
       task = default_information_task.merge(
-        "status" => "completed",
+        "status" => pending_question.present? ? "waiting_for_guest" : "completed",
         "intent" => intent,
         "topic" => topic,
         "last_question" => question,
+        "pending_question" => pending_question,
+        "context" => context,
         "answered_at" => now.iso8601
       )
 
@@ -273,6 +275,8 @@ module AiConcierge
         "intent" => nil,
         "topic" => nil,
         "last_question" => nil,
+        "pending_question" => nil,
+        "context" => nil,
         "answered_at" => nil
       }
     end

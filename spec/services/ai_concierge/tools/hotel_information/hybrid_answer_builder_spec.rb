@@ -71,13 +71,9 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result).to include(
-      "success" => true,
-      "answer" => "Breakfast is served from 7 AM to 10 AM.",
-      "answer_mode" => "deterministic",
-      "source" => "hotel_faq"
-    )
-    expect(result["knowledge_matches"]).to eq([ match ])
+    expect(result).to have_attributes(success: true, answer_mode: "deterministic", source: "hotel_faq")
+    expect(result.facts.map(&:text)).to eq([ "Breakfast is served from 7 AM to 10 AM." ])
+    expect(result.knowledge_matches).to eq([ match ])
   end
 
   it "uses synthesis mode for multiple matches" do
@@ -94,8 +90,8 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("Breakfast runs from 7 AM to 10 AM, and parking is available.")
     ).call
 
-    expect(result["answer_mode"]).to eq("synthesized")
-    expect(result["answer"]).to eq("Breakfast runs from 7 AM to 10 AM, and parking is available.")
+    expect(result.answer_mode).to eq("synthesized")
+    expect(result.facts.map(&:text)).to eq([ "Breakfast runs from 7 AM to 10 AM, and parking is available." ])
   end
 
   it "answers direct structured policy questions without synthesis" do
@@ -111,8 +107,8 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result["answer"]).to eq("Check-in starts at 3:00 PM.")
-    expect(result["answer_mode"]).to eq("fallback")
+    expect(result.facts.map(&:text)).to eq([ "You can check in from 3:00 PM." ])
+    expect(result.answer_mode).to eq("structured")
   end
 
   # The same question in Chinese reaches none of the English word matches, and
@@ -131,8 +127,8 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result["answer"]).to eq("Check-in starts at 3:00 PM.")
-    expect(result["answer_mode"]).to eq("fallback")
+    expect(result.facts.map(&:text)).to eq([ "You can check in from 3:00 PM." ])
+    expect(result.answer_mode).to eq("structured")
   end
 
   it "ignores a named fact the hotel has not filled in" do
@@ -149,7 +145,7 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result["answer_mode"]).to eq("unavailable")
+    expect(result.answer_mode).to eq("unavailable")
   end
 
   it "falls back to the best deterministic match when synthesis fails" do
@@ -173,8 +169,8 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: failing_agent
     ).call
 
-    expect(result["answer"]).to eq("Breakfast is served from 7 AM to 10 AM.")
-    expect(result["answer_mode"]).to eq("deterministic")
+    expect(result.facts.map(&:text)).to eq([ "Breakfast is served from 7 AM to 10 AM." ])
+    expect(result.answer_mode).to eq("fallback")
   end
 
   it "searches all hotel knowledge categories before using generic fallback text" do
@@ -199,9 +195,9 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result["answer"]).to eq("Parking is available for in-house guests.")
-    expect(result["answer_mode"]).to eq("deterministic")
-    expect(result["knowledge_matches"].first["category"]).to eq("faq")
+    expect(result.facts.map(&:text)).to eq([ "Parking is available for in-house guests." ])
+    expect(result.answer_mode).to eq("deterministic")
+    expect(result.knowledge_matches.first["category"]).to eq("faq")
   end
 
   it "retries all categories when the routed category has only a weak single match" do
@@ -222,7 +218,7 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result["answer"]).to eq("Parking is free.")
+    expect(result.facts.map(&:text)).to eq([ "Parking is free." ])
   end
 
   it "returns unavailable mode when no match or fallback exists" do
@@ -237,10 +233,7 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result).to include(
-      "success" => false,
-      "answer_mode" => "unavailable"
-    )
+    expect(result).to have_attributes(success: false, answer_mode: "unavailable")
   end
 
   # A thin first pass searches a second time over the fallback categories.
@@ -283,7 +276,8 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result).to include("answer_mode" => "deterministic", "answer" => match["content"])
+    expect(result).to have_attributes(answer_mode: "deterministic")
+    expect(result.facts.map(&:text)).to eq([ match["content"] ])
   end
 
   # A chunk only keyword search found matched some words -- that is how it got
@@ -304,7 +298,138 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
       answer_agent: answer_agent_returning("unused")
     ).call
 
-    expect(result["answer_mode"]).not_to eq("deterministic")
+    expect(result.answer_mode).not_to eq("deterministic")
+  end
+
+  it "returns at most five structured facts for a broad policy question and names the remaining topics" do
+    synthesized = (1..4).map do |index|
+      AiConcierge::Orchestration::HotelKnowledge::Reply::Fact.new(
+        topic: "rule #{index}", text: "Rule #{index} applies.", source_refs: [ index ]
+      )
+    end
+    matches = synthesized.each_with_index.map do |_, index|
+      match.merge("content" => "Rule #{index + 1} applies.", "distance" => 0.1 + index.fdiv(100))
+    end
+
+    result = described_class.new(
+      hotel: hotel,
+      query: "what are all your hotel policies?",
+      intent: "hotel_policy",
+      topic: "hotel_policy",
+      categories: [ "policy" ],
+      source: "hotel_policy",
+      scope: "broad",
+      structured_facts: {
+        "check_in_time" => "3:00 PM",
+        "check_out_time" => "11:00 AM",
+        "cancellation_policy" => "Free until 24 hours before arrival"
+      },
+      search_service: search_service_returning(matches),
+      answer_agent: answer_agent_returning(synthesized)
+    ).call
+
+    expect(result.shape).to eq("list")
+    expect(result.facts.size).to eq(5)
+    expect(result.remaining_topics).to eq([ "rule 3", "rule 4" ])
+    expect(result.facts.map(&:text).join(" ")).not_to include("not provided")
+  end
+
+  it "omits missing structured fields from a broad policy reply" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "what is the hotel policy?",
+      intent: "hotel_policy",
+      topic: "hotel_policy",
+      categories: [ "policy" ],
+      source: "property_policy",
+      scope: "broad",
+      structured_facts: { "check_in_time" => "3:00 PM", "check_out_time" => nil },
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result.shape).to eq("list")
+    expect(result.facts.map(&:topic)).to eq([ "check-in" ])
+  end
+
+  it "asks one focused question when a specific policy request is ambiguous" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "what policy applies?",
+      intent: "hotel_policy",
+      topic: "hotel_policy",
+      categories: [ "policy" ],
+      source: "property_policy",
+      scope: "specific",
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to have_attributes(shape: "clarification", answer_mode: "unavailable", success: false)
+    expect(result.facts.one?).to be(true)
+    expect(result.facts.first.text).to end_with("?")
+  end
+
+  it "clarifies ambiguous opening hours even when the model hints at check-in" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "what hour you start open",
+      intent: "hotel_policy",
+      topic: "hotel_policy",
+      categories: [ "policy" ],
+      source: "property_policy",
+      structured_facts: { "check_in_time" => "3:00 PM" },
+      hints: AiConcierge::Retrieval::QueryHints.new(fact: "check_in_time"),
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to have_attributes(shape: "clarification", success: false)
+    expect(result.facts.first.text).to eq("Do you mean the hotel check-in time or the opening hours of a facility?")
+  end
+
+  it "clarifies ambiguous opening hours before reading a stale cached answer" do
+    with_real_cache_store do
+      builder = described_class.new(
+        hotel: hotel,
+        query: "what hour you start open",
+        intent: "hotel_information",
+        topic: "general_hotel_info",
+        categories: [ "general_info" ],
+        source: "general_hotel_info",
+        search_service: search_service_returning([]),
+        answer_agent: answer_agent_returning("unused")
+      )
+      stale = AiConcierge::Orchestration::HotelKnowledge::Reply.new(
+        shape: "direct",
+        answer_mode: "synthesized",
+        facts: [ AiConcierge::Orchestration::HotelKnowledge::Reply::Fact.new(text: "Check-in time is from 3:00 PM.") ]
+      )
+      Rails.cache.write(builder.send(:cache_key), stale.to_h)
+
+      result = builder.call
+
+      expect(result).to have_attributes(shape: "clarification", success: false)
+      expect(result.facts.first.text).to start_with("Do you mean")
+    end
+  end
+
+  it "does not clarify opening hours when the guest names a facility" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "what time does the pool open?",
+      intent: "hotel_information",
+      topic: "general_hotel_info",
+      categories: [ "general_info" ],
+      source: "general_hotel_info",
+      search_service: search_service_returning([
+        match.merge("content" => "The pool opens at 7:00 AM.", "document_title" => "Pool")
+      ]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to have_attributes(shape: "direct", answer_mode: "deterministic", success: true)
+    expect(result.facts.first.text).to eq("The pool opens at 7:00 AM.")
   end
 
   describe "caching the answer" do
@@ -348,8 +473,8 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
           ).call
         end
 
-        expect(build("3:00 PM")["answer"]).to eq("Check-in starts at 3:00 PM.")
-        expect(build("2:00 PM")["answer"]).to eq("Check-in starts at 2:00 PM.")
+        expect(build("3:00 PM").facts.map(&:text)).to eq([ "You can check in from 3:00 PM." ])
+        expect(build("2:00 PM").facts.map(&:text)).to eq([ "You can check in from 2:00 PM." ])
       end
     end
 
@@ -373,8 +498,8 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
           answer_agent: answer_agent_returning("unused")
         ).call
 
-        expect(first["answer"]).to eq("Breakfast is served from 7 AM to 10 AM.")
-        expect(second["answer"]).to eq("Breakfast now runs to 11 AM.")
+        expect(first.facts.map(&:text)).to eq([ "Breakfast is served from 7 AM to 10 AM." ])
+        expect(second.facts.map(&:text)).to eq([ "Breakfast now runs to 11 AM." ])
       end
     end
   end
