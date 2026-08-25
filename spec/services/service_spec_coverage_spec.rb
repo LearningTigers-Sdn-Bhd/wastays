@@ -15,6 +15,11 @@ RSpec.describe "Service spec coverage" do
     "ai_concierge/orchestration/agent_loop/outcome" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/tool_recorder" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/turn_context" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    # Knowledge replies are exercised through the turn and orchestration
+    # boundaries that consume them.
+    "ai_concierge/orchestration/hotel_knowledge/clarification_resolver" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/hotel_knowledge/reply" => "ai_concierge/orchestration/hotel_knowledge/reply_composer_spec.rb",
+    "ai_concierge/orchestration/hotel_knowledge/reply_factory" => "ai_concierge/orchestration/hotel_knowledge/orchestrator_spec.rb",
     # The fallback sentence is a constant on the namespace: the only thing
     # worth asserting is that a turn which cannot answer sends it.
     "ai_concierge/message_builders" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
