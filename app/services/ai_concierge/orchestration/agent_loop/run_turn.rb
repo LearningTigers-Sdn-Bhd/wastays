@@ -41,6 +41,10 @@ module AiConcierge
         end
 
         def call
+          if (clarification = resolve_knowledge_clarification)
+            return Outcome.new(conversation_state: context.conversation_state, domain_result: clarification)
+          end
+
           response = Timeout.timeout(LLM_TIMEOUT) { run }
           recorder.outcome || booking_backstop || outcome_from_prose(response)
         rescue Timeout::Error, RubyLLM::Error, HopLimitExceeded, JSON::ParserError => e
@@ -58,6 +62,10 @@ module AiConcierge
         private
 
         attr_reader :context, :recorder
+
+        def resolve_knowledge_clarification
+          HotelKnowledge::ClarificationResolver.new(context: context).call
+        end
 
         def run
           response = BuildChat.new(context: context, tools: tools, recorder: recorder, max_hops: MAX_HOPS)

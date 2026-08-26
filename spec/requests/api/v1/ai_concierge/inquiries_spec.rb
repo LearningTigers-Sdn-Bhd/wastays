@@ -110,7 +110,13 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "What is the policy of this hotel?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("Quiet Hours\nQuiet hours start at 10 PM.")
+      expect(parsed_body["reply_message"]).to include(
+        "- You can check in from 15:00.",
+        "- Check-out is by 12:00.",
+        "- You can cancel under these terms: 24 hours.",
+        "- Quiet Hours Quiet hours start at 10 PM."
+      )
+      expect(parsed_body["reply_message"]).not_to match(/not provided|thank you for your inquiry|please let us know/i)
       expect(parsed_body["needs_human_support"]).to be(false)
       expect(parsed_body["action_name"]).to be_nil
       expect(parsed_body["prospect_public_id"]).to be_present
@@ -157,14 +163,15 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post slug_path, params: { message: "What is the policy of this hotel?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include(hotel.name)
+      expect(parsed_body["reply_message"]).to include("- You can check in from 15:00.")
+      expect(parsed_body["reply_message"]).not_to include(hotel.name)
     end
 
     it "answers general hotel information questions" do
       post path, params: { message: "Tell me about the hotel", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include(hotel.name)
+      expect(parsed_body["reply_message"]).not_to include(hotel.name)
       expect(parsed_body["reply_message"]).to include(hotel.address)
       expect(parsed_body["reply_message"]).to include(hotel.city)
     end
@@ -176,7 +183,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("General\nQ: What time is breakfast?\nA: Breakfast is served daily from 7 AM to 10 AM.")
+      expect(parsed_body["reply_message"]).to eq("General Q: What time is breakfast? A: Breakfast is served daily from 7 AM to 10 AM.")
     end
 
     it "returns the full nearby attractions list" do
@@ -186,7 +193,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "What attractions are nearby?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Here are the nearby attractions")
+      expect(parsed_body["reply_message"]).to include("Here are the available details")
       expect(parsed_body["reply_message"]).to include("Sky Bridge")
       expect(parsed_body["reply_message"]).to include("Night Market")
     end
@@ -204,9 +211,10 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "Tell me about the exec suite", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Here are the details for Executive Suite")
+      expect(parsed_body["reply_message"]).to include("Executive Suite: Large suite with sea view")
+      expect(parsed_body["reply_message"]).to include("amenities include Free WiFi")
       expect(parsed_body["reply_message"]).to include("Large suite with sea view.")
-      expect(parsed_body["reply_message"]).to include("Amenities: Free WiFi, Balcony / Terrace, Flat-screen TV")
+      expect(parsed_body["reply_message"]).to include("amenities include Free WiFi, Balcony / Terrace, Flat-screen TV")
     end
 
     it "asks the guest to clarify when a room question matches multiple room types" do
@@ -216,7 +224,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "Tell me about the ocean villa", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("multiple room types")
+      expect(parsed_body["reply_message"]).to include("several matching room types")
       expect(parsed_body["reply_message"]).to include("Ocean Villa King")
       expect(parsed_body["reply_message"]).to include("Ocean Villa Twin")
     end
@@ -376,7 +384,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
       post path, params: { message: "any hotel policies?", phone: phone }.to_json, headers: headers
 
-      expect(parsed_body["reply_message"]).to include("Here is our hotel policy")
+      expect(parsed_body["reply_message"]).to include("- You can check in from 15:00.")
 
       post path, params: { message: "no 2", phone: phone }.to_json, headers: headers
 
@@ -396,7 +404,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
       post path, params: { message: "tell me about the executive suite", phone: phone }.to_json, headers: headers
 
-      expect(parsed_body["reply_message"]).to include("Here are the details for Executive Suite")
+      expect(parsed_body["reply_message"]).to include("Executive Suite: Large suite with sea view")
 
       post path, params: { message: "no 1", phone: phone }.to_json, headers: headers
 
@@ -520,7 +528,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "may i know hotel amenities", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to include("Hotel amenities:")
+      expect(parsed_body["reply_message"]).to include("Available amenities include")
       expect(parsed_body["reply_message"]).not_to include("I couldn't match that room type")
     end
 

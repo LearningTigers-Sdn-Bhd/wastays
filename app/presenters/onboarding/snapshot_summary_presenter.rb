@@ -52,8 +52,7 @@ module Onboarding
       case section_key
       when "property_profile" then property_summary
       when "property_photos" then photos_summary
-      when "roles_permissions" then "#{ConfirmRolePresets::PRESET_SLUGS.size} standard roles confirmed"
-      when "staff_setup" then count_summary(snapshot["staff"], "staff member", "No additional staff")
+      when "team_setup" then "#{RolePresets::PRESET_SLUGS.size} standard roles confirmed · #{count_summary(snapshot['staff'], 'staff member', 'no additional staff')}"
       when "taxes_fees"
         count_summary(snapshot["taxes"], "property tax or fee", "No additional property fees", plural: "property taxes or fees")
       when "room_revenue" then "Posting and tax rules confirmed"

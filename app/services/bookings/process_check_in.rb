@@ -68,8 +68,23 @@ module Bookings
       raise CheckInError, booking_error(booking, "Check-in date and time is required.") if details[:checked_in_at].blank?
 
       timestamp_for(booking)
+      validate_timestamp!(booking)
       validate_security_deposit!(booking)
       validate_rooms!(booking)
+    end
+
+    # A guest cannot arrive before they arrive, so the date box can never point
+    # forward. The past stays open on purpose: the closed-date gate in
+    # TransitionStatus already asks for an override and a reason there. The
+    # tolerance matches the picker's five-minute step, so choosing the next mark
+    # on the spinner is not treated as a mistake.
+    FUTURE_TOLERANCE = 5.minutes
+
+    def validate_timestamp!(booking)
+      timestamp = timestamp_for(booking)
+      return if timestamp.blank? || timestamp <= Time.current + FUTURE_TOLERANCE
+
+      raise CheckInError, booking_error(booking, "Check-in time cannot be in the future.")
     end
 
     def validate_security_deposit!(booking)

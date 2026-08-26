@@ -2,10 +2,11 @@ module AiConcierge
   module Tools
     module HotelInformation
       class GetHotelFaqTool
-        def initialize(hotel:, query: nil, hints: Retrieval::QueryHints.none)
+        def initialize(hotel:, query: nil, scope: nil, hints: Retrieval::QueryHints.none)
           @hotel = hotel
           @query = query.to_s
           @hints = hints
+          @scope = scope
         end
 
         def call
@@ -14,7 +15,7 @@ module AiConcierge
             .order(:created_at, :id)
             .includes(:chunks)
           faq_text = format_documents(documents)
-          answer_payload = HybridAnswerBuilder.new(
+          reply = HybridAnswerBuilder.new(
             hotel: hotel,
             query: query,
             intent: "hotel_information",
@@ -22,25 +23,18 @@ module AiConcierge
             categories: [ "faq" ],
             source: "hotel_faq",
             fallback_text: faq_text.presence,
-            unavailable_answer: "The hotel has not provided FAQ details yet.",
+            scope: scope,
             hints: hints
           ).call
 
-          {
-            "success" => answer_payload["success"],
-            "answer" => answer_payload["answer"],
-            "answer_mode" => answer_payload["answer_mode"],
+          reply.to_h.merge(
             "faq_text" => faq_text.presence,
-            "source" => "hotel_faq",
-            "knowledge_matches" => answer_payload["knowledge_matches"],
-            "searched_categories" => answer_payload["searched_categories"],
-            "fallback_categories" => answer_payload["fallback_categories"]
-          }
+          )
         end
 
         private
 
-        attr_reader :hotel, :query, :hints
+        attr_reader :hotel, :query, :scope, :hints
 
         def format_documents(documents)
           documents.filter_map do |doc|

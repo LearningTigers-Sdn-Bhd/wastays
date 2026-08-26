@@ -46,7 +46,7 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     run_to_rate_plan_prompt
     post_message("what time is check in?")
 
-    expect(parsed_body["reply_message"]).to include("Check-in starts")
+    expect(parsed_body["reply_message"]).to include("You can check in from")
 
     post_message("no 1")
 
@@ -140,7 +140,7 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     run_to_rate_plan_prompt
     post_message("first one")
     post_message("what time is check in?")
-    expect(parsed_body["reply_message"]).to include("Check-in starts")
+    expect(parsed_body["reply_message"]).to include("You can check in from")
 
     # Option 4 rather than 1: the catalogue numbers every room in one run, and
     # Deluxe Room's own rows start after Garden Prestige Suite's.
@@ -353,7 +353,7 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
 
     post_message("standard")
     post_message("what time is check in?")
-    expect(parsed_body["reply_message"]).to include("Check-in starts")
+    expect(parsed_body["reply_message"]).to include("You can check in from")
 
     expect(booking_task["reask_count"]).to eq(0)
     expect(conversation.reload.human_requested_at).to be_nil

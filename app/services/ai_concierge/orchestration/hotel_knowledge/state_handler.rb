@@ -2,12 +2,15 @@ module AiConcierge
   module Orchestration
     module HotelKnowledge
       class StateHandler
-        def initialize(conversation_state:, interpretation:, message:, pause:, active_branch: nil)
+        def initialize(conversation_state:, interpretation:, message:, pause:, active_branch: nil,
+          pending_question: nil, clarification_context: nil)
           @conversation_state = conversation_state
           @interpretation = interpretation
           @message = message.to_s
           @pause = pause
           @active_branch = active_branch
+          @pending_question = pending_question
+          @clarification_context = clarification_context
         end
 
         def slots_payload
@@ -29,13 +32,16 @@ module AiConcierge
           State::ConversationTaskManager.new(slots_payload: payload).update_information_task(
             intent: interpretation["intent"],
             topic: interpretation["topic"],
-            question: message
+            question: message,
+            pending_question: pending_question,
+            context: clarification_context
           )
         end
 
         private
 
-        attr_reader :conversation_state, :interpretation, :message, :pause, :active_branch
+        attr_reader :conversation_state, :interpretation, :message, :pause, :active_branch, :pending_question,
+          :clarification_context
 
         def branch_for_suspension
           active_branch.is_a?(Hash) ? active_branch : State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).booking_branch

@@ -11,8 +11,7 @@ module HotelPortal
     IMPLEMENTED_SECTIONS = %w[
       property_profile
       property_photos
-      roles_permissions
-      staff_setup
+      team_setup
       taxes_fees
       room_revenue
       rooms
@@ -73,8 +72,9 @@ module HotelPortal
       @navigation = Onboarding::NavigationState.new(hotel: current_hotel).call
     end
 
+    # Links saved before the two Team steps merged still land on the right page.
     def set_current_entry
-      @current_entry = @navigation.fetch(params[:section_key])
+      @current_entry = @navigation.fetch(Onboarding::SectionCatalog.resolve(params[:section_key]))
     rescue KeyError
       raise ActiveRecord::RecordNotFound
     end
@@ -100,9 +100,12 @@ module HotelPortal
       when "property_profile", "property_photos"
         @photo_queue = HotelPortal::PhotoQueue.new(current_hotel, session)
         @profile_presenter = HotelPortal::ProfilePresenter.new(current_hotel, @photo_queue, view_context)
-      when "roles_permissions"
-        @preset_roles = preset_roles.includes(:permissions)
-      when "staff_setup"
+      when "team_setup"
+        # The page shows the four presets and lets staff be assigned to them, so
+        # they have to exist before it renders rather than only when it saves.
+        # Seeding is idempotent, and it also picks up permissions added to the
+        # registry since this account was created.
+        HotelOps::SeedAccountRoles.call(current_hotel.account) unless @presenter.read_only?
         @staff_roles = preset_roles
         @staff_entries = entries || current_hotel.onboarding_staff_drafts.includes(:role).order(:created_at, :id).map do |draft|
           {
@@ -165,10 +168,10 @@ module HotelPortal
           @payment_method_entries = entries || persisted_payment_method_entries
         end
       when "corporate_accounts"
-        # See staff_setup: no trailing blank row, because empty is an answer.
+        # See team_setup: no trailing blank row, because empty is an answer.
         @corporate_draft_entries = entries || persisted_corporate_draft_entries
       when "channel_manager"
-        # See staff_setup: no trailing blank row, because empty is an answer.
+        # See team_setup: no trailing blank row, because empty is an answer.
         @ota_credential_entries = entries || persisted_ota_credential_entries
       when "review"
         rates_coverage = Rates::SetupCoverage.call(hotel: current_hotel)
@@ -406,10 +409,8 @@ module HotelPortal
             actor: current_user,
             complete: complete
           ).call
-        when "roles_permissions"
-          save_role_review(complete)
-        when "staff_setup"
-          Onboarding::SaveStaffDrafts.new(
+        when "team_setup"
+          Onboarding::SaveTeamSetup.new(
             hotel: current_hotel,
             actor: current_user,
             entries: params[:staff_entries] || {},
@@ -487,18 +488,6 @@ module HotelPortal
       destination = complete ? (@navigation.next_entry(@current_entry.definition.key) || @navigation.fetch(@current_entry.definition.key)) : @navigation.fetch(@current_entry.definition.key)
       notice = complete ? "Progress saved. Continue with the next step." : "Draft saved."
       redirect_to onboarding_path(destination), notice: notice
-    end
-
-    def save_role_review(complete)
-      if complete
-        Onboarding::ConfirmRolePresets.new(
-          hotel: current_hotel,
-          actor: current_user,
-          confirmed: params[:confirm_presets]
-        ).call
-      else
-        update_section("in_progress", source: "role_preset_review")
-      end
     end
 
     def render_section_error(result)
@@ -732,8 +721,7 @@ module HotelPortal
 
       build_navigation
       destination = @navigation.next_entry(@current_entry.definition.key) || @navigation.fetch(@current_entry.definition.key)
-      notice = @current_entry.definition.key == "staff_setup" ? "No additional staff will be invited for now." : "Step skipped for now."
-      redirect_to onboarding_path(destination), notice: notice
+      redirect_to onboarding_path(destination), notice: "Step skipped for now."
     end
 
     def update_section(state, metadata)
@@ -747,8 +735,7 @@ module HotelPortal
     end
 
     def preset_roles
-      current_hotel.account.roles.where(slug: Onboarding::ConfirmRolePresets::PRESET_SLUGS)
-                   .order(Arel.sql("CASE slug WHEN 'hotel_owner' THEN 0 WHEN 'general_manager' THEN 1 WHEN 'front_desk' THEN 2 WHEN 'housekeeper' THEN 3 ELSE 4 END"))
+      Onboarding::RolePresets.for(current_hotel.account)
     end
 
     def implemented_section?

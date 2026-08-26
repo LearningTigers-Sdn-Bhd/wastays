@@ -179,20 +179,20 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       end
     end
 
-    it "hides today reset until arrivals or departures use another date" do
+    it "hides the business-date reset until arrivals or departures use another date" do
       grant_arrival_permission
-      today = hotel_today.iso8601
+      business_date = hotel.current_business_date.iso8601
 
       %w[arrivals departures].each do |tab|
         get hotel_front_desk_path(hotel), params: { tab: }
-        expect(response.parsed_body.at_css("a[aria-label='Reset to today']")).to be_nil
+        expect(response.parsed_body.at_css("a[aria-label='Reset to business date']")).to be_nil
 
         prefix = tab == "arrivals" ? "arrival" : "departure"
         get hotel_front_desk_path(hotel), params: {
           tab:, "#{prefix}_start_date" => "2026-07-14", "#{prefix}_end_date" => "2026-07-15"
         }
-        expect(response.parsed_body.at_css("a[aria-label='Reset to today']")&.[]("href")).to include(
-          "#{prefix}_start_date=#{today}", "#{prefix}_end_date=#{today}"
+        expect(response.parsed_body.at_css("a[aria-label='Reset to business date']")&.[]("href")).to include(
+          "#{prefix}_start_date=#{business_date}", "#{prefix}_end_date=#{business_date}"
         )
       end
     end
@@ -263,31 +263,32 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).not_to include(legacy_arrival.confirmation_token)
     end
 
-    it "resets arrivals to hotel-local today while preserving independent filters" do
+    it "resets arrivals to the open business date after local midnight" do
       grant_arrival_permission
 
       hotel.update!(time_zone: "Kuala Lumpur")
-      with_frozen_time(Time.utc(2026, 7, 15, 18, 30)) do
-        today = booking(status: "confirmed", confirmation_token: "LOCAL-TODAY", check_in: hotel.hotel_time_zone.local(2026, 7, 16, 15))
+      with_frozen_time(Time.utc(2026, 7, 25, 16, 1)) do
+        BusinessDates::ResetAuthority.call!(hotel:, date: Date.new(2026, 7, 25))
+        arrival = booking(status: "confirmed", confirmation_token: "BUSINESS-DATE-ARRIVAL", check_in: hotel.hotel_time_zone.local(2026, 7, 25, 15))
         get hotel_front_desk_path(hotel), params: {
-          tab: "arrivals", view: "rooms", arrival_q: "LOCAL",
+          tab: "arrivals", view: "rooms", arrival_q: "BUSINESS-DATE",
           arrival_start_date: "2026-07-14", arrival_end_date: "2026-07-14", arrival_page: 2,
           in_house_query: "Stay", in_house_page: 3, departure_query: "Departed", departure_page: 4
         }
 
-        reset_link = response.parsed_body.at_css("a[aria-label='Reset to today']")
+        reset_link = response.parsed_body.at_css("a[aria-label='Reset to business date']")
         expect(reset_link).to be_present
         expect(reset_link["href"]).to include(
-          "tab=arrivals", "view=rooms", "arrival_q=LOCAL",
-          "arrival_start_date=2026-07-16", "arrival_end_date=2026-07-16",
+          "tab=arrivals", "view=rooms", "arrival_q=BUSINESS-DATE",
+          "arrival_start_date=2026-07-25", "arrival_end_date=2026-07-25",
           "in_house_query=Stay", "in_house_page=3", "departure_query=Departed", "departure_page=4"
         )
         expect(reset_link["href"]).not_to include("arrival_page")
 
         get reset_link["href"]
-        expect(response.body).to include(today.confirmation_token)
-        expect(response.parsed_body.at_css("input[name='arrival_start_date']")["value"]).to eq("2026-07-16")
-        expect(response.parsed_body.at_css("input[name='arrival_end_date']")["value"]).to eq("2026-07-16")
+        expect(response.body).to include(arrival.confirmation_token)
+        expect(response.parsed_body.at_css("input[name='arrival_start_date']")["value"]).to eq("2026-07-25")
+        expect(response.parsed_body.at_css("input[name='arrival_end_date']")["value"]).to eq("2026-07-25")
       end
     end
 
@@ -305,18 +306,34 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(clear_link["href"]).not_to include("booking_start_date", "booking_end_date", "booking_page")
     end
 
-    it "resets departure dates to hotel-local today" do
+    it "resets departures to the open business date after local midnight" do
       hotel.update!(time_zone: "Kuala Lumpur")
 
-      with_frozen_time(Time.utc(2026, 7, 15, 18, 30)) do
+      with_frozen_time(Time.utc(2026, 7, 25, 16, 1)) do
+        BusinessDates::ResetAuthority.call!(hotel:, date: Date.new(2026, 7, 25))
         get hotel_front_desk_path(hotel), params: {
           tab: "departures", view: "list", departure_query: "Aisha",
           departure_start_date: "2026-07-14", departure_end_date: "2026-07-15", departure_page: 2
         }
 
-        reset_link = response.parsed_body.at_css("a[aria-label='Reset to today']")
-        expect(reset_link["href"]).to include("departure_start_date=2026-07-16", "departure_end_date=2026-07-16", "departure_query=Aisha")
+        reset_link = response.parsed_body.at_css("a[aria-label='Reset to business date']")
+        expect(reset_link["href"]).to include("departure_start_date=2026-07-25", "departure_end_date=2026-07-25", "departure_query=Aisha")
         expect(reset_link["href"]).not_to include("departure_page")
+      end
+    end
+
+    it "keeps checkout reset on the hotel-local calendar date" do
+      hotel.update!(time_zone: "Kuala Lumpur")
+
+      with_frozen_time(Time.utc(2026, 7, 25, 16, 1)) do
+        BusinessDates::ResetAuthority.call!(hotel:, date: Date.new(2026, 7, 25))
+        get hotel_front_desk_path(hotel), params: {
+          tab: "checkout", checkout_start_date: "2026-07-24", checkout_end_date: "2026-07-25"
+        }
+
+        reset_link = response.parsed_body.at_css("a[aria-label='Reset to today']")
+        expect(reset_link["href"]).to include("checkout_start_date=2026-07-26", "checkout_end_date=2026-07-26")
+        expect(response.parsed_body.at_css("a[aria-label='Reset to business date']")).to be_nil
       end
     end
 
@@ -324,7 +341,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list" }
 
       document = response.parsed_body
-      expect(document.at_css("a[aria-label='Clear dates'], a[aria-label='Reset to today']")).to be_nil
+      expect(document.at_css("a[aria-label='Clear dates'], a[aria-label='Reset to today'], a[aria-label='Reset to business date']")).to be_nil
       view_group = document.at_css(".panel-button-group[aria-label='Reservation view']")
       expect(view_group).to be_present
       expect(view_group.css("a.panel-button").map { |link| link.text.squish }).to eq(%w[Rooms List])

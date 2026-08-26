@@ -30,6 +30,22 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::StateHandler do
     expect(payload.dig("information_task", "last_question")).to eq("tell me about hotel")
   end
 
+  it "stores a knowledge clarification separately from the booking question" do
+    payload = described_class.new(
+      conversation_state: conversation_state,
+      interpretation: interpretation("hotel_information", "general_hotel_info"),
+      message: "what hour do you open?",
+      pause: false,
+      pending_question: "opening_hours_subject",
+      clarification_context: { "choices" => [ "check-in", "facility" ] }
+    ).slots_payload
+
+    expect(payload.dig("booking_task", "pending_question")).to eq("confirm_selection")
+    expect(payload.dig("information_task", "status")).to eq("waiting_for_guest")
+    expect(payload.dig("information_task", "pending_question")).to eq("opening_hours_subject")
+    expect(payload.dig("information_task", "context", "choices")).to eq([ "check-in", "facility" ])
+  end
+
   it "suspends the active booking and updates information task when pause is true" do
     payload = described_class.new(
       conversation_state: conversation_state,

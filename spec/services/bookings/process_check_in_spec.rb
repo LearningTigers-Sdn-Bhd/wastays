@@ -37,6 +37,37 @@ RSpec.describe Bookings::ProcessCheckIn, frozen_time: :business_day do
     expect(booking.booking_rooms.first.reload.room_number).to eq("101")
   end
 
+  it "refuses a check-in time in the future" do
+    future = 2.days.from_now.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
+    result = described_class.new(
+      bookings: [ booking ], details: details.merge(checked_in_at: future), user: user
+    ).call
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Check-in time cannot be in the future.")
+    expect(booking.reload.status).to eq("confirmed")
+  end
+
+  it "allows the next mark on the five-minute spinner" do
+    nearly_now = 4.minutes.from_now.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
+    result = described_class.new(
+      bookings: [ booking ], details: details.merge(checked_in_at: nearly_now), user: user
+    ).call
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.status).to eq("checked_in")
+  end
+
+  it "still allows a check-in time in the past" do
+    earlier = 3.hours.ago.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
+    result = described_class.new(
+      bookings: [ booking ], details: details.merge(checked_in_at: earlier), user: user
+    ).call
+
+    expect(result.success?).to be(true)
+    expect(booking.reload.status).to eq("checked_in")
+  end
+
   it "fails when no bookings are supplied" do
     result = described_class.new(bookings: [], details: {}, user: user).call
 

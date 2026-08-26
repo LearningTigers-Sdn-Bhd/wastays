@@ -17,11 +17,6 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetHotelFaqTool do
 
     expect(result).to include(
       "success" => true,
-      "answer" => [
-        "General",
-        "Q: Do you offer airport transfers?\nA: Yes, on request.",
-        "Q: What time is breakfast?\nA: Breakfast is served from 7 AM to 10 AM."
-      ].join("\n"),
       "answer_mode" => "fallback",
       "faq_text" => [
         "General",
@@ -31,6 +26,7 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetHotelFaqTool do
       "source" => "hotel_faq",
       "knowledge_matches" => []
     )
+    expect(result["facts"].map { |fact| fact["text"] }).to eq([ result["faq_text"] ])
   end
 
   it "joins multiple faq documents" do

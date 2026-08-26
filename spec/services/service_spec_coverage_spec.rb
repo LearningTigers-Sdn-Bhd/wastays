@@ -15,6 +15,11 @@ RSpec.describe "Service spec coverage" do
     "ai_concierge/orchestration/agent_loop/outcome" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/tool_recorder" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/agent_loop/turn_context" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    # Knowledge replies are exercised through the turn and orchestration
+    # boundaries that consume them.
+    "ai_concierge/orchestration/hotel_knowledge/clarification_resolver" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
+    "ai_concierge/orchestration/hotel_knowledge/reply" => "ai_concierge/orchestration/hotel_knowledge/reply_composer_spec.rb",
+    "ai_concierge/orchestration/hotel_knowledge/reply_factory" => "ai_concierge/orchestration/hotel_knowledge/orchestrator_spec.rb",
     # The fallback sentence is a constant on the namespace: the only thing
     # worth asserting is that a turn which cannot answer sends it.
     "ai_concierge/message_builders" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
@@ -40,9 +45,7 @@ RSpec.describe "Service spec coverage" do
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",
-    "onboarding/confirm_role_presets" => "onboarding/property_and_team_spec.rb",
     "onboarding/create_deliveries" => "onboarding/review_lifecycle_spec.rb",
-    "onboarding/decide_no_additional_staff" => "onboarding/property_and_team_spec.rb",
     "onboarding/decide_no_corporate_accounts" => "onboarding/commercial_setup_spec.rb",
     "onboarding/deliver_invitation_draft" => "onboarding/deliver_invitations_spec.rb",
     "onboarding/initialize_progress" => "onboarding/foundation_spec.rb",
@@ -52,6 +55,7 @@ RSpec.describe "Service spec coverage" do
     "onboarding/readiness" => "onboarding/foundation_spec.rb",
     "onboarding/request_changes" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/resume_page_resolver" => "onboarding/foundation_spec.rb",
+    "onboarding/role_presets" => "onboarding/property_and_team_spec.rb",
     "onboarding/save_corporate_drafts" => "onboarding/commercial_setup_spec.rb",
     "onboarding/save_discounts" => "onboarding/commercial_setup_spec.rb",
     "onboarding/save_extra_charges" => "onboarding/commercial_setup_spec.rb",
@@ -62,8 +66,8 @@ RSpec.describe "Service spec coverage" do
     "onboarding/save_rates_availability" => "onboarding/rates_availability_spec.rb",
     "onboarding/save_room_revenue" => "onboarding/taxes_and_room_revenue_spec.rb",
     "onboarding/save_rooms" => "onboarding/rooms_spec.rb",
-    "onboarding/save_staff_drafts" => "onboarding/property_and_team_spec.rb",
     "onboarding/save_taxes_fees" => "onboarding/taxes_and_room_revenue_spec.rb",
+    "onboarding/save_team_setup" => "onboarding/property_and_team_spec.rb",
     "onboarding/section_catalog" => "onboarding/foundation_spec.rb",
     "onboarding/skip_optional_section" => "onboarding/commercial_setup_spec.rb",
     "onboarding/submit_onboarding" => "onboarding/review_lifecycle_spec.rb",

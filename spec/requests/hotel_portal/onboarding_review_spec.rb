@@ -13,7 +13,7 @@ RSpec.describe "Hotel onboarding review page", type: :request do
   let(:snapshot) do
     {
       "property" => { "city" => "Kota Belud", "country" => "Malaysia", "default_currency" => "MYR" },
-      "sections" => Onboarding::SectionCatalog.keys.index_with { |key| { "state" => key == "staff_setup" ? "skipped" : "complete" } },
+      "sections" => Onboarding::SectionCatalog.keys.index_with { |key| { "state" => key == "extra_charges" ? "skipped" : "complete" } },
       "staff" => [], "taxes" => [], "room_revenue" => {},
       "rooms" => [ { "name" => "Garden Room", "quantity" => 4 } ],
       "rates" => { "coverage" => { "end_date" => "2027-08-12" }, "plans" => [] },
@@ -36,7 +36,7 @@ RSpec.describe "Hotel onboarding review page", type: :request do
 
     Onboarding::InitializeProgress.new(hotel:).call
     hotel.onboarding_sections.update_all(state: "complete", completed_at: Time.current)
-    hotel.onboarding_sections.find_by!(section_key: "staff_setup").update!(state: "skipped")
+    hotel.onboarding_sections.find_by!(section_key: "extra_charges").update!(state: "skipped")
 
     allow(Rates::SetupCoverage).to receive(:call).with(hotel:).and_return(coverage)
     allow(Onboarding::Readiness).to receive(:new).with(hotel:, rates_coverage: coverage)
@@ -60,11 +60,11 @@ RSpec.describe "Hotel onboarding review page", type: :request do
     expect(document.css("table caption").text).to include("Property setup summary")
     expect(document.css("table tbody th[scope='rowgroup']").map { |cell| cell.text.strip })
       .to eq([ "Property", "Team", "Finance", "Rooms & rates", "Commercial" ])
-    expect(document.css("table tbody th[scope='row']").size).to eq(13)
-    expect(document.css("div.md\\:hidden[aria-label='Property setup summary for small screens'] li").size).to eq(13)
+    expect(document.css("table tbody th[scope='row']").size).to eq(12)
+    expect(document.css("div.md\\:hidden[aria-label='Property setup summary for small screens'] li").size).to eq(12)
     expect(response.body).to include(
       "Kota Belud, Malaysia · MYR", "Coverage through 12 Aug 2027",
-      "No additional staff", "Deferred", "0 send · 0 hold"
+      "4 standard roles confirmed · no additional staff", "Deferred", "0 send · 0 hold"
     )
     expect(response.body).not_to include("Step 13 of 13")
     expect(document.at_css("button[type='submit'][form='onboarding-submission-form']")["disabled"]).to be_nil

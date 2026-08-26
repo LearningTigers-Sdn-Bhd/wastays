@@ -34,7 +34,7 @@ RSpec.describe HotelPortal::Setup::PhaseNav, type: :component do
   end
 
   it "fills the segments by state, with the current phase taking the solid fill" do
-    complete!("property_profile", "property_photos", "roles_permissions", "staff_setup")
+    complete!("property_profile", "property_photos", "team_setup")
     render_phase_nav("taxes_fees")
 
     nav = page.find("nav[aria-label='Onboarding progress']")
@@ -55,9 +55,9 @@ RSpec.describe HotelPortal::Setup::PhaseNav, type: :component do
 
   it "swaps the marker glyph for completed, locked, and attention states" do
     complete!("property_profile", "property_photos")
-    hotel.onboarding_sections.find_by!(section_key: "roles_permissions").update!(state: "needs_attention")
+    hotel.onboarding_sections.find_by!(section_key: "team_setup").update!(state: "needs_attention")
 
-    render_phase_nav("roles_permissions")
+    render_phase_nav("team_setup")
     nav = page.find("nav[aria-label='Onboarding progress']")
 
     expect(nav.find("li", text: "Property")).to have_css("[data-marker='check']")

@@ -38,22 +38,41 @@ RSpec.describe "Onboarding property and team services" do
     expect(hotel.business_ends_at.strftime("%H:%M")).to eq("01:30")
   end
 
-  it "requires explicit role confirmation and records a permission snapshot" do
+  # The step used to carry a checkbox saying the owner had read the presets. The
+  # fingerprint is what that click was really for, so saving the step writes it
+  # with no checkbox to tick.
+  it "records a permission snapshot when the team step is saved" do
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
     hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
 
-    refused = Onboarding::ConfirmRolePresets.new(hotel: hotel, actor: actor, confirmed: false).call
-    expect(refused.success?).to be(false)
+    result = Onboarding::SaveTeamSetup.new(hotel: hotel, actor: actor, entries: {}, complete: true).call
 
-    result = Onboarding::ConfirmRolePresets.new(hotel: hotel, actor: actor, confirmed: true).call
     expect(result.success?).to be(true)
+    expect(result.section).to have_attributes(state: "complete")
     expect(result.section.decision_metadata).to include(
-      "confirmed_role_slugs" => Onboarding::ConfirmRolePresets::PRESET_SLUGS,
-      "permission_fingerprint" => be_present
+      "source" => "team_setup",
+      "confirmed_role_slugs" => Onboarding::RolePresets::PRESET_SLUGS,
+      "permission_fingerprint" => be_present,
+      "decision" => "no_additional_staff"
     )
     expect(Onboarding::Readiness.new(hotel: hotel).call.blocking_issues.map(&:section_key))
-      .not_to include("roles_permissions")
+      .not_to include("team_setup")
+  end
+
+  it "blocks submission again when a preset role loses a permission after the save" do
+    Onboarding::InitializeProgress.new(hotel: hotel).call
+    hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
+    hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
+    Onboarding::SaveTeamSetup.new(hotel: hotel, actor: actor, entries: {}, complete: true).call
+
+    RolePermission.create!(
+      role: hotel.account.roles.find_by!(slug: "front_desk"),
+      permission: Permission.find_or_create_by!(slug: "view_bookings") { |permission| permission.name = "View bookings" }
+    )
+
+    issues = Onboarding::Readiness.new(hotel: hotel).call.blocking_issues
+    expect(issues.map(&:code)).to include(:roles_changed)
   end
 
   it "keeps invalid staff rows out of persistent drafts" do
@@ -61,9 +80,8 @@ RSpec.describe "Onboarding property and team services" do
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
     hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
-    hotel.onboarding_sections.find_by!(section_key: "roles_permissions").update!(state: "complete")
 
-    result = Onboarding::SaveStaffDrafts.new(
+    result = Onboarding::SaveTeamSetup.new(
       hotel: hotel,
       actor: actor,
       complete: true,
@@ -81,11 +99,10 @@ RSpec.describe "Onboarding property and team services" do
       Onboarding::InitializeProgress.new(hotel: hotel).call
       hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
       hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
-      hotel.onboarding_sections.find_by!(section_key: "roles_permissions").update!(state: "complete")
-    end
+          end
 
     def save(entries, complete: true)
-      Onboarding::SaveStaffDrafts.new(hotel: hotel, actor: actor, entries: entries, complete: complete).call
+      Onboarding::SaveTeamSetup.new(hotel: hotel, actor: actor, entries: entries, complete: complete).call
     end
 
     def entry(overrides = {})
@@ -148,11 +165,10 @@ RSpec.describe "Onboarding property and team services" do
     Onboarding::InitializeProgress.new(hotel: hotel).call
     hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
     hotel.onboarding_sections.find_by!(section_key: "property_photos").update!(state: "complete")
-    hotel.onboarding_sections.find_by!(section_key: "roles_permissions").update!(state: "complete")
-    existing_user = create(:user, account: hotel.account, email: "existing@example.com")
+        existing_user = create(:user, account: hotel.account, email: "existing@example.com")
     create(:user_hotel_access, hotel: hotel, user: existing_user, role: hotel.account.roles.find_by!(slug: "front_desk"))
 
-    result = Onboarding::SaveStaffDrafts.new(
+    result = Onboarding::SaveTeamSetup.new(
       hotel: hotel,
       actor: actor,
       complete: true,
