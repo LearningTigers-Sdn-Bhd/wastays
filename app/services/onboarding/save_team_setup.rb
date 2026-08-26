@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 module Onboarding
-  class SaveStaffDrafts
+  # The whole Team step: the four preset roles the owner reviews, and the staff
+  # they line up under those roles. One page, so one service and one section row.
+  class SaveTeamSetup
     Result = ApplicationResult.define(:section, :entries)
+    SECTION_KEY = "team_setup"
 
     def initialize(hotel:, actor:, entries:, complete:)
       @hotel = hotel
@@ -12,10 +15,17 @@ module Onboarding
     end
 
     def call
+      # The presets are seeded here rather than by the view, so an account that
+      # predates a new permission gets it before we fingerprint the roles.
+      HotelOps::SeedAccountRoles.call(@hotel.account)
+      return failure("All four preset roles must be available before continuing.") unless preset_roles.size == RolePresets::PRESET_SLUGS.size
+
       # Continuing with an empty table is itself the answer: nobody else needs
       # access yet. Making the owner press a separate button to say what the empty
-      # table already says would be asking twice.
-      return decide_no_additional_staff if @complete && entries.empty?
+      # table already says would be asking twice. The leftover drafts go with it,
+      # so an owner who empties the table queues no invitations for people they
+      # just removed.
+      return complete_without_staff if @complete && entries.empty?
       return failure(delivered_removal_error) if delivered_removal_error.present?
       return failure(validation_errors.to_sentence) if validation_errors.any?
 
@@ -23,13 +33,7 @@ module Onboarding
       OnboardingStaffDraft.transaction do
         discarded_drafts.each(&:destroy!)
         drafts.each(&:save!)
-        transition_result = UpdateSection.new(
-          hotel: @hotel,
-          section_key: "staff_setup",
-          state: @complete ? "complete" : "in_progress",
-          actor: @actor,
-          metadata: { source: "staff_draft_setup", staff_count: drafts.size }
-        ).call
+        transition_result = transition(@complete ? "complete" : "in_progress", staff_count: drafts.size)
         raise ActiveRecord::Rollback unless transition_result.success?
       end
       return failure(transition_result.error, section: transition_result.section) unless transition_result.success?
@@ -39,14 +43,37 @@ module Onboarding
 
     private
 
-    # The same decision the skip button used to record, including discarding any
-    # drafts left behind, so an owner who empties the table leaves no invitations
-    # queued for people they just removed.
-    def decide_no_additional_staff
-      result = DecideNoAdditionalStaff.new(hotel: @hotel, actor: @actor).call
+    def complete_without_staff
+      result = nil
+      OnboardingStaffDraft.transaction do
+        @hotel.onboarding_staff_drafts.delete_all
+        result = transition("complete", staff_count: 0, decision: "no_additional_staff")
+        raise ActiveRecord::Rollback unless result.success?
+      end
       return failure(result.error, section: result.section) unless result.success?
 
       Result.success(section: result.section, entries: [])
+    end
+
+    # One row carries the whole step, so one call writes the whole story:
+    # which roles were reviewed, whether their permissions have moved since
+    # (Readiness reads the fingerprint), and what the owner said about staff.
+    def transition(state, **decision)
+      UpdateSection.new(
+        hotel: @hotel,
+        section_key: SECTION_KEY,
+        state: state,
+        actor: @actor,
+        metadata: {
+          source: "team_setup",
+          confirmed_role_slugs: preset_roles.map(&:slug),
+          permission_fingerprint: RolePresets.permission_fingerprint(preset_roles)
+        }.merge(decision)
+      ).call
+    end
+
+    def preset_roles
+      @preset_roles ||= RolePresets.for(@hotel.account).includes(:permissions).to_a
     end
 
     def entries
@@ -72,7 +99,7 @@ module Onboarding
     end
 
     def roles
-      @roles ||= @hotel.account.roles.where(slug: ConfirmRolePresets::PRESET_SLUGS).index_by { |role| role.id.to_s }
+      @roles ||= preset_roles.index_by { |role| role.id.to_s }
     end
 
     # Rows are matched to existing drafts by email rather than rebuilt from
@@ -157,7 +184,7 @@ module Onboarding
     end
 
     def failure(message, section: nil)
-      Result.failure(message, section: section || @hotel.onboarding_sections.find_by(section_key: "staff_setup"), entries: serialized_entries)
+      Result.failure(message, section: section || @hotel.onboarding_sections.find_by(section_key: SECTION_KEY), entries: serialized_entries)
     end
   end
 end

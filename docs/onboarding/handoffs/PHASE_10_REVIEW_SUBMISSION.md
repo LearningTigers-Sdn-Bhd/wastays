@@ -48,7 +48,7 @@ Readiness verifies current domain data as well as section state:
 - sell-mode pricing and one-year setup coverage;
 - at least one active payment method.
 
-`ConfirmRolePresets.permission_fingerprint` is the single calculation used at save and at
+`RolePresets.permission_fingerprint` is the single calculation used at save and at
 readiness time. Role order is the preset order (`hotel_owner`, `general_manager`,
 `front_desk`, `housekeeper`), not alphabetical order. Changing the ordering changes the
 digest and will falsely mark a saved section stale, so do not duplicate this calculation.

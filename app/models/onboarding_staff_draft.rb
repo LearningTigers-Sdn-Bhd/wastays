@@ -30,7 +30,7 @@ class OnboardingStaffDraft < ApplicationRecord
   end
 
   def role_is_seeded_preset
-    return if role.blank? || role.slug.in?(Onboarding::ConfirmRolePresets::PRESET_SLUGS)
+    return if role.blank? || role.slug.in?(Onboarding::RolePresets::PRESET_SLUGS)
 
     errors.add(:role, "must be one of the seeded presets")
   end

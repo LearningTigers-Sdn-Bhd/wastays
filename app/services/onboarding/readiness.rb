@@ -45,8 +45,8 @@ module Onboarding
     def add_domain_findings(blocking, states)
       add_once(blocking, "property_profile", :property_invalid, "Add the required property details.") unless @hotel.property_profile_ready?
       add_once(blocking, "property_photos", :photos_missing, "Upload at least one photo of the property.") unless @hotel.property_photos_ready?
-      add_once(blocking, "roles_permissions", :roles_changed, "Review and confirm all four standard roles again.") unless role_confirmation_current?(states)
-      add_once(blocking, "staff_setup", :staff_decision_missing, "Confirm the staff to invite, or record that there are no additional staff.") unless explicit_decision?(states, "staff_setup", "staff_draft_setup")
+      add_once(blocking, "team_setup", :roles_changed, "Review and confirm all four standard roles again.") unless role_confirmation_current?(states)
+      add_once(blocking, "team_setup", :staff_decision_missing, "Confirm the staff to invite, or record that there are no additional staff.") unless explicit_decision?(states, "team_setup", "team_setup")
       add_once(blocking, "taxes_fees", :tax_confirmation_stale, "Review and confirm the property's current taxes and fees.") unless taxes_ready?(states)
       add_once(blocking, "room_revenue", :room_revenue_invalid, "Confirm the room revenue posting and tax rules.") unless room_revenue_ready?
       add_once(blocking, "rooms", :rooms_invalid, "Add at least one operationally valid room type.") unless rooms_ready?
@@ -64,11 +64,11 @@ module Onboarding
     end
 
     def role_confirmation_current?(states)
-      metadata = states.fetch("roles_permissions").decision_metadata
-      roles = @hotel.account.roles.where(slug: ConfirmRolePresets::PRESET_SLUGS).includes(:permissions).to_a
-      return false unless roles.size == ConfirmRolePresets::PRESET_SLUGS.size
+      metadata = states.fetch("team_setup").decision_metadata
+      roles = RolePresets.for(@hotel.account).includes(:permissions).to_a
+      return false unless roles.size == RolePresets::PRESET_SLUGS.size
 
-      current = ConfirmRolePresets.permission_fingerprint(roles)
+      current = RolePresets.permission_fingerprint(roles)
       metadata["permission_fingerprint"] == current
     end
 

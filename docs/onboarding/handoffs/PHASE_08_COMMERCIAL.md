@@ -69,7 +69,7 @@ setup — invitations are queued and delivered only after successful submission 
 and they do not block on acceptance.
 
 Phase 4 already established the pattern for this with `onboarding_staff_drafts` +
-`Onboarding::SaveStaffDrafts`. Mirror it: store requested corporate invitations as drafts,
+`Onboarding::SaveTeamSetup`. Mirror it: store requested corporate invitations as drafts,
 without delivery.
 
 **`IMPLEMENTATION_MAP.md` §8 item 11 flagged this as unresolved.** It is now decided.
@@ -93,7 +93,7 @@ impossible even under a race.
 Two consequences Phase 10 must honour:
 
 - **Drafts are never deleted after delivery.** They are the idempotency record.
-  `SaveCorporateDrafts` upserts rather than `delete_all`-ing (unlike `SaveStaffDrafts`), and
+  `SaveCorporateDrafts` upserts rather than `delete_all`-ing (unlike `SaveTeamSetup`), and
   refuses to remove a delivered row, so a changes-requested re-edit cannot cause a resend.
   `onboarding_staff_drafts` has the same latent problem and no marker — Phase 10 needs to
   solve it there too.
@@ -110,7 +110,7 @@ Extra charges, discounts, and corporate accounts support skipping, but `UpdateSe
 requires the skip to be a recorded decision with an audit event — not silent omission.
 `Onboarding::Readiness` blocks submission when an optional section is neither resolved nor
 skipped, so the UI must make the skip an affirmative choice (see
-`Onboarding::DecideNoAdditionalStaff` for the Phase 4 precedent).
+`Onboarding::SaveTeamSetup` for the Phase 4 precedent).
 
 ## Do not
 

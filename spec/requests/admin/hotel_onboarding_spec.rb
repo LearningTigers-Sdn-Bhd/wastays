@@ -93,7 +93,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
     it "shows the consolidated submitted setup workspace only on overview" do
       submitter = create(:user, account: hotel.account, name: "Property Owner")
       sections = Onboarding::SectionCatalog.keys.index_with { { "state" => "complete", "decision" => {} } }
-      sections["staff_setup"] = { "state" => "skipped", "decision" => {} }
+      sections["discounts"] = { "state" => "skipped", "decision" => {} }
       sections.delete("channel_manager")
       submission = create(
         :onboarding_submission,
@@ -141,7 +141,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       expect(tab_content["class"]).to include("min-h-0", "flex-1", "overflow-y-auto")
       expect(metrics.map { |metric| metric.text.squish }).to eq([
         "Required setup 8 of 8 Complete",
-        "Optional decisions 4 of 5 1 deferred",
+        "Optional decisions 3 of 4 1 deferred",
         "Rooms 4 1 room type",
         "Rate coverage 100% Through 12 Aug 2027"
       ])
@@ -166,9 +166,9 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
           HotelPortal::OnboardingPresenter::SECTION_CONTENT.fetch(key).first
         end
       )
-      expect(table.css("tbody th[scope='row']").size).to eq(13)
+      expect(table.css("tbody th[scope='row']").size).to eq(12)
       expect(table.css("a, button")).to be_empty
-      expect(table.css(".panel-badge[data-variant='success']").size).to eq(11)
+      expect(table.css(".panel-badge[data-variant='success']").size).to eq(10)
       expect(table.css(".panel-badge[data-variant='warning']").map { |badge| badge.text.squish }).to eq([ "Deferred" ])
       expect(table.css(".panel-badge[data-variant='neutral']").map { |badge| badge.text.squish }).to eq([ "Not started" ])
       table_rows = workspace.css("table.panel-table").to_h do |evidence_table|
@@ -183,7 +183,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
         [ "Invitation delivery", "1 sent · 0 held · 0 pending · 1 failed" ],
         [ "Booking.com", "Credentials supplied" ]
       )
-      expect(document.css('input[name="section_keys[]"]').size).to eq(13)
+      expect(document.css('input[name="section_keys[]"]').size).to eq(12)
       expect(document.at_css('#request-onboarding-changes-sheet')).to be_present
       expect(Rates::SetupCoverage).to have_received(:call).once
     end
@@ -205,7 +205,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       expect(response).to have_http_status(:ok)
       expect(metric_text).to eq([
         "Required setup 0 of 8 8 remaining",
-        "Optional decisions 0 of 5 0 deferred",
+        "Optional decisions 0 of 4 0 deferred",
         "Rooms 0 0 room types",
         "Rate coverage Not supplied No coverage date"
       ])

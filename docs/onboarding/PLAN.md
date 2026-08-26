@@ -111,13 +111,12 @@ Deliverable: an owner can activate, enter the onboarding shell, navigate allowed
 Deliver complete pages for:
 
 1. Property profile
-2. Roles and permissions review
-3. Draft staff setup
+2. Team Management: preset role review and draft staff
 
 Requirements:
 
 - Reuse the existing profile/photo services.
-- Present seeded role presets read-only and require confirmation.
+- Present seeded role presets read-only and fingerprint them on save.
 - Respect subscription-plan behaviour while allowing preset review.
 - Store staff entries without sending invitations.
 - Require an explicit staff configuration or `No additional staff for now` decision.

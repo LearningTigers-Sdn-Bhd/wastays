@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Admin::Hotels::OnboardingOverviewPresenter do
   let(:states) do
     Onboarding::SectionCatalog.keys.index_with { { "state" => "complete" } }.merge(
-      "staff_setup" => { "state" => "skipped" },
+      "discounts" => { "state" => "skipped" },
       "taxes_fees" => { "state" => "in_progress" },
       "rooms" => { "state" => "needs_attention" }
     )
@@ -70,8 +70,8 @@ RSpec.describe Admin::Hotels::OnboardingOverviewPresenter do
     expect(rows.fetch("property_profile")).to have_attributes(
       summary: "Kota Belud, Malaysia · MYR", status_label: "Complete", status_variant: :success
     )
-    expect(rows.fetch("staff_setup")).to have_attributes(
-      summary: "1 staff member", status_label: "Deferred", status_variant: :warning
+    expect(rows.fetch("team_setup")).to have_attributes(
+      summary: "4 standard roles confirmed · 1 staff member", status_label: "Complete", status_variant: :success
     )
     expect(rows.fetch("taxes_fees")).to have_attributes(
       summary: "2 property taxes or fees", status_label: "In progress", status_variant: :info
@@ -81,7 +81,9 @@ RSpec.describe Admin::Hotels::OnboardingOverviewPresenter do
     )
     expect(rows.fetch("rates_availability").summary).to eq("Coverage through 12 Aug 2027")
     expect(rows.fetch("extra_charges").summary).to eq("1 extra charge")
-    expect(rows.fetch("discounts").summary).to eq("No discounts")
+    expect(rows.fetch("discounts")).to have_attributes(
+      summary: "No discounts", status_label: "Deferred", status_variant: :warning
+    )
     expect(rows.fetch("payment_methods").summary).to eq("2 payment methods")
     expect(rows.fetch("corporate_accounts").summary).to eq("1 corporate account")
     expect(rows.fetch("channel_manager").summary).to eq("1 channel handover")
@@ -90,7 +92,7 @@ RSpec.describe Admin::Hotels::OnboardingOverviewPresenter do
   it "builds submitted setup and inventory metrics without using current hotel records" do
     expect(presenter.metrics.map(&:to_h)).to eq([
       { label: "Required setup", value: "6 of 8", detail: "2 remaining", detail_variant: :warning },
-      { label: "Optional decisions", value: "5 of 5", detail: "1 deferred", detail_variant: :success },
+      { label: "Optional decisions", value: "4 of 4", detail: "1 deferred", detail_variant: :success },
       { label: "Rooms", value: "6", detail: "2 room types", detail_variant: :neutral },
       { label: "Rate coverage", value: "100%", detail: "Through 12 Aug 2027", detail_variant: :success }
     ])
@@ -126,13 +128,13 @@ RSpec.describe Admin::Hotels::OnboardingOverviewPresenter do
 
     expect(rows.values.map(&:status_label).uniq).to eq([ "Not started" ])
     expect(rows.fetch("property_profile").summary).to eq("Property details saved")
-    expect(rows.fetch("staff_setup").summary).to eq("No additional staff")
+    expect(rows.fetch("team_setup").summary).to eq("4 standard roles confirmed · no additional staff")
     expect(rows.fetch("rooms").summary).to eq("0 room types · 0 rooms")
     expect(rows.fetch("rates_availability").summary).to eq("Rate coverage saved")
     expect(rows.fetch("channel_manager").summary).to eq("No channel handover")
     expect(fallback.metrics.map(&:to_h)).to eq([
       { label: "Required setup", value: "0 of 8", detail: "8 remaining", detail_variant: :warning },
-      { label: "Optional decisions", value: "0 of 5", detail: "0 deferred", detail_variant: :warning },
+      { label: "Optional decisions", value: "0 of 4", detail: "0 deferred", detail_variant: :warning },
       { label: "Rooms", value: "0", detail: "0 room types", detail_variant: :neutral },
       { label: "Rate coverage", value: "Not supplied", detail: "No coverage date", detail_variant: :warning }
     ])
