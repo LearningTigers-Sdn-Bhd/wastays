@@ -11,8 +11,8 @@
         Export
         <%= cached_icon "chevron-down", class: "ms-2 size-4", aria: { hidden: "true" } %>
       <% end %>
-      <% items.each do |label, href| %>
-        <% menu.with_item(href: href, data: { turbo: false }) { label } %>
+      <% items.each do |label, href, extra_attributes| %>
+        <% menu.with_item(href: href, data: { turbo: false }, **(extra_attributes || {})) { label } %>
       <% end %>
     <% end %>
   <% end %>

@@ -5,8 +5,12 @@
   { label: "Net cash", value: "MYR #{format_number(@cashier_report.totals[:net_cash], precision: 2)}", detail: "Collected less refunded", detail_variant: :success }
 ] %>
 
+<p class="text-sm font-medium text-foreground" hidden data-cashier-selection-summary>
+  <span data-cashier-selection-count>0</span> transactions ticked for export
+</p>
+
 <% [["Advance", @advance_rows, @advance_transactions], ["Settlement", @settlement_rows, @settlement_transactions]].each do |title, rows, transactions| %>
-  <section class="space-y-3" aria-labelledby="cashier-<%= title.downcase %>-heading">
+  <section class="space-y-3" aria-labelledby="cashier-<%= title.downcase %>-heading" data-cashier-section>
     <h2 id="cashier-<%= title.downcase %>-heading" class="text-base font-semibold text-foreground"><%= title %></h2>
     <%= render PanelsUI::Table.new(
           caption: "#{title} payments",
@@ -18,6 +22,15 @@
         ) do |table| %>
       <% table.with_header do %>
         <tr>
+          <th scope="col" class="w-10 text-center">
+            <%= render PanelsUI::Checkbox.new(
+                  name: "select_all_#{title.downcase}_transactions",
+                  id: "select-all-#{title.downcase}-transactions",
+                  label: "Select all #{title.downcase} transactions",
+                  label_hidden: true,
+                  include_hidden: false,
+                  data: { cashier_select_all: true }) %>
+          </th>
           <% ["Date & time", "Reservation", "Guest details", "Folio", "Invoice", "Payment mode", "Received by", "Remarks", "Amount"].each_with_index do |heading, index| %>
             <th scope="col" class="<%= index == 8 ? "text-right" : "text-left" %>"><%= heading %></th>
           <% end %>
@@ -28,11 +41,21 @@
           <% report_rows_grouped_by_month(rows, date_preset: @date_preset, &:posting_date).each do |month, period_rows| %>
             <% if month %>
               <tr class="bg-muted/55" data-slot="report-month-group">
-                <th scope="rowgroup" colspan="9" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+                <th scope="rowgroup" colspan="10" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
               </tr>
             <% end %>
           <% period_rows.each do |row| %>
             <tr data-testid="<%= title.downcase %>-row">
+              <td class="text-center">
+                <%= render PanelsUI::Checkbox.new(
+                      name: "selected_transaction_ids[]",
+                      id: "select-#{title.downcase}-transaction-#{row.transaction.id}",
+                      value: row.transaction.id,
+                      label: "Select transaction #{row.transaction.id}",
+                      label_hidden: true,
+                      include_hidden: false,
+                      data: { cashier_transaction_selection: true }) %>
+              </td>
               <td class="whitespace-nowrap text-muted-foreground">
                 <%= row.posting_date.strftime("%d %b %Y") %>
                 <% if row.posted_at %><span class="block text-xs"><%= row.posted_at.strftime("%H:%M") %></span><% end %>
@@ -52,7 +75,7 @@
           <% end %>
           <% end %>
         <% else %>
-          <%= render "table_empty_state", colspan: 9, message: "No #{title.downcase} payments found for this selected period." %>
+          <%= render "table_empty_state", colspan: 10, message: "No #{title.downcase} payments found for this selected period." %>
         <% end %>
       <% end %>
     <% end %>

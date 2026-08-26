@@ -313,4 +313,30 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
 
     expect(report.grand_total).to eq(amount_in: 1_463.76.to_d, amount_out: 50.to_d, balance: 1_413.76.to_d)
   end
+
+  it "filters by time-of-day range across the whole date window" do
+    morning = payment(category: "cash", amount: 100, posting_date: Date.new(2026, 6, 17), posted_at: Time.utc(2026, 6, 17, 8, 30))
+    afternoon = payment(category: "cash", amount: 200, posting_date: Date.new(2026, 6, 17), posted_at: Time.utc(2026, 6, 17, 15, 0))
+
+    report = described_class.new(
+      hotel: hotel, start_date: start_date, end_date: end_date,
+      start_time: "08:00", end_time: "12:00"
+    ).call
+
+    expect(report.settlement_scope).to contain_exactly(morning)
+    expect(report.settlement_scope).not_to include(afternoon)
+  end
+
+  it "restricts to explicit transaction_ids when given" do
+    kept = payment(category: "cash", amount: 100, posting_date: Date.new(2026, 6, 17))
+    dropped = payment(category: "cash", amount: 200, posting_date: Date.new(2026, 6, 17))
+
+    report = described_class.new(
+      hotel: hotel, start_date: start_date, end_date: end_date,
+      transaction_ids: [ kept.id ]
+    ).call
+
+    expect(report.settlement_scope).to contain_exactly(kept)
+    expect(report.settlement_scope).not_to include(dropped)
+  end
 end

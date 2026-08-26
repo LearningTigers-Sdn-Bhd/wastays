@@ -1785,16 +1785,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           .css("[aria-labelledby='cashier-advance-heading'] thead th")
           .map { |header| header.text.strip }
         expect(headers).to eq([
+          "Select all advance transactions",
           "Date & time", "Reservation", "Guest details", "Folio", "Invoice",
           "Payment mode", "Received by", "Remarks", "Amount"
         ])
 
         advance_row = Nokogiri::HTML(response.body).at_css('[data-testid="advance-row"]')
         advance_cells = advance_row.css("td")
-        expect(advance_cells.size).to eq(9)
-        expect(advance_cells[2].text.squish).to include(booking.guest_name, "Room —")
-        expect(advance_cells[3].text.strip).to eq(folio.folio_reference_display)
-        expect(advance_cells[4].text.strip).to eq("—")
+        expect(advance_cells.size).to eq(10)
+        expect(advance_cells[3].text.squish).to include(booking.guest_name, "Room —")
+        expect(advance_cells[4].text.strip).to eq(folio.folio_reference_display)
+        expect(advance_cells[5].text.strip).to eq("—")
         expect(advance_row.text).to include("Bank Transfer Payment")
 
         settlement_row = Nokogiri::HTML(response.body).at_css('[data-testid="settlement-row"]')
@@ -1847,6 +1848,19 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(response.body).to include("Visible front desk cash")
         expect(response.body).not_to include("Hidden Razorpay payment", "999.00")
         expect(metrics).to include("Cash movements 1", "Total collected MYR 100.00", "Net cash MYR 100.00")
+      end
+
+      it "restricts the exported rows to the ticked transactions" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        kept = create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 100, posting_date: start_date)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 200, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", format: :csv,
+          selected_transaction_ids: [ kept.id ], start_date: start_date.to_s, end_date: start_date.to_s)
+
+        expect(response.body).to include("100.00")
+        expect(response.body).not_to include("200.00")
       end
     end
 
