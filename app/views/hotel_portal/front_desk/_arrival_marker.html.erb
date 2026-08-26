@@ -1,0 +1,18 @@
+<%# locals: (presenter:) %>
+<%#
+  Arrival state for one row of the arrivals list (see ArrivalPresenter#arrival_marker).
+
+  Only "Arrived" and "Missed" render. A row with no mark is a guest still on
+  the way — the common case, and a mark on every row would read as noise. The
+  icon carries no meaning of its own, so the label stays visible at every size
+  rather than becoming an icon-only marker (DESIGN.md §10).
+%>
+<% marker = presenter.arrival_marker %>
+<% if marker %>
+  <%# self-center holds the badge on the middle line of a stretched card header
+      and is a no-op in the already-centred table row. %>
+  <span class="inline-flex shrink-0 self-center items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold <%= marker[:tone] %>">
+    <%= app_icon marker[:icon], class: "size-3.5 shrink-0", aria: { hidden: true } %>
+    <%= marker[:label] %>
+  </span>
+<% end %>

@@ -82,19 +82,32 @@ RSpec.describe HotelPortal::FrontDesk::ArrivalsQuery, frozen_time: Date.new(2026
       expect(query.start_date).to eq(Date.new(2026, 7, 15))
     end
 
-    it "falls back to today for invalid arrival date" do
+    it "falls back to the current business date for invalid arrival date" do
       query = described_class.new(hotel:, params: { arrival_date: "not-a-date" })
 
-      expect(query.start_date).to eq(Date.today)
+      expect(query.start_date).to eq(hotel.current_business_date)
     end
 
-    it "uses the hotel-local day for invalid and missing dates", frozen_time: Time.utc(2026, 7, 15, 18, 30) do
+    it "uses the current business date for invalid and missing dates", frozen_time: Time.utc(2026, 7, 15, 18, 30) do
       hotel.update!(time_zone: "Kuala Lumpur")
       invalid = described_class.new(hotel:, params: { arrival_start_date: "not-a-date" })
       missing = described_class.new(hotel:, params: {})
 
       expect([ invalid.start_date, invalid.end_date ]).to eq([ Date.new(2026, 7, 16) ] * 2)
       expect([ missing.start_date, missing.end_date ]).to eq([ Date.new(2026, 7, 16) ] * 2)
+    end
+
+    it "keeps the open business date after local midnight", frozen_time: Time.utc(2026, 7, 25, 16, 1) do
+      hotel.update!(time_zone: "Kuala Lumpur")
+      BusinessDates::ResetAuthority.call!(hotel:, date: Date.new(2026, 7, 25))
+      arrival = create(:booking, hotel:, status: "confirmed", check_in: hotel_time("2026-07-25"))
+
+      invalid = described_class.new(hotel:, params: { arrival_start_date: "not-a-date" })
+      missing = described_class.new(hotel:, params: {})
+
+      expect([ invalid.start_date, invalid.end_date ]).to eq([ Date.new(2026, 7, 25) ] * 2)
+      expect([ missing.start_date, missing.end_date ]).to eq([ Date.new(2026, 7, 25) ] * 2)
+      expect(missing.call).to contain_exactly(arrival)
     end
   end
 

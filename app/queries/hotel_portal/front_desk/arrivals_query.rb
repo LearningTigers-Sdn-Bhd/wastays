@@ -29,7 +29,7 @@ module HotelPortal
       def parse_date(value)
         Date.iso8601(value.to_s)
       rescue Date::Error
-        Time.current.in_time_zone(@hotel.hotel_time_zone).to_date
+        @hotel.current_business_date || @hotel.business_date_for(Time.current)
       end
 
       def apply_search(scope)

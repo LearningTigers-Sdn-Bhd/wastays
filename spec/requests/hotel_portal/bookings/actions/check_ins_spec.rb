@@ -455,4 +455,68 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
       expect(response).to have_http_status(:not_found)
     end
   end
+
+  describe "a closed business date" do
+    # Night audit has rolled past the arrival date, so the desk needs the
+    # override switch and a reason before the guest can be checked in.
+    before do
+      hotel.current_business_date_record.update!(status: "closed")
+      create(:hotel_business_date, hotel: hotel, business_date: Date.current + 1, status: "open")
+      create(:night_audit, hotel: hotel, business_date: Date.current, status: "completed")
+      # The override posts the accommodation catch-up charge onto a locked date,
+      # so the desk needs both folio permissions on top of manage_bookings.
+      grant_permission("post_folio_charges")
+      grant_permission("override_financial_date_lock")
+    end
+
+    it "asks for an override and a reason on the sheet" do
+      get hotel_booking_action_check_in_path(hotel, booking),
+        headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      expect(response).to have_http_status(:success)
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-check-in-sheet")
+
+      expect(dialog.text).to include("Closed business date", "Override night audit")
+      expect(dialog.at_css("input[name='check_in[override_night_audit]']")).to be_present
+      expect(dialog.at_css("input[name='check_in[reason]']")).to be_present
+    end
+
+    it "refuses the check-in when the override is off" do
+      post hotel_booking_action_check_in_path(hotel, booking), params: valid_params
+
+      expect(booking.reload.status).to eq("confirmed")
+      expect(response.body).to include("Reason required for backdated check-in")
+    end
+
+    it "refuses the check-in when the override carries no reason" do
+      params = valid_params
+      params[:check_in][:override_night_audit] = "1"
+
+      post hotel_booking_action_check_in_path(hotel, booking), params: params
+
+      expect(booking.reload.status).to eq("confirmed")
+      expect(response.body).to include("Reason required for backdated check-in")
+    end
+
+    it "checks the guest in with the override and a reason" do
+      params = valid_params
+      params[:check_in][:override_night_audit] = "1"
+      params[:check_in][:reason] = "The check-in system was offline"
+
+      post hotel_booking_action_check_in_path(hotel, booking), params: params
+
+      expect(booking.reload.status).to eq("checked_in")
+    end
+
+    it "records the reason in the booking audit trail" do
+      params = valid_params
+      params[:check_in][:override_night_audit] = "1"
+      params[:check_in][:reason] = "The check-in system was offline"
+
+      post hotel_booking_action_check_in_path(hotel, booking), params: params
+
+      reasons = BookingAuditLog.where(auditable: booking).map { |log| log.metadata["reason"] }.compact
+      expect(reasons).to include("The check-in system was offline")
+    end
+  end
 end

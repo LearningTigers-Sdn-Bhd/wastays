@@ -58,6 +58,54 @@ RSpec.describe HotelPortal::BookingPresenter do
     end
   end
 
+  describe "#checked_in_at_form_value past midnight" do
+    let(:hotel) { create(:hotel, time_zone: "Kuala Lumpur") }
+    let(:arrival_date) { Date.new(2026, 8, 25) }
+    let(:booking) { create(:booking, hotel: hotel, check_in: arrival_date, check_out: arrival_date + 2) }
+
+    # 26 Aug 00:30 in Kuala Lumpur, while the hotel still trades 25 Aug.
+    let(:after_midnight) { Time.utc(2026, 8, 25, 16, 30) }
+
+    before { hotel.current_business_date_record.update!(business_date: arrival_date, status: "open") }
+
+    it "falls back to the scheduled arrival while the arrival date stays open" do
+      with_frozen_time(after_midnight) do
+        expect(subject.checked_in_at_form_value).to start_with("2026-08-25T")
+      end
+    end
+
+    it "names the open business date in the hint" do
+      with_frozen_time(after_midnight) do
+        expect(subject.check_in_business_date_hint).to eq("Posts to business date 25 Aug 2026.")
+      end
+    end
+
+    it "keeps the clock when the arrival date is closed" do
+      hotel.current_business_date_record.update!(status: "closed")
+      create(:hotel_business_date, hotel: hotel, business_date: arrival_date + 1, status: "open")
+
+      with_frozen_time(after_midnight) do
+        expect(subject.checked_in_at_form_value).to eq("2026-08-26T00:30")
+      end
+    end
+
+    it "keeps the clock for an arrival on the current calendar date" do
+      booking.update!(check_in: Date.new(2026, 8, 26), check_out: Date.new(2026, 8, 28))
+
+      with_frozen_time(after_midnight) do
+        expect(subject.checked_in_at_form_value).to eq("2026-08-26T00:30")
+      end
+    end
+
+    it "keeps a check-in that was already recorded" do
+      booking.update!(checked_in_at: hotel.hotel_time_zone.parse("2026-08-25 22:15"))
+
+      with_frozen_time(after_midnight) do
+        expect(subject.checked_in_at_form_value).to eq("2026-08-25T22:15")
+      end
+    end
+  end
+
   describe "guest record counts" do
     it "counts the primary booking guest and additional guest records" do
       create(:booking_guest, booking: booking, is_primary: false)

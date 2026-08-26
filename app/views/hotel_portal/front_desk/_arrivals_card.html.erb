@@ -10,6 +10,9 @@
       <div class="flex min-w-0 flex-wrap items-start gap-1.5"><p class="min-w-0 flex-1 break-words text-sm font-semibold text-foreground"><%= presenter.guest_name %></p><%= render "guest_markers", presenter: %></div>
       <p class="mt-1 truncate font-mono text-xs text-muted-foreground"><%= presenter.confirmation_token %></p>
     </div>
+    <%# The marker sits beside the action trigger rather than inside the name
+        block, so both centre against the whole header instead of the first line. %>
+    <%= render "arrival_marker", presenter: %>
     <%= render "record_actions", booking:, tab: "arrivals" %>
   </header>
   <div class="space-y-3 p-3">
