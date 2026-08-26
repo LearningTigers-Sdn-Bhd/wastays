@@ -31,7 +31,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     get hotel_onboarding_path(hotel)
 
     expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "property_profile"))
-    expect(hotel.onboarding_sections.count).to eq(14)
+    expect(hotel.onboarding_sections.count).to eq(13)
   end
 
   it "renders the dedicated shell with accessible phase navigation" do
@@ -217,7 +217,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       patch hotel_onboarding_section_path(hotel, section_key: "property_photos"),
             params: { navigation_action: "save_continue" }
 
-      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "roles_permissions"))
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "team_setup"))
       expect(hotel.reload.featured_photo_attachment_id).to eq(hotel.photos.attachments.sole.id)
       expect(hotel.onboarding_sections.find_by!(section_key: "property_photos"))
         .to have_attributes(state: "complete", decision_metadata: include("source" => "property_photos"))
@@ -246,42 +246,56 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     end
   end
 
-  it "shows and confirms the four seeded role presets regardless of plan feature access" do
+  # Roles and staff share one page. The roles half is read-only, so it carries no
+  # control of its own: saving the page is what records that they were reviewed.
+  it "shows the role presets and the staff table on one page, regardless of plan feature access" do
     hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
     hotel.onboarding_sections.create!(section_key: "property_photos", state: "complete")
 
-    get hotel_onboarding_section_path(hotel, section_key: "roles_permissions")
+    get hotel_onboarding_section_path(hotel, section_key: "team_setup")
     expect(response).to have_http_status(:ok)
-    presets_page = response.parsed_body
-    expect(presets_page.css("h1").map { |heading| heading.text.strip }).to eq([ "Roles and permissions" ])
-    expect(presets_page.at_css("section[aria-label='Seeded role presets']")).to be_present
-    expect(presets_page.css("h2").map { |heading| heading.text.strip }).not_to include("Seeded role presets")
-
-    patch hotel_onboarding_section_path(hotel, section_key: "roles_permissions"),
-          params: { navigation_action: "save_continue", confirm_presets: "1" }
-
-    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "staff_setup"))
-    follow_redirect!
+    page = response.parsed_body
+    expect(page.css("h1").map { |heading| heading.text.strip }).to eq([ "Team Management" ])
+    expect(page.at_css("section[aria-label='Preset roles']")).to be_present
+    expect(page.at_css("section[aria-label='Draft staff']")).to be_present
+    expect(page.css(".panel-card__title").map { |title| title.text.strip })
+      .to eq([ "Hotel Owner", "General Manager", "Front Desk", "Housekeeper" ])
     expect(response.body).to include("Add staff member", "No staff added yet")
-    staff_page = response.parsed_body
-    expect(staff_page.css("h1").map { |heading| heading.text.strip }).to eq([ "Staff setup" ])
-    expect(staff_page.at_css("section[aria-label='Draft staff']")).to be_present
-    expect(staff_page.css("h2").map { |heading| heading.text.strip }).not_to include("Draft staff")
-    expect(account.roles.where(slug: Onboarding::ConfirmRolePresets::PRESET_SLUGS).count).to eq(4)
-    expect(hotel.onboarding_sections.find_by!(section_key: "roles_permissions").decision_metadata)
+    expect(response.body).not_to include("confirm_presets")
+
+    patch hotel_onboarding_section_path(hotel, section_key: "team_setup"),
+          params: { navigation_action: "save_continue" }
+
+    expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "taxes_fees"))
+    expect(account.roles.where(slug: Onboarding::RolePresets::PRESET_SLUGS).count).to eq(4)
+    expect(hotel.onboarding_sections.find_by!(section_key: "team_setup").decision_metadata)
       .to include("permission_fingerprint" => be_present)
+  end
+
+  # The two Team steps merged. A link saved before that still has to land
+  # somewhere useful.
+  it "sends the old Team step links to the merged page" do
+    hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
+    hotel.onboarding_sections.create!(section_key: "property_photos", state: "complete")
+
+    %w[roles_permissions staff_setup].each do |legacy_key|
+      get hotel_onboarding_section_path(hotel, section_key: legacy_key)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.css("h1").map { |heading| heading.text.strip }).to eq([ "Team Management" ])
+    end
   end
 
   it "stores staff drafts without sending invitations" do
     HotelOps::SeedAccountRoles.call(account)
     hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
-    hotel.onboarding_sections.create!(section_key: "roles_permissions", state: "complete")
+    hotel.onboarding_sections.create!(section_key: "property_photos", state: "complete")
     staff_role = account.roles.find_by!(slug: "front_desk")
 
     invitation_count = StaffInvitation.count
     delivery_count = ActionMailer::Base.deliveries.count
     expect {
-      patch hotel_onboarding_section_path(hotel, section_key: "staff_setup"),
+      patch hotel_onboarding_section_path(hotel, section_key: "team_setup"),
             params: {
               navigation_action: "save_continue",
               staff_entries: { "0" => { name: "Ari", email: "ARI@example.com", role_id: staff_role.id } }
@@ -299,16 +313,16 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   it "reads an empty staff table as the no-additional-staff decision and clears drafts" do
     HotelOps::SeedAccountRoles.call(account)
     hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
-    hotel.onboarding_sections.create!(section_key: "roles_permissions", state: "complete")
+    hotel.onboarding_sections.create!(section_key: "property_photos", state: "complete")
     create(:onboarding_staff_draft, hotel: hotel, role: account.roles.find_by!(slug: "housekeeper"))
 
-    patch hotel_onboarding_section_path(hotel, section_key: "staff_setup"),
+    patch hotel_onboarding_section_path(hotel, section_key: "team_setup"),
           params: { navigation_action: "save_continue", staff_entries: {} }
 
     expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "taxes_fees"))
     expect(hotel.onboarding_staff_drafts).to be_empty
-    expect(hotel.onboarding_sections.find_by!(section_key: "staff_setup")).to have_attributes(
-      state: "skipped",
+    expect(hotel.onboarding_sections.find_by!(section_key: "team_setup")).to have_attributes(
+      state: "complete",
       decision_metadata: include("decision" => "no_additional_staff")
     )
   end
@@ -316,16 +330,16 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   it "offers no separate staff skip button and rejects a forged one" do
     HotelOps::SeedAccountRoles.call(account)
     hotel.onboarding_sections.create!(section_key: "property_profile", state: "complete")
-    hotel.onboarding_sections.create!(section_key: "roles_permissions", state: "complete")
+    hotel.onboarding_sections.create!(section_key: "property_photos", state: "complete")
 
-    get hotel_onboarding_section_path(hotel, section_key: "staff_setup")
+    get hotel_onboarding_section_path(hotel, section_key: "team_setup")
     expect(response.body).not_to include("navigation_action\" value=\"skip\"")
 
-    patch hotel_onboarding_section_path(hotel, section_key: "staff_setup"),
+    patch hotel_onboarding_section_path(hotel, section_key: "team_setup"),
           params: { navigation_action: "skip" }
 
     expect(response).to have_http_status(:unprocessable_content)
-    expect(hotel.onboarding_sections.find_by!(section_key: "staff_setup").state).not_to eq("skipped")
+    expect(hotel.onboarding_sections.find_by!(section_key: "team_setup").state).not_to eq("skipped")
   end
 
   it "keeps pending-review onboarding read-only" do
@@ -386,7 +400,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   describe "finance phase" do
     def resolve_team_phase!
       Onboarding::InitializeProgress.new(hotel: hotel).call
-      %w[property_profile property_photos roles_permissions staff_setup].each do |key|
+      %w[property_profile property_photos team_setup].each do |key|
         hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
       end
     end
@@ -560,7 +574,7 @@ RSpec.describe "Hotel onboarding shell", type: :request do
   describe "rooms phase" do
     def resolve_finance_phase!
       Onboarding::InitializeProgress.new(hotel: hotel).call
-      %w[property_profile property_photos roles_permissions staff_setup taxes_fees room_revenue].each do |key|
+      %w[property_profile property_photos team_setup taxes_fees room_revenue].each do |key|
         hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
       end
     end

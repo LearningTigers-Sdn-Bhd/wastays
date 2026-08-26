@@ -8,7 +8,7 @@ RSpec.describe HotelPortal::OnboardingReviewPresenter do
   let(:ready) { Onboarding::Readiness::Result.new(ready: true, blocking_issues: [], warnings: warnings) }
   let(:warnings) do
     [ Onboarding::Readiness::Finding.new(
-      section_key: "staff_setup", severity: :warning, code: :deferred,
+      section_key: "extra_charges", severity: :warning, code: :deferred,
       message: "Nothing was added in this optional section."
     ) ]
   end
@@ -16,7 +16,7 @@ RSpec.describe HotelPortal::OnboardingReviewPresenter do
     {
       "property" => { "city" => "Kota Belud", "country" => "Malaysia", "default_currency" => "MYR" },
       "sections" => Onboarding::SectionCatalog.keys.index_with do |key|
-        { "state" => key == "staff_setup" ? "skipped" : "complete" }
+        { "state" => key == "extra_charges" ? "skipped" : "complete" }
       end,
       "staff" => [ { "name" => "Ari", "send_invitation" => true } ],
       "taxes" => [],
@@ -35,7 +35,7 @@ RSpec.describe HotelPortal::OnboardingReviewPresenter do
   before do
     Onboarding::InitializeProgress.new(hotel:).call
     hotel.onboarding_sections.update_all(state: "complete", completed_at: Time.current)
-    hotel.onboarding_sections.find_by!(section_key: "staff_setup").update!(state: "skipped")
+    hotel.onboarding_sections.find_by!(section_key: "extra_charges").update!(state: "skipped")
   end
 
   def presenter(readiness: ready, submission: nil)
@@ -53,7 +53,7 @@ RSpec.describe HotelPortal::OnboardingReviewPresenter do
     )
     expect(review.metrics.map { |metric| [ metric.label, metric.value, metric.detail ] }).to eq([
       [ "Required setup", "8 of 8", "Complete" ],
-      [ "Optional decisions", "5 of 5", "1 deferred" ],
+      [ "Optional decisions", "4 of 4", "1 deferred" ],
       [ "Needs attention", "0", "No sections" ],
       [ "Invitations", "2", "1 send · 1 hold" ]
     ])
@@ -61,7 +61,8 @@ RSpec.describe HotelPortal::OnboardingReviewPresenter do
 
     rows = review.groups.flat_map(&:rows).index_by { |row| row.entry.definition.key }
     expect(rows.fetch("property_profile").summary).to eq("Kota Belud, Malaysia · MYR")
-    expect(rows.fetch("staff_setup")).to have_attributes(summary: "1 staff member", status_label: "Deferred")
+    expect(rows.fetch("team_setup").summary).to eq("4 standard roles confirmed · 1 staff member")
+    expect(rows.fetch("extra_charges")).to have_attributes(summary: "No extra charges", status_label: "Deferred")
     expect(rows.fetch("rooms").summary).to eq("2 room types · 6 rooms")
     expect(rows.fetch("rates_availability").summary).to eq("Coverage through 12 Aug 2027")
     expect(rows.fetch("channel_manager").summary).to eq("No channel handover")

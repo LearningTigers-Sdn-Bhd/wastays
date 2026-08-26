@@ -24,7 +24,7 @@ phases 12–13, and it supersedes any phase file it disagrees with.
 
 | Phase | Sections | State |
 |---|---|---|
-| 4 | `property_profile`, `roles_permissions`, `staff_setup` | Complete |
+| 4 | `property_profile`, `team_setup` (was `roles_permissions` + `staff_setup`) | Complete |
 | 5 | `taxes_fees`, `room_revenue` | Complete |
 | 6 | `rooms` | Complete |
 | 7 | `rates_availability` | Complete |
@@ -100,7 +100,7 @@ One verb-named class per file in `app/services/onboarding/`. Existing examples t
 
 Shape: `Result = ApplicationResult.define(...)`, `initialize(hotel:, actor:, ..., complete:)`,
 `#call` returns success/failure, and the section transition happens **inside the same
-transaction** as the domain write, rolling back on failure. Copy `SaveStaffDrafts` for
+transaction** as the domain write, rolling back on failure. Copy `SaveTeamSetup` for
 anything collection-shaped.
 
 ### Section state transitions

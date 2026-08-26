@@ -16,8 +16,7 @@ module HotelPortal
     SECTION_CONTENT = {
       "property_profile" => [ "Property profile", "Add the identity, location, contact details, amenities, and policies guests need." ],
       "property_photos" => [ "Property photos", "Upload the photos guests will see. At least one is needed; the first becomes the featured photo, and you can change which one that is at any time." ],
-      "roles_permissions" => [ "Roles and permissions", "Review the preset access levels your team will use after launch. They are read-only during onboarding; custom role management opens after launch when the property’s plan includes it." ],
-      "staff_setup" => [ "Staff setup", "Prepare team members and their roles. Nothing is sent now — invitations are created only after onboarding is successfully submitted." ],
+      "team_setup" => [ "Team Management", "Review the roles your team will use, then list who needs access and under which role. Nothing is sent now. Invitations are created only after onboarding is successfully submitted." ],
       "taxes_fees" => [ "Taxes and fees", "Confirm statutory taxes and configure any mandatory property fees." ],
       "room_revenue" => [ "Room revenue", "Set how room sales post and which taxes and policies apply." ],
       "rooms" => [ "Rooms", "Create the room categories, capacity, amenities, policies, and room numbering this property operates. Pricing, photos, and descriptive details come later." ],
@@ -39,8 +38,7 @@ module HotelPortal
     # docs/onboarding/DESIGN_DECISIONS.md.
     SECTION_FORMS = {
       "property_profile" => "onboarding-property-profile-form",
-      "roles_permissions" => "onboarding-role-presets-form",
-      "staff_setup" => "onboarding-staff-drafts-form",
+      "team_setup" => "onboarding-team-setup-form",
       "taxes_fees" => "onboarding-taxes-fees-form",
       "room_revenue" => "onboarding-room-revenue-form",
       "rooms" => "onboarding-rooms-form",

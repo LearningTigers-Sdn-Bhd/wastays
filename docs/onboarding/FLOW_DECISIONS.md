@@ -118,26 +118,37 @@ Collect:
 
 ### Phase 2: Team
 
-#### 2. Roles and permissions — required confirmation
+#### 2. Team Management — required
 
-The owner reviews the seeded presets:
+One page holds both halves of the Team phase. It was two steps until 2026-08-26;
+the roles half had a read-only list and a checkbox, which is not a step's worth
+of work.
+
+The top of the page shows the four seeded presets as cards, each with a one-line
+summary of the job it is for:
 
 - Hotel Owner
 - General Manager
 - Front Desk
 - Housekeeper
 
-Permissions are read-only during onboarding. The owner confirms the presets. Editing and custom role management remain regular plan-gated settings features after launch.
+Presets are read-only during onboarding. Saving the page records a fingerprint of
+their permissions, and `Onboarding::Readiness` blocks submission when the
+permissions move after that. Editing and custom role management remain
+plan-gated settings features after launch.
 
-#### 3. Staff setup — optional with an explicit decision
+The lower half is the draft staff table. The owner enters email addresses and
+assigns preset roles. These records stay drafts throughout setup, and invitations
+are sent only after onboarding is successfully submitted. Invitation acceptance
+does not block admin review or launch.
 
-The owner may enter staff email addresses and assign preset roles. These records remain drafts throughout setup.
-
-Staff invitations are sent only after onboarding has been successfully submitted. Invitation acceptance does not block admin review or launch. The owner may explicitly choose `No additional staff for now`.
+Continuing with an empty table records `no_additional_staff` and completes the
+step. The step is required, so it cannot be skipped: the roles still need
+confirming even when nobody else needs access.
 
 ### Phase 3: Finance
 
-#### 4. Taxes and fees — required confirmation
+#### 3. Taxes and fees — required confirmation
 
 Configure system and custom taxes and fees, including:
 
@@ -148,7 +159,7 @@ Configure system and custom taxes and fees, including:
 - Enabled state
 - Foreign-guest applicability
 
-#### 5. Room revenue — required
+#### 4. Room revenue — required
 
 Configure:
 
@@ -161,7 +172,7 @@ Taxes precede room revenue so they are available for assignment. Room revenue pr
 
 ### Phase 4: Rooms and rates
 
-#### 6. Rooms — required
+#### 5. Rooms — required
 
 Configure:
 
@@ -175,7 +186,7 @@ At least one valid room type with positive quantity is required.
 Descriptions, photos, room groups, and pricing are not collected on this onboarding page.
 Phase 7 owns pricing; optional descriptive room details remain available in regular Settings.
 
-#### 7. Rate plans and availability — required
+#### 6. Rate plans and availability — required
 
 Configure:
 
@@ -240,29 +251,29 @@ The product must also provide expiry warnings, coverage indicators, and bulk ext
 
 ### Phase 5: Commercial
 
-#### 8. Extra charges — optional
+#### 7. Extra charges — optional
 
 Configure charge name, code, pricing method, amount, charging unit, override behaviour, active state, and applicable taxes. The owner may choose `No extra charges for now`.
 
-#### 9. Discounts — optional
+#### 8. Discounts — optional
 
 Configure discount name, code, fixed or percentage pricing, application scope, applicable room revenue or extra charges, override behaviour, and active state.
 
 Discounts follow extra charges because they may target the charge codes established by room revenue and extra charges. The owner may choose `No discounts for now`.
 
-#### 10. Payment methods — required
+#### 9. Payment methods — required
 
 Configure cash, card, bank transfer, payment gateways, advance/deposit support, default cash behaviour, and payment surcharges.
 
 Payment methods follow extra charges because a surcharge may reference an extra-charge configuration. At least one active usable payment method is required.
 
-#### 11. Corporate accounts — optional
+#### 10. Corporate accounts — optional
 
 The owner may prepare corporate account invitations and initial credit terms or explicitly choose `Configure later`.
 
 External acceptance does not block onboarding or launch. Any invitation requested during onboarding is queued until submission.
 
-#### 12. Channel manager — optional
+#### 11. Channel manager — optional
 
 Rescoped during delivery to credential intake, because that is how the client already works: they collect OTA extranet logins on a spreadsheet and connect the channels themselves afterwards.
 
@@ -278,7 +289,7 @@ The higher-level product decision about whether a channel manager will eventuall
 
 ### Phase 6: Review
 
-#### 13. Review and submit — required
+#### 12. Review and submit — required
 
 The readiness review shows required completion, explicit optional decisions, warnings, and blocking issues.
 
