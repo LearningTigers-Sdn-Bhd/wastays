@@ -78,46 +78,58 @@ namespace :hotel_generator do
 
       # 4. Create Room Types
       puts "\n-> Creating Room Types..."
-      standard_type = RoomType.create!(
-        hotel: hotel,
-        name: "Standard Room",
-        description: "Cozy standard room with mountain view.",
-        quantity: 12,
-        base_price: 150.0,
-        max_adults: 2,
-        max_children: 1,
-        room_number_mode: "custom",
-        room_numbers: (101..112).map(&:to_s),
-        amenities: selected_amenities
-      )
+      standard_type = RoomType.transaction do
+        room_type = RoomType.create!(
+          hotel: hotel,
+          name: "Standard Room",
+          description: "Cozy standard room with mountain view.",
+          quantity: 12,
+          base_price: 150.0,
+          max_adults: 2,
+          max_children: 1,
+          room_number_mode: "custom",
+          room_numbers: (101..112).map(&:to_s),
+          amenities: selected_amenities
+        )
+        Rooms::SyncFromRoomType.call!(room_type: room_type)
+        room_type
+      end
       puts "   Room Type: Standard Room created (12 rooms, 101-112)"
 
-      deluxe_type = RoomType.create!(
-        hotel: hotel,
-        name: "Deluxe Room",
-        description: "Spacious room with king bed and balcony.",
-        quantity: 12,
-        base_price: 250.0,
-        max_adults: 2,
-        max_children: 2,
-        room_number_mode: "custom",
-        room_numbers: (201..212).map(&:to_s),
-        amenities: selected_amenities
-      )
+      deluxe_type = RoomType.transaction do
+        room_type = RoomType.create!(
+          hotel: hotel,
+          name: "Deluxe Room",
+          description: "Spacious room with king bed and balcony.",
+          quantity: 12,
+          base_price: 250.0,
+          max_adults: 2,
+          max_children: 2,
+          room_number_mode: "custom",
+          room_numbers: (201..212).map(&:to_s),
+          amenities: selected_amenities
+        )
+        Rooms::SyncFromRoomType.call!(room_type: room_type)
+        room_type
+      end
       puts "   Room Type: Deluxe Room created (12 rooms, 201-212)"
 
-      suite_type = RoomType.create!(
-        hotel: hotel,
-        name: "Executive Suite",
-        description: "Luxury suite with private lounge and hot tub.",
-        quantity: 6,
-        base_price: 450.0,
-        max_adults: 3,
-        max_children: 2,
-        room_number_mode: "custom",
-        room_numbers: (301..306).map(&:to_s),
-        amenities: selected_amenities
-      )
+      suite_type = RoomType.transaction do
+        room_type = RoomType.create!(
+          hotel: hotel,
+          name: "Executive Suite",
+          description: "Luxury suite with private lounge and hot tub.",
+          quantity: 6,
+          base_price: 450.0,
+          max_adults: 3,
+          max_children: 2,
+          room_number_mode: "custom",
+          room_numbers: (301..306).map(&:to_s),
+          amenities: selected_amenities
+        )
+        Rooms::SyncFromRoomType.call!(room_type: room_type)
+        room_type
+      end
       puts "   Room Type: Executive Suite created (6 rooms, 301-306)"
 
       # 5. Create Rate Plans

@@ -119,14 +119,17 @@ room_types_data = [
 room_types = {}
 room_types_data.each do |rt_data|
   rt = RoomType.find_or_initialize_by(hotel: hotel, name: rt_data[:name])
-  rt.description = rt_data[:description]
-  rt.max_adults = rt_data[:max_adults]
-  rt.max_children = rt_data[:max_children]
-  rt.quantity = rt_data[:quantity]
-  rt.base_price = rt_data[:base_price]
-  rt.room_numbers = rt_data[:room_numbers]
-  rt.room_number_mode = "custom"
-  rt.save!
+  RoomType.transaction do
+    rt.description = rt_data[:description]
+    rt.max_adults = rt_data[:max_adults]
+    rt.max_children = rt_data[:max_children]
+    rt.quantity = rt_data[:quantity]
+    rt.base_price = rt_data[:base_price]
+    rt.room_numbers = rt_data[:room_numbers]
+    rt.room_number_mode = "custom"
+    rt.save!
+    Rooms::SyncFromRoomType.call!(room_type: rt)
+  end
   room_types[rt_data[:name]] = rt
   puts "Room Type '#{rt_data[:name]}' ready (#{rt_data[:quantity]} units)."
 end
