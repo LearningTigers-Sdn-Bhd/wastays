@@ -27,6 +27,17 @@ module HotelPortal
       end
     end
 
+    # Arrivals lists everyone due on the date, arrived or not, so the two rows
+    # look alike until the clerk opens the action menu. Only the states that
+    # need an eye carry a mark: an unmarked row means the guest is still on the
+    # way, which is the common case and would otherwise repeat on every card.
+    def arrival_marker
+      return { label: "Missed", icon: "triangle-alert", tone: "border-warning/30 bg-warning/10 text-warning" } if status == "no_show_detected"
+      return { label: "Arrived", icon: "check", tone: "border-success/30 bg-success/10 text-success" } if booking.checked_in_at.present?
+
+      nil
+    end
+
     def pre_checkin_status
       booking.pre_checkin_status || "not_started"
     end
