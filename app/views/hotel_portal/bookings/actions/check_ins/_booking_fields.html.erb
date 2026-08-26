@@ -10,8 +10,8 @@
     <p class="mt-1 text-sm text-muted-foreground">Confirm this guest's actual arrival time and room assignment.</p>
   </div>
 
-  <%= render PanelsUI::FormField.new(form:, attribute: :checked_in_at, label: "Check-in date and time", required: true) do |field| %>
-    <% field.with_date_time_picker(value: values[:checked_in_at], minute_step: 5, data: { lifecycle_required: true }) %>
+  <%= render PanelsUI::FormField.new(form:, attribute: :checked_in_at, label: "Check-in date and time", required: true, hint: values[:business_date_hint]) do |field| %>
+    <% field.with_date_time_picker(value: values[:checked_in_at], max: values[:checked_in_at_max], minute_step: 5, data: { lifecycle_required: true }) %>
   <% end %>
 
   <% if editing %>
