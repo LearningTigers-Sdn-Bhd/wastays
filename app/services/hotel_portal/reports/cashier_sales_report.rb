@@ -19,15 +19,19 @@ module HotelPortal
         keyword_init: true
       )
 
-      def initialize(hotel:, start_date:, end_date:)
+      def initialize(hotel:, start_date:, end_date:, start_time: nil, end_time: nil, transaction_ids: nil)
         @hotel = hotel
         @start_date = start_date.to_date
         @end_date = end_date.to_date
+        @start_time = parse_time_of_day(start_time)
+        @end_time = parse_time_of_day(end_time)
+        @transaction_ids = transaction_ids.presence
       end
 
       def call
         scope = base_scope
         transactions = exclude_gateway_movements(scope.to_a)
+        transactions = filter_by_time_range(transactions)
         visible_scope = scope.where(id: transactions.map(&:id))
         cash_transactions, ota_credits = transactions.partition { |transaction| !ota_non_cash_movement?(transaction) }
         advances, settlements = cash_transactions.partition { |transaction| section_for(transaction) == "Advance" }
@@ -76,13 +80,14 @@ module HotelPortal
       end
 
       def base_scope
-        FolioTransaction
+        scope = FolioTransaction
           .payment
           .joins(booking_folio: :booking)
           .left_outer_joins(:transaction_code)
           .where(bookings: { hotel_id: @hotel.id })
           .where(posting_date: @start_date..@end_date)
-          .includes(
+        scope = scope.where(id: @transaction_ids) if @transaction_ids
+        scope.includes(
             :transaction_code,
             :user,
             reversal_of_transaction: :transaction_code,
@@ -182,6 +187,27 @@ module HotelPortal
 
       def grand_total_for(transactions)
         in_out_balance(transactions)
+      end
+
+      def filter_by_time_range(transactions)
+        return transactions unless @start_time || @end_time
+
+        transactions.select do |transaction|
+          reference = transaction.posted_at || transaction.created_at
+          next false unless reference
+
+          seconds = reference.seconds_since_midnight.to_i
+          (@start_time.nil? || seconds >= @start_time) && (@end_time.nil? || seconds <= @end_time)
+        end
+      end
+
+      def parse_time_of_day(value)
+        return nil if value.blank?
+
+        hour, minute = value.to_s.split(":").map(&:to_i)
+        return nil unless hour.present? && (0..23).cover?(hour) && (0..59).cover?(minute.to_i)
+
+        hour * 3600 + minute.to_i * 60
       end
     end
   end
