@@ -39,7 +39,7 @@ RSpec.describe HotelPortal::Setup::Stepper, type: :component do
   end
 
   it "renders a locked step as an inert, labelled tab" do
-    %w[property_profile property_photos roles_permissions staff_setup].each do |key|
+    %w[property_profile property_photos team_setup].each do |key|
       hotel.onboarding_sections.find_by!(section_key: key).update!(state: "complete")
     end
 

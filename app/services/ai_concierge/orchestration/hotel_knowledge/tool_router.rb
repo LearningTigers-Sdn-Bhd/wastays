@@ -11,11 +11,11 @@ module AiConcierge
         def call
           case interpretation["intent"]
           when "hotel_policy"
-            result = Tools::HotelInformation::GetHotelPolicyTool.new(hotel: hotel, policy_topic: interpretation["topic"], query: message, hints: hints).call
+            result = Tools::HotelInformation::GetHotelPolicyTool.new(hotel: hotel, policy_topic: interpretation["topic"], query: message, scope: interpretation["scope"], hints: hints).call
             { reply_type: :hotel_policy, active_topic: "hotel_policy", active_flow: "hotel_policy", result: result }
           when "hotel_information"
             tool_class, reply_type = hotel_information_tool_and_reply_type
-            result = tool_class.new(hotel: hotel, query: message, hints: hints).call
+            result = tool_class.new(hotel: hotel, query: message, scope: interpretation["scope"], hints: hints).call
             { reply_type: reply_type, active_topic: interpretation["topic"], active_flow: "hotel_information", result: result }
           when "nearby_attractions"
             result = Tools::HotelInformation::GetNearbyAttractionsTool.new(hotel: hotel).call

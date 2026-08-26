@@ -7,7 +7,7 @@ module Onboarding
   # creates, so setup stores drafts and submission delivers them — the one
   # sanctioned onboarding-only record besides staff drafts.
   #
-  # Unlike SaveStaffDrafts this does not delete and rebuild the collection.
+  # Unlike SaveTeamSetup this does not delete and rebuild the collection.
   # A draft that has already produced an invitation carries the marker that
   # makes delivery idempotent, so an owner editing this page after a
   # changes-requested review must not be able to erase it and cause a resend.

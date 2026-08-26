@@ -162,7 +162,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
         .and change(User, :count).by(0)
         .and change(Hotel, :count).by(1)
         .and change(StaffInvitation, :count).by(1)
-        .and change(HotelOnboardingSection, :count).by(14)
+        .and change(HotelOnboardingSection, :count).by(13)
 
       hotel = Hotel.order(:created_at).last
       invitation = hotel.staff_invitations.last

@@ -596,7 +596,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
 
     expect(first_reply.payload[:reply_message]).to include("How many days and nights")
     expect(info_reply.payload[:reply_message]).to be_present
-    expect(policy_reply.payload[:reply_message]).to include("Here is our hotel policy")
+    expect(policy_reply.payload[:reply_message]).to include("You can cancel under these terms")
     expect(policy_reply.payload[:reply_message]).not_to include("Sorry, I couldn't find any rooms")
     expect(state.slots_payload.dig("booking_task", "status")).to eq("suspended")
     expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
@@ -654,8 +654,9 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
 
     result = described_class.new(hotel: hotel, message: "what amenities does deluxe room have?", phone: "+60123456789").call
 
-    expect(result.payload[:reply_message]).to include("Here are the details for Deluxe Room")
-    expect(result.payload[:reply_message]).to include("Amenities: Free WiFi, Air Conditioning")
+    expect(result.payload[:reply_message]).to include("Deluxe Room: Spacious room with city view")
+    expect(result.payload[:reply_message]).to include("amenities include Free WiFi")
+    expect(result.payload[:reply_message]).to include("amenities include Free WiFi, Air Conditioning")
   end
 
   # These specs were written against the interpreting pipeline, and their value

@@ -67,7 +67,35 @@ module HotelPortal
     end
 
     def checked_in_at_form_value
-      (booking.checked_in_at || Time.current).in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
+      (booking.checked_in_at || default_check_in_moment).in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
+    end
+
+    # Past midnight the wall clock already reads tomorrow while the hotel still
+    # trades yesterday, so "now" would open the sheet on the wrong day. An
+    # arrival that still sits inside the open business date falls back to its
+    # scheduled time instead; the desk can type the real arrival time over it.
+    def default_check_in_moment
+      arrival = booking.check_in
+      return Time.current if arrival.blank?
+
+      arrival_date = arrival.in_time_zone(hotel.hotel_time_zone).to_date
+      return Time.current unless arrival_date < Time.current.in_time_zone(hotel.hotel_time_zone).to_date
+      return Time.current if hotel.date_closed?(arrival_date)
+
+      arrival
+    end
+
+    # Greys out every date after today in the calendar. It only teaches the
+    # limit early: Bookings::ProcessCheckIn enforces it.
+    def checked_in_at_max_value
+      Time.current.in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%dT%H:%M")
+    end
+
+    def check_in_business_date_hint
+      business_date = hotel.current_business_date
+      return if business_date.blank?
+
+      "Posts to business date #{business_date.strftime('%d %b %Y')}."
     end
 
     def checked_out_at_form_value

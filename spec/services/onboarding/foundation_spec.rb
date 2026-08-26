@@ -6,7 +6,7 @@ RSpec.describe "Onboarding foundation" do
   it "initializes the stable ordered journey idempotently" do
     expect {
       Onboarding::InitializeProgress.new(hotel: hotel).call
-    }.to change(HotelOnboardingSection, :count).by(14)
+    }.to change(HotelOnboardingSection, :count).by(13)
       .and change(OnboardingAuditEvent, :count).by(1)
 
     expect {
@@ -19,7 +19,7 @@ RSpec.describe "Onboarding foundation" do
   it "enforces prerequisites and records completion audit events" do
     blocked = Onboarding::UpdateSection.new(
       hotel: hotel,
-      section_key: "roles_permissions",
+      section_key: "team_setup",
       state: "complete"
     ).call
     expect(blocked.success?).to be(false)
@@ -58,7 +58,7 @@ RSpec.describe "Onboarding foundation" do
 
     readiness = Onboarding::Readiness.new(hotel: hotel).call
     expect(readiness.ready).to be(false)
-    expect(readiness.blocking_issues.map(&:section_key)).to include("property_profile", "staff_setup")
+    expect(readiness.blocking_issues.map(&:section_key)).to include("property_profile", "team_setup")
   end
 
   it "does not count shell placeholder completion as launch-ready" do

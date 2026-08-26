@@ -6,8 +6,7 @@ module Onboarding
   # Onboarding::Readiness blocks submission for an optional section that is
   # neither complete nor skipped, so "I sell no extras" has to be recorded as an
   # answer rather than left as silence. This covers the sections whose skip is
-  # purely a decision; a section that also has to discard onboarding-only records
-  # keeps its own service (see DecideNoAdditionalStaff).
+  # purely a decision.
   #
   # Nothing is deleted. A property that configured charges and then skipped is
   # contradicting itself, so the counts go into the audit metadata where review

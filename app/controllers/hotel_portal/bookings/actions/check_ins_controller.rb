@@ -124,6 +124,8 @@ module HotelPortal
             tourism_tax_collected:,
             room_assignments: submitted[:room_assignments],
             requires_override: @requires_override,
+            business_date_hint: @presenter.check_in_business_date_hint,
+            checked_in_at_max: @presenter.checked_in_at_max_value,
             boat_in_time: submitted.fetch(:boat_in_time) { stored_boat_time(:boat_in_at) },
             boat_out_time: submitted.fetch(:boat_out_time) { stored_boat_time(:boat_out_at) }
           }

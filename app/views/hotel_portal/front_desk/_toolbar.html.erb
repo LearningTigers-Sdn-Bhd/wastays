@@ -47,13 +47,21 @@
                }) %>
         <% end %>
         <% hotel_today = Time.current.in_time_zone(current_hotel.hotel_time_zone).to_date %>
-        <% show_date_reset = @tab == "bookings" ? (@start_date || @end_date) : (@start_date != hotel_today || @end_date != hotel_today) %>
+        <% operational_date = current_hotel.current_business_date || current_hotel.business_date_for(Time.current) %>
+        <% reset_date = @tab.in?(["arrivals", "departures"]) ? operational_date : hotel_today %>
+        <% show_date_reset = @tab == "bookings" ? (@start_date || @end_date) : (@start_date != reset_date || @end_date != reset_date) %>
         <% if show_date_reset %>
           <% reset_state = state.except(*date_keys, @page_param).merge(tab: @tab, view: @view) %>
           <% unless @tab == "bookings" %>
-            <% reset_state = reset_state.merge(date_keys.first => hotel_today.iso8601, date_keys.second => hotel_today.iso8601) %>
+            <% reset_state = reset_state.merge(date_keys.first => reset_date.iso8601, date_keys.second => reset_date.iso8601) %>
           <% end %>
-          <% reset_label = @tab == "bookings" ? "Clear dates" : "Reset to today" %>
+          <% reset_label = if @tab == "bookings"
+            "Clear dates"
+          elsif @tab.in?(["arrivals", "departures"])
+            "Reset to business date"
+          else
+            "Reset to today"
+          end %>
           <%= link_to reset_label, hotel_front_desk_path(current_hotel, reset_state), class: "inline-flex min-h-10 items-center justify-center text-sm font-medium text-muted-foreground hover:text-foreground", aria: { label: reset_label } %>
         <% end %>
       </div>

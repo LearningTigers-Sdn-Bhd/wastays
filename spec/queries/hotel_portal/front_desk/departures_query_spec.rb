@@ -82,13 +82,26 @@ RSpec.describe HotelPortal::FrontDesk::DeparturesQuery, frozen_time: Time.zone.l
     expect(query.call).not_to include(legacy_booking)
   end
 
-  it "uses the hotel-local day for invalid and missing dates", frozen_time: Time.utc(2026, 7, 15, 18, 30) do
+  it "uses the current business date for invalid and missing dates", frozen_time: Time.utc(2026, 7, 15, 18, 30) do
     hotel.update!(time_zone: "Kuala Lumpur")
     invalid = described_class.new(hotel:, params: { departure_start_date: "not-a-date" })
     missing = described_class.new(hotel:, params: {})
 
     expect([ invalid.start_date, invalid.end_date ]).to eq([ Date.new(2026, 7, 16) ] * 2)
     expect([ missing.start_date, missing.end_date ]).to eq([ Date.new(2026, 7, 16) ] * 2)
+  end
+
+  it "keeps the open business date after local midnight", frozen_time: Time.utc(2026, 7, 25, 16, 1) do
+    hotel.update!(time_zone: "Kuala Lumpur")
+    BusinessDates::ResetAuthority.call!(hotel:, date: Date.new(2026, 7, 25))
+    departure = create(:booking, hotel:, status: "checked_in", check_out: hotel_time("2026-07-25"))
+
+    invalid = described_class.new(hotel:, params: { departure_start_date: "not-a-date" })
+    missing = described_class.new(hotel:, params: {})
+
+    expect([ invalid.start_date, invalid.end_date ]).to eq([ Date.new(2026, 7, 25) ] * 2)
+    expect([ missing.start_date, missing.end_date ]).to eq([ Date.new(2026, 7, 25) ] * 2)
+    expect(missing.call).to contain_exactly(departure)
   end
 
   describe "#total_count" do

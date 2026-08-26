@@ -20,18 +20,17 @@ module AiConcierge
 
       def hotel_policy_message
         result = context[:result] || {}
-        return result["answer"] if result["answer"].present? && result["success"] != false
-        return "Welcome to #{hotel.name}! #{result['policy_text']}" if result["policy_text"].present?
+        return result["answer"] if result["answer"].present?
 
-        structured_policy_present = result["check_in_time"].present? || result["check_out_time"].present? || result["cancellation_policy"].present?
-        return "Welcome to #{hotel.name}! The hotel has not provided its policy details yet." unless structured_policy_present
+        facts = []
+        facts << knowledge_fact("check-in", "You can check in from #{result['check_in_time']}.") if result["check_in_time"].present?
+        facts << knowledge_fact("check-out", "Check-out is by #{result['check_out_time']}.") if result["check_out_time"].present?
+        if result["cancellation_policy"].present?
+          facts << knowledge_fact("cancellation", "You can cancel under these terms: #{result['cancellation_policy'].to_s.chomp('.')}.")
+        end
+        facts << knowledge_fact("policy", result["policy_text"]) if facts.empty? && result["policy_text"].present?
 
-        [
-          "Welcome to #{hotel.name}! Here is our hotel policy:",
-          "- Check-in starts at: *#{result['check_in_time'].presence || 'not provided yet'}*",
-          "- Check-out is at: *#{result['check_out_time'].presence || 'not provided yet'}*",
-          "- Cancellation: *#{result['cancellation_policy'].presence || 'The hotel has not provided that information yet.'}*"
-        ].join("\n")
+        compose_knowledge(shape: facts.one? ? "direct" : "list", facts: facts, missing_topic: "policy information")
       end
 
       def booking_context_message
@@ -49,42 +48,43 @@ module AiConcierge
 
       def general_hotel_info_message
         result = context[:result] || {}
-        return result["answer"] if result["answer"].present? && result["success"] != false
+        return result["answer"] if result["answer"].present?
         summary = result["summary_text"].presence
         amenities = Array(result["amenities"])
-        return "I couldn't find general hotel information right now." if summary.blank? && amenities.blank?
-
-        lines = []
-        lines << summary if summary.present?
-        lines << "Hotel amenities: #{amenities.join(', ')}" if amenities.present?
-        lines.join("\n")
+        facts = []
+        facts << knowledge_fact("hotel information", summary) if summary.present?
+        facts << knowledge_fact("amenities", "Available amenities include #{amenities.to_sentence}.") if amenities.present?
+        compose_knowledge(shape: facts.many? ? "list" : "direct", facts: facts, missing_topic: "hotel information")
       end
 
       def hotel_faq_message
         result = context[:result] || {}
-        return result["answer"] if result["answer"].present? && result["success"] != false
-        return result["faq_text"] if result["faq_text"].present?
-
-        "The hotel has not provided FAQ details yet."
+        return result["answer"] if result["answer"].present?
+        facts = result["faq_text"].present? ? [ knowledge_fact("FAQ", result["faq_text"]) ] : []
+        compose_knowledge(shape: "direct", facts: facts, missing_topic: "an FAQ answer")
       end
 
       def nearby_attractions_message
-        attractions = Array(context.dig(:result, "attractions") || context[:attractions])
-        return "I couldn't find any nearby attractions listed right now." if attractions.empty?
+        result = context[:result] || {}
+        return result["answer"] if result["answer"].present?
 
-        lines = attractions.map do |attraction|
-          details = [ attraction["description"], attraction["address"], attraction["city"], attraction["country"] ].compact_blank.join(". ")
-          details = [ details, distance_text(attraction["distance_km"]) ].compact_blank.join(". ")
-          details.present? ? "- *#{attraction['name']}*: #{details}" : "- *#{attraction['name']}*"
-        end
-
-        [ "Here are the nearby attractions:", lines.join("\n") ].join("\n")
+        reply = Orchestration::HotelKnowledge::ReplyFactory.new(intent: "nearby_attractions", result: result).call
+        Orchestration::HotelKnowledge::ReplyComposer.new(reply: reply, tone: hotel.ai_concierge_tone).call
       end
 
-      def distance_text(distance_km)
-        return if distance_km.blank?
+      def knowledge_fact(topic, text)
+        Orchestration::HotelKnowledge::Reply::Fact.new(topic: topic, text: text)
+      end
 
-        "About #{format('%.1f', distance_km)} km away in a straight line"
+      def compose_knowledge(shape:, facts:, missing_topic:)
+        reply = Orchestration::HotelKnowledge::Reply.new(
+          shape: facts.empty? ? "unavailable" : shape,
+          answer_mode: facts.empty? ? "unavailable" : "fallback",
+          facts: facts,
+          missing_topic: missing_topic,
+          success: facts.present?
+        )
+        Orchestration::HotelKnowledge::ReplyComposer.new(reply: reply, tone: hotel.ai_concierge_tone).call
       end
     end
   end

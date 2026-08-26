@@ -47,7 +47,7 @@ Read `PHASE_10_REVIEW_SUBMISSION.md` and `PHASE_11_ADMIN_REVIEW.md` for full con
   completion routes were removed. Generic approval is only for suspended reactivation.
 
 Important regression rule: confirmation and readiness must both use
-`ConfirmRolePresets.permission_fingerprint`. JSON key order affects the digest. The preset
+`RolePresets.permission_fingerprint`. JSON key order affects the digest. The preset
 order is `hotel_owner`, `general_manager`, `front_desk`, `housekeeper`; independently
 sorting the roles alphabetically caused a successfully saved section to remain falsely
 stale.
