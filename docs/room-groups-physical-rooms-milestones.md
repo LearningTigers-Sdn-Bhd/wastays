@@ -1,7 +1,7 @@
 # Room Groups and Physical Rooms Milestones
 
 Status: Approved
-Implementation status: Milestones 0–2 in progress
+Implementation status: Milestones 0–2 complete
 Date: 2026-08-26
 
 ## Purpose
