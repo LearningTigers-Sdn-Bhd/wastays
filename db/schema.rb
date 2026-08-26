@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2791,6 +2791,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_120000) do
     t.index ["room_group_id"], name: "index_room_types_on_room_group_id"
   end
 
+  create_table "rooms", force: :cascade do |t|
+    t.datetime "archived_at"
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.string "number", null: false
+    t.integer "position", default: 0, null: false
+    t.bigint "room_group_id"
+    t.bigint "room_type_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "archived_at"], name: "index_rooms_on_hotel_id_and_archived_at"
+    t.index ["hotel_id", "number"], name: "index_rooms_on_hotel_id_and_number", unique: true
+    t.index ["hotel_id"], name: "index_rooms_on_hotel_id"
+    t.index ["room_group_id"], name: "index_rooms_on_room_group_id"
+    t.index ["room_type_id", "archived_at", "position"], name: "index_rooms_on_room_type_id_and_archived_at_and_position"
+    t.index ["room_type_id"], name: "index_rooms_on_room_type_id"
+    t.check_constraint "number::text = btrim(number::text) AND number::text <> ''::text", name: "rooms_number_normalized"
+  end
+
   create_table "setup_fee_rules", force: :cascade do |t|
     t.decimal "amount", precision: 12, scale: 2, null: false
     t.datetime "created_at", null: false
@@ -3194,6 +3212,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_120000) do
   add_foreign_key "room_type_rate_plans", "room_types"
   add_foreign_key "room_types", "hotels"
   add_foreign_key "room_types", "room_groups"
+  add_foreign_key "rooms", "hotels"
+  add_foreign_key "rooms", "room_groups"
+  add_foreign_key "rooms", "room_types"
   add_foreign_key "transaction_code_taxes", "hotel_taxes"
   add_foreign_key "transaction_code_taxes", "transaction_codes"
   add_foreign_key "transaction_codes", "hotels"
