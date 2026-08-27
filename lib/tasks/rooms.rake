@@ -16,4 +16,26 @@ namespace :rooms do
 
     exit 1
   end
+
+  desc "Compare the room directory against the legacy room-number lists"
+  task reconcile_directory: :environment do
+    total_issues = 0
+
+    Hotel.order(:id).find_each do |hotel|
+      result = Rooms::ReconcileDirectory.call(hotel: hotel)
+      next if result.reconciled?
+
+      total_issues += result.issues.size
+      puts "Hotel #{hotel.id} (#{hotel.name}) has #{result.issues.size} difference(s):"
+      result.issues.each { |issue| puts "  [#{issue.type}] #{issue.message}" }
+    end
+
+    if total_issues.zero?
+      puts "Room directory reconciliation passed."
+      next
+    end
+
+    puts "Room directory reconciliation found #{total_issues} difference(s)."
+    exit 1
+  end
 end

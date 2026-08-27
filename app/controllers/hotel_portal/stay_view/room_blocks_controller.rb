@@ -9,7 +9,7 @@ module HotelPortal
       def new
         room_type = current_hotel.room_types.find(params[:room_type_id])
         room_number = params[:room_number].to_s
-        raise ActiveRecord::RecordNotFound unless room_type.room_numbers.map(&:to_s).include?(room_number)
+        raise ActiveRecord::RecordNotFound unless ::Rooms::DirectoryQuery.for_room_type(room_type).include?(room_number)
 
         @room_block = current_hotel.room_blocks.build(
           room_type:,
@@ -65,7 +65,7 @@ module HotelPortal
       def room_block_params
         attributes = params.require(:room_block).permit(:room_type_id, :room_number, :start_date, :end_date, :block_type, :reason, :notes)
         room_type = current_hotel.room_types.find(attributes[:room_type_id])
-        unless room_type.room_numbers.map(&:to_s).include?(attributes[:room_number].to_s)
+        unless ::Rooms::DirectoryQuery.for_room_type(room_type).include?(attributes[:room_number])
           raise ActiveRecord::RecordNotFound
         end
 

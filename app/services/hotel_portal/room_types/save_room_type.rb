@@ -36,6 +36,7 @@ module HotelPortal
 
         if saved
           @room_type.attach_photos_with_limit(photos) if photos.present?
+          report_directory_drift
           sync_with_channel_manager
           OpenStruct.new(success?: true, room_type: @room_type)
         else
@@ -44,6 +45,23 @@ module HotelPortal
       end
 
       private
+
+      # The rooms table is the source of truth and `room_types.room_numbers`
+      # is its copy. The sync above writes both in one transaction, so a
+      # difference here means a defect, not bad input. Report it and let the
+      # save stand: a rollback would throw away correct work and hide the
+      # defect.
+      def report_directory_drift
+        result = Rooms::ReconcileDirectory.call(hotel: @hotel)
+        return if result.reconciled?
+
+        Rails.logger.warn(
+          "Room directory drift for hotel #{@hotel.id} after saving room type #{@room_type.id}: " \
+          "#{result.issues.map(&:message).join(' | ')}"
+        )
+      rescue StandardError => error
+        Rails.logger.warn("Room directory reconciliation failed for hotel #{@hotel.id}: #{error.message}")
+      end
 
       def sanitize_room_numbers
         if @params[:room_numbers]

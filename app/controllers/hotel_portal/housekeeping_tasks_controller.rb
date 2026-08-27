@@ -79,7 +79,7 @@ module HotelPortal
 
       @room_type = current_hotel.room_types.find(params[:room_type_id])
       @room_number = params[:room_number].to_s.strip
-      raise ActiveRecord::RecordNotFound unless @room_type.room_numbers.include?(@room_number)
+      raise ActiveRecord::RecordNotFound unless ::Rooms::DirectoryQuery.for_room_type(@room_type).include?(@room_number)
 
       @room_status = current_hotel.room_statuses.find_or_initialize_by(room_type: @room_type, room_number: @room_number)
       @selected_date = Date.parse(mutation_date.to_s)

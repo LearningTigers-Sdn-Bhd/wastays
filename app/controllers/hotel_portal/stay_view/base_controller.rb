@@ -112,7 +112,7 @@ module HotelPortal
         raise ActiveRecord::RecordNotFound if room_number.blank? || room_type_id.blank?
 
         room_type = current_hotel.room_types.find(room_type_id)
-        raise ActiveRecord::RecordNotFound unless room_type.room_numbers.map(&:to_s).include?(room_number.to_s)
+        raise ActiveRecord::RecordNotFound unless ::Rooms::DirectoryQuery.for_room_type(room_type).include?(room_number)
 
         "#{room_type.id}:#{room_number}"
       end

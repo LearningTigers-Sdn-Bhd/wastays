@@ -1,7 +1,7 @@
 # Room Groups and Physical Rooms Milestones
 
 Status: Approved
-Implementation status: Milestone 0 complete. Milestone 1 complete locally and pending production and demo operations. Milestones 2 to 5 complete on the branch.
+Implementation status: Milestones 0 and 1 complete on local, demo, and production. Milestones 2 to 6 complete on the branch. Milestone 7 is a separate project.
 Date: 2026-08-26
 
 ## Purpose
@@ -140,17 +140,19 @@ The last two cases can make the hotel-wide rule wrong for that hotel. Classify e
 
 This milestone corrects the duplicates so that an ordinary migration can run. It ships no code.
 
+Done. Operations ran Rails console scripts on each environment.
+
 ### Production
 
-One test hotel is affected. Renumber its room types in Room Inventory, or remove the test hotel.
+Complete. One test hotel was affected. It moved to the new floor-based numbering.
 
 ### Demo
 
-Many hotels are affected. Reseed demo. Every seeder produces correct floor-based numbers, so a reseed removes every duplicate.
+Complete. The affected hotels moved to the new floor-based numbering.
 
 ### Local
 
-Renumber hotel 8 and hotel 20, or reseed.
+Complete. Hotel 8 and hotel 20 use the new numbering.
 
 ### Exit criteria
 
@@ -327,7 +329,13 @@ Room cards, booking bars, rates, and operational actions remain unchanged.
 
 This milestone changes room enumeration from JSON to the `rooms` table.
 
+Done on the branch.
+
 WARNING: This milestone changes the read source for availability, bookings, Housekeeping, and Stay View. It carries the largest operational risk in this project. Do not start it until every earlier milestone passes.
+
+`Rooms::DirectoryQuery` holds the single answer to "which rooms exist". It reads active rooms in `position` order, for one hotel or for one room category. Every operational read calls it. `Rooms::GroupAssignmentsQuery` reads the same loaded rows, so a board asks the `rooms` table once.
+
+Run `bin/rails rooms:reconcile_directory` immediately before and after the release. It reports any difference between the two sources for every hotel and exits non-zero when one remains.
 
 Scope:
 
