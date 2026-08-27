@@ -55,7 +55,9 @@ module HotelOps
 
       deliver_owner_invitation(result) if @owner_invitation_options&.fetch(:deliver, false)
       result.except(:invitation_token)
-    rescue ActiveRecord::RecordInvalid, KeyError => e
+    rescue ActiveRecord::RecordInvalid => e
+      { success: false, error: e.message, invalid_record: e.record }
+    rescue KeyError => e
       { success: false, error: e.message }
     end
 
