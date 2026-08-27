@@ -52,7 +52,6 @@ module Rooms
           {
             hotel_id: room_type.hotel_id,
             room_type_id: room_type.id,
-            room_group_id: room_type.room_group_id,
             number:,
             position:
           }
@@ -202,7 +201,6 @@ module Rooms
     def attribute_issues(expected, room)
       issues = []
       compare_attribute(issues, :wrong_room_type, :room_type_id, expected, room)
-      compare_attribute(issues, :wrong_room_group, :room_group_id, expected, room)
       compare_attribute(issues, :wrong_position, :position, expected, room)
       issues
     end

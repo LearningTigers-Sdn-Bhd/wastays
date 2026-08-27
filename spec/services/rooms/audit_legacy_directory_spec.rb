@@ -21,6 +21,24 @@ RSpec.describe Rooms::AuditLegacyDirectory do
     expect(room_type.reload[:room_numbers]).to eq(raw_numbers)
   end
 
+  it "reports every invalid numbered-room finding as blocking" do
+    hotel = create(:hotel)
+    blank = create(:room_type, hotel:, quantity: 2, room_numbers: [])
+    blank.update_column(:room_numbers, [ "101", " " ])
+    duplicate = create(:room_type, hotel:, quantity: 2, room_numbers: [])
+    duplicate.update_column(:room_numbers, [ "201", "201" ])
+    short = create(:room_type, hotel:, quantity: 2, room_numbers: [])
+    short.update_column(:room_numbers, [ "301" ])
+
+    result = described_class.new(room_types: hotel.room_types).call
+
+    expect(result.blocking_issues.map(&:code)).to include(
+      :blank_room_number,
+      :duplicate_room_number,
+      :quantity_mismatch
+    )
+  end
+
   it "reports normalized room numbers that belong to different room types" do
     hotel = create(:hotel)
     first = create(:room_type, hotel:, name: "Deluxe", quantity: 1, room_numbers: [ "101" ])

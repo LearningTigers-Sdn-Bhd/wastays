@@ -26,14 +26,14 @@ RSpec.describe HotelPortal::RoomTypes::SaveRoomType do
         expect(result.room_type.rooms.active.ordered.pluck(:number, :position)).to eq([ [ "101", 0 ], [ "102", 1 ] ])
       end
 
-      it "copies the legacy room group to each physical room" do
+      it "does not copy the legacy room group to physical rooms" do
         room_group = create(:room_group, hotel: hotel)
         params[:room_group_id] = room_group.id
 
         result = subject.call
 
         expect(result).to be_success
-        expect(result.room_type.rooms.active.pluck(:room_group_id)).to contain_exactly(room_group.id, room_group.id)
+        expect(result.room_type.rooms.active.pluck(:room_group_id)).to contain_exactly(nil, nil)
       end
 
       it "leaves the hotel's lifecycle status alone" do

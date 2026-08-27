@@ -48,21 +48,19 @@ RSpec.describe Rooms::ReconcileDirectory do
 
   it "reports missing, unexpected, archived, and mismatched directory rows" do
     hotel = create(:hotel)
-    expected_group = create(:room_group, hotel:)
     wrong_group = create(:room_group, hotel:)
     expected_type = create(
       :room_type,
       hotel:,
-      room_group: expected_group,
       quantity: 5,
       room_numbers: %w[101 102 103 104 105]
     )
     wrong_type = create(:room_type, hotel:)
 
-    create(:room, hotel:, room_type: expected_type, room_group: expected_group, number: "102", position: 1, archived_at: Time.current)
-    create(:room, hotel:, room_type: wrong_type, room_group: expected_group, number: "103", position: 2)
+    create(:room, hotel:, room_type: expected_type, number: "102", position: 1, archived_at: Time.current)
+    create(:room, hotel:, room_type: wrong_type, number: "103", position: 2)
     create(:room, hotel:, room_type: expected_type, room_group: wrong_group, number: "104", position: 3)
-    create(:room, hotel:, room_type: expected_type, room_group: expected_group, number: "105", position: 8)
+    create(:room, hotel:, room_type: expected_type, number: "105", position: 8)
     create(:room, hotel:, room_type: wrong_type, number: "999", position: 0)
 
     result = described_class.call(hotel:)
@@ -72,9 +70,20 @@ RSpec.describe Rooms::ReconcileDirectory do
       :unexpected_active_room,
       :expected_room_archived,
       :wrong_room_type,
-      :wrong_room_group,
       :wrong_position
     )
+  end
+
+  it "permits physical-room groups to differ from the legacy room-type group" do
+    hotel = create(:hotel)
+    legacy_group = create(:room_group, hotel: hotel)
+    physical_group = create(:room_group, hotel: hotel)
+    room_type = create(:room_type, hotel: hotel, room_group: legacy_group, quantity: 1, room_numbers: [ "101" ])
+    create(:room, hotel: hotel, room_type: room_type, room_group: physical_group, number: "101")
+
+    result = described_class.call(hotel: hotel)
+
+    expect(result).to be_reconciled
   end
 
   it "reports a room whose hotel differs from its room type hotel" do

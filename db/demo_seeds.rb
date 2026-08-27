@@ -1184,18 +1184,19 @@ module DemoSeeds
     property_policy.save!
 
     rooms.each_with_index do |attrs, index|
-      room_type = RoomType.find_or_initialize_by(hotel: hotel, name: attrs[:name])
-      RoomType.transaction do
-        room_type.description = attrs[:description]
-        room_type.max_adults = attrs[:adults]
-        room_type.max_children = attrs[:children]
-        room_type.quantity = attrs[:quantity]
-        room_type.base_price = attrs[:base_price]
-        room_type.room_number_mode = "custom"
-        room_type.room_numbers = attrs.fetch(:room_numbers) { room_numbers_for(index, attrs[:quantity]) }
-        room_type.save!
-        Rooms::SyncFromRoomType.call!(room_type: room_type)
-      end
+      room_type = Rooms::SaveSeedRoomType.call!(
+        hotel:,
+        attributes: {
+          name: attrs[:name],
+          description: attrs[:description],
+          max_adults: attrs[:adults],
+          max_children: attrs[:children],
+          quantity: attrs[:quantity],
+          base_price: attrs[:base_price],
+          room_number_mode: "custom",
+          room_numbers: attrs.fetch(:room_numbers) { room_numbers_for(index, attrs[:quantity]) }
+        }
+      )
 
       ensure_room_calendar(
         room_type,

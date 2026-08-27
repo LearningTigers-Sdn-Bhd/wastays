@@ -39,13 +39,13 @@ RSpec.describe Rooms::SyncFromRoomType do
     expect(second.reload).to have_attributes(position: 1, room_group_id: nil, archived_at: nil)
   end
 
-  it "creates new rooms with the legacy room group" do
+  it "creates new rooms without a room group" do
     result = described_class.call(room_type: room_type)
 
     expect(result).to be_success
     expect(result.rooms.map(&:number)).to eq(%w[101 102])
     expect(result.rooms.map(&:position)).to eq([ 0, 1 ])
-    expect(result.rooms.map(&:room_group_id)).to eq([ room_group.id, room_group.id ])
+    expect(result.rooms.map(&:room_group_id)).to eq([ nil, nil ])
   end
 
   it "restores the archived identity without changing its group" do
@@ -69,7 +69,7 @@ RSpec.describe Rooms::SyncFromRoomType do
     expect(old_room.reload.archived_at).to be_present
     expect(result.rooms.map(&:number)).to eq(%w[201 102])
     expect(result.rooms.first.id).not_to eq(old_room.id)
-    expect(result.rooms.first.room_group_id).to eq(room_group.id)
+    expect(result.rooms.first.room_group_id).to be_nil
   end
 
   it "rejects a number that belongs to another room category" do

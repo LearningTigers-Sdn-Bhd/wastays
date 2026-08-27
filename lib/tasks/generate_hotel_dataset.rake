@@ -78,9 +78,9 @@ namespace :hotel_generator do
 
       # 4. Create Room Types
       puts "\n-> Creating Room Types..."
-      standard_type = RoomType.transaction do
-        room_type = RoomType.create!(
-          hotel: hotel,
+      standard_type = Rooms::SaveSeedRoomType.call!(
+        hotel: hotel,
+        attributes: {
           name: "Standard Room",
           description: "Cozy standard room with mountain view.",
           quantity: 12,
@@ -90,15 +90,13 @@ namespace :hotel_generator do
           room_number_mode: "custom",
           room_numbers: (101..112).map(&:to_s),
           amenities: selected_amenities
-        )
-        Rooms::SyncFromRoomType.call!(room_type: room_type)
-        room_type
-      end
+        }
+      )
       puts "   Room Type: Standard Room created (12 rooms, 101-112)"
 
-      deluxe_type = RoomType.transaction do
-        room_type = RoomType.create!(
-          hotel: hotel,
+      deluxe_type = Rooms::SaveSeedRoomType.call!(
+        hotel: hotel,
+        attributes: {
           name: "Deluxe Room",
           description: "Spacious room with king bed and balcony.",
           quantity: 12,
@@ -108,15 +106,13 @@ namespace :hotel_generator do
           room_number_mode: "custom",
           room_numbers: (201..212).map(&:to_s),
           amenities: selected_amenities
-        )
-        Rooms::SyncFromRoomType.call!(room_type: room_type)
-        room_type
-      end
+        }
+      )
       puts "   Room Type: Deluxe Room created (12 rooms, 201-212)"
 
-      suite_type = RoomType.transaction do
-        room_type = RoomType.create!(
-          hotel: hotel,
+      suite_type = Rooms::SaveSeedRoomType.call!(
+        hotel: hotel,
+        attributes: {
           name: "Executive Suite",
           description: "Luxury suite with private lounge and hot tub.",
           quantity: 6,
@@ -126,10 +122,8 @@ namespace :hotel_generator do
           room_number_mode: "custom",
           room_numbers: (301..306).map(&:to_s),
           amenities: selected_amenities
-        )
-        Rooms::SyncFromRoomType.call!(room_type: room_type)
-        room_type
-      end
+        }
+      )
       puts "   Room Type: Executive Suite created (6 rooms, 301-306)"
 
       # 5. Create Rate Plans

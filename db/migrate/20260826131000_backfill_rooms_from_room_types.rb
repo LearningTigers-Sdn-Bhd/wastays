@@ -10,8 +10,9 @@ class BackfillRoomsFromRoomTypes < ActiveRecord::Migration[8.0]
   end
 
   def up
-    candidates = room_candidates
-    raise_for_collisions!(candidates)
+    room_types = MigrationRoomType.order(:hotel_id, :id).to_a
+    candidates = room_candidates(room_types)
+    raise_for_invalid_directory!(room_types, candidates)
 
     candidates.each do |candidate|
       room = MigrationRoom.find_or_initialize_by(
@@ -36,8 +37,8 @@ class BackfillRoomsFromRoomTypes < ActiveRecord::Migration[8.0]
 
   private
 
-  def room_candidates
-    MigrationRoomType.order(:hotel_id, :id).flat_map do |room_type|
+  def room_candidates(room_types)
+    room_types.flat_map do |room_type|
       Array(room_type[:room_numbers]).flatten.each_with_index.filter_map do |raw_number, position|
         number = raw_number.to_s.strip
         next if number.blank?
@@ -54,29 +55,69 @@ class BackfillRoomsFromRoomTypes < ActiveRecord::Migration[8.0]
     end
   end
 
-  def raise_for_collisions!(candidates)
-    source_collisions = candidates.group_by { |candidate| [ candidate.fetch(:hotel_id), candidate.fetch(:number) ] }
-                                  .select { |_identity, entries| entries.size > 1 }
-    existing_collisions = candidates.filter_map do |candidate|
+  def raise_for_invalid_directory!(room_types, candidates)
+    issues = room_types.flat_map { |room_type| source_issues(room_type) }
+    issues.concat(cross_room_type_issues(candidates))
+    issues.concat(existing_room_issues(candidates))
+    return if issues.empty?
+
+    raise ActiveRecord::MigrationError,
+          "Cannot backfill physical rooms because the legacy room directory is invalid: #{issues.uniq.join('; ')}. " \
+          "Correct every finding in Room Inventory, then run the audit and migration again."
+  end
+
+  def source_issues(room_type)
+    raw_numbers = Array(room_type[:room_numbers]).flatten
+    normalized_numbers = raw_numbers.filter_map do |raw_number|
+      number = raw_number.to_s.strip
+      number if number.present?
+    end
+    issues = []
+
+    raw_numbers.each_with_index do |raw_number, position|
+      number = raw_number.to_s
+      if number.strip.blank?
+        issues << room_type_issue(room_type, "blank room number at position #{position}")
+      elsif number != number.strip
+        issues << room_type_issue(room_type, "untrimmed room number #{number.inspect}")
+      end
+    end
+
+    normalized_numbers.tally.each do |number, count|
+      issues << room_type_issue(room_type, "room number #{number.inspect} occurs #{count} times") if count > 1
+    end
+
+    if normalized_numbers.any? && normalized_numbers.size != room_type.quantity.to_i
+      issues << room_type_issue(
+        room_type,
+        "quantity is #{room_type.quantity}, but the room-number list contains #{normalized_numbers.size} values"
+      )
+    end
+
+    issues
+  end
+
+  def cross_room_type_issues(candidates)
+    candidates.group_by { |candidate| [ candidate.fetch(:hotel_id), candidate.fetch(:number) ] }.filter_map do |(hotel_id, number), entries|
+      owners = entries.uniq { |entry| entry.fetch(:room_type_id) }
+      next unless owners.many?
+
+      labels = owners.map { |entry| "#{entry.fetch(:room_type_id)} (#{entry.fetch(:room_type_name)})" }.join(", ")
+      "hotel #{hotel_id}, room #{number.inspect} belongs to room types #{labels}"
+    end
+  end
+
+  def existing_room_issues(candidates)
+    candidates.filter_map do |candidate|
       room = MigrationRoom.find_by(hotel_id: candidate.fetch(:hotel_id), number: candidate.fetch(:number))
       next if room.blank? || room.room_type_id == candidate.fetch(:room_type_id)
 
-      [ candidate, room ]
+      "hotel #{candidate.fetch(:hotel_id)}, room #{candidate.fetch(:number).inspect} belongs to existing room type " \
+        "#{room.room_type_id} and legacy room type #{candidate.fetch(:room_type_id)} (#{candidate.fetch(:room_type_name)})"
     end
+  end
 
-    return if source_collisions.empty? && existing_collisions.empty?
-
-    details = source_collisions.map do |(hotel_id, number), entries|
-      owners = entries.map { |entry| "#{entry.fetch(:room_type_id)} (#{entry.fetch(:room_type_name)})" }.join(", ")
-      "hotel #{hotel_id}, room #{number.inspect}, room types #{owners}"
-    end
-    details.concat(existing_collisions.map do |candidate, room|
-      "hotel #{candidate.fetch(:hotel_id)}, room #{candidate.fetch(:number).inspect}, " \
-        "room types #{room.room_type_id} and #{candidate.fetch(:room_type_id)} (#{candidate.fetch(:room_type_name)})"
-    end)
-
-    raise ActiveRecord::MigrationError,
-          "Cannot backfill physical rooms because room numbers collide after trimming: #{details.uniq.join('; ')}. " \
-          "Rename each duplicate room number in Room Inventory, then run the migration again."
+  def room_type_issue(room_type, message)
+    "hotel #{room_type.hotel_id}, room type #{room_type.id} (#{room_type.name}): #{message}"
   end
 end

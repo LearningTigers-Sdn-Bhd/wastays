@@ -83,7 +83,6 @@ module Rooms
             room = Room.create!(
               hotel: @room_type.hotel,
               room_type: @room_type,
-              room_group: @room_type.room_group,
               number: number,
               position: position
             )

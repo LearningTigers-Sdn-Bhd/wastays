@@ -2,7 +2,10 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["modeCheckbox", "rangeFields", "customFields", "start", "customList", "preview", "quantity", "inputContainer", "hint"]
-  static values = { defaultStart: { type: Number, default: 101 } }
+  static values = {
+    defaultStart: { type: Number, default: 101 },
+    reservedNumbers: { type: Array, default: [] }
+  }
 
   connect() {
     // ... initial guess logic ...
@@ -105,13 +108,24 @@ export default class extends Controller {
       })
     }
 
-    if (this.hasHintTarget) {
-      if (numbers.length !== quantity && quantity > 0) {
-        this.hintTarget.textContent = `Warning: the number of rooms (${numbers.length}) does not match the total number of rooms (${quantity})`
-        this.hintTarget.classList.remove("hidden")
-      } else {
-        this.hintTarget.classList.add("hidden")
-      }
+    this.updateHint(numbers, quantity)
+  }
+
+  updateHint(numbers, quantity) {
+    if (!this.hasHintTarget) return
+
+    const messages = []
+    if (numbers.length !== quantity && quantity > 0) {
+      messages.push(`The number of rooms (${numbers.length}) does not match the total number of rooms (${quantity}).`)
     }
+
+    const reserved = new Set(this.reservedNumbersValue)
+    const conflicts = [...new Set(numbers.filter(number => reserved.has(number)))]
+    if (conflicts.length > 0) {
+      messages.push(`These room numbers already belong to another room category: ${conflicts.join(", ")}.`)
+    }
+
+    this.hintTarget.textContent = messages.join(" ")
+    this.hintTarget.classList.toggle("hidden", messages.length === 0)
   }
 }
