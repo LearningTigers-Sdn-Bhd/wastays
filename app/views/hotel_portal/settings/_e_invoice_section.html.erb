@@ -102,21 +102,36 @@
         </label>
       </div>
 
+      <p class="text-sm text-muted-foreground">
+        Need the client ID and client secret?
+        <%= link_to "See the guide for getting your MyInvois credentials",
+              "https://docs.google.com/document/d/11R1ZLoTHDT50W4Gl4fAQ4uim22iQMEI7NXalY0CnRZs/edit?tab=t.0",
+              target: "_blank", rel: "noopener noreferrer", class: "text-primary-600 underline" %>.
+      </p>
+
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <%= render PanelsUI::FormField.new(
               form: f,
               attribute: :client_id,
               label: "MyInvois client ID",
-              hint: "From this hotel's own LHDN MyInvois account.") do |field| %>
-          <% field.with_input(autocomplete: "off") %>
+              hint: "From this hotel's own LHDN MyInvois account.",
+              data: { controller: "password-toggle" }) do |field| %>
+          <% field.with_input(type: "password", value: @e_invoice_setting.client_id, autocomplete: "off", data: { password_toggle_target: "input" }) %>
+          <% field.with_addon(align: :inline_end, variant: :bare) do %>
+            <%= render "hotel_portal/settings/password_reveal_addon" %>
+          <% end %>
         <% end %>
 
         <%= render PanelsUI::FormField.new(
               form: f,
               attribute: :client_secret,
               label: "MyInvois client secret",
-              hint: @e_invoice_setting.client_secret.present? ? "Saved. Leave blank to keep the current secret." : "Stored encrypted.") do |field| %>
-          <% field.with_input(type: "password", value: nil, autocomplete: "off", placeholder: @e_invoice_setting.client_secret.present? ? "••••••••" : nil) %>
+              hint: "Leave unchanged to keep the current secret.",
+              data: { controller: "password-toggle" }) do |field| %>
+          <% field.with_input(type: "password", value: @e_invoice_setting.client_secret, autocomplete: "off", data: { password_toggle_target: "input" }) %>
+          <% field.with_addon(align: :inline_end, variant: :bare) do %>
+            <%= render "hotel_portal/settings/password_reveal_addon" %>
+          <% end %>
         <% end %>
       </div>
 
@@ -162,12 +177,33 @@
       </div>
 
       <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_msic_code, label: "MSIC code", hint: "Industry classification code, e.g. 55101 for hotels.") do |field| %>
-        <% field.with_input(autocomplete: "off") %>
+        <% field.with_input(
+             autocomplete: "off",
+             data: {
+               e_invoice_settings_target: "msicInput",
+               action: "input->e-invoice-settings#suggestBusinessDescription"
+             }) %>
       <% end %>
+      <p class="-mt-2 text-xs text-muted-foreground">
+        <%= link_to "Look up your MSIC code", "https://sdk.myinvois.hasil.gov.my/codes/msic-codes/",
+              target: "_blank", rel: "noopener noreferrer", class: "text-primary-600 underline" %>
+      </p>
 
       <%= render PanelsUI::FormField.new(form: f, attribute: :supplier_business_description, label: "Business activity description") do |field| %>
-        <% field.with_input(autocomplete: "off") %>
+        <% field.with_input(autocomplete: "off", data: { e_invoice_settings_target: "businessDescriptionInput" }) %>
       <% end %>
+      <p
+        class="-mt-2 text-xs text-muted-foreground"
+        data-e-invoice-settings-target="businessDescriptionSuggestion"
+        hidden
+      >
+        LHDN's recommended description for this MSIC code is "<span data-e-invoice-settings-target="businessDescriptionSuggestionText"></span>".
+        <button
+          type="button"
+          class="text-primary-600 underline"
+          data-action="click->e-invoice-settings#applyBusinessDescriptionSuggestion"
+        >Use this</button>
+      </p>
     </div>
   </section>
 

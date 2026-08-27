@@ -9,12 +9,51 @@ import { Controller } from "@hotwired/stimulus"
 // the comment in that view file for details). Both Stimulus targets are
 // optional (see the hasXTarget guards below), so this controller is a no-op
 // until that markup comes back - nothing here needs to change to restore it.
+
+// LHDN's recommended MSIC descriptions for the codes accommodation
+// businesses on this platform actually use (see
+// https://sdk.myinvois.hasil.gov.my/codes/msic-codes/ for the full list).
+const MSIC_BUSINESS_DESCRIPTIONS = {
+  "55101": "Hotels and resort hotels",
+  "55103": "Apartment hotels / Serviced apartments",
+  "55108": "Home stay operations",
+  "55109": "Other short term accommodation activities"
+}
+
 export default class extends Controller {
-  static targets = ["signatureToggle", "signingFields", "environmentSelect", "productionWarning", "confirmProductionCheckbox"]
+  static targets = [
+    "signatureToggle", "signingFields", "environmentSelect", "productionWarning", "confirmProductionCheckbox",
+    "msicInput", "businessDescriptionInput", "businessDescriptionSuggestion", "businessDescriptionSuggestionText"
+  ]
 
   connect() {
     this.toggleSigningFields()
     this.toggleProductionWarning()
+    this.suggestBusinessDescription()
+  }
+
+  // Offers LHDN's recommended wording for a known MSIC code rather than
+  // filling it in automatically - the hotel may already have its own
+  // description on file, so this stays a one-click suggestion, not an
+  // overwrite.
+  suggestBusinessDescription() {
+    if (!this.hasMsicInputTarget || !this.hasBusinessDescriptionSuggestionTarget) return
+
+    const description = MSIC_BUSINESS_DESCRIPTIONS[this.msicInputTarget.value.trim()]
+
+    if (description) {
+      this.businessDescriptionSuggestionTextTarget.textContent = description
+      this.businessDescriptionSuggestionTarget.hidden = false
+    } else {
+      this.businessDescriptionSuggestionTarget.hidden = true
+    }
+  }
+
+  applyBusinessDescriptionSuggestion() {
+    if (!this.hasBusinessDescriptionInputTarget) return
+
+    this.businessDescriptionInputTarget.value = this.businessDescriptionSuggestionTextTarget.textContent
+    this.businessDescriptionSuggestionTarget.hidden = true
   }
 
   toggleSigningFields() {
