@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RoomBlock < ApplicationRecord
+  include RoomIdentifiable
+
   BLOCK_TYPES = %w[maintenance deep_cleaning renovation owner_use admin_hold].freeze
 
   belongs_to :hotel

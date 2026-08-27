@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RoomLock < ApplicationRecord
+  include RoomIdentifiable
+
   belongs_to :hotel
   belongs_to :user
   belongs_to :room_type

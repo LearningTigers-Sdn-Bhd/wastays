@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_27_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -482,6 +482,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.jsonb "nightly_rate_snapshot", default: {}, null: false
     t.jsonb "occupancy_snapshot", default: {}, null: false
     t.bigint "rate_plan_id"
+    t.bigint "room_id"
     t.string "room_number"
     t.bigint "room_type_id", null: false
     t.jsonb "room_type_snapshot", default: {}, null: false
@@ -490,6 +491,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.index ["booking_id"], name: "idx_booking_rooms_unique_booking", unique: true
     t.index ["booking_id"], name: "index_booking_rooms_on_booking_id"
     t.index ["rate_plan_id"], name: "index_booking_rooms_on_rate_plan_id"
+    t.index ["room_id"], name: "index_booking_rooms_on_room_id"
     t.index ["room_type_id"], name: "index_booking_rooms_on_room_type_id"
   end
 
@@ -1399,7 +1401,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.datetime "created_at", null: false
     t.string "credit_currency", null: false
     t.decimal "credit_limit", precision: 12, scale: 2
-    t.integer "deposit_percentage_override"
     t.boolean "direct_bill_enabled", default: false, null: false
     t.bigint "hotel_id", null: false
     t.integer "payment_terms_days"
@@ -1749,8 +1750,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.string "fixed_line_number"
     t.boolean "geolocation_enabled", default: true, null: false
     t.string "google_map_link"
-    t.integer "group_booking_deposit_percentage", default: 100, null: false
-    t.integer "group_booking_request_hold_hours", default: 48, null: false
     t.boolean "guest_chat_enabled", default: true, null: false
     t.jsonb "guest_registration_card_fields"
     t.text "guest_registration_card_terms"
@@ -1808,6 +1807,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.jsonb "metadata", default: {}, null: false
     t.text "request_details", null: false
     t.datetime "requested_at", null: false
+    t.bigint "room_id"
     t.string "room_number"
     t.bigint "room_type_id"
     t.string "status", default: "pending", null: false
@@ -1824,6 +1824,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.index ["hotel_id", "room_number"], name: "index_housekeeping_requests_on_hotel_id_and_room_number"
     t.index ["hotel_id", "status"], name: "index_housekeeping_requests_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_housekeeping_requests_on_hotel_id"
+    t.index ["room_id"], name: "index_housekeeping_requests_on_room_id"
     t.index ["room_type_id"], name: "index_housekeeping_requests_on_room_type_id"
     t.index ["work_context", "status", "requested_at"], name: "idx_housekeeping_requests_context_status_requested"
     t.index ["work_context"], name: "index_housekeeping_requests_on_work_context"
@@ -2311,8 +2312,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.bigint "hotel_id", null: false
-    t.decimal "maximum_amount_per_room_night", precision: 15, scale: 2, default: "10.0", null: false
-    t.decimal "maximum_percentage", precision: 8, scale: 4, default: "1.0", null: false
+    t.decimal "maximum_amount_per_room_night", precision: 12, scale: 2, default: "10.0", null: false
+    t.decimal "maximum_percentage", precision: 7, scale: 4, default: "1.0", null: false
     t.string "mode", default: "recommended", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_ota_rate_variance_policies_on_hotel_id", unique: true
@@ -2621,12 +2622,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.bigint "hotel_id", null: false
     t.text "notes"
     t.text "reason"
+    t.bigint "room_id"
     t.string "room_number"
     t.bigint "room_type_id", null: false
     t.date "start_date"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["hotel_id"], name: "index_room_blocks_on_hotel_id"
+    t.index ["room_id"], name: "index_room_blocks_on_room_id"
     t.index ["room_type_id"], name: "index_room_blocks_on_room_type_id"
     t.index ["user_id"], name: "index_room_blocks_on_user_id"
   end
@@ -2655,6 +2658,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.datetime "created_at", null: false
     t.datetime "expires_at", null: false
     t.bigint "hotel_id", null: false
+    t.bigint "room_id"
     t.string "room_number", null: false
     t.bigint "room_type_id", null: false
     t.datetime "updated_at", null: false
@@ -2662,6 +2666,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.index ["expires_at"], name: "index_room_locks_on_expires_at"
     t.index ["hotel_id", "room_type_id", "room_number"], name: "idx_room_locks_on_hotel_room_type_number", unique: true
     t.index ["hotel_id"], name: "index_room_locks_on_hotel_id"
+    t.index ["room_id"], name: "index_room_locks_on_room_id"
     t.index ["room_type_id"], name: "index_room_locks_on_room_type_id"
     t.index ["user_id"], name: "index_room_locks_on_user_id"
   end
@@ -2675,6 +2680,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.string "new_status"
     t.string "old_status"
     t.text "reason"
+    t.bigint "room_id"
     t.string "room_number", null: false
     t.bigint "room_type_id"
     t.datetime "updated_at", null: false
@@ -2684,6 +2690,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.index ["hotel_id", "event_type"], name: "index_room_operational_audit_logs_on_hotel_id_and_event_type"
     t.index ["hotel_id", "room_number"], name: "index_room_operational_audit_logs_on_hotel_id_and_room_number"
     t.index ["hotel_id"], name: "index_room_operational_audit_logs_on_hotel_id"
+    t.index ["room_id"], name: "index_room_operational_audit_logs_on_room_id"
     t.index ["room_type_id"], name: "index_room_operational_audit_logs_on_room_type_id"
     t.index ["user_id"], name: "index_room_operational_audit_logs_on_user_id"
   end
@@ -2722,6 +2729,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.text "notes"
     t.boolean "priority", default: false, null: false
     t.text "priority_note"
+    t.bigint "room_id"
     t.string "room_number", null: false
     t.bigint "room_type_id", null: false
     t.string "status", default: "ready", null: false
@@ -2733,6 +2741,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
     t.index ["hotel_id", "status"], name: "index_room_statuses_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_room_statuses_on_hotel_id"
     t.index ["last_changed_by_id"], name: "index_room_statuses_on_last_changed_by_id"
+    t.index ["room_id"], name: "index_room_statuses_on_room_id"
     t.index ["room_type_id"], name: "index_room_statuses_on_room_type_id"
   end
 
@@ -2969,6 +2978,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
   add_foreign_key "booking_rooms", "bookings"
   add_foreign_key "booking_rooms", "rate_plans"
   add_foreign_key "booking_rooms", "room_types"
+  add_foreign_key "booking_rooms", "rooms", on_delete: :nullify
   add_foreign_key "booking_tax_inclusion_overrides", "bookings"
   add_foreign_key "booking_tax_inclusion_overrides", "hotel_taxes"
   add_foreign_key "booking_tax_inclusion_overrides", "hotels"
@@ -3105,6 +3115,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
   add_foreign_key "housekeeping_requests", "bookings"
   add_foreign_key "housekeeping_requests", "hotels"
   add_foreign_key "housekeeping_requests", "room_types"
+  add_foreign_key "housekeeping_requests", "rooms", on_delete: :nullify
   add_foreign_key "inventory_audit_logs", "hotels"
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
@@ -3189,20 +3200,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_131000) do
   add_foreign_key "roles", "accounts"
   add_foreign_key "room_blocks", "hotels"
   add_foreign_key "room_blocks", "room_types"
+  add_foreign_key "room_blocks", "rooms", on_delete: :nullify
   add_foreign_key "room_blocks", "users"
   add_foreign_key "room_groups", "hotels"
   add_foreign_key "room_inventories", "room_types"
   add_foreign_key "room_locks", "hotels"
   add_foreign_key "room_locks", "room_types"
+  add_foreign_key "room_locks", "rooms", on_delete: :nullify
   add_foreign_key "room_locks", "users"
   add_foreign_key "room_operational_audit_logs", "bookings"
   add_foreign_key "room_operational_audit_logs", "hotels"
   add_foreign_key "room_operational_audit_logs", "room_types"
+  add_foreign_key "room_operational_audit_logs", "rooms", on_delete: :nullify
   add_foreign_key "room_operational_audit_logs", "users"
   add_foreign_key "room_rates", "rate_plans"
   add_foreign_key "room_rates", "room_types"
   add_foreign_key "room_statuses", "hotels"
   add_foreign_key "room_statuses", "room_types"
+  add_foreign_key "room_statuses", "rooms", on_delete: :nullify
   add_foreign_key "room_statuses", "users", column: "assigned_to_id"
   add_foreign_key "room_statuses", "users", column: "last_changed_by_id"
   add_foreign_key "room_type_rate_plan_age_band_prices", "rate_plan_age_bands"
