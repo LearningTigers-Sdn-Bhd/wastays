@@ -36,7 +36,7 @@ RSpec.describe Rooms::SaveSeedRoomType do
   end
 
   it "rolls the seed write back when a room number belongs to another category" do
-    other_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "102" ])
+    other_type = create(:room_type, sync_rooms: false, hotel:, quantity: 1, room_numbers: [ "102" ])
     create(:room, hotel:, room_type: other_type, number: "102")
 
     expect {

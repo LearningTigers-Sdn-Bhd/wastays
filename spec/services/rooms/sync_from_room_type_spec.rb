@@ -8,6 +8,7 @@ RSpec.describe Rooms::SyncFromRoomType do
   let(:room_type) do
     create(
       :room_type,
+      sync_rooms: false,
       hotel: hotel,
       room_group: room_group,
       quantity: 2,
@@ -73,7 +74,7 @@ RSpec.describe Rooms::SyncFromRoomType do
   end
 
   it "rejects a number that belongs to another room category" do
-    other_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
+    other_type = create(:room_type, sync_rooms: false, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
     other_room = create(:room, hotel: hotel, room_type: other_type, number: "101")
 
     result = described_class.call(room_type: room_type)
@@ -110,7 +111,7 @@ RSpec.describe Rooms::SyncFromRoomType do
   end
 
   it "raises its service error from call bang" do
-    other_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
+    other_type = create(:room_type, sync_rooms: false, hotel: hotel, quantity: 1, room_numbers: [ "101" ])
     create(:room, hotel: hotel, room_type: other_type, number: "101")
 
     expect { described_class.call!(room_type: room_type) }

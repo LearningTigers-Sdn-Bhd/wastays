@@ -10,7 +10,7 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     create(:room_type, hotel:, name: "Executive Penthouse", room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102])
   end
   let!(:garden_suite) do
-    create(:room_type, hotel:, name: "Garden Suite", room_number_mode: "custom", quantity: 1, room_numbers: %w[101])
+    create(:room_type, hotel:, name: "Garden Suite", room_number_mode: "custom", quantity: 1, room_numbers: %w[201])
   end
 
   def build_board(**filters)
@@ -21,6 +21,12 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     build_board(**filters).find do |entry|
       entry[:room_type].name == room_type_name && entry[:room_number] == number
     end
+  end
+
+  # Renumbering a category is a save, so the physical rooms move with it.
+  def renumber(room_type, numbers)
+    room_type.update!(quantity: numbers.size, room_numbers: numbers)
+    Rooms::SyncFromRoomType.call!(room_type:)
   end
 
   def stay(room_type: penthouse, room_number: "101", status:, check_in:, check_out:, **attributes)
@@ -35,12 +41,12 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     expect(rows.map { |entry| [ entry[:room_type].name, entry[:room_number] ] }).to contain_exactly(
       [ "Executive Penthouse", "101" ],
       [ "Executive Penthouse", "102" ],
-      [ "Garden Suite", "101" ]
+      [ "Garden Suite", "201" ]
     )
     expect(rows).to all(satisfy { |entry| !entry.key?(:hk_requests) })
   end
 
-  it "keeps rooms with the same number isolated by room type" do
+  it "keeps a booking on one room type off the rooms of another" do
     stay(
       status: "checked_in",
       check_in: selected_date - 1.day,
@@ -49,7 +55,7 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     )
 
     expect(room("Executive Penthouse")[:booking_status]).to eq("in_house")
-    expect(room("Garden Suite")[:booking_status]).to eq("vacant")
+    expect(room("Garden Suite", "201")[:booking_status]).to eq("vacant")
   end
 
   describe "booking status projection" do
@@ -114,7 +120,7 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     end
 
     it "shows a room without an applicable booking as vacant with no pax" do
-      expect(room("Garden Suite")).to include(booking_status: "vacant", pax: "—")
+      expect(room("Garden Suite", "201")).to include(booking_status: "vacant", pax: "—")
     end
 
     it "exposes late checkout eligibility only after the exact checked-in stay cutoff" do
@@ -125,7 +131,7 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
       )
 
       expect(room("Executive Penthouse")[:late_checkout_eligible]).to be(true)
-      expect(room("Garden Suite")[:late_checkout_eligible]).to be(false)
+      expect(room("Garden Suite", "201")[:late_checkout_eligible]).to be(false)
     end
   end
 
@@ -178,9 +184,9 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     end
 
     it "uses natural room-number order across room types by default" do
-      penthouse.update!(quantity: 4, room_numbers: %w[101 102 10 2])
+      renumber(penthouse, %w[101 102 10 2])
 
-      expect(build_board.map { |entry| entry[:room_number] }).to eq(%w[2 10 101 101 102])
+      expect(build_board.map { |entry| entry[:room_number] }).to eq(%w[2 10 101 102 201])
     end
   end
 
@@ -189,11 +195,9 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     let!(:annexe) { create(:room_group, hotel:, name: "Annexe") }
 
     before do
-      penthouse.update!(quantity: 2, room_numbers: %w[101 102])
-      garden_suite.update!(quantity: 1, room_numbers: %w[201])
-      create(:room, hotel:, room_type: penthouse, number: "101", room_group: main_wing)
-      create(:room, hotel:, room_type: penthouse, number: "102")
-      create(:room, hotel:, room_type: garden_suite, number: "201", room_group: annexe)
+      # The room type factory already made the physical rooms. Group two of them.
+      hotel.rooms.find_by!(number: "101").update!(room_group: main_wing)
+      hotel.rooms.find_by!(number: "201").update!(room_group: annexe)
     end
 
     it "names the room group of each room and calls the rest ungrouped" do

@@ -65,7 +65,7 @@ module HousekeepingTasks
 
     def build_rooms
       room_types.flat_map do |room_type|
-        room_type.room_numbers.map { |room_number| build_room(room_type, room_number) }
+        directory.numbers_for(room_type.id).map { |room_number| build_room(room_type, room_number) }
       end
     end
 
@@ -129,8 +129,12 @@ module HousekeepingTasks
         .group_by { |block| room_key(block.room_type_id, block.room_number) }
     end
 
+    def directory
+      @directory ||= ::Rooms::DirectoryQuery.call(hotel: @hotel)
+    end
+
     def room_group_assignments
-      @room_group_assignments ||= ::Rooms::GroupAssignmentsQuery.call(hotel: @hotel)
+      @room_group_assignments ||= ::Rooms::GroupAssignmentsQuery.call(hotel: @hotel, directory: directory)
     end
 
     def room_statuses_by_room

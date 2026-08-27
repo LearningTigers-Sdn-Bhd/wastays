@@ -268,9 +268,9 @@ RSpec.describe StayView::BuildBoard do
     let!(:annexe) { create(:room_group, hotel:, name: "Annexe") }
 
     before do
-      create(:room, hotel:, room_type: deluxe, number: "101", room_group: main_wing)
-      create(:room, hotel:, room_type: deluxe, number: "102")
-      create(:room, hotel:, room_type: suite, number: "201", room_group: main_wing)
+      # The room type factory already made the physical rooms. Group two of them.
+      hotel.rooms.find_by!(number: "101").update!(room_group: main_wing)
+      hotel.rooms.find_by!(number: "201").update!(room_group: main_wing)
     end
 
     def rows(**options)

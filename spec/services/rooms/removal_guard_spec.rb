@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Rooms::RemovalGuard do
   let(:hotel) { create(:hotel, accounting_business_date: Date.current) }
-  let(:room_type) { create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ]) }
+  let(:room_type) { create(:room_type, sync_rooms: false, hotel: hotel, quantity: 1, room_numbers: [ "101" ]) }
   let(:room) { create(:room, hotel: hotel, room_type: room_type, number: "101") }
 
   it "blocks a room with a nonterminal assigned booking" do

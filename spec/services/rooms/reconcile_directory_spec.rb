@@ -6,7 +6,7 @@ RSpec.describe Rooms::ReconcileDirectory do
   it "reports a reconciled directory with summary counts" do
     hotel = create(:hotel)
     group = create(:room_group, hotel:)
-    room_type = create(:room_type, hotel:, room_group: group, quantity: 2, room_numbers: %w[101 102])
+    room_type = create(:room_type, sync_rooms: false, hotel:, room_group: group, quantity: 2, room_numbers: %w[101 102])
     create(:room, hotel:, room_type:, room_group: group, number: "101", position: 0)
     create(:room, hotel:, room_type:, room_group: group, number: "102", position: 1)
 
@@ -18,7 +18,7 @@ RSpec.describe Rooms::ReconcileDirectory do
 
   it "accepts quantity-only room types with no physical rooms" do
     hotel = create(:hotel)
-    create(:room_type, hotel:, quantity: 3, room_numbers: [])
+    create(:room_type, sync_rooms: false, hotel:, quantity: 3, room_numbers: [])
 
     result = described_class.call(hotel:)
 
@@ -28,8 +28,8 @@ RSpec.describe Rooms::ReconcileDirectory do
 
   it "reports all source data issue types" do
     hotel = create(:hotel)
-    first = create(:room_type, hotel:, quantity: 4, room_numbers: [])
-    second = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
+    first = create(:room_type, sync_rooms: false, hotel:, quantity: 4, room_numbers: [])
+    second = create(:room_type, sync_rooms: false, hotel:, quantity: 1, room_numbers: [ "101" ])
     first.update_column(:room_numbers, [ " ", " 101 ", "101" ])
 
     result = described_class.call(hotel:)
@@ -51,11 +51,12 @@ RSpec.describe Rooms::ReconcileDirectory do
     wrong_group = create(:room_group, hotel:)
     expected_type = create(
       :room_type,
+      sync_rooms: false,
       hotel:,
       quantity: 5,
       room_numbers: %w[101 102 103 104 105]
     )
-    wrong_type = create(:room_type, hotel:)
+    wrong_type = create(:room_type, sync_rooms: false, hotel:)
 
     create(:room, hotel:, room_type: expected_type, number: "102", position: 1, archived_at: Time.current)
     create(:room, hotel:, room_type: wrong_type, number: "103", position: 2)
@@ -78,7 +79,7 @@ RSpec.describe Rooms::ReconcileDirectory do
     hotel = create(:hotel)
     legacy_group = create(:room_group, hotel: hotel)
     physical_group = create(:room_group, hotel: hotel)
-    room_type = create(:room_type, hotel: hotel, room_group: legacy_group, quantity: 1, room_numbers: [ "101" ])
+    room_type = create(:room_type, sync_rooms: false, hotel: hotel, room_group: legacy_group, quantity: 1, room_numbers: [ "101" ])
     create(:room, hotel: hotel, room_type: room_type, room_group: physical_group, number: "101")
 
     result = described_class.call(hotel: hotel)
@@ -88,7 +89,7 @@ RSpec.describe Rooms::ReconcileDirectory do
 
   it "reports a room whose hotel differs from its room type hotel" do
     hotel = create(:hotel)
-    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [ "101" ])
+    room_type = create(:room_type, sync_rooms: false, hotel:, quantity: 1, room_numbers: [ "101" ])
     foreign_hotel = create(:hotel)
     room = create(:room, hotel:, room_type:, number: "101")
     room.update_column(:hotel_id, foreign_hotel.id)
