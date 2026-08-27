@@ -18,4 +18,11 @@ RSpec.describe AiConcierge::Matching::BookingIntentMatcher do
     expect(matcher).not_to be_booking
     expect(matcher).not_to be_how_to_question
   end
+
+  it "separates price exploration from explicit booking commitment" do
+    expect(described_class.new(message: "find the cheapest room")).to be_rate_question
+    expect(described_class.new(message: "find the cheapest room")).not_to be_booking_commitment
+    expect(described_class.new(message: "book the cheapest room")).to be_booking_commitment
+    expect(described_class.new(message: "continue with option 1")).to be_booking_commitment
+  end
 end

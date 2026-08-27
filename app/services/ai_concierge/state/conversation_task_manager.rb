@@ -46,6 +46,14 @@ module AiConcierge
       booking_task["pending_question"].presence
     end
 
+    def booking_purpose
+      booking_task["purpose"]
+    end
+
+    def price_exploration?
+      booking_purpose == "price_exploration"
+    end
+
     def suspended_booking?
       booking_task["status"] == "suspended" || booking_task["suspended"] == true
     end
@@ -66,10 +74,11 @@ module AiConcierge
     # exactly as it did before. An interruption goes further and clears the
     # count outright, because it suspends the booking with a branch of its own
     # shape -- which is the lenient direction, and the one to be lenient in.
-    def activate_booking(branch, pending_question:, status: nil, count_reask: false)
+    def activate_booking(branch, pending_question:, status: nil, count_reask: false, purpose: nil)
       normalized = normalize_branch(branch)
 
       update_booking_task(
+        "purpose" => normalized_booking_purpose(purpose || booking_purpose),
         "status" => status.presence || status_for_pending_question(pending_question),
         "pending_question" => pending_question,
         "branch" => normalized,
@@ -78,6 +87,10 @@ module AiConcierge
         "suspended_at" => nil,
         "expires_at" => nil
       )
+    end
+
+    def set_booking_purpose(purpose)
+      update_booking_task("purpose" => normalized_booking_purpose(purpose))
     end
 
     def suspend_booking_for_information(intent:, topic:, pending_question:)
@@ -225,6 +238,7 @@ module AiConcierge
     def normalize_booking_task(value)
       task = value.is_a?(Hash) ? value.deep_dup : {}
       default_booking_task.merge(task).tap do |normalized|
+        normalized["purpose"] = normalized_booking_purpose(normalized["purpose"])
         normalized["branch"] = normalize_branch(normalized["branch"])
         next unless normalized["status"] == "suspended" && expired?(normalized)
 
@@ -287,6 +301,10 @@ module AiConcierge
       case pending_question
       when "select_option"
         "waiting_for_option_selection"
+      when "price_option_exploration"
+        "exploring_prices"
+      when "price_option_continuation"
+        "waiting_for_price_continuation"
       when "confirm_selection"
         "waiting_for_confirmation"
       when "rate_plan_selection"
@@ -315,6 +333,7 @@ module AiConcierge
 
     def default_booking_task
       {
+        "purpose" => "booking",
         "status" => "idle",
         "pending_question" => nil,
         "branch" => default_branch,
@@ -326,6 +345,10 @@ module AiConcierge
         "last_interruption_intent" => nil,
         "last_interruption_topic" => nil
       }
+    end
+
+    def normalized_booking_purpose(value)
+      value.to_s == "price_exploration" ? "price_exploration" : "booking"
     end
 
     def default_information_task

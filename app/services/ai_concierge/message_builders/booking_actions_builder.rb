@@ -35,8 +35,18 @@ module AiConcierge
           ask_party_split_message
         when :suggest_options
           suggest_options_message
+        when :price_options
+          suggest_options_message
         when :resume_options
           "Here are the booking options we saved for you:\n\n#{suggest_options_message}"
+        when :price_option_details
+          price_option_details_message
+        when :price_option_declined
+          "No problem. You can ask about another priced option when you are ready."
+        when :price_option_required
+          "Please send the number of the priced option that you want to continue with."
+        when :price_option_invalid
+          "I could not match that priced option. Please send a number from the list."
         when :ask_confirmation
           ask_confirmation_message
         when :invalid_selection
@@ -135,7 +145,7 @@ module AiConcierge
 
       def suggest_options_message
         groups = Array(context[:options])
-        intro = "Here are the available options"
+        intro = context[:price_exploration] ? "Here are the available price options" : "Here are the available options"
         intro = "#{intro} for #{guest_label}" if guest_label.present?
         intro = "#{intro} in #{month_label}" if month_label.present?
 
@@ -150,11 +160,53 @@ module AiConcierge
         ].compact_blank.join("\n\n")
       end
 
+      def price_option_details_message
+        option = context[:selected_option] || {}
+        details = context[:room_details] || {}
+        rate_plans = Array(option["rate_plans"])
+        amenities = Array(details["amenities"])
+
+        lines = [
+          "*#{details['room_type_name'].presence || option['room_type_name']}*",
+          "_#{format_full_date_range(option['check_in'], option['check_out'])} · #{guest_label}_",
+          details["description"].presence,
+          occupancy_line(details),
+          ("Amenities: #{amenities.join(', ')}." if amenities.present?),
+          "Available rates:",
+          rate_plan_lines(rate_plans, option),
+          "Would you like to continue booking this option? Please reply *Yes* or *No*."
+        ]
+
+        lines.compact_blank.join("\n\n")
+      end
+
+      def occupancy_line(details)
+        parts = []
+        parts << "#{details['max_adults']} #{'adult'.pluralize(details['max_adults'])}" if details["max_adults"].present?
+        parts << "#{details['max_children']} #{'child'.pluralize(details['max_children'])}" if details["max_children"].present?
+        return if parts.empty?
+
+        "Capacity: #{parts.to_sentence}."
+      end
+
+      def rate_plan_lines(rate_plans, option)
+        return "- #{format_price(option['currency'], option['total_price'])}" if rate_plans.empty?
+
+        rate_plans.map do |rate_plan|
+          "- #{rate_plan['name']}: #{format_price(rate_plan['currency'], rate_plan['total_price'])}"
+        end.join("\n")
+      end
+
       # The example is taken from the list the guest is looking at, so the one
       # answer offered is one that will actually match. The number is the only
       # answer the catalogue accepts -- a room name is not a second way in.
       def selection_instruction(groups)
         first = catalogue_options(groups).first
+        if context[:price_exploration]
+          return "Reply with a number to see room and rate details." if first.blank?
+
+          return %(Reply with a number to see room and rate details, e.g. "#{first['position']}". To continue booking, say "continue with option #{first['position']}".)
+        end
         return "Reply with the number of the option you want." if first.blank?
 
         %(Reply with the number of the option you want, e.g. "#{first['position']}".)
@@ -170,7 +222,11 @@ module AiConcierge
         check_out = params["check_out"]
         rooms = params["room_count"].to_i
 
-        nights = nights_between(check_in, check_out).to_i
+        nights = if check_in.present? && check_out.present?
+                   nights_between(check_in, check_out).to_i
+        else
+                   branch["nights"].to_i
+        end
 
         parts = []
         parts << format_full_date_range(check_in, check_out) if check_in.present? && check_out.present?

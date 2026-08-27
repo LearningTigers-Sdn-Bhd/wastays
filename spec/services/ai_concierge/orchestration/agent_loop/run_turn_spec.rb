@@ -105,6 +105,29 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
 
       expect(run.call.domain_result.dig(:extra_context, :message)).to eq("Hello! How can I help?")
     end
+
+    it "starts price exploration when the guest accepts a saved price-search offer" do
+      offered = AiConcierge::State::ConversationTaskManager
+        .new(slots_payload: {})
+        .record_optional_sales_offer("offer_price_search")
+      conversation_state.update!(slots_payload: offered)
+
+      chat = instance_double(RubyLLM::Chat)
+      allow(chat).to receive(:with_instructions)
+      allow(chat).to receive(:with_tools)
+      allow(chat).to receive(:with_temperature)
+      allow(chat).to receive(:before_tool_call)
+      allow(chat).to receive(:after_tool_result)
+      allow(chat).to receive(:ask).and_return(Struct.new(:content).new("Okay."))
+      allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_return(chat)
+
+      result = run(message: "yes").call.domain_result
+
+      expect(result[:pending_question]).to eq("booking_timing")
+      expect(result[:action_name]).to be_nil
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("price_exploration")
+      expect(result.dig(:slots_payload, "sales_task", "last_optional_action")).to be_nil
+    end
   end
 
   describe "hotel knowledge clarifications" do
@@ -138,7 +161,8 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
 
       resolved = run(message: "pool").call.domain_result
 
-      expect(resolved.dig(:extra_context, :result, "answer")).to eq("The swimming pool opens at 7:00 AM.")
+      expect(resolved.dig(:extra_context, :result, "answer"))
+        .to eq("The swimming pool opens at 7:00 AM.\n\nWould you like me to help you find a room for your travel dates?")
       expect(resolved.dig(:slots_payload, "information_task", "pending_question")).to be_nil
     end
 
@@ -158,7 +182,8 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
 
       result = run(message: "the second one").call.domain_result
 
-      expect(result.dig(:extra_context, :result, "answer")).to eq("Check-out is by 11:00 AM.")
+      expect(result.dig(:extra_context, :result, "answer"))
+        .to eq("Check-out is by 11:00 AM.\n\nIf this policy works for you, I can help you find a room for your travel dates.")
       expect(result.dig(:slots_payload, "information_task", "pending_question")).to be_nil
     end
 

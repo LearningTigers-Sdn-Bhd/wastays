@@ -1,6 +1,86 @@
 require "rails_helper"
 
 RSpec.describe AiConcierge::State::ConversationTaskManager do
+  describe "booking purpose" do
+    it "normalizes existing tasks to booking without changing the state version" do
+      manager = described_class.new(slots_payload: {})
+
+      expect(manager.booking_purpose).to eq("booking")
+      expect(manager).not_to be_price_exploration
+      expect(manager.payload["state_version"]).to eq(2)
+    end
+
+    it "keeps price exploration through booking updates and clears it on reset" do
+      priced = described_class.new(slots_payload: {}).set_booking_purpose("price_exploration")
+      active = described_class.new(slots_payload: priced).activate_booking(
+        { "target_month" => 8 }, pending_question: "price_option_exploration"
+      )
+
+      expect(active.dig("booking_task", "purpose")).to eq("price_exploration")
+      expect(active.dig("booking_task", "status")).to eq("exploring_prices")
+      expect(described_class.new(slots_payload: active).reset_booking_task.dig("booking_task", "purpose")).to eq("booking")
+    end
+
+    it "keeps price exploration while an information answer suspends the booking" do
+      priced = described_class.new(slots_payload: {}).set_booking_purpose("price_exploration")
+      active = described_class.new(slots_payload: priced).activate_booking(
+        { "target_month" => 8 }, pending_question: "price_option_exploration"
+      )
+      suspended = described_class.new(slots_payload: active).suspend_booking_for_information(
+        intent: "hotel_policy",
+        topic: "hotel_policy",
+        pending_question: "price_option_exploration"
+      )
+
+      expect(suspended.dig("booking_task", "purpose")).to eq("price_exploration")
+      expect(suspended.dig("booking_task", "status")).to eq("suspended")
+    end
+  end
+
+  describe "sales offers" do
+    it "adds the sales task without changing the state version" do
+      manager = described_class.new(slots_payload: {})
+
+      expect(manager.payload["state_version"]).to eq(2)
+      expect(manager.sales_task).to eq(
+        "last_optional_action" => nil,
+        "suppress_next_optional_offer" => false,
+        "refusal_acknowledgment_pending" => false
+      )
+    end
+
+    it "records and declines an optional offer without changing booking or information state" do
+      initial = described_class.new(slots_payload: {}).update_information_task(intent: "hotel_policy", topic: "hotel_policy")
+      normalized = described_class.new(slots_payload: initial).payload
+      offered = described_class.new(slots_payload: normalized).record_optional_sales_offer("offer_booking_help")
+      declined = described_class.new(slots_payload: offered).decline_optional_sales_offer
+
+      expect(declined["booking_task"]).to eq(normalized["booking_task"])
+      expect(declined["information_task"]).to eq(normalized["information_task"])
+      expect(declined.dig("sales_task", "last_optional_action")).to be_nil
+      expect(declined.dig("sales_task", "suppress_next_optional_offer")).to be(true)
+      expect(declined.dig("sales_task", "refusal_acknowledgment_pending")).to be(true)
+    end
+
+    it "clears the acknowledgment without consuming suppression" do
+      offered = described_class.new(slots_payload: {}).record_optional_sales_offer("offer_price_search")
+      declined = described_class.new(slots_payload: offered).decline_optional_sales_offer
+      cleared = described_class.new(slots_payload: declined).clear_optional_sales_offer
+
+      expect(cleared.dig("sales_task", "suppress_next_optional_offer")).to be(true)
+      expect(cleared.dig("sales_task", "refusal_acknowledgment_pending")).to be(false)
+    end
+
+    it "consumes one suppressed optional offer" do
+      offered = described_class.new(slots_payload: {}).record_optional_sales_offer("offer_booking_help")
+      declined = described_class.new(slots_payload: offered).decline_optional_sales_offer
+      consumed = described_class.new(slots_payload: declined).consume_sales_offer_suppression
+
+      expect(consumed.dig("sales_task", "suppress_next_optional_offer")).to be(false)
+      expect(consumed.dig("sales_task", "refusal_acknowledgment_pending")).to be(false)
+    end
+  end
+
   describe "counting a question the guest keeps not answering" do
     let(:branch) { { "branch_id" => "branch-1", "target_month" => 8, "target_year" => 2026 } }
 

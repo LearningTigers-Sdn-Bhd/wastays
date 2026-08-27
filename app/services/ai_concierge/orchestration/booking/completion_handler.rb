@@ -66,8 +66,9 @@ module AiConcierge
             reply_type: nil,
             pending_question: "confirm_selection",
             extra_context: { message: error },
-            action_name: nil
-          ).with(needs_human_support: true)
+            action_name: nil,
+            needs_human_support: true
+          )
         end
       end
     end

@@ -88,13 +88,17 @@ module AiConcierge
         # language the thread is in -- and re-asking is always better than
         # letting the model answer for the booking system.
         def booking_backstop
-          return unless context.pending_question.present? || booking_words?
+          return unless context.pending_question.present? || booking_words? || accepted_price_offer?
 
           advance_booking_tool&.execute(slots: {}, signals: {})
           recorder.outcome
         end
 
         def booking_words? = Matching::BookingIntentMatcher.new(message: context.message).booking?
+
+        def accepted_price_offer?
+          context.pending_price_offer? && Core::ConfirmationReader.new(message: context.message).confirmation == "yes"
+        end
 
         def advance_booking_tool
           tools.find { |tool| tool.is_a?(Tools::Llm::AdvanceBookingFunction) }

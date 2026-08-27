@@ -34,6 +34,18 @@ RSpec.describe "AI concierge tools the model can see" do
       expect(result).to be_a(RubyLLM::Tool::Halt)
       expect(recorder.outcome.domain_result[:active_flow]).to eq("booking_search")
       expect(recorder.outcome.domain_result[:pending_question]).to eq("booking_timing")
+      expect(recorder.outcome.domain_result.dig(:slots_payload, "booking_task", "purpose")).to eq("price_exploration")
+      expect(recorder.outcome.domain_result[:action_name]).to be_nil
+    end
+
+
+    it "keeps an explicit request to book the cheapest room in booking commitment" do
+      tool(AiConcierge::Tools::Llm::AdvanceBookingFunction, "book the cheapest room")
+        .execute
+
+      result = recorder.outcome.domain_result
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("booking")
+      expect(result[:action_name]).to eq("request_quote")
     end
 
     it "does the same when the guest asks the price of a named room" do
@@ -142,6 +154,16 @@ RSpec.describe "AI concierge tools the model can see" do
       expect(interpretation["slots"]).to eq("adults" => 2)
       expect(interpretation).not_to have_key("action")
       expect(interpretation).not_to have_key("pending_question")
+    end
+
+    it "reads a positive price-option answer as confirmation" do
+      %w[yes baik 好的].each do |answer|
+        interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
+          slots: {}, signals: {}, pending_question: "price_option_continuation", message: answer
+        ).call
+
+        expect(interpretation.dig("slots", "confirmation")).to eq("yes")
+      end
     end
   end
 

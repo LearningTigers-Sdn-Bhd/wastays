@@ -8,6 +8,7 @@ RSpec.describe AiConcierge::State::SlotMerger do
       "adults" => nil,
       "children" => nil,
       "suggested_options" => [ { "position" => 1 } ],
+      "viewed_option" => { "position" => 1 },
       "confirmation_candidate" => { "position" => 1 },
       "selected_option" => { "position" => 1 },
       "selected_rate_plan_id" => 12,
@@ -20,6 +21,7 @@ RSpec.describe AiConcierge::State::SlotMerger do
     expect(result["adults"]).to eq(2)
     expect(result["children"]).to eq(0)
     expect(result["suggested_options"]).to eq([])
+    expect(result["viewed_option"]).to be_nil
   end
 
   it "derives the target month from a check-in date" do
@@ -103,6 +105,7 @@ RSpec.describe AiConcierge::State::SlotMerger do
       "target_month" => 7,
       "target_year" => 2026,
       "suggested_options" => [ { "position" => 1 } ],
+      "viewed_option" => { "position" => 1 },
       "confirmation_candidate" => { "position" => 1 },
       "selected_option" => { "position" => 1 },
       "suggestion_set_version" => 1
@@ -112,6 +115,7 @@ RSpec.describe AiConcierge::State::SlotMerger do
 
     expect(result["target_month"]).to eq(5)
     expect(result["suggested_options"]).to eq([])
+    expect(result["viewed_option"]).to be_nil
     expect(result["confirmation_candidate"]).to be_nil
     expect(result["selected_option"]).to be_nil
     expect(result["selected_rate_plan_id"]).to be_nil

@@ -79,9 +79,10 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(result).to be_success
     expect(result.payload[:reply_message]).to include("room rates depend on the booking dates and room types")
     expect(result.payload[:reply_message]).to include("Which date or month do you plan to arrive for check-in?")
-    expect(result.payload[:action_name]).to eq("request_quote")
+    expect(result.payload[:action_name]).to be_nil
     expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
     expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("booking_timing")
+    expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
   end
 
   it "derives duration from a complete date range answer" do

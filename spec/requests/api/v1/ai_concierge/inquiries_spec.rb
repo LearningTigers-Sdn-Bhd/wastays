@@ -114,12 +114,29 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
         "- You can check in from 15:00.",
         "- Check-out is by 12:00.",
         "- You can cancel under these terms: 24 hours.",
-        "- Quiet Hours Quiet hours start at 10 PM."
+        "- Quiet Hours Quiet hours start at 10 PM.",
+        "If this policy works for you, I can help you find a room for your travel dates."
       )
       expect(parsed_body["reply_message"]).not_to match(/not provided|thank you for your inquiry|please let us know/i)
       expect(parsed_body["needs_human_support"]).to be(false)
       expect(parsed_body["action_name"]).to be_nil
       expect(parsed_body["prospect_public_id"]).to be_present
+    end
+
+    it "keeps the chat open after a sales refusal and suppresses one optional offer" do
+      post path, params: { message: "What time is check-out?", phone: phone }.to_json, headers: headers
+      expect(parsed_body["reply_message"]).to include("If this policy works for you")
+
+      post path, params: { message: "no thanks", phone: phone }.to_json, headers: headers
+      expect(parsed_body["reply_message"]).to eq("No problem. How else can I help you?")
+
+      post path, params: { message: "What time is check-in?", phone: phone }.to_json, headers: headers
+      expect(parsed_body["reply_message"]).to include("You can check in from 15:00.")
+      expect(parsed_body["reply_message"]).not_to include("If this policy works for you")
+
+      post path, params: { message: "What time is check-out?", phone: phone }.to_json, headers: headers
+      expect(parsed_body["reply_message"]).to include("If this policy works for you")
+      expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
     end
 
     it "records a knowledge diagnostic for unanswered knowledge turns without changing the public payload" do
@@ -156,7 +173,8 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
-      expect(parsed_body["reply_message"]).to eq("Breakfast is served daily from 7 AM to 10 AM.")
+      expect(parsed_body["reply_message"])
+        .to eq("Breakfast is served daily from 7 AM to 10 AM.\n\nWould you like me to help you find a room for your travel dates?")
     end
 
     it "accepts hotel slugs in the path" do
@@ -183,7 +201,8 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "Do you have an faq?", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).to eq("General Q: What time is breakfast? A: Breakfast is served daily from 7 AM to 10 AM.")
+      expect(parsed_body["reply_message"])
+        .to eq("General Q: What time is breakfast? A: Breakfast is served daily from 7 AM to 10 AM.\n\nWould you like me to help you find a room for your travel dates?")
     end
 
     it "returns the full nearby attractions list" do
@@ -276,6 +295,58 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       expect(parsed_body["reply_message"]).to include("*1. Garden Prestige Suite* · August 1 to August 3 — from RM")
       expect(parsed_body["reply_message"]).to include("*2. Garden Prestige Suite* · August 2 to August 4 — from RM")
       expect(parsed_body["reply_message"]).to include('Reply with the number of the option you want, e.g. "1".')
+    end
+
+    it "explores a price before requiring booking and quotation confirmations" do
+      room_type = seed_room_type_options("Garden Prestige Suite", month: 8, days: [ 28, 29, 30, 31 ])
+      room_type.update!(description: "A quiet suite facing the garden.", amenities: %w[wifi balcony])
+      stub_concierge_model(
+        room_type_names: [ "Garden Prestige Suite" ],
+        scripted: {
+          "what is the cheapest room price?" => { tool: "advance_booking", arguments: { slots: {} } },
+          "28 august to 31 august" => {
+            tool: "advance_booking",
+            arguments: {
+              slots: { check_in: "2026-08-28", check_out: "2026-08-31", nights: 3, days: 4 },
+              evidence: { timing: "28 august", checkout: "31 august", duration: "28 august to 31 august" }
+            }
+          },
+          "2 adults" => {
+            tool: "advance_booking",
+            arguments: { slots: { adults: 2, children: 0 }, evidence: { party: "2 adults" } }
+          },
+          "1" => { tool: "advance_booking", arguments: { slots: { option_number: 1 } } },
+          "yes" => { tool: "advance_booking", arguments: { slots: { confirmation: "yes" } } }
+        }
+      )
+
+      post path, params: { message: "what is the cheapest room price?", phone: phone }.to_json, headers: headers
+      expect(parsed_body["action_name"]).to be_nil
+
+      post path, params: { message: "28 august to 31 august", phone: phone }.to_json, headers: headers
+      post path, params: { message: "2 adults", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("Lowest starting option: *1. Garden Prestige Suite*")
+      expect(parsed_body["reply_message"]).to include("28 August 2026 - 31 August 2026 · 3 nights · 2 adults · 1 room")
+      expect(parsed_body["action_name"]).to be_nil
+
+      post path, params: { message: "1", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("A quiet suite facing the garden.")
+      expect(parsed_body["reply_message"]).to include("Available rates:")
+      expect(parsed_body["reply_message"]).to include("Would you like to continue booking this option?")
+      expect(parsed_body["reply_message"]).not_to include("Quotation link:")
+      expect(parsed_body["action_name"]).to be_nil
+
+      post path, params: { message: "yes", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book")
+      expect(parsed_body["reply_message"]).not_to include("Quotation link:")
+      expect(parsed_body["action_name"]).to eq("request_quote")
+
+      post path, params: { message: "yes", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("Quotation link:")
     end
 
     # The thread from a live chat: two room types on the same fixed dates, both

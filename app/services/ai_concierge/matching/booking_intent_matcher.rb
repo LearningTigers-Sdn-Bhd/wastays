@@ -36,8 +36,15 @@ module AiConcierge
         return true if normalized.match?(/\brooms?\s+(?:rates?|prices?|pricing|cost)\b/)
         return true if normalized.match?(/\b(?:rates?|prices?|pricing|cost)\s+(?:for|of)\s+(?:a\s+)?rooms?\b/)
         return true if normalized.match?(/\bhow much\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
+        return true if normalized.match?(/\b(?:cheapest|lowest)\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
 
         normalized.match?(/\b(?:rates?|prices?|pricing|cost)\b/) && normalized.match?(/\b(?:rooms?|suite|villa|penthouse|stay|stays|night|nights)\b/)
+      end
+
+      # These words state commitment. Price words without one of these words
+      # mean that the guest is still comparing options.
+      def booking_commitment?
+        normalized.match?(/\b(?:book|reserve|continue|proceed)\b/)
       end
 
       # "How do I book?" is a question before it is a booking request.
