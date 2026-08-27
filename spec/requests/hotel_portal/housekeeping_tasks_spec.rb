@@ -234,6 +234,30 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       expect(rows[1..].map { |row| row.split(",")[2] }).to eq([ "Main Wing", "Ungrouped", "Ungrouped" ])
     end
 
+    it "counts the selected filters in the column header badge" do
+      main_wing = create(:room_group, hotel:, name: "Main Wing")
+      create(:room, hotel:, room_type:, number: "101", room_group: main_wing)
+
+      get hotel_housekeeping_tasks_path(hotel, date: business_date, room_group_ids: [ main_wing.id ])
+
+      document = Nokogiri::HTML(response.body)
+      badge = document.at_css("#hk-room-group-filter-cell .panel-badge")
+      expect(badge.text).to eq("1")
+      expect(badge["aria-label"]).to eq("1 room groups selected")
+      expect(badge["data-housekeeping-filter-badge"]).to eq("room_group_ids[]")
+      expect(badge["data-housekeeping-filter-title"]).to eq("room group")
+      expect(badge["data-housekeeping-filter-noun"]).to eq("room groups")
+      expect(document.at_css("#hk-room-group-filter-trigger")["aria-label"])
+        .to eq("Filter room group, 1 selected")
+
+      get hotel_housekeeping_tasks_path(hotel, date: business_date, room_group_ids: [ "__none__" ])
+
+      empty = Nokogiri::HTML(response.body)
+      expect(empty.at_css("#hk-room-group-filter-cell .panel-badge").text).to eq("0")
+      expect(empty.at_css("#hk-room-group-filter-trigger")["aria-label"])
+        .to eq("Filter room group, 0 selected")
+    end
+
     it "keeps header filters available when no rooms match" do
       get hotel_housekeeping_tasks_path(hotel, room_statuses: [ "__none__" ])
 

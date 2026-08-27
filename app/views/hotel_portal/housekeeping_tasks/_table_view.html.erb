@@ -54,13 +54,10 @@
             <th scope="col" id="hk-room-type-filter-cell" data-column-key="room_type" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-room-type-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter room type, #{all_room_types ? 'all selected' : "#{selected_room_type_ids.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "room type", selected: selected_room_type_ids)) do %>
                   Room type
-                  <%= render PanelsUI::Badge.new(
-                        label: all_room_types ? "All" : selected_room_type_ids.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_room_types ? "All room types" : "#{selected_room_type_ids.size} room types selected" }) %>
+                  <%= housekeeping_filter_badge(name: "room_type_ids[]", title: "room type",
+                        noun: "room types", selected: selected_room_type_ids) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "room_type_ids[]", value: "__all__", checked: all_room_types) { "All room types" } %>
@@ -76,13 +73,10 @@
             <th scope="col" id="hk-room-group-filter-cell" data-column-key="room_group" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-room-group-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter room group, #{all_room_groups ? 'all selected' : "#{selected_room_group_ids.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "room group", selected: selected_room_group_ids)) do %>
                   Room group
-                  <%= render PanelsUI::Badge.new(
-                        label: all_room_groups ? "All" : selected_room_group_ids.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_room_groups ? "All room groups" : "#{selected_room_group_ids.size} room groups selected" }) %>
+                  <%= housekeeping_filter_badge(name: "room_group_ids[]", title: "room group",
+                        noun: "room groups", selected: selected_room_group_ids) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "room_group_ids[]", value: "__all__", checked: all_room_groups) { "All room groups" } %>
@@ -104,13 +98,10 @@
             <th scope="col" id="hk-room-status-filter-cell" data-column-key="room_status" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-room-status-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter room status, #{all_room_statuses ? 'all selected' : "#{selected_room_statuses.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "room status", selected: selected_room_statuses)) do %>
                   Room status
-                  <%= render PanelsUI::Badge.new(
-                        label: all_room_statuses ? "All" : selected_room_statuses.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_room_statuses ? "All room statuses" : "#{selected_room_statuses.size} room statuses selected" }) %>
+                  <%= housekeeping_filter_badge(name: "room_statuses[]", title: "room status",
+                        noun: "room statuses", selected: selected_room_statuses) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "room_statuses[]", value: "__all__", checked: all_room_statuses) { "All room statuses" } %>
@@ -126,13 +117,10 @@
             <th scope="col" id="hk-assigned-to-filter-cell" data-column-key="assigned_to" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-assigned-to-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter assigned staff, #{all_assigned_to ? 'all selected' : "#{selected_assigned_to_ids.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "assigned staff", selected: selected_assigned_to_ids)) do %>
                   Assigned to
-                  <%= render PanelsUI::Badge.new(
-                        label: all_assigned_to ? "All" : selected_assigned_to_ids.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_assigned_to ? "All staff" : "#{selected_assigned_to_ids.size} staff selected" }) %>
+                  <%= housekeeping_filter_badge(name: "assigned_to_ids[]", title: "assigned staff",
+                        noun: "staff", selected: selected_assigned_to_ids) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "assigned_to_ids[]", value: "__all__", checked: all_assigned_to) { "All staff" } %>
@@ -148,13 +136,10 @@
             <th scope="col" id="hk-booking-status-filter-cell" class="text-center" data-column-key="booking_status" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-booking-status-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter booking status, #{all_booking_statuses ? 'all selected' : "#{selected_booking_statuses.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "booking status", selected: selected_booking_statuses)) do %>
                   Booking status
-                  <%= render PanelsUI::Badge.new(
-                        label: all_booking_statuses ? "All" : selected_booking_statuses.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_booking_statuses ? "All booking statuses" : "#{selected_booking_statuses.size} booking statuses selected" }) %>
+                  <%= housekeeping_filter_badge(name: "booking_statuses[]", title: "booking status",
+                        noun: "booking statuses", selected: selected_booking_statuses) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "booking_statuses[]", value: "__all__", checked: all_booking_statuses) { "All booking statuses" } %>

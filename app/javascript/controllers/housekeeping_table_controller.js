@@ -89,9 +89,28 @@ export default class extends Controller {
       selectedOptions.forEach(option => url.searchParams.append(input.name, option.value))
     }
 
+    const dropdownRoot = input.closest(".dropdown-menu-root")
+    this.updateFilterBadge(dropdownRoot, selectedOptions.length, optionInputs.length)
     this.clearRoomSelection()
-    this.scheduleReopen(input.closest(".dropdown-menu-root"))
+    this.scheduleReopen(dropdownRoot)
     this.navigateTo(url)
+  }
+
+  // The filter header cell is data-turbo-permanent, so the frame reload never
+  // repaints the badge. It is kept in step here instead.
+  updateFilterBadge(dropdownRoot, selectedCount, optionCount) {
+    const badge = dropdownRoot?.querySelector("[data-housekeeping-filter-badge]")
+    if (!badge) return
+
+    const all = selectedCount === optionCount
+    const { housekeepingFilterTitle: title, housekeepingFilterNoun: noun } = badge.dataset
+
+    badge.textContent = all ? "All" : selectedCount.toString()
+    badge.setAttribute("aria-label", all ? `All ${noun}` : `${selectedCount} ${noun} selected`)
+    badge.closest("button")?.setAttribute(
+      "aria-label",
+      `Filter ${title}, ${all ? "all selected" : `${selectedCount} selected`}`
+    )
   }
 
   async columnChanged(input) {
