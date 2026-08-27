@@ -277,7 +277,8 @@ module HotelPortal
     end
 
     def room_type_numbers_json
-      room_types.map { |rt| [ rt.id, rt.room_numbers ] }.to_h.to_json
+      directory = ::Rooms::DirectoryQuery.call(hotel:)
+      room_types.map { |rt| [ rt.id, directory.numbers_for(rt.id) ] }.to_h.to_json
     end
 
     def room_types

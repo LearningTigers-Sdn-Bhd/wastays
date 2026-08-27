@@ -261,6 +261,55 @@ RSpec.describe StayView::BuildBoard do
     queries.count
   end
 
+  describe "room groups" do
+    let!(:deluxe) { create(:room_type, hotel:, name: "Deluxe", quantity: 2, room_numbers: %w[101 102]) }
+    let!(:suite) { create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ]) }
+    let!(:main_wing) { create(:room_group, hotel:, name: "Main Wing") }
+    let!(:annexe) { create(:room_group, hotel:, name: "Annexe") }
+
+    before do
+      # The room type factory already made the physical rooms. Group two of them.
+      hotel.rooms.find_by!(number: "101").update!(room_group: main_wing)
+      hotel.rooms.find_by!(number: "201").update!(room_group: main_wing)
+    end
+
+    def rows(**options)
+      described_class.call(hotel:, user:, start_date:, days: 7, **options).room_groups.flat_map(&:rooms)
+    end
+
+    it "carries the room group on each room row" do
+      groups = rows.to_h { |row| [ row.room_number, row.room_group_name ] }
+
+      expect(groups).to eq("101" => "Main Wing", "102" => "Ungrouped", "201" => "Main Wing")
+      expect(rows.find { |row| row.room_number == "102" }).not_to be_grouped
+    end
+
+    it "offers every room group of the hotel that holds a room" do
+      board = described_class.call(hotel:, user:, start_date:, days: 7)
+
+      expect(board.room_group_options.map(&:name)).to eq([ "Main Wing" ])
+    end
+
+    it "filters the board by room group across room types" do
+      expect(rows(filters: { room_group_id: main_wing.id }).map(&:room_number)).to contain_exactly("101", "201")
+    end
+
+    it "filters the board down to the ungrouped rooms" do
+      expect(rows(filters: { room_group_id: "__ungrouped__" }).map(&:room_number)).to eq([ "102" ])
+    end
+
+    it "keeps every room when no room group is selected" do
+      expect(rows.size).to eq(3)
+    end
+
+    it "ignores an unrelated hotel's room group" do
+      other_hotel = create(:hotel, account: hotel.account)
+      other_group = create(:room_group, hotel: other_hotel, name: "Far Wing")
+
+      expect(rows(filters: { room_group_id: other_group.id })).to be_empty
+    end
+  end
+
   def active_record_values(value, found = [])
     case value
     when ActiveRecord::Base

@@ -84,13 +84,45 @@ RSpec.describe StayView::ApplyFilters do
     )
   end
 
-  def room_row(room_number:, physical_status:, occupancies: [], booking_segments: [])
+  describe "room group filter" do
+    let(:main_wing_room) { room_row(room_number: "101", physical_status: :ready, room_group_id: 7, room_group_name: "Main Wing") }
+    let(:ungrouped_room) { room_row(room_number: "102", physical_status: :ready) }
+    let(:group) { StayView::RoomGroup.new(room_type_id: 3, name: "Deluxe", rooms: [ main_wing_room, ungrouped_room ]) }
+
+    def filtered(room_group_id)
+      described_class.call(
+        room_groups: [ group ],
+        filters: StayView::FilterState.build(room_group_id:)
+      ).flat_map(&:rooms).map(&:room_number)
+    end
+
+    it "keeps every room when no room group is selected" do
+      expect(filtered(nil)).to eq(%w[101 102])
+    end
+
+    it "keeps the rooms of the selected room group" do
+      expect(filtered(7)).to eq(%w[101])
+    end
+
+    it "keeps the ungrouped rooms on their own" do
+      expect(filtered("__ungrouped__")).to eq(%w[102])
+    end
+
+    it "keeps no room when the selected group holds none" do
+      expect(filtered(99)).to be_empty
+    end
+  end
+
+  def room_row(room_number:, physical_status:, occupancies: [], booking_segments: [], room_group_id: nil,
+               room_group_name: nil)
     StayView::RoomRow.new(
       key: "3:#{room_number}",
       dom_id: "room-#{room_number}",
       room_number:,
       room_type_id: 3,
       room_type_name: "Deluxe",
+      room_group_id:,
+      room_group_name:,
       smoking_allowed: false,
       pets_allowed: false,
       current_physical_status: physical_status,

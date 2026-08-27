@@ -6,7 +6,8 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h2 id="room-groups-heading" class="text-base font-semibold text-foreground">Room Groups</h2>
-        <p class="mt-1 text-sm text-muted-foreground">Manage the property areas used to organize room categories.</p>
+        <p class="mt-1 text-sm text-muted-foreground">Organize physical rooms into property areas such as towers, wings, or floors.</p>
+        <p class="mt-1 text-xs text-muted-foreground"><%= pluralize(@unassigned_room_count, "active room") %> unassigned</p>
       </div>
       <%= render PanelsUI::Button.new(
             href: new_hotel_room_group_path(@hotel),
@@ -31,19 +32,21 @@
         <tr>
           <th scope="col">Room group</th>
           <th scope="col">Room categories</th>
-          <th scope="col">Assigned</th>
+          <th scope="col">Assigned rooms</th>
           <th scope="col" class="text-right">Actions</th>
         </tr>
       <% end %>
 
       <% table.with_body do %>
         <% @room_groups.each do |group| %>
+          <% active_rooms = group.active_rooms.to_a %>
+          <% room_type_names = active_rooms.map { |room| room.room_type.name }.uniq.sort %>
           <tr id="room-group-row-<%= group.id %>">
             <th scope="row" class="font-medium text-foreground"><%= group.name %></th>
             <td class="text-muted-foreground">
-              <%= group.room_types.any? ? group.room_types.sort_by(&:name).map(&:name).to_sentence : "No room categories assigned" %>
+              <%= room_type_names.any? ? room_type_names.to_sentence : "No active rooms assigned" %>
             </td>
-            <td class="text-muted-foreground"><%= pluralize(group.room_types.size, "category") %></td>
+            <td class="text-muted-foreground"><%= pluralize(active_rooms.size, "room") %></td>
             <td class="text-right">
               <div class="inline-flex items-center gap-1">
                 <%= render PanelsUI::Button.new(
@@ -61,7 +64,7 @@
                       class: "text-destructive",
                       data: {
                         turbo_method: :delete,
-                        turbo_confirm: "Delete this room group? Assigned room categories will become unassigned.",
+                        turbo_confirm: "Delete this room group? Its rooms will become unassigned.",
                         turbo_confirm_title: "Delete room group",
                         turbo_confirm_tone: "destructive"
                       }) do %>

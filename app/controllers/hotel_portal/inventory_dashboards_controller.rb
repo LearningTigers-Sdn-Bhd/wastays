@@ -41,6 +41,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
     end
 
     @room_types = current_hotel.room_types.order(:id)
+    @room_directory = Rooms::DirectoryQuery.call(hotel: current_hotel)
     @calendar = build_calendar
     @pricing_form = HotelPortal::PricingForm.new(current_hotel, @room_types).from_saved_rules(params[:room_type_ids])
 
@@ -224,6 +225,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       @range_mode = "days"
       @view_mode = "combined"
       @room_types = current_hotel.room_types.order(:id)
+      @room_directory = Rooms::DirectoryQuery.call(hotel: current_hotel)
 
       @hotel_base_currency = current_hotel.default_currency || "MYR"
       requested_currencies = Array(params[:view_currencies]).reject(&:blank?)

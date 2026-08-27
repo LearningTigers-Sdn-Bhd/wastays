@@ -16,11 +16,19 @@ module StayView
     end
 
     def self.filter_room(room, filters, hotel:, reference_date:, operational_date:)
+      return unless room_group_matches?(room, filters.room_group_id)
       return unless physical_status_matches?(room, filters.physical_status)
       return unless occupancy_matches?(room, filters.occupancy)
       return unless room_state_matches?(room, filters.room_state, hotel:, reference_date:, operational_date:)
 
       room
+    end
+
+    def self.room_group_matches?(room, room_group_id)
+      return true if room_group_id.nil?
+      return !room.grouped? if room_group_id == ::Rooms::GroupAssignmentsQuery::UNGROUPED
+
+      room.room_group_id == room_group_id
     end
 
     def self.physical_status_matches?(room, status)
@@ -44,6 +52,6 @@ module StayView
     end
 
     private_class_method :filter_room, :physical_status_matches?, :occupancy_matches?,
-      :room_state_matches?
+      :room_state_matches?, :room_group_matches?
   end
 end

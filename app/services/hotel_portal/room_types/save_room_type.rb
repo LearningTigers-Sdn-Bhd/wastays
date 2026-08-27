@@ -16,9 +16,25 @@ module HotelPortal
         sanitize_amenities
 
         photos = @params.delete(:photos)
-        @room_type.assign_attributes(@params)
+        saved = false
 
-        if @room_type.save
+        RoomType.transaction do
+          @room_type.lock! if @room_type.persisted?
+          @room_type.assign_attributes(@params)
+
+          unless @room_type.save
+            raise ActiveRecord::Rollback
+          end
+
+          room_sync = Rooms::SyncFromRoomType.call(room_type: @room_type)
+          unless room_sync.success?
+            raise ActiveRecord::Rollback
+          end
+
+          saved = true
+        end
+
+        if saved
           @room_type.attach_photos_with_limit(photos) if photos.present?
           sync_with_channel_manager
           OpenStruct.new(success?: true, room_type: @room_type)
@@ -31,7 +47,11 @@ module HotelPortal
 
       def sanitize_room_numbers
         if @params[:room_numbers]
-          @params[:room_numbers] = Array(@params[:room_numbers]).reject(&:blank?)
+          @params[:room_numbers] = Array(@params[:room_numbers])
+            .flatten
+            .compact
+            .map { |number| number.to_s.strip }
+            .reject(&:blank?)
         else
           @params[:room_numbers] = []
         end

@@ -17,7 +17,7 @@ module Bookings
     def call
       errors = []
       errors << "Checkout must be after check-in." unless check_out > check_in
-      errors << "Select a configured room." unless room_type.room_numbers.map(&:to_s).include?(room_number)
+      errors << "Select a configured room." unless ::Rooms::DirectoryQuery.for_room_type(room_type).include?(room_number)
       return errors.freeze if errors.any?
 
       available = AvailableRoomNumbers.new(

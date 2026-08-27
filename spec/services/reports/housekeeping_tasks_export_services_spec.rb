@@ -32,7 +32,8 @@ RSpec.describe "Housekeeping task export services" do
             notes: "=SUM(A1:A2) towels",
             assigned_to: housekeeper,
             booking_status_label: "Pending checkout",
-            room_status_label: "Dirty"
+            room_status_label: "Dirty",
+            room_group_name: "Main Wing"
           },
           {
             room_number: "002",
@@ -58,11 +59,11 @@ RSpec.describe "Housekeeping task export services" do
     )
 
     expect(table.rows.first).to eq([
-      "001", "Ocean Suite", "2/1", "Dirty", "José 陈", "Pending checkout",
+      "001", "Ocean Suite", "Main Wing", "2/1", "Dirty", "José 陈", "Pending checkout",
       "21 Jul 2026, 02:30 PM", "23 Jul 2026, 12:00 AM", 2, "=SUM(A1:A2) towels"
     ])
     expect(table.rows.second).to eq([
-      "002", "Ocean Suite", "—", "Cleaned", "Unassigned", "Vacant", "—", "—", nil, ""
+      "002", "Ocean Suite", "Ungrouped", "—", "Cleaned", "Unassigned", "Vacant", "—", "—", nil, ""
     ])
     expect(table.room_count).to eq(2)
     expect(table.assigned_count).to eq(1)
@@ -84,13 +85,14 @@ RSpec.describe "Housekeeping task export services" do
 
     expect(csv).to start_with("\uFEFF")
     expect(csv).to include("'=SUM(A1:A2) towels")
-    expect(csv).to include("002,Ocean Suite,—,Cleaned,Unassigned,Vacant,—,—,,")
+    expect(csv).to include("002,Ocean Suite,Ungrouped,—,Cleaned,Unassigned,Vacant,—,—,,")
     expect(xlsx).to start_with("PK")
     expect(Zip::File.open_buffer(StringIO.new(xlsx)).map(&:name)).to include("xl/workbook.xml")
     expect(pdf).to start_with("%PDF")
     expect(pdf_text).to include(
       "Housekeeping Tasks", "SELECTED DATE", "21 Jul 2026", "PREPARED BY", "Housekeeping Manager",
-      "Room Details", "2 rooms", "José 陈", "002", "Vacant", "Confidential", "Page 1 of 1"
+      "Room Details", "2 rooms", "José 陈", "002", "Vacant", "Main Wing", "Ungrouped",
+      "Confidential", "Page 1 of 1"
     )
     expect(pdf_text).not_to include("ASSIGNED")
   end

@@ -5,7 +5,6 @@ require "rails_helper"
 RSpec.describe RoomGroup, type: :model do
   describe "associations" do
     it { is_expected.to belong_to(:hotel) }
-    it { is_expected.to have_many(:room_types).dependent(:nullify) }
   end
 
   describe "validations" do

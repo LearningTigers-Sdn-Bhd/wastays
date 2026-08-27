@@ -21,11 +21,17 @@ module Rooms
 
     private
 
+    # The rooms this category actually has, read once from the physical-room
+    # directory and reused for every date in the window.
+    def configured_rooms
+      @configured_rooms ||= DirectoryQuery.for_room_type(@room_type).numbers
+    end
+
     def sync_date(date)
       inventory = @room_type.room_inventories.find_or_initialize_by(date: date)
 
       # 1. Total rooms for this type
-      all_room_numbers = @room_type.room_numbers.map(&:to_s).reject(&:blank?)
+      all_room_numbers = configured_rooms
 
       # 2. Find blocked rooms (excluding finished ones)
       blocked_numbers = @hotel.room_blocks.active_on(date)

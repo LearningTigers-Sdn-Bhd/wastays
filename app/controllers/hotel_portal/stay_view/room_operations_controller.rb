@@ -22,7 +22,7 @@ module HotelPortal
       def set_room_status
         @room_type = current_hotel.room_types.find(params[:room_type_id])
         @room_number = params[:room_number].to_s
-        raise ActiveRecord::RecordNotFound unless @room_type.room_numbers.map(&:to_s).include?(@room_number)
+        raise ActiveRecord::RecordNotFound unless ::Rooms::DirectoryQuery.for_room_type(@room_type).include?(@room_number)
 
         @room_status = current_hotel.room_statuses.find_or_initialize_by(room_type: @room_type, room_number: @room_number)
         @room_status.status ||= "ready"

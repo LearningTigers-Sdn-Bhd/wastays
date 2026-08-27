@@ -34,8 +34,7 @@ RSpec.describe 'Room Setup', type: :system do
     expect(page).to have_content('Room category created successfully.')
     expect(page).to have_content('Deluxe Suite')
     expect(page).to have_css(".panel-collapsible[data-state='closed']", text: 'Deluxe Suite')
-    click_button 'Assign'
-    click_link 'Assign Room Rate'
+    click_link 'Assign room rate'
 
     within '#assign-room-rate-sheet' do
       expect(page).to have_css('.panel-autocomplete', text: '')

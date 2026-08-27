@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RoomStatus < ApplicationRecord
+  include RoomIdentifiable
+
   STATUSES = %w[ready dirty cleaning awaiting_inspection inspection_failed out_of_service late_checkout_detected].freeze
   ASSIGNABLE_STATUSES = %w[ready].freeze
 

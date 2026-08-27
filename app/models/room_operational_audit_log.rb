@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RoomOperationalAuditLog < ApplicationRecord
+  include RoomIdentifiable
+
   EVENT_TYPES = %w[
     room_status_changed
     checkout_marked_dirty

@@ -9,24 +9,14 @@
         <p class="mt-1 text-sm text-muted-foreground">Manage each room category and the rate plans guests can book.</p>
       </div>
       <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        <%= render PanelsUI::DropdownMenu.new(id: "room-inventory-assign-menu", placement: :bottom_end, class: "w-52") do |menu| %>
-          <% menu.with_trigger(variant: :secondary, size: :sm, class: "w-full justify-center sm:w-auto") do %>
-            <%= app_icon "link", class: "size-4", aria: { hidden: true } %>
-            <span>Assign</span>
-            <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
-          <% end %>
-          <% menu.with_item(
-               href: new_hotel_room_group_assignment_path(current_hotel),
-               data: { turbo_frame: "settings_action_sheet" }) do %>
-            <%= app_icon "layout-grid", class: "size-4", aria: { hidden: true } %>
-            <span>Assign Room Group</span>
-          <% end %>
-          <% menu.with_item(
-               href: new_hotel_rate_plan_attachment_path(current_hotel),
-               data: { turbo_frame: "settings_action_sheet" }) do %>
-            <%= app_icon "badge-dollar-sign", class: "size-4", aria: { hidden: true } %>
-            <span>Assign Room Rate</span>
-          <% end %>
+        <%= render PanelsUI::Button.new(
+              href: new_hotel_rate_plan_attachment_path(current_hotel),
+              variant: :secondary,
+              size: :sm,
+              class: "w-full sm:w-auto",
+              data: { turbo_frame: "settings_action_sheet" }) do %>
+          <%= app_icon "badge-dollar-sign", class: "size-4", aria: { hidden: true } %>
+          Assign room rate
         <% end %>
         <%= render PanelsUI::Button.new(
               href: new_hotel_room_type_path(current_hotel),
@@ -41,7 +31,7 @@
 
     <%= form_with url: hotel_room_types_path(current_hotel),
                   method: :get,
-                  class: "grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(16rem,.7fr)]",
+                  class: "max-w-2xl",
                   data: {
                     controller: "auto-submit",
                     turbo_frame: "room_types_results",
@@ -62,25 +52,13 @@
              data: { action: "input->auto-submit#submit" }) %>
       <% end %>
 
-      <%= render PanelsUI::FormField.new(
-            form: form,
-            attribute: :room_group_ids,
-            label: "Filter by room groups",
-            label_hidden: true) do |field| %>
-        <% field.with_multi_select(
-             [ { label: "Unassigned", value: "unassigned" } ] +
-               @room_groups.map { |group| { label: group.name, value: group.id } },
-             selected: @selected_room_group_ids,
-             prompt: "Filter by room groups") %>
-      <% end %>
     <% end %>
 
     <turbo-frame id="room_types_results">
       <% if @room_types.any? %>
         <div class="overflow-hidden rounded-lg border border-border bg-card" aria-label="Room categories and rate plans">
-          <div class="hidden grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,.9fr)_minmax(0,.6fr)_minmax(0,.75fr)_auto] gap-4 border-b border-border bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground md:grid" aria-hidden="true">
+          <div class="hidden grid-cols-[minmax(0,1.7fr)_minmax(0,.9fr)_minmax(0,.6fr)_minmax(0,.75fr)_auto] gap-4 border-b border-border bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground md:grid" aria-hidden="true">
             <span>Room category</span>
-            <span>Group</span>
             <span>Capacity</span>
             <span>Rooms</span>
             <span>Rate issues</span>
@@ -106,7 +84,7 @@
           </div>
           <h3 class="mt-3 text-sm font-medium text-foreground"><%= @filters_active ? "No matching room categories" : "No room categories found" %></h3>
           <p class="mt-1 text-sm text-muted-foreground">
-            <%= @filters_active ? "Try another search or change the selected room groups." : "Create a room category to start building inventory and rates." %>
+            <%= @filters_active ? "Try another search." : "Create a room category to start building inventory and rates." %>
           </p>
           <div class="mt-4">
             <% if @filters_active %>
@@ -129,7 +107,7 @@
 
       <% if @room_types.total_pages > 1 %>
         <div class="mt-5 flex justify-center">
-          <%= paginate @room_types, params: { q: params[:q], room_group_ids: @selected_room_group_ids }, data: { turbo_action: "advance" } %>
+          <%= paginate @room_types, params: { q: params[:q] }, data: { turbo_action: "advance" } %>
         </div>
       <% end %>
     </turbo-frame>

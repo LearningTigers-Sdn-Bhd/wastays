@@ -7,6 +7,7 @@ module HousekeepingTasks
     ALL = [
       Column.new(key: "room_number", label: "Room", export_label: "Room Number", pdf_label: "Room", type: :text, pdf_width: 48, excel_width: 15),
       Column.new(key: "room_type", label: "Room type", export_label: "Room Type", pdf_label: "Room Type", type: :text, pdf_width: 80, excel_width: 22),
+      Column.new(key: "room_group", label: "Room group", export_label: "Room Group", pdf_label: "Room Group", type: :text, pdf_width: 80, excel_width: 22),
       Column.new(key: "pax", label: "Pax", export_label: "Pax", pdf_label: "Pax", type: :text, pdf_width: 38, excel_width: 10),
       Column.new(key: "room_status", label: "Room status", export_label: "Room Status", pdf_label: "Room Status", type: :text, pdf_width: 75, excel_width: 24),
       Column.new(key: "assigned_to", label: "Assigned to", export_label: "Assigned To", pdf_label: "Assigned To", type: :text, pdf_width: 80, excel_width: 24),

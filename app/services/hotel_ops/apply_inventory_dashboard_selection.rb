@@ -387,7 +387,7 @@ module HotelOps
       return nil unless room_types.count == 1
       return nil if selected_room_numbers.blank?
 
-      selected_room_numbers & room_type.room_numbers
+      selected_room_numbers & ::Rooms::DirectoryQuery.for_room_type(room_type).numbers
     end
 
     def occupied_room_count(date, room_numbers)

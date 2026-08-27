@@ -3,8 +3,8 @@ require "rails_helper"
 RSpec.describe NightAudits::Execution::ProcessBookings do
   it "runs no-show and due-out processing" do
     audit = create(:night_audit)
-    no_shows = instance_double(OpenStruct)
-    due_outs = instance_double(OpenStruct)
+    no_shows = double("no show result")
+    due_outs = double("due out result")
     allow(NightAudits::ProcessNoShowDetections).to receive(:call).and_return(no_shows)
     allow(NightAudits::DetectDueOuts).to receive(:call).and_return(due_outs)
 
