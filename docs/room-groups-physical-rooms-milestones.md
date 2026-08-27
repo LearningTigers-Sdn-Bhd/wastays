@@ -394,7 +394,7 @@ Scope:
 
 - Backfill each `room_id`.
 - Add dual-write behavior.
-- Change operational lookups to `room_id`.
+- Change operational lookups to `room_id`. Not done, and not planned. It would re-key every operational table and its indexes. `room_id` plus `Rooms::Rename` already deliver what it was for, so the lookups stay on hotel, room type, and number.
 - Add foreign keys and indexes.
 - Remove the JSON room-number field.
 - Remove `room_types.room_group_id`.
@@ -419,7 +419,7 @@ The service has no screen yet. Room Inventory still edits the room list, where r
 ### Exit criteria
 
 - Renaming a room does not disconnect its history.
-- Room status, blocks, locks, and bookings use stable room identity.
+- Room status, blocks, locks, and bookings use stable room identity through `room_id`.
 - Historical documents retain their original room number and room type.
 - No application code reads the old JSON field.
 - No application code reads `room_types.room_group_id`.
