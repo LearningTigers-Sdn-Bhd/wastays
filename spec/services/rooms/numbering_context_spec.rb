@@ -34,10 +34,10 @@ RSpec.describe Rooms::NumberingContext do
     expect(described_class.call(hotel:).suggested_start).to eq(101)
   end
 
-  it "normalizes legacy JSON values" do
-    room_type = create(:room_type, hotel:, quantity: 1, room_numbers: [])
-    room_type.update_column(:room_numbers, [ " 101 " ])
+  it "reserves the number of an archived room, because a hotel cannot reuse it" do
+    room_type = create(:room_type, hotel:, quantity: 2, room_numbers: %w[101 102])
+    renumber_room_type!(room_type, %w[102])
 
-    expect(described_class.call(hotel:).reserved_numbers).to eq([ "101" ])
+    expect(described_class.call(hotel:).reserved_numbers).to eq(%w[101 102])
   end
 end

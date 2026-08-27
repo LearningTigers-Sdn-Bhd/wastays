@@ -1,7 +1,7 @@
 # Room Groups and Physical Rooms Milestones
 
 Status: Approved
-Implementation status: Milestones 0 and 1 complete on local, demo, and production. Milestones 2 to 6 complete on the branch. Milestone 7 is a separate project.
+Implementation status: Milestones 0 and 1 complete on local, demo, and production. Milestones 2 to 7 complete on the branch.
 Date: 2026-08-26
 
 ## Purpose
@@ -106,7 +106,7 @@ This milestone defines the product rules and measures the legacy data. It change
 
 ### The audit
 
-Run `bin/rails rooms:audit_legacy_directory` against production, demo, and local data. The supported task is read-only. It names each affected hotel and changes no records.
+Run `bin/rails rooms:audit_legacy_directory` against production, demo, and local data. The supported task is read-only. It names each affected hotel and changes no records. Milestone 7 removed this task.
 
 Each of these findings blocks the backfill:
 
@@ -197,7 +197,7 @@ CAUTION: Run the audit again immediately before you deploy. Milestone 1 can go s
 
 ### Keep the supported audit task
 
-Keep `lib/tasks/rooms.rake`, its spec, and `Rooms::AuditLegacyDirectory`. Operations must run the task immediately before migration. Milestone 6 also reuses the audit rules during reconciliation.
+Keep `lib/tasks/rooms.rake`, its spec, and `Rooms::AuditLegacyDirectory`. Operations must run the task immediately before migration. Milestone 7 removed all three, because the legacy source they read is gone.
 
 ### The generator
 
@@ -335,7 +335,7 @@ WARNING: This milestone changes the read source for availability, bookings, Hous
 
 `Rooms::DirectoryQuery` holds the single answer to "which rooms exist". It reads active rooms in `position` order, for one hotel or for one room category. Every operational read calls it. `Rooms::GroupAssignmentsQuery` reads the same loaded rows, so a board asks the `rooms` table once.
 
-Run `bin/rails rooms:reconcile_directory` immediately before and after the release. It reports any difference between the two sources for every hotel and exits non-zero when one remains.
+Milestone 7 removed the reconciliation task and the audit task. There is one source now, so there is nothing left to compare.
 
 Scope:
 
@@ -369,9 +369,11 @@ JSON field  = compatibility copy
 
 ## Milestone 7 — Harden identity and remove legacy fields
 
-This milestone is out of the current pull request. It follows as a separate project.
+Done on the branch.
 
-Add nullable `room_id` references to relevant records:
+`RoomIdentifiable` keeps `room_id` in step on every write. `RoomType#room_numbers` is no longer a column: it reads the physical rooms, and it accepts a list that `Rooms::SyncFromRoomType` writes.
+
+Nullable `room_id` references on:
 
 - `booking_rooms`.
 - `room_statuses`.
@@ -444,6 +446,6 @@ Demo and local data are safe to reseed at any time.
 | 6 | Physical rooms become the source of truth |
 | 7 | Stable room identity and legacy cleanup |
 
-Milestones 0 to 6 ship as one branch and one pull request. Milestone 7 is a separate project.
+Milestones 0 to 7 ship as one branch and one pull request.
 
-Milestones 2 and 3 are additive and reversible. Milestone 6 is the release gate.
+Milestones 2, 3, and 7's references are additive and reversible. Milestone 6 is the release gate. The column removal in Milestone 7 rebuilds `room_numbers` from the physical rooms when it rolls back.

@@ -62,10 +62,10 @@ RSpec.describe "Physical rooms are authoritative", frozen_time: Time.zone.local(
     expect(available_numbers).to contain_exactly("101", "102")
   end
 
-  it "ignores a room number that Room Inventory holds without a physical room" do
+  it "reads the room list from the physical rooms alone" do
     hotel.rooms.find_by!(number: "102").destroy!
 
-    expect(room_type.reload.room_numbers).to contain_exactly("101", "102")
+    expect(room_type.reload.room_numbers).to contain_exactly("101")
     expect(housekeeping_numbers).to contain_exactly("101")
     expect(stay_view_numbers).to contain_exactly("101")
     expect(available_numbers).to contain_exactly("101")

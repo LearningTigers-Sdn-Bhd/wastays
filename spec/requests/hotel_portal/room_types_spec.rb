@@ -22,8 +22,8 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
 
   describe "GET #index" do
     let!(:room_group) { create(:room_group, hotel: hotel) }
-    let!(:grouped_room_type) { create(:room_type, hotel: hotel, room_group: room_group) }
-    let!(:ungrouped_room_type) { create(:room_type, hotel: hotel, room_group: nil) }
+    let!(:grouped_room_type) { create(:room_type, hotel: hotel) }
+    let!(:ungrouped_room_type) { create(:room_type, hotel: hotel) }
 
     it "lists rooms as a compact, default-closed inventory accordion with rate issues" do
       grouped_room_type.update!(description: "Description should not appear in the inventory row")
@@ -163,7 +163,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
 
     it "does not filter Room Inventory by legacy room-group parameters" do
       another_group = create(:room_group, hotel: hotel)
-      another_room = create(:room_type, hotel: hotel, room_group: another_group)
+      another_room = create(:room_type, hotel: hotel)
 
       get hotel_room_types_path(hotel), params: { room_group_ids: [ room_group.id, "unassigned" ] }
 
@@ -194,7 +194,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
     end
 
     it "paginates search results at 25 and retains the search" do
-      create_list(:room_type, 26, hotel: hotel, room_group: room_group, name: "Searchable Category")
+      create_list(:room_type, 26, hotel: hotel, name: "Searchable Category")
 
       get hotel_room_types_path(hotel), params: { q: "Searchable" }
 
@@ -293,14 +293,16 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(response.body).to include(hotel_room_types_path(hotel))
     end
 
-    it "does not accept a room-group assignment" do
+    it "ignores a room-group assignment, because a group holds rooms and not categories" do
       room_group = create(:room_group, hotel: hotel)
 
-      post hotel_room_types_path(hotel),
-           params: { room_type: valid_params[:room_type].merge(room_group_id: room_group.id) },
-           as: :turbo_stream
+      expect do
+        post hotel_room_types_path(hotel),
+             params: { room_type: valid_params[:room_type].merge(room_group_id: room_group.id) },
+             as: :turbo_stream
+      end.to change(RoomType, :count).by(1)
 
-      expect(RoomType.order(:id).last.room_group).to be_nil
+      expect(RoomType.column_names).not_to include("room_group_id")
     end
 
     it "re-renders the sheet with the errors when the category is invalid" do

@@ -26,10 +26,7 @@ RSpec.describe HotelPortal::RoomTypes::SaveRoomType do
         expect(result.room_type.rooms.active.ordered.pluck(:number, :position)).to eq([ [ "101", 0 ], [ "102", 1 ] ])
       end
 
-      it "does not copy the legacy room group to physical rooms" do
-        room_group = create(:room_group, hotel: hotel)
-        params[:room_group_id] = room_group.id
-
+      it "leaves every new physical room ungrouped, because a group holds rooms" do
         result = subject.call
 
         expect(result).to be_success
@@ -54,20 +51,20 @@ RSpec.describe HotelPortal::RoomTypes::SaveRoomType do
       it "rolls back the room type when a physical room conflicts" do
         other_type = create(:room_type, hotel: hotel)
         existing_room = create(:room, hotel: hotel, room_type: other_type, number: "102")
-        room_type.update!(quantity: 1, room_numbers: [ "201" ])
+        room_type.update!(quantity: 1)
         original_room = create(:room, hotel: hotel, room_type: room_type, number: "201")
 
         result = subject.call
 
         expect(result).not_to be_success
         expect(result.room_type.errors[:room_numbers]).to include("Room 102 already belongs to another room category.")
-        expect(room_type.reload).to have_attributes(quantity: 1, room_numbers: [ "201" ])
+        expect(RoomType.find(room_type.id)).to have_attributes(quantity: 1, room_numbers: [ "201" ])
         expect(original_room.reload).to be_active
         expect(existing_room.reload.room_type_id).not_to eq(room_type.id)
       end
 
       it "archives every room when the room type returns to quantity-only inventory" do
-        room_type.update!(quantity: 2, room_numbers: %w[201 202])
+        room_type.update!(quantity: 2)
         rooms = %w[201 202].each_with_index.map do |number, position|
           create(:room, hotel: hotel, room_type: room_type, number: number, position: position)
         end

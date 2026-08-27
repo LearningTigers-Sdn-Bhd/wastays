@@ -19,6 +19,9 @@ module Rooms
 
     def initialize(room_type:)
       @room_type = room_type
+      # Capture the request now. The lock below reloads the record, and a
+      # reload drops a list that was never written.
+      @requested_numbers = room_type.room_numbers if room_type.room_numbers_pending?
     end
 
     def call
@@ -31,10 +34,10 @@ module Rooms
 
     private
 
+    # The list the caller asked for. With no request, the rooms the category
+    # already has: a save that does not touch room numbers must not remove one.
     def desired_numbers
-      @desired_numbers ||= Array(@room_type.room_numbers).flatten.compact
-        .map { |number| number.to_s.strip }
-        .reject(&:blank?)
+      @desired_numbers ||= @requested_numbers || DirectoryQuery.for_room_type(@room_type).numbers
     end
 
     def sync_rooms
@@ -42,7 +45,6 @@ module Rooms
 
       Room.transaction do
         @room_type.lock!
-        remove_instance_variable(:@desired_numbers) if defined?(@desired_numbers)
         if desired_numbers.uniq.length != desired_numbers.length
           result = failure("Room numbers must be unique.")
           raise ActiveRecord::Rollback
@@ -91,6 +93,7 @@ module Rooms
           room
         end
 
+        @room_type.clear_pending_room_numbers
         result = Result.success(rooms: rooms)
       end
 

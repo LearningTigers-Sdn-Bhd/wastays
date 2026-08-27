@@ -22,18 +22,14 @@ module Rooms
 
     attr_reader :hotel, :room_type
 
+    # Archived rooms count as reserved. Their numbers stay unique inside the
+    # hotel, so offering one again would collide.
     def reserved_numbers
-      @reserved_numbers ||= (json_numbers + physical_room_numbers)
+      @reserved_numbers ||= physical_room_numbers
         .map { |number| number.to_s.strip }
         .reject(&:blank?)
         .uniq
         .sort
-    end
-
-    def json_numbers
-      scope = hotel.room_types
-      scope = scope.where.not(id: room_type.id) if room_type&.persisted?
-      scope.pluck(:room_numbers).flat_map { |numbers| Array(numbers).flatten }
     end
 
     def physical_room_numbers

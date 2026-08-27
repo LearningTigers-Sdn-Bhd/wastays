@@ -10,7 +10,6 @@ RSpec.describe Rooms::SyncFromRoomType do
       :room_type,
       sync_rooms: false,
       hotel: hotel,
-      room_group: room_group,
       quantity: 2,
       room_numbers: %w[101 102]
     )
@@ -86,7 +85,7 @@ RSpec.describe Rooms::SyncFromRoomType do
   end
 
   it "rejects room numbers that duplicate after normalization" do
-    room_type.update_column(:room_numbers, [ "101", " 101 " ])
+    room_type.room_numbers = [ "101", " 101 " ]
 
     result = described_class.call(room_type: room_type)
 
