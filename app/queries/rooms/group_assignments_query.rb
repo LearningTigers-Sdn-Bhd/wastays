@@ -2,9 +2,8 @@
 
 module Rooms
   # Room-group membership for a hotel, keyed the way the operational boards key
-  # their rows. Housekeeping and Stay View both enumerate rooms from
-  # `room_types.room_numbers` until Milestone 6, so the group is looked up
-  # beside that list rather than read from it.
+  # their rows. It reads the rows DirectoryQuery already loads, so the boards
+  # ask the `rooms` table once for both the room list and its groups.
   class GroupAssignmentsQuery
     UNGROUPED = "__ungrouped__"
     UNGROUPED_LABEL = "Ungrouped"
@@ -17,8 +16,11 @@ module Rooms
 
     def self.call(...) = new(...).call
 
-    def initialize(hotel:)
+    # `directory` lets a caller that already loaded the directory reuse it
+    # instead of reading the same rows twice.
+    def initialize(hotel:, directory: nil)
       @hotel = hotel
+      @directory_rows = directory
     end
 
     def call
@@ -30,21 +32,24 @@ module Rooms
     attr_reader :hotel
 
     def rows
-      @rows ||= hotel.rooms.active
-        .where.not(room_group_id: nil)
-        .joins(:room_group)
-        .order("room_groups.name", "room_groups.id")
-        .pluck(:room_type_id, :number, :room_group_id, "room_groups.name")
+      @rows ||= directory.rows.select { |row| row.room_group_id.present? }
+    end
+
+    def directory
+      @directory ||= @directory_rows || DirectoryQuery.call(hotel:)
     end
 
     def assignments
-      rows.each_with_object({}) do |(room_type_id, number, room_group_id, name), result|
-        result[[ room_type_id, number.to_s ]] = reference(room_group_id, name)
+      rows.each_with_object({}) do |row, result|
+        result[[ row.room_type_id, row.number ]] = reference(row.room_group_id, row.room_group_name)
       end.freeze
     end
 
     def options
-      rows.map { |row| reference(row[2], row[3]) }.uniq.freeze
+      rows.sort_by { |row| [ row.room_group_name.to_s, row.room_group_id ] }
+        .map { |row| reference(row.room_group_id, row.room_group_name) }
+        .uniq
+        .freeze
     end
 
     def reference(id, name)
