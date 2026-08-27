@@ -8,7 +8,9 @@ module HotelPortal
       "ai" => [ "AI Concierge", "Configure AI concierge behavior and provider settings." ],
       "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ],
-      "e_invoice" => [ "E-Invoice", "Configure LHDN MyInvois submission details for this property." ]
+      "e_invoice" => [ "E-Invoice", "This hotel files its own e-invoices to LHDN through MyInvois, under its own tax registration, " \
+                                    "using the credentials below. Guests may request one within the same calendar month as their " \
+                                    "payment; anything unrequested and under RM10,000 goes out in the monthly consolidated batch." ]
     }.freeze
 
     attr_reader :hotel, :active_page, :current_user

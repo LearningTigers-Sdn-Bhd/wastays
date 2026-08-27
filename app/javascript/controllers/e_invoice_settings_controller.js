@@ -13,6 +13,7 @@ import { Controller } from "@hotwired/stimulus"
 // LHDN's recommended MSIC descriptions for the codes accommodation
 // businesses on this platform actually use (see
 // https://sdk.myinvois.hasil.gov.my/codes/msic-codes/ for the full list).
+// Mirrors EInvoice::MsicCodes::CODES - keep the two in sync.
 const MSIC_BUSINESS_DESCRIPTIONS = {
   "55101": "Hotels and resort hotels",
   "55103": "Apartment hotels / Serviced apartments",
@@ -20,16 +21,54 @@ const MSIC_BUSINESS_DESCRIPTIONS = {
   "55109": "Other short term accommodation activities"
 }
 
+const MSIC_CUSTOM = "custom"
+
 export default class extends Controller {
   static targets = [
     "signatureToggle", "signingFields", "environmentSelect", "productionWarning", "confirmProductionCheckbox",
-    "msicInput", "businessDescriptionInput", "businessDescriptionSuggestion", "businessDescriptionSuggestionText"
+    "msicCodePicker", "msicInputWrapper", "msicInput", "businessDescriptionInput", "businessDescriptionSuggestion", "businessDescriptionSuggestionText"
   ]
 
   connect() {
     this.toggleSigningFields()
     this.toggleProductionWarning()
     this.suggestBusinessDescription()
+  }
+
+  // The picker is a shortcut over the real MSIC code field, not a separate
+  // source of truth - picking a known code fills the field (and offers its
+  // description) while keeping it out of the way; picking "Custom" reveals
+  // the field and hands it focus so the hotel can type a code that isn't in
+  // the list. The field stays in the DOM either way, pre-filled, so its
+  // value still submits when hidden.
+  pickMsicCode() {
+    if (!this.hasMsicCodePickerTarget || !this.hasMsicInputTarget) return
+
+    const value = this.msicCodePickerTarget.value
+
+    if (value === "" ) return
+
+    if (value === MSIC_CUSTOM) {
+      this.msicInputTarget.value = ""
+      if (this.hasMsicInputWrapperTarget) this.msicInputWrapperTarget.hidden = false
+      this.msicInputTarget.focus()
+    } else {
+      this.msicInputTarget.value = value
+      if (this.hasMsicInputWrapperTarget) this.msicInputWrapperTarget.hidden = true
+    }
+
+    this.suggestBusinessDescription()
+  }
+
+  // Keeps the picker showing the right option when the code field is edited
+  // directly - a known code selects itself, anything else falls to "Custom".
+  syncMsicCodePicker() {
+    if (!this.hasMsicCodePickerTarget || !this.hasMsicInputTarget) return
+
+    const code = this.msicInputTarget.value.trim()
+    const knownCode = Object.prototype.hasOwnProperty.call(MSIC_BUSINESS_DESCRIPTIONS, code)
+
+    this.msicCodePickerTarget.value = code === "" ? "" : (knownCode ? code : MSIC_CUSTOM)
   }
 
   // Offers LHDN's recommended wording for a known MSIC code rather than
