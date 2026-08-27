@@ -490,9 +490,10 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
     it "groups Room View by room group and filters by it" do
       suite = create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ])
       main_wing = create(:room_group, hotel:, name: "Main Wing")
-      create(:room, hotel:, room_type:, number: "101", room_group: main_wing)
-      create(:room, hotel:, room_type:, number: "102")
-      create(:room, hotel:, room_type: suite, number: "201", room_group: main_wing)
+      # The room type factories already made the physical rooms. Group two of
+      # them and leave 102 ungrouped.
+      room_type.rooms.find_by!(number: "101").update!(room_group: main_wing)
+      suite.rooms.find_by!(number: "201").update!(room_group: main_wing)
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, group_by: "room_group")
       grouped = Nokogiri::HTML(response.body)

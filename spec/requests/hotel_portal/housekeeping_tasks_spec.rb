@@ -184,9 +184,8 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
 
     it "groups the board by room group and filters by it" do
       main_wing = create(:room_group, hotel:, name: "Main Wing")
-      create(:room, hotel:, room_type:, number: "101", room_group: main_wing)
-      create(:room, hotel:, room_type:, number: "202", room_group: main_wing)
-      create(:room, hotel:, room_type:, number: "303")
+      # The room type factory already made the physical rooms. Group two of them.
+      hotel.rooms.where(number: %w[101 202]).find_each { |room| room.update!(room_group: main_wing) }
 
       get hotel_housekeeping_tasks_path(hotel, date: business_date, group_by: "room_group")
 
@@ -224,7 +223,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
 
     it "carries the room group into the exports" do
       main_wing = create(:room_group, hotel:, name: "Main Wing")
-      create(:room, hotel:, room_type:, number: "101", room_group: main_wing)
+      hotel.rooms.find_by!(number: "101").update!(room_group: main_wing)
 
       get hotel_housekeeping_tasks_path(hotel, format: :csv),
           params: { date: business_date, group_by: "room_group" }
@@ -236,7 +235,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
 
     it "counts the selected filters in the column header badge" do
       main_wing = create(:room_group, hotel:, name: "Main Wing")
-      create(:room, hotel:, room_type:, number: "101", room_group: main_wing)
+      hotel.rooms.find_by!(number: "101").update!(room_group: main_wing)
 
       get hotel_housekeeping_tasks_path(hotel, date: business_date, room_group_ids: [ main_wing.id ])
 
