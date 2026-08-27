@@ -16,7 +16,6 @@ class Room < ApplicationRecord
   validates :position, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :room_type_belongs_to_hotel
   validate :room_group_belongs_to_hotel
-  validate :number_is_immutable, on: :update
   validate :room_type_is_immutable, on: :update
 
   def archive!
@@ -48,10 +47,6 @@ class Room < ApplicationRecord
     return if room_group.blank? || hotel_id.blank? || room_group.hotel_id == hotel_id
 
     errors.add(:room_group, "must belong to the same hotel")
-  end
-
-  def number_is_immutable
-    errors.add(:number, "cannot be changed") if will_save_change_to_number?
   end
 
   def room_type_is_immutable

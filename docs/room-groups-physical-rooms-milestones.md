@@ -401,6 +401,21 @@ Scope:
 - Remove obsolete assignment routes and services.
 - Remove temporary reconciliation code after a stable period.
 
+### How a rename keeps its history
+
+`Rooms::Rename` changes the number and keeps the room id. Two groups of records answer two different questions, so they behave differently:
+
+```text
+room_statuses, room_blocks, room_locks ──▶ take the new number
+booking_rooms, audit logs              ──▶ keep the number they were written with
+```
+
+A room status describes the room as it is today, so it must show today's number. A folio, a registration card, or an audit trail states what happened at the time, and a later rename must not change that.
+
+The boards read the number from the `rooms` table, so they show the new number at once.
+
+The service has no screen yet. Room Inventory still edits the room list, where removing a number archives a room and adding one creates a room.
+
 ### Exit criteria
 
 - Renaming a room does not disconnect its history.

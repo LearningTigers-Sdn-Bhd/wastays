@@ -59,13 +59,12 @@ RSpec.describe Room, type: :model do
       expect(build(:room, position: 1.5)).not_to be_valid
     end
 
-    it "does not allow the room number to change" do
+    it "allows the room number to change, because Rooms::Rename carries the history" do
       room = create(:room)
 
       room.number = "NEW-101"
 
-      expect(room).not_to be_valid
-      expect(room.errors[:number]).to include("cannot be changed")
+      expect(room).to be_valid
     end
 
     it "does not allow the room type to change" do
