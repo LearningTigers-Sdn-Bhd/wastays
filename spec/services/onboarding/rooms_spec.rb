@@ -44,6 +44,7 @@ RSpec.describe Onboarding::SaveRooms do
       base_price: 0.to_d, smoking_allowed: false, pets_allowed: false
     )
     expect(room.room_numbers).to eq([ "101", "102" ])
+    expect(room.rooms.active.ordered.pluck(:number, :position)).to eq([ [ "101", 0 ], [ "102", 1 ] ])
     expect(result.section).to have_attributes(state: "complete")
     expect(result.section.decision_metadata).to include("pricing_deferred" => true)
     expect(result.section.decision_metadata).not_to have_key("placeholder")
@@ -58,6 +59,7 @@ RSpec.describe Onboarding::SaveRooms do
     expect(result.success?).to be(false)
     expect(result.error).to start_with("Room 2:")
     expect(hotel.room_types).to be_empty
+    expect(hotel.rooms).to be_empty
   end
 
   it "preserves an existing room's price while updating operational fields" do
@@ -80,6 +82,7 @@ RSpec.describe Onboarding::SaveRooms do
     expect(result.success?).to be(false)
     expect(result.error).to include("Room numbers must be unique", "exactly one number")
     expect(hotel.room_types).to be_empty
+    expect(hotel.rooms).to be_empty
   end
 
   it "requires at least one operational room only when completing" do

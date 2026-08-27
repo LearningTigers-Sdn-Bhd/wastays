@@ -16,6 +16,21 @@
           data: { action: "change->date-preset#toggleCustom" }) %>
   <% end %>
 
+  <% if local_assigns.fetch(:show_time_range, false) %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :cashier_start_time, label: "From", class: "w-full sm:w-28") do |field| %>
+      <% field.with_time_picker(value: local_assigns[:time_range_start], data: { action: "change->date-preset#submitDate" }) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :cashier_end_time, label: "To", class: "w-full sm:w-28") do |field| %>
+      <% field.with_time_picker(value: local_assigns[:time_range_end], data: { action: "change->date-preset#submitDate" }) %>
+    <% end %>
+
+    <% if local_assigns[:clear_time_range_path].present? %>
+      <%= link_to "Clear time", local_assigns[:clear_time_range_path],
+            class: "text-sm text-muted-foreground underline underline-offset-4 pb-2.5",
+            data: { turbo: false } %>
+    <% end %>
+  <% end %>
+
   <div id="custom-date-range" class="<%= %w[custom single].include?(date_preset) ? 'flex' : 'hidden' %> items-end gap-2">
     <% if local_assigns.fetch(:single_date, false) %>
       <%= render PanelsUI::FormField.new(form: form, attribute: :as_of_date, label: "As of date", label_hidden: true, class: "w-full md:w-40") do |field| %>

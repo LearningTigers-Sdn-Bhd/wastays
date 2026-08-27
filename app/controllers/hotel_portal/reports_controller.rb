@@ -241,7 +241,8 @@ module HotelPortal
       @cashier_report = HotelPortal::Reports::CashierSalesReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
-        end_date: @report_end_date
+        end_date: @report_end_date,
+        **cashier_report_filters
       ).call
 
       if @daily_report_tab == "revenue"
@@ -257,7 +258,7 @@ module HotelPortal
           csv = HotelPortal::Reports::DailyReportCsvExportService.new(
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
-            cashier_report: @cashier_report,
+            cashier_report: cashier_export_report,
             charge_register: @charge_register_result.rows
           ).generate
           send_data csv,
@@ -269,7 +270,7 @@ module HotelPortal
             hotel: current_hotel,
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
-            cashier_report: @cashier_report,
+            cashier_report: cashier_export_report,
             charge_register: @charge_register_result.rows
           ).generate
           send_data workbook,
@@ -282,7 +283,7 @@ module HotelPortal
             hotel: current_hotel,
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
-            cashier_report: @cashier_report,
+            cashier_report: cashier_export_report,
             charge_register: @charge_register_result.rows,
             prepared_by: current_user.name
           ).generate
@@ -920,6 +921,25 @@ module HotelPortal
         amount_total: rows.sum(&:signed_amount),
         tax_total: rows.sum(&:tax_amount)
       )
+    end
+
+    def cashier_report_filters
+      {
+        start_time: params[:cashier_start_time],
+        end_time: params[:cashier_end_time]
+      }
+    end
+
+    def cashier_export_report
+      return @cashier_report unless params[:selected_transaction_ids].present?
+
+      HotelPortal::Reports::CashierSalesReport.new(
+        hotel: current_hotel,
+        start_date: @report_start_date,
+        end_date: @report_end_date,
+        **cashier_report_filters,
+        transaction_ids: Array(params[:selected_transaction_ids])
+      ).call
     end
 
     def prepare_cashier_lists

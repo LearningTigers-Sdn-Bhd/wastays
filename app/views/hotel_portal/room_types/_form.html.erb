@@ -3,7 +3,6 @@
 <% amenity_choices = categorized_room_amenities.flat_map do |group|
      group[:items].map { |amenity| { label: "#{group[:category]} · #{amenity[:name]}", value: amenity[:id] } }
    end %>
-<% room_group_choices = @hotel.room_groups.order(:name).map { |group| { label: group.name, value: group.id } } %>
 <% custom_numbering = room_type.room_number_mode == "custom" %>
 <% currency = @hotel.default_currency %>
 <% form_classes = single_column ? "space-y-8" : "grid grid-cols-1 items-start gap-x-10 gap-y-10 lg:grid-cols-2" %>
@@ -15,7 +14,11 @@
               local: true,
               id: form_id,
               class: form_classes,
-              data: { controller: "room-number-generator" } do |f| %>
+              data: {
+                controller: "room-number-generator",
+                room_number_generator_default_start_value: @room_numbering_context.suggested_start,
+                room_number_generator_reserved_numbers_value: @room_numbering_context.reserved_numbers.to_json
+              } do |f| %>
   <% if room_type.errors.any? %>
     <div class="<%= "lg:col-span-2" unless single_column %>">
       <%= render PanelsUI::Alert.new(
@@ -40,23 +43,12 @@
     <section aria-labelledby="room-category-basics-heading">
       <div>
         <h2 id="room-category-basics-heading" class="text-base font-semibold text-foreground">Basic Info</h2>
-        <p class="mt-2 text-sm text-muted-foreground">Name this room category and place it in a room group.</p>
+        <p class="mt-2 text-sm text-muted-foreground">Name this room category and describe it for staff and guests.</p>
       </div>
 
       <div class="<%= basics_grid_classes %>">
         <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Room Category Name", required: true) do |field| %>
           <% field.with_input(placeholder: "e.g. Deluxe Twin Room", autocomplete: "off") %>
-        <% end %>
-
-        <%# Omitted entirely until the property has room groups — the control
-            would be an empty list, and groups are created from the list page. %>
-        <% if room_group_choices.any? %>
-          <%= render PanelsUI::FormField.new(form: f, attribute: :room_group_id, label: "Room Group") do |field| %>
-            <% field.with_select_menu(
-                 room_group_choices,
-                 selected: room_type.room_group_id,
-                 include_blank: "No Group") %>
-          <% end %>
         <% end %>
 
         <%= render PanelsUI::FormField.new(

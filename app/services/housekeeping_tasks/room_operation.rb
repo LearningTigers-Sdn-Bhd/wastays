@@ -10,7 +10,7 @@ module HousekeepingTasks
       @room_status ||= begin
         room_type = @hotel.room_types.find(@room_type_id)
         normalized_room_number = @room_number.to_s.strip
-        raise ActiveRecord::RecordNotFound unless room_type.room_numbers.include?(normalized_room_number)
+        raise ActiveRecord::RecordNotFound unless ::Rooms::DirectoryQuery.for_room_type(room_type).include?(normalized_room_number)
 
         @hotel.room_statuses.find_or_create_by!(room_type: room_type, room_number: normalized_room_number)
       end

@@ -4,10 +4,15 @@
 <% selected_room_statuses = Array(effective_board_filters["room_statuses"]).map(&:to_s) %>
 <% selected_assigned_to_ids = Array(effective_board_filters["assigned_to_ids"]).map(&:to_s) %>
 <% selected_booking_statuses = Array(effective_board_filters["booking_statuses"]).map(&:to_s) %>
+<% selected_room_group_ids = Array(effective_board_filters["room_group_ids"]).map(&:to_s) %>
+<% board_grouping = effective_board_filters["group_by"].presence || "none" %>
+<% section_name = ->(room) { board_grouping == "room_group" ? room.room_group_name : room.room_type.name } %>
+<% section_counts = board_grouping == "none" ? {} : @rooms.group_by(&section_name).transform_values(&:size) %>
 <% all_room_types = selected_room_type_ids.empty? %>
 <% all_room_statuses = selected_room_statuses.empty? %>
 <% all_assigned_to = selected_assigned_to_ids.empty? %>
 <% all_booking_statuses = selected_booking_statuses.empty? %>
+<% all_room_groups = selected_room_group_ids.empty? %>
 
 <section class="space-y-3" aria-labelledby="hk-board-heading"
          data-controller="results-announcer"
@@ -15,15 +20,6 @@
   <h2 id="hk-board-heading" class="sr-only">Housekeeping room board</h2>
   <p class="sr-only" role="status" aria-live="polite" aria-atomic="true"
      data-results-announcer-target="status"></p>
-
-  <div class="flex min-h-8 items-center justify-between gap-3">
-    <p class="text-sm font-medium text-foreground" hidden data-housekeeping-selection-summary>
-      <span data-housekeeping-selection-count>0</span> rooms selected
-    </p>
-    <p class="text-xs text-muted-foreground" data-housekeeping-result-count>
-      <%= pluralize(@rooms.size, "room") %> matching the current filters
-    </p>
-  </div>
 
   <%= turbo_frame_tag "housekeeping_tasks_results" do %>
     <p hidden data-board-summary>
@@ -36,7 +32,7 @@
           header_style: :sentence,
           hoverable: true,
           sticky_header: true,
-          wrapper_class: "max-h-[82dvh] overflow-auto overscroll-none rounded-lg border border-border bg-card"
+          wrapper_class: "max-h-[79dvh] overflow-auto overscroll-none rounded-lg border border-border bg-card"
         ) do |table| %>
       <% table.with_header do %>
         <tr>
@@ -58,13 +54,10 @@
             <th scope="col" id="hk-room-type-filter-cell" data-column-key="room_type" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-room-type-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter room type, #{all_room_types ? 'all selected' : "#{selected_room_type_ids.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "room type", selected: selected_room_type_ids)) do %>
                   Room type
-                  <%= render PanelsUI::Badge.new(
-                        label: all_room_types ? "All" : selected_room_type_ids.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_room_types ? "All room types" : "#{selected_room_type_ids.size} room types selected" }) %>
+                  <%= housekeeping_filter_badge(name: "room_type_ids[]", title: "room type",
+                        noun: "room types", selected: selected_room_type_ids) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "room_type_ids[]", value: "__all__", checked: all_room_types) { "All room types" } %>
@@ -72,6 +65,27 @@
                     <% menu.with_checkbox(name: "room_type_ids[]", value: room_type.id,
                           checked: all_room_types || selected_room_type_ids.include?(room_type.id.to_s)) { room_type.name } %>
                   <% end %>
+              <% end %>
+            </th>
+          <% end %>
+
+          <% if @visible_columns.include?("room_group") %>
+            <th scope="col" id="hk-room-group-filter-cell" data-column-key="room_group" data-turbo-permanent>
+              <%= render PanelsUI::DropdownMenu.new(id: "hk-room-group-filter", placement: :bottom_start, class: "w-64") do |menu| %>
+                <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
+                      aria_label: housekeeping_filter_aria(title: "room group", selected: selected_room_group_ids)) do %>
+                  Room group
+                  <%= housekeeping_filter_badge(name: "room_group_ids[]", title: "room group",
+                        noun: "room groups", selected: selected_room_group_ids) %>
+                  <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                <% end %>
+                  <% menu.with_checkbox(name: "room_group_ids[]", value: "__all__", checked: all_room_groups) { "All room groups" } %>
+                  <% @room_groups.each do |room_group| %>
+                    <% menu.with_checkbox(name: "room_group_ids[]", value: room_group.id,
+                          checked: all_room_groups || selected_room_group_ids.include?(room_group.id.to_s)) { room_group.name } %>
+                  <% end %>
+                  <% menu.with_checkbox(name: "room_group_ids[]", value: Rooms::GroupAssignmentsQuery::UNGROUPED,
+                        checked: all_room_groups || selected_room_group_ids.include?(Rooms::GroupAssignmentsQuery::UNGROUPED)) { "Ungrouped" } %>
               <% end %>
             </th>
           <% end %>
@@ -84,13 +98,10 @@
             <th scope="col" id="hk-room-status-filter-cell" data-column-key="room_status" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-room-status-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter room status, #{all_room_statuses ? 'all selected' : "#{selected_room_statuses.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "room status", selected: selected_room_statuses)) do %>
                   Room status
-                  <%= render PanelsUI::Badge.new(
-                        label: all_room_statuses ? "All" : selected_room_statuses.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_room_statuses ? "All room statuses" : "#{selected_room_statuses.size} room statuses selected" }) %>
+                  <%= housekeeping_filter_badge(name: "room_statuses[]", title: "room status",
+                        noun: "room statuses", selected: selected_room_statuses) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "room_statuses[]", value: "__all__", checked: all_room_statuses) { "All room statuses" } %>
@@ -106,13 +117,10 @@
             <th scope="col" id="hk-assigned-to-filter-cell" data-column-key="assigned_to" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-assigned-to-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter assigned staff, #{all_assigned_to ? 'all selected' : "#{selected_assigned_to_ids.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "assigned staff", selected: selected_assigned_to_ids)) do %>
                   Assigned to
-                  <%= render PanelsUI::Badge.new(
-                        label: all_assigned_to ? "All" : selected_assigned_to_ids.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_assigned_to ? "All staff" : "#{selected_assigned_to_ids.size} staff selected" }) %>
+                  <%= housekeeping_filter_badge(name: "assigned_to_ids[]", title: "assigned staff",
+                        noun: "staff", selected: selected_assigned_to_ids) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "assigned_to_ids[]", value: "__all__", checked: all_assigned_to) { "All staff" } %>
@@ -128,13 +136,10 @@
             <th scope="col" id="hk-booking-status-filter-cell" class="text-center" data-column-key="booking_status" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-booking-status-filter", placement: :bottom_start, class: "w-64") do |menu| %>
                 <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: "Filter booking status, #{all_booking_statuses ? 'all selected' : "#{selected_booking_statuses.size} selected"}") do %>
+                      aria_label: housekeeping_filter_aria(title: "booking status", selected: selected_booking_statuses)) do %>
                   Booking status
-                  <%= render PanelsUI::Badge.new(
-                        label: all_booking_statuses ? "All" : selected_booking_statuses.size.to_s,
-                        variant: :primary,
-                        size: :xs,
-                        aria: { label: all_booking_statuses ? "All booking statuses" : "#{selected_booking_statuses.size} booking statuses selected" }) %>
+                  <%= housekeeping_filter_badge(name: "booking_statuses[]", title: "booking status",
+                        noun: "booking statuses", selected: selected_booking_statuses) %>
                   <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
                 <% end %>
                   <% menu.with_checkbox(name: "booking_statuses[]", value: "__all__", checked: all_booking_statuses) { "All booking statuses" } %>
@@ -195,8 +200,36 @@
             </td>
           </tr>
         <% else %>
+          <% current_section = nil %>
+          <% section_key = nil %>
+          <% section_index = 0 %>
           <% @rooms.each do |room| %>
-            <tr id="hk-room-<%= room.dom_key %>" class="align-middle" data-housekeeping-room-row>
+            <% section = board_grouping == "none" ? nil : section_name.call(room) %>
+            <% if section && section != current_section %>
+              <% current_section = section %>
+              <% section_index += 1 %>
+              <% section_key = "hk-section-#{section_index}" %>
+              <tr data-table-group-row data-housekeeping-section-row data-housekeeping-section="<%= section_key %>">
+                <td class="w-10 text-center">
+                  <%= render PanelsUI::Checkbox.new(
+                        name: "select_section_#{section_key}",
+                        id: "select-#{section_key}",
+                        label: "Select the #{pluralize(section_counts.fetch(section, 0), 'room')} in #{section}",
+                        label_hidden: true,
+                        include_hidden: false,
+                        data: { housekeeping_section_select: section_key }) %>
+                </td>
+                <th scope="colgroup" colspan="<%= @visible_columns.size %>"
+                    class="text-start text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <%= section %>
+                  <span class="ms-2 font-normal normal-case tracking-normal">
+                    <%= pluralize(section_counts.fetch(section, 0), "room") %>
+                  </span>
+                </th>
+              </tr>
+            <% end %>
+            <tr id="hk-room-<%= room.dom_key %>" class="align-middle" data-housekeeping-room-row
+                data-housekeeping-section="<%= section_key %>">
               <td class="w-10 text-center">
                 <%= render PanelsUI::Checkbox.new(
                       name: "selected_rooms[#{room.room_type.id}][]",
@@ -224,6 +257,9 @@
 
               <% if @visible_columns.include?("room_type") %>
                 <td class="whitespace-nowrap" data-column-key="room_type"><%= room.room_type.name %></td>
+              <% end %>
+              <% if @visible_columns.include?("room_group") %>
+                <td class="whitespace-nowrap <%= "text-muted-foreground" unless room.grouped? %>" data-column-key="room_group"><%= room.room_group_name %></td>
               <% end %>
               <% if @visible_columns.include?("pax") %>
                 <td class="whitespace-nowrap text-center tabular-nums" data-column-key="pax"><%= room.pax %></td>

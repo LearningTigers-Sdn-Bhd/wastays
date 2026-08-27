@@ -58,9 +58,9 @@ RSpec.describe Bookings::AvailableRoomNumbers do
   end
 
   it "includes room numbers locked for different room types" do
-    other_room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "102" ])
+    other_room_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "201" ])
     other_user = create(:user)
-    create(:room_lock, hotel: hotel, room_type: other_room_type, user: other_user, room_number: "102", expires_at: 10.minutes.from_now)
+    create(:room_lock, hotel: hotel, room_type: other_room_type, user: other_user, room_number: "201", expires_at: 10.minutes.from_now)
 
     expect(subject.call).to match_array([ "101", "102", "103" ])
   end

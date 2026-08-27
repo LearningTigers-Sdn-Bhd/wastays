@@ -22,8 +22,8 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
 
   describe "GET #index" do
     let!(:room_group) { create(:room_group, hotel: hotel) }
-    let!(:grouped_room_type) { create(:room_type, hotel: hotel, room_group: room_group) }
-    let!(:ungrouped_room_type) { create(:room_type, hotel: hotel, room_group: nil) }
+    let!(:grouped_room_type) { create(:room_type, hotel: hotel) }
+    let!(:ungrouped_room_type) { create(:room_type, hotel: hotel) }
 
     it "lists rooms as a compact, default-closed inventory accordion with rate issues" do
       grouped_room_type.update!(description: "Description should not appear in the inventory row")
@@ -66,7 +66,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(room_trigger["aria-expanded"]).to eq("false")
       expect(room_trigger["aria-controls"]).to eq("room-inventory-#{grouped_room_type.id}-content")
       expect(document.css("[aria-label='Room categories and rate plans'] > div:first-child > span").map { |header| header.text.squish }).to eq(
-        [ "Room category", "Group", "Capacity", "Rooms", "Rate issues", "Actions" ]
+        [ "Room category", "Capacity", "Rooms", "Rate issues", "Actions" ]
       )
       expect(document.at_css("#room-inventory-#{grouped_room_type.id} [aria-label='1 Adult'] svg")).to be_present
       expect(document.at_css("#room-inventory-#{grouped_room_type.id} [aria-label='1 Child'] svg")).to be_present
@@ -151,27 +151,25 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
 
       new_rate = document.css("#room-inventory-#{grouped_room_type.id} a").find { |link| link.text.squish == "New rate" }
       expect(new_rate["href"]).to eq(new_hotel_rate_plan_path(hotel, room_type_id: grouped_room_type.id))
-      expect(document.at_css("a[aria-label='Assign group to #{ungrouped_room_type.name}']")["href"]).to eq(
-        new_hotel_room_group_assignment_path(hotel, room_type_id: ungrouped_room_type.id)
-      )
       expect(document.at_css("body").text).to include("Rooms", "Rate issues", "Rate plans (5)", "New rate")
       expect(document.at_css("body").text).not_to include("New Rate", "Standard Rate (MYR)")
-      expect(document.at_css("body").text).to include("Assign Room Group", "Assign Room Rate")
+      expect(document.at_css("body").text).to include("Assign room rate")
+      expect(document.at_css("body").text).not_to include("Assign Room Group", room_group.name)
       expect(document.css("a[aria-label^='Attach rate plan to']")).to be_empty
       expect(document.css(".dropdown-menu-root").count).to be >= 2
       expect(document.css("button[data-turbo-confirm-tone='destructive']").count).to be >= 2
       expect(document.at_css("body").text).not_to include("Total Categories")
     end
 
-    it "filters by multiple room groups and unassigned" do
+    it "does not filter Room Inventory by legacy room-group parameters" do
       another_group = create(:room_group, hotel: hotel)
-      another_room = create(:room_type, hotel: hotel, room_group: another_group)
+      another_room = create(:room_type, hotel: hotel)
 
       get hotel_room_types_path(hotel), params: { room_group_ids: [ room_group.id, "unassigned" ] }
 
       ids = response.parsed_body.css("[data-room-type-id]").map { |row| row["data-room-type-id"] }
       expect(ids).to include(grouped_room_type.id.to_s, ungrouped_room_type.id.to_s)
-      expect(ids).not_to include(another_room.id.to_s)
+      expect(ids).to include(another_room.id.to_s)
     end
 
     it "searches by room category and attached rate plan name without duplicate rows" do
@@ -186,37 +184,34 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(ids).to eq([ grouped_room_type.id.to_s ])
     end
 
-    it "ignores unknown room group filters" do
-      get hotel_room_types_path(hotel), params: { room_group_ids: [ "missing" ] }
-
-      expect(response).to have_http_status(:ok)
-      expect(response.parsed_body.css("[data-room-type-id]").size).to eq(3)
-    end
-
-    it "renders search and multi-group filters instead of group tabs" do
+    it "renders search without room-group assignment or filter controls" do
       get hotel_room_types_path(hotel)
       document = response.parsed_body
       expect(document.at_css("input[name='q']")).to be_present
-      expect(document.at_css("select[name='room_group_ids[]'][multiple]")).to be_present
+      expect(document.at_css("select[name='room_group_ids[]'][multiple]")).to be_nil
       expect(document.at_css("nav[aria-label='Room Group Filter']")).to be_nil
+      expect(document.text.squish).not_to include("Assign Room Group")
     end
 
-    it "paginates filtered results at 25 and retains filter state" do
-      create_list(:room_type, 26, hotel: hotel, room_group: room_group, name: "Searchable Category")
+    it "paginates search results at 25 and retains the search" do
+      create_list(:room_type, 26, hotel: hotel, name: "Searchable Category")
 
-      get hotel_room_types_path(hotel), params: { q: "Searchable", room_group_ids: [ room_group.id ] }
+      get hotel_room_types_path(hotel), params: { q: "Searchable" }
 
       document = response.parsed_body
       expect(document.css("[data-room-type-id]").size).to eq(25)
       page_two = document.css("a").find { |link| link.text.squish == "2" }
       query = Rack::Utils.parse_nested_query(URI.parse(page_two["href"]).query)
       expect(query).to include("q" => "Searchable", "page" => "2")
-      expect(query["room_group_ids"]).to eq([ room_group.id.to_s ])
+      expect(query).not_to have_key("room_group_ids")
     end
   end
 
   describe "GET #new" do
     it "renders a right xl single-column sheet without photo controls" do
+      reserved_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "305" ])
+      create(:room, hotel: hotel, room_type: reserved_type, number: "450", archived_at: 1.day.ago)
+
       get new_hotel_room_type_path(hotel)
 
       expect(response).to have_http_status(:ok)
@@ -232,6 +227,8 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(sheet["class"].split).not_to include("left-0", "bottom-0", "w-dvw")
       expect(form["class"].split).to include("space-y-8")
       expect(form["class"].split).not_to include("lg:grid-cols-2")
+      expect(form["data-room-number-generator-default-start-value"]).to eq("451")
+      expect(JSON.parse(form["data-room-number-generator-reserved-numbers-value"])).to contain_exactly("305", "450")
       expect(basics_fields["class"].split).not_to include("sm:grid-cols-2")
       expect(capacity_fields["class"].split).to include("sm:grid-cols-2")
       expect(restriction_fields["class"].split).to include("sm:grid-cols-2")
@@ -245,11 +242,17 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(document.at_css("#bulk-delete-photos-form")).to be_nil
       expect(document.at_css("input[type='file']")).to be_nil
       expect(document.at_css('[data-panels-ui--tabs-target="tab"]')).to be_nil
+      expect(document.at_css("select[name='room_type[room_group_id]']")).to be_nil
     end
   end
 
   describe "GET #edit" do
     it "retains the full bottom two-column sheet with photo management" do
+      room_type.update!(quantity: 1, room_numbers: [ "101" ])
+      create(:room, hotel: hotel, room_type: room_type, number: "101")
+      other_type = create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "201" ])
+      create(:room, hotel: hotel, room_type: other_type, number: "202", archived_at: 1.day.ago)
+
       get edit_hotel_room_type_path(hotel, room_type)
 
       expect(response).to have_http_status(:ok)
@@ -263,6 +266,8 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(sheet["class"].split).to include("bottom-0", "h-dvh", "rounded-none")
       expect(sheet["class"].split).not_to include("left-0", "w-[48rem]")
       expect(form["class"].split).to include("lg:grid-cols-2")
+      expect(form["data-room-number-generator-default-start-value"]).to eq("203")
+      expect(JSON.parse(form["data-room-number-generator-reserved-numbers-value"])).to contain_exactly("201", "202")
       expect(rendered_classes).to include("sm:grid-cols-2", "sm:col-span-2")
       expect(restriction_fields["class"].split).to include("sm:grid-cols-2")
       expect(document.at_css("#room-category-photos-heading")).to be_present
@@ -286,6 +291,18 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(response.body).to include('action="complete_sheet"')
       expect(response.body).to include('target="settings_action_sheet"')
       expect(response.body).to include(hotel_room_types_path(hotel))
+    end
+
+    it "ignores a room-group assignment, because a group holds rooms and not categories" do
+      room_group = create(:room_group, hotel: hotel)
+
+      expect do
+        post hotel_room_types_path(hotel),
+             params: { room_type: valid_params[:room_type].merge(room_group_id: room_group.id) },
+             as: :turbo_stream
+      end.to change(RoomType, :count).by(1)
+
+      expect(RoomType.column_names).not_to include("room_group_id")
     end
 
     it "re-renders the sheet with the errors when the category is invalid" do

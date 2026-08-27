@@ -3,10 +3,6 @@
 class RoomType < ApplicationRecord
   include HotelScopable
 
-  belongs_to :room_group, optional: true
-
-  scope :unassigned, -> { where(room_group_id: nil) }
-
   has_many :room_rates, dependent: :destroy
   has_many :channel_room_rates, dependent: :destroy
   has_many :room_inventories, dependent: :destroy
@@ -16,6 +12,7 @@ class RoomType < ApplicationRecord
   has_many :booking_rooms, dependent: :restrict_with_error
   has_many :booking_quote_items, dependent: :restrict_with_error
   has_many :room_statuses, dependent: :destroy
+  has_many :rooms, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
   has_many_attached :photos
 
@@ -34,8 +31,30 @@ class RoomType < ApplicationRecord
   validate :amenities_must_be_from_list
   validate :room_numbers_must_match_quantity
 
+  # The physical rooms are the room list. This attribute reads them, and it
+  # accepts a new list that Rooms::SyncFromRoomType writes.
+  #
+  # A list assigned here is only a request. Nothing exists until the sync runs,
+  # so a caller that assigns it must run the sync in the same transaction.
   def room_numbers
-    Array(super).flatten.compact.map(&:to_s).reject(&:blank?)
+    return @pending_room_numbers if room_numbers_pending?
+    return [] unless persisted?
+
+    Rooms::DirectoryQuery.for_room_type(self).numbers
+  end
+
+  def room_numbers=(values)
+    @pending_room_numbers = Array(values).flatten.compact.map { |value| value.to_s.strip }.reject(&:blank?)
+  end
+
+  def room_numbers_pending?
+    defined?(@pending_room_numbers) ? true : false
+  end
+
+  # Rooms::SyncFromRoomType calls this once it has written the request. After
+  # that the directory is the answer, so the record stops holding its own copy.
+  def clear_pending_room_numbers
+    remove_instance_variable(:@pending_room_numbers) if room_numbers_pending?
   end
 
   def max_capacity
@@ -141,7 +160,12 @@ class RoomType < ApplicationRecord
   # identifies individual rooms, the list becomes the inventory identity and
   # must describe every unit exactly once. Keep this on the domain record so
   # Settings and onboarding cannot persist different definitions of a room.
+  #
+  # Only a requested list is checked. A saved list already passed this rule,
+  # and re-reading the directory on every save would query it for nothing.
   def room_numbers_must_match_quantity
+    return unless room_numbers_pending?
+
     numbers = room_numbers
     return if numbers.empty?
 

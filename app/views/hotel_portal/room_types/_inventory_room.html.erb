@@ -6,7 +6,7 @@
      id: "room-inventory-#{room_type.id}",
      region: true,
      class: "last:border-b-0",
-     header_class: "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 hover:bg-muted/30 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,.9fr)_minmax(0,.6fr)_minmax(0,.75fr)_auto] md:gap-4",
+     header_class: "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 hover:bg-muted/30 md:grid-cols-[minmax(0,1.7fr)_minmax(0,.9fr)_minmax(0,.6fr)_minmax(0,.75fr)_auto] md:gap-4",
      trigger_class: "min-h-0 flex-row-reverse justify-end gap-2 py-0 hover:no-underline",
      content_class: "border-t border-border bg-muted/20",
      data: { room_type_id: room_type.id }) do |item| %>
@@ -15,22 +15,6 @@
   <% end %>
 
   <% item.with_header_content do %>
-    <div class="col-span-2 ml-6 min-w-0 md:col-auto md:ml-0">
-      <% if room_type.room_group %>
-        <span class="block truncate text-xs font-normal text-muted-foreground"><span class="md:sr-only">Group: </span><%= room_type.room_group.name %></span>
-      <% else %>
-        <%= render PanelsUI::Button.new(
-              href: new_hotel_room_group_assignment_path(current_hotel, room_type_id: room_type.id),
-              variant: :ghost,
-              size: :xs,
-              aria_label: "Assign group to #{room_type.name}",
-              data: { turbo_frame: "settings_action_sheet" }) do %>
-          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
-          Assign group
-        <% end %>
-      <% end %>
-    </div>
-
     <div class="col-span-2 ml-6 flex flex-wrap items-center gap-4 md:contents">
       <div class="flex items-center gap-2 text-xs font-normal text-muted-foreground">
         <%= render PanelsUI::Tooltip.new(text: pluralize(room_type.max_adults, "Adult"), delay: 150) do %>

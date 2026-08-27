@@ -4,17 +4,17 @@ module StayView
   class ProjectRoom
     def self.call(
       room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts: [], group_rooms: {},
-      financial_signals: {}, date_window:, capabilities:
+      financial_signals: {}, room_group: nil, date_window:, capabilities:
     )
       new(
         room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts:, group_rooms:,
-        financial_signals:, date_window:, capabilities:
+        financial_signals:, room_group:, date_window:, capabilities:
       ).call
     end
 
     def initialize(
       room_type:, room_number:, bookings:, room_status:, room_blocks:, housekeeping_alerts:, group_rooms:,
-      financial_signals:, date_window:, capabilities:
+      financial_signals:, room_group:, date_window:, capabilities:
     )
       @room_type = room_type
       @room_number = room_number
@@ -24,6 +24,7 @@ module StayView
       @housekeeping_alerts = housekeeping_alerts
       @group_rooms = group_rooms
       @financial_signals = financial_signals
+      @room_group = room_group
       @date_window = date_window
       @capabilities = capabilities
     end
@@ -48,6 +49,8 @@ module StayView
         room_number: room_number,
         room_type_id: room_type.id,
         room_type_name: room_type.name,
+        room_group_id: room_group&.id,
+        room_group_name: room_group&.name || ::Rooms::GroupAssignmentsQuery::UNGROUPED_LABEL,
         smoking_allowed: room_type.smoking_allowed,
         pets_allowed: room_type.pets_allowed,
         current_physical_status: status.physical_status,
@@ -65,7 +68,7 @@ module StayView
     private
 
     attr_reader :room_type, :room_number, :bookings, :room_status, :room_blocks, :housekeeping_alerts, :group_rooms,
-      :financial_signals, :date_window, :capabilities
+      :financial_signals, :room_group, :date_window, :capabilities
 
     def project_housekeeping_alert(alert)
       HousekeepingAlert.new(

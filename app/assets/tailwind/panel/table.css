@@ -72,8 +72,29 @@
   .panel-table[data-sticky-header="true"] thead th {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 3;
     background: var(--muted);
+  }
+
+  /* A grouped board repeats a section heading between its rows. The heading
+     pins under the sticky header so the section stays named while its rows
+     scroll. The header's own height is measured at runtime, because filter
+     controls inside it change how tall it is. */
+  .panel-table[data-sticky-header="true"] tbody tr[data-table-group-row] {
+    position: sticky;
+    top: var(--panel-table-header-size, 2.5rem);
+    z-index: 2;
+  }
+
+  /* The pinned heading needs its own opaque surface, one shade off the table
+     header, so the two layers stay apart when they meet. */
+  .panel-table tbody tr[data-table-group-row] > * {
+    border-block: 1px solid var(--border);
+    background: color-mix(in oklab, var(--muted) 65%, var(--card));
+  }
+
+  .panel-table[data-hoverable="true"] tbody tr[data-table-group-row]:hover > * {
+    background: color-mix(in oklab, var(--muted) 65%, var(--card));
   }
 
   /* A pinned first column keeps each row's label readable while the rest of a
@@ -95,7 +116,7 @@
 
   /* The corner cell is pinned on both axes, so it outranks either edge alone. */
   .panel-table[data-sticky-column="true"][data-sticky-header="true"] thead tr > :first-child {
-    z-index: 2;
+    z-index: 4;
   }
 
   .panel-table[data-sticky-column="true"] tfoot tr > :first-child {

@@ -1,4 +1,6 @@
 class BookingRoom < ApplicationRecord
+  include RoomIdentifiable
+
   belongs_to :booking
   belongs_to :room_type
   belongs_to :rate_plan, optional: true
@@ -12,5 +14,11 @@ class BookingRoom < ApplicationRecord
 
   def quantity
     1
+  end
+
+  private
+
+  def room_identity_hotel_id
+    booking&.hotel_id
   end
 end

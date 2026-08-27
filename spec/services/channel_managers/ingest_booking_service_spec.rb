@@ -126,7 +126,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
   end
 
   it "keeps a manually assigned room when a later revision arrives" do
-    room_type.update!(quantity: 2, room_numbers: %w[101 102])
+    renumber_room_type!(room_type, %w[101 102])
     existing = create(:booking,
       hotel: hotel,
       channel_manager_reference: "CM456",
@@ -142,7 +142,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
   end
 
   it "automatically assigns an available physical room" do
-    room_type.update!(quantity: 2, room_numbers: %w[101 102])
+    renumber_room_type!(room_type, %w[101 102])
 
     result = described_class.new(booking_data: booking_data).call
 
@@ -416,7 +416,7 @@ RSpec.describe ChannelManagers::IngestBookingService do
     end
 
     it "automatically assigns a distinct physical room to each child" do
-      room_type.update!(quantity: 2, room_numbers: %w[101 102])
+      renumber_room_type!(room_type, %w[101 102])
 
       result = described_class.new(booking_data: multi_room_data).call
 

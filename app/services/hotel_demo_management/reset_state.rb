@@ -72,7 +72,7 @@ module HotelDemoManagement
       room_types = @hotel.room_types.to_a
       return "Hotel must have at least one room type before demo state can be reset." if room_types.empty?
 
-      invalid_room_type = room_types.find { |room_type| room_type.room_numbers.blank? }
+      invalid_room_type = room_types.find { |room_type| ::Rooms::DirectoryQuery.for_room_type(room_type).numbers.blank? }
       return "Room type '#{invalid_room_type.name}' must have at least one room number." if invalid_room_type
 
       invalid_base_price = room_types.find { |room_type| room_type.base_price.blank? || room_type.base_price.negative? }
@@ -317,7 +317,7 @@ module HotelDemoManagement
             date: date,
             quantity: room_type.quantity,
             status: "open",
-            available_room_numbers: room_type.room_numbers,
+            available_room_numbers: ::Rooms::DirectoryQuery.for_room_type(room_type).numbers,
             created_at: now,
             updated_at: now
           }
@@ -351,7 +351,7 @@ module HotelDemoManagement
       @hotel.room_types.each do |room_type|
         room_type.room_statuses.update_all(status: "ready", last_changed_at: Time.current, updated_at: Time.current)
 
-        expected_room_numbers = room_type.room_numbers.map(&:to_s)
+        expected_room_numbers = ::Rooms::DirectoryQuery.for_room_type(room_type).numbers
         existing_statuses = room_type.room_statuses.pluck(:room_number)
 
         missing_numbers = expected_room_numbers - existing_statuses

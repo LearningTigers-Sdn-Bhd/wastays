@@ -112,7 +112,7 @@ module Bookings
           raise CheckInError, booking_error(booking, "Assign every room before checking in.")
         end
 
-        configured_rooms = booking_room.room_type.room_numbers.map(&:to_s)
+        configured_rooms = ::Rooms::DirectoryQuery.for_room_type(booking_room.room_type).numbers
         unless room_number.in?(configured_rooms)
           raise CheckInError, booking_error(booking, "Room #{room_number} does not belong to #{booking_room.room_type.name}.")
         end
