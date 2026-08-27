@@ -20,6 +20,8 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
 
     expect(payload[:reply_message]).to eq("How many days and nights will you be staying?")
     expect(payload[:prospect_public_id]).to eq(prospect.public_id)
+    expect(payload).not_to have_key(:next_action)
+    expect(payload).not_to have_key(:sales_task)
     expect(prospect.prospect_messages.where(direction: "outbound").last.body).to eq(payload[:reply_message])
     expect(conversation_state.reload.pending_question).to be_nil
   end

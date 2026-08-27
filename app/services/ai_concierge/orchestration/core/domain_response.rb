@@ -22,6 +22,7 @@ module AiConcierge
         :active_flow,
         :pending_question,
         :action_name,
+        :next_action,
         :extra_context,
         :flow_status,
         :end_reason,
@@ -34,7 +35,8 @@ module AiConcierge
         # time, so they live here instead.
         BOOKING_FLOW = "booking_search"
 
-        def self.booking(slots_payload:, reply_type:, pending_question:, extra_context: {}, action_name: "request_quote")
+        def self.booking(slots_payload:, reply_type:, pending_question:, next_action: Sales::NextAction.none,
+                         extra_context: {}, action_name: "request_quote", needs_human_support: false)
           new(
             slots_payload: slots_payload,
             reply_type: reply_type,
@@ -42,12 +44,14 @@ module AiConcierge
             active_topic: BOOKING_FLOW,
             active_flow: BOOKING_FLOW,
             action_name: action_name,
+            next_action: next_action,
+            needs_human_support: needs_human_support,
             extra_context: extra_context
           )
         end
 
-        def initialize(extra_context: {}, needs_human_support: false, **rest)
-          super(extra_context: extra_context, needs_human_support: needs_human_support, **rest)
+        def initialize(next_action: Sales::NextAction.none, extra_context: {}, needs_human_support: false, **rest)
+          super(next_action: next_action, extra_context: extra_context, needs_human_support: needs_human_support, **rest)
         end
 
         # `Struct` has no `#with` -- only `Data` does -- and the callers that
