@@ -36,6 +36,12 @@ module Bookings
 
     private
 
+    # The rooms this category actually has, read from the physical-room
+    # directory in position order.
+    def configured_rooms
+      @configured_rooms ||= ::Rooms::DirectoryQuery.for_room_type(@room_type).numbers
+    end
+
     def availability_snapshot
       return @availability_snapshot if defined?(@availability_snapshot)
 
@@ -45,14 +51,14 @@ module Bookings
         if inv
           if inv.status == "open"
             # Legacy quantity mode stores open inventory with an empty available_room_numbers array.
-            # In that case, treat all room_type numbers as candidates and let occupancy/locks/status
+            # In that case, treat every configured room as a candidate and let occupancy/locks/status
             # filters decide final assignability.
-            inv.available_room_numbers.presence || @room_type.room_numbers
+            inv.available_room_numbers.presence || configured_rooms
           else
             []
           end
         else
-          @room_type.room_numbers
+          configured_rooms
         end
       end
 
@@ -82,7 +88,7 @@ module Bookings
       available_rooms = candidate_rooms.select { |room_number| room_selectable_by_status?(room_number) }
 
       @availability_snapshot = {
-        all_rooms: @room_type.room_numbers.map(&:to_s).reject(&:blank?),
+        all_rooms: configured_rooms,
         available_rooms: available_rooms,
         allowed_rooms: allowed_rooms.map(&:to_s),
         occupied_numbers: occupied_numbers,

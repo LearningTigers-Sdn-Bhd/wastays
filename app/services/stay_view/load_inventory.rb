@@ -26,7 +26,9 @@ module StayView
         standard_rates: load_standard_rates,
         financial_signals: load_financial_signals(bookings),
         rate_plan_options: load_rate_plan_options,
-        selected_rate_plan_id:
+        selected_rate_plan_id:,
+        room_group_assignments: room_groups.assignments,
+        room_group_options: room_groups.options
       )
     end
 
@@ -34,15 +36,25 @@ module StayView
 
     attr_reader :hotel, :date_window, :capabilities, :requested_rate_plan_id
 
+    # The board enumerates rooms from the `rooms` table. Room-group membership
+    # rides on the same rows, so both read one loaded directory.
+    def directory
+      @directory ||= ::Rooms::DirectoryQuery.call(hotel:)
+    end
+
+    def room_groups
+      @room_groups ||= ::Rooms::GroupAssignmentsQuery.call(hotel:, directory:)
+    end
+
     def load_room_types
       base_price_column = capabilities.view_rates? ? :base_price : Arel.sql("NULL")
       @room_types ||= hotel.room_types.order(:name, :id)
-        .pluck(:id, :name, :room_numbers, :smoking_allowed, :pets_allowed, base_price_column)
-        .map do |id, name, room_numbers, smoking_allowed, pets_allowed, base_price|
+        .pluck(:id, :name, :smoking_allowed, :pets_allowed, base_price_column)
+        .map do |id, name, smoking_allowed, pets_allowed, base_price|
           master_plan_id, rate_currency = load_master_plans[id]
           rate_currency = rate_currency.presence || hotel.default_currency.presence || "MYR" if capabilities.view_rates?
           RoomTypeRecord.new(
-            id:, name:, room_numbers:, smoking_allowed:, pets_allowed:, base_price:,
+            id:, name:, room_numbers: directory.numbers_for(id), smoking_allowed:, pets_allowed:, base_price:,
             master_rate_plan_id: master_plan_id, rate_currency:
           )
         end
@@ -337,9 +349,7 @@ module StayView
     end
 
     def load_room_keys
-      load_room_types.flat_map do |room_type|
-        room_type.room_numbers.map { |room_number| [ room_type.id, room_number ] }
-      end.to_set
+      directory.keys
     end
 
     def hotel_owned_housekeeping_rows

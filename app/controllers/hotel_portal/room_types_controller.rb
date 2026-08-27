@@ -9,19 +9,17 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
 
   def index
     room_types = @hotel.room_types.includes(
-      :room_group,
       room_type_rate_plans: [ :channel_mapping, :occupancy_prices, :rate_plan ]
     )
     @all_room_types = RoomTypesQuery.new(room_types).call(params)
     @room_types = @all_room_types.page(params[:page]).per(25)
 
-    @room_groups = @hotel.room_groups.order(:name)
-    @selected_room_group_ids = Array(params[:room_group_ids]).compact_blank.map(&:to_s)
-    @filters_active = params[:q].present? || @selected_room_group_ids.any?
+    @filters_active = params[:q].present?
   end
 
   def new
     @room_type = @hotel.room_types.build
+    set_room_numbering_context
     render layout: false
   end
 
@@ -35,11 +33,13 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
       finish_sheet("Room category created successfully.")
     else
       @room_type = result.room_type
+      set_room_numbering_context
       render :new, layout: false, status: :unprocessable_content
     end
   end
 
   def edit
+    set_room_numbering_context
     render layout: false
   end
 
@@ -53,6 +53,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     if result.success?
       finish_sheet("Room category updated successfully.")
     else
+      set_room_numbering_context
       render :edit, layout: false, status: :unprocessable_content
     end
   end
@@ -129,6 +130,10 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
   end
 
   def room_type_params
-    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, :room_number_mode, :smoking_allowed, :pets_allowed, :room_group_id, photos: [], room_numbers: [], amenities: [])
+    params.require(:room_type).permit(:name, :description, :max_adults, :max_children, :quantity, :base_price, :room_number_mode, :smoking_allowed, :pets_allowed, photos: [], room_numbers: [], amenities: [])
+  end
+
+  def set_room_numbering_context
+    @room_numbering_context = Rooms::NumberingContext.call(hotel: @hotel, room_type: @room_type)
   end
 end

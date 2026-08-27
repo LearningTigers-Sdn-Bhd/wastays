@@ -38,12 +38,22 @@
         <%= hidden_field_tag :rate_plan_id, board.filters.rate_plan_id %>
         <%= hidden_field_tag :occupancy, board.filters.occupancy %>
         <%= hidden_field_tag :physical_status, board.filters.physical_status %>
-        <%= render PanelsUI::FormField.new(form:, attribute: :room_type_id, label: "Filter rooms by room type", label_hidden: true, size: :sm, class: "w-full") do |field| %>
-          <% field.with_select_menu(
-            [ { label: "All room types", value: "" } ] + board.room_type_options.map { |option| { label: option.name, value: option.id } },
-            selected: board.filters.room_type_id
-          ) %>
-        <% end %>
+        <div class="flex w-full min-w-0 items-center gap-1">
+          <%= render PanelsUI::FormField.new(form:, attribute: :room_type_id, label: "Filter rooms by room type", label_hidden: true, size: :sm, class: "min-w-0 flex-1") do |field| %>
+            <% field.with_select_menu(
+              [ { label: "All room types", value: "" } ] + board.room_type_options.map { |option| { label: option.name, value: option.id } },
+              selected: board.filters.room_type_id
+            ) %>
+          <% end %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :room_group_id, label: "Filter rooms by room group", label_hidden: true, size: :sm, class: "min-w-0 flex-1") do |field| %>
+            <% field.with_select_menu(
+              [ { label: "All room groups", value: "" } ] +
+                board.room_group_options.map { |option| { label: option.name, value: option.id } } +
+                [ { label: "Ungrouped", value: Rooms::GroupAssignmentsQuery::UNGROUPED } ],
+              selected: board.filters.room_group_id
+            ) %>
+          <% end %>
+        </div>
       <% end %>
     <% end %>
 

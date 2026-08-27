@@ -21,13 +21,15 @@ module HotelPortal
 
     attr_reader :room_number, :resolved_status, :booking, :room_type, :hotel, :view_context,
                 :booking_status, :booking_status_label, :notes, :assigned_to, :assigned_to_id,
-                :selected_date, :pax, :late_checkout_eligible
+                :selected_date, :pax, :late_checkout_eligible, :room_group_id
 
     def initialize(room_data, hotel:, view_context:, selected_date:)
       @room_number = room_data.fetch(:room_number)
       @resolved_status = room_data.fetch(:resolved_status)
       @booking = room_data[:booking] || room_data[:active_booking]
       @room_type = room_data.fetch(:room_type)
+      @room_group_id = room_data[:room_group_id]
+      @room_group_name = room_data[:room_group_name]
       @hotel = hotel
       @view_context = view_context
       @booking_status = room_data.fetch(:booking_status)
@@ -160,5 +162,11 @@ module HotelPortal
     def label
       "#{room_type.name} #{room_number}"
     end
+
+    def room_group_name
+      @room_group_name.presence || ::Rooms::GroupAssignmentsQuery::UNGROUPED_LABEL
+    end
+
+    def grouped? = room_group_id.present?
   end
 end

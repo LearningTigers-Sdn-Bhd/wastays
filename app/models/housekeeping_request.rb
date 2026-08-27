@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class HousekeepingRequest < ApplicationRecord
+  include RoomIdentifiable
+
   belongs_to :booking, optional: true
   belongs_to :room_type, optional: true
   belongs_to :hotel, optional: true

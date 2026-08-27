@@ -7,11 +7,14 @@
     <%= render PanelsUI::Sheet.new(
           id: persisted ? "edit-room-group-sheet" : "new-room-group-sheet",
           side: :right,
-          size: :sm,
+          size: :xl,
           title: title,
-          description: "Use a clear property-area name such as Main Tower or Left Wing.") do |sheet| %>
+          description: "Name the property area and select its physical rooms.") do |sheet| %>
       <% sheet.with_body do %>
-        <%= form_with model: [ @hotel, room_group ], id: form_id, class: "space-y-5 py-2" do |form| %>
+        <%= form_with model: [ @hotel, room_group ],
+                      id: form_id,
+                      class: "space-y-6 py-2",
+                      data: { controller: "room-group-rooms" } do |form| %>
           <% if room_group.errors.any? %>
             <%= render PanelsUI::Alert.new(tone: :destructive, title: "Room group could not be saved", role: :alert) do |alert| %>
               <% alert.with_description { room_group.errors.full_messages.to_sentence } %>
@@ -19,8 +22,94 @@
           <% end %>
 
           <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Group name", required: true) do |field| %>
-            <% field.with_input(placeholder: "e.g. Main Tower", autocomplete: "off") %>
+            <% field.with_input(placeholder: "For example, Main Tower", autocomplete: "off") %>
           <% end %>
+
+          <section aria-labelledby="room-group-rooms-heading" class="space-y-4">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 id="room-group-rooms-heading" class="text-base font-semibold text-foreground">Physical rooms</h3>
+                <p class="mt-1 text-sm text-muted-foreground">Only unassigned rooms and rooms in this group appear here. Clear a selection to leave the room unassigned.</p>
+              </div>
+              <p class="shrink-0 text-sm font-medium text-foreground" aria-live="polite" data-room-group-rooms-target="count"><%= pluralize(@selected_room_ids.size, "room") %> selected</p>
+            </div>
+
+            <% if @rooms.any? %>
+              <%= hidden_field_tag "room_group[room_ids][]", "" %>
+
+              <%= fields_for "room_group_filters", OpenStruct.new(query: "", room_type_id: "") do |filter_form| %>
+                <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,.55fr)]">
+                  <%= render PanelsUI::FormField.new(
+                        form: filter_form,
+                        attribute: :query,
+                        label: "Search rooms",
+                        label_hidden: true) do |field| %>
+                    <% field.with_input(
+                         type: :search,
+                         placeholder: "Search room number or category",
+                         autocomplete: "off",
+                         data: {
+                           room_group_rooms_target: "search",
+                           action: "input->room-group-rooms#filter"
+                         }) %>
+                  <% end %>
+
+                  <%= render PanelsUI::FormField.new(
+                        form: filter_form,
+                        attribute: :room_type_id,
+                        label: "Filter by room category",
+                        label_hidden: true) do |field| %>
+                    <% field.with_select_menu(
+                         @room_types.map { |room_type| { label: room_type.name, value: room_type.id } },
+                         include_blank: "All room categories",
+                         selected: "",
+                         data: {
+                           room_group_rooms_target: "roomType",
+                           action: "change->room-group-rooms#filter"
+                         }) %>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <div class="max-h-96 space-y-2 overflow-y-auto rounded-md border border-border bg-muted/20 p-2" data-testid="room-group-room-list">
+                <% @rooms.each do |room| %>
+                  <% current_group = room.room_group %>
+                  <% status = if current_group == room_group
+                       "In this group"
+                     else
+                       "Unassigned"
+                     end %>
+                  <div data-room-group-rooms-target="row"
+                       data-room-group-rooms-search-value="<%= "#{room.number} #{room.room_type.name}".downcase %>"
+                       data-room-group-rooms-room-type-value="<%= room.room_type_id %>">
+                    <%= render PanelsUI::Checkbox.new(
+                          name: "room_group[room_ids][]",
+                          id: "room-group-room-#{room.id}",
+                          value: room.id,
+                          checked: @selected_room_ids.include?(room.id.to_s),
+                          include_hidden: false,
+                          label: room.number,
+                          description: "#{room.room_type.name} · #{status}",
+                          variant: :card,
+                          data: {
+                            room_group_rooms_target: "checkbox",
+                            action: "change->room-group-rooms#updateCount"
+                          }) %>
+                  </div>
+                <% end %>
+
+                <div class="hidden px-4 py-8 text-center" data-room-group-rooms-target="empty">
+                  <p class="text-sm font-medium text-foreground">No rooms match these filters.</p>
+                  <p class="mt-1 text-sm text-muted-foreground">Change the search or room category.</p>
+                </div>
+              </div>
+            <% else %>
+              <div class="rounded-md border border-dashed border-border px-4 py-8 text-center">
+                <p class="text-sm font-medium text-foreground">No physical rooms are available.</p>
+                <p class="mt-1 text-sm text-muted-foreground">Add room numbers in Room Inventory before you assign rooms to this group.</p>
+              </div>
+            <% end %>
+          </section>
         <% end %>
       <% end %>
 

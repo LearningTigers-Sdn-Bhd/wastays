@@ -70,7 +70,7 @@ module HotelDemoManagement
     end
 
     def validate_room_setup
-      sellable_room_types = @hotel.room_types.select { |room_type| room_type.quantity.positive? && room_type.room_numbers.any? }
+      sellable_room_types = @hotel.room_types.select { |room_type| room_type.quantity.positive? && ::Rooms::DirectoryQuery.for_room_type(room_type).any? }
       return "Hotel must have at least one sellable room before realtime demo state can be seeded." if sellable_room_types.empty?
 
       missing_plan = sellable_room_types.detect { |room_type| room_type.rate_plans.exists? == false }
@@ -402,7 +402,7 @@ module HotelDemoManagement
           assigned[:check_in] < check_out && check_in < assigned[:check_out]
         end.map { |assigned| assigned[:room_number] }
 
-        configured_rooms = room_type.room_numbers.first(room_type.quantity).map(&:to_s)
+        configured_rooms = ::Rooms::DirectoryQuery.for_room_type(room_type).numbers.first(room_type.quantity)
         room_number = (configured_rooms - occupied_rooms).first
         return [ room_type, room_number ] if room_number
       end

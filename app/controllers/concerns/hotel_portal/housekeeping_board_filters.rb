@@ -7,8 +7,8 @@ module HotelPortal
   module HousekeepingBoardFilters
     extend ActiveSupport::Concern
 
-    FILTER_KEYS = %i[sort direction].freeze
-    ARRAY_FILTER_KEYS = %i[room_type_ids room_statuses assigned_to_ids booking_statuses].freeze
+    FILTER_KEYS = %i[sort direction group_by].freeze
+    ARRAY_FILTER_KEYS = %i[room_type_ids room_statuses assigned_to_ids booking_statuses room_group_ids].freeze
 
     included do
       helper_method :board_filters
@@ -36,7 +36,8 @@ module HotelPortal
         room_type_ids: [],
         room_statuses: [],
         assigned_to_ids: [],
-        booking_statuses: []
+        booking_statuses: [],
+        room_group_ids: []
       )
     end
   end

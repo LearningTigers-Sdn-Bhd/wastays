@@ -44,3 +44,8 @@
 .DS_Store
 
 channex_doc_index.md
+
+# Claude Code
+.claude/settings.local.json
+.claude/settings.json
+.claude/style-reminder.txt

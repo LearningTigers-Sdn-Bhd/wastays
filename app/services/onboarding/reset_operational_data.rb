@@ -207,7 +207,7 @@ module Onboarding
 
     def reset_room_statuses!
       @hotel.room_types.includes(:room_statuses).find_each do |room_type|
-        expected = room_type.room_numbers.map(&:to_s)
+        expected = ::Rooms::DirectoryQuery.for_room_type(room_type).numbers
         room_type.room_statuses.where.not(room_number: expected).delete_all
         expected.each do |room_number|
           status = room_type.room_statuses.find_or_initialize_by(hotel: @hotel, room_number:)

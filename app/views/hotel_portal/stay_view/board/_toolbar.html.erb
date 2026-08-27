@@ -15,6 +15,7 @@ end %>
         } do |form| %>
     <%= hidden_field_tag :view, board.view_mode %>
     <%= hidden_field_tag :room_type_id, board.filters.room_type_id %>
+    <%= hidden_field_tag :room_group_id, board.filters.room_group_id %>
     <%= hidden_field_tag :group_by, state.room_grouping if board.view_mode == :rooms %>
 
     <% if board.capabilities.view_rates? %>

@@ -124,14 +124,17 @@ module StayView
   end
 
   RoomRow = Data.define(
-    :key, :dom_id, :room_number, :room_type_id, :room_type_name, :smoking_allowed, :pets_allowed,
+    :key, :dom_id, :room_number, :room_type_id, :room_type_name, :room_group_id, :room_group_name,
+    :smoking_allowed, :pets_allowed,
     :current_physical_status, :status_note, :priority_note, :operational_flags, :day_cells, :booking_segments,
     :operational_segments, :housekeeping_alerts, :capabilities
   ) do
     def initialize(**attributes)
       attributes[:status_note] ||= nil
       attributes[:priority_note] ||= nil
-      %i[key dom_id room_number room_type_name].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
+      attributes[:room_group_id] ||= nil
+      attributes[:room_group_name] = attributes[:room_group_name].presence || ::Rooms::GroupAssignmentsQuery::UNGROUPED_LABEL
+      %i[key dom_id room_number room_type_name room_group_name].each { |key| attributes[key] = attributes.fetch(key).to_s.freeze }
       attributes[:current_physical_status] = attributes[:current_physical_status]&.to_sym
       attributes[:status_note] = attributes[:status_note].presence&.to_s&.freeze
       attributes[:priority_note] = attributes[:priority_note].presence&.to_s&.freeze
@@ -142,6 +145,8 @@ module StayView
       end
       super(**attributes)
     end
+
+    def grouped? = room_group_id.present?
 
     def occupancy_for(date)
       day_cells.find { |cell| cell.date == date.to_date }&.occupancies || EMPTY_OCCUPANCIES
@@ -204,11 +209,12 @@ module StayView
 
   ROOM_CARD_STATES = %i[vacant arrival occupied departure turnover blocked].freeze
 
-  FilterState = Data.define(:room_type_id, :rate_plan_id, :occupancy, :physical_status, :room_state) do
+  FilterState = Data.define(:room_type_id, :rate_plan_id, :occupancy, :physical_status, :room_state, :room_group_id) do
     def self.build(value = {})
       source = value.to_h.symbolize_keys
       new(
         room_type_id: Integer(source[:room_type_id], exception: false),
+        room_group_id: normalize_room_group_id(source[:room_group_id]),
         rate_plan_id: Integer(source[:rate_plan_id], exception: false),
         occupancy: normalize_symbol(source[:occupancy], %w[available arrival occupied departure]),
         physical_status: normalize_symbol(source[:physical_status], RoomStatus::STATUSES - [ "late_checkout_detected" ]),
@@ -225,7 +231,16 @@ module StayView
       allowed.include?(candidate) ? candidate.to_sym : nil
     end
 
-    private_class_method :normalize_symbol
+    # A room group is an id, except for the sentinel that isolates the rooms
+    # that belong to no group.
+    def self.normalize_room_group_id(value)
+      candidate = value.to_s
+      return ::Rooms::GroupAssignmentsQuery::UNGROUPED if candidate == ::Rooms::GroupAssignmentsQuery::UNGROUPED
+
+      Integer(candidate, exception: false)
+    end
+
+    private_class_method :normalize_symbol, :normalize_room_group_id
   end
 
   STATUS_COUNT_STATES = [ :all, *ROOM_CARD_STATES, :dirty ].freeze
@@ -250,11 +265,11 @@ module StayView
 
   Board = Data.define(
     :view_mode, :date_window, :room_groups, :footer_summaries, :room_type_options, :rate_plan_options,
-    :status_counts, :filters, :capabilities, :room_card_presentations
+    :status_counts, :filters, :capabilities, :room_card_presentations, :room_group_options
   ) do
     def initialize(
       view_mode:, date_window:, room_groups:, footer_summaries:, room_type_options:, rate_plan_options: [],
-      status_counts:, filters:, capabilities:, room_card_presentations: {}
+      status_counts:, filters:, capabilities:, room_card_presentations: {}, room_group_options: []
     )
       super(
         view_mode: view_mode.to_sym,
@@ -266,7 +281,8 @@ module StayView
         status_counts: status_counts,
         filters: filters,
         capabilities: capabilities,
-        room_card_presentations: Immutable.hash(room_card_presentations)
+        room_card_presentations: Immutable.hash(room_card_presentations),
+        room_group_options: Immutable.array(room_group_options)
       )
     end
 

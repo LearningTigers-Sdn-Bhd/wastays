@@ -13,6 +13,7 @@ module HotelPortal
     def index
       @staff_members = HotelPortal::ActiveHousekeepersQuery.new(hotel: current_hotel).call
       @room_types = current_hotel.room_types.order(:name).to_a
+      @room_groups = current_hotel.room_groups.order(:name, :id).to_a
       @selected_date = selected_date
       @visible_columns = visible_columns
       @rooms = board
@@ -78,7 +79,7 @@ module HotelPortal
 
       @room_type = current_hotel.room_types.find(params[:room_type_id])
       @room_number = params[:room_number].to_s.strip
-      raise ActiveRecord::RecordNotFound unless @room_type.room_numbers.include?(@room_number)
+      raise ActiveRecord::RecordNotFound unless ::Rooms::DirectoryQuery.for_room_type(@room_type).include?(@room_number)
 
       @room_status = current_hotel.room_statuses.find_or_initialize_by(room_type: @room_type, room_number: @room_number)
       @selected_date = Date.parse(mutation_date.to_s)
@@ -147,6 +148,8 @@ module HotelPortal
         room_statuses: filters[:room_statuses],
         assigned_to_ids: filters[:assigned_to_ids],
         booking_statuses: filters[:booking_statuses],
+        room_group_ids: filters[:room_group_ids],
+        group_by: filters[:group_by],
         sort: filters[:sort],
         direction: filters[:direction]
       ).call
@@ -158,6 +161,11 @@ module HotelPortal
       filters.delete("room_statuses") unless @visible_columns.include?("room_status")
       filters.delete("assigned_to_ids") unless @visible_columns.include?("assigned_to")
       filters.delete("booking_statuses") unless @visible_columns.include?("booking_status")
+      unless @visible_columns.include?("room_group")
+        filters.delete("room_group_ids")
+        filters.delete("group_by") if filters["group_by"] == "room_group"
+      end
+      filters.delete("group_by") if filters["group_by"] == "room_type" && @visible_columns.exclude?("room_type")
       if filters["sort"].present? && @visible_columns.exclude?(filters["sort"])
         filters.delete("sort")
         filters.delete("direction")

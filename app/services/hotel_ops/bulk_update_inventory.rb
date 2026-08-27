@@ -11,6 +11,12 @@ module HotelOps
       @room_numbers = room_numbers
     end
 
+    # The rooms this category actually has, read once from the physical-room
+    # directory and reused for every date in the window.
+    def configured_rooms
+      @configured_rooms ||= ::Rooms::DirectoryQuery.for_room_type(@room_type).numbers
+    end
+
     def call
       Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
@@ -22,9 +28,9 @@ module HotelOps
 
           inventory.status = @status
           if @room_numbers.is_a?(Array)
-            if @room_type.room_numbers.any?
+            if configured_rooms.any?
               # 1. Filter room numbers to only those that belong to this RoomType
-              valid_rooms = @room_numbers & @room_type.room_numbers
+              valid_rooms = @room_numbers & configured_rooms
               inventory.available_room_numbers = valid_rooms
 
               # 2. Calculate net quantity (Selected - Already Booked)

@@ -694,9 +694,6 @@ Rails.application.routes.draw do
             delete :bulk_destroy_photos
           end
         end
-        resource :room_group_assignment,
-                 path: "room-inventory/room-group-assignment",
-                 only: %i[new create]
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do
           get :autocomplete, on: :collection
         end
