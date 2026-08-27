@@ -6,29 +6,62 @@ const FILTER_NAMES = [
   "room_type_ids[]",
   "room_statuses[]",
   "assigned_to_ids[]",
-  "booking_statuses[]"
+  "booking_statuses[]",
+  "room_group_ids[]"
 ]
-const BOARD_PARAM_NAMES = [...FILTER_NAMES, "sort", "direction"]
+const GROUPING_NAME = "group_by"
+const DEFAULT_GROUPING = "none"
+const BOARD_PARAM_NAMES = [...FILTER_NAMES, GROUPING_NAME, "sort", "direction"]
 const COLUMN_FILTER_NAMES = {
   room_type: "room_type_ids[]",
   room_status: "room_statuses[]",
   assigned_to: "assigned_to_ids[]",
-  booking_status: "booking_statuses[]"
+  booking_status: "booking_statuses[]",
+  room_group: "room_group_ids[]"
+}
+const COLUMN_GROUPINGS = {
+  room_type: "room_type",
+  room_group: "room_group"
 }
 
 export default class extends Controller {
   static values = { preferenceUrl: String }
 
+  connect() {
+    this.syncStickyHeaderOffset()
+  }
+
   disconnect() {
     this.cancelScheduledReopen()
+  }
+
+  // Group headings pin below the table header. The header holds filter menus,
+  // so its height is only known once it is drawn.
+  syncStickyHeaderOffset() {
+    const table = this.element.querySelector(".panel-table")
+    const head = table?.querySelector("thead")
+    if (!head) return
+
+    table.style.setProperty("--panel-table-header-size", `${head.offsetHeight}px`)
   }
 
   changed(event) {
     const input = event.target
     if (input.name === "visible_columns[]") return this.columnChanged(input)
     if (input.dataset.housekeepingSelectAll) return this.toggleAllRooms(input)
+    if (input.dataset.housekeepingSectionSelect) return this.toggleSectionRooms(input)
     if (input.dataset.housekeepingRoomSelection) return this.roomSelectionChanged()
+    if (input.name === GROUPING_NAME) return this.groupingChanged(input)
     if (FILTER_NAMES.includes(input.name)) return this.filterChanged(input)
+  }
+
+  groupingChanged(input) {
+    const url = new URL(window.location.href)
+    url.searchParams.delete(GROUPING_NAME)
+    if (input.value && input.value !== DEFAULT_GROUPING) url.searchParams.set(GROUPING_NAME, input.value)
+
+    this.clearRoomSelection()
+    this.navigateTo(url)
   }
 
   filterChanged(input) {
@@ -129,6 +162,32 @@ export default class extends Controller {
     this.roomSelectionChanged()
   }
 
+  toggleSectionRooms(input) {
+    this.sectionRoomInputs(input.dataset.housekeepingSectionSelect).forEach(roomInput => {
+      roomInput.checked = input.checked
+    })
+    this.roomSelectionChanged()
+  }
+
+  syncSectionSelections() {
+    this.sectionSelectInputs.forEach(sectionInput => {
+      const inputs = this.sectionRoomInputs(sectionInput.dataset.housekeepingSectionSelect)
+      const selected = inputs.filter(roomInput => roomInput.checked)
+      sectionInput.checked = inputs.length > 0 && selected.length === inputs.length
+      sectionInput.indeterminate = selected.length > 0 && selected.length < inputs.length
+    })
+  }
+
+  sectionRoomInputs(sectionKey) {
+    return this.roomSelectionInputs.filter(
+      roomInput => roomInput.closest("tr")?.dataset.housekeepingSection === sectionKey
+    )
+  }
+
+  get sectionSelectInputs() {
+    return Array.from(this.element.querySelectorAll("input[data-housekeeping-section-select]"))
+  }
+
   roomSelectionChanged() {
     const inputs = this.roomSelectionInputs
     const selected = inputs.filter(input => input.checked)
@@ -138,6 +197,8 @@ export default class extends Controller {
       selectAll.checked = inputs.length > 0 && selected.length === inputs.length
       selectAll.indeterminate = selected.length > 0 && selected.length < inputs.length
     }
+
+    this.syncSectionSelections()
 
     const summary = this.element.querySelector("[data-housekeeping-selection-summary]")
     const count = this.element.querySelector("[data-housekeeping-selection-count]")
@@ -181,6 +242,7 @@ export default class extends Controller {
   frameLoaded(event) {
     if (event.target?.id !== RESULTS_FRAME_ID) return
 
+    this.syncStickyHeaderOffset()
     this.clearRoomSelection()
     const summary = event.target.querySelector("[data-board-summary]")
     const resultCount = this.element.querySelector("[data-housekeeping-result-count]")
@@ -226,6 +288,7 @@ export default class extends Controller {
 
     const filterName = COLUMN_FILTER_NAMES[columnKey]
     if (filterName) url.searchParams.delete(filterName)
+    if (url.searchParams.get(GROUPING_NAME) === COLUMN_GROUPINGS[columnKey]) url.searchParams.delete(GROUPING_NAME)
     if (["arrival", "departure"].includes(columnKey) && url.searchParams.get("sort") === columnKey) {
       url.searchParams.delete("sort")
       url.searchParams.delete("direction")

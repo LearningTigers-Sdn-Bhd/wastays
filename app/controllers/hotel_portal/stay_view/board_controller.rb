@@ -30,7 +30,7 @@ module HotelPortal
       def board_params
         params.permit(
           :view, :start_date, :date, :days, :room_type_id, :rate_plan_id, :occupancy, :physical_status, :room_state,
-          :group_by
+          :group_by, :room_group_id
         )
       end
     end

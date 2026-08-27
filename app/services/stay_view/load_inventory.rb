@@ -26,13 +26,21 @@ module StayView
         standard_rates: load_standard_rates,
         financial_signals: load_financial_signals(bookings),
         rate_plan_options: load_rate_plan_options,
-        selected_rate_plan_id:
+        selected_rate_plan_id:,
+        room_group_assignments: room_groups.assignments,
+        room_group_options: room_groups.options
       )
     end
 
     private
 
     attr_reader :hotel, :date_window, :capabilities, :requested_rate_plan_id
+
+    # Room-group membership lives on `rooms`, but room enumeration stays on the
+    # room type's JSON list until Milestone 6. The two are joined by number.
+    def room_groups
+      @room_groups ||= ::Rooms::GroupAssignmentsQuery.call(hotel:)
+    end
 
     def load_room_types
       base_price_column = capabilities.view_rates? ? :base_price : Arel.sql("NULL")

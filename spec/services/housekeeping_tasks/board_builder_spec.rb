@@ -183,4 +183,70 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
       expect(build_board.map { |entry| entry[:room_number] }).to eq(%w[2 10 101 101 102])
     end
   end
+
+  describe "room groups" do
+    let!(:main_wing) { create(:room_group, hotel:, name: "Main Wing") }
+    let!(:annexe) { create(:room_group, hotel:, name: "Annexe") }
+
+    before do
+      penthouse.update!(quantity: 2, room_numbers: %w[101 102])
+      garden_suite.update!(quantity: 1, room_numbers: %w[201])
+      create(:room, hotel:, room_type: penthouse, number: "101", room_group: main_wing)
+      create(:room, hotel:, room_type: penthouse, number: "102")
+      create(:room, hotel:, room_type: garden_suite, number: "201", room_group: annexe)
+    end
+
+    it "names the room group of each room and calls the rest ungrouped" do
+      rows = build_board.index_by { |entry| entry[:room_number] }
+
+      expect(rows["101"][:room_group_name]).to eq("Main Wing")
+      expect(rows["101"][:room_group_id]).to eq(main_wing.id)
+      expect(rows["102"][:room_group_name]).to eq("Ungrouped")
+      expect(rows["102"][:room_group_id]).to be_nil
+    end
+
+    it "filters by room group" do
+      rows = build_board(room_group_ids: [ annexe.id ])
+
+      expect(rows.map { |entry| entry[:room_number] }).to eq(%w[201])
+    end
+
+    it "filters the ungrouped rooms on their own" do
+      rows = build_board(room_group_ids: [ "__ungrouped__" ])
+
+      expect(rows.map { |entry| entry[:room_number] }).to eq(%w[102])
+    end
+
+    it "keeps every room when no room group is selected" do
+      expect(build_board(room_group_ids: []).size).to eq(3)
+    end
+
+    it "orders the board by room group and puts ungrouped rooms last" do
+      rows = build_board(group_by: "room_group")
+
+      expect(rows.map { |entry| entry[:room_group_name] }).to eq([ "Annexe", "Main Wing", "Ungrouped" ])
+      expect(rows.map { |entry| entry[:room_number] }).to eq(%w[201 101 102])
+    end
+
+    it "orders the board by room type name" do
+      rows = build_board(group_by: "room_type")
+
+      expect(rows.map { |entry| entry[:room_type].name }).to eq(
+        [ "Executive Penthouse", "Executive Penthouse", "Garden Suite" ]
+      )
+    end
+
+    it "keeps natural room-number order when the grouping is flat" do
+      expect(build_board(group_by: "none").map { |entry| entry[:room_number] }).to eq(%w[101 102 201])
+    end
+
+    it "sorts inside a section, not across sections" do
+      stay(room_type: garden_suite, room_number: "201", status: "checked_in",
+           check_in: selected_date - 3.days, check_out: selected_date + 1.day)
+
+      rows = build_board(group_by: "room_group", sort: "arrival", direction: "asc")
+
+      expect(rows.map { |entry| entry[:room_group_name] }).to eq([ "Annexe", "Main Wing", "Ungrouped" ])
+    end
+  end
 end

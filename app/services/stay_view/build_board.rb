@@ -79,7 +79,8 @@ module StayView
         status_counts: counts,
         filters: effective_filters,
         capabilities: resolved_capabilities,
-        room_card_presentations:
+        room_card_presentations:,
+        room_group_options: inventory.room_group_options
       )
       instrument(board, started_at)
       board
@@ -108,6 +109,7 @@ module StayView
             room_type:, room_number:, bookings: bookings.fetch(key, EMPTY), room_status: statuses[key],
             room_blocks: blocks.fetch(key, EMPTY), housekeeping_alerts: housekeeping_alerts.fetch(key, EMPTY),
             group_rooms: inventory.group_rooms, financial_signals: inventory.financial_signals,
+            room_group: inventory.room_group_assignments[key],
             date_window:, capabilities:
           )
         end

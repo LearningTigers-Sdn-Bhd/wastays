@@ -30,10 +30,14 @@ module HousekeepingTasks
     ].freeze
     SORT_KEYS = %w[arrival departure].freeze
     SORT_DIRECTIONS = %w[asc desc].freeze
+    GROUPINGS = %w[none room_type room_group].freeze
+    DEFAULT_GROUPING = "none"
+    UNGROUPED = ::Rooms::GroupAssignmentsQuery::UNGROUPED
+    UNGROUPED_LABEL = ::Rooms::GroupAssignmentsQuery::UNGROUPED_LABEL
     EMPTY = [].freeze
 
     def initialize(hotel:, date:, room_type_ids: nil, room_statuses: nil, assigned_to_ids: nil, booking_statuses: nil,
-                   sort: nil, direction: nil, now: Time.current)
+                   room_group_ids: nil, group_by: nil, sort: nil, direction: nil, now: Time.current)
       @hotel = hotel
       @date = date.to_date
       @now = now
@@ -41,6 +45,10 @@ module HousekeepingTasks
       @room_status_filter = normalize_filter_values(room_statuses) { |value| value.to_s if ROOM_STATUS_LABELS.key?(value.to_s) }
       @assigned_to_filter = normalize_filter_values(assigned_to_ids, &:to_i)
       @booking_status_filter = normalize_filter_values(booking_statuses) { |value| value.to_s if BOOKING_STATUSES.key?(value.to_s) }
+      @room_group_filter = normalize_filter_values(room_group_ids) do |value|
+        value == UNGROUPED ? UNGROUPED : Integer(value, exception: false)
+      end
+      @grouping = GROUPINGS.include?(group_by.to_s) ? group_by.to_s : DEFAULT_GROUPING
       @sort = SORT_KEYS.include?(sort.to_s) ? sort.to_s : nil
       @direction = SORT_DIRECTIONS.include?(direction.to_s) ? direction.to_s : "asc"
     end
@@ -72,9 +80,13 @@ module HousekeepingTasks
         out_of_order: blocked || physical_status == "out_of_service"
       )
 
+      room_group = room_group_assignments.for(room_type.id, room_number)
+
       {
         room_number: room_number.to_s,
         room_type:,
+        room_group_id: room_group&.id,
+        room_group_name: room_group&.name || UNGROUPED_LABEL,
         room_status: persisted_status,
         resolved_status: physical_status,
         room_status_label: ROOM_STATUS_LABELS.fetch(physical_status),
@@ -115,6 +127,10 @@ module HousekeepingTasks
         .where(completed_at: nil)
         .where("start_date <= :date AND end_date >= :date", date: @date)
         .group_by { |block| room_key(block.room_type_id, block.room_number) }
+    end
+
+    def room_group_assignments
+      @room_group_assignments ||= ::Rooms::GroupAssignmentsQuery.call(hotel: @hotel)
     end
 
     def room_statuses_by_room
@@ -182,7 +198,10 @@ module HousekeepingTasks
     # -- Filtering ---------------------------------------------------------
 
     def filter_rooms(rooms)
-      predicates = [ room_type_predicate, room_status_predicate, assigned_to_predicate, booking_status_predicate ].compact
+      predicates = [
+        room_type_predicate, room_status_predicate, assigned_to_predicate, booking_status_predicate,
+        room_group_predicate
+      ].compact
       return rooms if predicates.empty?
 
       rooms.select { |room| predicates.all? { |predicate| predicate.call(room) } }
@@ -212,11 +231,19 @@ module HousekeepingTasks
       ->(room) { @booking_status_filter.include?(room[:booking_status]) }
     end
 
+    def room_group_predicate
+      return if @room_group_filter.nil?
+
+      ->(room) { @room_group_filter.include?(room[:room_group_id] || UNGROUPED) }
+    end
+
     def sort_rooms(rooms)
       rooms.sort { |left, right| compare_rooms(left, right) }
     end
 
     def compare_rooms(left, right)
+      section = section_key(left) <=> section_key(right)
+      return section unless section.zero?
       return natural_room_key(left) <=> natural_room_key(right) unless @sort
 
       left_value = booking_sort_value(left)
@@ -236,6 +263,18 @@ module HousekeepingTasks
 
       @sort == "arrival" ? (booking.checked_in_at || booking.check_in) : (booking.checked_out_at || booking.check_out)
     end
+
+    # Sections are contiguous runs in the one ordered board, so the screen and
+    # the exports read the same list.
+    def section_key(room)
+      case @grouping
+      when "room_type" then [ 0, room[:room_type].name.to_s.downcase, room[:room_type].id.to_i ]
+      when "room_group" then [ room[:room_group_id] ? 0 : 1, room[:room_group_name].to_s.downcase ]
+      else EMPTY_SECTION
+      end
+    end
+
+    EMPTY_SECTION = [].freeze
 
     def natural_room_key(room)
       room_number = room[:room_number].to_s

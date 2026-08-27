@@ -1,7 +1,7 @@
 # Room Groups and Physical Rooms Milestones
 
 Status: Approved
-Implementation status: Milestone 0 complete. Milestone 1 complete locally and pending production and demo operations. Milestones 2 to 4 complete on the branch.
+Implementation status: Milestone 0 complete. Milestone 1 complete locally and pending production and demo operations. Milestones 2 to 5 complete on the branch.
 Date: 2026-08-26
 
 ## Purpose

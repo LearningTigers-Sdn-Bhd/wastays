@@ -64,7 +64,7 @@ export default class extends Controller {
     const form = new URLSearchParams(new FormData(this.element))
     const keys = [
       "view", "start_date", "date", "days", "room_type_id",
-      "rate_plan_id", "occupancy", "physical_status", "room_state", "group_by"
+      "rate_plan_id", "occupancy", "physical_status", "room_state", "group_by", "room_group_id"
     ]
 
     return keys.every((key) => (location.searchParams.get(key) || "") === (form.get(key) || ""))

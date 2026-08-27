@@ -75,11 +75,12 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       headers = Nokogiri::HTML.fragment(header).css("th").map { |column| column.text.squish }
       expect(headers).to include("Room", "Pax", "Nights", "Remarks")
       expect(headers[2]).to include("Room type", "All room types")
-      expect(headers[4]).to include("Room status", "All room statuses")
-      expect(headers[5]).to include("Assigned to", "All staff")
-      expect(headers[6]).to include("Booking status", "All booking statuses")
-      expect(headers[7]).to include("Arrival")
-      expect(headers[8]).to include("Departure")
+      expect(headers[3]).to include("Room group", "All room groups", "Ungrouped")
+      expect(headers[5]).to include("Room status", "All room statuses")
+      expect(headers[6]).to include("Assigned to", "All staff")
+      expect(headers[7]).to include("Booking status", "All booking statuses")
+      expect(headers[8]).to include("Arrival")
+      expect(headers[9]).to include("Departure")
       expect(response.body).to include("2/1", "Guest requested extra towels", "Pending checkout")
       expect(response.body).to include("Clear remarks for #{room_type.name} 101")
       expect(response.body).not_to include("Task status", "Add task", "No task")
@@ -181,11 +182,64 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       )
     end
 
+    it "groups the board by room group and filters by it" do
+      main_wing = create(:room_group, hotel:, name: "Main Wing")
+      create(:room, hotel:, room_type:, number: "101", room_group: main_wing)
+      create(:room, hotel:, room_type:, number: "202", room_group: main_wing)
+      create(:room, hotel:, room_type:, number: "303")
+
+      get hotel_housekeeping_tasks_path(hotel, date: business_date, group_by: "room_group")
+
+      document = Nokogiri::HTML(response.body)
+      sections = document.css("tr[data-housekeeping-section-row] th").map { |cell| cell.text.squish }
+      expect(sections).to eq([ "Main Wing 2 rooms", "Ungrouped 1 room" ])
+      expect(document.css("tr[data-housekeeping-room-row]").size).to eq(3)
+
+      section_rows = document.css("tr[data-housekeeping-section-row]")
+      expect(section_rows.map { |row| row["data-housekeeping-section"] }).to eq(%w[hk-section-1 hk-section-2])
+      expect(section_rows.first.at_css("input[data-housekeeping-section-select]")["id"]).to eq("select-hk-section-1")
+      expect(section_rows.first.text.squish).to include("Select the 2 rooms in Main Wing", "Main Wing", "2 rooms")
+      expect(section_rows[1].text.squish).to include("Select the 1 room in Ungrouped")
+      expect(document.css("tr[data-housekeeping-room-row]").map { |row| row["data-housekeeping-section"] })
+        .to eq(%w[hk-section-1 hk-section-1 hk-section-2])
+
+      get hotel_housekeeping_tasks_path(hotel, date: business_date)
+      flat = Nokogiri::HTML(response.body)
+      expect(flat.css("tr[data-housekeeping-section-row]")).to be_empty
+      expect(flat.css("tr[data-housekeeping-room-row]").map { |row| row["data-housekeeping-section"] })
+        .to all(be_blank)
+
+      get hotel_housekeeping_tasks_path(hotel, date: business_date, room_group_ids: [ main_wing.id ])
+      filtered = Nokogiri::HTML(response.body)
+      expect(filtered.css("tr[data-housekeeping-room-row]").map { |row| row["id"] }).to eq(
+        [ "hk-room-#{room_type.id}-101", "hk-room-#{room_type.id}-202" ]
+      )
+
+      get hotel_housekeeping_tasks_path(hotel, date: business_date, room_group_ids: [ "__ungrouped__" ])
+      ungrouped = Nokogiri::HTML(response.body)
+      expect(ungrouped.css("tr[data-housekeeping-room-row]").map { |row| row["id"] }).to eq(
+        [ "hk-room-#{room_type.id}-303" ]
+      )
+    end
+
+    it "carries the room group into the exports" do
+      main_wing = create(:room_group, hotel:, name: "Main Wing")
+      create(:room, hotel:, room_type:, number: "101", room_group: main_wing)
+
+      get hotel_housekeeping_tasks_path(hotel, format: :csv),
+          params: { date: business_date, group_by: "room_group" }
+
+      rows = response.body.lines.map(&:strip)
+      expect(rows.first).to include("Room Group")
+      expect(rows[1..].map { |row| row.split(",")[2] }).to eq([ "Main Wing", "Ungrouped", "Ungrouped" ])
+    end
+
     it "keeps header filters available when no rooms match" do
       get hotel_housekeeping_tasks_path(hotel, room_statuses: [ "__none__" ])
 
-      expect(response.body).to include('id="hk-room-type-filter"', 'id="hk-room-status-filter"', "No rooms found")
-      empty_state = Nokogiri::HTML(response.body).at_css("tbody td[colspan='11']")
+      expect(response.body).to include('id="hk-room-type-filter"', 'id="hk-room-status-filter"',
+                                       'id="hk-room-group-filter"', "No rooms found")
+      empty_state = Nokogiri::HTML(response.body).at_css("tbody td[colspan='12']")
       expect(empty_state.text.squish).to eq("No rooms found Change the filters to show rooms.")
     end
 
@@ -202,7 +256,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       get hotel_housekeeping_tasks_path(hotel, format: :csv), params: export_params
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("text/csv")
-      expect(response.body).to include("Room Number,Room Type,Pax", "Inspect balcony", "101")
+      expect(response.body).to include("Room Number,Room Type,Room Group,Pax", "Inspect balcony", "101", "Ungrouped")
       expect(response.body.lines.size).to eq(2)
 
       get hotel_housekeeping_tasks_path(hotel, format: :xlsx), params: export_params

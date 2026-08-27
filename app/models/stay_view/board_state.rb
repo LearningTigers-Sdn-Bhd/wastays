@@ -2,8 +2,8 @@
 
 module StayView
   class BoardState
-    FILTER_KEYS = %i[room_type_id rate_plan_id occupancy physical_status room_state].freeze
-    GROUPINGS = %w[room_type none].freeze
+    FILTER_KEYS = %i[room_type_id rate_plan_id occupancy physical_status room_state room_group_id].freeze
+    GROUPINGS = %w[room_type room_group none].freeze
     DEFAULT_GROUPING = "room_type"
 
     attr_reader :date_window, :filters, :room_grouping
@@ -23,7 +23,7 @@ module StayView
 
     def view_mode = date_window.view_mode
     def density = :compact
-    def grouped_rooms? = room_grouping == "room_type"
+    def grouped_rooms? = room_grouping != "none"
 
     def build_options
       {

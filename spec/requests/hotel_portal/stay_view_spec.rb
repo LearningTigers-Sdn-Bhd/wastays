@@ -471,9 +471,9 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
       expect(toggle["data-variant"]).to eq("outline")
       expect(toggle["data-spacing"]).to eq("0")
       expect(toggle.css("button").map { |button| [ button.text.squish, button["aria-pressed"] ] }).to eq(
-        [ [ "Grouped", "true" ], [ "Ungrouped", "false" ] ]
+        [ [ "Ungrouped", "false" ], [ "Group by room type", "true" ], [ "Group by room group", "false" ] ]
       )
-      expect(toggle.css("button svg[aria-hidden='true']").size).to eq(2)
+      expect(toggle.css("button svg[aria-hidden='true']").size).to eq(3)
       expect(toggle.css("button")).to all(satisfy { |button| button["class"].split.include?("panel-toggle") })
       expect(workspace.text).to include("3 rooms")
       advanced = grouped.at_css("#stay-view-advanced-filters-content")
@@ -485,6 +485,35 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
       expect(flat.css("[data-testid='stay-view-room-cards'] > section")).to be_empty
       expect(flat.css("[data-testid='stay-view-room-cards'] article h3").map(&:text)).to contain_exactly("101", "102", "201")
       expect(response.body).to include("Room 101", "Room 201")
+    end
+
+    it "groups Room View by room group and filters by it" do
+      suite = create(:room_type, hotel:, name: "Suite", quantity: 1, room_numbers: [ "201" ])
+      main_wing = create(:room_group, hotel:, name: "Main Wing")
+      create(:room, hotel:, room_type:, number: "101", room_group: main_wing)
+      create(:room, hotel:, room_type:, number: "102")
+      create(:room, hotel:, room_type: suite, number: "201", room_group: main_wing)
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, group_by: "room_group")
+      grouped = Nokogiri::HTML(response.body)
+      headings = grouped.css("[data-testid='stay-view-room-cards'] section h3").map { |heading| heading.text.squish }
+      expect(headings).to eq([ "Main Wing", "Ungrouped" ])
+      expect(grouped.css("[data-testid='stay-view-room-cards'] article h4").map(&:text)).to contain_exactly("101", "102", "201")
+
+      toolbar = grouped.at_css("[data-slot='stay-view-room-workspace-toolbar']")
+      expect(toolbar.at_css("#room_group_id-select-menu")).to be_present
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, group_by: "room_group",
+                                      room_group_id: main_wing.id)
+      filtered = Nokogiri::HTML(response.body)
+      expect(filtered.css("[data-testid='stay-view-room-cards'] section h3").map { |heading| heading.text.squish })
+        .to eq([ "Main Wing" ])
+      expect(filtered.css("[data-testid='stay-view-room-cards'] article h4").map(&:text)).to contain_exactly("101", "201")
+
+      get hotel_stay_view_path(hotel, view: "rooms", date: Date.current, group_by: "room_group",
+                                      room_group_id: "__ungrouped__")
+      ungrouped = Nokogiri::HTML(response.body)
+      expect(ungrouped.css("[data-testid='stay-view-room-cards'] article h4").map(&:text)).to eq([ "102" ])
     end
 
     it "renders a compact turnover panel without a room action menu or footer" do

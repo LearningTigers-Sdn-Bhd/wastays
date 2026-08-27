@@ -36,6 +36,7 @@ module Reports
       {
         "room_number" => room[:room_number].to_s,
         "room_type" => room[:room_type].name.to_s,
+        "room_group" => room[:room_group_name].presence || "Ungrouped",
         "pax" => room[:pax].presence || "—",
         "room_status" => room[:room_status_label].to_s,
         "assigned_to" => room[:assigned_to]&.name.presence || "Unassigned",
