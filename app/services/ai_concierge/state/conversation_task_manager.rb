@@ -21,6 +21,22 @@ module AiConcierge
       payload["information_task"]
     end
 
+    def sales_task
+      payload["sales_task"]
+    end
+
+    def optional_sales_offer_pending?
+      sales_task["last_optional_action"].present?
+    end
+
+    def sales_offer_suppressed?
+      sales_task["suppress_next_optional_offer"] == true
+    end
+
+    def sales_refusal_acknowledgment_pending?
+      sales_task["refusal_acknowledgment_pending"] == true
+    end
+
     def booking_branch
       branch = booking_task["branch"]
       branch.is_a?(Hash) ? branch : default_branch
@@ -96,6 +112,39 @@ module AiConcierge
       without_legacy(payload.merge("information_task" => compact_blank_values(task)))
     end
 
+    def record_optional_sales_offer(action)
+      update_sales_task(
+        "last_optional_action" => action.to_s,
+        "suppress_next_optional_offer" => false,
+        "refusal_acknowledgment_pending" => false
+      )
+    end
+
+    def decline_optional_sales_offer
+      return payload unless optional_sales_offer_pending?
+
+      update_sales_task(
+        "last_optional_action" => nil,
+        "suppress_next_optional_offer" => true,
+        "refusal_acknowledgment_pending" => true
+      )
+    end
+
+    def consume_sales_offer_suppression
+      update_sales_task(
+        "last_optional_action" => nil,
+        "suppress_next_optional_offer" => false,
+        "refusal_acknowledgment_pending" => false
+      )
+    end
+
+    def clear_optional_sales_offer
+      update_sales_task(
+        "last_optional_action" => nil,
+        "refusal_acknowledgment_pending" => false
+      )
+    end
+
     def archive_completed_booking
       return payload unless booking_branch_present?
 
@@ -132,6 +181,7 @@ module AiConcierge
           "state_version" => STATE_VERSION,
           "booking_task" => normalize_booking_task(migrated["booking_task"]),
           "information_task" => normalize_information_task(migrated["information_task"]),
+          "sales_task" => normalize_sales_task(migrated["sales_task"]),
           "completed_booking_branches" => Array(migrated["completed_booking_branches"]).select { |entry| entry.is_a?(Hash) }
         )
       )
@@ -192,8 +242,17 @@ module AiConcierge
       default_information_task.merge(task)
     end
 
+    def normalize_sales_task(value)
+      task = value.is_a?(Hash) ? value.deep_dup : {}
+      default_sales_task.merge(task)
+    end
+
     def update_booking_task(attributes)
       without_legacy(payload.merge("booking_task" => booking_task.merge(attributes)))
+    end
+
+    def update_sales_task(attributes)
+      without_legacy(payload.merge("sales_task" => sales_task.merge(attributes)))
     end
 
     # The branch is the whole answer to "did anything move?". A guest who
@@ -278,6 +337,14 @@ module AiConcierge
         "pending_question" => nil,
         "context" => nil,
         "answered_at" => nil
+      }
+    end
+
+    def default_sales_task
+      {
+        "last_optional_action" => nil,
+        "suppress_next_optional_offer" => false,
+        "refusal_acknowledgment_pending" => false
       }
     end
 

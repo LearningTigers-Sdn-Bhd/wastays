@@ -51,4 +51,23 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Localizer do
 
     expect(described_class.new(hotel: hotel, reply: original, language: "ms").call).to eq(original)
   end
+
+  it "keeps a translated sales-action line" do
+    allow(chat).to receive(:ask).and_return(
+      double(content: '{"text":"Daftar masuk bermula pada 3:00 PM.\n\nAdakah anda mahu saya membantu mencari bilik?"}')
+    )
+    original = "Check-in starts at 3:00 PM.\n\nWould you like me to help you find a room?"
+
+    result = described_class.new(hotel: hotel, reply: original, language: "ms").call
+
+    expect(result).to end_with("Adakah anda mahu saya membantu mencari bilik?")
+    expect(result).to include("3:00 PM")
+  end
+
+  it "falls back to English when a translation removes the sales-action line" do
+    allow(chat).to receive(:ask).and_return(double(content: '{"text":"Daftar masuk bermula pada 3:00 PM."}'))
+    original = "Check-in starts at 3:00 PM.\n\nWould you like me to help you find a room?"
+
+    expect(described_class.new(hotel: hotel, reply: original, language: "ms").call).to eq(original)
+  end
 end
