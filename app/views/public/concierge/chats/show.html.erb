@@ -11,5 +11,6 @@
              content_class: "flex min-h-0 flex-1",
              container_class: "flex w-full min-h-0 flex-col"
            } do %>
-  <%= render "public/concierge/chats/conversation", conversation: @conversation, messages: @messages, hotel: @hotel %>
+  <%= render "public/concierge/chats/conversation", conversation: @conversation, messages: @messages,
+        hotel: @hotel, chat_input: @chat_input %>
 <% end %>

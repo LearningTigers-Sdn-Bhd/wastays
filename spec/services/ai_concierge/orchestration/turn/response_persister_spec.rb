@@ -153,6 +153,51 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversatio
       expect(last_body).to eq("How many days and nights will you be staying?")
     end
 
+    it "sends the greeting template when the stylist changes the hotel name" do
+      changed = "Hello! Welcome to Another Hotel. I can help you find the right stay, check prices, " \
+        "answer hotel questions, or access an existing booking. What can I help you with today?"
+      stub_concierge_stylist(text: changed, language: "en")
+
+      payload = described_class.new(hotel: hotel, conversation: conversation, message: "hello").persist_response(
+        prospect: prospect,
+        conversation_state: conversation_state,
+        slots_payload: conversation_state.slots_payload,
+        reply_type: :greeting,
+        active_topic: nil,
+        active_flow: nil,
+        pending_question: nil,
+        action_name: nil
+      )
+
+      expect(payload[:reply_message]).to include("Welcome to #{hotel.name}.")
+      expect(payload[:reply_message]).not_to include("Another Hotel")
+    end
+
+    it "sends the template when the stylist changes a masked magic-link email" do
+      stub_concierge_stylist(
+        text: "Your secure login link is on its way to another@example.com.",
+        language: "en"
+      )
+
+      payload = described_class.new(hotel: hotel, conversation: conversation, message: "send the link").persist_response(
+        prospect: prospect,
+        conversation_state: conversation_state,
+        slots_payload: conversation_state.slots_payload,
+        reply_type: :magic_link_sent,
+        active_topic: nil,
+        active_flow: nil,
+        pending_question: nil,
+        action_name: nil,
+        extra_context: {
+          masked_email: "j•••@example.com",
+          protected_names: [ "j•••@example.com" ]
+        }
+      )
+
+      expect(payload[:reply_message]).to include("j•••@example.com")
+      expect(payload[:reply_message]).not_to include("another@example.com")
+    end
+
     # What the guest wrote in is a fact about the guest, not about whether this
     # particular rewrite came back usable.
     it "still remembers the language when the rewrite is rejected" do

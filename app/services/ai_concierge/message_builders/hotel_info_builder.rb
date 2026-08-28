@@ -43,7 +43,10 @@ module AiConcierge
           "- *#{dates}*: #{booking['room_type_name']}"
         end
 
-        [ intro, lines.join("\n") ].join("\n")
+        message = [ intro, lines.join("\n") ].join("\n")
+        return message unless context[:resume_booking]
+
+        "#{message}\n\nWould you like to continue planning your new stay?"
       end
 
       def general_hotel_info_message

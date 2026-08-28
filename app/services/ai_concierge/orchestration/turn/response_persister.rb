@@ -26,7 +26,8 @@ module AiConcierge
             flow_status: flow_status,
             end_reason: end_reason,
             knowledge_reply: extra_context[:knowledge_reply],
-            guest_language: extra_context[:guest_language]
+            guest_language: extra_context[:guest_language],
+            protected_names: extra_context[:protected_names]
           )
         end
 
@@ -54,8 +55,8 @@ module AiConcierge
         # one place holding both the flag and the thread, so this is where the
         # thread is put in front of staff. `request_human!` deliberately leaves
         # `mode` alone: the bot keeps answering until a person actually arrives.
-        def persist_static_response(prospect:, conversation_state:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:, knowledge_reply: false, guest_language: nil)
-          reply = style(reply_message, knowledge_reply: knowledge_reply, guest_language: guest_language)
+        def persist_static_response(prospect:, conversation_state:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:, knowledge_reply: false, guest_language: nil, protected_names: nil)
+          reply = style(reply_message, knowledge_reply: knowledge_reply, guest_language: guest_language, protected_names: protected_names)
           ActiveRecord::Base.transaction do
             persist_state(conversation_state, slots_payload:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:)
             record_outbound_message(prospect, reply)
@@ -87,7 +88,7 @@ module AiConcierge
         # It runs on a finished string. Nothing the model returns can change a
         # price, a date or a link, because those were computed before it was
         # asked, and anything it did change is caught below.
-        def style(template, knowledge_reply: false, guest_language: nil)
+        def style(template, knowledge_reply: false, guest_language: nil, protected_names: nil)
           return Reply.new(body: template) if template.blank?
           if knowledge_reply
             conversation.record_language!(guest_language)
@@ -104,7 +105,7 @@ module AiConcierge
           styled = Agents::ReplyStylist.new(
             hotel: hotel, template: template, guest_message: message, thread_language: thread_language
           ).call
-          text = verified(template, styled, thread_language: thread_language)
+          text = verified(template, styled, thread_language: thread_language, protected_names: protected_names)
 
           text ? Reply.new(body: text, source_body: template) : Reply.new(body: template)
         rescue Agents::ReplyStylist::ReplyStylistError => e
@@ -126,11 +127,15 @@ module AiConcierge
         # too short to carry a language of its own -- "yes", a row number --
         # was answered in a language the guest had never used. Correctly, too,
         # because by then the thread said so, and nothing could say otherwise.
-        def verified(template, styled, thread_language:)
+        def verified(template, styled, thread_language:, protected_names: nil)
           conversation.record_language!(styled.guest_language)
           return rejected(:language) unless wrote_in_the_decided_language?(styled, thread_language)
 
-          checker = Agents::RewriteVerifier.new(template: template, candidate: styled.text, protected_names: protected_names)
+          checker = Agents::RewriteVerifier.new(
+            template: template,
+            candidate: styled.text,
+            protected_names: protected_names_for(protected_names)
+          )
           checker.call || rejected(checker.failure)
         end
 
@@ -153,8 +158,9 @@ module AiConcierge
 
         # The words the guest will type back at us. Fetched once per turn, and
         # only on a turn the stylist actually runs on.
-        def protected_names
-          @protected_names ||= hotel.room_types.pluck(:name) + hotel.rate_plans.pluck(:name)
+        def protected_names_for(extra_names)
+          @protected_names ||= [ hotel.name ] + hotel.room_types.pluck(:name) + hotel.rate_plans.pluck(:name)
+          @protected_names + Array(extra_names)
         end
 
         def persist_state(conversation_state, slots_payload:, active_topic:, active_flow:, pending_question:, flow_status: nil, end_reason: nil)

@@ -50,6 +50,22 @@
         <%= render "public/concierge/shared/error_alert", message: flash[:alert] %>
       </div>
     <% end %>
-    <% panel.with_composer(url: concierge_chat_messages_path(hotel)) %>
+    <% case chat_input.kind %>
+    <% when :confirmation_code %>
+      <% panel.with_secure_input do %>
+        <%= render PublicUI::Chat::SecureInput.new(
+              url: concierge_chat_booking_path(hotel),
+              kind: :confirmation_code,
+              error: chat_input.error) %>
+      <% end %>
+    <% else %>
+      <% if chat_input.suggestions.any? %>
+        <% panel.with_quick_replies(
+             suggestions: chat_input.suggestions,
+             message_url: concierge_chat_messages_path(hotel),
+             agent_url: concierge_chat_agent_path(hotel)) %>
+      <% end %>
+      <% panel.with_composer(url: concierge_chat_messages_path(hotel)) %>
+    <% end %>
   <% end %>
 <% end %>

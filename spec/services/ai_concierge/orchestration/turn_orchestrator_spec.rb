@@ -189,22 +189,67 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     end
   end
 
-  it "does not end the conversation on a greeting" do
-    script_model("hello", interpretation(intent: "greeting", conversation_signals: { "end_conversation" => true }))
+  it "answers an idle greeting without consulting the agent loop or starting a booking" do
+    expect(AiConcierge::Orchestration::AgentLoop::RunTurn).not_to receive(:new)
 
     result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
-    # A greeting reaches no tool, so the reply is the model's own words --
-    # the one place the loop lets it write to the guest. What matters here is
-    # that the turn did not read as goodbye.
-    expect(result.payload[:reply_message]).to be_present
-    expect(result.payload[:reply_message]).not_to include("No problem, please let me know if you need anything.")
+    expect(result.payload[:reply_message]).to eq(
+      "Hello! Welcome to #{hotel.name}. I can help you find the right stay, check prices, " \
+        "answer hotel questions, or access an existing booking. What can I help you with today?"
+    )
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+    expect(state.slots_payload.dig("booking_task", "pending_question")).to be_nil
+    expect(state.pending_question).to be_nil
+  end
+
+  it "keeps a pending secure booking lookup ahead of greetings and the agent loop" do
+    prospect = create(:prospect, hotel: hotel, phone_number: nil)
+    conversation = create(:conversation, hotel: hotel, prospect: prospect, channel: "web")
+    manager = AiConcierge::State::ConversationTaskManager.new(slots_payload: {})
+    create(
+      :prospect_conversation_state,
+      prospect: prospect,
+      slots_payload: manager.request_existing_booking_code,
+      active_topic: "existing_booking",
+      active_flow: "existing_booking",
+      pending_question: "confirmation_code"
+    )
+    expect(AiConcierge::Orchestration::AgentLoop::RunTurn).not_to receive(:new)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "hello",
+      prospect_public_id: prospect.public_id,
+      channel: conversation.channel
+    ).call
+
+      expect(result.payload[:reply_message]).to include("Enter your booking confirmation code")
+  end
+
+  it "offers a portal link before asking an anonymous guest for a confirmation code" do
+    prospect = create(:prospect, hotel: hotel, phone_number: nil)
+    conversation = create(:conversation, hotel: hotel, prospect: prospect, channel: "web")
+    expect(AiConcierge::Orchestration::AgentLoop::RunTurn).not_to receive(:new)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "I have an existing booking",
+      prospect_public_id: prospect.public_id,
+      channel: conversation.channel
+    ).call
+
+    expect(result.payload[:reply_message]).to include("Guest Portal", "secure login link")
+    expect(prospect.prospect_conversation_state.reload.slots_payload.dig("existing_booking_task", "status"))
+      .to eq("portal_offered")
   end
 
   it "returns an internal server error when orchestration fails unexpectedly" do
     allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_raise(StandardError, "boom")
 
-    result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789").call
+    result = described_class.new(hotel: hotel, message: "Can you help me?", phone: "+60123456789").call
 
     expect(result).not_to be_success
     expect(result.status).to eq(:internal_server_error)

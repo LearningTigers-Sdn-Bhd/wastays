@@ -1,13 +1,62 @@
 require "rails_helper"
 
 RSpec.describe AiConcierge::State::ConversationTaskManager do
+  describe "existing booking task" do
+    it "scopes secure lookup state to one conversation" do
+      payload = described_class.new(slots_payload: {}).request_existing_booking_code(conversation_id: 12)
+      manager = described_class.new(slots_payload: payload)
+
+      expect(manager.existing_booking_pending?(conversation_id: 12)).to be(true)
+      expect(manager.existing_booking_pending?(conversation_id: 13)).to be(false)
+    end
+
+    it "requests a confirmation code without changing the new-booking task" do
+      manager = described_class.new(slots_payload: {})
+      original_booking = manager.booking_task
+
+      payload = manager.request_existing_booking_code
+
+      expect(payload["existing_booking_task"]).to include(
+        "status" => "awaiting_confirmation_code",
+        "pending_question" => "confirmation_code"
+      )
+      expect(payload["booking_task"]).to eq(original_booking)
+    end
+
+    it "offers the portal without changing the new-booking task" do
+      manager = described_class.new(slots_payload: {})
+      original_booking = manager.booking_task
+
+      payload = manager.offer_existing_booking_portal(request_kind: :portal_general)
+
+      expect(payload.dig("existing_booking_task", "status")).to eq("portal_offered")
+      expect(payload.dig("ui_task", "suggestion_group")).to eq("portal_offer")
+      expect(payload["booking_task"]).to eq(original_booking)
+    end
+
+    it "locks the lookup after five rejected codes" do
+      payload = described_class.new(slots_payload: {}).request_existing_booking_code
+      5.times { payload = described_class.new(slots_payload: payload).reject_existing_booking_code }
+
+      expect(payload.dig("existing_booking_task", "status")).to eq("locked")
+      expect(payload.dig("ui_task", "suggestion_group")).to eq("magic_link_failure")
+    end
+
+    it "stores only allowlisted suggestion groups" do
+      manager = described_class.new(slots_payload: {})
+
+      expect(manager.show_suggestions("greeting").dig("ui_task", "suggestion_group")).to eq("greeting")
+      expect(manager.show_suggestions("https://example.com").dig("ui_task", "suggestion_group")).to be_nil
+    end
+  end
+
   describe "booking purpose" do
     it "normalizes existing tasks to booking without changing the state version" do
       manager = described_class.new(slots_payload: {})
 
       expect(manager.booking_purpose).to eq("booking")
       expect(manager).not_to be_price_exploration
-      expect(manager.payload["state_version"]).to eq(2)
+      expect(manager.payload["state_version"]).to eq(3)
     end
 
     it "keeps price exploration through booking updates and clears it on reset" do
@@ -41,7 +90,7 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
     it "adds the sales task without changing the state version" do
       manager = described_class.new(slots_payload: {})
 
-      expect(manager.payload["state_version"]).to eq(2)
+      expect(manager.payload["state_version"]).to eq(3)
       expect(manager.sales_task).to eq(
         "last_optional_action" => nil,
         "suppress_next_optional_offer" => false,
@@ -127,18 +176,18 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
     end
   end
 
-  it "normalizes legacy active state into a v2 booking task" do
+  it "normalizes legacy active state into the current booking task" do
     branch = { "branch_id" => "branch-1", "target_month" => 8 }
 
     payload = described_class.new(slots_payload: { "active" => branch, "paused_flows" => [] }).payload
 
-    expect(payload["state_version"]).to eq(2)
+    expect(payload["state_version"]).to eq(3)
     expect(payload["booking_task"]["branch"]["target_month"]).to eq(8)
     expect(payload).not_to have_key("active")
     expect(payload).not_to have_key("paused_flows")
   end
 
-  it "normalizes legacy paused booking flow into a suspended v2 booking task" do
+  it "normalizes legacy paused booking flow into a suspended current booking task" do
     branch = { "branch_id" => "branch-1", "suggested_options" => [ { "room_type_name" => "Deluxe Room" } ] }
     payload = described_class.new(slots_payload: {
       "paused_flows" => [

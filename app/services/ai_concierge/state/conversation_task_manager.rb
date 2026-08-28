@@ -1,8 +1,11 @@
 module AiConcierge
   module State
     class ConversationTaskManager
-    STATE_VERSION = 2
+    STATE_VERSION = 3
     SUSPENDED_BOOKING_TTL = ProspectConversationState::PAUSED_FLOW_TTL
+    SUGGESTION_GROUPS = %w[
+      greeting portal_offer post_link_sales magic_link_failure staff_wait unsupported_change
+    ].freeze
 
     # `now` is set first because normalizing reads it: whether a suspension has
     # lapsed is part of what the payload says, not something asked afterwards.
@@ -23,6 +26,105 @@ module AiConcierge
 
     def sales_task
       payload["sales_task"]
+    end
+
+    def existing_booking_task
+      payload["existing_booking_task"]
+    end
+
+    def existing_booking_pending?(conversation_id: nil)
+      existing_booking_task["status"] == "awaiting_confirmation_code" && existing_booking_scope_matches?(conversation_id)
+    end
+
+    def existing_booking_portal_offered?(conversation_id: nil)
+      existing_booking_task["status"] == "portal_offered" && existing_booking_scope_matches?(conversation_id)
+    end
+
+    def existing_booking_handoff_offered?(conversation_id: nil)
+      existing_booking_task["status"].in?(%w[handoff_offered locked]) && existing_booking_scope_matches?(conversation_id)
+    end
+
+    def suggestion_group
+      payload.dig("ui_task", "suggestion_group")
+    end
+
+    def show_suggestions(group)
+      normalized = group.to_s
+      normalized = nil unless normalized.in?(SUGGESTION_GROUPS)
+      update_ui_task("suggestion_group" => normalized)
+    end
+
+    def clear_suggestions
+      update_ui_task("suggestion_group" => nil)
+    end
+
+    def offer_existing_booking_portal(request_kind: nil, conversation_id: nil)
+      updated = update_existing_booking_task(
+        "status" => "portal_offered",
+        "pending_question" => nil,
+        "request_kind" => request_kind,
+        "conversation_id" => conversation_id,
+        "lookup_attempt_count" => 0,
+        "locked_until" => nil
+      )
+      self.class.new(slots_payload: updated, now: now).show_suggestions("portal_offer")
+    end
+
+    def offer_existing_booking_handoff(request_kind: nil, conversation_id: nil)
+      updated = update_existing_booking_task(
+        "status" => "handoff_offered",
+        "pending_question" => nil,
+        "request_kind" => request_kind,
+        "conversation_id" => conversation_id || existing_booking_task["conversation_id"],
+        "locked_until" => nil
+      )
+      self.class.new(slots_payload: updated, now: now).show_suggestions(
+        request_kind.to_s.start_with?("unsupported_") ? "unsupported_change" : "magic_link_failure"
+      )
+    end
+
+    def request_existing_booking_code(conversation_id: nil)
+      updated = update_existing_booking_task(
+        "status" => "awaiting_confirmation_code",
+        "pending_question" => "confirmation_code",
+        "conversation_id" => conversation_id || existing_booking_task["conversation_id"],
+        "lookup_attempt_count" => 0,
+        "locked_until" => nil
+      )
+      self.class.new(slots_payload: updated, now: now).clear_suggestions
+    end
+
+    def reject_existing_booking_code
+      attempts = existing_booking_task["lookup_attempt_count"].to_i + 1
+      updated = update_existing_booking_task(
+        "status" => attempts >= 5 ? "locked" : "awaiting_confirmation_code",
+        "pending_question" => attempts >= 5 ? nil : "confirmation_code",
+        "lookup_attempt_count" => attempts,
+        "locked_until" => (attempts >= 5 ? (now + 30.minutes).iso8601 : nil)
+      )
+      return updated unless attempts >= 5
+
+      self.class.new(slots_payload: updated, now: now).show_suggestions("magic_link_failure")
+    end
+
+    def record_magic_link_sent
+      updated = update_existing_booking_task(
+        "status" => "link_sent",
+        "pending_question" => nil,
+        "lookup_attempt_count" => 0,
+        "locked_until" => nil
+      )
+      self.class.new(slots_payload: updated, now: now).show_suggestions("post_link_sales")
+    end
+
+    def record_booking_support_requested
+      updated = without_legacy(payload.merge("existing_booking_task" => default_existing_booking_task))
+      self.class.new(slots_payload: updated, now: now).show_suggestions("staff_wait")
+    end
+
+    def reset_existing_booking_task
+      updated = without_legacy(payload.merge("existing_booking_task" => default_existing_booking_task))
+      self.class.new(slots_payload: updated, now: now).clear_suggestions
     end
 
     def optional_sales_offer_pending?
@@ -195,6 +297,8 @@ module AiConcierge
           "booking_task" => normalize_booking_task(migrated["booking_task"]),
           "information_task" => normalize_information_task(migrated["information_task"]),
           "sales_task" => normalize_sales_task(migrated["sales_task"]),
+          "existing_booking_task" => normalize_existing_booking_task(migrated["existing_booking_task"]),
+          "ui_task" => normalize_ui_task(migrated["ui_task"]),
           "completed_booking_branches" => Array(migrated["completed_booking_branches"]).select { |entry| entry.is_a?(Hash) }
         )
       )
@@ -261,12 +365,43 @@ module AiConcierge
       default_sales_task.merge(task)
     end
 
+    def normalize_existing_booking_task(value)
+      task = value.is_a?(Hash) ? value.deep_dup : {}
+      default_existing_booking_task.merge(task).tap do |normalized|
+        if normalized["status"] == "locked" && expired?(normalized, key: "locked_until")
+          normalized.replace(default_existing_booking_task)
+        elsif normalized["status"] == "identified"
+          normalized.replace(default_existing_booking_task)
+        end
+      end
+    end
+
+    def normalize_ui_task(value)
+      task = value.is_a?(Hash) ? value.deep_dup : {}
+      default_ui_task.merge(task).tap do |normalized|
+        normalized["suggestion_group"] = nil unless normalized["suggestion_group"].to_s.in?(SUGGESTION_GROUPS)
+      end
+    end
+
     def update_booking_task(attributes)
       without_legacy(payload.merge("booking_task" => booking_task.merge(attributes)))
     end
 
     def update_sales_task(attributes)
       without_legacy(payload.merge("sales_task" => sales_task.merge(attributes)))
+    end
+
+    def update_existing_booking_task(attributes)
+      without_legacy(payload.merge("existing_booking_task" => existing_booking_task.merge(attributes)))
+    end
+
+    def update_ui_task(attributes)
+      without_legacy(payload.merge("ui_task" => payload["ui_task"].merge(attributes)))
+    end
+
+    def existing_booking_scope_matches?(conversation_id)
+      stored_id = existing_booking_task["conversation_id"]
+      conversation_id.blank? || stored_id.blank? || stored_id.to_s == conversation_id.to_s
     end
 
     # The branch is the whole answer to "did anything move?". A guest who
@@ -316,8 +451,8 @@ module AiConcierge
       end
     end
 
-    def expired?(task)
-      expires_at = Time.zone.parse(task["expires_at"].to_s)
+    def expired?(task, key: "expires_at")
+      expires_at = Time.zone.parse(task[key].to_s)
       expires_at.present? && expires_at <= now
     rescue ArgumentError
       false
@@ -369,6 +504,21 @@ module AiConcierge
         "suppress_next_optional_offer" => false,
         "refusal_acknowledgment_pending" => false
       }
+    end
+
+    def default_existing_booking_task
+      {
+        "status" => "idle",
+        "pending_question" => nil,
+        "request_kind" => nil,
+        "conversation_id" => nil,
+        "lookup_attempt_count" => 0,
+        "locked_until" => nil
+      }
+    end
+
+    def default_ui_task
+      { "suggestion_group" => nil }
     end
 
     # One definition, in `SlotMerger`. This was a character-for-character copy

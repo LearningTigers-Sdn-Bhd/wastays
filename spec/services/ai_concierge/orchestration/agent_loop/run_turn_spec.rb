@@ -30,6 +30,22 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       )
     end
 
+    it "does not expose booking lookup to an anonymous web guest" do
+      web_prospect = create(:prospect, hotel: hotel, phone_number: nil)
+      web_conversation = create(:conversation, hotel: hotel, prospect: web_prospect, channel: "web")
+      web_state = create(:prospect_conversation_state, prospect: web_prospect)
+      turn = described_class.new(
+        hotel: hotel,
+        prospect: web_prospect,
+        phone: nil,
+        conversation_state: web_state,
+        message: "Tell me about the hotel",
+        conversation: web_conversation
+      )
+
+      expect(turn.tools.map(&:name)).not_to include("get_booking_context")
+    end
+
     # RubyLLM derives a tool name from the full class name, which here would be
     # "ai_concierge--tools--llm--advance_booking". The model has to be able to
     # say the name back.

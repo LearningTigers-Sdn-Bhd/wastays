@@ -1,0 +1,26 @@
+<div class="public-chat__secure-input" aria-live="polite">
+  <%= form_with url: url, method: :post, class: "space-y-2" do %>
+    <div>
+      <%= label_tag parameter, label, class: "public-chat__secure-label" %>
+      <p id="concierge-secure-input-hint" class="public-chat__secure-hint"><%= hint %></p>
+    </div>
+
+    <% if error.present? %>
+      <p id="concierge-secure-input-error" class="public-chat__secure-error" role="alert"><%= error %></p>
+    <% end %>
+
+    <div class="public-chat__composer-field">
+      <%= text_field_tag parameter, nil,
+            required: true,
+            class: "public-chat__input uppercase",
+            aria: {
+              describedby: [ "concierge-secure-input-hint", ("concierge-secure-input-error" if error.present?) ].compact.join(" "),
+              invalid: error.present? ? "true" : nil
+            },
+            **input_attributes %>
+      <button type="submit" class="public-chat__send" aria-label="Submit <%= label.downcase %>">
+        <%= helpers.app_icon "arrow-up", class: "size-5", stroke_width: 2.5, aria: { hidden: "true" } %>
+      </button>
+    </div>
+  <% end %>
+</div>

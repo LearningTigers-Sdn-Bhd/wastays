@@ -110,6 +110,7 @@ Rails.application.routes.draw do
     get  "contact",                to: "contact#show",         as: :contact
     get    "chat",                 to: "chats#show",           as: :chat
     post   "chat",                 to: "chats#create",         as: :chat_messages
+    post   "chat/booking",         to: "booking_links#create", as: :chat_booking
     delete "chat",                 to: "chats#destroy",        as: :clear_chat
     post   "chat/agent",           to: "chats#request_agent",  as: :chat_agent
   end

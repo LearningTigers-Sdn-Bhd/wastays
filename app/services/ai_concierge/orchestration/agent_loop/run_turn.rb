@@ -56,12 +56,23 @@ module AiConcierge
         end
 
         def tools
-          @tools ||= TOOL_CLASSES.map { |klass| klass.new(context: context, recorder: recorder) }
+          @tools ||= available_tool_classes.map { |klass| klass.new(context: context, recorder: recorder) }
         end
 
         private
 
         attr_reader :context, :recorder
+
+        def available_tool_classes
+          return TOOL_CLASSES unless anonymous_web_guest?
+
+          TOOL_CLASSES.without(Tools::Llm::GetBookingContextFunction)
+        end
+
+        def anonymous_web_guest?
+          context.conversation&.channel == Concierge::PostWebMessage::CHANNEL &&
+            context.phone.blank? && context.prospect.phone_number.blank?
+        end
 
         def resolve_knowledge_clarification
           HotelKnowledge::ClarificationResolver.new(context: context).call

@@ -1,0 +1,23 @@
+<div class="public-chat__quick-replies" aria-label="Suggested replies">
+  <% suggestions.each do |suggestion| %>
+    <% case suggestion.kind %>
+    <% when :message %>
+      <%= button_to suggestion.label,
+            message_url,
+            params: { message: suggestion.value },
+            method: :post,
+            form: { data: { action: "turbo:submit-end->concierge-chat#clearSuggestions" } },
+            class: "public-chat__quick-reply" %>
+    <% when :agent %>
+      <%= button_to suggestion.label,
+            agent_url,
+            params: { reason: "booking_support" },
+            method: :post,
+            class: "public-chat__quick-reply" %>
+    <% when :focus %>
+      <button type="button"
+              class="public-chat__quick-reply"
+              data-action="concierge-chat#focusComposer"><%= suggestion.label %></button>
+    <% end %>
+  <% end %>
+</div>
