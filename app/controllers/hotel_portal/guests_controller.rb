@@ -46,6 +46,7 @@ module HotelPortal
             country: guest.country,
             gender: guest.gender,
             date_of_birth: guest.date_of_birth&.iso8601,
+            home_address: guest.home_address,
             blacklisted: guest.blacklisted_at?(current_hotel)
           }
         }
@@ -199,7 +200,7 @@ module HotelPortal
     end
 
     def guest_params
-      params.require(:guest).permit(:name, :email, :phone, :city, :state_code, :postal_code, :tin, :country, :gender, :document_type, :government_id, :date_of_birth)
+      params.require(:guest).permit(:name, :email, :phone, :home_address, :city, :state_code, :postal_code, :tin, :country, :gender, :document_type, :government_id, :date_of_birth)
     end
 
 

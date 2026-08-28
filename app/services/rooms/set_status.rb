@@ -17,7 +17,7 @@ module Rooms
     }.freeze
 
     def initialize(room_status:, status:, user:, reason: nil, booking: nil, event_type: "room_status_changed", metadata: {},
-                   require_ready_notes: true, clear_assignment: false, enforce_transition: true)
+                   clear_assignment: false, enforce_transition: true)
       @room_status = room_status
       @status = status.to_s
       @user = user
@@ -25,7 +25,6 @@ module Rooms
       @booking = booking
       @event_type = event_type
       @metadata = metadata
-      @require_ready_notes = require_ready_notes
       @clear_assignment = clear_assignment
       @enforce_transition = enforce_transition
     end
@@ -33,7 +32,6 @@ module Rooms
     def call
       return success if @room_status.status == @status
       return failure("Unsupported room status: #{@status}.") unless RoomStatus::STATUSES.include?(@status)
-      return failure("Add remarks before marking this room Cleaned") if @status == "ready" && @require_ready_notes && @reason.blank?
       return failure("A checked-in booking is required to report late checkout.") if @status == "late_checkout_detected" && @booking.blank?
       return failure(transition_error) if @enforce_transition && !allowed_transition?
 

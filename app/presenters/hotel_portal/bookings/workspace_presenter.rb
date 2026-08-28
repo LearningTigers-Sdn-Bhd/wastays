@@ -61,7 +61,7 @@ module HotelPortal
       "Group statement" => :statements
     }.freeze
     DOCUMENT_TYPE_ORDER = DOCUMENT_SECTION_BY_TYPE.keys.each_with_index.to_h.freeze
-    GUEST_FORM_ATTRIBUTES = %i[name email phone country gender document_type government_id date_of_birth].freeze
+    GUEST_FORM_ATTRIBUTES = %i[name email phone country gender document_type government_id date_of_birth home_address].freeze
     BADGE_VARIANTS = {
       "slate" => :neutral, "blue" => :info, "amber" => :warning,
       "emerald" => :success, "orange" => :warning, "rose" => :destructive
@@ -623,7 +623,8 @@ module HotelPortal
         gender: bg.gender_snapshot.presence || g.gender,
         document_type: bg.document_type_snapshot.presence || g.document_type.presence || "ic",
         government_id: safe_encrypted_value(bg, :government_id_snapshot) || safe_encrypted_value(g, :government_id),
-        date_of_birth: bg.date_of_birth_snapshot.presence || g.date_of_birth
+        date_of_birth: bg.date_of_birth_snapshot.presence || g.date_of_birth,
+        home_address: bg.home_address_snapshot.presence || g.home_address
       }
     end
 

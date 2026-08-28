@@ -513,6 +513,17 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.booking.guest_document_type).to eq("passport")
   end
 
+  it "creates a new guest with an optional home address" do
+    params.merge!(guest_home_address: "No. 12, Jalan Ampang")
+
+    result = subject.call
+
+    expect(result.success?).to be true
+    guest = result.booking.guests.first
+    expect(guest.home_address).to eq("No. 12, Jalan Ampang")
+    expect(result.booking.guest_home_address).to eq("No. 12, Jalan Ampang")
+  end
+
   it "stores a nightly rate snapshot and tax posting snapshot" do
     hotel.update!(sst_enabled: true)
     room_revenue_code.update!(is_taxable: true)

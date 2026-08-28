@@ -87,6 +87,10 @@
              data: { guest_dob_target: "dateOfBirth" }) %>
       <% end %>
     </div>
+
+    <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Address") do |field| %>
+      <% field.with_text_area(value: guest.home_address, rows: 2, placeholder: "Street address, city, postcode") %>
+    <% end %>
   <% end %>
 <% end %>
 <% end %>

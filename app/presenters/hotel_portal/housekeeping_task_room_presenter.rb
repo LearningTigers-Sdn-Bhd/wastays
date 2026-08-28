@@ -62,10 +62,6 @@ module HotelPortal
 
         eligible = allowed.include?(value)
         eligible &&= late_checkout_eligible if value == "late_checkout_detected"
-        if value == "ready" && resolved_status != "ready" && notes.blank?
-          eligible = false
-          label = "Cleaned — add remarks first"
-        end
         { label:, value:, disabled: value != resolved_status && !eligible }
       end
     end
