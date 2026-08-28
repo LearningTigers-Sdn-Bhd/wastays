@@ -18,19 +18,19 @@ module AiConcierge
         when :ask_booking_timing
           ask_booking_timing_message
         when :ask_room_rate_timing
-          "Dear guest, room rates depend on the booking dates and room types. Which date or month do you plan to arrive for check-in?"
+          "Of course. I can compare current room prices. Which date or month are you considering for check-in?"
         when :timing_in_the_past
           timing_in_the_past_message
         when :ask_date_range_month
-          "You said #{date_range_label}, but which month?"
+          price_exploration? ? "You want to compare #{date_range_label}, but which month?" : "You said #{date_range_label}, but which month?"
         when :ask_specific_timing
           ask_specific_timing_message
         when :ask_duration
-          "How many days and nights will you be staying?"
+          price_exploration? ? price_duration_message : "How many days and nights will you be staying?"
         when :ask_guest_count
           ask_guest_count_message
         when :ask_adult_count
-          %(How many adults will be staying? Please reply with the number, e.g. "2 adults".)
+          price_exploration? ? %(How many adults should I include in the price comparison? Please reply with the number, e.g. "2 adults".) : %(How many adults will be staying? Please reply with the number, e.g. "2 adults".)
         when :ask_party_split
           ask_party_split_message
         when :suggest_options
@@ -42,11 +42,13 @@ module AiConcierge
         when :price_option_details
           price_option_details_message
         when :price_option_declined
-          "No problem. You can ask about another priced option when you are ready."
+          "No problem. You can compare another option or change the dates."
         when :price_option_required
-          "Please send the number of the priced option that you want to continue with."
+          "Which priced option would you like to book? Please send its number."
         when :price_option_invalid
           "I could not match that priced option. Please send a number from the list."
+        when :price_option_guidance
+          "This option is still only being compared. You can view another option, change the dates, or say *book this option* when you are ready."
         when :ask_confirmation
           ask_confirmation_message
         when :invalid_selection
@@ -120,17 +122,46 @@ module AiConcierge
         else
                    ""
         end
-        "How many guests should I check for#{suffix}? #{GUEST_COUNT_FORMAT}"
+        if price_exploration?
+          "How many adults and children should I include in the price comparison#{suffix}? #{GUEST_COUNT_FORMAT}"
+        else
+          "How many guests should I check for#{suffix}? #{GUEST_COUNT_FORMAT}"
+        end
       end
 
       def ask_specific_timing_message
+        if price_exploration?
+          return price_specific_timing_message
+        end
+
         "You want to make a booking in #{month_label}. May I know the exact check-in date or assumption range, e.g: *early*, *mid*, and *late*?"
+      end
+
+      def price_duration_message
+        return "How many nights would you like me to compare?" if month_label.blank?
+
+        "For #{month_label}, how many nights would you like me to compare?"
+      end
+
+      def price_specific_timing_message
+        month = branch["target_month"].to_i
+        year = branch["target_year"].to_i
+        date = Date.new(year, month, 1)
+        name = date.strftime("%B")
+        last_day = date.end_of_month.day
+
+        "For #{name} #{year}, should I compare early #{name} (1–10), mid-#{name} (11–20), or late #{name} (21–#{last_day})? " \
+          "You can also give me exact dates."
+      rescue Date::Error
+        "For #{month_label}, do you prefer early, middle, or late in the month? You can also give me exact dates."
       end
 
       def ask_party_split_message
         total = context[:party_size_total].to_i
         adults = context[:adults]
         children = context[:children]
+
+        return price_party_split_message(total, adults, children) if price_exploration?
 
         if adults.present? && adults.to_i.positive? && adults.to_i < total
           remaining = total - adults.to_i
@@ -141,6 +172,17 @@ module AiConcierge
         else
           "For #{total} people, how many are adults and how many are children?"
         end
+      end
+
+      def price_party_split_message(total, adults, children)
+        if adults.present? && adults.to_i.positive? && adults.to_i < total
+          return "I have #{adults} adults. How many of the remaining #{total - adults.to_i} guests are children?"
+        end
+        if children.present? && children.to_i.positive? && children.to_i < total
+          return "I have #{children} children. How many of the remaining #{total - children.to_i} guests are adults?"
+        end
+
+        "For the price comparison, how many of the #{total} guests are adults and how many are children?"
       end
 
       def suggest_options_message
@@ -174,7 +216,7 @@ module AiConcierge
           ("Amenities: #{amenities.join(', ')}." if amenities.present?),
           "Available rates:",
           rate_plan_lines(rate_plans, option),
-          "Would you like to continue booking this option? Please reply *Yes* or *No*."
+          "You can compare another option, change the dates, or say *book this option* when you are ready."
         ]
 
         lines.compact_blank.join("\n\n")
@@ -205,7 +247,7 @@ module AiConcierge
         if context[:price_exploration]
           return "Reply with a number to see room and rate details." if first.blank?
 
-          return %(Reply with a number to see room and rate details, e.g. "#{first['position']}". To continue booking, say "continue with option #{first['position']}".)
+          return %(Reply with a number to see room and rate details, e.g. "#{first['position']}". This does not select or book the room.)
         end
         return "Reply with the number of the option you want." if first.blank?
 
@@ -302,7 +344,13 @@ module AiConcierge
 
       def no_options_message
         label = month_label.presence || "those dates"
+        return "I could not find a current price for #{label}. Send another date or month and I will compare again." if price_exploration?
+
         "Sorry, I couldn't find any rooms available for #{label}. If you want, send another date or month and I'll check again."
+      end
+
+      def price_exploration?
+        context[:price_exploration]
       end
 
       def ask_rate_plan_message

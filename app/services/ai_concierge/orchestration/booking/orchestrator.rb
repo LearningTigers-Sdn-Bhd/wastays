@@ -213,20 +213,19 @@ module AiConcierge
     def handle_price_exploration
       return unless price_exploration_turn?
 
-      if pending_question == "price_option_continuation"
-        return continue_viewed_option if continuation_accepted?
-        return decline_viewed_option if confirmation_answer == "no"
-      end
-
       result = referenced_price_option
       if result&.fetch("success", false)
-        return continue_price_option(result["selected_option"]) if booking_continuation_requested?
+        return continue_price_option(result["selected_option"]) if explicit_purchase_requested?
 
         return show_price_option_details(result["selected_option"])
       end
 
-      return price_option_required_response if booking_continuation_requested?
+      return continue_viewed_option if explicit_purchase_requested? && active_branch["viewed_option"].present?
+      return if explicit_purchase_requested? && priced_options.blank?
       return price_option_invalid_response if price_option_reference?
+      return price_option_required_response if explicit_purchase_requested?
+      return price_option_guidance_response if price_progress_word? && active_branch["viewed_option"].present?
+      return decline_viewed_option if confirmation_answer == "no" && active_branch["viewed_option"].present?
       return show_price_option_details(active_branch["viewed_option"]) if pending_question == "price_option_continuation" && active_branch["viewed_option"].present?
 
       nil
@@ -292,6 +291,16 @@ module AiConcierge
       )
     end
 
+    def price_option_guidance_response
+      set_booking_purpose("price_exploration")
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        reply_type: :price_option_guidance,
+        pending_question: "price_option_continuation"
+      )
+    end
+
     def price_option_invalid_response
       set_booking_purpose("price_exploration")
       booking_response(
@@ -345,18 +354,20 @@ module AiConcierge
       message.downcase.match?(/\b(?:cheapest|lowest)\b/)
     end
 
-    def booking_continuation_requested?
-      interpretation.dig("slots", "option_action") == "continue" ||
-        Matching::BookingIntentMatcher.new(message: message).booking_commitment? ||
-        continuation_accepted?
+    def explicit_purchase_requested?
+      booking_intent.explicit_purchase_commitment?
     end
 
-    def continuation_accepted?
-      pending_question == "price_option_continuation" && confirmation_answer == "yes"
+    def price_progress_word?
+      confirmation_answer == "yes" || message.downcase.match?(/\b(?:continue|proceed)\b/)
     end
 
     def confirmation_answer
       interpretation.dig("slots", "confirmation") || Core::ConfirmationReader.new(message: message).confirmation
+    end
+
+    def priced_options
+      Array(active_branch["suggested_options"])
     end
 
     def set_booking_purpose(purpose)

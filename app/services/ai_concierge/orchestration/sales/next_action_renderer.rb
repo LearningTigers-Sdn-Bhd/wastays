@@ -29,6 +29,7 @@ module AiConcierge
           case next_action.kind
           when "offer_booking_help" then booking_help_message
           when "offer_price_search" then "Would you like me to check prices for this room for your travel dates?"
+          when "offer_guided_hotel_exploration" then "What matters most for your stay: facilities, location, or room choices?"
           when "resume_booking", "continue_booking" then "Would you like to continue your booking?"
           when "offer_alternative_search" then "Would you like me to search another date or room?"
           when "offer_front_desk" then front_desk_message

@@ -14,6 +14,7 @@ RSpec.describe AiConcierge::Orchestration::Sales::NextActionRenderer do
   it "renders every action kind after the factual answer" do
     expect(render("offer_booking_help")).to end_with("Would you like me to help you find a room for your travel dates?")
     expect(render("offer_price_search")).to end_with("Would you like me to check prices for this room for your travel dates?")
+    expect(render("offer_guided_hotel_exploration")).to end_with("What matters most for your stay: facilities, location, or room choices?")
     expect(render("resume_booking")).to end_with("Would you like to continue your booking?")
     expect(render("continue_booking")).to end_with("Would you like to continue your booking?")
     expect(render("offer_alternative_search")).to end_with("Would you like me to search another date or room?")

@@ -10,7 +10,7 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
 
     message = described_class.new(hotel: hotel, context: {}).call(:ask_room_rate_timing)
 
-    expect(message).to eq("Dear guest, room rates depend on the booking dates and room types. Which date or month do you plan to arrive for check-in?")
+    expect(message).to eq("Of course. I can compare current room prices. Which date or month are you considering for check-in?")
   end
 
   it "asks for booking timing with arrival phrasing" do
@@ -19,6 +19,56 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
     message = described_class.new(hotel: hotel, context: {}).call(:ask_booking_timing)
 
     expect(message).to eq("Sure, which date or month do you plan to arrive for check-in?")
+  end
+
+  it "uses shopping language for every price-search collection question" do
+    hotel = build_stubbed(:hotel, name: "Demo Hotel")
+    context = {
+      price_exploration: true,
+      branch: {
+        "target_month" => 9,
+        "target_year" => 2026,
+        "clarification_needed" => { "start_day" => 10, "end_day" => 12 }
+      },
+      party_size_total: 3,
+      adults: 2
+    }
+    builder = described_class.new(hotel: hotel, context: context)
+
+    messages = %i[ask_date_range_month ask_specific_timing ask_duration ask_guest_count ask_adult_count ask_party_split]
+      .map { |reply_type| builder.call(reply_type) }
+
+    expect(messages).to all(satisfy { |message| message.present? && !message.match?(/want to make a booking|continue booking/i) })
+    expect(messages.join(" ")).to include("compare", "price comparison")
+  end
+
+  it "shows the selected month segment in the price duration question" do
+    hotel = build_stubbed(:hotel, name: "Demo Hotel")
+    context = {
+      price_exploration: true,
+      branch: { "target_month" => 9, "target_year" => 2026, "month_segment" => "late" }
+    }
+
+    message = described_class.new(hotel: hotel, context: context).call(:ask_duration)
+
+    expect(message).to eq("For late September 2026, how many nights would you like me to compare?")
+  end
+
+  it "shows the correct final day in price timing windows" do
+    hotel = build_stubbed(:hotel, name: "Demo Hotel")
+
+    examples = {
+      [ 2, 2027 ] => 28,
+      [ 2, 2028 ] => 29,
+      [ 9, 2026 ] => 30
+    }
+
+    examples.each do |(month, year), last_day|
+      context = { price_exploration: true, branch: { "target_month" => month, "target_year" => year } }
+      message = described_class.new(hotel: hotel, context: context).call(:ask_specific_timing)
+
+      expect(message).to include("late #{Date::MONTHNAMES[month]} (21–#{last_day})"), year.to_s
+    end
   end
 
   it "says hello and what it can do when the booking question opens the thread" do
@@ -99,7 +149,7 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
     expect(message).to include("Here are the available price options for 2 adults in August 2026")
     expect(message).to include("Lowest starting option: *1. Garden Suite* — from RM 600.00")
     expect(message).to include('Reply with a number to see room and rate details, e.g. "1".')
-    expect(message).to include('To continue booking, say "continue with option 1".')
+    expect(message).to include("This does not select or book the room.")
     expect(message).not_to include("28 August 2026 - 31 August 2026 · 3 nights")
   end
 
@@ -130,7 +180,7 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
     expect(message).to include("A quiet room facing the garden.")
     expect(message).to include("Capacity: 2 adults and 1 child.")
     expect(message).to include("- Saver: RM 600.00", "- Flexible: RM 720.00")
-    expect(message).to end_with("Would you like to continue booking this option? Please reply *Yes* or *No*.")
+    expect(message).to end_with("You can compare another option, change the dates, or say *book this option* when you are ready.")
   end
 
   it "asks which month for a monthless date range" do

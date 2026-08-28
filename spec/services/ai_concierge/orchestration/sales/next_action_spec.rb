@@ -17,9 +17,10 @@ RSpec.describe AiConcierge::Orchestration::Sales::NextAction do
     expect(described_class.new("offer_booking_help")).not_to be_none
   end
 
-  it "identifies only the two optional sales offers" do
+  it "identifies only optional sales offers" do
     expect(described_class.new("offer_booking_help")).to be_optional
     expect(described_class.new("offer_price_search")).to be_optional
+    expect(described_class.new("offer_guided_hotel_exploration")).to be_optional
     expect(described_class.new("resume_booking")).not_to be_optional
   end
 end

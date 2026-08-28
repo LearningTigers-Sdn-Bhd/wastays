@@ -116,8 +116,9 @@ module AiConcierge
         end
 
         def purpose_after_price_exploration
-          return "booking" if confirms_viewed_option?
-          return "booking" if booking_intent.booking_commitment? && option_chosen?
+          return "price_exploration" unless booking_intent.explicit_purchase_commitment?
+          return "booking" if option_chosen?
+          return "booking" unless priced_options_available?
 
           "price_exploration"
         end
@@ -126,15 +127,13 @@ module AiConcierge
           context.pending_price_offer? && confirmation == "yes"
         end
 
-        def confirms_viewed_option?
-          context.pending_question == "price_option_continuation" &&
-            context.booking_branch["viewed_option"].present? &&
-            (confirmation == "yes" || booking_intent.booking_commitment?)
-        end
-
         def option_chosen?
           context.booking_branch["viewed_option"].present? ||
             Matching::OptionReference.new(message: context.message).number.present?
+        end
+
+        def priced_options_available?
+          Array(context.booking_branch["suggested_options"]).any?
         end
 
         def confirmation

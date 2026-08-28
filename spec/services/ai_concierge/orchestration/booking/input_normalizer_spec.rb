@@ -42,6 +42,72 @@ RSpec.describe AiConcierge::Orchestration::Booking::InputNormalizer do
     end
   end
 
+  it "extracts a natural segment from a relative month" do
+    with_frozen_time Date.new(2026, 8, 28) do
+      [ "next month on end month", "end of next month" ].each do |message|
+        result = described_class.new(
+          message: message,
+          slots: {},
+          pending_question: "specific_timing",
+          conversation_signals: signals
+        ).call
+
+        expect(result).to include(
+          "target_month" => 9,
+          "target_year" => 2026,
+          "month_segment" => "late"
+        ), message
+      end
+    end
+  end
+
+  it "normalizes natural month-segment answers" do
+    examples = {
+      "early" => [ "beginning of the month", "awal bulan", "月初" ],
+      "mid" => [ "middle part", "pertengahan bulan", "月中" ],
+      "late" => [ "last part", "hujung bulan", "akhir bulan", "月底", "月末" ]
+    }
+
+    examples.each do |segment, messages|
+      messages.each do |message|
+        result = described_class.new(
+          message: message,
+          slots: {},
+          pending_question: "specific_timing",
+          conversation_signals: signals,
+          active_branch: { "target_month" => 9, "target_year" => 2026 }
+        ).call
+
+        expect(result["month_segment"]).to eq(segment), message
+      end
+    end
+  end
+
+  it "removes a model segment when the guest gives conflicting segments" do
+    result = described_class.new(
+      message: "early or end of the month",
+      slots: { "target_month" => 9, "target_year" => 2026, "month_segment" => "late" },
+      pending_question: "specific_timing",
+      conversation_signals: signals,
+      active_branch: { "target_month" => 9, "target_year" => 2026 }
+    ).call
+
+    expect(result).not_to include("month_segment")
+  end
+
+  it "removes a model segment from a bare relative month" do
+    with_frozen_time Date.new(2026, 8, 28) do
+      result = described_class.new(
+        message: "next month",
+        slots: { "target_month" => 9, "target_year" => 2026, "month_segment" => "late" },
+        pending_question: "specific_timing",
+        conversation_signals: signals
+      ).call
+
+      expect(result).to include("target_month" => 9, "target_year" => 2026, "month_segment" => "")
+    end
+  end
+
   it "clears a stale month segment when this-month timing has no segment" do
     with_frozen_time Date.new(2026, 6, 3) do
       result = described_class.new(

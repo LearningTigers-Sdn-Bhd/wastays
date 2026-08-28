@@ -27,12 +27,7 @@ module AiConcierge
           pending_question: pending_question,
           suppress_offer: manager.sales_offer_suppressed?
         )
-        factual_message = ReplyComposer.new(
-          reply: reply,
-          tone: hotel.ai_concierge_tone,
-          message: message,
-          previous_reply: previous_reply
-        ).call
+        factual_message = factual_message(reply)
         sales_message = Sales::NextActionRenderer.new(
           answer: factual_message,
           next_action: selected_action,
@@ -77,12 +72,32 @@ module AiConcierge
       def next_action(reply, manager, pending_question:, suppress_offer:)
         Sales::NextActionPolicy.new(
           intent: interpretation["intent"],
+          topic: sales_topic(reply),
           outcome: next_action_outcome(reply, pending_question),
           booking_task: manager.booking_task,
           resumable_booking: manager.suspended_booking_resumable?,
           needs_human_support: false,
           suppress_offer: suppress_offer
         ).call
+      end
+
+      def factual_message(reply)
+        return HotelOverviewComposer.new(hotel: hotel, reply: reply, tone: hotel.ai_concierge_tone).call if hotel_overview?(reply)
+
+        ReplyComposer.new(
+          reply: reply,
+          tone: hotel.ai_concierge_tone,
+          message: message,
+          previous_reply: previous_reply
+        ).call
+      end
+
+      def hotel_overview?(reply)
+        interpretation["topic"] == "general_hotel_info" && reply.shape == "list"
+      end
+
+      def sales_topic(reply)
+        hotel_overview?(reply) ? "hotel_overview" : interpretation["topic"]
       end
 
       def next_action_outcome(reply, pending_question)

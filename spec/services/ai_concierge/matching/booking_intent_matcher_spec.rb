@@ -25,4 +25,14 @@ RSpec.describe AiConcierge::Matching::BookingIntentMatcher do
     expect(described_class.new(message: "book the cheapest room")).to be_booking_commitment
     expect(described_class.new(message: "continue with option 1")).to be_booking_commitment
   end
+
+  it "requires book or reserve language for a price-shopping purchase" do
+    %w[yes continue proceed].each do |message|
+      expect(described_class.new(message: message)).not_to be_explicit_purchase_commitment
+    end
+    expect(described_class.new(message: "book this option")).to be_explicit_purchase_commitment
+    expect(described_class.new(message: "reserve option 2")).to be_explicit_purchase_commitment
+    expect(described_class.new(message: "make a booking")).to be_explicit_purchase_commitment
+    expect(described_class.new(message: "I have a booking question")).not_to be_explicit_purchase_commitment
+  end
 end

@@ -21,6 +21,10 @@ module AiConcierge
           slots_payload = booking_payload(conversation_state, active_branch, pending_question: pending_question, status: status)
           slots_payload = State::ConversationTaskManager.new(slots_payload: slots_payload).clear_optional_sales_offer
           manager = State::ConversationTaskManager.new(slots_payload: slots_payload)
+          message_context = {
+            branch: active_branch,
+            price_exploration: manager.price_exploration?
+          }.merge(extra_context)
 
           Core::DomainResponse.booking(
             slots_payload: slots_payload,
@@ -34,7 +38,7 @@ module AiConcierge
               needs_human_support: needs_human_support
             ),
             needs_human_support: needs_human_support,
-            extra_context: extra_context
+            extra_context: message_context
           )
         end
 

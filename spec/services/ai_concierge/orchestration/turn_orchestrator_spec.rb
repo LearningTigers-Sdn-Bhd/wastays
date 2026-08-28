@@ -77,12 +77,83 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
     expect(result).to be_success
-    expect(result.payload[:reply_message]).to include("room rates depend on the booking dates and room types")
-    expect(result.payload[:reply_message]).to include("Which date or month do you plan to arrive for check-in?")
+    expect(result.payload[:reply_message]).to include("I can compare current room prices")
+    expect(result.payload[:reply_message]).to include("Which date or month are you considering for check-in?")
     expect(result.payload[:action_name]).to be_nil
     expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
     expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("booking_timing")
     expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
+  end
+
+  it "keeps a month-only price answer in shopping language", frozen_time: Date.new(2026, 8, 28) do
+    script_messages(
+      "I want to check room prices" => interpretation(intent: "booking_search", topic: "booking_search", slots: {}),
+      "next month" => interpretation(
+        intent: "booking_search",
+        topic: "booking_search",
+        slots: { "target_month" => 9, "target_year" => 2026 }
+      )
+    )
+
+    described_class.new(hotel: hotel, message: "I want to check room prices", phone: "+60123456789").call
+    result = described_class.new(hotel: hotel, message: "next month", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message])
+      .to eq("For September 2026, should I compare early September (1–10), mid-September (11–20), or late September (21–30)? You can also give me exact dates.")
+    expect(result.payload[:reply_message]).not_to include("make a booking")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
+  end
+
+  it "accepts end month wording without leaving price exploration", frozen_time: Date.new(2026, 8, 28) do
+    script_messages(
+      "I want to check room prices" => interpretation(intent: "booking_search", topic: "booking_search", slots: {}),
+      "next month on end month" => interpretation(
+        intent: "booking_search",
+        topic: "booking_search",
+        slots: { "target_month" => 9, "target_year" => 2026 }
+      )
+    )
+
+    result = nil
+    expect do
+      described_class.new(hotel: hotel, message: "I want to check room prices", phone: "+60123456789").call
+      result = described_class.new(hotel: hotel, message: "next month on end month", phone: "+60123456789").call
+    end.not_to change(BookingQuote, :count)
+
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to eq("For late September 2026, how many nights would you like me to compare?")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
+    expect(state.slots_payload.dig("booking_task", "branch", "month_segment")).to eq("late")
+  end
+
+  it "asks again when a price month segment is conflicting", frozen_time: Date.new(2026, 8, 28) do
+    script_messages(
+      "I want to check room prices" => interpretation(intent: "booking_search", topic: "booking_search", slots: {}),
+      "next month" => interpretation(
+        intent: "booking_search",
+        topic: "booking_search",
+        slots: { "target_month" => 9, "target_year" => 2026 }
+      ),
+      "early or end of the month" => interpretation(
+        intent: "booking_search",
+        topic: "booking_search",
+        slots: { "target_month" => 9, "target_year" => 2026, "month_segment" => "late" }
+      )
+    )
+
+    described_class.new(hotel: hotel, message: "I want to check room prices", phone: "+60123456789").call
+    described_class.new(hotel: hotel, message: "next month", phone: "+60123456789").call
+    result = described_class.new(hotel: hotel, message: "early or end of the month", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to include("early September (1–10)", "late September (21–30)")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
+    expect(state.slots_payload.dig("booking_task", "branch", "month_segment")).to be_blank
   end
 
   it "derives duration from a complete date range answer" do

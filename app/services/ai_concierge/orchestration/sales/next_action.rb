@@ -5,10 +5,11 @@ module AiConcierge
     module Sales
       # A commercial next step selected by Ruby, before any reply wording.
       class NextAction
-        OPTIONAL_KINDS = %w[offer_booking_help offer_price_search].freeze
+        OPTIONAL_KINDS = %w[offer_booking_help offer_price_search offer_guided_hotel_exploration].freeze
         KINDS = %w[
           offer_booking_help
           offer_price_search
+          offer_guided_hotel_exploration
           resume_booking
           continue_booking
           offer_alternative_search

@@ -24,10 +24,9 @@ RSpec.describe "AI concierge tools the model can see" do
   end
 
   describe "a price question that reaches an information tool" do
-    # The 11pm enquiry the whole product exists to convert. Answering it with a
-    # room description instead of taking the guest into a booking is the
-    # expensive kind of wrong, so it is not left to the model's judgement.
-    it "hands the turn to the booking machine instead of answering it" do
+    # The 11pm enquiry the whole product exists to convert. A room description
+    # does not answer it, but price interest is not booking consent either.
+    it "hands the turn to deterministic price shopping" do
       result = tool(AiConcierge::Tools::Llm::AnswerHotelQuestionFunction, "how much is a room here?")
         .execute
 
@@ -45,6 +44,18 @@ RSpec.describe "AI concierge tools the model can see" do
 
       result = recorder.outcome.domain_result
       expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("booking")
+      expect(result[:action_name]).to eq("request_quote")
+    end
+
+    it "moves an empty price search into booking after an explicit booking request" do
+      payload = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).set_booking_purpose("price_exploration")
+      conversation_state.update!(slots_payload: payload)
+
+      tool(AiConcierge::Tools::Llm::AdvanceBookingFunction, "I want to book a room").execute
+
+      result = recorder.outcome.domain_result
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("booking")
+      expect(result[:pending_question]).to eq("booking_timing")
       expect(result[:action_name]).to eq("request_quote")
     end
 

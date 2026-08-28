@@ -1,10 +1,11 @@
 require "rails_helper"
 
 RSpec.describe AiConcierge::Orchestration::Sales::NextActionPolicy do
-  def policy(intent: "hotel_information", outcome: "answered", booking_task: {}, resumable_booking: false,
+  def policy(intent: "hotel_information", topic: nil, outcome: "answered", booking_task: {}, resumable_booking: false,
              needs_human_support: false, suppress_offer: false)
     described_class.new(
       intent: intent,
+      topic: topic,
       outcome: outcome,
       booking_task: booking_task,
       resumable_booking: resumable_booking,
@@ -49,6 +50,10 @@ RSpec.describe AiConcierge::Orchestration::Sales::NextActionPolicy do
     expect(kind(intent: "room_information")).to eq("offer_price_search")
   end
 
+  it "offers guided exploration after a broad hotel overview" do
+    expect(kind(topic: "hotel_overview")).to eq("offer_guided_hotel_exploration")
+  end
+
   it "offers booking help after general information" do
     %w[hotel_information hotel_policy nearby_attractions].each do |intent|
       expect(kind(intent: intent)).to eq("offer_booking_help")
@@ -58,6 +63,7 @@ RSpec.describe AiConcierge::Orchestration::Sales::NextActionPolicy do
   it "suppresses only optional sales offers" do
     expect(kind(suppress_offer: true)).to eq("none")
     expect(kind(intent: "room_information", suppress_offer: true)).to eq("none")
+    expect(kind(topic: "hotel_overview", suppress_offer: true)).to eq("none")
     expect(kind(intent: "booking_search", outcome: "no_options", suppress_offer: true)).to eq("offer_alternative_search")
     expect(kind(intent: "booking_search", outcome: "booking_progress", booking_task: active_task, suppress_offer: true)).to eq("continue_booking")
     expect(kind(outcome: "unavailable", suppress_offer: true)).to eq("offer_front_desk")

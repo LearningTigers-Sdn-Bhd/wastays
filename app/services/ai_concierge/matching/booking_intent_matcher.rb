@@ -47,6 +47,13 @@ module AiConcierge
         normalized.match?(/\b(?:book|reserve|continue|proceed)\b/)
       end
 
+      # Price shopping crosses into booking only when the guest names the
+      # purchase action. General progress words do not give that consent.
+      def explicit_purchase_commitment?
+        normalized.match?(/\b(?:book|reserve)\b/) ||
+          normalized.match?(/\b(?:make|start|create)\s+(?:a\s+)?(?:booking|reservation)\b/)
+      end
+
       # "How do I book?" is a question before it is a booking request.
       #
       # The ladder still opens -- the honest answer is that they book here,

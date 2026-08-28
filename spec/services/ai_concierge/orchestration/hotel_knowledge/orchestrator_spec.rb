@@ -51,10 +51,12 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result.dig(:extra_context, :result, "amenities")).to be_present
     expect(result.dig(:slots_payload, "booking_task", "status")).to eq("idle")
     expect(result.dig(:slots_payload, "information_task", "intent")).to eq("hotel_information")
-    expect(result.dig(:extra_context, :result, "answer"))
-      .to end_with("Would you like me to help you find a room for your travel dates?")
-    expect(result.dig(:slots_payload, "sales_task", "last_optional_action")).to eq("offer_booking_help")
-    expect(result.next_action.kind).to eq("offer_booking_help")
+    answer = result.dig(:extra_context, :result, "answer")
+    expect(answer).to include(hotel.name, hotel.city)
+    expect(answer).not_to include(hotel.address)
+    expect(answer).to end_with("What matters most for your stay: facilities, location, or room choices?")
+    expect(result.dig(:slots_payload, "sales_task", "last_optional_action")).to eq("offer_guided_hotel_exploration")
+    expect(result.next_action.kind).to eq("offer_guided_hotel_exploration")
   end
 
   it "returns a hotel faq domain result" do
@@ -254,8 +256,8 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       pause: false
     ).call
 
-    expect(second.next_action.kind).to eq("offer_booking_help")
-    expect(second.dig(:extra_context, :result, "answer")).to include("find a room")
+    expect(second.next_action.kind).to eq("offer_guided_hotel_exploration")
+    expect(second.dig(:extra_context, :result, "answer")).to include("What matters most for your stay")
   end
 
   it "acknowledges a refusal before answering a new question" do

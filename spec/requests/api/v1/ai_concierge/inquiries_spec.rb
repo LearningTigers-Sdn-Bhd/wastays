@@ -189,9 +189,9 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
       post path, params: { message: "Tell me about the hotel", phone: phone }.to_json, headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(parsed_body["reply_message"]).not_to include(hotel.name)
-      expect(parsed_body["reply_message"]).to include(hotel.address)
-      expect(parsed_body["reply_message"]).to include(hotel.city)
+      expect(parsed_body["reply_message"]).to include(hotel.name, hotel.city)
+      expect(parsed_body["reply_message"]).not_to include(hotel.address)
+      expect(parsed_body["reply_message"]).to end_with("What matters most for your stay: facilities, location, or room choices?")
     end
 
     it "answers hotel faq questions" do
@@ -316,6 +316,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
             arguments: { slots: { adults: 2, children: 0 }, evidence: { party: "2 adults" } }
           },
           "1" => { tool: "advance_booking", arguments: { slots: { option_number: 1 } } },
+          "book this option" => { tool: "advance_booking", arguments: { slots: {} } },
           "yes" => { tool: "advance_booking", arguments: { slots: { confirmation: "yes" } } }
         }
       )
@@ -334,11 +335,16 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request do
 
       expect(parsed_body["reply_message"]).to include("A quiet suite facing the garden.")
       expect(parsed_body["reply_message"]).to include("Available rates:")
-      expect(parsed_body["reply_message"]).to include("Would you like to continue booking this option?")
+      expect(parsed_body["reply_message"]).to include("say *book this option* when you are ready")
       expect(parsed_body["reply_message"]).not_to include("Quotation link:")
       expect(parsed_body["action_name"]).to be_nil
 
       post path, params: { message: "yes", phone: phone }.to_json, headers: headers
+
+      expect(parsed_body["reply_message"]).to include("still only being compared")
+      expect(parsed_body["action_name"]).to be_nil
+
+      post path, params: { message: "book this option", phone: phone }.to_json, headers: headers
 
       expect(parsed_body["reply_message"]).to include("Please reply *Yes* to confirm the book")
       expect(parsed_body["reply_message"]).not_to include("Quotation link:")
