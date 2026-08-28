@@ -27,8 +27,13 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
     create(:booking, { hotel:, guest_name: "Aisha Tan", guest_email: "aisha@example.com", guest_phone: "+60123456789" }.merge(attributes))
   end
 
+  # Matches how the front desk queries resolve an unspecified date filter
+  # (Hotel#current_business_date / #business_date_for), not the plain calendar
+  # date — the hotel's business day can still be "yesterday" for a couple of
+  # hours after local midnight, so a naive calendar date drifts out of sync
+  # with what the page actually filters by during that window.
   def hotel_today
-    Time.current.in_time_zone(hotel.hotel_time_zone).to_date
+    hotel.current_business_date || hotel.business_date_for(Time.current)
   end
 
   # In list view the table and the mobile cards both render every record, so
