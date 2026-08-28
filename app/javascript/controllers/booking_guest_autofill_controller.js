@@ -3,7 +3,8 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "nameField", "emailField", "phoneField", "dateOfBirthField", "genderField", "countryField",
-    "existingGuestId", "profileRow", "linkedName", "linkedDescription", "blacklistWarning", "updateSwitch"
+    "existingGuestId", "profileRow", "linkedName", "linkedDescription", "blacklistWarning", "updateSwitch",
+    "addressField", "addressInput", "addressToggle"
   ]
 
   selectGuest(event) {
@@ -17,6 +18,11 @@ export default class extends Controller {
     this.setControl(this.dateOfBirthFieldTarget, guest.date_of_birth)
     this.setControl(this.genderFieldTarget, guest.gender)
     this.setControl(this.countryFieldTarget, guest.country)
+    if (this.hasAddressInputTarget && guest.home_address) {
+      this.addressInputTarget.value = guest.home_address
+      this.addressInputTarget.dispatchEvent(new Event("input", { bubbles: true }))
+      this.showAddress()
+    }
 
     this.existingGuestIdTarget.value = result.value
     this.linkedNameTarget.textContent = guest.name || result.label || "Existing guest"
@@ -54,5 +60,17 @@ export default class extends Controller {
     if (!this.hasUpdateSwitchTarget) return
     this.updateSwitchTarget.checked = enabled
     this.updateSwitchTarget.dispatchEvent(new Event("change", { bubbles: true }))
+  }
+
+  toggleAddress(event) {
+    event.preventDefault()
+    this.showAddress()
+  }
+
+  showAddress() {
+    if (!this.hasAddressFieldTarget) return
+    this.addressFieldTarget.hidden = false
+    if (this.hasAddressToggleTarget) this.addressToggleTarget.hidden = true
+    this.addressInputTarget?.focus()
   }
 }

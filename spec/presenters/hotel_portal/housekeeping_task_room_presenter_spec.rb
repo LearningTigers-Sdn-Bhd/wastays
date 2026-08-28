@@ -78,12 +78,12 @@ RSpec.describe HotelPortal::HousekeepingTaskRoomPresenter do
     expect(eligible_choices.fetch("late_checkout_detected")[:disabled]).to be(false)
   end
 
-  it "explains that remarks are required before selecting Cleaned" do
+  it "allows selecting Cleaned without remarks" do
     without_remarks = present(resolved_status: "cleaning").status_choices.index_by { |choice| choice[:value] }
     with_remarks = present(resolved_status: "cleaning", notes: "Inspection complete")
       .status_choices.index_by { |choice| choice[:value] }
 
-    expect(without_remarks.fetch("ready")).to include(label: "Cleaned — add remarks first", disabled: true)
+    expect(without_remarks.fetch("ready")).to include(label: "Cleaned", disabled: false)
     expect(with_remarks.fetch("ready")).to include(label: "Cleaned", disabled: false)
   end
 

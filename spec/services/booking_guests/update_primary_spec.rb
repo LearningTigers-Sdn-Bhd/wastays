@@ -13,7 +13,8 @@ RSpec.describe BookingGuests::UpdatePrimary do
       country: "Malaysia",
       document_type: "passport",
       government_id: "P123",
-      date_of_birth: "1990-01-02"
+      date_of_birth: "1990-01-02",
+      home_address: "No. 12, Jalan Ampang"
     }
   end
 
@@ -23,8 +24,8 @@ RSpec.describe BookingGuests::UpdatePrimary do
     result = described_class.call(booking:, attributes:, actor:)
 
     expect(result).to be_success
-    expect(booking.reload).to have_attributes(guest_name: "Updated Primary", guest_email: "primary@example.com")
-    expect(booking.primary_guest).to have_attributes(name: "Updated Primary", government_id: "p123")
+    expect(booking.reload).to have_attributes(guest_name: "Updated Primary", guest_email: "primary@example.com", guest_home_address: "No. 12, Jalan Ampang")
+    expect(booking.primary_guest).to have_attributes(name: "Updated Primary", government_id: "p123", home_address: "No. 12, Jalan Ampang")
   end
 
   it "reports a BIBO validation rollback as a failure" do

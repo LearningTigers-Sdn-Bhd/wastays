@@ -125,7 +125,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       expect(dirty_options.find { |option| option.text == "Late checkout detected" }["disabled"]).to eq("disabled")
       expect(cleaning_options.map(&:text)).to include("Awaiting inspection", "Inspection failed")
       expect(cleaning_options.find { |option| option["value"] == "ready" }).to have_attributes(
-        text: "Cleaned — add remarks first"
+        text: "Cleaned"
       )
       expect(status_form["data-turbo-frame"]).to eq("_top")
     end

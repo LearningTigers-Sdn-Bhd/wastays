@@ -885,7 +885,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(add_guest["href"]).to include(hotel_booking_action_manage_guest_path(hotel, booking))
       form = document.at_css("form#guest-details-form[data-controller*='guest-details-editor']")
       footer = document.at_css('[data-testid="guest-details-footer"]')
-      save_guest = footer.at_xpath(".//button[@type='submit' and normalize-space()='Save Guest']")
+      save_guest = footer.at_xpath(".//button[@type='submit' and normalize-space()='Save for this booking only']")
       view_grc = footer.at_xpath(".//a[normalize-space()='View GRC']")
       discard_alert = document.at_css('dialog[data-controller~="confirm-discard"]')
 
