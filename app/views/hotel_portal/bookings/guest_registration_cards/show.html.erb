@@ -287,7 +287,16 @@
       </section>
 
       <section class="rounded-lg border border-border bg-card p-5 shadow-sm">
-        <h2 class="text-lg font-bold text-foreground">Signature</h2>
+        <div class="flex items-center gap-1.5">
+          <h2 class="text-lg font-bold text-foreground">Signature</h2>
+          <%= render PanelsUI::Tooltip.new(
+                text: "Collect the guest's digital signature here, or have them sign the printed form instead.",
+                placement: :right) do %>
+            <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="What is this signature for?">
+              <%= cached_icon "info", class: "size-4 text-muted-foreground", aria: { hidden: "true" }, focusable: "false" %>
+            </span>
+          <% end %>
+        </div>
         <p class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
           Please read the terms and conditions carefully before signing. Your signature confirms the guest has reviewed the check-in, check-out, and hotel policy terms shown on this card.
         </p>

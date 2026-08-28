@@ -34,6 +34,10 @@ module Guests
     safe_attr(:country)
   end
 
+  def home_address
+    @guest.home_address.presence || "—"
+  end
+
   def gender
     safe_attr(:gender)&.capitalize || "—"
   end

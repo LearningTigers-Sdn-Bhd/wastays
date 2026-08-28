@@ -31,6 +31,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body.scan("Print official form").size).to eq(1)
       expect(response.body).not_to include("Hotel acknowledgement")
       expect(response.body).not_to include("Cancellation Policy")
+      expect(response.body).to include("What is this signature for?")
     end
 
     it "shows formatted guest registration number after check-in number exists" do

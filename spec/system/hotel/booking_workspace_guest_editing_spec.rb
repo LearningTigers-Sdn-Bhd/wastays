@@ -70,7 +70,8 @@ RSpec.describe "Booking workspace guest editing", frozen_time: :business_day, ty
     expect(page).to have_css("#guest-details-panel > footer[data-testid='guest-details-footer']")
     expect(page).to have_no_css("turbo-frame#booking_workspace > footer[data-testid='guest-details-footer']")
     fill_in "Full name", with: "Saved From Footer"
-    click_button "Save for this booking only"
+    find("[data-testid='guest-save-trigger']").click
+    within("#guest-save-scope-dialog") { click_button "Save" }
 
     primary_booking_guest = booking.booking_guests.find_by!(is_primary: true)
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: primary_booking_guest.id))
@@ -85,7 +86,8 @@ RSpec.describe "Booking workspace guest editing", frozen_time: :business_day, ty
     page.execute_script("document.querySelector('input[name=\"guest[name]\"]').removeAttribute('required')")
     fill_in "Full name", with: ""
 
-    click_button "Save for this booking only"
+    find("[data-testid='guest-save-trigger']").click
+    within("#guest-save-scope-dialog") { click_button "Save" }
 
     expect(page).to have_css("[data-guest-details-error-summary]", text: "Name can't be blank")
     expect(page).to have_field("Email", with: "submitted@example.com")
@@ -137,7 +139,11 @@ RSpec.describe "Booking workspace guest editing", frozen_time: :business_day, ty
 
     expect(page).to have_field("Full name", wait: 10)
     fill_in "Full name", with: "Shared Guest Name"
-    click_button "Save guest (full)"
+    find("[data-testid='guest-save-trigger']").click
+    within("#guest-save-scope-dialog") do
+      choose(option: "snapshot_and_profile")
+      click_button "Save"
+    end
 
     expect(page).to have_content("Guest details and guest record updated.")
     expect(page).to have_field("Full name", with: "Shared Guest Name")

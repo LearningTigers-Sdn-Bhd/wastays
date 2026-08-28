@@ -258,6 +258,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(presenter.header_party_line).to eq(presenter.primary_guest_name)
       expect(presenter.stay_dates_vary?).to be(false)
       expect(presenter.header_stay_line).to include("night")
+      expect(presenter.header_party_and_stay_line).to eq("#{presenter.header_party_line} · #{presenter.header_stay_line}")
       expect(presenter.header_outstanding_balance).to eq(presenter.money(presenter.total_balance))
     end
 
