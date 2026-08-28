@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_27_100200) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -407,6 +407,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_100200) do
     t.string "gender_snapshot"
     t.string "government_id_snapshot"
     t.bigint "guest_id", null: false
+    t.string "home_address_snapshot"
     t.boolean "is_primary"
     t.string "name_snapshot"
     t.string "phone_snapshot"
@@ -1303,6 +1304,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_100200) do
     t.string "email"
     t.string "gender"
     t.string "government_id"
+    t.string "home_address"
     t.datetime "last_signed_in_at"
     t.string "magic_token_digest"
     t.datetime "magic_token_expires_at"

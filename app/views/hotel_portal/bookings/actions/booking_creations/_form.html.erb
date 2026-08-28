@@ -171,6 +171,19 @@ end %>
                            }) %>
                     <% end %>
                   </div>
+                  <% address_present = @booking.guest_home_address.present? %>
+                  <div>
+                    <button type="button" class="text-xs font-medium text-primary hover:underline" <%= "hidden" if address_present %>
+                            data-action="booking-guest-autofill#toggleAddress" data-booking-guest-autofill-target="addressToggle">
+                      + Add address
+                    </button>
+                    <div <%= "hidden" unless address_present %> data-booking-guest-autofill-target="addressField">
+                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_home_address, label: "Address") do |field| %>
+                        <% field.with_text_area(value: @booking.guest_home_address, rows: 2, placeholder: "Street address, city, postcode",
+                             data: { booking_guest_autofill_target: "addressInput" }) %>
+                      <% end %>
+                    </div>
+                  </div>
                   <% selected_guest_id = params.dig(:booking, :existing_guest_id).presence || @booking.existing_guest_id %>
                   <%= f.hidden_field :existing_guest_id, value: selected_guest_id, data: { booking_guest_autofill_target: "existingGuestId" } %>
                   <div class="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3 <%= "md:flex-row md:items-center md:justify-between" unless quick %>"

@@ -129,7 +129,7 @@ module HotelPortal
         def booking_params
           params.fetch(:booking, {}).permit(
             :guest_name, :guest_email, :guest_phone, :checked_in_at,
-            :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_date_of_birth, :guest_update_intent,
+            :guest_country, :guest_gender, :guest_document_type, :guest_government_id, :guest_date_of_birth, :guest_home_address, :guest_update_intent,
             :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
             :collect_payment, :hotel_payment_method_id, :payment_method_type, :payment_reference,
             :tourism_tax_collected, :collect_security_deposit,

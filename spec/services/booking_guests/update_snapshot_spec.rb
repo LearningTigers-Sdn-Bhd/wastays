@@ -16,12 +16,14 @@ RSpec.describe BookingGuests::UpdateSnapshot do
       gender: "female",
       document_type: "passport",
       government_id: "P9988",
-      date_of_birth: "1992-03-04"
+      date_of_birth: "1992-03-04",
+      home_address: "No. 12, Jalan Ampang"
     }
   end
 
   it "updates the stay snapshot and primary booking fields without changing the guest profile" do
     original_profile_name = guest.name
+    original_profile_address = guest.home_address
 
     result = described_class.call(booking_guest:, attributes:, actor:)
 
@@ -29,10 +31,12 @@ RSpec.describe BookingGuests::UpdateSnapshot do
     expect(booking_guest.reload).to have_attributes(
       name_snapshot: "Stay Name",
       government_id_snapshot: "p9988",
-      date_of_birth_snapshot: Date.new(1992, 3, 4)
+      date_of_birth_snapshot: Date.new(1992, 3, 4),
+      home_address_snapshot: "No. 12, Jalan Ampang"
     )
-    expect(booking.reload).to have_attributes(guest_name: "Stay Name", guest_email: "stay@example.com")
+    expect(booking.reload).to have_attributes(guest_name: "Stay Name", guest_email: "stay@example.com", guest_home_address: "No. 12, Jalan Ampang")
     expect(guest.reload.name).to eq(original_profile_name)
+    expect(guest.reload.home_address).to eq(original_profile_address)
   end
 
   it "updates the reusable guest profile only when requested" do
@@ -40,7 +44,7 @@ RSpec.describe BookingGuests::UpdateSnapshot do
 
     expect(result).to be_success
     expect(booking_guest.reload.name_snapshot).to eq("Stay Name")
-    expect(guest.reload).to have_attributes(name: "Stay Name", date_of_birth: Date.new(1992, 3, 4))
+    expect(guest.reload).to have_attributes(name: "Stay Name", date_of_birth: Date.new(1992, 3, 4), home_address: "No. 12, Jalan Ampang")
   end
 
   it "does not partially update any layer when validation fails" do

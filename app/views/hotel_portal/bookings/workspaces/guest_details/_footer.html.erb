@@ -35,25 +35,25 @@
       <% end %>
 
       <% if can_manage %>
-        <%= render PanelsUI::ButtonGroup.new(aria: { label: "Save guest" }) do %>
+        <div class="flex shrink-0 items-center gap-2">
           <%= render PanelsUI::Button.new(
                 as: :button,
                 type: :submit,
                 form: "guest-details-form",
                 name: "save_scope",
-                value: "snapshot") do %>Save Guest<% end %>
-          <%= render PanelsUI::DropdownMenu.new(id: "guest-save-options", placement: :top_end) do |menu| %>
-            <% menu.with_trigger(size: :icon, aria_label: "More save options") do %>
-              <%= cached_icon "chevron-up", class: "size-4", aria: { hidden: true } %>
-            <% end %>
-            <% menu.with_item(type: :submit, form_id: "guest-details-form", name: "save_scope", value: "snapshot_and_profile") do %>
-              <span class="block">
-                <span class="block text-sm font-semibold text-foreground">Save &amp; Update Guest Record</span>
-                <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">Also update this guest’s reusable profile.</span>
-              </span>
-            <% end %>
-          <% end %>
-        <% end %>
+                value: "snapshot",
+                variant: :secondary,
+                size: :sm,
+                title: "Only this booking’s guest details are updated. The guest’s reusable profile is left as-is.") do %>Save for this booking only<% end %>
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                form: "guest-details-form",
+                name: "save_scope",
+                value: "snapshot_and_profile",
+                size: :sm,
+                title: "Updates this booking and the guest’s reusable profile, changing every booking that references them.") do %>Save guest (full)<% end %>
+        </div>
       <% else %>
         <span class="text-xs font-semibold text-muted-foreground">View only</span>
       <% end %>

@@ -76,7 +76,7 @@ RSpec.describe Rooms::SetStatus do
     expect(log.metadata["event"]).to eq("detect_due_out")
   end
 
-  it "requires a note when marking a room as ready" do
+  it "allows marking a room as ready without a note" do
     room_status = create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "cleaning")
 
     result = described_class.new(
@@ -86,9 +86,8 @@ RSpec.describe Rooms::SetStatus do
       reason: ""
     ).call
 
-    expect(result).not_to be_success
-    expect(result.error).to eq("Add remarks before marking this room Cleaned")
-    expect(room_status.reload.status).to eq("cleaning")
+    expect(result).to be_success
+    expect(room_status.reload.status).to eq("ready")
   end
 
   it "allows marking a room as ready with a note" do

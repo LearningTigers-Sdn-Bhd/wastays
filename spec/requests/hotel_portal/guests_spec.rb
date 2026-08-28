@@ -188,6 +188,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         gender: "female",
         document_type: "passport",
         date_of_birth: Date.new(1994, 6, 7),
+        home_address: "No. 12, Jalan Ampang",
         created_by_hotel: hotel
       )
 
@@ -207,6 +208,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         "country" => "Malaysia",
         "gender" => "female",
         "date_of_birth" => "1994-06-07",
+        "home_address" => "No. 12, Jalan Ampang",
         "blacklisted" => false
       )
     end
@@ -226,6 +228,20 @@ RSpec.describe "HotelPortal::Guests", type: :request do
 
       expect(response).to redirect_to(hotel_guest_path(hotel, Guest.last))
       expect(Guest.last.date_of_birth).to eq(Date.new(1990, 8, 9))
+    end
+
+    it "permits an optional home address when creating a guest" do
+      post hotel_guests_path(hotel), params: {
+        guest: {
+          name: "Create Guest",
+          email: "create2@example.com",
+          country: "Malaysia",
+          home_address: "No. 12, Jalan Ampang"
+        }
+      }
+
+      expect(response).to redirect_to(hotel_guest_path(hotel, Guest.last))
+      expect(Guest.last.home_address).to eq("No. 12, Jalan Ampang")
     end
   end
 

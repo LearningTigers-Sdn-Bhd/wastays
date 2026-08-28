@@ -32,7 +32,7 @@
                 form:,
                 attribute: :notes,
                 label: "Remarks",
-                hint: "Remarks are required before marking a room Cleaned.") do |field| %>
+                hint: "Optional notes for the next housekeeper or front desk agent.") do |field| %>
             <% field.with_text_area(
                  value: params.key?(:notes) ? params[:notes] : @room_status.notes,
                  rows: 8,
