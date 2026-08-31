@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
+RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request, frozen_time: Time.zone.local(2026, 7, 15, 12) do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:api_key) { create(:api_key, bearer: hotel) }
   let(:headers) { { "Authorization" => "Bearer #{api_key.token}", "Content-Type" => "application/json" } }
