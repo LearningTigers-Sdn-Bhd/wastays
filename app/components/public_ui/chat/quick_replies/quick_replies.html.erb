@@ -8,12 +8,6 @@
             method: :post,
             form: { data: { action: "turbo:submit-end->concierge-chat#clearSuggestions" } },
             class: "public-chat__quick-reply" %>
-    <% when :agent %>
-      <%= button_to suggestion.label,
-            agent_url,
-            params: { reason: "booking_support" },
-            method: :post,
-            class: "public-chat__quick-reply" %>
     <% when :focus %>
       <button type="button"
               class="public-chat__quick-reply"

@@ -23,6 +23,157 @@ RSpec.describe "AI concierge tools the model can see" do
     allow(HotelKnowledges::SearchService).to receive(:new).and_return(instance_double(HotelKnowledges::SearchService, call: []))
   end
 
+  describe "compound hotel questions" do
+    let(:message) { "What time is check-in, and what time is check-out?" }
+
+    before do
+      create(:property_policy, hotel: hotel, check_in_time: "3:00 PM", check_out_time: "11:00 AM")
+    end
+
+    it "answers two questions in order with labels and one optional action" do
+      compound = tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, message)
+
+      result = compound.execute(
+        questions: [
+          { evidence: "What time is check-in", label: "Check-in", kind: "hotel_policy", category: "policy", fact: "check_in_time" },
+          { evidence: "what time is check-out", label: "Check-out", kind: "hotel_policy", category: "policy", fact: "check_out_time" }
+        ],
+        guest_language: "en"
+      )
+
+      expect(result).to be_a(RubyLLM::Tool::Halt)
+      answer = recorder.outcome.domain_result.dig(:extra_context, :message)
+      expect(answer).to include("1. Check-in — You can check in from 3:00 PM.")
+      expect(answer).to include("2. Check-out — Check-out is by 11:00 AM.")
+      expect(answer.scan("compare rooms").size).to eq(1)
+      expect(answer).to include("Is there anything else you’d like to know?")
+    end
+
+    it "rejects evidence that is not present in the guest message" do
+      compound = tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, message)
+
+      compound.execute(questions: [
+        { evidence: "invented check-in question", label: "Check-in", kind: "hotel_policy" },
+        { evidence: "what time is check-out", label: "Check-out", kind: "hotel_policy" }
+      ])
+
+      expect(recorder.outcome.domain_result.dig(:extra_context, :message))
+        .to eq("Please send your request again in one message.")
+    end
+
+    it "keeps booking slots from a mixed information and booking message" do
+      mixed = "What time is check-in, and is parking available? I need a room in August 2026 for 2 adults."
+      compound = tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, mixed)
+
+      compound.execute(
+        questions: [
+          { evidence: "What time is check-in", label: "Check-in", kind: "hotel_policy", category: "policy", fact: "check_in_time" },
+          { evidence: "is parking available", label: "Parking", kind: "hotel_information", category: "general_info", search_terms: "parking" }
+        ],
+        commercial: {
+          intent: "booking",
+          slots: { target_month: 8, target_year: 2026, adults: 2 },
+          evidence: { timing: "August 2026", party: "2 adults" }
+        }
+      )
+
+      booking = recorder.outcome.domain_result.slots_payload.fetch("booking_task")
+      expect(booking.dig("branch", "target_month")).to eq(8)
+      expect(booking.dig("branch", "target_year")).to eq(2026)
+      expect(booking.dig("branch", "adults")).to eq(2)
+      expect(recorder.outcome.domain_result.dig(:extra_context, :message)).to start_with("Here is what I found:")
+    end
+
+    it "answers one hotel question before continuing the booking from the same message" do
+      mixed = "Does the hotel have parking, and what rooms are available from 10 October to 12 October for two adults?"
+      match = {
+        "content" => "Parking is available for hotel guests.",
+        "category" => "general_info",
+        "distance" => 0.1
+      }
+      allow(HotelKnowledges::SearchService).to receive(:new)
+        .and_return(instance_double(HotelKnowledges::SearchService, call: [ match ]))
+
+      tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, mixed).execute(
+        questions: [
+          {
+            evidence: "Does the hotel have parking",
+            label: "parking",
+            kind: "hotel_information",
+            category: "general_info",
+            search_terms: "parking"
+          }
+        ],
+        commercial: {
+          intent: "booking",
+          slots: { check_in: "2026-10-10", check_out: "2026-10-12", adults: 2 },
+          evidence: { timing: "10 October", checkout: "12 October", party: "two adults" }
+        }
+      )
+
+      result = recorder.outcome.domain_result
+      expect(result.dig(:extra_context, :message)).to start_with("Parking is available for hotel guests.")
+      expect(result.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-10-10")
+      expect(result.slots_payload.dig("booking_task", "branch", "check_out")).to eq("2026-10-12")
+      expect(result.slots_payload.dig("booking_task", "branch", "adults")).to eq(2)
+    end
+
+    it "answers every question without a count cap and capitalizes labels" do
+      expanded = "What time is check-in, what time is check-out, what is the cancellation policy, and are pets allowed?"
+      compound = tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, expanded)
+
+      compound.execute(
+        questions: [
+          { evidence: "What time is check-in", label: "check-in", kind: "hotel_policy", fact: "check_in_time" },
+          { evidence: "what time is check-out", label: "check-out", kind: "hotel_policy", fact: "check_out_time" },
+          { evidence: "what is the cancellation policy", label: "cancellation", kind: "hotel_policy", fact: "cancellation_policy" },
+          { evidence: "are pets allowed", label: "pet policy", kind: "hotel_policy", search_terms: "pets" }
+        ]
+      )
+
+      answer = recorder.outcome.domain_result.dig(:extra_context, :message)
+      expect(answer).to include("1. Check-in")
+      expect(answer).to include("4. Pet policy")
+      expect(answer).not_to include("first three questions")
+    end
+
+    context "when booking confirmation is pending" do
+      let(:conversation_state) do
+        selected = {
+          "selection_id" => "selection-1",
+          "room_type_name" => "Garden Suite",
+          "check_in" => "2026-08-01",
+          "check_out" => "2026-08-03",
+          "currency" => "MYR",
+          "total_price" => 400
+        }
+        create(
+          :prospect_conversation_state,
+          :awaiting_confirmation,
+          prospect: prospect,
+          selected_option: selected
+        )
+      end
+
+      it "answers the questions and asks for confirmation again without creating a quote" do
+        compound = tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, message)
+
+        expect {
+          compound.execute(questions: [
+            { evidence: "What time is check-in", label: "Check-in", kind: "hotel_policy", fact: "check_in_time" },
+            { evidence: "what time is check-out", label: "Check-out", kind: "hotel_policy", fact: "check_out_time" }
+          ])
+        }.not_to change(BookingQuote, :count)
+
+        result = recorder.outcome.domain_result
+        expect(result.pending_question).to eq("confirm_selection")
+        expect(result.dig(:extra_context, :message)).to start_with("Here is what I found:")
+        expect(result.dig(:extra_context, :message)).to include("Would you like to confirm your quotation")
+        expect(result.slots_payload.dig("information_task", "pending_question")).to be_nil
+      end
+    end
+  end
+
   describe "a price question that reaches an information tool" do
     # The 11pm enquiry the whole product exists to convert. A room description
     # does not answer it, but price interest is not booking consent either.
@@ -149,6 +300,14 @@ RSpec.describe "AI concierge tools the model can see" do
       expect(interpretation.dig("slots", "confirmation")).to be_nil
     end
 
+    it "reads a row number at confirmation as a new option selection" do
+      interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
+        slots: {}, signals: {}, pending_question: "confirm_selection", message: "2"
+      ).call
+
+      expect(interpretation["intent"]).to eq("option_selection")
+    end
+
     it "reads the same yes as nothing in particular when no confirmation is pending" do
       interpretation = AiConcierge::Tools::Llm::AdvanceBookingFunction::SyntheticInterpretation.new(
         slots: { "confirmation" => "yes" }, signals: {}, pending_question: "guest_count"
@@ -180,8 +339,7 @@ RSpec.describe "AI concierge tools the model can see" do
 
   describe "the names the model sees" do
     it "uses short names rather than ruby namespaces" do
-      expect(tool(AiConcierge::Tools::Llm::AdvanceBookingFunction, "hi").name).to eq("advance_booking")
-      expect(tool(AiConcierge::Tools::Llm::AnswerHotelQuestionFunction, "hi").name).to eq("answer_hotel_question")
+      expect(tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, "hi").name).to eq("handle_guest_turn")
     end
   end
 end

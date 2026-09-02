@@ -2,6 +2,11 @@ module AiConcierge
   module Orchestration
     module Turn
       class ResponsePersister
+        UNSTYLED_REPLY_TYPES = %i[
+          booking_attempt_cancelled_next_step
+          booking_support_requested
+          booking_cancellation_support_requested
+        ].freeze
         # The thread is required, not optional: every reply this writes is a row
         # in it, and the column no longer takes a message without one.
         def initialize(hotel:, conversation:, message: nil)
@@ -11,7 +16,7 @@ module AiConcierge
         end
 
         def persist_response(prospect:, conversation_state:, slots_payload:, reply_type:, active_topic:, active_flow:, pending_question:, action_name:, extra_context: {}, flow_status: nil, end_reason: nil, needs_human_support: false)
-          messenger_context = { reply_type: reply_type, opening_reply: opening_reply? }.merge(extra_context)
+          messenger_context = { reply_type: reply_type, opening_reply: opening_reply?, language: conversation.reply_language }.merge(extra_context)
           reply_message = Agents::MessengerAgent.new(hotel: hotel, context: messenger_context).call.fetch("reply_message")
           persist_static_response(
             prospect: prospect,
@@ -27,7 +32,8 @@ module AiConcierge
             end_reason: end_reason,
             knowledge_reply: extra_context[:knowledge_reply],
             guest_language: extra_context[:guest_language],
-            protected_names: extra_context[:protected_names]
+            protected_names: extra_context[:protected_names],
+            skip_styling: UNSTYLED_REPLY_TYPES.include?(reply_type&.to_sym)
           )
         end
 
@@ -55,8 +61,8 @@ module AiConcierge
         # one place holding both the flag and the thread, so this is where the
         # thread is put in front of staff. `request_human!` deliberately leaves
         # `mode` alone: the bot keeps answering until a person actually arrives.
-        def persist_static_response(prospect:, conversation_state:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:, knowledge_reply: false, guest_language: nil, protected_names: nil)
-          reply = style(reply_message, knowledge_reply: knowledge_reply, guest_language: guest_language, protected_names: protected_names)
+        def persist_static_response(prospect:, conversation_state:, slots_payload:, reply_message:, needs_human_support:, action_name:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:, knowledge_reply: false, guest_language: nil, protected_names: nil, skip_styling: false)
+          reply = style(reply_message, knowledge_reply: knowledge_reply, guest_language: guest_language, protected_names: protected_names, skip_styling: skip_styling)
           ActiveRecord::Base.transaction do
             persist_state(conversation_state, slots_payload:, active_topic:, active_flow:, pending_question:, flow_status:, end_reason:)
             record_outbound_message(prospect, reply)
@@ -88,8 +94,9 @@ module AiConcierge
         # It runs on a finished string. Nothing the model returns can change a
         # price, a date or a link, because those were computed before it was
         # asked, and anything it did change is caught below.
-        def style(template, knowledge_reply: false, guest_language: nil, protected_names: nil)
+        def style(template, knowledge_reply: false, guest_language: nil, protected_names: nil, skip_styling: false)
           return Reply.new(body: template) if template.blank?
+          return Reply.new(body: template) if skip_styling
           if knowledge_reply
             conversation.record_language!(guest_language)
             return Reply.new(body: template)
@@ -133,10 +140,14 @@ module AiConcierge
 
           checker = Agents::RewriteVerifier.new(
             template: template,
-            candidate: styled.text,
+            candidate: normalized_styled_text(styled.text, protected_names),
             protected_names: protected_names_for(protected_names)
           )
           checker.call || rejected(checker.failure)
+        end
+
+        def normalized_styled_text(text, extra_names)
+          Agents::PunctuationNormalizer.call(text, protected_names: protected_names_for(extra_names))
         end
 
         # Ruby decided which language this reply had to go out in; this is the

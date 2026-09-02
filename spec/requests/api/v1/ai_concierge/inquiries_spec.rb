@@ -115,7 +115,7 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request, frozen_time: Tim
         "- Check-out is by 12:00.",
         "- You can cancel under these terms: 24 hours.",
         "- Quiet Hours Quiet hours start at 10 PM.",
-        "If this policy works for you, I can help you find a room for your travel dates."
+        "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
       )
       expect(parsed_body["reply_message"]).not_to match(/not provided|thank you for your inquiry|please let us know/i)
       expect(parsed_body["needs_human_support"]).to be(false)
@@ -123,19 +123,19 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request, frozen_time: Tim
       expect(parsed_body["prospect_public_id"]).to be_present
     end
 
-    it "keeps the chat open after a sales refusal and suppresses one optional offer" do
+    it "keeps the chat open after a sales refusal and suppresses the rest of the information run" do
       post path, params: { message: "What time is check-out?", phone: phone }.to_json, headers: headers
-      expect(parsed_body["reply_message"]).to include("If this policy works for you")
+      expect(parsed_body["reply_message"]).to include("If that suits your plans")
 
       post path, params: { message: "no thanks", phone: phone }.to_json, headers: headers
       expect(parsed_body["reply_message"]).to eq("No problem. How else can I help you?")
 
       post path, params: { message: "What time is check-in?", phone: phone }.to_json, headers: headers
       expect(parsed_body["reply_message"]).to include("You can check in from 15:00.")
-      expect(parsed_body["reply_message"]).not_to include("If this policy works for you")
+      expect(parsed_body["reply_message"]).not_to include("compare rooms")
 
       post path, params: { message: "What time is check-out?", phone: phone }.to_json, headers: headers
-      expect(parsed_body["reply_message"]).to include("If this policy works for you")
+      expect(parsed_body["reply_message"]).not_to include("compare rooms")
       expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
     end
 
@@ -174,7 +174,10 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request, frozen_time: Tim
       expect(response).to have_http_status(:ok)
       expect(parsed_body.keys).to contain_exactly("reply_message", "needs_human_support", "action_name", "prospect_public_id")
       expect(parsed_body["reply_message"])
-        .to eq("Breakfast is served daily from 7 AM to 10 AM.\n\nWould you like me to help you find a room for your travel dates?")
+        .to eq(
+          "Breakfast is served daily from 7 AM to 10 AM.\n\n" \
+          "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+        )
     end
 
     it "accepts hotel slugs in the path" do
@@ -202,7 +205,10 @@ RSpec.describe "API V1 AI Concierge Inquiries", type: :request, frozen_time: Tim
 
       expect(response).to have_http_status(:ok)
       expect(parsed_body["reply_message"])
-        .to eq("General Q: What time is breakfast? A: Breakfast is served daily from 7 AM to 10 AM.\n\nWould you like me to help you find a room for your travel dates?")
+        .to eq(
+          "General Q: What time is breakfast? A: Breakfast is served daily from 7 AM to 10 AM.\n\n" \
+          "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+        )
     end
 
     it "returns the full nearby attractions list" do

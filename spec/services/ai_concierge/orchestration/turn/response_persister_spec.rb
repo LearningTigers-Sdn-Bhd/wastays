@@ -76,6 +76,28 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
 
     expect(conversation.reload.human_requested_at).to be_nil
   end
+
+  it "does not let the stylist rewrite booking-attempt cancellation" do
+    expect_any_instance_of(AiConcierge::Agents::ReplyStylist).not_to receive(:call)
+
+    payload = described_class.new(
+      hotel: hotel,
+      conversation: conversation,
+      message: "cancel my booking attempt"
+    ).persist_response(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      slots_payload: conversation_state.slots_payload,
+      reply_type: :booking_attempt_cancelled_next_step,
+      active_topic: nil,
+      active_flow: nil,
+      pending_question: nil,
+      action_name: nil
+    )
+
+    expect(payload[:reply_message]).to include("booking attempt")
+    expect(payload[:reply_message]).not_to include("Your booking has been cancelled")
+  end
 end
 
 RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister, "conversation threading" do

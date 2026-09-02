@@ -62,8 +62,7 @@
       <% if chat_input.suggestions.any? %>
         <% panel.with_quick_replies(
              suggestions: chat_input.suggestions,
-             message_url: concierge_chat_messages_path(hotel),
-             agent_url: concierge_chat_agent_path(hotel)) %>
+             message_url: concierge_chat_messages_path(hotel)) %>
       <% end %>
       <% panel.with_composer(url: concierge_chat_messages_path(hotel)) %>
     <% end %>

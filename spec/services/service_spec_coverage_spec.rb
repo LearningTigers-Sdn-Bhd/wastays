@@ -20,6 +20,8 @@ RSpec.describe "Service spec coverage" do
     "ai_concierge/orchestration/hotel_knowledge/clarification_resolver" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
     "ai_concierge/orchestration/hotel_knowledge/reply" => "ai_concierge/orchestration/hotel_knowledge/reply_composer_spec.rb",
     "ai_concierge/orchestration/hotel_knowledge/reply_factory" => "ai_concierge/orchestration/hotel_knowledge/orchestrator_spec.rb",
+    "ai_concierge/orchestration/hotel_knowledge/question_resolver" => "ai_concierge/orchestration/hotel_knowledge/orchestrator_spec.rb",
+    "ai_concierge/agents/punctuation_normalizer" => "ai_concierge/orchestration/hotel_knowledge/localizer_spec.rb",
     # The fallback sentence is a constant on the namespace: the only thing
     # worth asserting is that a turn which cannot answer sends it.
     "ai_concierge/message_builders" => "ai_concierge/orchestration/agent_loop/run_turn_spec.rb",
@@ -32,6 +34,7 @@ RSpec.describe "Service spec coverage" do
     # The model-facing functions are one surface and are specced as one.
     "ai_concierge/tools/llm/advance_booking_function" => "ai_concierge/tools/llm/functions_spec.rb",
     "ai_concierge/tools/llm/answer_hotel_question_function" => "ai_concierge/tools/llm/functions_spec.rb",
+    "ai_concierge/tools/llm/handle_guest_turn_function" => "ai_concierge/tools/llm/functions_spec.rb",
     "ai_concierge/tools/llm/base_function" => "ai_concierge/tools/llm/functions_spec.rb",
     "ai_concierge/tools/llm/get_booking_context_function" => "ai_concierge/tools/llm/functions_spec.rb",
     "ai_concierge/tools/llm/get_nearby_attractions_function" => "ai_concierge/tools/llm/functions_spec.rb",

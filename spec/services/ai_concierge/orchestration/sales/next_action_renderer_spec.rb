@@ -12,7 +12,9 @@ RSpec.describe AiConcierge::Orchestration::Sales::NextActionRenderer do
   end
 
   it "renders every action kind after the factual answer" do
-    expect(render("offer_booking_help")).to end_with("Would you like me to help you find a room for your travel dates?")
+    expect(render("offer_booking_help")).to end_with(
+      "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+    )
     expect(render("offer_price_search")).to end_with("Would you like me to check prices for this room for your travel dates?")
     expect(render("offer_guided_hotel_exploration")).to end_with("What matters most for your stay: facilities, location, or room choices?")
     expect(render("resume_booking")).to end_with("Would you like to continue your booking?")
@@ -22,9 +24,29 @@ RSpec.describe AiConcierge::Orchestration::Sales::NextActionRenderer do
     expect(render("none")).to eq("The hotel has a pool.")
   end
 
-  it "uses conditional booking copy after a policy answer" do
-    expect(render("offer_booking_help", intent: "hotel_policy"))
-      .to end_with("If this policy works for you, I can help you find a room for your travel dates.")
+  it "rotates approved booking-help copy by index" do
+    message = described_class.new(
+      answer: "Pets are not allowed.",
+      next_action: AiConcierge::Orchestration::Sales::NextAction.new("offer_booking_help"),
+      intent: "hotel_policy",
+      closing_copy_index: 1
+    ).call
+
+    expect(message).to end_with(
+      "Would you like to see which rooms are available for your dates, or is there anything else I can help with?"
+    )
+  end
+
+  it "rotates a neutral closer without adding another sales offer" do
+    message = described_class.new(
+      answer: "Pets are not allowed.",
+      next_action: AiConcierge::Orchestration::Sales::NextAction.none,
+      intent: "hotel_policy",
+      closing_copy_index: 1,
+      natural_closer: true
+    ).call
+
+    expect(message).to eq("Pets are not allowed.\n\nWhat else can I help you with?")
   end
 
   it "uses topic-specific front-desk guidance" do

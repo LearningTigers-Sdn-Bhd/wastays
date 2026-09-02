@@ -4,7 +4,7 @@ module AiConcierge
     STATE_VERSION = 3
     SUSPENDED_BOOKING_TTL = ProspectConversationState::PAUSED_FLOW_TTL
     SUGGESTION_GROUPS = %w[
-      greeting portal_offer post_link_sales magic_link_failure staff_wait unsupported_change
+      greeting portal_offer post_link_support magic_link_failure staff_wait unsupported_change
     ].freeze
 
     # `now` is set first because normalizing reads it: whether a suspension has
@@ -44,6 +44,10 @@ module AiConcierge
       existing_booking_task["status"].in?(%w[handoff_offered locked]) && existing_booking_scope_matches?(conversation_id)
     end
 
+    def existing_booking_link_sent?(conversation_id: nil)
+      existing_booking_task["status"] == "link_sent" && existing_booking_scope_matches?(conversation_id)
+    end
+
     def suggestion_group
       payload.dig("ui_task", "suggestion_group")
     end
@@ -59,25 +63,25 @@ module AiConcierge
     end
 
     def offer_existing_booking_portal(request_kind: nil, conversation_id: nil)
-      updated = update_existing_booking_task(
+      updated = reset_information_run(update_existing_booking_task(
         "status" => "portal_offered",
         "pending_question" => nil,
         "request_kind" => request_kind,
         "conversation_id" => conversation_id,
         "lookup_attempt_count" => 0,
         "locked_until" => nil
-      )
+      ))
       self.class.new(slots_payload: updated, now: now).show_suggestions("portal_offer")
     end
 
     def offer_existing_booking_handoff(request_kind: nil, conversation_id: nil)
-      updated = update_existing_booking_task(
+      updated = reset_information_run(update_existing_booking_task(
         "status" => "handoff_offered",
         "pending_question" => nil,
         "request_kind" => request_kind,
         "conversation_id" => conversation_id || existing_booking_task["conversation_id"],
         "locked_until" => nil
-      )
+      ))
       self.class.new(slots_payload: updated, now: now).show_suggestions(
         request_kind.to_s.start_with?("unsupported_") ? "unsupported_change" : "magic_link_failure"
       )
@@ -114,11 +118,11 @@ module AiConcierge
         "lookup_attempt_count" => 0,
         "locked_until" => nil
       )
-      self.class.new(slots_payload: updated, now: now).show_suggestions("post_link_sales")
+      self.class.new(slots_payload: updated, now: now).show_suggestions("post_link_support")
     end
 
     def record_booking_support_requested
-      updated = without_legacy(payload.merge("existing_booking_task" => default_existing_booking_task))
+      updated = reset_information_run(without_legacy(payload.merge("existing_booking_task" => default_existing_booking_task)))
       self.class.new(slots_payload: updated, now: now).show_suggestions("staff_wait")
     end
 
@@ -228,11 +232,32 @@ module AiConcierge
     end
 
     def record_optional_sales_offer(action)
+      next_copy_index = sales_task["optional_copy_index"].to_i
+      next_copy_index = (next_copy_index + 1) % 3 if action.to_s == "offer_booking_help"
       update_sales_task(
         "last_optional_action" => action.to_s,
         "suppress_next_optional_offer" => false,
-        "refusal_acknowledgment_pending" => false
+        "refusal_acknowledgment_pending" => false,
+        "information_offer_shown" => true,
+        "optional_copy_index" => next_copy_index
       )
+    end
+
+    def record_information_closer(source = payload)
+      task = normalize_sales_task(source["sales_task"]).merge(
+        "closing_copy_index" => (normalize_sales_task(source["sales_task"])["closing_copy_index"].to_i + 1) % 3
+      )
+      without_legacy(source.merge("sales_task" => task))
+    end
+
+    def reset_information_run(source = payload)
+      task = normalize_sales_task(source["sales_task"]).merge(
+        "last_optional_action" => nil,
+        "suppress_next_optional_offer" => false,
+        "refusal_acknowledgment_pending" => false,
+        "information_offer_shown" => false
+      )
+      without_legacy(source.merge("sales_task" => task))
     end
 
     def decline_optional_sales_offer
@@ -379,6 +404,7 @@ module AiConcierge
     def normalize_ui_task(value)
       task = value.is_a?(Hash) ? value.deep_dup : {}
       default_ui_task.merge(task).tap do |normalized|
+        normalized["suggestion_group"] = "post_link_support" if normalized["suggestion_group"] == "post_link_sales"
         normalized["suggestion_group"] = nil unless normalized["suggestion_group"].to_s.in?(SUGGESTION_GROUPS)
       end
     end
@@ -502,7 +528,10 @@ module AiConcierge
       {
         "last_optional_action" => nil,
         "suppress_next_optional_offer" => false,
-        "refusal_acknowledgment_pending" => false
+        "refusal_acknowledgment_pending" => false,
+        "information_offer_shown" => false,
+        "optional_copy_index" => 0,
+        "closing_copy_index" => 0
       }
     end
 

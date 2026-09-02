@@ -29,12 +29,12 @@ RSpec.describe Concierge::RequestHumanAgent do
     expect(conversation.messages.last.body).to include("asked to speak to a team member")
   end
 
-  it "uses the approved sales reply for booking support" do
+  it "uses the approved support reply for booking support" do
     described_class.new(conversation: conversation, reason: :booking_support).call
 
     message = conversation.messages.last
     expect(message.sender_role).to eq("bot")
-    expect(message.body).to include("I have asked the hotel team", "What interests you?")
+    expect(message.body).to include("I have asked the hotel team", "continue chatting while you wait")
     expect(prospect.prospect_conversation_state.slots_payload.dig("ui_task", "suggestion_group")).to eq("staff_wait")
   end
 

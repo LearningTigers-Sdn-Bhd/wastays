@@ -90,7 +90,9 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result.dig(:extra_context, :result, "attractions").first["name"]).to eq("Sky Bridge")
     expect(result.dig(:extra_context, :result, "answer")).to include("- Sky Bridge: Scenic landmark.")
     expect(result.dig(:extra_context, :result, "answer"))
-      .to end_with("Would you like me to help you find a room for your travel dates?")
+      .to end_with(
+        "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+      )
   end
 
   it "returns a room information success domain result" do
@@ -132,7 +134,10 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     ).call
 
     expect(result.dig(:extra_context, :result, "answer"))
-      .to eq("Pets are not allowed.\n\nIf this policy works for you, I can help you find a room for your travel dates.")
+      .to eq(
+        "Pets are not allowed.\n\n" \
+        "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+      )
   end
 
   it "returns an ambiguous room information domain result" do
@@ -226,7 +231,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result.dig(:slots_payload, "sales_task", "refusal_acknowledgment_pending")).to be(false)
   end
 
-  it "suppresses one optional offer and allows the following offer" do
+  it "suppresses optional offers for the rest of the information run" do
     hotel.update!(amenities: [ Hotel::HOTEL_AMENITIES.first.fetch(:id) ])
     offered = AiConcierge::State::ConversationTaskManager
       .new(slots_payload: {})
@@ -256,8 +261,8 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       pause: false
     ).call
 
-    expect(second.next_action.kind).to eq("offer_guided_hotel_exploration")
-    expect(second.dig(:extra_context, :result, "answer")).to include("What matters most for your stay")
+    expect(second.next_action).to be_none
+    expect(second.dig(:extra_context, :result, "answer")).not_to include("What matters most for your stay")
   end
 
   it "acknowledges a refusal before answering a new question" do
@@ -275,7 +280,8 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       pause: false
     ).call
 
-    expect(result.dig(:extra_context, :result, "answer")).to eq("No problem. Check-out is by 11:00 AM.")
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to eq("No problem. Check-out is by 11:00 AM.\n\nIs there anything else you’d like to know?")
     expect(result.next_action).to be_none
     expect(result.dig(:slots_payload, "sales_task", "suppress_next_optional_offer")).to be(false)
   end

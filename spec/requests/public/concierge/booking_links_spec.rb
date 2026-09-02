@@ -6,7 +6,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
   let(:feature_group) { create(:feature_group) }
   let(:feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
   let(:plan) { create(:plan) }
-  let(:hotel) { create(:hotel, status: "live", concierge_enabled: true, plan: plan) }
+  let(:hotel) { create(:hotel, :with_ai_concierge, status: "live", concierge_enabled: true, plan: plan) }
 
   before do
     create(:plan_feature, plan: plan, feature: feature, enabled: true)
@@ -38,9 +38,29 @@ RSpec.describe "Public Concierge booking links", type: :request do
     expect(ProspectMessage.where(body: booking.confirmation_token)).not_to exist
     expect(@state.reload.slots_payload.dig("existing_booking_task", "status")).to eq("link_sent")
     reply = @conversation.messages.where(direction: "outbound").last.body
-    expect(reply).to include("secure login link", "Ready to plan your next stay?")
+    expect(reply).to include("secure login link", "I am here if you need more help.")
     expect(reply).not_to include(booking.check_in.to_date.to_s, booking.guest_name, booking.guest_email)
-    expect(response.body).to include(PublicUI::Chat::Panel::INPUT_REGION_ID, "Find a room", "Type your message")
+    expect(response.body).to include(PublicUI::Chat::Panel::INPUT_REGION_ID, "Ask the hotel team", "Type your message")
+    expect(response.body).not_to include("Find a room", "Check prices")
+  end
+
+  it "records the post-link staff quick reply as a guest message before requesting staff" do
+    linked = AiConcierge::State::ConversationTaskManager.new(slots_payload: @state.slots_payload)
+      .offer_existing_booking_portal(conversation_id: @conversation.id)
+    linked = AiConcierge::State::ConversationTaskManager.new(slots_payload: linked).record_magic_link_sent
+    @state.update!(slots_payload: linked)
+    guest_message = "Please ask the hotel team to help with my booking."
+
+    perform_enqueued_jobs do
+      post concierge_chat_messages_path(hotel),
+        params: { message: guest_message },
+        headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    end
+
+    expect(@conversation.messages.where(direction: "inbound").last.body).to eq(guest_message)
+    expect(@conversation.reload).to be_human_requested
+    expect(@conversation.messages.where(direction: "outbound").last.body)
+      .to include("You can continue chatting while you wait.")
   end
 
   it "keeps an invalid code out of history and keeps the secure field active" do

@@ -3,14 +3,14 @@
 module AiConcierge
   module Matching
     class ExistingBookingSupportMatcher
-      BOOKING_REFERENCE = /\b(?:my|an|existing|current|upcoming)\s+(?:booking|reservation|stay)\b|\bi\s+have\s+(?:a\s+)?(?:booking|reservation)\b/
-      STRONG_BOOKING_REFERENCE = /\b(?:my|existing|current|upcoming)\s+(?:booking|reservation)\b/
+      BOOKING_REFERENCE = /\b(?:my|an|existing|current|upcoming)\s+(?:booking|reservation|stay)\b|\bi\s+have\s+(?:a\s+)?(?:booking|reservation)\b|\btempahan saya\b|我的.*(?:预订|預訂)/
+      STRONG_BOOKING_REFERENCE = /\b(?:my|existing|current|upcoming)\s+(?:booking|reservation)\b|\btempahan saya\b|我的.*(?:预订|預訂)/
       SUPPORT_ATTRIBUTE_REFERENCE = /\bmy\s+(?:check in|check out|arrival|departure|room|guest details|contact details|payment arrangements)\b/
       PORTAL_RESOURCE_REFERENCE = /\bmy\s+(?:booking details|reservation details|receipt|invoice|e invoice|voucher|booking summary|refund request)\b/
       CHANGE = /\b(?:change|move|reschedule|adjust|update|correct|switch|extend|shorten|upgrade)\b/
 
       def initialize(message:, existing_context: false)
-        @normalized = message.to_s.downcase.gsub(/[^a-z0-9]+/, " ").squish
+        @normalized = message.to_s.downcase.gsub(/[^\p{Alnum}]+/, " ").squish
         @existing_context = existing_context
       end
 
@@ -50,8 +50,20 @@ module AiConcierge
 
       def cancellation_action?
         return false if normalized.match?(/\b(?:policy|policies|terms|refundable)\b/)
+        return false if attempt_cancellation? && !explicit_existing_booking_reference?
 
-        normalized.match?(/\b(?:cancel|refund)\b/)
+        normalized.match?(/\b(?:cancel|refund|batalkan|bayaran balik)\b/) || normalized.match?(/(?:取消|退款)/)
+      end
+
+      def attempt_cancellation?
+        normalized.match?(/\b(?:attempt|quote|quotation|percubaan|sebut harga)\b/) ||
+          normalized.match?(/(?:尝试|報價|报价)/)
+      end
+
+      def explicit_existing_booking_reference?
+        normalized.match?(/\b(?:existing|current|upcoming)\s+(?:booking|reservation|stay)\b/) ||
+          normalized.match?(/\bi\s+have\s+(?:a\s+)?(?:booking|reservation)\b/) ||
+          normalized.match?(/\btempahan saya\b/) || normalized.match?(/我的.*(?:预订|預訂)/)
       end
 
       def document_request?

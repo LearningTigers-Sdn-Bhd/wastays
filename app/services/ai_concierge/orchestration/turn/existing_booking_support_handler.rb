@@ -13,9 +13,11 @@ module AiConcierge
         end
 
         def call(conversation_state:)
-          return unless conversation&.channel == Concierge::PostWebMessage::CHANNEL
+          return unless conversation
 
           manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
+          return whatsapp_cancellation(manager) if whatsapp? && cancellation_request?(manager)
+          return unless web?
           return request_code(manager) if portal_offered?(manager) && wants_magic_link?
           return request_staff(manager) if handoff_requested?(manager)
           return if manager.existing_booking_pending?(conversation_id: conversation.id)
@@ -86,8 +88,23 @@ module AiConcierge
         end
 
         def handoff_requested?(manager)
-          (handoff_offered?(manager) || portal_offered?(manager)) &&
+          (handoff_offered?(manager) || portal_offered?(manager) || link_sent?(manager)) &&
             (message.downcase.match?(ASK_TEAM) || Core::ConfirmationReader.new(message: message).confirmation == "yes")
+        end
+
+        def cancellation_request?(manager)
+          Matching::ExistingBookingSupportMatcher.new(
+            message: message,
+            existing_context: portal_offered?(manager) || handoff_offered?(manager) || link_sent?(manager)
+          ).request_kind == :portal_cancellation
+        end
+
+        def whatsapp_cancellation(manager)
+          domain_response(
+            slots_payload: manager.record_booking_support_requested,
+            reply_type: :booking_cancellation_support_requested,
+            needs_human_support: true
+          )
         end
 
         def portal_offered?(manager)
@@ -97,6 +114,13 @@ module AiConcierge
         def handoff_offered?(manager)
           manager.existing_booking_handoff_offered?(conversation_id: conversation.id)
         end
+
+        def link_sent?(manager)
+          manager.existing_booking_link_sent?(conversation_id: conversation.id)
+        end
+
+        def web? = conversation.channel == Concierge::PostWebMessage::CHANNEL
+        def whatsapp? = conversation.channel == "whatsapp"
 
         def wants_magic_link?
           message.downcase.match?(SEND_LINK) || Core::ConfirmationReader.new(message: message).confirmation == "yes"

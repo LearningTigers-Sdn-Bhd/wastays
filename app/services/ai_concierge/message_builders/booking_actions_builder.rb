@@ -344,9 +344,9 @@ module AiConcierge
 
       def no_options_message
         label = month_label.presence || "those dates"
-        return "I could not find a current price for #{label}. Send another date or month and I will compare again." if price_exploration?
+        return "I could not find a current room price for #{label}. Send another date or month, and I will compare the available options." if price_exploration?
 
-        "Sorry, I couldn't find any rooms available for #{label}. If you want, send another date or month and I'll check again."
+        "I could not find a bookable room for #{label}. Send another date or month, and I will check again."
       end
 
       def price_exploration?
@@ -401,7 +401,14 @@ module AiConcierge
       end
 
       def booking_attempt_cancelled_next_step_message
-        "I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?"
+        case context[:language].to_s
+        when "ms"
+          "Saya telah menghentikan percubaan tempahan ini. Anda boleh mulakan tempahan baharu atau tanya tentang hotel."
+        when "zh"
+          "我已停止这次预订尝试。您可以开始新的预订，或询问酒店信息。"
+        else
+          "I stopped this booking attempt. You can start a new booking or ask about the hotel."
+        end
       end
     end
   end

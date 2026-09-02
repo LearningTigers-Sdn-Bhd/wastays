@@ -70,6 +70,7 @@ module AiConcierge
           return ALREADY_ADVANCED if recorder.booking_advanced?
 
           recorder.mark_booking_advanced!
+          purpose = booking_purpose
 
           interpretation = SyntheticInterpretation.new(
             slots: slots, signals: signals, evidence: evidence,
@@ -88,7 +89,7 @@ module AiConcierge
             conversation_state: prepared.conversation_state,
             interpretation: interpretation,
             active_branch: prepared.active_branch,
-            decision: { action: decision_action, pending_question: prepared.pending_question, purpose: booking_purpose },
+            decision: { action: decision_action, pending_question: prepared.pending_question, purpose: purpose },
             message: context.message,
             phone: context.phone
           ).call
@@ -219,6 +220,8 @@ module AiConcierge
             # nothing else can be about nothing else, whichever question the
             # booking was put down on.
             return "option_selection" if resumed && Matching::OptionReference.new(message: message).only_reference?
+            return "option_selection" if pending_question == "confirm_selection" &&
+              Matching::OptionReference.new(message: message).only_reference?
 
             # Options are on the table, so whatever the guest just said is an
             # answer to them -- a row, an ordinal, a date. Reading that as a

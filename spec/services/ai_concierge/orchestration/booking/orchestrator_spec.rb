@@ -148,6 +148,20 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
 
     let(:priced_branch) { branch_with_options([ group("Garden Prestige Suite", [ priced_option ]) ]) }
 
+    it "does not treat cheapest as a list reference when no priced list exists" do
+      empty_branch = default_active_branch.merge("suggested_options" => [])
+      activate_price_exploration(empty_branch, pending_question: "price_option_exploration")
+
+      result = orchestrate(
+        message: "show me the cheapest room",
+        interpretation: interpretation(intent: "booking_search", slots: {}),
+        active_branch: empty_branch,
+        decision: { action: :booking, pending_question: "price_option_exploration", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).not_to eq(:price_option_invalid)
+    end
+
     it "treats a bare number as a details request without selecting the room" do
       activate_price_exploration(priced_branch, pending_question: "price_option_exploration")
 

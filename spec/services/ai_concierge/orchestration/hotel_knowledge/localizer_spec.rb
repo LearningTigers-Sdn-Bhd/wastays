@@ -70,4 +70,24 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Localizer do
 
     expect(described_class.new(hotel: hotel, reply: original, language: "ms").call).to eq(original)
   end
+
+  it "removes duplicate punctuation from a valid translation" do
+    allow(chat).to receive(:ask).and_return(
+      double(content: '{"text":"Pasar malam terletak berhampiran hotel.."}')
+    )
+    original = "The night market is near the hotel."
+
+    result = described_class.new(hotel: hotel, reply: original, language: "ms").call
+
+    expect(result).to eq("Pasar malam terletak berhampiran hotel.")
+  end
+
+  it "removes duplicate Chinese terminal punctuation" do
+    allow(chat).to receive(:ask).and_return(double(content: '{"text":"夜市就在酒店附近。。"}'))
+    original = "The night market is near the hotel."
+
+    result = described_class.new(hotel: hotel, reply: original, language: "zh").call
+
+    expect(result).to eq("夜市就在酒店附近。")
+  end
 end

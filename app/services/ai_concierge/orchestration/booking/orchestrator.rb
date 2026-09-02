@@ -347,7 +347,7 @@ module AiConcierge
     def price_option_reference?
       Matching::OptionReference.new(message: message).number.present? ||
         interpretation.dig("slots", "option_number").present? ||
-        cheapest_reference?
+        (cheapest_reference? && cheapest_option.present?)
     end
 
     def cheapest_reference?

@@ -21,7 +21,7 @@ turns:
   - guest: "forget the room"
     expect:
       pending_question: null
-      reply_matches: ["I've cancelled your booking attempt"]
+      reply_matches: ["I stopped this booking attempt"]
       flow_status: active
       creates_quote: false
 

@@ -23,6 +23,34 @@ RSpec.describe AiConcierge::Orchestration::Turn::ExistingBookingSupportHandler d
     expect(result.slots_payload.dig("existing_booking_task", "status")).to eq("awaiting_confirmation_code")
   end
 
+  it "does not intercept attempt cancellation after offering the portal" do
+    offered = AiConcierge::State::ConversationTaskManager.new(slots_payload: {})
+      .offer_existing_booking_portal(conversation_id: conversation.id)
+    state.update!(slots_payload: offered)
+
+    result = described_class.new(
+      message: "Never mind, cancel the booking attempt",
+      conversation: conversation
+    ).call(conversation_state: state)
+
+    expect(result).to be_nil
+  end
+
+  it "accepts a visible staff request after a portal link was sent" do
+    linked = AiConcierge::State::ConversationTaskManager.new(slots_payload: {})
+      .offer_existing_booking_portal(conversation_id: conversation.id)
+    linked = AiConcierge::State::ConversationTaskManager.new(slots_payload: linked).record_magic_link_sent
+    state.update!(slots_payload: linked)
+
+    result = described_class.new(
+      message: "Please ask the hotel team to help with my booking.",
+      conversation: conversation
+    ).call(conversation_state: state)
+
+    expect(result.reply_type).to eq(:booking_support_requested)
+    expect(result.needs_human_support).to be(true)
+  end
+
   it "offers staff for a date change in an existing-booking context" do
     offered = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).offer_existing_booking_portal
     state.update!(slots_payload: offered)
@@ -45,11 +73,12 @@ RSpec.describe AiConcierge::Orchestration::Turn::ExistingBookingSupportHandler d
     expect(result).to be_nil
   end
 
-  it "does not affect another chat channel" do
+  it "routes a WhatsApp cancellation to staff without claiming success" do
     whatsapp = create(:conversation, :whatsapp, hotel: hotel, prospect: prospect)
 
     result = described_class.new(message: "Cancel my booking", conversation: whatsapp).call(conversation_state: state)
 
-    expect(result).to be_nil
+    expect(result.reply_type).to eq(:booking_cancellation_support_requested)
+    expect(result.needs_human_support).to be(true)
   end
 end

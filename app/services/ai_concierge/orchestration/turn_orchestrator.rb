@@ -79,13 +79,6 @@ module AiConcierge
       # rather than after the model, so those turns no longer buy a round-trip
       # to answer a question a regex already answered.
       def run_agent_loop(session)
-        control_response = control_handler.handle(
-          prospect: session.prospect,
-          conversation_state: session.conversation_state,
-          interpretation: Core::ConfirmationReader.new(message: message).as_interpretation
-        )
-        return control_response if control_response
-
         existing_booking_support = Turn::ExistingBookingSupportHandler.new(
           message: message,
           conversation: @conversation
@@ -99,6 +92,14 @@ module AiConcierge
             )
           )
         end
+
+
+        control_response = control_handler.handle(
+          prospect: session.prospect,
+          conversation_state: session.conversation_state,
+          interpretation: Core::ConfirmationReader.new(message: message).as_interpretation
+        )
+        return control_response if control_response
 
         secure_input = Turn::SecureInputHandler.new(conversation: @conversation).call(
           conversation_state: session.conversation_state

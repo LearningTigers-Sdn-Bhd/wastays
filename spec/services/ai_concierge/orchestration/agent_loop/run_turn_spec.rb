@@ -25,8 +25,7 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
 
     it "offers the tools by the short names it describes them by" do
       expect(run.tools.map(&:name)).to contain_exactly(
-        "answer_hotel_question", "get_nearby_attractions",
-        "get_room_type_details", "get_booking_context", "advance_booking"
+        "handle_guest_turn", "get_booking_context"
       )
     end
 
@@ -61,13 +60,16 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
     # structurally impossible.
     it "refuses a second advance and does not run the booking again" do
       turn = run(message: "early august")
-      tool = turn.tools.find { |candidate| candidate.name == "advance_booking" }
+      tool = turn.tools.find { |candidate| candidate.name == "handle_guest_turn" }
 
-      first = tool.call({})
-      second = tool.call({})
+      expect(AiConcierge::Orchestration::Booking::Orchestrator).to receive(:new).once.and_call_original
+
+      arguments = { questions: [], commercial: { intent: "booking", slots: {}, signals: {}, evidence: {} } }
+      first = tool.call(arguments)
+      second = tool.call(arguments)
 
       expect(first).to be_a(RubyLLM::Tool::Halt)
-      expect(second).to eq(AiConcierge::Tools::Llm::AdvanceBookingFunction::ALREADY_ADVANCED)
+      expect(second).to be_a(RubyLLM::Tool::Halt)
     end
   end
 
@@ -99,8 +101,8 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
     # the guest's answer, and it is already written down.
     it "keeps what a tool already did when the model fails afterwards" do
       turn = run(message: "early august")
-      tool = turn.tools.find { |candidate| candidate.name == "advance_booking" }
-      tool.call({})
+      tool = turn.tools.find { |candidate| candidate.name == "handle_guest_turn" }
+      tool.call(questions: [], commercial: { intent: "booking", slots: {}, signals: {}, evidence: {} })
 
       allow(turn).to receive(:run).and_raise(Timeout::Error)
 
@@ -178,7 +180,10 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       resolved = run(message: "pool").call.domain_result
 
       expect(resolved.dig(:extra_context, :result, "answer"))
-        .to eq("The swimming pool opens at 7:00 AM.\n\nWould you like me to help you find a room for your travel dates?")
+        .to eq(
+          "The swimming pool opens at 7:00 AM.\n\n" \
+          "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+        )
       expect(resolved.dig(:slots_payload, "information_task", "pending_question")).to be_nil
     end
 
@@ -199,7 +204,10 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       result = run(message: "the second one").call.domain_result
 
       expect(result.dig(:extra_context, :result, "answer"))
-        .to eq("Check-out is by 11:00 AM.\n\nIf this policy works for you, I can help you find a room for your travel dates.")
+        .to eq(
+          "Check-out is by 11:00 AM.\n\n" \
+          "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+        )
       expect(result.dig(:slots_payload, "information_task", "pending_question")).to be_nil
     end
 

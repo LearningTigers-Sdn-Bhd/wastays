@@ -94,8 +94,20 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
       expect(manager.sales_task).to eq(
         "last_optional_action" => nil,
         "suppress_next_optional_offer" => false,
-        "refusal_acknowledgment_pending" => false
+        "refusal_acknowledgment_pending" => false,
+        "information_offer_shown" => false,
+        "optional_copy_index" => 0,
+        "closing_copy_index" => 0
       )
+    end
+
+    it "rotates the information closer without changing the state version" do
+      first = described_class.new(slots_payload: {}).record_information_closer
+      second = described_class.new(slots_payload: first).record_information_closer
+
+      expect(first.dig("sales_task", "closing_copy_index")).to eq(1)
+      expect(second.dig("sales_task", "closing_copy_index")).to eq(2)
+      expect(second["state_version"]).to eq(3)
     end
 
     it "records and declines an optional offer without changing booking or information state" do
@@ -128,6 +140,15 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
       expect(consumed.dig("sales_task", "suppress_next_optional_offer")).to be(false)
       expect(consumed.dig("sales_task", "refusal_acknowledgment_pending")).to be(false)
     end
+  end
+
+  it "maps the legacy post-link sales group to post-link support" do
+    manager = described_class.new(slots_payload: {
+      "state_version" => 3,
+      "ui_task" => { "suggestion_group" => "post_link_sales" }
+    })
+
+    expect(manager.suggestion_group).to eq("post_link_support")
   end
 
   describe "counting a question the guest keeps not answering" do

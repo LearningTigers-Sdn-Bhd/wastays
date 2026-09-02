@@ -26,7 +26,7 @@ RSpec.describe AiConcierge::MessageBuilders::ExistingBookingBuilder do
     )
   end
 
-  it "builds the post-link sales reply with a masked destination" do
+  it "builds the post-link support reply with a masked destination" do
     message = described_class.new(
       hotel: build_stubbed(:hotel),
       context: { masked_email: "j•••@example.com" }
@@ -34,7 +34,7 @@ RSpec.describe AiConcierge::MessageBuilders::ExistingBookingBuilder do
 
     expect(message).to eq(
       "Your secure login link is on its way to j•••@example.com. Open it to manage your booking. " \
-        "Ready to plan your next stay? I can help you find the right room and check the best available options for your dates."
+        "I am here if you need more help."
     )
   end
 
@@ -56,11 +56,10 @@ RSpec.describe AiConcierge::MessageBuilders::ExistingBookingBuilder do
     )
   end
 
-  it "builds the approved post-handoff sales reply" do
+  it "builds the approved post-handoff support reply" do
     expect(builder.call(:booking_support_requested)).to eq(
-      "I have asked the hotel team to assist you. They will reply here when someone is available. " \
-        "You do not have to wait without help. Let me show you our room options, current prices, hotel facilities, " \
-        "or nearby attractions. What interests you?"
+      "I have asked the hotel team to help with your booking. They will reply here when available. " \
+        "You can continue chatting while you wait."
     )
   end
 

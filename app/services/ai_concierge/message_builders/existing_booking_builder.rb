@@ -16,15 +16,16 @@ module AiConcierge
           "I could not send a login link with that confirmation code. Check the code and try again."
         when :magic_link_sent
           "Your secure login link is on its way to #{context[:masked_email]}. Open it to manage your booking. " \
-            "Ready to plan your next stay? I can help you find the right room and check the best available options for your dates."
+            "I am here if you need more help."
         when :magic_link_cooldown
           "A login link was already sent to #{context[:masked_email]}. Please wait two minutes before you request another link."
         when :magic_link_unavailable
           magic_link_unavailable_message
         when :booking_support_requested
-          "I have asked the hotel team to assist you. They will reply here when someone is available. " \
-            "You do not have to wait without help. Let me show you our room options, current prices, hotel facilities, " \
-            "or nearby attractions. What interests you?"
+          "I have asked the hotel team to help with your booking. They will reply here when available. " \
+            "You can continue chatting while you wait."
+        when :booking_cancellation_support_requested
+          "I have asked the hotel team to help with your cancellation request. They will reply when available."
         when :unsupported_date_change
           "Booking-date changes are not available in the Guest Portal yet. For now, I can ask the hotel team to help you " \
             "change your check-in date. Would you like me to contact them, or would you like help with something else?"

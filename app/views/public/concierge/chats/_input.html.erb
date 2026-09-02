@@ -9,8 +9,7 @@
     <% if input.suggestions.any? %>
       <%= render PublicUI::Chat::QuickReplies.new(
             suggestions: input.suggestions,
-            message_url: concierge_chat_messages_path(hotel),
-            agent_url: concierge_chat_agent_path(hotel)) %>
+            message_url: concierge_chat_messages_path(hotel)) %>
     <% end %>
     <%= render PublicUI::Chat::Composer.new(url: concierge_chat_messages_path(hotel)) %>
   <% end %>

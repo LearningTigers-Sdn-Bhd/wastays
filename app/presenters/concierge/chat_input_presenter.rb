@@ -13,17 +13,16 @@ module Concierge
       ],
       "portal_offer" => [
         [ "Send login link", :message, "Send my login link." ],
-        [ "Ask the hotel team", :agent, nil ],
+        [ "Ask the hotel team", :message, "Please ask the hotel team to help with my booking." ],
         [ "Not now", :message, "Not now." ]
       ],
-      "post_link_sales" => [
-        [ "Find a room", :message, "I want to find a room." ],
-        [ "Check prices", :message, "I want to check prices." ],
-        [ "Explore the hotel", :message, "Tell me about the hotel." ],
+      "post_link_support" => [
+        [ "Ask the hotel team", :message, "Please ask the hotel team to help with my booking." ],
+        [ "Ask another question", :focus, nil ],
         [ "Not now", :message, "Not now." ]
       ],
       "magic_link_failure" => [
-        [ "Ask the hotel team", :agent, nil ],
+        [ "Ask the hotel team", :message, "Please ask the hotel team to help with my booking." ],
         [ "Ask another question", :focus, nil ],
         [ "Not now", :message, "Not now." ]
       ],
@@ -35,7 +34,7 @@ module Concierge
         [ "I will wait", :message, "I will wait." ]
       ],
       "unsupported_change" => [
-        [ "Ask the hotel team", :agent, nil ],
+        [ "Ask the hotel team", :message, "Please ask the hotel team to help with my booking." ],
         [ "Ask another question", :focus, nil ],
         [ "Explore the hotel", :message, "Tell me about the hotel." ],
         [ "Not now", :message, "Not now." ]

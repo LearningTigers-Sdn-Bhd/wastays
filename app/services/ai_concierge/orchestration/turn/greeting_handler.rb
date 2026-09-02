@@ -17,7 +17,9 @@ module AiConcierge
 
           manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
           Core::DomainResponse.new(
-            slots_payload: manager.show_suggestions("greeting"),
+            slots_payload: State::ConversationTaskManager
+              .new(slots_payload: manager.reset_information_run)
+              .show_suggestions("greeting"),
             reply_type: :greeting,
             next_action: Sales::NextAction.none
           )

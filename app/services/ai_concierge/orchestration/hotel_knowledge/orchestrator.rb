@@ -15,8 +15,16 @@ module AiConcierge
       end
 
       def call
-        tool_result = route_tool
-        reply = ReplyFactory.new(intent: interpretation["intent"], result: tool_result[:result]).call
+        resolution = QuestionResolver.new(
+          hotel: hotel,
+          message: message,
+          interpretation: interpretation,
+          language: language,
+          previous_reply: previous_reply,
+          localize: false
+        ).call
+        tool_result = resolution.tool_result
+        reply = resolution.reply
         pending_question = clarification_pending_question(reply, tool_result[:result])
         slots_payload = information_slots_payload(reply, tool_result[:result], pending_question: pending_question)
         manager = State::ConversationTaskManager.new(slots_payload: slots_payload)
@@ -25,18 +33,23 @@ module AiConcierge
           reply,
           manager,
           pending_question: pending_question,
-          suppress_offer: manager.sales_offer_suppressed?
+          suppress_offer: manager.sales_offer_suppressed? || manager.sales_task["information_offer_shown"] == true
         )
-        factual_message = factual_message(reply)
         sales_message = Sales::NextActionRenderer.new(
-          answer: factual_message,
+          answer: resolution.answer,
           next_action: selected_action,
           intent: interpretation["intent"],
           missing_topic: reply.missing_topic,
-          acknowledge_refusal: manager.sales_refusal_acknowledgment_pending?
+          acknowledge_refusal: manager.sales_refusal_acknowledgment_pending?,
+          copy_index: manager.sales_task["optional_copy_index"],
+          closing_copy_index: manager.sales_task["closing_copy_index"],
+          natural_closer: natural_closer?(reply, pending_question, selected_action)
         ).call
         localized = Localizer.new(hotel: hotel, reply: sales_message, language: language).call
         slots_payload = sales_slots_payload(manager, candidate_action: candidate_action, selected_action: selected_action)
+        if natural_closer?(reply, pending_question, selected_action)
+          slots_payload = State::ConversationTaskManager.new(slots_payload: slots_payload).record_information_closer
+        end
         result = tool_result[:result].merge(reply.to_h).merge("answer" => localized)
         record_knowledge_diagnostic(result)
         Core::DomainResponse.new(
@@ -58,10 +71,6 @@ module AiConcierge
       attr_reader :hotel, :message, :interpretation, :conversation_state, :pause, :active_branch, :language,
         :guest_language
 
-      def route_tool
-        ToolRouter.new(hotel: hotel, message: message, interpretation: interpretation).call
-      end
-
       def previous_reply
         conversation_state&.prospect&.prospect_messages
           &.where(direction: "outbound")
@@ -81,17 +90,6 @@ module AiConcierge
         ).call
       end
 
-      def factual_message(reply)
-        return HotelOverviewComposer.new(hotel: hotel, reply: reply, tone: hotel.ai_concierge_tone).call if hotel_overview?(reply)
-
-        ReplyComposer.new(
-          reply: reply,
-          tone: hotel.ai_concierge_tone,
-          message: message,
-          previous_reply: previous_reply
-        ).call
-      end
-
       def hotel_overview?(reply)
         interpretation["topic"] == "general_hotel_info" && reply.shape == "list"
       end
@@ -105,6 +103,10 @@ module AiConcierge
         return "unavailable" if reply.shape == "unavailable"
 
         "answered"
+      end
+
+      def natural_closer?(reply, pending_question, selected_action)
+        pending_question.blank? && reply.success && selected_action.kind.in?(%w[none offer_booking_help])
       end
 
       def sales_slots_payload(manager, candidate_action:, selected_action:)

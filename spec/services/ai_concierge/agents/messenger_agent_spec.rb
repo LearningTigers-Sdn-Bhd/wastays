@@ -99,7 +99,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       reply_type: :booking_attempt_cancelled_next_step
     }).call
 
-    expect(result["reply_message"]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(result["reply_message"]).to eq("I stopped this booking attempt. You can start a new booking or ask about the hotel.")
   end
 
   it "renders the generic end confirmation prompt" do

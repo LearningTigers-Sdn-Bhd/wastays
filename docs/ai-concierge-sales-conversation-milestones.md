@@ -2,19 +2,21 @@
 
 Status: In progress
 Started: 2026-08-27
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ## Progress
 
 | Milestone | Status |
 |---|---|
-| Milestone 0 — Conversation contract | Approved |
+| Milestone 0 — Conversation contract | Approved for Milestones 1–4, Milestone 5 addendum pending |
 | Milestone 1 — Next-action policy | Completed |
 | Milestone 2 — Hotel-information replies | Completed |
 | Milestone 3 — Price exploration | Completed |
-| Milestone 4 — Existing-booking conversations | Not started |
-| Milestone 5 — WhatsApp welcome | Not started |
-| Milestone 6 — Protection and release | Not started |
+| Milestone 4 — Greeting and journey navigation | Completed |
+| Milestone 5 — Secure web existing-booking support | Implemented, acceptance pending |
+| Milestone 6 — Reactive evaluation and release | In progress |
+
+The proactive WhatsApp welcome is a separate, deferred project. It does not block the reactive Concierge release.
 
 ## Purpose
 
@@ -60,7 +62,7 @@ The next action must fit the guest's situation. The concierge must not repeat �
 
 #### Existing booking
 
-> Hello, and welcome to {hotel_name}. We found your stay from {check_in} to {check_out}. How can we help with your booking?
+> You can manage this through the Guest Portal. I can send a secure login link to the email saved on your booking.
 
 ## Product rules
 
@@ -69,7 +71,9 @@ The next action must fit the guest's situation. The concierge must not repeat �
 - Do not hide restrictions, prices, or unavailable services.
 - Do not pressure the guest after a refusal.
 - Do not treat a price inquiry as consent to book.
-- Do not offer a new booking when the guest asks about an existing booking.
+- Keep existing-booking support as the primary journey.
+- The current flow offers future-stay help after link delivery and during a hotel-team wait.
+- Milestone 5 acceptance must approve or remove these offers.
 - Do not invent a hotel benefit, discount, policy, room, rate, or attraction.
 - Preserve the active booking when the guest asks an information question.
 - Resume the active booking only after the information question is resolved.
@@ -110,11 +114,19 @@ Hotel-knowledge replies currently bypass the reply stylist. The hotel-knowledge 
 
 Price questions use the booking path because a valid price depends on dates. This path must support price exploration without claiming booking consent.
 
-Proactive WhatsApp messages use the notification and Relay path. They do not use the reactive AI Concierge response path.
+Standalone greetings use a deterministic path before the model and booking orchestration.
+
+Existing-booking support is available in the anonymous web chat. It does not identify or show a booking inside the chat.
+
+The guest enters a confirmation code in a secure field. WAStays sends a Guest Portal link to the booking's saved email.
+
+The secure code does not enter the message history or model input. Unsupported booking changes go to the hotel team.
+
+Proactive WhatsApp messages use the notification and Relay path. They remain outside this reactive plan.
 
 ## Milestone 0 — Approve the conversation contract
 
-Status: Approved
+Status: Approved for Milestones 1–4, Milestone 5 addendum pending
 
 This milestone defines the product behavior. It changes no application behavior.
 
@@ -126,14 +138,14 @@ This milestone defines the product behavior. It changes no application behavior.
 - Approve positive, restrictive, unavailable, and missing-information examples.
 - Decide which replies need no sales question.
 - Decide how often the Concierge can repeat a sales prompt.
-- Decide whether the confirmed-booking welcome sends immediately or at a scheduled time.
+- Approve or remove future-stay offers after link delivery and during a hotel-team wait.
 
 ### Exit criteria
 
 - Product owners approve the conversation matrix.
 - Product owners approve the example replies.
 - Product owners approve the price-exploration boundary.
-- Product owners approve the WhatsApp welcome timing.
+- Product owners approve the existing-booking sales boundary.
 
 ## Milestone 1 — Add the next-action policy
 
@@ -227,7 +239,7 @@ This milestone applies the next-action policy to reactive information replies.
 - [x] Refusal and one-off suppression specs pass.
 - [x] Public Concierge request specs pass.
 
-### Validation
+### Milestone validation on 2026-08-27
 
 - Full AI Concierge domain: 648 examples, 0 failures.
 - AI Concierge API requests: 42 examples, 0 failures.
@@ -274,6 +286,10 @@ The booking search remains the source of prices and availability. The conversati
 - Kept `action_name` empty until the guest explicitly continues with booking.
 - Kept quotation creation behind the existing quotation-confirmation question.
 - Added the exploration state without a database migration or a new public API field.
+- Added month-part interpretation for phrases such as early, middle, and late month.
+- Kept room-information questions separate from booking intent.
+- Added a hotel overview that offers room or price exploration.
+- Improved price-shopping copy and continuation choices.
 
 ### Exit criteria
 
@@ -284,7 +300,7 @@ The booking search remains the source of prices and availability. The conversati
 - [x] The existing quotation confirmation remains required.
 - [x] Booking and rate-plan specs pass.
 
-### Validation
+### Milestone validation on 2026-08-27
 
 - Full AI Concierge domain: 666 examples, 0 failures.
 - Booking search, availability, effective-rate, and quotation services: 85 examples, 0 failures.
@@ -293,77 +309,99 @@ The booking search remains the source of prices and availability. The conversati
 
 Repository policy prohibits browser testing. Request specs cover the public Concierge API flow.
 
-## Milestone 4 — Improve existing-booking conversations
+## Milestone 4 — Add greeting and journey navigation
 
-Status: Not started
+Status: Completed on 2026-08-28
 
-This milestone gives confirmed guests a service-focused conversation.
+This milestone gives an idle conversation a warm and deterministic start.
 
-### Reactive welcome
+The greeting path runs before the model and booking orchestration. A pending secure booking request takes priority over a greeting.
 
-When a confirmed guest writes, the Concierge can acknowledge the known stay.
+### Delivered
 
-The reply can offer:
-
-- Check-in information.
-- Parking information.
-- Directions.
-- Hotel facilities.
-- Special-request guidance.
-- Front-desk assistance.
-
-The reply must not invite the guest to make the same booking again.
+- Added standalone greeting recognition for English, Malay, and Chinese.
+- Added support for a standalone wave emoji.
+- Kept messages with a greeting and a question on the normal answer path.
+- Added a hotel-specific welcome message.
+- Added quick choices for rooms, prices, hotel information, and existing bookings.
+- Kept the booking task idle after a standalone greeting.
+- Kept the greeting free of a pending question and booking action.
 
 ### Exit criteria
 
-- The Concierge uses only bookings matched to the guest and hotel.
-- The reply names the correct stay dates.
-- The reply does not expose another guest's booking.
-- Multiple active bookings produce a clear choice.
-- No active booking produces a safe response.
-- Booking-context specs pass.
+- [x] A standalone greeting does not start a booking.
+- [x] A greeting with a question still answers the question.
+- [x] A pending secure booking request remains active.
+- [x] The reply names the correct hotel.
+- [x] Greeting and orchestration specs pass.
 
-## Milestone 5 — Add the proactive WhatsApp welcome
+## Milestone 5 — Add secure web existing-booking support
 
-Status: Not started
+Status: Implemented on 2026-08-28, product acceptance pending
 
-This milestone sends a welcome inquiry through the existing notification and Relay path.
+This milestone gives anonymous web guests a safe path to existing-booking support.
 
-WAStays does not connect to WhatsApp directly. The Relay receives a WAStays webhook and sends the WhatsApp message.
+The chat does not identify a guest or show booking facts. The authenticated Guest Portal owns booking details and booking actions.
 
-### Proposed message
+### Supported requests
 
-> Hello, and welcome to {hotel_name}. Thank you for booking with us for {check_in}. Do you have questions about your stay?
+- Open or manage an existing booking.
+- View booking documents in the Guest Portal.
+- Start an eligible cancellation or refund request in the Guest Portal.
+- Ask the hotel team about unsupported booking changes.
 
-### Delivery rules
+### Secure portal flow
 
-- Send only for an eligible confirmed booking.
-- Include the hotel name and correct stay dates.
-- Use the hotel's WhatsApp number and the guest's phone number.
-- Give each welcome delivery a stable idempotency key.
-- Do not send duplicate welcome messages after retries.
-- Do not send for a cancelled booking.
-- Update or replace pending content after a relevant booking change.
-- Record delivery status and errors.
-- Obey the template and delivery requirements defined by the WhatsApp owner.
+1. The Concierge offers the Guest Portal or hotel-team assistance.
+2. The guest requests a secure login link.
+3. The chat shows a dedicated confirmation-code field.
+4. WAStays matches the code within the current hotel.
+5. WAStays accepts only an active booking status.
+6. WAStays sends a magic link to the primary guest's saved email.
+7. The chat shows only the masked email address.
+8. The Guest Portal shows the authenticated booking details.
 
-The current pre-arrival scheduler creates messages two days and one day before arrival. Product approval determines whether this welcome is immediate or scheduled.
+### Safety rules
+
+- Keep the confirmation code out of `ProspectMessage` and model input.
+- Scope the pending secure field to one web conversation.
+- Do not carry the secure field into a new conversation.
+- Do not show stay dates, guest names, or full email addresses in anonymous chat.
+- Limit invalid code attempts.
+- Apply a request throttle to the booking-link route.
+- Offer hotel-team assistance when the link is unavailable.
+- Route date, room, guest, payment, and exception changes to hotel staff.
+- Keep this flow on the web channel until WhatsApp has an approved identity boundary.
+
+### Delivered
+
+- Added deterministic existing-booking intent matching.
+- Added separate portal and hotel-team support paths.
+- Added secure chat input and quick-reply components.
+- Added conversation-scoped existing-booking state.
+- Reused the existing Guest Portal magic-link authentication.
+- Added protected masked-email output.
+- Added failed-attempt locking and request throttling.
+- Added public request, service, component, job, and orchestration specs.
 
 ### Exit criteria
 
-- One eligible booking creates one welcome delivery.
-- Relay retries do not create duplicate guest messages.
-- Booking updates do not send stale dates.
-- Booking cancellations stop pending delivery.
-- Training hotels do not send the message.
-- Notification, job, webhook, and payload specs pass.
-- The Relay contract documents the new event.
+- [x] Booking lookup is scoped to the current hotel.
+- [x] The confirmation code does not enter chat history.
+- [x] Another browser cannot submit a code for the conversation.
+- [x] The reply does not expose booking facts.
+- [x] The portal link goes to the booking's saved email.
+- [x] Unsupported changes can reach the hotel team.
+- [x] AI Concierge and Hotel Concierge domain specs pass.
+- [ ] Product owners approve the post-link future-stay offer.
+- [ ] Product owners approve the sales choices during a hotel-team wait.
+- [ ] Reviewed transcripts confirm that support remains the primary journey.
 
-## Milestone 6 — Protect, evaluate, and release
+## Milestone 6 — Evaluate and release the reactive Concierge
 
-Status: Not started
+Status: In progress
 
-This milestone proves that the new conversation behavior is safe and useful.
+This milestone proves that the reactive conversation behavior is safe and useful.
 
 ### Rewrite protection
 
@@ -390,8 +428,10 @@ Test the 40 primary contexts. Add variants for these outcomes:
 - No availability.
 - A price question without booking consent.
 - A suspended booking.
-- An existing booking.
-- Multiple existing bookings.
+- An existing-booking portal request.
+- An unsupported existing-booking change.
+- An invalid confirmation code.
+- An unavailable portal link.
 - A human-support request.
 - English and Malay replies.
 - Business and cheerful tones.
@@ -404,43 +444,117 @@ Measure these conversation events:
 - The guest requests a price search.
 - The guest selects a room.
 - The guest reaches a quotation link.
+- The guest requests existing-booking support.
+- The guest requests a secure portal link.
+- WAStays sends or cannot send the portal link.
 - The guest requests human support.
 - The guest stops after repeated sales prompts.
 
 ### Exit criteria
 
-- Focused AI Concierge specs pass.
-- Notification and Relay specs pass.
-- The relevant test domains pass.
-- Reviewed transcripts contain no false facts.
-- Reviewed transcripts contain no inappropriate booking prompts.
-- The release has a safe rollback path.
+- [x] Focused AI Concierge specs pass.
+- [x] Focused Hotel Concierge specs pass.
+- [ ] The acceptance matrix passes.
+- [ ] Reviewed transcripts contain no false facts.
+- [ ] Reviewed transcripts contain no inappropriate booking prompts.
+- [ ] Product measurements are available.
+- [ ] The full relevant CI checks pass.
+- [ ] The release has a safe rollback path.
+
+## Current branch validation
+
+Validated on 2026-08-28:
+
+- `bin/test ai_concierge`: 734 examples, 0 failures.
+- `bin/test hotel_concierge`: 252 examples, 0 failures.
+- `git diff --check`: passed.
+
+These results cover the focused domains. They do not represent a full `bin/ci` run.
+
+Repository policy prohibits browser testing. Request and component specs cover the public web Concierge path.
+
+## Deferred project — Proactive WhatsApp welcome
+
+Status: Not started
+
+The proactive welcome is not part of the reactive Concierge release.
+
+WAStays does not connect to WhatsApp directly. The Relay receives a WAStays webhook and sends the WhatsApp message.
+
+### Proposed message
+
+> Hello, and welcome to {hotel_name}. Thank you for booking with us for {check_in}. Do you have questions about your stay?
+
+### Decisions required before implementation
+
+- Decide whether the welcome sends immediately or at a scheduled time.
+- Approve the WhatsApp template and delivery requirements.
+- Define eligible booking statuses and hotel exclusions.
+- Define behavior after a booking update or cancellation.
+- Define the idempotency key and delivery record.
+
+### Delivery requirements
+
+- Send only for an eligible confirmed booking.
+- Include the hotel name and correct stay dates.
+- Use the hotel's WhatsApp number and the guest's phone number.
+- Do not create duplicate guest messages after retries.
+- Do not send for a cancelled booking.
+- Do not send stale dates after a booking update.
+- Record delivery status and errors.
+- Keep direct WhatsApp credentials outside WAStays.
+
+### Exit criteria
+
+- One eligible booking creates one welcome delivery.
+- Relay retries do not create duplicate guest messages.
+- Booking updates do not send stale dates.
+- Booking cancellations stop pending delivery.
+- Training hotels do not send the message.
+- Notification, job, webhook, and payload specs pass.
+- The Relay contract documents the new event.
 
 ## Recommended delivery order
 
-1. Milestone 0 is approved.
-2. Milestones 1 and 2 are completed.
-3. Complete Milestone 3 after transcript review.
-4. Complete Milestone 4 after booking-context review.
-5. Complete Milestone 5 as a separate notification change.
-6. Complete Milestone 6 before general release.
-
-Milestones 1 to 4 form the reactive Concierge change. Milestone 5 is separate because it sends a proactive external message.
+1. Milestones 1 to 4 are completed.
+2. Approve the Milestone 5 addendum to the conversation contract.
+3. Complete the product acceptance items for Milestone 5.
+4. Complete the evaluation and release items for Milestone 6.
+5. Release the reactive Concierge when Milestone 6 passes.
+6. Plan the proactive WhatsApp welcome as a separate project.
 
 ## Main implementation areas
 
 ### Reactive Concierge
 
-- `app/services/ai_concierge/orchestration/core/intents.rb`
+- `app/services/ai_concierge/matching/greeting_matcher.rb`
+- `app/services/ai_concierge/matching/existing_booking_support_matcher.rb`
+- `app/services/ai_concierge/orchestration/turn/greeting_handler.rb`
+- `app/services/ai_concierge/orchestration/turn/existing_booking_support_handler.rb`
+- `app/services/ai_concierge/orchestration/turn/secure_input_handler.rb`
 - `app/services/ai_concierge/orchestration/hotel_knowledge/reply_composer.rb`
+- `app/services/ai_concierge/orchestration/hotel_knowledge/hotel_overview_composer.rb`
+- `app/services/ai_concierge/orchestration/sales/next_action_policy.rb`
+- `app/services/ai_concierge/orchestration/sales/next_action_renderer.rb`
 - `app/services/ai_concierge/message_builders/booking_actions_builder.rb`
-- `app/services/ai_concierge/orchestration/turn/booking_context_handler.rb`
+- `app/services/ai_concierge/message_builders/greeting_builder.rb`
+- `app/services/ai_concierge/message_builders/existing_booking_builder.rb`
 - `app/services/ai_concierge/orchestration/turn/response_persister.rb`
 - `app/services/ai_concierge/agents/reply_stylist.rb`
 - `app/services/ai_concierge/agents/rewrite_verifier.rb`
 - `app/services/ai_concierge/state/conversation_task_manager.rb`
 
-### Proactive WhatsApp delivery
+### Secure web booking access
+
+- `app/controllers/public/concierge/booking_links_controller.rb`
+- `app/presenters/concierge/chat_input_presenter.rb`
+- `app/services/concierge/send_booking_magic_link.rb`
+- `app/services/guests/magic_links/issue.rb`
+- `app/components/public_ui/chat/secure_input.rb`
+- `app/components/public_ui/chat/quick_replies.rb`
+- `config/initializers/rack_attack.rb`
+
+### Deferred WhatsApp delivery
 
 - `app/services/notifications/dispatcher.rb`
 - `app/services/notifications/pre_arrival_scheduler.rb`
@@ -458,10 +572,14 @@ Milestones 1 to 4 form the reactive Concierge change. Milestone 5 is separate be
 - Automatic upsells that have no application-controlled inventory.
 - Changes to payment processing.
 - Direct WhatsApp credentials inside WAStays.
+- Showing booking details in an anonymous chat.
+- Existing-booking support on WhatsApp without an approved identity boundary.
 - A replacement for human support.
 
 ## Completion definition
 
-This project is complete when reactive and proactive replies use the approved guest-stage rules.
+This reactive project is complete when Milestone 5 acceptance and all Milestone 6 exit criteria pass.
 
 The replies must remain factual, helpful, and commercially useful. They must preserve booking state and respect the guest's choices.
+
+The deferred WhatsApp welcome has its own completion criteria. It does not block this reactive project.

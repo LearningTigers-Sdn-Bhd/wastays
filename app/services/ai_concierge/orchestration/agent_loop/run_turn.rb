@@ -20,11 +20,8 @@ module AiConcierge
         LLM_TIMEOUT = 30
 
         TOOL_CLASSES = [
-          Tools::Llm::AnswerHotelQuestionFunction,
-          Tools::Llm::GetNearbyAttractionsFunction,
-          Tools::Llm::GetRoomTypeDetailsFunction,
-          Tools::Llm::GetBookingContextFunction,
-          Tools::Llm::AdvanceBookingFunction
+          Tools::Llm::HandleGuestTurnFunction,
+          Tools::Llm::GetBookingContextFunction
           # GenerateBookingUrlTool has no function here on purpose. The only way to a
           # payable quote is Booking::CompletionHandler, which is only reached
           # when Postgres says a confirmation was the open question.
@@ -101,7 +98,10 @@ module AiConcierge
         def booking_backstop
           return unless context.pending_question.present? || booking_words? || accepted_price_offer?
 
-          advance_booking_tool&.execute(slots: {}, signals: {})
+          handle_guest_turn_tool&.execute(
+            questions: [],
+            commercial: { intent: "booking", slots: {}, signals: {}, evidence: {} }
+          )
           recorder.outcome
         end
 
@@ -111,8 +111,8 @@ module AiConcierge
           context.pending_price_offer? && Core::ConfirmationReader.new(message: context.message).confirmation == "yes"
         end
 
-        def advance_booking_tool
-          tools.find { |tool| tool.is_a?(Tools::Llm::AdvanceBookingFunction) }
+        def handle_guest_turn_tool
+          tools.find { |tool| tool.is_a?(Tools::Llm::HandleGuestTurnFunction) }
         end
 
         # The model answered without reaching for a tool: a greeting, or a

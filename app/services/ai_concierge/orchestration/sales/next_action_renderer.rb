@@ -7,12 +7,27 @@ module AiConcierge
       class NextActionRenderer
         REFUSAL_ACKNOWLEDGMENT = "No problem."
 
-        def initialize(answer:, next_action:, intent:, missing_topic: nil, acknowledge_refusal: false)
+        BOOKING_HELP_MESSAGES = [
+          "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?",
+          "Would you like to see which rooms are available for your dates, or is there anything else I can help with?",
+          "I can also help you compare rooms and current prices. What else would you like to know?"
+        ].freeze
+        NEUTRAL_CLOSERS = [
+          "Is there anything else you’d like to know?",
+          "What else can I help you with?",
+          "Feel free to ask if you’d like to know anything else about the hotel."
+        ].freeze
+
+        def initialize(answer:, next_action:, intent:, missing_topic: nil, acknowledge_refusal: false, copy_index: 0,
+          closing_copy_index: 0, natural_closer: false)
           @answer = answer.to_s.strip
           @next_action = next_action
           @intent = intent.to_s
           @missing_topic = missing_topic.to_s
           @acknowledge_refusal = acknowledge_refusal
+          @copy_index = copy_index.to_i
+          @closing_copy_index = closing_copy_index.to_i
+          @natural_closer = natural_closer
         end
 
         def call
@@ -23,7 +38,8 @@ module AiConcierge
 
         private
 
-        attr_reader :answer, :next_action, :intent, :missing_topic, :acknowledge_refusal
+        attr_reader :answer, :next_action, :intent, :missing_topic, :acknowledge_refusal, :copy_index,
+          :closing_copy_index, :natural_closer
 
         def action_message
           case next_action.kind
@@ -33,14 +49,16 @@ module AiConcierge
           when "resume_booking", "continue_booking" then "Would you like to continue your booking?"
           when "offer_alternative_search" then "Would you like me to search another date or room?"
           when "offer_front_desk" then front_desk_message
-          when "none" then nil
+          when "none" then neutral_closer
           end
         end
 
         def booking_help_message
-          return "If this policy works for you, I can help you find a room for your travel dates." if intent == "hotel_policy"
+          BOOKING_HELP_MESSAGES[closing_copy_index % BOOKING_HELP_MESSAGES.length]
+        end
 
-          "Would you like me to help you find a room for your travel dates?"
+        def neutral_closer
+          NEUTRAL_CLOSERS[closing_copy_index % NEUTRAL_CLOSERS.length] if natural_closer
         end
 
         def front_desk_message
