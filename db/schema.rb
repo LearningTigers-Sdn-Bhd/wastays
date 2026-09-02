@@ -831,6 +831,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
     t.index ["external_id"], name: "index_complaint_requests_on_external_id", unique: true
   end
 
+  create_table "concierge_booking_verifications", force: :cascade do |t|
+    t.integer "attempt_count", default: 0, null: false
+    t.bigint "booking_id", null: false
+    t.string "code_digest"
+    t.bigint "conversation_id", null: false
+    t.datetime "created_at", null: false
+    t.text "delivery_code"
+    t.text "destination_email"
+    t.datetime "expires_at"
+    t.bigint "hotel_id", null: false
+    t.datetime "locked_until"
+    t.integer "send_count", default: 0, null: false
+    t.datetime "send_window_started_at"
+    t.datetime "sent_at"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "verified_at"
+    t.datetime "verified_until"
+    t.index ["booking_id"], name: "index_concierge_booking_verifications_on_booking_id"
+    t.index ["conversation_id", "booking_id"], name: "index_concierge_booking_verifications_on_thread_booking", unique: true
+    t.index ["conversation_id"], name: "index_concierge_booking_verifications_on_conversation_id"
+    t.index ["hotel_id", "status"], name: "index_concierge_booking_verifications_on_hotel_id_and_status"
+    t.index ["hotel_id"], name: "index_concierge_booking_verifications_on_hotel_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'sent'::character varying, 'verified'::character varying, 'expired'::character varying, 'locked'::character varying, 'delivery_failed'::character varying]::text[])", name: "concierge_booking_verifications_status_allowed"
+  end
+
   create_table "conversations", force: :cascade do |t|
     t.bigint "assigned_user_id"
     t.string "channel", default: "web", null: false
@@ -3006,6 +3032,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
   add_foreign_key "check_out_requests", "bookings"
   add_foreign_key "check_out_requests", "users", column: "acknowledged_by_user_id"
   add_foreign_key "complaint_requests", "bookings"
+  add_foreign_key "concierge_booking_verifications", "bookings"
+  add_foreign_key "concierge_booking_verifications", "conversations"
+  add_foreign_key "concierge_booking_verifications", "hotels"
   add_foreign_key "conversations", "hotels"
   add_foreign_key "conversations", "prospects"
   add_foreign_key "conversations", "users", column: "assigned_user_id"
