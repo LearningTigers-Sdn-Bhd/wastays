@@ -217,6 +217,7 @@ module AiConcierge
           amenities = Array(structured_facts["amenities"]).compact_blank
           if amenities.any? && amenities_question?
             matching = amenities.select { |amenity| query.downcase.include?(amenity.downcase) }
+            return if matching.empty? && service_question?
             matching = amenities if matching.empty?
             return fact(topic: "amenities", text: "Available amenities include #{matching.to_sentence}.")
           end

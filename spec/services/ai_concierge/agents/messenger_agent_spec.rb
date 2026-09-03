@@ -3,9 +3,8 @@ require "rails_helper"
 RSpec.describe AiConcierge::Agents::MessengerAgent do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
 
-  # A greeting has no reply type: nothing routes to a tool, so the model's own
-  # words are the reply and MessengerAgent renders the bare message. There used
-  # to be a `:greeting` branch in the builder that nothing could reach.
+  # A model clarification has no reply type, so MessengerAgent must still
+  # render the model's bare message when no builder applies.
   it "renders the message when there is no reply type to dispatch on" do
     result = described_class.new(hotel: hotel, context: { message: "Hi there!" }).call
 
@@ -100,7 +99,7 @@ RSpec.describe AiConcierge::Agents::MessengerAgent do
       reply_type: :booking_attempt_cancelled_next_step
     }).call
 
-    expect(result["reply_message"]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(result["reply_message"]).to eq("I stopped this booking attempt. You can start a new booking or ask about the hotel.")
   end
 
   it "renders the generic end confirmation prompt" do

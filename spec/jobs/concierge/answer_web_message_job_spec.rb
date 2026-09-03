@@ -56,6 +56,24 @@ RSpec.describe Concierge::AnswerWebMessageJob do
 
       expect { perform }.not_to change { conversation.messages.count }
     end
+
+    it "records the guided greeting without starting a booking" do
+      allow_any_instance_of(Hotel).to receive(:ai_concierge_enabled?).and_return(true)
+      stub_concierge_stylist
+      expect(AiConcierge::Orchestration::AgentLoop::RunTurn).not_to receive(:new)
+
+      perform(message: "hello")
+
+      reply = conversation.messages.where(direction: "outbound").last
+      state = prospect.prospect_conversation_state.reload
+      expect(reply.body).to eq(
+        "Hello! Welcome to #{hotel.name}. I can help you find the right stay, check prices, " \
+          "answer hotel questions, or access an existing booking. What can I help you with today?"
+      )
+      expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+      expect(state.slots_payload.dig("ui_task", "suggestion_group")).to eq("greeting")
+      expect(state.pending_question).to be_nil
+    end
   end
 
   # The window between the guest pressing Send and this running is exactly when

@@ -30,6 +30,7 @@ module AiConcierge
     REASK_HANDOVER = 2
 
     def call
+      apply_booking_purpose
       escalate(resume_framing(resolve))
     end
 
@@ -49,6 +50,9 @@ module AiConcierge
     def resolve
       case decision[:action]
       when :booking, :resume
+        price_response = handle_price_exploration
+        return price_response if price_response
+
         revision_response = handle_booking_revision
         return revision_response if revision_response
 
@@ -66,6 +70,18 @@ module AiConcierge
     end
 
     attr_reader :hotel, :prospect, :conversation_state, :interpretation, :active_branch, :decision, :message, :phone
+
+    def apply_booking_purpose
+      return if decision[:purpose].blank?
+
+      manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
+      @started_in_price_exploration = manager.price_exploration?
+      conversation_state.assign_attributes(slots_payload: manager.set_booking_purpose(decision[:purpose]))
+    end
+
+    def price_exploration_turn?
+      @started_in_price_exploration || State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).price_exploration?
+    end
 
     def resumed? = decision[:action] == :resume
 
@@ -105,7 +121,17 @@ module AiConcierge
       return result if reasks < REASK_NUDGE
 
       nudged = result.with(extra_context: result.extra_context.merge(retry: true))
-      reasks >= REASK_HANDOVER ? nudged.with(needs_human_support: true) : nudged
+      return nudged if reasks < REASK_HANDOVER
+
+      nudged.with(
+        needs_human_support: true,
+        next_action: booking_next_action(
+          slots_payload: nudged.slots_payload,
+          reply_type: nudged.reply_type,
+          pending_question: nudged.pending_question,
+          needs_human_support: true
+        )
+      )
     end
 
     def process_booking_action(action, conversation_state: self.conversation_state, active_branch: self.active_branch)
@@ -184,6 +210,171 @@ module AiConcierge
       end
     end
 
+    def handle_price_exploration
+      return unless price_exploration_turn?
+
+      result = referenced_price_option
+      if result&.fetch("success", false)
+        return continue_price_option(result["selected_option"]) if explicit_purchase_requested?
+
+        return show_price_option_details(result["selected_option"])
+      end
+
+      return continue_viewed_option if explicit_purchase_requested? && active_branch["viewed_option"].present?
+      return if explicit_purchase_requested? && priced_options.blank?
+      return price_option_invalid_response if price_option_reference?
+      return price_option_required_response if explicit_purchase_requested?
+      return price_option_guidance_response if price_progress_word? && active_branch["viewed_option"].present?
+      return decline_viewed_option if confirmation_answer == "no" && active_branch["viewed_option"].present?
+      return show_price_option_details(active_branch["viewed_option"]) if pending_question == "price_option_continuation" && active_branch["viewed_option"].present?
+
+      nil
+    end
+
+    def continue_viewed_option
+      option = active_branch["viewed_option"]
+      return price_option_required_response if option.blank?
+
+      continue_price_option(option)
+    end
+
+    def continue_price_option(option)
+      set_booking_purpose("booking")
+      selection_handler.continue_with_option(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        selected_option: option
+      )
+    end
+
+    def show_price_option_details(option)
+      return price_option_required_response if option.blank?
+
+      details = Tools::RoomInformation::GetRoomTypeDetailsTool.new(
+        hotel: hotel,
+        query: option["room_type_name"],
+        room_type_name: option["room_type_name"]
+      ).call
+      return refresh_price_options unless details["success"]
+
+      set_booking_purpose("price_exploration")
+      active_branch["viewed_option"] = option
+      active_branch["selected_option"] = nil
+      active_branch["confirmation_candidate"] = nil
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        reply_type: :price_option_details,
+        pending_question: "price_option_continuation",
+        extra_context: { selected_option: option, room_details: details, branch: active_branch }
+      )
+    end
+
+    def decline_viewed_option
+      set_booking_purpose("price_exploration")
+      active_branch["viewed_option"] = nil
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        reply_type: :price_option_declined,
+        pending_question: "price_option_exploration"
+      )
+    end
+
+    def price_option_required_response
+      set_booking_purpose("price_exploration")
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        reply_type: :price_option_required,
+        pending_question: "price_option_exploration"
+      )
+    end
+
+    def price_option_guidance_response
+      set_booking_purpose("price_exploration")
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        reply_type: :price_option_guidance,
+        pending_question: "price_option_continuation"
+      )
+    end
+
+    def price_option_invalid_response
+      set_booking_purpose("price_exploration")
+      booking_response(
+        conversation_state: conversation_state,
+        active_branch: active_branch,
+        reply_type: :price_option_invalid,
+        pending_question: "price_option_exploration"
+      )
+    end
+
+    def refresh_price_options
+      set_booking_purpose("price_exploration")
+      active_branch["viewed_option"] = nil
+      handle_search_options
+    end
+
+    def referenced_price_option
+      return unless price_option_reference?
+
+      result = Tools::Booking::SelectBookingOptionTool.new(
+        option_number: referenced_option_number,
+        suggested_options: active_branch["suggested_options"],
+        suggestion_set_version: active_branch["suggestion_set_version"],
+        message: message
+      ).call
+      return result unless result["success"]
+      return result if result.dig("selected_option", "position").to_i == referenced_option_number.to_i
+
+      { "success" => false, "error" => "invalid_selection" }
+    end
+
+    def referenced_option_number
+      return cheapest_option&.dig("position") if cheapest_reference?
+
+      Matching::OptionReference.new(message: message).number || interpretation.dig("slots", "option_number")
+    end
+
+    def cheapest_option
+      Array(active_branch["suggested_options"]).flat_map { |group| Array(group["options"]) }.min_by do |option|
+        option["total_price"].to_f
+      end
+    end
+
+    def price_option_reference?
+      Matching::OptionReference.new(message: message).number.present? ||
+        interpretation.dig("slots", "option_number").present? ||
+        (cheapest_reference? && cheapest_option.present?)
+    end
+
+    def cheapest_reference?
+      message.downcase.match?(/\b(?:cheapest|lowest)\b/)
+    end
+
+    def explicit_purchase_requested?
+      booking_intent.explicit_purchase_commitment?
+    end
+
+    def price_progress_word?
+      confirmation_answer == "yes" || message.downcase.match?(/\b(?:continue|proceed)\b/)
+    end
+
+    def confirmation_answer
+      interpretation.dig("slots", "confirmation") || Core::ConfirmationReader.new(message: message).confirmation
+    end
+
+    def priced_options
+      Array(active_branch["suggested_options"])
+    end
+
+    def set_booking_purpose(purpose)
+      manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
+      conversation_state.assign_attributes(slots_payload: manager.set_booking_purpose(purpose))
+    end
+
     def handle_booking_revision(conversation_state: self.conversation_state, active_branch: self.active_branch)
       case Booking::RevisionPolicy.new(
         message: message,
@@ -257,15 +448,20 @@ module AiConcierge
     # guest -- after a search, after a "no", after a change of room, and when
     # a booking is picked back up. Four copies of this used to drift.
     def options_response(active_branch:, conversation_state: self.conversation_state, reply_type: :suggest_options, options: active_branch["suggested_options"])
+      price_exploration = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload).price_exploration?
+      reply_type = :price_options if price_exploration && reply_type == :suggest_options
+      pending = price_exploration ? "price_option_exploration" : "select_option"
       booking_response(
         conversation_state: conversation_state,
         active_branch: active_branch,
         reply_type: reply_type,
-        pending_question: "select_option",
+        pending_question: pending,
         extra_context: {
           options: options,
           branch: active_branch,
-          search_params: search_params_for(active_branch, options: options)
+          search_params: search_params_for(active_branch),
+          flexible_search: active_branch["check_in"].blank?,
+          price_exploration: price_exploration
         }
       )
     end
@@ -356,14 +552,8 @@ module AiConcierge
       @booking_intent ||= Matching::BookingIntentMatcher.new(message: message)
     end
 
-    def search_params_for(branch, options: branch["suggested_options"])
-      search_params = branch.slice("check_in", "check_out", "adults", "children", "room_count")
-      if search_params["check_in"].blank? && Array(options).present?
-        first_opt = options.first["options"].first
-        search_params["check_in"] = first_opt["check_in"]
-        search_params["check_out"] = first_opt["check_out"]
-      end
-      search_params
+    def search_params_for(branch)
+      branch.slice("check_in", "check_out", "adults", "children", "room_count")
     end
 
     def domain_response?(value)

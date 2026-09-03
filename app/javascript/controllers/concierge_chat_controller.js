@@ -36,6 +36,7 @@ export default class extends Controller {
 
     this.inputTarget.value = ""
     this.growInput()
+    this.clearSuggestions()
     this.scrollToLatest()
   }
 
@@ -67,6 +68,16 @@ export default class extends Controller {
     const input = this.inputTarget
     input.style.height = "auto"
     input.style.height = `${input.scrollHeight}px`
+  }
+
+  focusComposer() {
+    if (!this.hasInputTarget) return
+
+    this.inputTarget.focus()
+  }
+
+  clearSuggestions() {
+    this.element.querySelector(".public-chat__quick-replies")?.remove()
   }
 
   onBeforeStreamRender(event) {

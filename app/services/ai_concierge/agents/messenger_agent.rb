@@ -27,11 +27,21 @@ module AiConcierge
     def builder_message(reply_type)
       return if reply_type.nil?
 
-      booking_builder.call(reply_type) || hotel_info_builder.call(reply_type) || room_info_builder.call(reply_type)
+      greeting_builder.call(reply_type) || booking_builder.call(reply_type) ||
+        existing_booking_builder.call(reply_type) || hotel_info_builder.call(reply_type) ||
+        room_info_builder.call(reply_type)
+    end
+
+    def greeting_builder
+      @greeting_builder ||= MessageBuilders::GreetingBuilder.new(hotel:, context:)
     end
 
     def booking_builder
       @booking_builder ||= MessageBuilders::BookingActionsBuilder.new(hotel:, context:)
+    end
+
+    def existing_booking_builder
+      @existing_booking_builder ||= MessageBuilders::ExistingBookingBuilder.new(hotel:, context:)
     end
 
     def hotel_info_builder

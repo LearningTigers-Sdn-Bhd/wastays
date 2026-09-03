@@ -29,6 +29,7 @@ module AiConcierge
           return true if normalized.match?(/\brooms?\s+(?:rates?|prices?|pricing|cost)\b/)
           return true if normalized.match?(/\b(?:rates?|prices?|pricing|cost)\s+(?:for|of)\s+(?:a\s+)?rooms?\b/)
           return true if normalized.match?(/\bhow much\b/) && room_or_stay?
+          return true if normalized.match?(/\b(?:cheapest|lowest)\b/) && room_or_stay?
 
           normalized.match?(/\b(?:rates?|prices?|pricing|cost)\b/) && room_or_stay?
         end
