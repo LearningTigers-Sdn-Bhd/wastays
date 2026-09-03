@@ -179,6 +179,10 @@ module HotelPortal
       end
     end
 
+    def header_party_and_stay_line
+      [ header_party_line, header_stay_line ].compact_blank.join(" · ")
+    end
+
     def stay_dates_vary?
       return false unless group_context_enabled?
 

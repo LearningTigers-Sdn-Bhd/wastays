@@ -276,7 +276,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         country: "India",
         gender: "male",
         document_type: "passport",
-        date_of_birth: Date.new(1985, 1, 2)
+        date_of_birth: Date.new(1985, 1, 2),
+        home_address: "No. 12, Jalan Ampang"
       )
 
       myr_booking = create(
@@ -316,6 +317,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("MYR")
       expect(body_text).to include("USD")
       expect(body_text.downcase).to include("india")
+      expect(body_text).to include("No. 12, Jalan Ampang")
     end
 
     it "only totals checked in and completed bookings" do
