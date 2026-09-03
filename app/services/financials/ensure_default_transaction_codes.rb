@@ -19,6 +19,7 @@ module Financials
       { system_key: "ota_unmapped_tax", code: "OTA_TAX", name: "OTA Unmapped Tax", kind: "tax", category: "tax", gl_account_code: "2010" },
       { system_key: "misc_revenue", code: "MISC", name: "Miscellaneous Revenue", kind: "charge", category: "other", gl_account_code: "4090" },
       { system_key: "cash_payment", code: "CASH", name: "Cash Payment", kind: "payment", category: "cash", gl_account_code: "1020" },
+      { system_key: "cash_prepayment", code: "CASH_ADV", name: "Cash Prepayment", kind: "payment", category: "booking_payment", gl_account_code: "2020" },
       { system_key: "card_payment", code: "CARD", name: "Card Payment", kind: "payment", category: "gateway_payment", gl_account_code: "1010" },
       { system_key: "bank_payment", code: "BANK", name: "Bank Transfer Payment", kind: "payment", category: "booking_payment", gl_account_code: "2020" },
       { system_key: "gateway_manual_recovery_payment", code: "GATEWAY", name: "Gateway Manual Recovery", kind: "payment", category: "gateway_payment", gl_account_code: "1010" },

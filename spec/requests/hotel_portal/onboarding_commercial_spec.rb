@@ -227,9 +227,14 @@ RSpec.describe "Hotel onboarding commercial phase", type: :request do
     it "shows the standard payment codes rather than offering them for editing" do
       get hotel_onboarding_section_path(hotel, section_key: "payment_methods")
 
-      expect(response.body).to include("Cash Payment", "Card Payment")
+      expect(response.body).to include("Cash Payment", "Cash Prepayment", "Card Payment")
       expect(response.body).not_to include("payment_method_entries[0][name]")
       expect(response.body).to include("payment_method_entries[NEW_RECORD][name]")
+
+      cash_prepayment_row = response.parsed_body.css("tr").find { |row| row.text.include?("Cash Prepayment") }
+      expect(cash_prepayment_row).to be_present
+      expect(cash_prepayment_row.at_css("input[name$='[guest_advance]']")&.[]("value")).to eq("true")
+      expect(cash_prepayment_row.at_css("input[name$='[default_cash]']")&.[]("value")).to eq("false")
     end
 
     it "saves and advances to corporate accounts" do
