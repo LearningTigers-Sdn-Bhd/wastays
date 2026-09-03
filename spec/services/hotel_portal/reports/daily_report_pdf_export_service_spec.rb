@@ -139,7 +139,8 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
       "Payment Mode", "Stage", "Received By", "Currency", "Amount",
       "Room —", "Bank Transfer Payment"
     )
-    expect(cashier).to include("Booking", "Confirmation")
+    expect(cashier).to include("Booking No.")
+    expect(cashier).not_to include("Confirmation")
     expect(cashier).not_to include("Folio / Invoice", "Guest Room Folio Invoice")
     expect(cashier).not_to include("Room #", "Res. #", "Bill #")
     expect(cashier_activity).to include("Payment Activity")
