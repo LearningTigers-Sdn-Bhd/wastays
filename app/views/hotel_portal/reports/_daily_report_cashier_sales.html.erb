@@ -90,7 +90,7 @@
           <td class="whitespace-nowrap text-right"><%= format_number(@cashier_report.grand_total[:balance], precision: 2) %></td>
         </tr>
       <% else %>
-        <%= render "table_empty_state", colspan: 11, message: "No payments were handled at the front desk for this selected period." %>
+        <%= render "table_empty_state", colspan: 11, message: "No payments were handled at the desk for this selected period." %>
       <% end %>
     <% end %>
   <% end %>
@@ -101,66 +101,69 @@
   <% end %>
 </section>
 
-<% if @non_cash_rows.present? %>
-  <section class="space-y-3" aria-labelledby="non-cash-heading">
-    <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-      <h2 id="non-cash-heading" class="text-base font-semibold text-foreground">Not handled at the desk</h2>
-      <p class="text-base font-semibold text-foreground" data-testid="non-cash-heading-total">
-        MYR <%= format_number(@cashier_report.non_cash_totals[:net_cash], precision: 2) %>
-        <span class="ml-2 text-sm font-normal text-muted-foreground"><%= pluralize(@cashier_report.non_cash_totals[:movement_count], "movement") %></span>
-      </p>
-    </div>
-    <p class="text-sm text-muted-foreground">
-      Money the hotel received through an online gateway or an OTA. No cashier handled it, so it stays out of the totals above.
+<section class="space-y-3" aria-labelledby="non-cash-heading">
+  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <h2 id="non-cash-heading" class="text-base font-semibold text-foreground">Not handled at the desk</h2>
+    <p class="text-base font-semibold text-foreground" data-testid="non-cash-heading-total">
+      MYR <%= format_number(@cashier_report.non_cash_totals[:net_cash], precision: 2) %>
+      <span class="ml-2 text-sm font-normal text-muted-foreground"><%= pluralize(@cashier_report.non_cash_totals[:movement_count], "movement") %></span>
     </p>
-    <%= render PanelsUI::Table.new(
-          caption: "Gateway and OTA movements",
-          density: :compact,
-          header_style: :sentence,
-          hoverable: true,
-          wrapper_class: "rounded-lg border border-border bg-card",
-          data: { testid: "non-cash-rows" }
-        ) do |table| %>
-      <% table.with_header do %>
-        <tr>
-          <% ["Date & time", "Reservation", "Guest details", "Payment mode", "Remarks", "Amount"].each_with_index do |heading, index| %>
-            <th scope="col" class="<%= index == 5 ? "text-right" : "text-left" %>"><%= heading %></th>
-          <% end %>
-        </tr>
-      <% end %>
-      <% table.with_body do %>
-        <% @non_cash_rows.group_by(&:origin).each do |origin, origin_rows| %>
-          <tr class="bg-muted/55" data-slot="report-origin-group">
-            <th scope="rowgroup" colspan="5" class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"><%= origin %></th>
-            <td class="whitespace-nowrap bg-muted/55 text-right text-xs font-semibold text-muted-foreground">
-              <%= format_number(origin_rows.sum(&:signed_amount), precision: 2) %>
-            </td>
-          </tr>
-          <% origin_rows.each do |row| %>
-            <tr data-testid="non-cash-row">
-              <td class="whitespace-nowrap text-muted-foreground">
-                <%= row.posting_date.strftime("%d %b %Y") %>
-                <% if row.posted_at %><span class="block text-xs"><%= row.posted_at.strftime("%H:%M") %></span><% end %>
-              </td>
-              <td><%= row.booking_reference %></td>
-              <td>
-                <%= row.guest_name %>
-                <span class="block text-xs text-muted-foreground">Room <%= row.room_number %></span>
-              </td>
-              <td><%= row.settlement_mode %></td>
-              <td><%= row.description %></td>
-              <td class="whitespace-nowrap text-right font-semibold"><%= row.currency %> <%= format_number(row.signed_amount, precision: 2) %></td>
-            </tr>
-          <% end %>
+  </div>
+  <p class="text-sm text-muted-foreground">
+    Money the hotel received through an online gateway or an OTA. No cashier handled it, so it stays out of the totals above.
+  </p>
+  <%= render PanelsUI::Table.new(
+        caption: "Gateway and OTA movements",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        wrapper_class: "rounded-lg border border-border bg-card",
+        data: { testid: "non-cash-rows" }
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <% ["Date & time", "Reservation", "Guest details", "Payment mode", "Remarks", "Amount"].each_with_index do |heading, index| %>
+          <th scope="col" class="<%= index == 5 ? "text-right" : "text-left" %>"><%= heading %></th>
         <% end %>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if @non_cash_rows.blank? %>
+        <%= render "table_empty_state", colspan: 6, message: "No gateway or OTA money for this selected period. Everything was handled at the desk." %>
+      <% end %>
+      <% @non_cash_rows.group_by(&:origin).each do |origin, origin_rows| %>
+        <tr class="bg-muted/55" data-slot="report-origin-group">
+          <th scope="rowgroup" colspan="5" class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"><%= origin %></th>
+          <td class="whitespace-nowrap bg-muted/55 text-right text-xs font-semibold text-muted-foreground">
+            <%= format_number(origin_rows.sum(&:signed_amount), precision: 2) %>
+          </td>
+        </tr>
+        <% origin_rows.each do |row| %>
+          <tr data-testid="non-cash-row">
+            <td class="whitespace-nowrap text-muted-foreground">
+              <%= row.posting_date.strftime("%d %b %Y") %>
+              <% if row.posted_at %><span class="block text-xs"><%= row.posted_at.strftime("%H:%M") %></span><% end %>
+            </td>
+            <td><%= row.booking_reference %></td>
+            <td>
+              <%= row.guest_name %>
+              <span class="block text-xs text-muted-foreground">Room <%= row.room_number %></span>
+            </td>
+            <td><%= row.settlement_mode %></td>
+            <td><%= row.description %></td>
+            <td class="whitespace-nowrap text-right font-semibold"><%= row.currency %> <%= format_number(row.signed_amount, precision: 2) %></td>
+          </tr>
+        <% end %>
+      <% end %>
+      <% if @non_cash_rows.present? %>
         <tr class="bg-muted/40 font-semibold">
           <th scope="row" colspan="5">Grand total</th>
           <td class="whitespace-nowrap text-right"><%= format_number(@cashier_report.non_cash_totals[:net_cash], precision: 2) %></td>
         </tr>
       <% end %>
     <% end %>
-  </section>
-<% end %>
+  <% end %>
+</section>
 
 <section class="space-y-3" aria-labelledby="cashier-summary-heading">
   <h2 id="cashier-summary-heading" class="text-base font-semibold text-foreground">Activity by payment mode</h2>

@@ -1743,8 +1743,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           start_date: start_date.to_s, end_date: start_date.to_s)
 
         page = Capybara.string(response.body)
-        expect(page.text).to include("Cashier activity", "Activity by payment mode", "Currency summary")
-        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 3)
+        expect(page.text).to include("Cashier activity", "Not handled at the desk", "Activity by payment mode", "Currency summary")
+        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 4)
 
         document = Nokogiri::HTML(response.body)
         cashier_summary_headers = document
@@ -1855,6 +1855,21 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(document.css('[data-testid="non-cash-row"]').size).to eq(1)
         expect(document.at_css('[data-testid="non-cash-row"]').text).to include("Hidden Razorpay payment")
         expect(metrics).to include("Movements 1", "Total collected MYR 100.00", "Net at desk MYR 100.00")
+      end
+
+      it "states that nothing was left unhandled when there is no gateway or OTA money" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 100, posting_date: start_date)
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        document = Nokogiri::HTML(response.body)
+        expect(document.text).to include("Not handled at the desk")
+        expect(document.at_css('[data-testid="non-cash-heading-total"]').text.squish).to eq("MYR 0.00 0 movements")
+        expect(document.css('[data-testid="non-cash-rows"] [data-slot="report-empty-state"]').text.squish)
+          .to eq("No gateway or OTA money for this selected period. Everything was handled at the desk.")
+        expect(document.css('[data-slot="report-origin-group"]')).to be_empty
       end
 
       it "groups the money no cashier handled by origin and states its total at the heading" do
