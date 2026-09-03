@@ -178,6 +178,8 @@
                 <% when "date" %><td class="whitespace-nowrap text-muted-foreground"><%= row.posting_date.strftime("%d %b %Y") %></td>
                 <% when "time" %><td class="whitespace-nowrap text-muted-foreground"><%= row.posted_at&.strftime("%H:%M") %></td>
                 <% when "reservation" %><td class="whitespace-nowrap"><%= row.booking_number %><span class="block text-xs text-muted-foreground">Confirmation <%= row.confirmation_code %></span></td>
+                <% when "booking_number" %><td class="whitespace-nowrap"><%= row.booking_number %></td>
+                <% when "confirmation_code" %><td class="whitespace-nowrap"><%= row.confirmation_code %></td>
                 <% when "guest_details" %><td><%= row.guest_name %><span class="block text-xs text-muted-foreground">Room <%= row.room_number %></span></td>
                 <% when "folio" %><td><%= row.folio_number %></td>
                 <% when "invoice" %><td><%= row.invoice_number %></td>

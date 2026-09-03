@@ -48,6 +48,8 @@ module HotelPortal
           when "time" then [ row.posted_at&.strftime("%H:%M") ]
           when "reservation"
             pdf ? [ [ "Booking #{row.booking_number}", "Confirmation #{row.confirmation_code}" ].join("\n") ] : [ row.booking_number, row.confirmation_code ]
+          when "booking_number" then [ row.booking_number ]
+          when "confirmation_code" then [ row.confirmation_code ]
           when "guest_details" then pdf ? [ [ row.guest_name, "Room #{row.room_number}" ].join("\n") ] : [ row.guest_name, row.room_number ]
           when "folio" then [ row.folio_number ]
           when "invoice" then [ row.invoice_number ]

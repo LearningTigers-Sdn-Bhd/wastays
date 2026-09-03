@@ -10,6 +10,8 @@ module HotelPortal
         Column.new(key: "date", label: "Date", export_labels: [ "Date" ], pdf_label: "Date", pdf_width: 62, excel_width: 14),
         Column.new(key: "time", label: "Time", export_labels: [ "Time" ], pdf_label: "Time", pdf_width: 44, excel_width: 10),
         Column.new(key: "reservation", label: "Booking", export_labels: [ "Booking No.", "Confirmation Code" ], pdf_label: "Booking", pdf_width: 82, excel_width: 20),
+        Column.new(key: "booking_number", label: "Booking number", export_labels: [ "Booking No." ], pdf_label: "Booking No.", pdf_width: 70, excel_width: 18),
+        Column.new(key: "confirmation_code", label: "Confirmation number", export_labels: [ "Confirmation Code" ], pdf_label: "Confirmation", pdf_width: 78, excel_width: 20),
         Column.new(key: "guest_details", label: "Guest and room", export_labels: [ "Guest", "Room" ], pdf_label: "Guest / Room", pdf_width: 100, excel_width: 28),
         Column.new(key: "folio", label: "Folio", export_labels: [ "Folio" ], pdf_label: "Folio", pdf_width: 70, excel_width: 18),
         Column.new(key: "invoice", label: "Invoice", export_labels: [ "Invoice" ], pdf_label: "Invoice", pdf_width: 70, excel_width: 18),
@@ -22,7 +24,7 @@ module HotelPortal
         Column.new(key: "amount", label: "Amount", export_labels: [ "Amount" ], pdf_label: "Amount", pdf_width: 68, excel_width: 16)
       ].freeze
       KEYS = ALL.map(&:key).freeze
-      DEFAULT_KEYS = %w[date_time reservation guest_details handling payment_mode stage received_by currency amount].freeze
+      DEFAULT_KEYS = %w[date_time booking_number guest_details handling payment_mode stage received_by currency amount].freeze
       BY_KEY = ALL.index_by(&:key).freeze
 
       module_function

@@ -1803,7 +1803,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         document = Nokogiri::HTML(response.body)
         headers = document.css("[aria-labelledby='cashier-activity-heading'] thead th[data-column-key]").map { |header| header["data-column-key"] }
-        expect(headers).to eq(%w[date_time reservation guest_details handling payment_mode stage received_by currency amount])
+        expect(headers).to eq(%w[date_time booking_number guest_details handling payment_mode stage received_by currency amount])
 
         rows = document.css('[data-testid="cashier-row"]')
         expect(rows.size).to eq(2)
@@ -1811,7 +1811,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         advance_row = rows.find { |row| row.text.include?("Bank Transfer Payment") }
         advance_cells = advance_row.css("td")
         expect(advance_cells.size).to eq(10)
-        expect(advance_cells[2].text.squish).to include(booking.formatted_reservation_number, "Confirmation #{booking.confirmation_token}")
+        expect(advance_cells[2].text.squish).to eq(booking.formatted_reservation_number)
         expect(advance_cells[3].text.squish).to include(booking.guest_name, "Room —")
         expect(advance_cells[4].text.strip).to eq("At desk")
         expect(advance_cells[6].text.strip).to eq("Advance")
@@ -2079,8 +2079,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(response).to have_http_status(:success)
         expect(response.body).to include(
           "Payment Activity", "Activity By Payment Mode", "Currency Summary",
-          "Date & Time,Booking No.,Confirmation Code,Guest,Room,Handling,Payment Mode,Stage,Received By,Currency,Amount",
-          booking.formatted_reservation_number, booking.confirmation_token,
+          "Date & Time,Booking No.,Guest,Room,Handling,Payment Mode,Stage,Received By,Currency,Amount",
+          booking.formatted_reservation_number,
           "Cash Payment"
         )
         expect(response.body).not_to include("20260506", "Cashier note")

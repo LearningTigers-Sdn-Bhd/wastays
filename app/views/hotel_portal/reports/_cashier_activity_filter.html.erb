@@ -4,7 +4,10 @@
        variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
        aria_label: "Filter #{title.downcase}, #{selected.empty? ? 'all selected' : "#{selected.size} selected"}") do %>
     <%= title %>
-    <% if selected.any? %><span class="text-xs text-muted-foreground">(<%= selected.size %>)</span><% end %>
+    <%= render PanelsUI::Badge.new(
+          label: selected.empty? ? "All" : selected.size.to_s,
+          variant: selected.empty? ? :neutral : :primary,
+          size: :xs, shape: :rounded) %>
     <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
   <% end %>
   <% menu.with_checkbox(name: "#{param_name}[]", value: "__all__", checked: selected.empty?) { "All #{title.downcase}" } %>
