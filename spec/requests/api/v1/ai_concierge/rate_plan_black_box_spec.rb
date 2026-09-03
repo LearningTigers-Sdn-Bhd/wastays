@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
+RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request, frozen_time: Time.zone.local(2026, 7, 15, 12) do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:api_key) { create(:api_key, bearer: hotel) }
   let(:headers) { { "Authorization" => "Bearer #{api_key.token}", "Content-Type" => "application/json" } }
@@ -181,7 +181,7 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     post_message("actually 3 rooms")
 
     expect(parsed_body["reply_message"]).not_to include("Which rate would you like?")
-    expect(parsed_body["reply_message"]).to match(/Here are the available options|couldn't find any rooms/)
+    expect(parsed_body["reply_message"]).to match(/Here are the available options|I could not find a bookable room/)
   end
 
   # A live thread: the model answered "yes" with an advance_booking call that
@@ -252,7 +252,7 @@ RSpec.describe "AI Concierge rate-plan conversation coverage", type: :request do
     post_message("first one")
     post_message("changed my mind")
 
-    expect(parsed_body["reply_message"]).to include("I've cancelled your booking attempt")
+    expect(parsed_body["reply_message"]).to include("I stopped this booking attempt")
     expect(active_branch["selected_option"]).to be_nil
     expect(active_branch["confirmation_candidate"]).to be_nil
   end

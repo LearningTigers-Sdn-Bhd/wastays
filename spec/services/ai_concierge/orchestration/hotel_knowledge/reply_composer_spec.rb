@@ -44,21 +44,21 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::ReplyComposer do
     message = compose(shape: "list", facts: facts, remaining_topics: [ "topic 6", "late arrival" ])
 
     expect(message.lines.count { |line| line.start_with?("- ") }).to eq(5)
-    expect(message).to include("You can also ask about topic 6 or late arrival.")
+    expect(message).to include("Other available topics include topic 6 or late arrival.")
     expect(message).not_to include("Fact 6.")
   end
 
   it "uses useful topic-specific unavailable replies" do
     expect(compose(shape: "unavailable", missing_topic: "service information"))
-      .to eq("The hotel has not listed that service yet. Please ask the front desk for the current details.")
+      .to eq("The hotel has not listed that service yet.")
     expect(compose(shape: "unavailable", missing_topic: "nearby attractions"))
-      .to eq("The hotel has not listed nearby attractions yet. Please ask the front desk for local recommendations.")
+      .to eq("The hotel has not listed nearby attractions yet.")
     expect(compose(shape: "unavailable", missing_topic: "room type"))
       .to eq("I could not match that room type. Please send the room type name.")
     expect(compose(shape: "unavailable", missing_topic: "an FAQ answer"))
-      .to eq("I could not find that answer in the hotel's FAQ. Please ask the front desk for the current details.")
+      .to eq("I could not find that answer in the hotel's FAQ.")
     expect(compose(shape: "unavailable", missing_topic: "policy information"))
-      .to eq("The hotel has not added that policy yet. Please ask the front desk for the current details.")
+      .to eq("The hotel has not added that policy yet.")
   end
 
   it "asks one focused clarification question" do

@@ -20,11 +20,8 @@ module AiConcierge
         LLM_TIMEOUT = 30
 
         TOOL_CLASSES = [
-          Tools::Llm::AnswerHotelQuestionFunction,
-          Tools::Llm::GetNearbyAttractionsFunction,
-          Tools::Llm::GetRoomTypeDetailsFunction,
-          Tools::Llm::GetBookingContextFunction,
-          Tools::Llm::AdvanceBookingFunction
+          Tools::Llm::HandleGuestTurnFunction,
+          Tools::Llm::GetBookingContextFunction
           # GenerateBookingUrlTool has no function here on purpose. The only way to a
           # payable quote is Booking::CompletionHandler, which is only reached
           # when Postgres says a confirmation was the open question.
@@ -56,12 +53,23 @@ module AiConcierge
         end
 
         def tools
-          @tools ||= TOOL_CLASSES.map { |klass| klass.new(context: context, recorder: recorder) }
+          @tools ||= available_tool_classes.map { |klass| klass.new(context: context, recorder: recorder) }
         end
 
         private
 
         attr_reader :context, :recorder
+
+        def available_tool_classes
+          return TOOL_CLASSES unless anonymous_web_guest?
+
+          TOOL_CLASSES.without(Tools::Llm::GetBookingContextFunction)
+        end
+
+        def anonymous_web_guest?
+          context.conversation&.channel == Concierge::PostWebMessage::CHANNEL &&
+            context.phone.blank? && context.prospect.phone_number.blank?
+        end
 
         def resolve_knowledge_clarification
           HotelKnowledge::ClarificationResolver.new(context: context).call
@@ -88,16 +96,23 @@ module AiConcierge
         # language the thread is in -- and re-asking is always better than
         # letting the model answer for the booking system.
         def booking_backstop
-          return unless context.pending_question.present? || booking_words?
+          return unless context.pending_question.present? || booking_words? || accepted_price_offer?
 
-          advance_booking_tool&.execute(slots: {}, signals: {})
+          handle_guest_turn_tool&.execute(
+            questions: [],
+            commercial: { intent: "booking", slots: {}, signals: {}, evidence: {} }
+          )
           recorder.outcome
         end
 
         def booking_words? = Matching::BookingIntentMatcher.new(message: context.message).booking?
 
-        def advance_booking_tool
-          tools.find { |tool| tool.is_a?(Tools::Llm::AdvanceBookingFunction) }
+        def accepted_price_offer?
+          context.pending_price_offer? && Core::ConfirmationReader.new(message: context.message).confirmation == "yes"
+        end
+
+        def handle_guest_turn_tool
+          tools.find { |tool| tool.is_a?(Tools::Llm::HandleGuestTurnFunction) }
         end
 
         # The model answered without reaching for a tool: a greeting, or a

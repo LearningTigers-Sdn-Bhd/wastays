@@ -1,0 +1,64 @@
+require "rails_helper"
+
+RSpec.describe AiConcierge::Orchestration::Sales::NextActionRenderer do
+  def render(kind, intent: "hotel_information", missing_topic: nil, acknowledge_refusal: false, answer: "The hotel has a pool.")
+    described_class.new(
+      answer: answer,
+      next_action: AiConcierge::Orchestration::Sales::NextAction.new(kind),
+      intent: intent,
+      missing_topic: missing_topic,
+      acknowledge_refusal: acknowledge_refusal
+    ).call
+  end
+
+  it "renders every action kind after the factual answer" do
+    expect(render("offer_booking_help")).to end_with(
+      "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+    )
+    expect(render("offer_price_search")).to end_with("Would you like me to check prices for this room for your travel dates?")
+    expect(render("offer_guided_hotel_exploration")).to end_with("What matters most for your stay: facilities, location, or room choices?")
+    expect(render("resume_booking")).to end_with("Would you like to continue your booking?")
+    expect(render("continue_booking")).to end_with("Would you like to continue your booking?")
+    expect(render("offer_alternative_search")).to end_with("Would you like me to search another date or room?")
+    expect(render("offer_front_desk")).to end_with("Please ask the front desk for assistance.")
+    expect(render("none")).to eq("The hotel has a pool.")
+  end
+
+  it "rotates approved booking-help copy by index" do
+    message = described_class.new(
+      answer: "Pets are not allowed.",
+      next_action: AiConcierge::Orchestration::Sales::NextAction.new("offer_booking_help"),
+      intent: "hotel_policy",
+      closing_copy_index: 1
+    ).call
+
+    expect(message).to end_with(
+      "Would you like to see which rooms are available for your dates, or is there anything else I can help with?"
+    )
+  end
+
+  it "rotates a neutral closer without adding another sales offer" do
+    message = described_class.new(
+      answer: "Pets are not allowed.",
+      next_action: AiConcierge::Orchestration::Sales::NextAction.none,
+      intent: "hotel_policy",
+      closing_copy_index: 1,
+      natural_closer: true
+    ).call
+
+    expect(message).to eq("Pets are not allowed.\n\nWhat else can I help you with?")
+  end
+
+  it "uses topic-specific front-desk guidance" do
+    expect(render("offer_front_desk", missing_topic: "nearby attractions"))
+      .to end_with("Please ask the front desk for local recommendations.")
+    expect(render("offer_front_desk", missing_topic: "service information"))
+      .to end_with("Please ask the front desk for the current details.")
+  end
+
+  it "acknowledges a refusal before the answer and keeps one action" do
+    message = render("none", acknowledge_refusal: true, answer: "Check-out is by 11:00 AM.")
+
+    expect(message).to eq("No problem. Check-out is by 11:00 AM.")
+  end
+end

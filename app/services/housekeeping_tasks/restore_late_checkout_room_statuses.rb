@@ -47,7 +47,6 @@ module HousekeepingTasks
         status: detection.old_status,
         user: @user,
         booking: @booking,
-        require_ready_notes: false,
         metadata: {
           "source" => "late_checkout_resolution",
           "detection_audit_log_id" => detection.id

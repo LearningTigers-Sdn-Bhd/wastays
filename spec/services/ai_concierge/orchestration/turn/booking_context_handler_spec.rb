@@ -27,6 +27,21 @@ RSpec.describe AiConcierge::Orchestration::Turn::BookingContextHandler do
     )
   end
 
+  it "offers the portal to an anonymous web visitor without exposing booking context" do
+    web_prospect = create(:prospect, hotel: hotel, phone_number: nil)
+    web_state = create(:prospect_conversation_state, prospect: web_prospect)
+    conversation = create(:conversation, hotel: hotel, prospect: web_prospect, channel: "web")
+
+    result = described_class.new(hotel: hotel, phone: nil, conversation: conversation).call(
+      prospect: web_prospect,
+      conversation_state: web_state
+    )
+
+    expect(result.reply_type).to eq(:existing_booking_portal)
+    expect(result.slots_payload.dig("existing_booking_task", "status")).to eq("portal_offered")
+    expect(result.extra_context).to eq({})
+  end
+
   # Nothing exercised this handler's result all the way to the persister, so
   # the shape it returns was free to drift from every other turn's and the
   # suite stayed green. It reaches a guest through

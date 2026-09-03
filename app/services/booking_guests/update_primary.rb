@@ -58,7 +58,8 @@ module BookingGuests
         gender: @booking.guest_gender,
         document_type: @booking.guest_document_type,
         government_id: @booking.guest_government_id,
-        date_of_birth: @booking.guest_date_of_birth
+        date_of_birth: @booking.guest_date_of_birth,
+        home_address: @booking.guest_home_address
       )
     end
 
@@ -71,7 +72,8 @@ module BookingGuests
         guest_gender: @attributes[:gender],
         guest_document_type: @attributes[:document_type],
         guest_government_id: @attributes[:government_id],
-        guest_date_of_birth: @attributes[:date_of_birth]
+        guest_date_of_birth: @attributes[:date_of_birth],
+        guest_home_address: @attributes[:home_address]
       }
     end
   end

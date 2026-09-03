@@ -26,7 +26,7 @@ RSpec.describe AiConcierge::Orchestration::Turn::ControlHandler do
   end
 
   it "requests end confirmation for an active booking flow" do
-    conversation_state.update!(active_flow: "booking_search")
+    conversation_state.update!(active_flow: "booking_search", slots_payload: offered_sales_payload)
 
     result = described_class.new(message: "stop", response_persister: response_persister).handle(
       prospect: prospect,
@@ -35,11 +35,58 @@ RSpec.describe AiConcierge::Orchestration::Turn::ControlHandler do
     )
 
     expect(result.payload[:reply_message]).to include("Would you like to end this chat?")
-    expect(conversation_state.reload.pending_question).to eq("confirm_to_end_conversation")
+    conversation_state.reload
+    expect(conversation_state.pending_question).to eq("confirm_to_end_conversation")
+    expect(conversation_state.slots_payload.dig("sales_task", "last_optional_action")).to be_nil
   end
 
   it "ends immediately for generic explicit end" do
     result = described_class.new(message: "bye", response_persister: response_persister).handle(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      interpretation: interpretation
+    )
+
+    expect(result.payload[:reply_message]).to eq("Thank you for chatting with us. Message us any time.")
+    expect(conversation_state.reload.flow_status).to eq("ended")
+  end
+
+  it "declines the latest optional sales offer and keeps the conversation active" do
+    [ "no thanks", "tak mahu", "不用" ].each do |message|
+      conversation_state.update!(slots_payload: offered_sales_payload)
+
+      result = described_class.new(message: message, response_persister: response_persister).handle(
+        prospect: prospect,
+        conversation_state: conversation_state,
+        interpretation: interpretation
+      )
+
+      expect(result.payload[:reply_message]).to eq("No problem. How else can I help you?")
+      expect(conversation_state.reload.flow_status).to eq("active")
+      expect(conversation_state.slots_payload.dig("sales_task", "suppress_next_optional_offer")).to be(true)
+      expect(conversation_state.slots_payload.dig("sales_task", "refusal_acknowledgment_pending")).to be(false)
+    end
+  end
+
+  it "marks a refusal before a new question and lets the model answer" do
+    conversation_state.update!(slots_payload: offered_sales_payload)
+
+    result = described_class.new(
+      message: "no thanks, what time is check-out?",
+      response_persister: response_persister
+    ).handle(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      interpretation: interpretation
+    )
+
+    expect(result).to be_nil
+    expect(conversation_state.slots_payload.dig("sales_task", "suppress_next_optional_offer")).to be(true)
+    expect(conversation_state.slots_payload.dig("sales_task", "refusal_acknowledgment_pending")).to be(true)
+  end
+
+  it "keeps the generic ending when no optional offer awaits an answer" do
+    result = described_class.new(message: "no thanks", response_persister: response_persister).handle(
       prospect: prospect,
       conversation_state: conversation_state,
       interpretation: interpretation
@@ -151,5 +198,11 @@ RSpec.describe AiConcierge::Orchestration::Turn::ControlHandler do
         "end_conversation" => false
       }
     }
+  end
+
+  def offered_sales_payload
+    AiConcierge::State::ConversationTaskManager
+      .new(slots_payload: {})
+      .record_optional_sales_offer("offer_booking_help")
   end
 end

@@ -4,7 +4,16 @@
   }
 
   .tabs-list {
-    @apply flex max-w-full items-center overflow-x-auto;
+    @apply flex max-w-full items-center overflow-x-auto overflow-y-hidden overscroll-y-none;
+    /* overflow-x: auto makes the browser compute overflow-y as auto too, so the
+       1px the line-variant underline hangs below the strip paints a vertical
+       scrollbar. Pin overflow-y to hidden and hide the horizontal bar: the strip
+       scrolls sideways only, and never chains a vertical scroll to the page. */
+    scrollbar-width: none;
+  }
+
+  .tabs-list::-webkit-scrollbar {
+    display: none;
   }
 
   .tabs-tab {

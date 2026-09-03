@@ -1,5 +1,5 @@
-id: room_rate_is_a_booking
-description: "asking what a room costs is an attempt to book, not a request for published information"
+id: room_rate_starts_price_shopping
+description: "asking what a room costs starts price shopping without booking commitment"
 origin: "InformationIntentGuard#room_rate_question?"
 setup:
   knowledge:
@@ -15,5 +15,5 @@ turns:
     expect:
       flow: booking_search
       pending_question: booking_timing
-      reply_matches: ["room rates depend on the booking dates"]
+      reply_matches: ["compare current room prices"]
       creates_quote: false

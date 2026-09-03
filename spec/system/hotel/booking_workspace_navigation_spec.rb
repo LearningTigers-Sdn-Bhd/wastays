@@ -22,7 +22,7 @@ RSpec.describe "Booking workspace navigation", frozen_time: :business_day, type:
     expect(page).to have_content("Primary guest")
     expect(page).to have_field("Email", with: "hanami@mail.com")
     expect(page).to have_content("Guest details recorded for this stay.")
-    expect(page).to have_button("Save Guest")
+    expect(page).to have_button("Save for this booking only")
 
     within("#booking-workspace-tabs") { click_link "Deposits" }
     expect(page).to have_css('[data-layout-mode="standard"]')

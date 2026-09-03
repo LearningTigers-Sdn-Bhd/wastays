@@ -4,6 +4,13 @@ module HotelPortal
   module Reports
     class CashierSalesReport
       ADVANCE_CATEGORY = "booking_payment"
+      HANDLING_LABELS = {
+        "at_desk" => "At desk",
+        "gateway" => "Gateway",
+        "ota_collected" => "OTA collected"
+      }.freeze
+      HANDLING_ORDER = HANDLING_LABELS.keys.freeze
+      STAGE_ORDER = %w[Advance Settlement Refund].freeze
       REFUND_SOURCE_SYSTEM_KEYS = {
         "cash" => "cash_payment",
         "bank_transfer" => "bank_payment",
@@ -13,70 +20,137 @@ module HotelPortal
       }.freeze
 
       Result = Struct.new(
-        :start_date, :end_date, :totals, :advance_scope, :settlement_scope,
-        :mode_by_transaction_id, :mode_summary_rows, :mode_totals, :currency_summary_rows, :grand_total,
-        :ota_credit_scope, :ota_credit_totals,
+        :start_date, :end_date, :totals, :cash_transactions,
+        :mode_by_transaction_id, :section_by_transaction_id, :mode_order,
+        :mode_summary_rows, :mode_totals, :currency_summary_rows, :grand_total,
+        :non_cash_transactions, :non_cash_totals, :non_cash_origin_by_transaction_id,
+        :transactions, :at_desk_totals, :non_desk_totals, :all_totals,
+        :handling_by_transaction_id, :received_by_key_by_transaction_id,
+        :handling_totals, :filter_options, :all_mode_summary_rows, :all_mode_totals,
+        :all_currency_summary_rows, :all_grand_total,
         keyword_init: true
       )
 
-      def initialize(hotel:, start_date:, end_date:, start_time: nil, end_time: nil, transaction_ids: nil)
+      def initialize(hotel:, start_date:, end_date:, start_time: nil, end_time: nil, transaction_ids: nil,
+                     handling: nil, payment_modes: nil, stages: nil, received_by: nil, currencies: nil)
         @hotel = hotel
         @start_date = start_date.to_date
         @end_date = end_date.to_date
         @start_time = parse_time_of_day(start_time)
         @end_time = parse_time_of_day(end_time)
-        @transaction_ids = transaction_ids.presence
+        @transaction_ids = transaction_ids.nil? ? nil : Array(transaction_ids)
+        @filters = {
+          handling: Array(handling).compact_blank,
+          payment_modes: Array(payment_modes).compact_blank,
+          stages: Array(stages).compact_blank,
+          received_by: Array(received_by).compact_blank,
+          currencies: Array(currencies).compact_blank
+        }
       end
 
       def call
-        scope = base_scope
-        transactions = exclude_gateway_movements(scope.to_a)
-        transactions = filter_by_time_range(transactions)
-        visible_scope = scope.where(id: transactions.map(&:id))
-        cash_transactions, ota_credits = transactions.partition { |transaction| !ota_non_cash_movement?(transaction) }
-        advances, settlements = cash_transactions.partition { |transaction| section_for(transaction) == "Advance" }
+        transactions = filter_by_time_range(base_scope.to_a)
+        @gateway = ::Folios::Payments::GatewayOriginated.for(transactions.map { |t| classification_transaction(t) })
+        options = filter_options_for(transactions)
+        transactions = filter_activity(transactions)
+        cash, non_cash = transactions.partition { |transaction| cashier_handled?(transaction) }
+        handling_map = transactions.to_h { |transaction| [ transaction.id, handling_for(transaction) ] }
+        received_by_map = transactions.to_h { |transaction| [ transaction.id, received_by_key_for(transaction) ] }
 
         Result.new(
           start_date: @start_date,
           end_date: @end_date,
-          totals: totals_for(cash_transactions),
-          advance_scope: visible_scope.where(id: advances.map(&:id)),
-          settlement_scope: visible_scope.where(id: settlements.map(&:id)),
+          totals: totals_for(cash),
+          cash_transactions: group_by_mode(cash),
           mode_by_transaction_id: transactions.to_h { |transaction| [ transaction.id, mode_label_for(transaction) ] },
-          mode_summary_rows: mode_summary_for(cash_transactions),
-          mode_totals: mode_totals_for(cash_transactions),
-          currency_summary_rows: currency_summary_for(cash_transactions),
-          grand_total: grand_total_for(cash_transactions),
-          ota_credit_scope: visible_scope.where(id: ota_credits.map(&:id)),
-          ota_credit_totals: totals_for(ota_credits)
+          section_by_transaction_id: transactions.to_h { |transaction| [ transaction.id, section_for(transaction) ] },
+          mode_order: mode_order,
+          mode_summary_rows: mode_summary_for(cash, include_handling: false),
+          mode_totals: mode_totals_for(cash, include_handling: false),
+          currency_summary_rows: currency_summary_for(cash, include_handling: false),
+          grand_total: grand_total_for(cash),
+          non_cash_transactions: group_by_origin(non_cash),
+          non_cash_totals: totals_for(non_cash),
+          non_cash_origin_by_transaction_id: non_cash.to_h { |t| [ t.id, origin_for(t) ] },
+          transactions: transactions,
+          at_desk_totals: totals_for(cash),
+          non_desk_totals: totals_for(non_cash),
+          all_totals: totals_for(transactions),
+          handling_by_transaction_id: handling_map,
+          received_by_key_by_transaction_id: received_by_map,
+          handling_totals: handling_totals_for(transactions),
+          filter_options: options,
+          all_mode_summary_rows: mode_summary_for(transactions, include_handling: true),
+          all_mode_totals: mode_totals_for(transactions, include_handling: true),
+          all_currency_summary_rows: currency_summary_for(transactions, include_handling: true),
+          all_grand_total: grand_total_for(transactions)
         )
       end
 
       private
 
-      def exclude_gateway_movements(transactions)
-        payment_transaction_ids = transactions.filter_map do |transaction|
-          classification_transaction(transaction).metadata.to_h.stringify_keys["payment_transaction_id"].presence
-        end
-        razorpay_payment_ids = PaymentTransaction
-          .where(id: payment_transaction_ids, gateway: "razorpay")
-          .pluck(:id)
-          .map(&:to_s)
-
-        transactions.reject do |transaction|
-          gateway_originated?(classification_transaction(transaction), razorpay_payment_ids)
-        end
+      # Cash drawer money is everything hotel staff handled themselves. Online
+      # gateway charges and OTA-collected credits are real money, but no cashier
+      # ever counted them, so they are reported apart from the drawer total.
+      def cashier_handled?(transaction)
+        !gateway_movement?(transaction) && !ota_non_cash_movement?(transaction)
       end
 
-      def gateway_originated?(transaction, razorpay_payment_ids)
-        metadata = transaction.metadata.to_h.stringify_keys
+      def gateway_movement?(transaction)
+        @gateway.call(classification_transaction(transaction)) ||
+          transaction.metadata.to_h.stringify_keys["refund_source"] == "gateway"
+      end
 
-        transaction.category == "gateway_payment" ||
-          transaction.transaction_code&.system_key == "gateway_manual_recovery_payment" ||
-          metadata["posting_source"] == "gateway_payment" ||
-          metadata["payment_source"] == "gateway" ||
-          metadata["refund_source"] == "gateway" ||
-          razorpay_payment_ids.include?(metadata["payment_transaction_id"].to_s)
+      # Gateway money already sits in the merchant account. OTA money does not:
+      # the channel still holds it. Two different problems with two different
+      # owners, so the report names which one each row is.
+      ORIGIN_ORDER = [ GATEWAY_ORIGIN = "Gateway", OTA_ORIGIN = "OTA collected" ].freeze
+
+      def origin_for(transaction)
+        gateway_movement?(transaction) ? GATEWAY_ORIGIN : OTA_ORIGIN
+      end
+
+      def handling_for(transaction)
+        return "at_desk" if cashier_handled?(transaction)
+
+        gateway_movement?(transaction) ? "gateway" : "ota_collected"
+      end
+
+      def received_by_key_for(transaction)
+        return "gateway" if handling_for(transaction) == "gateway"
+        return "user:#{transaction.user_id}" if transaction.user_id
+
+        "unassigned"
+      end
+
+      def received_by_label_for(transaction)
+        return "Payment Gateway" if handling_for(transaction) == "gateway"
+
+        transaction.user&.name.presence || "—"
+      end
+
+      def group_by_origin(transactions)
+        transactions.sort_by.with_index { |t, index| [ ORIGIN_ORDER.index(origin_for(t)), index ] }
+      end
+
+      # The hotel decides which payment methods it takes and in which order it
+      # lists them. The report follows that order rather than the alphabet, so a
+      # cashier reads the report in the same order they read the payment screen.
+      def mode_order
+        @mode_order ||= @hotel.hotel_payment_methods
+          .ordered
+          .joins(:transaction_code)
+          .pluck("transaction_codes.name")
+      end
+
+      def mode_rank(mode)
+        mode_order.index(mode) || mode_order.size
+      end
+
+      def group_by_mode(transactions)
+        transactions.sort_by.with_index do |transaction, index|
+          [ mode_rank(mode_label_for(transaction)), mode_label_for(transaction), index ]
+        end
       end
 
       def base_scope
@@ -86,7 +160,7 @@ module HotelPortal
           .left_outer_joins(:transaction_code)
           .where(bookings: { hotel_id: @hotel.id })
           .where(posting_date: @start_date..@end_date)
-        scope = scope.where(id: @transaction_ids) if @transaction_ids
+        scope = scope.where(id: @transaction_ids) unless @transaction_ids.nil?
         scope.includes(
             :transaction_code,
             :user,
@@ -125,6 +199,8 @@ module HotelPortal
       end
 
       def section_for(transaction)
+        return "Refund" if transaction.category == "refund"
+
         classification_transaction(transaction).category == ADVANCE_CATEGORY ? "Advance" : "Settlement"
       end
 
@@ -164,25 +240,43 @@ module HotelPortal
         { amount_in: amount_in.round(2), amount_out: amount_out.round(2), balance: (amount_in - amount_out).round(2) }
       end
 
-      def mode_summary_for(transactions)
+      def mode_summary_for(transactions, include_handling:)
         transactions
-          .group_by { |t| [ mode_label_for(t), t.currency, section_for(t) ] }
-          .map { |(mode, currency, section), txs| { mode: mode, currency: currency, section: section }.merge(in_out_balance(txs)) }
-          .sort_by { |row| [ row[:mode], row[:section] ] }
+          .group_by { |t| [ handling_for(t), mode_label_for(t), t.currency, section_for(t) ] }
+          .map do |(handling, mode, currency, section), txs|
+            row = { mode:, currency:, section: }.merge(in_out_balance(txs))
+            include_handling ? row.merge(handling:, handling_label: HANDLING_LABELS.fetch(handling)) : row
+          end
+          .sort_by { |row| [ HANDLING_ORDER.index(row[:handling]), mode_rank(row[:mode]), row[:mode], STAGE_ORDER.index(row[:section]) ] }
       end
 
-      def mode_totals_for(transactions)
+      def mode_totals_for(transactions, include_handling:)
         transactions
-          .group_by { |t| mode_label_for(t) }
-          .map { |mode, txs| { mode: mode }.merge(in_out_balance(txs)) }
-          .sort_by { |row| row[:mode] }
+          .group_by { |t| [ handling_for(t), mode_label_for(t) ] }
+          .map do |(handling, mode), txs|
+            row = { mode: }.merge(in_out_balance(txs))
+            include_handling ? row.merge(handling:, handling_label: HANDLING_LABELS.fetch(handling)) : row
+          end
+          .sort_by { |row| [ HANDLING_ORDER.index(row[:handling]), mode_rank(row[:mode]), row[:mode] ] }
       end
 
-      def currency_summary_for(transactions)
+      def currency_summary_for(transactions, include_handling:)
         transactions
-          .group_by { |t| [ t.currency, section_for(t) ] }
-          .map { |(currency, section), txs| { currency: currency, section: section }.merge(in_out_balance(txs)) }
-          .sort_by { |row| [ row[:currency], row[:section] ] }
+          .group_by { |t| [ handling_for(t), t.currency, section_for(t) ] }
+          .map do |(handling, currency, section), txs|
+            row = { currency:, section: }.merge(in_out_balance(txs))
+            include_handling ? row.merge(handling:, handling_label: HANDLING_LABELS.fetch(handling)) : row
+          end
+          .sort_by { |row| [ HANDLING_ORDER.index(row[:handling]), row[:currency], STAGE_ORDER.index(row[:section]) ] }
+      end
+
+      def handling_totals_for(transactions)
+        HANDLING_ORDER.filter_map do |handling|
+          rows = transactions.select { |transaction| handling_for(transaction) == handling }
+          next if rows.empty?
+
+          { handling:, handling_label: HANDLING_LABELS.fetch(handling), movement_count: rows.size }.merge(in_out_balance(rows))
+        end
       end
 
       def grand_total_for(transactions)
@@ -199,6 +293,34 @@ module HotelPortal
           seconds = reference.seconds_since_midnight.to_i
           (@start_time.nil? || seconds >= @start_time) && (@end_time.nil? || seconds <= @end_time)
         end
+      end
+
+      def filter_activity(transactions)
+        transactions.select do |transaction|
+          filter_matches?(:handling, handling_for(transaction)) &&
+            filter_matches?(:payment_modes, mode_label_for(transaction)) &&
+            filter_matches?(:stages, section_for(transaction)) &&
+            filter_matches?(:received_by, received_by_key_for(transaction)) &&
+            filter_matches?(:currencies, transaction.currency)
+        end
+      end
+
+      def filter_matches?(name, value)
+        @filters.fetch(name).empty? || @filters.fetch(name).include?(value.to_s)
+      end
+
+      def filter_options_for(transactions)
+        {
+          handling: HANDLING_ORDER.filter_map do |key|
+            [ HANDLING_LABELS.fetch(key), key ] if transactions.any? { |transaction| handling_for(transaction) == key }
+          end,
+          payment_modes: transactions.map { |transaction| mode_label_for(transaction) }.uniq.sort_by { |mode| [ mode_rank(mode), mode ] }.map { |mode| [ mode, mode ] },
+          stages: STAGE_ORDER.filter_map { |stage| [ stage, stage ] if transactions.any? { |transaction| section_for(transaction) == stage } },
+          received_by: transactions.uniq { |transaction| received_by_key_for(transaction) }
+            .sort_by { |transaction| [ received_by_label_for(transaction) == "—" ? 1 : 0, received_by_label_for(transaction).downcase ] }
+            .map { |transaction| [ received_by_label_for(transaction), received_by_key_for(transaction) ] },
+          currencies: transactions.map(&:currency).uniq.sort.map { |currency| [ currency, currency ] }
+        }
       end
 
       def parse_time_of_day(value)

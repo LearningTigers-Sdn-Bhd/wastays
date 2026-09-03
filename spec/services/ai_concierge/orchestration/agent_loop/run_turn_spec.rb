@@ -25,9 +25,24 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
 
     it "offers the tools by the short names it describes them by" do
       expect(run.tools.map(&:name)).to contain_exactly(
-        "answer_hotel_question", "get_nearby_attractions",
-        "get_room_type_details", "get_booking_context", "advance_booking"
+        "handle_guest_turn", "get_booking_context"
       )
+    end
+
+    it "does not expose booking lookup to an anonymous web guest" do
+      web_prospect = create(:prospect, hotel: hotel, phone_number: nil)
+      web_conversation = create(:conversation, hotel: hotel, prospect: web_prospect, channel: "web")
+      web_state = create(:prospect_conversation_state, prospect: web_prospect)
+      turn = described_class.new(
+        hotel: hotel,
+        prospect: web_prospect,
+        phone: nil,
+        conversation_state: web_state,
+        message: "Tell me about the hotel",
+        conversation: web_conversation
+      )
+
+      expect(turn.tools.map(&:name)).not_to include("get_booking_context")
     end
 
     # RubyLLM derives a tool name from the full class name, which here would be
@@ -45,13 +60,16 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
     # structurally impossible.
     it "refuses a second advance and does not run the booking again" do
       turn = run(message: "early august")
-      tool = turn.tools.find { |candidate| candidate.name == "advance_booking" }
+      tool = turn.tools.find { |candidate| candidate.name == "handle_guest_turn" }
 
-      first = tool.call({})
-      second = tool.call({})
+      expect(AiConcierge::Orchestration::Booking::Orchestrator).to receive(:new).once.and_call_original
+
+      arguments = { questions: [], commercial: { intent: "booking", slots: {}, signals: {}, evidence: {} } }
+      first = tool.call(arguments)
+      second = tool.call(arguments)
 
       expect(first).to be_a(RubyLLM::Tool::Halt)
-      expect(second).to eq(AiConcierge::Tools::Llm::AdvanceBookingFunction::ALREADY_ADVANCED)
+      expect(second).to be_a(RubyLLM::Tool::Halt)
     end
   end
 
@@ -83,8 +101,8 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
     # the guest's answer, and it is already written down.
     it "keeps what a tool already did when the model fails afterwards" do
       turn = run(message: "early august")
-      tool = turn.tools.find { |candidate| candidate.name == "advance_booking" }
-      tool.call({})
+      tool = turn.tools.find { |candidate| candidate.name == "handle_guest_turn" }
+      tool.call(questions: [], commercial: { intent: "booking", slots: {}, signals: {}, evidence: {} })
 
       allow(turn).to receive(:run).and_raise(Timeout::Error)
 
@@ -104,6 +122,29 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_return(chat)
 
       expect(run.call.domain_result.dig(:extra_context, :message)).to eq("Hello! How can I help?")
+    end
+
+    it "starts price exploration when the guest accepts a saved price-search offer" do
+      offered = AiConcierge::State::ConversationTaskManager
+        .new(slots_payload: {})
+        .record_optional_sales_offer("offer_price_search")
+      conversation_state.update!(slots_payload: offered)
+
+      chat = instance_double(RubyLLM::Chat)
+      allow(chat).to receive(:with_instructions)
+      allow(chat).to receive(:with_tools)
+      allow(chat).to receive(:with_temperature)
+      allow(chat).to receive(:before_tool_call)
+      allow(chat).to receive(:after_tool_result)
+      allow(chat).to receive(:ask).and_return(Struct.new(:content).new("Okay."))
+      allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_return(chat)
+
+      result = run(message: "yes").call.domain_result
+
+      expect(result[:pending_question]).to eq("booking_timing")
+      expect(result[:action_name]).to be_nil
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("price_exploration")
+      expect(result.dig(:slots_payload, "sales_task", "last_optional_action")).to be_nil
     end
   end
 
@@ -138,7 +179,11 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
 
       resolved = run(message: "pool").call.domain_result
 
-      expect(resolved.dig(:extra_context, :result, "answer")).to eq("The swimming pool opens at 7:00 AM.")
+      expect(resolved.dig(:extra_context, :result, "answer"))
+        .to eq(
+          "The swimming pool opens at 7:00 AM.\n\n" \
+          "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+        )
       expect(resolved.dig(:slots_payload, "information_task", "pending_question")).to be_nil
     end
 
@@ -158,7 +203,11 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
 
       result = run(message: "the second one").call.domain_result
 
-      expect(result.dig(:extra_context, :result, "answer")).to eq("Check-out is by 11:00 AM.")
+      expect(result.dig(:extra_context, :result, "answer"))
+        .to eq(
+          "Check-out is by 11:00 AM.\n\n" \
+          "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+        )
       expect(result.dig(:slots_payload, "information_task", "pending_question")).to be_nil
     end
 

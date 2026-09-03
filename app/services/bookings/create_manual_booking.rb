@@ -294,7 +294,8 @@ module Bookings
         guest_gender: booking.guest_gender.presence || guest.gender,
         guest_document_type: booking.guest_document_type.presence || guest.document_type,
         guest_government_id: booking.guest_government_id.presence || guest.government_id,
-        guest_date_of_birth: booking.guest_date_of_birth.presence || guest.date_of_birth
+        guest_date_of_birth: booking.guest_date_of_birth.presence || guest.date_of_birth,
+        guest_home_address: booking.guest_home_address.presence || guest.home_address
       )
     end
 
@@ -372,6 +373,7 @@ module Bookings
         document_type: booking.guest_document_type,
         government_id: booking.guest_government_id,
         date_of_birth: booking.guest_date_of_birth,
+        home_address: booking.guest_home_address,
         created_by_hotel_id: @hotel.id
       )
     end
@@ -386,6 +388,9 @@ module Bookings
       updates[:gender] = booking.guest_gender if booking.guest_gender.present? && guest.gender != booking.guest_gender
       if booking.guest_date_of_birth.present? && guest.date_of_birth != booking.guest_date_of_birth
         updates[:date_of_birth] = booking.guest_date_of_birth
+      end
+      if booking.guest_home_address.present? && guest.home_address != booking.guest_home_address
+        updates[:home_address] = booking.guest_home_address
       end
 
       guest.update!(updates) if updates.any?

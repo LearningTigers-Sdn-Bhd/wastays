@@ -23,7 +23,7 @@ turns:
   - guest: "is there parking?"
     expect:
       reply_matches: ["Parking is free"]
-      booking_status: suspended
+      booking_status: collecting_slots
       creates_quote: false
 
   # The second question, asked before the first was ever followed up.
@@ -37,7 +37,7 @@ turns:
     expect:
       reply_matches: ["Wifi is included"]
       reply_excludes: ["Parking is free"]
-      booking_status: suspended
+      booking_status: collecting_slots
       creates_quote: false
 
   # August, three days, two nights -- stated once, four turns ago, and never

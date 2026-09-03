@@ -42,7 +42,7 @@ module AiConcierge
             attraction["city"],
             attraction["country"],
             distance_text(attraction["distance_km"])
-          ].compact_blank.join(". ")
+          ].compact_blank.map { |fragment| fragment.to_s.strip.sub(/[.!?。！？]+\z/, "") }.join(". ")
           text = details.present? ? "#{attraction['name']}: #{details}." : "#{attraction['name']}."
 
           Reply::Fact.new(topic: attraction["name"], text: text)

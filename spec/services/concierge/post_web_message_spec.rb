@@ -43,6 +43,17 @@ RSpec.describe Concierge::PostWebMessage do
     expect(second.conversation.messages.count).to eq(2)
   end
 
+  it "clears stale suggestions when the guest types a free-form message" do
+    first = post("Hello")
+    state = create(:prospect_conversation_state, prospect: first.prospect)
+    manager = AiConcierge::State::ConversationTaskManager.new(slots_payload: state.slots_payload)
+    state.update!(slots_payload: manager.show_suggestions("greeting"))
+
+    post("Tell me about parking", prospect_public_id: first.prospect.public_id)
+
+    expect(state.reload.slots_payload.dig("ui_task", "suggestion_group")).to be_nil
+  end
+
   it "asks the assistant to answer when the hotel has one" do
     allow_any_instance_of(Hotel).to receive(:ai_concierge_ready?).and_return(true)
 

@@ -76,6 +76,23 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
     expect(result.knowledge_matches).to eq([ match ])
   end
 
+  it "does not replace missing breakfast hours with unrelated amenities" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "when do you serve breakfast?",
+      intent: "hotel_information",
+      topic: "general_hotel_info",
+      categories: [ "general_info" ],
+      source: "general_hotel_info",
+      structured_facts: { "amenities" => [ "WiFi", "Swimming pool", "Laundry" ] },
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to have_attributes(shape: "unavailable", success: false)
+    expect(result.facts).to be_empty
+  end
+
   it "uses synthesis mode for multiple matches" do
     second_match = match.merge("content" => "Parking is available for guests.", "distance" => 0.2)
 

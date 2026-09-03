@@ -18,6 +18,7 @@ module HousekeepingTasks
       Column.new(key: "remarks", label: "Remarks", export_label: "Remarks", pdf_label: "Remarks", type: :text, pdf_width: 140, excel_width: 36)
     ].freeze
     KEYS = ALL.map(&:key).freeze
+    DEFAULT_KEYS = KEYS
     BY_KEY = ALL.index_by(&:key).freeze
 
     module_function

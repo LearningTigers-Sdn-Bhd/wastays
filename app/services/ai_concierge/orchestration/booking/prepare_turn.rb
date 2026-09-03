@@ -22,6 +22,8 @@ module AiConcierge
         def call
           state = conversation_state
           manager = State::ConversationTaskManager.new(slots_payload: state.slots_payload)
+          state = with_payload(state, manager.reset_information_run)
+          manager = State::ConversationTaskManager.new(slots_payload: state.slots_payload)
 
           if manager.booking_pending_question.blank? && state.pending_question.present?
             state = with_payload(state, manager.activate_booking(manager.booking_branch, pending_question: state.pending_question))

@@ -70,7 +70,7 @@ RSpec.describe "Booking workspace guest editing", frozen_time: :business_day, ty
     expect(page).to have_css("#guest-details-panel > footer[data-testid='guest-details-footer']")
     expect(page).to have_no_css("turbo-frame#booking_workspace > footer[data-testid='guest-details-footer']")
     fill_in "Full name", with: "Saved From Footer"
-    click_button "Save Guest"
+    click_button "Save for this booking only"
 
     primary_booking_guest = booking.booking_guests.find_by!(is_primary: true)
     expect(page).to have_current_path(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: primary_booking_guest.id))
@@ -85,7 +85,7 @@ RSpec.describe "Booking workspace guest editing", frozen_time: :business_day, ty
     page.execute_script("document.querySelector('input[name=\"guest[name]\"]').removeAttribute('required')")
     fill_in "Full name", with: ""
 
-    click_button "Save Guest"
+    click_button "Save for this booking only"
 
     expect(page).to have_css("[data-guest-details-error-summary]", text: "Name can't be blank")
     expect(page).to have_field("Email", with: "submitted@example.com")
@@ -132,21 +132,12 @@ RSpec.describe "Booking workspace guest editing", frozen_time: :business_day, ty
     expect(page).not_to have_content(sibling.formatted_reservation_number)
   end
 
-  it "updates the reusable guest only from the explicit split-save option", js: true do
+  it "updates the reusable guest only from the explicit full-save option", js: true do
     visit hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
 
     expect(page).to have_field("Full name", wait: 10)
     fill_in "Full name", with: "Shared Guest Name"
-    save_options_trigger = find("button[aria-label='More save options']")
-    save_options_trigger.click
-    expect(page.evaluate_script(<<~JS)).to be(true)
-      (() => {
-        const trigger = document.querySelector("button[aria-label='More save options']").getBoundingClientRect()
-        const menu = document.querySelector("#guest-save-options-menu").getBoundingClientRect()
-        return menu.left < trigger.left && menu.right <= trigger.right + 1
-      })()
-    JS
-    click_button "Save & Update Guest Record"
+    click_button "Save guest (full)"
 
     expect(page).to have_content("Guest details and guest record updated.")
     expect(page).to have_field("Full name", with: "Shared Guest Name")

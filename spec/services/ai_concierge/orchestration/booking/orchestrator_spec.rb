@@ -23,6 +23,7 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
     expect(result[:pending_question]).to eq("confirm_selection")
     expect(result.dig(:extra_context, :selected_option, "selection_id")).to eq("exec_1")
     expect(result.dig(:slots_payload, "booking_task", "branch", "selected_option", "selection_id")).to eq("exec_1")
+    expect(result.next_action.kind).to eq("continue_booking")
   end
 
   it "selects the row the guest numbered, across room types" do
@@ -78,10 +79,286 @@ RSpec.describe AiConcierge::Orchestration::Booking::Orchestrator do
 
     expect(result.dig(:extra_context, :message)).to eq("Unable to generate quote right now.")
     expect(result[:needs_human_support]).to be(true)
+    expect(result.next_action.kind).to eq("offer_front_desk")
     expect(result[:pending_question]).to eq("confirm_selection")
     expect(result.slots_payload).to be_present
     expect(result.flow_status).to be_nil
     expect(result.end_reason).to be_nil
+  end
+
+  it "offers another search when no booking option is available" do
+    search_tool = AiConcierge::Tools::Booking::SearchBookingOptionsTool
+    allow(search_tool).to receive(:new).and_return(instance_double(search_tool, call: []))
+
+    result = orchestrate(
+      message: "show me the rooms",
+      interpretation: interpretation,
+      active_branch: default_active_branch,
+      decision: { action: :search_options, pending_question: nil }
+    )
+
+    expect(result[:reply_type]).to eq(:no_options)
+    expect(result.next_action.kind).to eq("offer_alternative_search")
+  end
+
+  it "lets human support override an open booking question" do
+    active_branch = branch_with_options([
+      group("Garden Prestige Suite", [ option(1, "garden_1", "2026-08-01") ]),
+      group("Deluxe Room", [ option(2, "deluxe_1", "2026-08-02") ])
+    ])
+    initial_payload = AiConcierge::State::ConversationTaskManager
+      .new(slots_payload: {})
+      .activate_booking(active_branch, pending_question: "select_option")
+    first_reask = AiConcierge::State::ConversationTaskManager
+      .new(slots_payload: initial_payload)
+      .activate_booking(active_branch, pending_question: "select_option", count_reask: true)
+    conversation_state.update!(slots_payload: first_reask)
+
+    result = orchestrate(
+      message: "not one of those",
+      interpretation: interpretation(intent: "option_selection"),
+      active_branch: active_branch
+    )
+
+    expect(result[:needs_human_support]).to be(true)
+    expect(result.next_action.kind).to eq("offer_front_desk")
+  end
+
+  describe "price exploration" do
+    let!(:priced_room) do
+      create(
+        :room_type,
+        hotel: hotel,
+        name: "Garden Prestige Suite",
+        description: "A quiet suite facing the garden.",
+        amenities: [ "wifi" ]
+      )
+    end
+
+    let(:priced_option) do
+      option(1, "garden_1", "2026-08-01").merge(
+        "room_type_id" => priced_room.id,
+        "room_type_name" => "Garden Prestige Suite",
+        "rate_plans" => [
+          { "rate_plan_id" => 10, "name" => "Saver", "total_price" => 220.0, "currency" => "MYR" },
+          { "rate_plan_id" => 11, "name" => "Flexible", "total_price" => 260.0, "currency" => "MYR" }
+        ]
+      )
+    end
+
+    let(:priced_branch) { branch_with_options([ group("Garden Prestige Suite", [ priced_option ]) ]) }
+
+    it "does not treat cheapest as a list reference when no priced list exists" do
+      empty_branch = default_active_branch.merge("suggested_options" => [])
+      activate_price_exploration(empty_branch, pending_question: "price_option_exploration")
+
+      result = orchestrate(
+        message: "show me the cheapest room",
+        interpretation: interpretation(intent: "booking_search", slots: {}),
+        active_branch: empty_branch,
+        decision: { action: :booking, pending_question: "price_option_exploration", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).not_to eq(:price_option_invalid)
+    end
+
+    it "treats a bare number as a details request without selecting the room" do
+      activate_price_exploration(priced_branch, pending_question: "price_option_exploration")
+
+      result = orchestrate(
+        message: "1",
+        interpretation: interpretation(intent: "option_selection", slots: { "option_number" => 1 }),
+        active_branch: priced_branch,
+        decision: { action: :booking, pending_question: "price_option_exploration", purpose: "price_exploration" }
+      )
+
+      branch = result.dig(:slots_payload, "booking_task", "branch")
+      expect(result[:reply_type]).to eq(:price_option_details)
+      expect(result[:pending_question]).to eq("price_option_continuation")
+      expect(result[:action_name]).to be_nil
+      expect(result.next_action.kind).to eq("none")
+      expect(branch.dig("viewed_option", "selection_id")).to eq("garden_1")
+      expect(branch["selected_option"]).to be_nil
+      expect(branch["confirmation_candidate"]).to be_nil
+    end
+
+    it "shows details for an explicit option or cheapest-option reference" do
+      [ "details for option 1", "show me the cheapest option" ].each do |message|
+        activate_price_exploration(priced_branch, pending_question: "price_option_exploration")
+
+        result = orchestrate(
+          message: message,
+          interpretation: interpretation(intent: "option_selection", slots: {}),
+          active_branch: priced_branch.deep_dup,
+          decision: { action: :booking, pending_question: "price_option_exploration", purpose: "price_exploration" }
+        )
+
+        expect(result[:reply_type]).to eq(:price_option_details), "expected details for #{message.inspect}"
+        expect(result.dig(:slots_payload, "booking_task", "branch", "selected_option")).to be_nil
+      end
+    end
+
+    it "treats continue as shopping when it references a priced option" do
+      activate_price_exploration(priced_branch, pending_question: "price_option_exploration")
+
+      result = orchestrate(
+        message: "continue with option 1",
+        interpretation: interpretation(
+          intent: "option_selection",
+          slots: { "option_number" => 1, "option_action" => "continue" }
+        ),
+        active_branch: priced_branch,
+        decision: { action: :booking, pending_question: "price_option_exploration", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).to eq(:price_option_details)
+      expect(result[:action_name]).to be_nil
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("price_exploration")
+      expect(result.dig(:slots_payload, "booking_task", "branch", "selected_option")).to be_nil
+    end
+
+    it "keeps an invalid reference in exploration" do
+      activate_price_exploration(priced_branch, pending_question: "price_option_exploration")
+
+      result = orchestrate(
+        message: "option 9",
+        interpretation: interpretation(intent: "option_selection", slots: { "option_number" => 9 }),
+        active_branch: priced_branch,
+        decision: { action: :booking, pending_question: "price_option_exploration", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).to eq(:price_option_invalid)
+      expect(result[:pending_question]).to eq("price_option_exploration")
+      expect(result[:action_name]).to be_nil
+    end
+
+    it "refreshes the search when the saved room no longer exists" do
+      activate_price_exploration(priced_branch, pending_question: "price_option_exploration")
+      priced_room.destroy!
+
+      result = orchestrate(
+        message: "1",
+        interpretation: interpretation(intent: "option_selection", slots: { "option_number" => 1 }),
+        active_branch: priced_branch,
+        decision: { action: :booking, pending_question: "price_option_exploration", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).to eq(:no_options)
+      expect(result.next_action.kind).to eq("offer_alternative_search")
+      expect(result.dig(:slots_payload, "booking_task", "branch", "viewed_option")).to be_nil
+    end
+
+    it "books a numbered option only when the guest explicitly says to book" do
+      activate_price_exploration(priced_branch, pending_question: "price_option_exploration")
+
+      result = orchestrate(
+        message: "book option 1",
+        interpretation: interpretation(
+          intent: "option_selection",
+          slots: { "option_number" => 1, "option_action" => "continue" }
+        ),
+        active_branch: priced_branch,
+        decision: { action: :booking, pending_question: "price_option_exploration", purpose: "booking" }
+      )
+
+      expect(result[:reply_type]).to eq(:ask_rate_plan)
+      expect(result[:pending_question]).to eq("rate_plan_selection")
+      expect(result[:action_name]).to eq("request_quote")
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("booking")
+    end
+
+    it "keeps a viewed option in exploration after a positive answer" do
+      viewed = priced_branch.merge("viewed_option" => priced_option)
+      activate_price_exploration(viewed, pending_question: "price_option_continuation")
+
+      result = orchestrate(
+        message: "yes",
+        interpretation: interpretation(intent: "confirmation", slots: { "confirmation" => "yes" }),
+        active_branch: viewed,
+        decision: { action: :booking, pending_question: "price_option_continuation", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).to eq(:price_option_guidance)
+      expect(result[:action_name]).to be_nil
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("price_exploration")
+      expect(result.dig(:slots_payload, "booking_task", "branch", "viewed_option", "selection_id")).to eq("garden_1")
+      expect(result.dig(:slots_payload, "booking_task", "branch", "selected_option")).to be_nil
+    end
+
+    it "books the viewed option after an explicit request" do
+      viewed = priced_branch.merge("viewed_option" => priced_option)
+      activate_price_exploration(viewed, pending_question: "price_option_continuation")
+
+      result = orchestrate(
+        message: "reserve this option",
+        interpretation: interpretation(intent: "option_selection", slots: {}),
+        active_branch: viewed,
+        decision: { action: :booking, pending_question: "price_option_continuation", purpose: "booking" }
+      )
+
+      expect(result[:reply_type]).to eq(:ask_rate_plan)
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("booking")
+      expect(result.dig(:slots_payload, "booking_task", "branch", "selected_option", "selection_id")).to eq("garden_1")
+    end
+
+    it "asks which priced option to book when no option is identified" do
+      activate_price_exploration(priced_branch, pending_question: "price_option_exploration")
+
+      result = orchestrate(
+        message: "I want to book",
+        interpretation: interpretation(intent: "booking_search", slots: {}),
+        active_branch: priced_branch,
+        decision: { action: :booking, pending_question: "price_option_exploration", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).to eq(:price_option_required)
+      expect(result[:action_name]).to be_nil
+      expect(result.dig(:slots_payload, "booking_task", "purpose")).to eq("price_exploration")
+    end
+
+    it "keeps the shortlist active without another sales prompt after a refusal" do
+      viewed = priced_branch.merge("viewed_option" => priced_option)
+      activate_price_exploration(viewed, pending_question: "price_option_continuation")
+
+      result = orchestrate(
+        message: "no",
+        interpretation: interpretation(intent: "confirmation", slots: { "confirmation" => "no" }),
+        active_branch: viewed,
+        decision: { action: :booking, pending_question: "price_option_continuation", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).to eq(:price_option_declined)
+      expect(result[:pending_question]).to eq("price_option_exploration")
+      expect(result[:action_name]).to be_nil
+      expect(result.next_action.kind).to eq("none")
+      expect(result.dig(:slots_payload, "booking_task", "branch", "suggested_options")).to be_present
+      expect(result.dig(:slots_payload, "booking_task", "branch", "viewed_option")).to be_nil
+    end
+
+    it "repeats the viewed details when the continuation answer is unreadable" do
+      viewed = priced_branch.merge("viewed_option" => priced_option)
+      activate_price_exploration(viewed, pending_question: "price_option_continuation")
+
+      result = orchestrate(
+        message: "maybe later",
+        interpretation: interpretation,
+        active_branch: viewed,
+        decision: { action: :booking, pending_question: "price_option_continuation", purpose: "price_exploration" }
+      )
+
+      expect(result[:reply_type]).to eq(:price_option_details)
+      expect(result[:pending_question]).to eq("price_option_continuation")
+      expect(result[:action_name]).to be_nil
+    end
+
+    def activate_price_exploration(branch, pending_question:)
+      payload = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).set_booking_purpose("price_exploration")
+      payload = AiConcierge::State::ConversationTaskManager.new(slots_payload: payload).activate_booking(
+        branch,
+        pending_question: pending_question
+      )
+      conversation_state.update!(slots_payload: payload, pending_question: pending_question)
+    end
   end
 
   it "selects the rate plan the guest numbered" do

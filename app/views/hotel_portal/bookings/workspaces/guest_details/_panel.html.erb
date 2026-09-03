@@ -59,6 +59,11 @@
                 <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
                   <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
                 <% end %>
+                <div class="sm:col-span-2">
+                  <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Address") do |field| %>
+                    <% field.with_text_area(value: snapshots[:home_address], rows: 2, placeholder: "Street address, city, postcode") %>
+                  <% end %>
+                </div>
               </div>
               <% end %>
             <% end %>

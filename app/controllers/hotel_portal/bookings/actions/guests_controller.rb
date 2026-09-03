@@ -150,7 +150,7 @@ module HotelPortal
         end
 
         def guest_params
-          params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth)
+          params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth, :home_address)
         end
 
         def resolved_guest_target

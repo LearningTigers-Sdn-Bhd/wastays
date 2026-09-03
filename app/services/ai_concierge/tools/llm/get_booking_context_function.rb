@@ -13,7 +13,8 @@ module AiConcierge
         def execute
           domain_result = Orchestration::Turn::BookingContextHandler.new(
             hotel: hotel,
-            phone: context.phone
+            phone: context.phone,
+            conversation: context.conversation
           ).call(prospect: context.prospect, conversation_state: context.conversation_state)
 
           record(domain_result, digest: { answered: true })

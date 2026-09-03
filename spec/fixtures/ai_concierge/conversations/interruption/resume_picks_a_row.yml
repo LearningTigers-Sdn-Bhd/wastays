@@ -29,7 +29,7 @@ turns:
   - guest: "is there parking?"
     expect:
       reply_matches: ["Parking is free"]
-      booking_status: suspended
+      booking_status: waiting_for_confirmation
 
   # "2" is not a yes and not a no. Nothing has told the model a list is waiting,
   # so it arrives as an ordinary sentence -- the number in it is the only sign
