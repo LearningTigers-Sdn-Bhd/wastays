@@ -1,0 +1,25 @@
+<div class="space-y-3">
+  <h3 class="text-base font-semibold text-foreground">Activity by payment mode</h3>
+  <%= render PanelsUI::Table.new(caption: "Activity by payment mode and handling", density: :compact, header_style: :sentence, hoverable: true, wrapper_class: "rounded-lg border border-border bg-card") do |table| %>
+    <% table.with_header do %><tr><% ["Handling", "Payment mode", "Currency", "Stage", "Amount in", "Amount out", "Balance"].each_with_index do |heading, index| %><th scope="col" class="<%= index >= 4 ? 'text-right' : 'text-left' %>"><%= heading %></th><% end %></tr><% end %>
+    <% table.with_body do %>
+      <% if @cashier_report.all_mode_summary_rows.empty? %><%= render "table_empty_state", colspan: 7, message: "No payment activity for this selected period." %><% end %>
+      <% @cashier_report.all_mode_summary_rows.each do |row| %><tr><td><%= row[:handling_label] %></td><td><%= row[:mode] %></td><td><%= row[:currency] %></td><td><%= row[:section] %></td><td class="text-right"><%= format_number(row[:amount_in], precision: 2) %></td><td class="text-right"><%= format_number(row[:amount_out], precision: 2) %></td><td class="text-right"><%= format_number(row[:balance], precision: 2) %></td></tr><% end %>
+      <% @cashier_report.handling_totals.each do |row| %><tr class="bg-muted/40 font-semibold"><th scope="row" colspan="4"><%= row[:handling_label] %> subtotal</th><td class="text-right"><%= format_number(row[:amount_in], precision: 2) %></td><td class="text-right"><%= format_number(row[:amount_out], precision: 2) %></td><td class="text-right"><%= format_number(row[:balance], precision: 2) %></td></tr><% end %>
+      <% if @cashier_report.all_mode_summary_rows.any? %><tr class="bg-muted/55 font-semibold"><th scope="row" colspan="4">Grand total</th><td class="text-right"><%= format_number(@cashier_report.all_grand_total[:amount_in], precision: 2) %></td><td class="text-right"><%= format_number(@cashier_report.all_grand_total[:amount_out], precision: 2) %></td><td class="text-right"><%= format_number(@cashier_report.all_grand_total[:balance], precision: 2) %></td></tr><% end %>
+    <% end %>
+  <% end %>
+</div>
+
+<div class="space-y-3">
+  <h3 class="text-base font-semibold text-foreground">Currency summary</h3>
+  <%= render PanelsUI::Table.new(caption: "Currency summary by handling", density: :compact, header_style: :sentence, hoverable: true, wrapper_class: "rounded-lg border border-border bg-card") do |table| %>
+    <% table.with_header do %><tr><% ["Handling", "Currency", "Stage", "Amount in", "Amount out", "Balance"].each_with_index do |heading, index| %><th scope="col" class="<%= index >= 3 ? 'text-right' : 'text-left' %>"><%= heading %></th><% end %></tr><% end %>
+    <% table.with_body do %>
+      <% if @cashier_report.all_currency_summary_rows.empty? %><%= render "table_empty_state", colspan: 6, message: "No payment activity for this selected period." %><% end %>
+      <% @cashier_report.all_currency_summary_rows.each do |row| %><tr><td><%= row[:handling_label] %></td><td><%= row[:currency] %></td><td><%= row[:section] %></td><td class="text-right"><%= format_number(row[:amount_in], precision: 2) %></td><td class="text-right"><%= format_number(row[:amount_out], precision: 2) %></td><td class="text-right"><%= format_number(row[:balance], precision: 2) %></td></tr><% end %>
+      <% @cashier_report.handling_totals.each do |row| %><tr class="bg-muted/40 font-semibold"><th scope="row" colspan="3"><%= row[:handling_label] %> subtotal</th><td class="text-right"><%= format_number(row[:amount_in], precision: 2) %></td><td class="text-right"><%= format_number(row[:amount_out], precision: 2) %></td><td class="text-right"><%= format_number(row[:balance], precision: 2) %></td></tr><% end %>
+      <% if @cashier_report.all_currency_summary_rows.any? %><tr class="bg-muted/55 font-semibold"><th scope="row" colspan="3">Grand total</th><td class="text-right"><%= format_number(@cashier_report.all_grand_total[:amount_in], precision: 2) %></td><td class="text-right"><%= format_number(@cashier_report.all_grand_total[:amount_out], precision: 2) %></td><td class="text-right"><%= format_number(@cashier_report.all_grand_total[:balance], precision: 2) %></td></tr><% end %>
+    <% end %>
+  <% end %>
+</div>

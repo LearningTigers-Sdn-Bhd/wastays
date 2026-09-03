@@ -2,7 +2,8 @@
 
 module PaymentMethods
   class EnsureDefaults
-    SYSTEM_KEYS = %w[cash_payment card_payment bank_payment gateway_manual_recovery_payment ota_collected_payment].freeze
+    CASH_SYSTEM_KEYS = %w[cash_payment cash_prepayment].freeze
+    SYSTEM_KEYS = %w[cash_payment cash_prepayment card_payment card_prepayment bank_payment gateway_manual_recovery_payment ota_collected_payment].freeze
 
     def self.call(hotel)
       new(hotel).call
@@ -22,7 +23,7 @@ module PaymentMethods
 
         @hotel.hotel_payment_methods.create!(
           transaction_code: code,
-          payment_method_type: code.system_key == "cash_payment" ? "cash" : "bank_gateway",
+          payment_method_type: CASH_SYSTEM_KEYS.include?(code.system_key) ? "cash" : "bank_gateway",
           default_cash: code.system_key == "cash_payment" && !@hotel.hotel_payment_methods.where(default_cash: true).exists?,
           guest_advance: code.category == "booking_payment",
           position: next_position

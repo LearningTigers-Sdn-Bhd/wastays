@@ -7,18 +7,21 @@ module HotelPortal
     class DailyReportExcelExportService
       CASHIER_HEADERS = [
         "Date & Time", "Reservation", "Guest", "Room", "Folio", "Invoice",
-        "Payment Mode", "Received By", "Remarks", "Currency", "Amount"
+        "Payment Mode", "Stage", "Received By", "Remarks", "Currency", "Amount"
       ].freeze
 
       COLORS = ExcelExportStyles::COLORS
       FONT_SIZES = ExcelExportStyles::FONT_SIZES
 
-      def initialize(hotel:, tab:, revenue_report:, cashier_report:, charge_register: [])
+      def initialize(hotel:, tab:, revenue_report:, cashier_report:, charge_register: [], cashier_view: "full",
+                     visible_columns: CashierActivityColumns::DEFAULT_KEYS)
         @hotel = hotel
         @tab = tab
         @revenue_report = revenue_report
         @cashier_report = cashier_report
         @charge_register = charge_register
+        @cashier_view = cashier_view.to_s.presence_in(%w[full activity summary]) || "full"
+        @visible_columns = visible_columns
       end
 
       def generate
@@ -106,11 +109,11 @@ module HotelPortal
           [ "Net Revenue", decimal(@revenue_report.totals[:net_revenue]), "MYR" ]
         ])
         sheet.add_row([])
-        add_metric_section(sheet, "Cashier Sales (Cash Flow)", [
-          [ "Cash Movements", @cashier_report.totals[:movement_count], nil ],
+        add_metric_section(sheet, "Cashier Activity (Cash Flow)", [
+          [ "Movements", @cashier_report.totals[:movement_count], nil ],
           [ "Total Collected", decimal(@cashier_report.totals[:total_collected]), "MYR" ],
           [ "Total Refunded", decimal(@cashier_report.totals[:total_refunded]), "MYR" ],
-          [ "Net Cash", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
+          [ "Net At Desk", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
         ])
       end
 
@@ -156,50 +159,64 @@ module HotelPortal
       end
 
       def build_cashier_workbook
-        advance = add_sheet("Advance", CASHIER_HEADERS.size, widths: cashier_widths)
-        add_report_header(advance, "Cashier Sales - Advance", CASHIER_HEADERS.size)
-        add_metric_section(advance, "Cashier Sales Summary", cashier_metrics)
-        advance.add_row([])
-        advance_rows = cashier_rows(@cashier_report.advance_scope)
-        add_table(
-          advance, headers: CASHIER_HEADERS, rows: advance_rows,
-          datetime_columns: [ 0 ], money_columns: [ 10 ], total_row: total_for_cashier(advance_rows)
-        )
+        build_cashier_activity_sheet if %w[full activity].include?(@cashier_view)
+        build_cashier_summary_sheets if %w[full summary].include?(@cashier_view)
+      end
 
-        settlement = add_sheet("Settlement", CASHIER_HEADERS.size, widths: cashier_widths)
-        add_report_header(settlement, "Cashier Sales - Settlement", CASHIER_HEADERS.size)
-        settlement_rows = cashier_rows(@cashier_report.settlement_scope)
-        add_table(
-          settlement, headers: CASHIER_HEADERS, rows: settlement_rows,
-          datetime_columns: [ 0 ], money_columns: [ 10 ], total_row: total_for_cashier(settlement_rows)
-        )
+      def build_cashier_activity_sheet
+        table = CashierActivityExportTable.new(report: @cashier_report, visible_columns: @visible_columns)
+        activity = add_sheet("Payment Activity", table.headers.size, widths: table.excel_widths)
+        add_report_header(activity, "Payment Activity", table.headers.size)
+        rows = table.rows.map { |row| row.map { |value| value.is_a?(BigDecimal) ? decimal(value) : value } }
+        amount_index = table.headers.index("Amount")
+        total = Array.new(table.headers.size)
+        total[0] = "Total"
+        total[amount_index] = decimal(rows.sum { |row| row[amount_index].to_d }) if amount_index
+        add_table(activity, headers: table.headers, rows:, money_columns: [ amount_index ].compact, total_row: total)
+      end
 
-        summary = add_sheet("Cashier Summary", 6, widths: [ 28, 13, 16, 18, 18, 18 ])
-        add_report_header(summary, "Cashier Summary", 6)
-        summary_rows = @cashier_report.mode_summary_rows.map do |row|
-          [ row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+      def build_cashier_summary_sheets
+        summary = add_sheet("Activity By Payment Mode", 7, widths: [ 20, 28, 13, 16, 18, 18, 18 ])
+        add_report_header(summary, "Activity By Payment Mode", 7)
+        add_metric_section(summary, "At Desk", cashier_metric_rows(@cashier_report.at_desk_totals || @cashier_report.totals))
+        add_metric_section(summary, "Not Handled At The Desk", cashier_metric_rows(@cashier_report.non_desk_totals || @cashier_report.non_cash_totals))
+        summary.add_row([])
+        summary_rows = (@cashier_report.all_mode_summary_rows || @cashier_report.mode_summary_rows).map do |row|
+          [ row[:handling_label], row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
-        summary_rows += @cashier_report.mode_totals.map do |row|
-          [ "#{row[:mode]} Total", nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        summary_rows += cashier_handling_totals.map do |row|
+          [ "#{row[:handling_label]} Subtotal", nil, nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
+        grand = cashier_grand_total
         add_table(
           summary,
-          headers: [ "Payment Mode", "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
-          rows: summary_rows, money_columns: [ 3, 4, 5 ]
+          headers: [ "Handling", "Payment Mode", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
+          rows: summary_rows, money_columns: [ 4, 5, 6 ],
+          total_row: [ "Grand Total", nil, nil, nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
         )
 
-        currency = add_sheet("Currency Summary", 5, widths: [ 16, 18, 20, 20, 20 ])
-        add_report_header(currency, "Currency Summary", 5)
-        currency_rows = @cashier_report.currency_summary_rows.map do |row|
-          [ row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        currency = add_sheet("Currency Summary", 6, widths: [ 20, 16, 18, 20, 20, 20 ])
+        add_report_header(currency, "Currency Summary", 6)
+        currency_rows = (@cashier_report.all_currency_summary_rows || @cashier_report.currency_summary_rows).map do |row|
+          [ row[:handling_label], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
-        grand = @cashier_report.grand_total
+        currency_rows += cashier_handling_totals.map do |row|
+          [ "#{row[:handling_label]} Subtotal", nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        end
         add_table(
           currency,
-          headers: [ "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
-          rows: currency_rows, money_columns: [ 2, 3, 4 ],
-          total_row: [ "Grand Total", nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
+          headers: [ "Handling", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
+          rows: currency_rows, money_columns: [ 3, 4, 5 ],
+          total_row: [ "Grand Total", nil, nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
         )
+      end
+
+      def cashier_handling_totals
+        @cashier_report.respond_to?(:handling_totals) ? Array(@cashier_report.handling_totals) : []
+      end
+
+      def cashier_grand_total
+        @cashier_report.all_grand_total || @cashier_report.grand_total
       end
 
       def add_sheet(name, column_count, widths:)
@@ -293,10 +310,19 @@ module HotelPortal
 
       def cashier_metrics
         [
-          [ "Cash Movements", @cashier_report.totals[:movement_count], nil ],
+          [ "Movements", @cashier_report.totals[:movement_count], nil ],
           [ "Total Collected", decimal(@cashier_report.totals[:total_collected]), "MYR" ],
           [ "Total Refunded", decimal(@cashier_report.totals[:total_refunded]), "MYR" ],
-          [ "Net Cash", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
+          [ "Net At Desk", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
+        ]
+      end
+
+      def cashier_metric_rows(totals)
+        [
+          [ "Movements", totals[:movement_count], nil ],
+          [ "Amount In", decimal(totals[:total_collected]), "MYR" ],
+          [ "Amount Out", decimal(totals[:total_refunded]), "MYR" ],
+          [ "Net", decimal(totals[:net_cash]), "MYR" ]
         ]
       end
 
@@ -321,7 +347,7 @@ module HotelPortal
           row = cashier_row(transaction)
           [
             transaction_datetime(row), row.booking_reference, row.guest_name, row.room_number,
-            row.folio_number, row.invoice_number, row.settlement_mode, row.received_by,
+            row.folio_number, row.invoice_number, row.settlement_mode, row.section, row.received_by,
             row.description, row.currency, decimal(row.signed_amount)
           ]
         end
@@ -330,7 +356,9 @@ module HotelPortal
       def cashier_row(transaction)
         DailyReportTransactionRow.new(
           transaction,
-          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
+          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
+          section: @cashier_report.section_by_transaction_id[transaction.id],
+          origin: @cashier_report.non_cash_origin_by_transaction_id&.[](transaction.id)
         )
       end
 
@@ -342,8 +370,8 @@ module HotelPortal
       end
 
       def total_for_cashier(rows)
-        total = rows.sum { |row| row[10].to_d }
-        [ "Total", *Array.new(8), rows.first&.[](9) || "MYR", decimal(total) ]
+        total = rows.sum { |row| row[11].to_d }
+        [ "Total", *Array.new(9), rows.first&.[](10) || "MYR", decimal(total) ]
       end
 
       def total_for_register(rows, column_count, amount_indexes:)
@@ -360,7 +388,7 @@ module HotelPortal
       end
 
       def cashier_widths
-        [ 20, 25, 22, 12, 20, 16, 24, 20, 42, 12, 16 ]
+        [ 20, 25, 22, 12, 20, 16, 24, 14, 20, 42, 12, 16 ]
       end
 
       def period_label

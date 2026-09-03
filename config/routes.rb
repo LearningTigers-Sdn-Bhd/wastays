@@ -614,6 +614,10 @@ Rails.application.routes.draw do
         }
       end
     end
+    patch "reports/daily-report/cashier-view-preference",
+      to: "cashier_activity_view_preferences#update", as: :cashier_activity_view_preference
+    delete "reports/daily-report/cashier-view-preference",
+      to: "cashier_activity_view_preferences#destroy"
     namespace :reports do
       resources :night_audits, only: [ :index, :show ]
     end

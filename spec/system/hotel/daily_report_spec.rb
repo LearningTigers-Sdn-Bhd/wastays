@@ -56,10 +56,10 @@ RSpec.describe "Daily Report: Revenue vs Cashier Sales", type: :system, js: true
     expect(page).to have_content((today - 2.days).strftime("%d %b %Y"))
     expect(page).to have_content((today - 1.day).strftime("%d %b %Y"))
 
-    click_link "Cashier sales"
+    click_link "Cashier activity"
     expect(page).to have_current_path(%r{tab=cashier})
     expect(page).to have_content("Settlement")
-    expect(page).to have_css('[data-testid="settlement-row"]', count: 1)
+    expect(page).to have_css('[data-testid="cashier-row"]', count: 1)
     expect(page).to have_content("Sunset Guest")
     expect(page).to have_content(today.strftime("%d %b %Y"))
   end

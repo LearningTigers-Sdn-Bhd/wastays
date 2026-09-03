@@ -262,8 +262,8 @@ module HotelPortal
                    .where.missing(:hotel_payment_method)
                    .order(:code)
                    .map do |code|
-        cash = code.system_key == "cash_payment"
-        default_cash = cash && !cash_claimed
+        cash = PaymentMethods::EnsureDefaults::CASH_SYSTEM_KEYS.include?(code.system_key)
+        default_cash = code.system_key == "cash_payment" && !cash_claimed
         cash_claimed ||= default_cash
         {
           "transaction_code_id" => code.id.to_s,
