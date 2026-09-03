@@ -24,11 +24,11 @@ module AiConcierge
 
           response = Timeout.timeout(LLM_TIMEOUT) { chat.ask(prompt) }
           Providers::UsageLog.call(response, hotel: hotel, stage: :knowledge_translation)
-          candidate = parse(response&.content.to_s)
-          valid_translation?(candidate) ? candidate : reply
+          candidate = normalize(parse(response&.content.to_s))
+          valid_translation?(candidate) ? candidate : normalize(reply)
         rescue Timeout::Error, RubyLLM::Error, LocalizationError => e
           Rails.logger.warn("AiConcierge::HotelKnowledge::Localizer skipped: #{e.message}")
-          reply
+          normalize(reply)
         end
 
         private
@@ -76,8 +76,20 @@ module AiConcierge
           Agents::RewriteVerifier.new(
             template: reply,
             candidate: candidate,
-            protected_names: hotel.room_types.pluck(:name) + hotel.rate_plans.pluck(:name)
-          ).call.present?
+            protected_names: protected_names
+          ).call.present? && !Agents::PunctuationNormalizer.malformed?(candidate)
+        end
+
+        def normalize(text)
+          Agents::PunctuationNormalizer.call(
+            text,
+            protected_names: protected_names
+          )
+        end
+
+        def protected_names
+          @protected_names ||= [ hotel.name ] + hotel.room_types.pluck(:name) +
+            hotel.rate_plans.pluck(:name) + hotel.nearby_attractions.pluck(:name)
         end
 
         def bullet_count(text) = text.lines.count { |line| line.start_with?("- ") }

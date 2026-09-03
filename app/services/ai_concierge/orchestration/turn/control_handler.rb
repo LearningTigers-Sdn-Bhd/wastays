@@ -2,6 +2,7 @@ module AiConcierge
   module Orchestration
     module Turn
       class ControlHandler
+        SALES_OFFER_DECLINED_MESSAGE = "No problem. How else can I help you?".freeze
         # A goodbye, and said as one. It used to be word for word what a guest
         # who declined to end was told, so the two outcomes of the same
         # question read identically -- and only the flow status, which no guest
@@ -59,6 +60,9 @@ module AiConcierge
         end
 
         def handle(prospect:, conversation_state:, interpretation:)
+          sales_refusal = handle_sales_refusal(prospect:, conversation_state:)
+          return sales_refusal if sales_refusal
+
           conversation_control = conversation_control(conversation_state: conversation_state, interpretation: interpretation)
 
           if conversation_control.cancel_attempt?
@@ -82,12 +86,43 @@ module AiConcierge
 
         attr_reader :message, :response_persister
 
+        def handle_sales_refusal(prospect:, conversation_state:)
+          manager = State::ConversationTaskManager.new(slots_payload: conversation_state.slots_payload)
+          refusal = Sales::OfferRefusalPolicy.new(message: message, sales_task: manager.sales_task).call
+          return unless refusal.refusal?
+
+          declined_payload = manager.decline_optional_sales_offer
+          conversation_state.assign_attributes(slots_payload: declined_payload)
+          return unless refusal.standalone?
+
+          acknowledged_payload = State::ConversationTaskManager
+            .new(slots_payload: declined_payload)
+            .clear_optional_sales_offer
+
+          Core::Result.success(payload: response_persister.persist_static_response(
+            prospect: prospect,
+            conversation_state: conversation_state,
+            slots_payload: acknowledged_payload,
+            reply_message: SALES_OFFER_DECLINED_MESSAGE,
+            needs_human_support: false,
+            action_name: nil,
+            active_topic: conversation_state.active_topic,
+            active_flow: conversation_state.active_flow,
+            pending_question: nil,
+            flow_status: "active",
+            end_reason: nil
+          ))
+        end
+
         def request_end_confirmation(prospect:, conversation_state:, interpretation:)
           mode = Core::ConversationControlPolicy.new(message: message, conversation_state: conversation_state, interpretation: interpretation).end_confirmation_mode
+          slots_payload = State::ConversationTaskManager
+            .new(slots_payload: conversation_state.slots_payload)
+            .clear_optional_sales_offer
           response_persister.persist_response(
             prospect: prospect,
             conversation_state: conversation_state,
-            slots_payload: conversation_state.slots_payload,
+            slots_payload: slots_payload,
             reply_type: :confirm_to_end_conversation,
             active_topic: conversation_state.active_topic,
             active_flow: conversation_state.active_flow,

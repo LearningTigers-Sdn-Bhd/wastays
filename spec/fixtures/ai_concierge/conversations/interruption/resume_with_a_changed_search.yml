@@ -29,7 +29,7 @@ turns:
   - guest: "is there parking?"
     expect:
       reply_matches: ["Parking is free"]
-      booking_status: suspended
+      booking_status: waiting_for_option_selection
 
   # Picked up with a search the saved list was never priced for. Showing that
   # list again quotes one room to a guest who asked for two -- and writing the

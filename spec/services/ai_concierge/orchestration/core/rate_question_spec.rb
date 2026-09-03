@@ -12,6 +12,7 @@ RSpec.describe AiConcierge::Orchestration::Core::RateQuestion do
     expect(asks_about_price?("what is the price for a room in august?")).to be(true)
     expect(asks_about_price?("how much per night?")).to be(true)
     expect(asks_about_price?("cost of the ocean villa?")).to be(true)
+    expect(asks_about_price?("find the cheapest room")).to be(true)
   end
 
   # "Room service" contains the word room and is never a room.

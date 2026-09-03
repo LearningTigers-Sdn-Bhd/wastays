@@ -151,8 +151,8 @@ class Guest < ApplicationRecord
     otp_sent_at.present? && otp_sent_at > RESEND_COOLDOWN.ago
   end
 
-  def magic_link_on_cooldown?
-    magic_token_expires_at.present? && magic_token_expires_at > (MAGIC_LINK_EXPIRY - RESEND_COOLDOWN).from_now
+  def magic_link_on_cooldown?(now: Time.current)
+    magic_token_expires_at.present? && magic_token_expires_at > now + MAGIC_LINK_EXPIRY - RESEND_COOLDOWN
   end
 
   def generate_otp!
@@ -170,11 +170,11 @@ class Guest < ApplicationRecord
     BCrypt::Password.new(otp_code_digest) == code
   end
 
-  def generate_magic_token!
+  def generate_magic_token!(now: Time.current)
     token = SecureRandom.urlsafe_base64(32)
     update!(
       magic_token_digest: Digest::SHA256.hexdigest(token),
-      magic_token_expires_at: MAGIC_LINK_EXPIRY.from_now
+      magic_token_expires_at: now + MAGIC_LINK_EXPIRY
     )
     token
   end

@@ -49,7 +49,7 @@ module HotelPortal
       # flyout, instead of fifteen anonymous ones.
       @_hotel_reports_sidebar_sections = [
         NavSection.new(label: "", items: [
-          NavItem.new(label: "Financial", search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability Payouts Breakdown", active: financial_nav_items.any?(&:active), icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
+          NavItem.new(label: "Financial", search_text: "Reports Financial Summary Manager Flash Daily Report Revenue Cashier Sales Cashier Activity Refund Extra Charge Daily Occupancy Outstanding Balance Deposit Liability Payouts Breakdown", active: financial_nav_items.any?(&:active), icon: "chart-bar", children: financial_nav_items, permission: "view_reports"),
           NavItem.new(label: "Compliance", search_text: "Reports Compliance Tax Tourism Tax SST Night Audit History Business Date Close", active: compliance_nav_items.any?(&:active), icon: "calculator", children: compliance_nav_items, permission: "view_reports"),
           NavItem.new(label: "Guest", search_text: "Reports Guest Arrivals Departures Checkout Registration Cards", active: guest_nav_items.any?(&:active), icon: "users", children: guest_nav_items, permission: "view_reports"),
           NavItem.new(label: "Logs", search_text: "Logs Operation Notification Inventory Audit Tracking History Security", active: log_nav_items.any?(&:active), icon: "file-text", children: log_nav_items, permission: "view_audit_logs")

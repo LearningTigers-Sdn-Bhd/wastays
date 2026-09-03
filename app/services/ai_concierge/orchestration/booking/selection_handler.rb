@@ -43,8 +43,16 @@ module AiConcierge
             )
           end
 
-          selected_option = result["selected_option"]
+          continue_with_option(
+            conversation_state: conversation_state,
+            active_branch: active_branch,
+            selected_option: result["selected_option"]
+          )
+        end
+
+        def continue_with_option(conversation_state:, active_branch:, selected_option:)
           rate_plans = Array(selected_option["rate_plans"])
+          active_branch["viewed_option"] = nil
 
           # Both lists are answered by position, so a number on this turn is the
           # row of the catalogue and cannot also be a row of the rate list. A

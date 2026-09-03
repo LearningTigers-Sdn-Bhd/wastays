@@ -119,7 +119,7 @@ module Onboarding
       row.merge(
         "name" => code.name,
         "code" => code.code,
-        "payment_method_type" => code.system_key == "cash_payment" ? "cash" : "bank_gateway",
+        "payment_method_type" => PaymentMethods::EnsureDefaults::CASH_SYSTEM_KEYS.include?(code.system_key) ? "cash" : "bank_gateway",
         "guest_advance" => (code.category == "booking_payment").to_s
       )
     end

@@ -127,13 +127,16 @@ module AiConcierge
         return "" if options.empty?
 
         with_dates = distinct_stays(options).many?
-        options.map { |option| option_row(option, with_dates: with_dates) }.join("\n")
+        options.each_with_index.map { |option, index| option_row(option, with_dates: with_dates, first: index.zero?) }.join("\n")
       end
 
-      def option_row(option, with_dates:)
+      def option_row(option, with_dates:, first: false)
         parts = [ "*#{option['position']}. #{option['room_type_name']}*" ]
         parts << format_date_range(option["check_in"], option["check_out"]) if with_dates
-        [ parts.join(" · "), from_price(option) ].compact.join(" — ")
+        row = [ parts.join(" · "), from_price(option) ].compact.join(" — ")
+        return row unless first && context[:price_exploration]
+
+        "Lowest starting option: #{row}"
       end
 
       def catalogue_options(groups)

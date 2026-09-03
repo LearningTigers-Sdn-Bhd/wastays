@@ -7,6 +7,17 @@ RSpec.describe HotelPortal::Reports::DailyReportTransactionRow do
   let(:booking) { create(:booking, hotel: hotel, guest_name: "Jane Doe") }
   let(:folio) { create(:booking_folio, booking: booking, hotel: hotel) }
 
+  it "shows the booking number and confirmation code as separate references" do
+    booking.update_columns(reservation_reference: "RES-2026-0042", confirmation_token: "ABC123")
+    transaction = create(:folio_transaction, booking_folio: folio, category: "accommodation", amount: 100)
+
+    row = described_class.new(transaction)
+
+    expect(row.booking_number).to eq("RES-2026-0042")
+    expect(row.booking_reference).to eq("RES-2026-0042")
+    expect(row.confirmation_code).to eq("ABC123")
+  end
+
   it "preserves a custom service identity" do
     code = create(:transaction_code, hotel: hotel, code: "ISLAND_HOP", name: "Island Hopping", kind: "charge", category: "other")
     transaction = create(:folio_transaction, booking_folio: folio, transaction_code: code, category: "other", amount: 100, description: "Two guests")
@@ -64,7 +75,22 @@ RSpec.describe HotelPortal::Reports::DailyReportTransactionRow do
       metadata: { payment_transaction_id: 42, posting_source: "gateway_payment" }
     )
 
-    expect(described_class.new(transaction).received_by).to eq("Payment Gateway")
+    expect(described_class.new(transaction, origin: "Gateway").received_by).to eq("Payment Gateway")
+  end
+
+  it "does not label a manual-booking payment as a gateway receipt" do
+    direct = create(:payment_transaction, booking: booking, gateway: "manual", event_source: "manual_booking")
+    transaction = create(
+      :folio_transaction,
+      booking_folio: folio,
+      transaction_type: "payment",
+      category: "booking_payment",
+      amount: 50,
+      user: nil,
+      metadata: { payment_transaction_id: direct.id, posting_source: "gateway_payment" }
+    )
+
+    expect(described_class.new(transaction).received_by).to eq("—")
   end
 
   it "uses the staff name for manual receipts and an em dash for unattributed records" do
@@ -136,7 +162,7 @@ RSpec.describe HotelPortal::Reports::DailyReportTransactionRow do
     expect(described_class.new(transaction).room_details).to be_nil
   end
 
-  it "exposes the folio invoice number, falling back to an em dash" do
+  it "exposes the formatted folio invoice number, falling back to an em dash" do
     hotel = create(:hotel)
     booking = create(:booking, hotel: hotel)
     folio = create(:booking_folio, booking: booking, hotel: hotel, invoice_number: 20260007)
@@ -144,9 +170,10 @@ RSpec.describe HotelPortal::Reports::DailyReportTransactionRow do
 
     row = described_class.new(transaction)
 
-    expect(row.invoice_number).to eq(20260007)
+    expect(row.invoice_number).to eq(folio.invoice_reference)
+    expect(row.invoice_number).not_to eq("20260007")
 
-    folio.update_columns(invoice_number: nil, invoice_year: nil)
+    folio.update_columns(invoice_number: nil, invoice_year: nil, invoice_reference: nil)
     expect(described_class.new(transaction.reload).invoice_number).to eq("—")
   end
 end

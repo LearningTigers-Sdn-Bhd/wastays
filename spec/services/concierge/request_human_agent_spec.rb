@@ -29,6 +29,27 @@ RSpec.describe Concierge::RequestHumanAgent do
     expect(conversation.messages.last.body).to include("asked to speak to a team member")
   end
 
+  it "uses the approved support reply for booking support" do
+    described_class.new(conversation: conversation, reason: :booking_support).call
+
+    message = conversation.messages.last
+    expect(message.sender_role).to eq("bot")
+    expect(message.body).to include("I have asked the hotel team", "continue chatting while you wait")
+    expect(prospect.prospect_conversation_state.slots_payload.dig("ui_task", "suggestion_group")).to eq("staff_wait")
+  end
+
+  it "adds the booking-support reply once without restarting an existing staff wait" do
+    described_class.new(conversation: conversation).call
+    first_asked_at = conversation.reload.human_requested_at
+
+    expect {
+      2.times { described_class.new(conversation: conversation, reason: :booking_support).call }
+    }.to change { conversation.messages.where(sender_role: "bot").count }.by(1)
+
+    expect(conversation.reload.human_requested_at).to eq(first_asked_at)
+    expect(conversation.messages.last.body).to include("I have asked the hotel team")
+  end
+
   # Asked twice is still asked once: the first ask is what says how long they
   # have been waiting.
   it "does not restart the wait when the guest asks again" do

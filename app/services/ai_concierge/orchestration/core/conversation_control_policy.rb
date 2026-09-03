@@ -9,11 +9,13 @@ module AiConcierge
       end
 
       def cancel_attempt?
-        return true if normalized_message.match?(/\bcancel\b/) && normalized_message.match?(/\b(?:attempt|booking|reservation|quotation|quote)\b/)
-        return true if normalized_message.match?(/\b(?:drop|forget)\b/) && normalized_message.match?(/\b(?:room|booking|reservation|quotation|quote)\b/)
+        return true if multilingual_attempt_cancellation?
+        return true if normalized_message.match?(/\bcancel\b/) && normalized_message.match?(/\b(?:attempt|quotation|quote)\b/)
         return false unless active_booking_attempt?
+        return false if existing_booking_wording?
+        return true if normalized_message.match?(/\A(?:drop|forget) (?:the |this )?(?:room|booking|reservation|quote|quotation)\z/)
 
-        normalized_message.match?(/\A(?:leave it|changed my mind|i changed my mind|not that booking|not that reservation|drop it)\z/)
+        normalized_message.match?(/\A(?:leave it|changed my mind|i changed my mind|not that booking|not that reservation|drop it|forget it)\z/)
       end
 
       def wait_time_end?
@@ -74,7 +76,18 @@ module AiConcierge
       end
 
       def normalized_message
-        @normalized_message ||= message.downcase.gsub(/[^a-z0-9']+/, " ").squish
+        @normalized_message ||= message.downcase.gsub(/[^\p{Alnum}']+/, " ").squish
+      end
+
+      def multilingual_attempt_cancellation?
+        normalized_message.match?(/\b(?:batalkan|hentikan)\b.*\b(?:percubaan|sebut harga)\b/) ||
+          normalized_message.match?(/取消.*(?:尝试|報價|报价)/)
+      end
+
+      def existing_booking_wording?
+        normalized_message.match?(/\b(?:my|existing|current|upcoming)\s+(?:booking|reservation|stay)\b/) ||
+          normalized_message.match?(/\bi have (?:a )?(?:booking|reservation)\b/) ||
+          normalized_message.match?(/\btempahan saya\b/) || normalized_message.match?(/我的.*(?:预订|預訂)/)
       end
       end
     end

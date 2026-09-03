@@ -56,7 +56,10 @@ module Public
       # they wait -- see Concierge::RequestHumanAgent for why that is not a
       # handover.
       def request_agent
-        ::Concierge::RequestHumanAgent.new(conversation: current_conversation).call
+        ::Concierge::RequestHumanAgent.new(
+          conversation: current_conversation,
+          reason: params[:reason]
+        ).call
 
         redirect_to concierge_chat_path(@hotel)
       end
@@ -75,6 +78,7 @@ module Public
       def load_thread(conversation = nil)
         @conversation = conversation || current_conversation
         @messages = @conversation ? @conversation.messages.includes(:sender_user).to_a : []
+        @chat_input = ::Concierge::ChatInputPresenter.new(conversation: @conversation, error: @error)
       end
 
       def current_conversation

@@ -13,7 +13,29 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     create(:folio_transaction, booking_folio: folio, transaction_type: "payment", **attrs)
   end
 
-  it "splits payments into Advance (booking_payment) vs Settlement (everything else)" do
+  it "summarizes and filters all handling types without changing at-desk totals" do
+    cash = payment(category: "cash", amount: 100, posting_date: start_date)
+    gateway_payment = create(:payment_transaction, booking:, gateway: "razorpay")
+    gateway = payment(
+      category: "gateway_payment", amount: 70, posting_date: start_date,
+      metadata: { payment_transaction_id: gateway_payment.id, posting_source: "gateway_payment" }
+    )
+
+    report = described_class.new(hotel:, start_date:, end_date:).call
+    expect(report.transactions).to contain_exactly(cash, gateway)
+    expect(report.handling_by_transaction_id).to include(cash.id => "at_desk", gateway.id => "gateway")
+    expect(report.totals[:net_cash]).to eq(100.to_d)
+    expect(report.all_totals[:net_cash]).to eq(170.to_d)
+    expect(report.all_mode_summary_rows.map { |row| row[:handling] }).to contain_exactly("at_desk", "gateway")
+
+    filtered = described_class.new(
+      hotel:, start_date:, end_date:, handling: [ "gateway" ], currencies: [ "MYR" ], stages: [ "Settlement" ]
+    ).call
+    expect(filtered.transactions).to contain_exactly(gateway)
+    expect(filtered.all_totals[:net_cash]).to eq(70.to_d)
+  end
+
+  it "labels advances, settlements, and refunds with one stage rule" do
     advance = payment(category: "booking_payment", amount: 100, posting_date: Date.new(2026, 6, 16))
     settlement = payment(category: "cash", amount: 360, posting_date: Date.new(2026, 6, 17))
     refund = payment(category: "refund", amount: -50, posting_date: Date.new(2026, 6, 18))
@@ -21,9 +43,11 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-    expect(report.advance_scope).to contain_exactly(advance)
-    expect(report.settlement_scope).to contain_exactly(settlement, refund)
-    expect(report.advance_scope).not_to include(charge)
+    expect(report.cash_transactions).to contain_exactly(advance, settlement, refund)
+    expect(report.section_by_transaction_id[advance.id]).to eq("Advance")
+    expect(report.section_by_transaction_id[settlement.id]).to eq("Settlement")
+    expect(report.section_by_transaction_id[refund.id]).to eq("Refund")
+    expect(report.cash_transactions).not_to include(charge)
   end
 
 
@@ -72,15 +96,16 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
     expect(ota_credit).to be_ota_collected_credit
-    expect(report.ota_credit_scope).to contain_exactly(ota_credit)
-    expect(report.ota_credit_totals).to eq(
+    expect(report.non_cash_transactions).to contain_exactly(ota_credit)
+    expect(report.non_cash_totals).to eq(
       movement_count: 1,
       total_collected: 90.to_d,
       total_refunded: 0.to_d,
       net_cash: 90.to_d
     )
-    expect(report.advance_scope).to contain_exactly(bank_advance)
-    expect(report.settlement_scope).to contain_exactly(cash)
+    expect(report.cash_transactions).to contain_exactly(bank_advance, cash)
+    expect(report.section_by_transaction_id[bank_advance.id]).to eq("Advance")
+    expect(report.section_by_transaction_id[cash.id]).to eq("Settlement")
     expect(report.totals).to eq(
       movement_count: 2,
       total_collected: 35.to_d,
@@ -135,10 +160,10 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-    expect(report.ota_credit_scope).to contain_exactly(ota_credit, ota_refund)
+    expect(report.non_cash_transactions).to contain_exactly(ota_credit, ota_refund)
     expect(report.totals[:movement_count]).to eq(0)
     expect(report.grand_total).to eq(amount_in: 0.to_d, amount_out: 0.to_d, balance: 0.to_d)
-    expect(report.ota_credit_totals).to include(total_collected: 100.to_d, total_refunded: 25.to_d, net_cash: 75.to_d)
+    expect(report.non_cash_totals).to include(total_collected: 100.to_d, total_refunded: 25.to_d, net_cash: 75.to_d)
   end
 
   it "excludes Razorpay movements from lists, totals, and summaries" do
@@ -166,9 +191,8 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-    expect(report.advance_scope).not_to include(advance)
-    expect(report.settlement_scope).not_to include(settlement, refund)
-    expect(report.settlement_scope).to contain_exactly(cash)
+    expect(report.cash_transactions).not_to include(advance, settlement, refund)
+    expect(report.cash_transactions).to contain_exactly(cash)
     expect(report.totals).to eq(
       movement_count: 1,
       total_collected: 360.to_d,
@@ -210,8 +234,8 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-    expect(report.settlement_scope).not_to include(gateway_recovery)
-    expect(report.settlement_scope).to contain_exactly(card_terminal)
+    expect(report.cash_transactions).not_to include(gateway_recovery)
+    expect(report.cash_transactions).to contain_exactly(card_terminal)
     expect(report.grand_total[:balance]).to eq(300.to_d)
   end
 
@@ -229,9 +253,12 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-    expect(report.advance_scope).to contain_exactly(advance, refund)
+    expect(report.cash_transactions).to contain_exactly(advance, refund)
+    expect(report.section_by_transaction_id[refund.id]).to eq("Refund")
     bank_advance = report.mode_summary_rows.find { |row| row[:mode] == "Bank Transfer Payment" && row[:section] == "Advance" }
-    expect(bank_advance).to include(amount_in: 100.to_d, amount_out: 40.to_d, balance: 60.to_d)
+    bank_refund = report.mode_summary_rows.find { |row| row[:mode] == "Bank Transfer Payment" && row[:section] == "Refund" }
+    expect(bank_advance).to include(amount_in: 100.to_d, amount_out: 0.to_d, balance: 100.to_d)
+    expect(bank_refund).to include(amount_in: 0.to_d, amount_out: 40.to_d, balance: -40.to_d)
   end
 
   it "uses refund source metadata as the mode when no original payment is linked" do
@@ -244,9 +271,9 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
 
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
-    expect(report.settlement_scope).to contain_exactly(refund)
+    expect(report.cash_transactions).to contain_exactly(refund)
     expect(report.mode_by_transaction_id[refund.id]).to eq("Cash Payment")
-    cash = report.mode_summary_rows.find { |row| row[:mode] == "Cash Payment" && row[:section] == "Settlement" }
+    cash = report.mode_summary_rows.find { |row| row[:mode] == "Cash Payment" && row[:section] == "Refund" }
     expect(cash).to include(amount_in: 0.to_d, amount_out: 25.to_d, balance: -25.to_d)
   end
 
@@ -289,7 +316,9 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
     cash_settlement = report.mode_summary_rows.find { |r| r[:mode] == "Cash Payment" && r[:section] == "Settlement" }
-    expect(cash_settlement).to include(amount_in: 2_070.79.to_d, amount_out: 50.to_d, balance: 2_020.79.to_d)
+    cash_refund = report.mode_summary_rows.find { |r| r[:mode] == "Cash Payment" && r[:section] == "Refund" }
+    expect(cash_settlement).to include(amount_in: 2_070.79.to_d, amount_out: 0.to_d, balance: 2_070.79.to_d)
+    expect(cash_refund).to include(amount_in: 0.to_d, amount_out: 50.to_d, balance: -50.to_d)
 
     cash_total = report.mode_totals.find { |r| r[:mode] == "Cash Payment" }
     expect(cash_total).to include(amount_in: 2_070.79.to_d, amount_out: 50.to_d, balance: 2_020.79.to_d)
@@ -309,7 +338,10 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     expect(advance_row).to include(amount_in: 1_205.20.to_d, amount_out: 0.to_d, balance: 1_205.20.to_d)
 
     settlement_row = report.currency_summary_rows.find { |r| r[:currency] == "MYR" && r[:section] == "Settlement" }
-    expect(settlement_row).to include(amount_in: 258.56.to_d, amount_out: 50.to_d, balance: 208.56.to_d)
+    expect(settlement_row).to include(amount_in: 258.56.to_d, amount_out: 0.to_d, balance: 258.56.to_d)
+
+    refund_row = report.currency_summary_rows.find { |r| r[:currency] == "MYR" && r[:section] == "Refund" }
+    expect(refund_row).to include(amount_in: 0.to_d, amount_out: 50.to_d, balance: -50.to_d)
 
     expect(report.grand_total).to eq(amount_in: 1_463.76.to_d, amount_out: 50.to_d, balance: 1_413.76.to_d)
   end
@@ -323,8 +355,8 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
       start_time: "08:00", end_time: "12:00"
     ).call
 
-    expect(report.settlement_scope).to contain_exactly(morning)
-    expect(report.settlement_scope).not_to include(afternoon)
+    expect(report.cash_transactions).to contain_exactly(morning)
+    expect(report.cash_transactions).not_to include(afternoon)
   end
 
   it "restricts to explicit transaction_ids when given" do
@@ -336,7 +368,109 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
       transaction_ids: [ kept.id ]
     ).call
 
-    expect(report.settlement_scope).to contain_exactly(kept)
-    expect(report.settlement_scope).not_to include(dropped)
+    expect(report.cash_transactions).to contain_exactly(kept)
+    expect(report.cash_transactions).not_to include(dropped)
+  end
+  it "keeps a card-terminal payment that carries the gateway_payment category" do
+    card_code = hotel.transaction_codes.find_by!(system_key: "card_payment")
+    card_terminal = payment(
+      category: "gateway_payment",
+      amount: 300,
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: card_code,
+      metadata: { payment_source: "card", posting_source: "staff" }
+    )
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.cash_transactions).to contain_exactly(card_terminal)
+    expect(report.non_cash_transactions).to be_empty
+    expect(report.totals[:net_cash]).to eq(300.to_d)
+  end
+
+  it "keeps a payment taken on a payment method the hotel defined itself" do
+    qr_code = create(
+      :transaction_code,
+      hotel: hotel, kind: "payment", category: "gateway_payment",
+      code: "QR", name: "DuitNow QR", system_key: "qr_payment", system_required: false
+    )
+    qr_payment = payment(
+      category: "gateway_payment",
+      amount: 780,
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: qr_code,
+      metadata: { posting_source: "staff" }
+    )
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.cash_transactions).to contain_exactly(qr_payment)
+    expect(report.mode_by_transaction_id[qr_payment.id]).to eq("DuitNow QR")
+    expect(report.totals[:net_cash]).to eq(780.to_d)
+  end
+
+  it "keeps a payment that manual booking recorded, not treating its link as a gateway charge" do
+    direct = create(:payment_transaction, booking: booking, gateway: "manual", event_source: "manual_booking")
+    bank_code = hotel.transaction_codes.find_by!(system_key: "bank_payment")
+    staff_transfer = payment(
+      category: "booking_payment",
+      amount: 500,
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: bank_code,
+      metadata: { payment_transaction_id: direct.id, posting_source: "gateway_payment" }
+    )
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.cash_transactions).to contain_exactly(staff_transfer)
+    expect(report.non_cash_transactions).to be_empty
+    expect(report.totals[:net_cash]).to eq(500.to_d)
+  end
+
+  it "names the origin of every row no cashier handled, gateway before OTA" do
+    ota_code = hotel.transaction_codes.find_by!(system_key: "ota_collected_payment")
+    party = create(
+      :booking_billing_party, booking: booking, hotel: hotel, party_kind: "ota",
+      booking_source: create(:booking_source, key: "ota_origin_test", label: "OTA Origin Test"),
+      booking_guest: nil, hotel_corporate_account: nil
+    )
+    ota_folio = create(
+      :booking_folio, booking: booking, hotel: hotel, folio_type: "external", payer_type: "ota",
+      is_primary: false, booking_billing_party: party, hotel_corporate_account: nil
+    )
+    ota_credit = create(
+      :folio_transaction, booking_folio: ota_folio, transaction_type: "payment",
+      category: "booking_payment", amount: 90, posting_date: Date.new(2026, 6, 17),
+      transaction_code: ota_code, metadata: { posting_source: "ota_credit", receipt_policy: "none" }
+    )
+    online = create(:payment_transaction, booking: booking, gateway: "razorpay")
+    gateway_charge = payment(
+      category: "gateway_payment", amount: 200, posting_date: Date.new(2026, 6, 17),
+      metadata: { payment_transaction_id: online.id, posting_source: "gateway_payment" }
+    )
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.non_cash_transactions).to eq([ gateway_charge, ota_credit ])
+    expect(report.non_cash_origin_by_transaction_id[gateway_charge.id]).to eq("Gateway")
+    expect(report.non_cash_origin_by_transaction_id[ota_credit.id]).to eq("OTA collected")
+    expect(report.cash_transactions).to be_empty
+  end
+
+  it "orders payment modes the way the hotel ordered its payment methods" do
+    PaymentMethods::EnsureDefaults.call(hotel)
+    cash_code = hotel.transaction_codes.find_by!(system_key: "cash_payment")
+    card_code = hotel.transaction_codes.find_by!(system_key: "card_payment")
+    hotel.hotel_payment_methods.find_by!(transaction_code: card_code).update!(position: 0)
+    hotel.hotel_payment_methods.find_by!(transaction_code: cash_code).update!(position: 1)
+
+    card = payment(category: "cash", amount: 100, posting_date: Date.new(2026, 6, 17), transaction_code: card_code)
+    cash = payment(category: "cash", amount: 200, posting_date: Date.new(2026, 6, 17), transaction_code: cash_code)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.mode_order.first(2)).to eq([ "Card Payment", "Cash Payment" ])
+    expect(report.mode_totals.map { |row| row[:mode] }).to eq([ "Card Payment", "Cash Payment" ])
+    expect(report.cash_transactions).to eq([ card, cash ])
   end
 end

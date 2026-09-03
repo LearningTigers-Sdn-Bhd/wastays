@@ -436,7 +436,9 @@ RSpec.describe "Hotel onboarding shell", type: :system do
     expect(page).to have_no_css("h2", text: "How can guests pay?")
     expect(page).to have_no_css("th", text: "Surcharge")
     expect(page).to have_css("tr.panel-record-table__row", text: "Cash Payment")
+    expect(page).to have_css("tr.panel-record-table__row", text: "Cash Prepayment")
     expect(page).to have_no_css("button[aria-label='Remove Cash Payment']")
+    expect(page).to have_no_css("button[aria-label='Remove Cash Prepayment']")
     expect(page).to have_css("button[aria-label^='A standard payment code']")
     click_button "Save & continue"
 
@@ -447,6 +449,12 @@ RSpec.describe "Hotel onboarding shell", type: :system do
 
     expect(page).to have_css("h1", text: "Channel manager")
     expect(hotel.hotel_payment_methods.active).to be_present
+    expect(hotel.hotel_payment_methods.joins(:transaction_code).find_by!(transaction_codes: { system_key: "cash_payment" }))
+      .to have_attributes(payment_method_type: "cash", guest_advance: false, default_cash: true)
+    expect(hotel.hotel_payment_methods.joins(:transaction_code).find_by!(transaction_codes: { system_key: "cash_prepayment" }))
+      .to have_attributes(payment_method_type: "cash", guest_advance: true, default_cash: false)
+    expect(hotel.hotel_payment_methods.joins(:transaction_code).find_by!(transaction_codes: { system_key: "card_prepayment" }))
+      .to have_attributes(payment_method_type: "bank_gateway", guest_advance: true, default_cash: false)
     expect(Invitation.count).to eq(0)
   end
 end

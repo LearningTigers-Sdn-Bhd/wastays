@@ -77,11 +77,83 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
     expect(result).to be_success
-    expect(result.payload[:reply_message]).to include("room rates depend on the booking dates and room types")
-    expect(result.payload[:reply_message]).to include("Which date or month do you plan to arrive for check-in?")
-    expect(result.payload[:action_name]).to eq("request_quote")
+    expect(result.payload[:reply_message]).to include("I can compare current room prices")
+    expect(result.payload[:reply_message]).to include("Which date or month are you considering for check-in?")
+    expect(result.payload[:action_name]).to be_nil
     expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
     expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("booking_timing")
+    expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
+  end
+
+  it "keeps a month-only price answer in shopping language", frozen_time: Date.new(2026, 8, 28) do
+    script_messages(
+      "I want to check room prices" => interpretation(intent: "booking_search", topic: "booking_search", slots: {}),
+      "next month" => interpretation(
+        intent: "booking_search",
+        topic: "booking_search",
+        slots: { "target_month" => 9, "target_year" => 2026 }
+      )
+    )
+
+    described_class.new(hotel: hotel, message: "I want to check room prices", phone: "+60123456789").call
+    result = described_class.new(hotel: hotel, message: "next month", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message])
+      .to eq("For September 2026, should I compare early September (1–10), mid-September (11–20), or late September (21–30)? You can also give me exact dates.")
+    expect(result.payload[:reply_message]).not_to include("make a booking")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
+  end
+
+  it "accepts end month wording without leaving price exploration", frozen_time: Date.new(2026, 8, 28) do
+    script_messages(
+      "I want to check room prices" => interpretation(intent: "booking_search", topic: "booking_search", slots: {}),
+      "next month on end month" => interpretation(
+        intent: "booking_search",
+        topic: "booking_search",
+        slots: { "target_month" => 9, "target_year" => 2026 }
+      )
+    )
+
+    result = nil
+    expect do
+      described_class.new(hotel: hotel, message: "I want to check room prices", phone: "+60123456789").call
+      result = described_class.new(hotel: hotel, message: "next month on end month", phone: "+60123456789").call
+    end.not_to change(BookingQuote, :count)
+
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to eq("For late September 2026, how many nights would you like me to compare?")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
+    expect(state.slots_payload.dig("booking_task", "branch", "month_segment")).to eq("late")
+  end
+
+  it "asks again when a price month segment is conflicting", frozen_time: Date.new(2026, 8, 28) do
+    script_messages(
+      "I want to check room prices" => interpretation(intent: "booking_search", topic: "booking_search", slots: {}),
+      "next month" => interpretation(
+        intent: "booking_search",
+        topic: "booking_search",
+        slots: { "target_month" => 9, "target_year" => 2026 }
+      ),
+      "early or end of the month" => interpretation(
+        intent: "booking_search",
+        topic: "booking_search",
+        slots: { "target_month" => 9, "target_year" => 2026, "month_segment" => "late" }
+      )
+    )
+
+    described_class.new(hotel: hotel, message: "I want to check room prices", phone: "+60123456789").call
+    described_class.new(hotel: hotel, message: "next month", phone: "+60123456789").call
+    result = described_class.new(hotel: hotel, message: "early or end of the month", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
+
+    expect(result.payload[:reply_message]).to include("early September (1–10)", "late September (21–30)")
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("booking_task", "purpose")).to eq("price_exploration")
+    expect(state.slots_payload.dig("booking_task", "branch", "month_segment")).to be_blank
   end
 
   it "derives duration from a complete date range answer" do
@@ -188,22 +260,67 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     end
   end
 
-  it "does not end the conversation on a greeting" do
-    script_model("hello", interpretation(intent: "greeting", conversation_signals: { "end_conversation" => true }))
+  it "answers an idle greeting without consulting the agent loop or starting a booking" do
+    expect(AiConcierge::Orchestration::AgentLoop::RunTurn).not_to receive(:new)
 
     result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789").call
+    state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
-    # A greeting reaches no tool, so the reply is the model's own words --
-    # the one place the loop lets it write to the guest. What matters here is
-    # that the turn did not read as goodbye.
-    expect(result.payload[:reply_message]).to be_present
-    expect(result.payload[:reply_message]).not_to include("No problem, please let me know if you need anything.")
+    expect(result.payload[:reply_message]).to eq(
+      "Hello! Welcome to #{hotel.name}. I can help you find the right stay, check prices, " \
+        "answer hotel questions, or access an existing booking. What can I help you with today?"
+    )
+    expect(result.payload[:action_name]).to be_nil
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
+    expect(state.slots_payload.dig("booking_task", "pending_question")).to be_nil
+    expect(state.pending_question).to be_nil
+  end
+
+  it "keeps a pending secure booking lookup ahead of greetings and the agent loop" do
+    prospect = create(:prospect, hotel: hotel, phone_number: nil)
+    conversation = create(:conversation, hotel: hotel, prospect: prospect, channel: "web")
+    manager = AiConcierge::State::ConversationTaskManager.new(slots_payload: {})
+    create(
+      :prospect_conversation_state,
+      prospect: prospect,
+      slots_payload: manager.request_existing_booking_code,
+      active_topic: "existing_booking",
+      active_flow: "existing_booking",
+      pending_question: "confirmation_code"
+    )
+    expect(AiConcierge::Orchestration::AgentLoop::RunTurn).not_to receive(:new)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "hello",
+      prospect_public_id: prospect.public_id,
+      channel: conversation.channel
+    ).call
+
+      expect(result.payload[:reply_message]).to include("Enter your booking confirmation code")
+  end
+
+  it "offers a portal link before asking an anonymous guest for a confirmation code" do
+    prospect = create(:prospect, hotel: hotel, phone_number: nil)
+    conversation = create(:conversation, hotel: hotel, prospect: prospect, channel: "web")
+    expect(AiConcierge::Orchestration::AgentLoop::RunTurn).not_to receive(:new)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "I have an existing booking",
+      prospect_public_id: prospect.public_id,
+      channel: conversation.channel
+    ).call
+
+    expect(result.payload[:reply_message]).to include("Guest Portal", "secure login link")
+    expect(prospect.prospect_conversation_state.reload.slots_payload.dig("existing_booking_task", "status"))
+      .to eq("portal_offered")
   end
 
   it "returns an internal server error when orchestration fails unexpectedly" do
     allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_raise(StandardError, "boom")
 
-    result = described_class.new(hotel: hotel, message: "hello", phone: "+60123456789").call
+    result = described_class.new(hotel: hotel, message: "Can you help me?", phone: "+60123456789").call
 
     expect(result).not_to be_success
     expect(result.status).to eq(:internal_server_error)
@@ -363,7 +480,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     cancel_reply = described_class.new(hotel: hotel, message: "cancel attempt", phone: "+60123456789").call
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
-    expect(cancel_reply.payload[:reply_message]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(cancel_reply.payload[:reply_message]).to eq("I stopped this booking attempt. You can start a new booking or ask about the hotel.")
     expect(state.flow_status).to eq("active")
     expect(state.pending_question).to be_nil
     expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
@@ -381,7 +498,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
 
     script_model("cancel my attempt for booking", interpretation(intent: "reset", conversation_signals: { "is_reset" => true }))
     cancel_reply = described_class.new(hotel: hotel, message: "cancel my attempt for booking", phone: "+60123456789").call
-    expect(cancel_reply.payload[:reply_message]).to include("end the conversation")
+    expect(cancel_reply.payload[:reply_message]).to include("I stopped this booking attempt")
 
     script_model("end conversation", interpretation(intent: "greeting", conversation_signals: { "end_conversation" => true }))
     end_reply = described_class.new(hotel: hotel, message: "end conversation", phone: "+60123456789").call
@@ -400,7 +517,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     result = described_class.new(hotel: hotel, message: "cancel my attempt for booking", phone: "+60123456789").call
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
-    expect(result.payload[:reply_message]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(result.payload[:reply_message]).to eq("I stopped this booking attempt. You can start a new booking or ask about the hotel.")
     expect(state.pending_question).to be_nil
     expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
     expect(state.slots_payload.dig("booking_task", "branch", "target_month")).to be_nil
@@ -434,7 +551,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     result = described_class.new(hotel: hotel, message: "changed my mind", phone: "+60123456789").call
     state = prospect.reload.prospect_conversation_state
 
-    expect(result.payload[:reply_message]).to eq("I've cancelled your booking attempt. Would you like to start a new booking, ask about hotel policies or information, or end the conversation?")
+    expect(result.payload[:reply_message]).to eq("I stopped this booking attempt. You can start a new booking or ask about the hotel.")
     expect(state.pending_question).to be_nil
     expect(state.active_flow).to be_nil
     expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
@@ -453,12 +570,12 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     result = described_class.new(hotel: hotel, message: "forget the room", phone: "+60123456789").call
     state = hotel.prospects.lookup_by_phone("+60123456789").first.prospect_conversation_state.reload
 
-    expect(result.payload[:reply_message]).to include("I've cancelled your booking attempt")
+    expect(result.payload[:reply_message]).to include("I stopped this booking attempt")
     expect(state.flow_status).to eq("active")
     expect(state.slots_payload.dig("booking_task", "status")).to eq("idle")
   end
 
-  it "keeps a suspended confirmation through information turns and resumes on yes" do
+  it "keeps confirmation active through an information turn and confirms on yes" do
     prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
     room_type = create(:room_type, hotel: hotel, name: "Deluxe Room")
     selected_option = {
@@ -511,7 +628,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     state_after_info = prospect.reload.prospect_conversation_state
 
     expect(info_reply.payload[:reply_message]).to be_present
-    expect(state_after_info.slots_payload.dig("booking_task", "status")).to eq("suspended")
+    expect(state_after_info.slots_payload.dig("booking_task", "status")).to eq("waiting_for_confirmation")
     expect(state_after_info.slots_payload.dig("booking_task", "pending_question")).to eq("confirm_selection")
     expect(state_after_info.slots_payload).not_to have_key("active")
     expect(state_after_info.slots_payload).not_to have_key("paused_flows")
@@ -525,7 +642,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
   # Frozen so "next month" is the June the scripted slots name, and 23 June
   # is still to come: an implicit year now rolls forward, and a wall-clock
   # June would make this thread a booking for a date already gone.
-  it "resumes slot collection with a date after a hotel information interruption", frozen_time: Date.new(2026, 5, 15) do
+  it "continues slot collection with a date after a hotel information question", frozen_time: Date.new(2026, 5, 15) do
     hotel.update!(amenities: [ "swimming_pool" ])
 
     script_messages(
@@ -550,7 +667,7 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(state.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")
   end
 
-  it "suspends active booking for guarded hotel knowledge and resumes afterward", frozen_time: Date.new(2026, 5, 15) do
+  it "answers hotel knowledge and repeats the active booking question", frozen_time: Date.new(2026, 5, 15) do
     stub_knowledge_search(
       "general_info" => [],
       "faq,general_info,policy" => [
@@ -572,14 +689,14 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
 
     expect(first_reply.payload[:reply_message]).to include("exact check-in date")
     expect(info_reply.payload[:reply_message]).to include("Parking is available near the lobby")
-    expect(state_after_info.slots_payload.dig("booking_task", "status")).to eq("suspended")
+    expect(state_after_info.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
     expect(state_after_info.slots_payload.dig("booking_task", "pending_question")).to eq("specific_timing")
     expect(resume_reply.payload[:reply_message]).to eq("How many days and nights will you be staying?")
     expect(state_after_resume.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
     expect(state_after_resume.slots_payload.dig("booking_task", "branch", "check_in")).to eq("2026-06-23")
   end
 
-  it "answers booking advice questions while a booking is suspended instead of resuming stale search" do
+  it "answers booking advice questions while keeping the pending booking question" do
     hotel.property_policy.update!(cancellation_policy: "Full payment is required before confirmation.")
 
     script_messages(
@@ -598,8 +715,8 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     expect(info_reply.payload[:reply_message]).to be_present
     expect(policy_reply.payload[:reply_message]).to include("You can cancel under these terms")
     expect(policy_reply.payload[:reply_message]).not_to include("Sorry, I couldn't find any rooms")
-    expect(state.slots_payload.dig("booking_task", "status")).to eq("suspended")
-    expect(state.slots_payload.dig("information_task", "intent")).to eq("hotel_policy")
+    expect(state.slots_payload.dig("booking_task", "status")).to eq("collecting_slots")
+    expect(state.slots_payload.dig("booking_task", "pending_question")).to eq("duration")
   end
 
   it "resumes a saved list and selects the row the guest numbered" do

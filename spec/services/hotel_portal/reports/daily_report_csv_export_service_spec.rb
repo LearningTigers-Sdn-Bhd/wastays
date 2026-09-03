@@ -37,9 +37,12 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
         total_refunded: 0.to_d,
         net_cash: 100.to_d
       },
-      advance_scope: [],
-      settlement_scope: [],
+      cash_transactions: [],
+      non_cash_transactions: [],
+      non_cash_totals: { movement_count: 0, total_collected: 0.to_d, total_refunded: 0.to_d, net_cash: 0.to_d },
       mode_by_transaction_id: {},
+      section_by_transaction_id: {},
+      mode_order: [],
       mode_summary_rows: [],
       mode_totals: [],
       currency_summary_rows: [],
@@ -66,12 +69,13 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     )
   end
 
-  def generate(tab, charge_register: [])
+  def generate(tab, charge_register: [], cashier_view: "full")
     described_class.new(
       tab: tab,
       revenue_report: revenue_report,
       cashier_report: cashier_report,
-      charge_register: charge_register
+      charge_register: charge_register,
+      cashier_view: cashier_view
     ).generate
   end
 
@@ -81,9 +85,9 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     expect(csv).to start_with(described_class::BOM)
     expect(csv).to include(
       "Revenue (Accrual),Net Revenue,498.40,MYR",
-      "Cashier Sales (Cash Flow),Net Cash,100.00,MYR"
+      "Cashier Activity (Cash Flow),Net At Desk,100.00,MYR"
     )
-    expect(csv).not_to include("Daily Breakdown", "Advance")
+    expect(csv).not_to include("Daily Breakdown", "Activity By Payment Mode")
   end
 
   it "exports revenue analysis and the Revenue Register" do
@@ -107,13 +111,27 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
       posting_date: date,
       description: "Front desk cash"
     )
-    cashier_report.advance_scope = [ payment ]
+    cashier_report.cash_transactions = [ payment ]
     cashier_report.mode_by_transaction_id = { payment.id => "Cash Payment" }
+    cashier_report.section_by_transaction_id = { payment.id => "Settlement" }
+    cashier_report.non_cash_origin_by_transaction_id = {}
 
     csv = generate("cashier")
 
-    expect(csv).to include("Advance", "Settlement", "Cashier Summary", "Currency Summary")
-    expect(csv).to include("Cash Guest", "Cash Payment", "Front desk cash", "MYR,100.00")
+    expect(csv).to include("Payment Activity", "Activity By Payment Mode", "Currency Summary")
+    expect(csv).to include("Payment Mode,Stage,Received By")
+    expect(csv).to include("Cash Guest", "At desk", "Cash Payment", "MYR,100.00")
+    expect(csv).not_to include("Front desk cash")
     expect(csv).not_to include("Daily Breakdown", "Revenue Register")
+  end
+
+  it "scopes cashier content to activity and summary views" do
+    activity = generate("cashier", cashier_view: "activity")
+    summary = generate("cashier", cashier_view: "summary")
+
+    expect(activity).to include("Payment Activity")
+    expect(activity).not_to include("At Desk,Movements", "Activity By Payment Mode", "Currency Summary")
+    expect(summary).to include("At Desk,Movements", "Activity By Payment Mode", "Currency Summary")
+    expect(summary).not_to include("Payment Activity")
   end
 end

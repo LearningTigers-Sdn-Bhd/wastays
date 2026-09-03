@@ -59,6 +59,10 @@ module AiConcierge
         def booking_branch = task_manager.booking_branch
         def pending_question = task_manager.booking_pending_question || conversation_state.pending_question
 
+        def pending_price_offer?
+          task_manager.sales_task["last_optional_action"] == "offer_price_search"
+        end
+
         # Whether answering a question now means putting a booking down rather
         # than dropping it. Lifted from TransitionPolicy#info_interruption_active?
         # unchanged -- the rule is about state, so it survives the rewrite.

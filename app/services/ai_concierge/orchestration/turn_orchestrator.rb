@@ -79,12 +79,51 @@ module AiConcierge
       # rather than after the model, so those turns no longer buy a round-trip
       # to answer a question a regex already answered.
       def run_agent_loop(session)
+        existing_booking_support = Turn::ExistingBookingSupportHandler.new(
+          message: message,
+          conversation: @conversation
+        ).call(conversation_state: session.conversation_state)
+        if existing_booking_support
+          return Core::Result.success(
+            payload: response_persister.persist_domain_response(
+              prospect: session.prospect,
+              conversation_state: session.conversation_state,
+              domain_result: existing_booking_support
+            )
+          )
+        end
+
+
         control_response = control_handler.handle(
           prospect: session.prospect,
           conversation_state: session.conversation_state,
           interpretation: Core::ConfirmationReader.new(message: message).as_interpretation
         )
         return control_response if control_response
+
+        secure_input = Turn::SecureInputHandler.new(conversation: @conversation).call(
+          conversation_state: session.conversation_state
+        )
+        if secure_input
+          return Core::Result.success(
+            payload: response_persister.persist_domain_response(
+              prospect: session.prospect,
+              conversation_state: session.conversation_state,
+              domain_result: secure_input
+            )
+          )
+        end
+
+        greeting = Turn::GreetingHandler.new(message: message).call(conversation_state: session.conversation_state)
+        if greeting
+          return Core::Result.success(
+            payload: response_persister.persist_domain_response(
+              prospect: session.prospect,
+              conversation_state: session.conversation_state,
+              domain_result: greeting
+            )
+          )
+        end
 
         outcome = AgentLoop::RunTurn.new(
           hotel: hotel,

@@ -25,7 +25,10 @@ module Concierge
       return unless conversation.bot? && conversation.open?
 
       result = ask(conversation, message)
-      return if result.success?
+      if result.success?
+        BroadcastChatInput.call(conversation: conversation)
+        return
+      end
 
       note_failure(conversation)
     end

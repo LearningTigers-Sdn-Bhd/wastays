@@ -3,6 +3,13 @@
   <%= log %>
   <div class="public-chat__footer">
     <%= alert if alert? %>
-    <%= composer %>
+    <%= tag.div(id: PublicUI::Chat::Panel::INPUT_REGION_ID) do %>
+      <% if secure_input? %>
+        <%= secure_input %>
+      <% else %>
+        <%= quick_replies if quick_replies? %>
+        <%= composer %>
+      <% end %>
+    <% end %>
   </div>
 <% end %>

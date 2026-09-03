@@ -10,4 +10,9 @@ class Rack::Attack
       req.ip
     end
   end
+
+  throttle("concierge/booking_link/ip", limit: 10, period: 1.minute) do |req|
+    booking_link_path = req.path.match?(%r{\A/concierge/[^/]+/chat/booking\z})
+    req.ip if req.post? && booking_link_path
+  end
 end

@@ -36,7 +36,7 @@ turns:
   - guest: "wait, is cancellation free?"
     expect:
       reply_matches: ["48 hours"]
-      booking_status: suspended
+      booking_status: waiting_for_confirmation
       creates_quote: false
 
   # One word, and it has to mean what it meant before the detour: this room,

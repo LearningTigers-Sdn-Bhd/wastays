@@ -25,7 +25,8 @@
   /* --- Scrollbar track ---------------------------------------------------- */
   .panel-scroll-area__scrollbar {
     @apply absolute rounded-full bg-black/5 opacity-0 transition-opacity duration-150 dark:bg-white/10;
-    z-index: 1;
+    /* Keep the overlay usable above sticky table headers and group rows. */
+    z-index: 10;
   }
 
   .panel-scroll-area__scrollbar[data-orientation="vertical"] {

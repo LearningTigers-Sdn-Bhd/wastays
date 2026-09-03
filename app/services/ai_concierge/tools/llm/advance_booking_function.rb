@@ -51,6 +51,7 @@ module AiConcierge
             string :check_in, description: "ISO 8601 date, only when the guest states one. Never today's date by default."
             string :check_out, description: "ISO 8601 date"
             string :room_type_name
+            string :option_action, enum: %w[details continue], description: "Whether the guest asks to view an option or continue booking it"
           end
           object :evidence, description: "Quote the guest's own words, copied exactly from their message, for each thing you filled in. Whatever language they wrote in. Leave a field out when the message does not say it." do
             string :timing, description: "The words that say when they arrive"
@@ -69,6 +70,7 @@ module AiConcierge
           return ALREADY_ADVANCED if recorder.booking_advanced?
 
           recorder.mark_booking_advanced!
+          purpose = booking_purpose
 
           interpretation = SyntheticInterpretation.new(
             slots: slots, signals: signals, evidence: evidence,
@@ -87,7 +89,7 @@ module AiConcierge
             conversation_state: prepared.conversation_state,
             interpretation: interpretation,
             active_branch: prepared.active_branch,
-            decision: { action: decision_action, pending_question: prepared.pending_question },
+            decision: { action: decision_action, pending_question: prepared.pending_question, purpose: purpose },
             message: context.message,
             phone: context.phone
           ).call
@@ -103,6 +105,45 @@ module AiConcierge
         # suspended is a fact, and the model has already said the useful part
         # by choosing this tool at all.
         def decision_action = context.resumable_booking? ? :resume : :booking
+
+        def booking_purpose
+          current = context.task_manager.booking_purpose
+          return "price_exploration" if accepted_price_offer?
+          return purpose_after_price_exploration if current == "price_exploration"
+          return "booking" if booking_intent.booking_commitment?
+          return "price_exploration" if booking_intent.rate_question?
+
+          current
+        end
+
+        def purpose_after_price_exploration
+          return "price_exploration" unless booking_intent.explicit_purchase_commitment?
+          return "booking" if option_chosen?
+          return "booking" unless priced_options_available?
+
+          "price_exploration"
+        end
+
+        def accepted_price_offer?
+          context.pending_price_offer? && confirmation == "yes"
+        end
+
+        def option_chosen?
+          context.booking_branch["viewed_option"].present? ||
+            Matching::OptionReference.new(message: context.message).number.present?
+        end
+
+        def priced_options_available?
+          Array(context.booking_branch["suggested_options"]).any?
+        end
+
+        def confirmation
+          @confirmation ||= Orchestration::Core::ConfirmationReader.new(message: context.message).confirmation
+        end
+
+        def booking_intent
+          @booking_intent ||= Matching::BookingIntentMatcher.new(message: context.message)
+        end
 
         # Intent is derived from the open question, never from the model.
         # "Yes" means a confirmation only while a confirmation is what was
@@ -156,7 +197,7 @@ module AiConcierge
             @slots.merge("confirmation" => spoken_confirmation)
           end
 
-          YES_NO_QUESTIONS = %w[confirm_selection party_split].freeze
+          YES_NO_QUESTIONS = %w[confirm_selection party_split price_option_continuation].freeze
 
           # The same words the control handler reads a goodbye by, asked of the
           # same message. One vocabulary, so a yes the hotel accepts in one
@@ -179,11 +220,13 @@ module AiConcierge
             # nothing else can be about nothing else, whichever question the
             # booking was put down on.
             return "option_selection" if resumed && Matching::OptionReference.new(message: message).only_reference?
+            return "option_selection" if pending_question == "confirm_selection" &&
+              Matching::OptionReference.new(message: message).only_reference?
 
             # Options are on the table, so whatever the guest just said is an
             # answer to them -- a row, an ordinal, a date. Reading that as a
             # fresh search would show the same list again and strand them.
-            return "option_selection" if pending_question == "select_option"
+            return "option_selection" if %w[select_option price_option_exploration].include?(pending_question)
 
             "booking_search"
           end
