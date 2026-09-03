@@ -36,7 +36,7 @@ module HotelPortal
     end
 
     def active_booking_guest
-      @selected_booking_guest || primary_booking_guest
+      @selected_booking_guest || @card.booking_guest || primary_booking_guest
     end
 
     def guest_name
@@ -102,13 +102,21 @@ module HotelPortal
     end
 
     def guest_country_display
-      guest_country.presence || "-"
+      guest_country.presence || "Not provided"
+    end
+
+    def guest_address_display
+      snapshot_address = active_booking_guest&.home_address_snapshot.presence
+      return snapshot_address if snapshot_address
+      return @booking.guest_home_address.presence || "Not provided" if active_booking_guest.nil? || active_booking_guest.primary?
+
+      "Not provided"
     end
 
     def guest_identity
       active_booking_guest&.government_id_snapshot.presence ||
         (active_booking_guest&.primary? ? @booking.guest_government_id.presence : nil) ||
-        "-"
+        "Not provided"
     end
 
     def guest_count_display

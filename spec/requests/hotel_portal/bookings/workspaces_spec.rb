@@ -257,7 +257,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       document = Nokogiri::HTML(response.body)
       header = document.at_css('[data-testid="booking-workspace-header"]')
       overview = document.at_css('[data-testid="booking-overview"]')
-      expect(header["class"]).to include("px-5", "pt-4")
+      expect(header["class"]).to include("px-5", "pt-3")
       expect(overview.at_xpath('.//h2[normalize-space()="Overview"]')).to be_nil
     end
 
@@ -885,9 +885,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(add_guest["href"]).to include(hotel_booking_action_manage_guest_path(hotel, booking))
       form = document.at_css("form#guest-details-form[data-controller*='guest-details-editor']")
       footer = document.at_css('[data-testid="guest-details-footer"]')
-      save_guest = footer.at_xpath(".//button[@type='submit' and normalize-space()='Save for this booking only']")
+      save_trigger = footer.at_xpath(".//button[@command='show-modal' and normalize-space()='Save']")
       view_grc = footer.at_xpath(".//a[normalize-space()='View GRC']")
       discard_alert = document.at_css('dialog[data-controller~="confirm-discard"]')
+      save_dialog = footer.at_css("dialog#guest-save-scope-dialog")
 
       expect(form).to be_present
       expect(form["action"]).to eq(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: guest.id))
@@ -903,15 +904,17 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(footer["class"]).to include("bg-card")
       expect(footer["class"]).not_to include("shadow", "border-t")
       expect(document.at_xpath("//a[normalize-space()='Edit Guest']")).to be_nil
-      expect(save_guest["form"]).to eq("guest-details-form")
+      expect(save_trigger["commandfor"]).to eq("guest-save-scope-dialog")
       expect(view_grc["href"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))
       expect(view_grc["target"]).to eq("_blank")
       expect(discard_alert["role"]).to eq("alertdialog")
       expect(response.body).to include("Guest details", "Guest details recorded for this stay.")
       expect(response.body).not_to include("Stay Record", "Guest Profile")
       expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Enter IC or passport number", "Select date of birth")
-      expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot']")).to be_present
-      expect(footer.at_xpath(".//button[@name='save_scope' and @value='snapshot_and_profile']")).to be_present
+      expect(save_dialog).to be_present
+      expect(save_dialog.at_xpath(".//input[@name='save_scope' and @value='snapshot' and @form='guest-details-form' and @checked]")).to be_present
+      expect(save_dialog.at_xpath(".//input[@name='save_scope' and @value='snapshot_and_profile' and @form='guest-details-form']")).to be_present
+      expect(save_dialog.at_xpath(".//button[@type='submit' and @form='guest-details-form']")).to be_present
       expect(response.body).not_to include("C Form")
     end
 

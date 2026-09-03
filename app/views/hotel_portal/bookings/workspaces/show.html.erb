@@ -1,6 +1,6 @@
 <% content_for :full_height_page, true %>
 
-<div class="flex min-h-0 w-full flex-1 flex-col gap-4" data-testid="booking-workspace">
+<div class="flex min-h-0 w-full flex-1 flex-col gap-2" data-testid="booking-workspace">
   <%= render "booking_header", booking: @booking, presenter: @presenter %>
 
   <% if @entity_booking&.status == "voided" %>
