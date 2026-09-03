@@ -1747,7 +1747,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(page.text).to include("Full report", "Payment activity", "Not handled at the desk", "Activity by payment mode", "Currency summary")
         expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 3)
         scroll_area = document.at_css("[data-testid='cashier-table-scroll-area'].panel-scroll-area[data-orientation='both']")
-        expect(scroll_area.at_css(".panel-scroll-area__viewport")["class"].split).to include("max-h-[79dvh]")
+        viewport_classes = scroll_area.at_css(".panel-scroll-area__viewport")["class"].split
+        expect(viewport_classes).to include("max-h-[60dvh]")
+        expect(viewport_classes).not_to include("overscroll-none")
         expect(scroll_area.at_css(".panel-table__wrapper.overflow-visible")).to be_present
         expect(page).to have_css("[data-testid='cashier-table-scroll-area'] .panel-scroll-area__scrollbar", count: 2)
         expect(page.text).to include("Handling", "Payment mode", "Currency", "Stage", "Amount in", "Amount out", "Balance")

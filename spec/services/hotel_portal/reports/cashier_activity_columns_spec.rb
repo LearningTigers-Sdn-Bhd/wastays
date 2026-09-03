@@ -10,4 +10,10 @@ RSpec.describe HotelPortal::Reports::CashierActivityColumns do
     )
     expect(described_class.selected(%w[guest_details]).first.export_labels).to eq([ "Guest", "Room" ])
   end
+
+  it "offers separate date and time columns that are off by default" do
+    expect(described_class.normalize(%w[time date date_time])).to eq(%w[date_time date time])
+    expect(described_class::DEFAULT_KEYS).not_to include("date", "time")
+    expect(described_class.selected(%w[date time]).map(&:export_labels)).to eq([ [ "Date" ], [ "Time" ] ])
+  end
 end

@@ -7,6 +7,8 @@ module HotelPortal
 
       ALL = [
         Column.new(key: "date_time", label: "Date and time", export_labels: [ "Date & Time" ], pdf_label: "Date & Time", pdf_width: 72, excel_width: 22),
+        Column.new(key: "date", label: "Date", export_labels: [ "Date" ], pdf_label: "Date", pdf_width: 62, excel_width: 14),
+        Column.new(key: "time", label: "Time", export_labels: [ "Time" ], pdf_label: "Time", pdf_width: 44, excel_width: 10),
         Column.new(key: "reservation", label: "Booking", export_labels: [ "Booking No.", "Confirmation Code" ], pdf_label: "Booking", pdf_width: 82, excel_width: 20),
         Column.new(key: "guest_details", label: "Guest and room", export_labels: [ "Guest", "Room" ], pdf_label: "Guest / Room", pdf_width: 100, excel_width: 28),
         Column.new(key: "folio", label: "Folio", export_labels: [ "Folio" ], pdf_label: "Folio", pdf_width: 70, excel_width: 18),

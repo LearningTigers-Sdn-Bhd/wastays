@@ -1,0 +1,11 @@
+<% [["At desk", @cashier_report.at_desk_totals, "Net at desk"], ["Not handled at the desk", @cashier_report.non_desk_totals, "Net gateway and OTA"]].each do |title, totals, net_label| %>
+  <div class="space-y-3">
+    <h3 class="text-sm font-medium text-foreground"><%= title %></h3>
+    <%= render "daily_report_metric_row", aria_label: "#{title} summary", metrics: [
+      { label: "Movements", value: format_number(totals[:movement_count]), detail: "Payments and refunds" },
+      { label: "Amount in", value: "MYR #{format_number(totals[:total_collected], precision: 2)}", detail: "Money received" },
+      { label: "Amount out", value: "- MYR #{format_number(totals[:total_refunded], precision: 2)}", detail: "Money returned", detail_variant: :destructive },
+      { label: net_label, value: "MYR #{format_number(totals[:net_cash], precision: 2)}", detail: "Amount in less amount out", detail_variant: :success }
+    ] %>
+  </div>
+<% end %>

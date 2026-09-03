@@ -59,6 +59,12 @@
 
 <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-cashier-preference-status></p>
 
+<% if @cashier_view == "full" %>
+  <section class="space-y-5" aria-label="Cashier activity totals">
+    <%= render "cashier_activity_metrics" %>
+  </section>
+<% end %>
+
 <% if %w[full activity].include?(@cashier_view) %>
   <section class="space-y-3" aria-labelledby="cashier-activity-heading" data-cashier-section>
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -87,9 +93,8 @@
 
     <%= render PanelsUI::ScrollArea.new(
           orientation: :both,
-          max_height: "max-h-[79dvh]",
+          max_height: @cashier_view == "full" ? "max-h-[60dvh]" : "max-h-[79dvh]",
           class: "overflow-hidden rounded-lg border border-border bg-card",
-          viewport_class: "overscroll-none",
           data: { testid: "cashier-table-scroll-area" }) do %>
       <%= render PanelsUI::Table.new(
             caption: "Payment movements grouped by #{@cashier_group_by.humanize.downcase}",
@@ -170,6 +175,8 @@
                 <% case key %>
                 <% when "date_time" %>
                   <td class="whitespace-nowrap text-muted-foreground"><%= row.posting_date.strftime("%d %b %Y") %><% if row.posted_at %><span class="block text-xs"><%= row.posted_at.strftime("%H:%M") %></span><% end %></td>
+                <% when "date" %><td class="whitespace-nowrap text-muted-foreground"><%= row.posting_date.strftime("%d %b %Y") %></td>
+                <% when "time" %><td class="whitespace-nowrap text-muted-foreground"><%= row.posted_at&.strftime("%H:%M") %></td>
                 <% when "reservation" %><td class="whitespace-nowrap"><%= row.booking_number %><span class="block text-xs text-muted-foreground">Confirmation <%= row.confirmation_code %></span></td>
                 <% when "guest_details" %><td><%= row.guest_name %><span class="block text-xs text-muted-foreground">Room <%= row.room_number %></span></td>
                 <% when "folio" %><td><%= row.folio_number %></td>
@@ -190,7 +197,7 @@
       <% end %>
     <% end %>
     <% if @cashier_transactions.total_pages > 1 %>
-      <nav class="flex justify-center border-t border-border px-3 py-2" aria-label="Payment activity pagination" data-slot="report-pagination">
+      <nav class="flex justify-center px-3 py-2" aria-label="Payment activity pagination" data-slot="report-pagination">
         <%= paginate @cashier_transactions, param_name: "cashier_page" %>
       </nav>
     <% end %>
@@ -200,16 +207,8 @@
 <% if %w[full summary].include?(@cashier_view) %>
   <section class="space-y-5" aria-labelledby="cashier-summary-heading">
     <h2 id="cashier-summary-heading" class="text-base font-semibold text-foreground">Summary</h2>
-    <% [["At desk", @cashier_report.at_desk_totals, "Net at desk"], ["Not handled at the desk", @cashier_report.non_desk_totals, "Net gateway and OTA"]].each do |title, totals, net_label| %>
-      <div class="space-y-3">
-        <h3 class="text-sm font-medium text-foreground"><%= title %></h3>
-        <%= render "daily_report_metric_row", aria_label: "#{title} summary", metrics: [
-          { label: "Movements", value: format_number(totals[:movement_count]), detail: "Payments and refunds" },
-          { label: "Amount in", value: "MYR #{format_number(totals[:total_collected], precision: 2)}", detail: "Money received" },
-          { label: "Amount out", value: "- MYR #{format_number(totals[:total_refunded], precision: 2)}", detail: "Money returned", detail_variant: :destructive },
-          { label: net_label, value: "MYR #{format_number(totals[:net_cash], precision: 2)}", detail: "Amount in less amount out", detail_variant: :success }
-        ] %>
-      </div>
+    <% if @cashier_view == "summary" %>
+      <%= render "cashier_activity_metrics" %>
     <% end %>
     <%= render "cashier_activity_summaries" %>
   </section>
