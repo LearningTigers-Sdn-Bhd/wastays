@@ -130,7 +130,7 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
 
     expect(sheet_names(overview_entries)).to eq([ "Overview" ])
     expect(sheet_names(revenue_entries)).to eq([ "Daily Breakdown", "Revenue by Source", "Revenue Register" ])
-    expect(sheet_names(cashier_entries)).to eq([ "Cashier Activity", "Cashier Summary", "Currency Summary" ])
+    expect(sheet_names(cashier_entries)).to eq([ "Cashier Activity", "Activity By Payment Mode", "Currency Summary" ])
     expect(font_size(overview_entries, metadata_cell.fetch(:style))).to eq(11)
     expect(font_size(overview_entries, section_cell.fetch(:style))).to eq(12)
     expect(font_size(overview_entries, metric_header.fetch(:style))).to eq(11)

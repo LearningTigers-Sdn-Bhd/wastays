@@ -38,10 +38,10 @@ module HotelPortal
           [ "Net Revenue", decimal(revenue[:net_revenue]), "MYR" ]
         ])
         append_metrics(csv, "Cashier Activity (Cash Flow)", [
-          [ "Cash Movements", cashier[:movement_count], nil ],
+          [ "Movements", cashier[:movement_count], nil ],
           [ "Total Collected", decimal(cashier[:total_collected]), "MYR" ],
           [ "Total Refunded", decimal(cashier[:total_refunded]), "MYR" ],
-          [ "Net Cash", decimal(cashier[:net_cash]), "MYR" ]
+          [ "Net At Desk", decimal(cashier[:net_cash]), "MYR" ]
         ])
       end
 
@@ -83,8 +83,8 @@ module HotelPortal
       def append_cashier(csv)
         append_cashier_transactions(csv, "Cashier Activity", @cashier_report.cash_transactions)
 
-        csv << [ "Cashier Summary" ]
-        csv << [ "Mode", "Currency", "Description", "Amount (IN)", "Amount (OUT)", "Balance" ]
+        csv << [ "Activity By Payment Mode" ]
+        csv << [ "Mode", "Currency", "Stage", "Amount (IN)", "Amount (OUT)", "Balance" ]
         @cashier_report.mode_summary_rows.each do |row|
           csv << [ row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
@@ -94,7 +94,7 @@ module HotelPortal
         csv << []
 
         csv << [ "Currency Summary" ]
-        csv << [ "Currency", "Description", "Amount (IN)", "Amount (OUT)", "Balance" ]
+        csv << [ "Currency", "Stage", "Amount (IN)", "Amount (OUT)", "Balance" ]
         @cashier_report.currency_summary_rows.each do |row|
           csv << [ row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
@@ -104,7 +104,7 @@ module HotelPortal
         return if @cashier_report.non_cash_transactions.empty?
 
         csv << []
-        append_cashier_transactions(csv, "Not Counted As Cash", @cashier_report.non_cash_transactions)
+        append_cashier_transactions(csv, "Not Handled At The Desk", @cashier_report.non_cash_transactions)
       end
 
       def append_transactions(csv, title, transactions)

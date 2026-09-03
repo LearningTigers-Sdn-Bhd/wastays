@@ -107,10 +107,10 @@ module HotelPortal
         ])
         sheet.add_row([])
         add_metric_section(sheet, "Cashier Activity (Cash Flow)", [
-          [ "Cash Movements", @cashier_report.totals[:movement_count], nil ],
+          [ "Movements", @cashier_report.totals[:movement_count], nil ],
           [ "Total Collected", decimal(@cashier_report.totals[:total_collected]), "MYR" ],
           [ "Total Refunded", decimal(@cashier_report.totals[:total_refunded]), "MYR" ],
-          [ "Net Cash", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
+          [ "Net At Desk", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
         ])
       end
 
@@ -166,8 +166,8 @@ module HotelPortal
           datetime_columns: [ 0 ], money_columns: [ 11 ], total_row: total_for_cashier(activity_rows)
         )
 
-        summary = add_sheet("Cashier Summary", 6, widths: [ 28, 13, 16, 18, 18, 18 ])
-        add_report_header(summary, "Cashier Summary", 6)
+        summary = add_sheet("Activity By Payment Mode", 6, widths: [ 28, 13, 16, 18, 18, 18 ])
+        add_report_header(summary, "Activity By Payment Mode", 6)
         summary_rows = @cashier_report.mode_summary_rows.map do |row|
           [ row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
@@ -176,7 +176,7 @@ module HotelPortal
         end
         add_table(
           summary,
-          headers: [ "Payment Mode", "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
+          headers: [ "Payment Mode", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
           rows: summary_rows, money_columns: [ 3, 4, 5 ]
         )
 
@@ -188,15 +188,15 @@ module HotelPortal
         grand = @cashier_report.grand_total
         add_table(
           currency,
-          headers: [ "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
+          headers: [ "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
           rows: currency_rows, money_columns: [ 2, 3, 4 ],
           total_row: [ "Grand Total", nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
         )
 
         return if @cashier_report.non_cash_transactions.empty?
 
-        non_cash = add_sheet("Not Counted As Cash", CASHIER_HEADERS.size, widths: cashier_widths)
-        add_report_header(non_cash, "Not Counted As Cash", CASHIER_HEADERS.size)
+        non_cash = add_sheet("Not Handled At The Desk", CASHIER_HEADERS.size, widths: cashier_widths)
+        add_report_header(non_cash, "Not Handled At The Desk", CASHIER_HEADERS.size)
         non_cash_rows = cashier_rows(@cashier_report.non_cash_transactions)
         add_table(
           non_cash, headers: CASHIER_HEADERS, rows: non_cash_rows,
@@ -295,10 +295,10 @@ module HotelPortal
 
       def cashier_metrics
         [
-          [ "Cash Movements", @cashier_report.totals[:movement_count], nil ],
+          [ "Movements", @cashier_report.totals[:movement_count], nil ],
           [ "Total Collected", decimal(@cashier_report.totals[:total_collected]), "MYR" ],
           [ "Total Refunded", decimal(@cashier_report.totals[:total_refunded]), "MYR" ],
-          [ "Net Cash", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
+          [ "Net At Desk", decimal(@cashier_report.totals[:net_cash]), "MYR" ]
         ]
       end
 

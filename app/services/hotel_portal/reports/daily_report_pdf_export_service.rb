@@ -76,7 +76,7 @@ module HotelPortal
 
         pdf.start_new_page(layout: :landscape)
         draw_cashier_transaction_table(
-          pdf, "Not Counted As Cash", @cashier_report.non_cash_transactions,
+          pdf, "Not Handled At The Desk", @cashier_report.non_cash_transactions,
           "Gateway and OTA money that no cashier handled"
         )
       end
@@ -202,7 +202,7 @@ module HotelPortal
       end
 
       def draw_cashier_summaries(pdf)
-        draw_section_heading(pdf, "Cashier Summary", "Amounts grouped by payment mode")
+        draw_section_heading(pdf, "Activity By Payment Mode", "Amounts grouped by payment mode")
         rows = @cashier_report.mode_summary_rows.map do |row|
           [ row[:mode], row[:currency], row[:section], money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
         end
@@ -213,7 +213,7 @@ module HotelPortal
         if rows.present?
           draw_data_table(
             pdf,
-            [ "Payment Mode", "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
+            [ "Payment Mode", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
             rows,
             numeric_columns: [ 3, 4, 5 ]
           )
@@ -232,7 +232,7 @@ module HotelPortal
         if @cashier_report.currency_summary_rows.present?
           draw_data_table(
             pdf,
-            [ "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
+            [ "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
             currency_rows,
             numeric_columns: [ 2, 3, 4 ], total_row: currency_rows.size
           )
@@ -317,10 +317,10 @@ module HotelPortal
       def cashier_kpis
         totals = @cashier_report.totals
         [
-          [ "Cash Movements", totals[:movement_count].to_s ],
+          [ "Movements", totals[:movement_count].to_s ],
           [ "Total Collected", "MYR #{money(totals[:total_collected])}" ],
           [ "Total Refunded", "MYR #{money(totals[:total_refunded])}" ],
-          [ "Net Cash", "MYR #{money(totals[:net_cash])}" ]
+          [ "Net At Desk", "MYR #{money(totals[:net_cash])}" ]
         ]
       end
 

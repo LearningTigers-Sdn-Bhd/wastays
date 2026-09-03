@@ -398,6 +398,36 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     expect(report.totals[:net_cash]).to eq(500.to_d)
   end
 
+  it "names the origin of every row no cashier handled, gateway before OTA" do
+    ota_code = hotel.transaction_codes.find_by!(system_key: "ota_collected_payment")
+    party = create(
+      :booking_billing_party, booking: booking, hotel: hotel, party_kind: "ota",
+      booking_source: create(:booking_source, key: "ota_origin_test", label: "OTA Origin Test"),
+      booking_guest: nil, hotel_corporate_account: nil
+    )
+    ota_folio = create(
+      :booking_folio, booking: booking, hotel: hotel, folio_type: "external", payer_type: "ota",
+      is_primary: false, booking_billing_party: party, hotel_corporate_account: nil
+    )
+    ota_credit = create(
+      :folio_transaction, booking_folio: ota_folio, transaction_type: "payment",
+      category: "booking_payment", amount: 90, posting_date: Date.new(2026, 6, 17),
+      transaction_code: ota_code, metadata: { posting_source: "ota_credit", receipt_policy: "none" }
+    )
+    online = create(:payment_transaction, booking: booking, gateway: "razorpay")
+    gateway_charge = payment(
+      category: "gateway_payment", amount: 200, posting_date: Date.new(2026, 6, 17),
+      metadata: { payment_transaction_id: online.id, posting_source: "gateway_payment" }
+    )
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.non_cash_transactions).to eq([ gateway_charge, ota_credit ])
+    expect(report.non_cash_origin_by_transaction_id[gateway_charge.id]).to eq("Gateway")
+    expect(report.non_cash_origin_by_transaction_id[ota_credit.id]).to eq("OTA collected")
+    expect(report.cash_transactions).to be_empty
+  end
+
   it "orders payment modes the way the hotel ordered its payment methods" do
     PaymentMethods::EnsureDefaults.call(hotel)
     cash_code = hotel.transaction_codes.find_by!(system_key: "cash_payment")

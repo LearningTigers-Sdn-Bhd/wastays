@@ -84,9 +84,9 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     expect(csv).to start_with(described_class::BOM)
     expect(csv).to include(
       "Revenue (Accrual),Net Revenue,498.40,MYR",
-      "Cashier Activity (Cash Flow),Net Cash,100.00,MYR"
+      "Cashier Activity (Cash Flow),Net At Desk,100.00,MYR"
     )
-    expect(csv).not_to include("Daily Breakdown", "Cashier Summary")
+    expect(csv).not_to include("Daily Breakdown", "Activity By Payment Mode")
   end
 
   it "exports revenue analysis and the Revenue Register" do
@@ -116,7 +116,7 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
 
     csv = generate("cashier")
 
-    expect(csv).to include("Cashier Activity", "Cashier Summary", "Currency Summary")
+    expect(csv).to include("Cashier Activity", "Activity By Payment Mode", "Currency Summary")
     expect(csv).to include("Cash Guest", "Cash Payment", "Front desk cash", "MYR,100.00")
     expect(csv).not_to include("Daily Breakdown", "Revenue Register")
   end

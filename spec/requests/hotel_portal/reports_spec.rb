@@ -1501,7 +1501,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("#daily-report-tabs.tabs-root--line nav.tabs-list--line")
       expect(page).to have_link("Cashier activity")
       expect(page.text).to include("Revenue (accrual)", "Bookings engaged", "Total charges", "Net revenue")
-      expect(page.text).to include("Cashier activity (cash flow)", "Cash movements", "Total collected", "Total refunded", "Net cash")
+      expect(page.text).to include("Cashier activity (cash flow)", "Movements", "Total collected", "Total refunded", "Net at desk")
       expect(page).to have_css("form[data-slot='report-toolbar']")
       expect(page).to have_css("[data-slot='report-export']")
       expect(page).to have_select("date_preset")
@@ -1743,8 +1743,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           start_date: start_date.to_s, end_date: start_date.to_s)
 
         page = Capybara.string(response.body)
+        expect(page.text).to include("Cashier activity", "Activity by payment mode", "Currency summary")
         expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 3)
-        expect(page.text).to include("Cashier summary", "Currency summary")
 
         document = Nokogiri::HTML(response.body)
         cashier_summary_headers = document
@@ -1754,8 +1754,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           .css("[aria-labelledby='currency-summary-heading'] thead th")
           .map { |header| header.text.strip }
 
-        expect(cashier_summary_headers).to eq([ "Mode", "Currency", "Description", "Amount (in)", "Amount (out)", "Balance" ])
-        expect(currency_summary_headers).to eq([ "Currency", "Description", "Amount (in)", "Amount (out)", "Balance" ])
+        expect(cashier_summary_headers).to eq([ "Mode", "Currency", "Stage", "Amount (in)", "Amount (out)", "Balance" ])
+        expect(currency_summary_headers).to eq([ "Currency", "Stage", "Amount (in)", "Amount (out)", "Balance" ])
       end
 
       it "lists every staff-handled payment in one table with its type" do
@@ -1789,7 +1789,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(headers).to eq([
           "Select all cashier transactions",
           "Date & time", "Reservation", "Guest details", "Folio", "Invoice",
-          "Payment mode", "Type", "Received by", "Remarks", "Amount"
+          "Payment mode", "Stage", "Received by", "Remarks", "Amount"
         ])
 
         rows = document.css('[data-testid="cashier-row"]')
@@ -1854,7 +1854,27 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(response.body).to include("Visible front desk cash")
         expect(document.css('[data-testid="non-cash-row"]').size).to eq(1)
         expect(document.at_css('[data-testid="non-cash-row"]').text).to include("Hidden Razorpay payment")
-        expect(metrics).to include("Cash movements 1", "Total collected MYR 100.00", "Net cash MYR 100.00")
+        expect(metrics).to include("Movements 1", "Total collected MYR 100.00", "Net at desk MYR 100.00")
+      end
+
+      it "groups the money no cashier handled by origin and states its total at the heading" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        razorpay = create(:payment_transaction, booking: booking, gateway: "razorpay")
+        create(
+          :folio_transaction, booking_folio: folio, transaction_type: "payment",
+          category: "gateway_payment", amount: 700, posting_date: start_date,
+          description: "Online prepayment",
+          metadata: { payment_transaction_id: razorpay.id, posting_source: "gateway_payment" }
+        )
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        document = Nokogiri::HTML(response.body)
+        expect(document.text).to include("Not handled at the desk")
+        expect(document.at_css('[data-testid="non-cash-heading-total"]').text.squish).to eq("MYR 700.00 1 movement")
+        expect(document.css('[data-slot="report-origin-group"]').map { |row| row.at_css("th").text.strip }).to eq([ "Gateway" ])
+        expect(document.css('[data-testid="non-cash-row"]').size).to eq(1)
       end
 
       it "restricts the exported rows to the ticked transactions" do
@@ -1875,7 +1895,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       it "exports only the combined KPI summary on the overview tab" do
         get daily_report_hotel_reports_path(hotel, tab: "overview", format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
 
-        expect(response.body).to include("Revenue (Accrual)", "Cashier Activity (Cash Flow)", "Net Revenue", "Net Cash")
+        expect(response.body).to include("Revenue (Accrual)", "Cashier Activity (Cash Flow)", "Net Revenue", "Net At Desk")
         expect(response.body).not_to include("Posting Date", "Daily Breakdown")
       end
 
@@ -1924,7 +1944,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         expect(response).to have_http_status(:success)
         expect(response.body).to include(
-          "Cashier Activity", "Cashier Summary", "Currency Summary",
+          "Cashier Activity", "Activity By Payment Mode", "Currency Summary",
           "Date & Time,Reservation,Guest,Room,Folio,Invoice,Payment Mode,Type,Received By,Remarks,Currency,Amount",
           "Cash Payment", "20260506", "Cashier note"
         )

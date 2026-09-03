@@ -956,7 +956,8 @@ module HotelPortal
         HotelPortal::Reports::DailyReportTransactionRow.new(
           transaction,
           settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
-          section: @cashier_report.section_by_transaction_id[transaction.id]
+          section: @cashier_report.section_by_transaction_id[transaction.id],
+          origin: @cashier_report.non_cash_origin_by_transaction_id[transaction.id]
         )
       end
     end

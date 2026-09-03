@@ -16,7 +16,7 @@ module HotelPortal
         :start_date, :end_date, :totals, :cash_transactions,
         :mode_by_transaction_id, :section_by_transaction_id, :mode_order,
         :mode_summary_rows, :mode_totals, :currency_summary_rows, :grand_total,
-        :non_cash_transactions, :non_cash_totals,
+        :non_cash_transactions, :non_cash_totals, :non_cash_origin_by_transaction_id,
         keyword_init: true
       )
 
@@ -46,8 +46,9 @@ module HotelPortal
           mode_totals: mode_totals_for(cash),
           currency_summary_rows: currency_summary_for(cash),
           grand_total: grand_total_for(cash),
-          non_cash_transactions: non_cash,
-          non_cash_totals: totals_for(non_cash)
+          non_cash_transactions: group_by_origin(non_cash),
+          non_cash_totals: totals_for(non_cash),
+          non_cash_origin_by_transaction_id: non_cash.to_h { |t| [ t.id, origin_for(t) ] }
         )
       end
 
@@ -63,6 +64,19 @@ module HotelPortal
       def gateway_movement?(transaction)
         @gateway.call(classification_transaction(transaction)) ||
           transaction.metadata.to_h.stringify_keys["refund_source"] == "gateway"
+      end
+
+      # Gateway money already sits in the merchant account. OTA money does not:
+      # the channel still holds it. Two different problems with two different
+      # owners, so the report names which one each row is.
+      ORIGIN_ORDER = [ GATEWAY_ORIGIN = "Gateway", OTA_ORIGIN = "OTA collected" ].freeze
+
+      def origin_for(transaction)
+        gateway_movement?(transaction) ? GATEWAY_ORIGIN : OTA_ORIGIN
+      end
+
+      def group_by_origin(transactions)
+        transactions.sort_by.with_index { |t, index| [ ORIGIN_ORDER.index(origin_for(t)), index ] }
       end
 
       # The hotel decides which payment methods it takes and in which order it

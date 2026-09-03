@@ -17,11 +17,15 @@ module HotelPortal
       delegate :posting_date, :posted_at, :transaction_type, :category, :description,
         :currency, to: :transaction
 
-      def initialize(transaction, settlement_mode: nil, section: nil)
+      def initialize(transaction, settlement_mode: nil, section: nil, origin: nil)
         @transaction = transaction
         @settlement_mode = settlement_mode
         @section = section
+        @origin = origin
       end
+
+      # Set only on rows no cashier handled: which side the money sits on.
+      attr_reader :origin
 
       # What the movement did to the drawer: money taken before the charge
       # exists, money taken against a charge, or money given back.
