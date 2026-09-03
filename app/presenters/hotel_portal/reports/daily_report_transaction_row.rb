@@ -5,11 +5,11 @@ module HotelPortal
     class DailyReportTransactionRow
       CASHIER_LIST_HEADERS = [
         "Date & Time", "Reservation", "Guest", "Room", "Folio", "Invoice",
-        "Payment Mode", "Received By", "Remarks", "Amount"
+        "Payment Mode", "Type", "Received By", "Remarks", "Amount"
       ].freeze
       CASHIER_VISUAL_HEADERS = [
         "Date & Time", "Reservation", "Guest Details", "Folio", "Invoice",
-        "Payment Mode", "Received By", "Remarks", "Amount"
+        "Payment Mode", "Type", "Received By", "Remarks", "Amount"
       ].freeze
 
       attr_reader :transaction
@@ -17,9 +17,18 @@ module HotelPortal
       delegate :posting_date, :posted_at, :transaction_type, :category, :description,
         :currency, to: :transaction
 
-      def initialize(transaction, settlement_mode: nil)
+      def initialize(transaction, settlement_mode: nil, section: nil)
         @transaction = transaction
         @settlement_mode = settlement_mode
+        @section = section
+      end
+
+      # What the movement did to the drawer: money taken before the charge
+      # exists, money taken against a charge, or money given back.
+      def section
+        return "Refund" if category == "refund"
+
+        @section.presence || "Settlement"
       end
 
       def booking

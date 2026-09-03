@@ -13,9 +13,10 @@ module HotelPortal
       }.freeze
 
       Result = Struct.new(
-        :start_date, :end_date, :totals, :advance_scope, :settlement_scope,
-        :mode_by_transaction_id, :mode_summary_rows, :mode_totals, :currency_summary_rows, :grand_total,
-        :ota_credit_scope, :ota_credit_totals,
+        :start_date, :end_date, :totals, :cash_transactions,
+        :mode_by_transaction_id, :section_by_transaction_id, :mode_order,
+        :mode_summary_rows, :mode_totals, :currency_summary_rows, :grand_total,
+        :non_cash_transactions, :non_cash_totals,
         keyword_init: true
       )
 
@@ -29,54 +30,58 @@ module HotelPortal
       end
 
       def call
-        scope = base_scope
-        transactions = exclude_gateway_movements(scope.to_a)
-        transactions = filter_by_time_range(transactions)
-        visible_scope = scope.where(id: transactions.map(&:id))
-        cash_transactions, ota_credits = transactions.partition { |transaction| !ota_non_cash_movement?(transaction) }
-        advances, settlements = cash_transactions.partition { |transaction| section_for(transaction) == "Advance" }
+        transactions = filter_by_time_range(base_scope.to_a)
+        cash, non_cash = transactions.partition { |transaction| cashier_handled?(transaction) }
 
         Result.new(
           start_date: @start_date,
           end_date: @end_date,
-          totals: totals_for(cash_transactions),
-          advance_scope: visible_scope.where(id: advances.map(&:id)),
-          settlement_scope: visible_scope.where(id: settlements.map(&:id)),
+          totals: totals_for(cash),
+          cash_transactions: group_by_mode(cash),
           mode_by_transaction_id: transactions.to_h { |transaction| [ transaction.id, mode_label_for(transaction) ] },
-          mode_summary_rows: mode_summary_for(cash_transactions),
-          mode_totals: mode_totals_for(cash_transactions),
-          currency_summary_rows: currency_summary_for(cash_transactions),
-          grand_total: grand_total_for(cash_transactions),
-          ota_credit_scope: visible_scope.where(id: ota_credits.map(&:id)),
-          ota_credit_totals: totals_for(ota_credits)
+          section_by_transaction_id: transactions.to_h { |transaction| [ transaction.id, section_for(transaction) ] },
+          mode_order: mode_order,
+          mode_summary_rows: mode_summary_for(cash),
+          mode_totals: mode_totals_for(cash),
+          currency_summary_rows: currency_summary_for(cash),
+          grand_total: grand_total_for(cash),
+          non_cash_transactions: non_cash,
+          non_cash_totals: totals_for(non_cash)
         )
       end
 
       private
 
-      def exclude_gateway_movements(transactions)
-        payment_transaction_ids = transactions.filter_map do |transaction|
-          classification_transaction(transaction).metadata.to_h.stringify_keys["payment_transaction_id"].presence
-        end
-        razorpay_payment_ids = PaymentTransaction
-          .where(id: payment_transaction_ids, gateway: "razorpay")
-          .pluck(:id)
-          .map(&:to_s)
-
-        transactions.reject do |transaction|
-          gateway_originated?(classification_transaction(transaction), razorpay_payment_ids)
-        end
+      # Cash drawer money is everything hotel staff handled themselves. Online
+      # gateway charges and OTA-collected credits are real money, but no cashier
+      # ever counted them, so they are reported apart from the drawer total.
+      def cashier_handled?(transaction)
+        !gateway_movement?(transaction) && !ota_non_cash_movement?(transaction)
       end
 
-      def gateway_originated?(transaction, razorpay_payment_ids)
-        metadata = transaction.metadata.to_h.stringify_keys
+      def gateway_movement?(transaction)
+        ::Folios::Payments::GatewayOriginated.call(classification_transaction(transaction)) ||
+          transaction.metadata.to_h.stringify_keys["refund_source"] == "gateway"
+      end
 
-        transaction.category == "gateway_payment" ||
-          transaction.transaction_code&.system_key == "gateway_manual_recovery_payment" ||
-          metadata["posting_source"] == "gateway_payment" ||
-          metadata["payment_source"] == "gateway" ||
-          metadata["refund_source"] == "gateway" ||
-          razorpay_payment_ids.include?(metadata["payment_transaction_id"].to_s)
+      # The hotel decides which payment methods it takes and in which order it
+      # lists them. The report follows that order rather than the alphabet, so a
+      # cashier reads the report in the same order they read the payment screen.
+      def mode_order
+        @mode_order ||= @hotel.hotel_payment_methods
+          .ordered
+          .joins(:transaction_code)
+          .pluck("transaction_codes.name")
+      end
+
+      def mode_rank(mode)
+        mode_order.index(mode) || mode_order.size
+      end
+
+      def group_by_mode(transactions)
+        transactions.sort_by.with_index do |transaction, index|
+          [ mode_rank(mode_label_for(transaction)), mode_label_for(transaction), index ]
+        end
       end
 
       def base_scope
@@ -168,14 +173,14 @@ module HotelPortal
         transactions
           .group_by { |t| [ mode_label_for(t), t.currency, section_for(t) ] }
           .map { |(mode, currency, section), txs| { mode: mode, currency: currency, section: section }.merge(in_out_balance(txs)) }
-          .sort_by { |row| [ row[:mode], row[:section] ] }
+          .sort_by { |row| [ mode_rank(row[:mode]), row[:mode], row[:section] ] }
       end
 
       def mode_totals_for(transactions)
         transactions
           .group_by { |t| mode_label_for(t) }
           .map { |mode, txs| { mode: mode }.merge(in_out_balance(txs)) }
-          .sort_by { |row| row[:mode] }
+          .sort_by { |row| [ mode_rank(row[:mode]), row[:mode] ] }
       end
 
       def currency_summary_for(transactions)

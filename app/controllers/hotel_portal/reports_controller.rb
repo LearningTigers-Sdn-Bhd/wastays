@@ -945,18 +945,18 @@ module HotelPortal
     def prepare_cashier_lists
       return unless request.format.html?
 
-      @advance_transactions = @cashier_report.advance_scope.page(params[:advance_page]).per(50)
-      @advance_rows = @advance_transactions.map do |transaction|
+      @cashier_transactions = Kaminari.paginate_array(@cashier_report.cash_transactions)
+                                      .page(params[:cashier_page]).per(50)
+      @cashier_rows = cashier_rows_for(@cashier_transactions)
+      @non_cash_rows = cashier_rows_for(@cashier_report.non_cash_transactions)
+    end
+
+    def cashier_rows_for(transactions)
+      transactions.map do |transaction|
         HotelPortal::Reports::DailyReportTransactionRow.new(
           transaction,
-          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
-        )
-      end
-      @settlement_transactions = @cashier_report.settlement_scope.page(params[:settlement_page]).per(50)
-      @settlement_rows = @settlement_transactions.map do |transaction|
-        HotelPortal::Reports::DailyReportTransactionRow.new(
-          transaction,
-          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
+          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
+          section: @cashier_report.section_by_transaction_id[transaction.id]
         )
       end
     end

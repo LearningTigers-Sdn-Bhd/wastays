@@ -1,4 +1,4 @@
-<%= render "daily_report_metric_row", aria_label: "Cashier sales summary", metrics: [
+<%= render "daily_report_metric_row", aria_label: "Cashier activity summary", metrics: [
   { label: "Cash movements", value: format_number(@cashier_report.totals[:movement_count]), detail: "Payments and refunds" },
   { label: "Total collected", value: "MYR #{format_number(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
   { label: "Total refunded", value: "- MYR #{format_number(@cashier_report.totals[:total_refunded], precision: 2)}", detail: "Amount out", detail_variant: :destructive },
@@ -9,47 +9,56 @@
   <span data-cashier-selection-count>0</span> transactions ticked for export
 </p>
 
-<% [["Advance", @advance_rows, @advance_transactions], ["Settlement", @settlement_rows, @settlement_transactions]].each do |title, rows, transactions| %>
-  <section class="space-y-3" aria-labelledby="cashier-<%= title.downcase %>-heading" data-cashier-section>
-    <h2 id="cashier-<%= title.downcase %>-heading" class="text-base font-semibold text-foreground"><%= title %></h2>
-    <%= render PanelsUI::Table.new(
-          caption: "#{title} payments",
-          density: :compact,
-          header_style: :sentence,
-          hoverable: true,
-          wrapper_class: "rounded-lg border border-border bg-card",
-          data: { testid: "#{title.downcase}-rows" }
-        ) do |table| %>
-      <% table.with_header do %>
-        <tr>
-          <th scope="col" class="w-10 text-center">
-            <%= render PanelsUI::Checkbox.new(
-                  name: "select_all_#{title.downcase}_transactions",
-                  id: "select-all-#{title.downcase}-transactions",
-                  label: "Select all #{title.downcase} transactions",
-                  label_hidden: true,
-                  include_hidden: false,
-                  data: { cashier_select_all: true }) %>
-          </th>
-          <% ["Date & time", "Reservation", "Guest details", "Folio", "Invoice", "Payment mode", "Received by", "Remarks", "Amount"].each_with_index do |heading, index| %>
-            <th scope="col" class="<%= index == 8 ? "text-right" : "text-left" %>"><%= heading %></th>
-          <% end %>
-        </tr>
-      <% end %>
-      <% table.with_body do %>
-        <% if rows.present? %>
-          <% report_rows_grouped_by_month(rows, date_preset: @date_preset, &:posting_date).each do |month, period_rows| %>
+<% cashier_headings = ["Date & time", "Reservation", "Guest details", "Folio", "Invoice", "Payment mode", "Type", "Received by", "Remarks", "Amount"] %>
+
+<section class="space-y-3" aria-labelledby="cashier-activity-heading" data-cashier-section>
+  <h2 id="cashier-activity-heading" class="text-base font-semibold text-foreground">Cashier activity</h2>
+  <%= render PanelsUI::Table.new(
+        caption: "Payments handled by hotel staff",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        wrapper_class: "rounded-lg border border-border bg-card",
+        data: { testid: "cashier-rows" }
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col" class="w-10 text-center">
+          <%= render PanelsUI::Checkbox.new(
+                name: "select_all_cashier_transactions",
+                id: "select-all-cashier-transactions",
+                label: "Select all cashier transactions",
+                label_hidden: true,
+                include_hidden: false,
+                data: { cashier_select_all: true }) %>
+        </th>
+        <% cashier_headings.each_with_index do |heading, index| %>
+          <th scope="col" class="<%= index == 9 ? "text-right" : "text-left" %>"><%= heading %></th>
+        <% end %>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if @cashier_rows.present? %>
+        <% @cashier_rows.group_by(&:settlement_mode).each do |mode, mode_rows| %>
+          <% mode_total = @cashier_report.mode_totals.find { |item| item[:mode] == mode } %>
+          <tr class="bg-muted/55" data-slot="report-mode-group">
+            <th scope="rowgroup" colspan="10" class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"><%= mode %></th>
+            <td class="whitespace-nowrap bg-muted/55 text-right text-xs font-semibold text-muted-foreground">
+              <%= format_number(mode_total ? mode_total[:balance] : 0, precision: 2) %>
+            </td>
+          </tr>
+          <% report_rows_grouped_by_month(mode_rows, date_preset: @date_preset, &:posting_date).each do |month, period_rows| %>
             <% if month %>
-              <tr class="bg-muted/55" data-slot="report-month-group">
-                <th scope="rowgroup" colspan="10" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+              <tr class="bg-muted/30" data-slot="report-month-group">
+                <th scope="rowgroup" colspan="11" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
               </tr>
             <% end %>
-          <% period_rows.each do |row| %>
-            <tr data-testid="<%= title.downcase %>-row">
+            <% period_rows.each do |row| %>
+            <tr data-testid="cashier-row">
               <td class="text-center">
                 <%= render PanelsUI::Checkbox.new(
                       name: "selected_transaction_ids[]",
-                      id: "select-#{title.downcase}-transaction-#{row.transaction.id}",
+                      id: "select-cashier-transaction-#{row.transaction.id}",
                       value: row.transaction.id,
                       label: "Select transaction #{row.transaction.id}",
                       label_hidden: true,
@@ -68,21 +77,75 @@
               <td><%= row.folio_number %></td>
               <td><%= row.invoice_number %></td>
               <td><%= row.settlement_mode %></td>
+              <td class="whitespace-nowrap"><%= row.section %></td>
               <td><%= row.received_by %></td>
               <td><%= row.description %></td>
               <td class="whitespace-nowrap text-right font-semibold"><%= row.currency %> <%= format_number(row.signed_amount, precision: 2) %></td>
             </tr>
+            <% end %>
           <% end %>
-          <% end %>
-        <% else %>
-          <%= render "table_empty_state", colspan: 10, message: "No #{title.downcase} payments found for this selected period." %>
         <% end %>
+        <tr class="bg-muted/40 font-semibold">
+          <th scope="row" colspan="10">Grand total</th>
+          <td class="whitespace-nowrap text-right"><%= format_number(@cashier_report.grand_total[:balance], precision: 2) %></td>
+        </tr>
+      <% else %>
+        <%= render "table_empty_state", colspan: 11, message: "No payments were handled at the front desk for this selected period." %>
       <% end %>
     <% end %>
-    <% if transactions.respond_to?(:total_pages) && transactions.total_pages > 1 %>
-      <nav class="flex justify-center border-t border-border px-3 py-2" aria-label="<%= title %> report pagination" data-slot="report-pagination">
-        <%= paginate transactions, param_name: "#{title.downcase}_page" %>
-      </nav>
+  <% end %>
+  <% if @cashier_transactions.respond_to?(:total_pages) && @cashier_transactions.total_pages > 1 %>
+    <nav class="flex justify-center border-t border-border px-3 py-2" aria-label="Cashier activity pagination" data-slot="report-pagination">
+      <%= paginate @cashier_transactions, param_name: "cashier_page" %>
+    </nav>
+  <% end %>
+</section>
+
+<% if @non_cash_rows.present? %>
+  <section class="space-y-3" aria-labelledby="non-cash-heading">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 id="non-cash-heading" class="text-base font-semibold text-foreground">Not counted as cash</h2>
+      <p class="text-sm text-muted-foreground">
+        Money the hotel received through an online gateway or an OTA. No cashier handled it, so it stays out of the totals above.
+      </p>
+    </div>
+    <%= render PanelsUI::Table.new(
+          caption: "Gateway and OTA movements",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-lg border border-border bg-card",
+          data: { testid: "non-cash-rows" }
+        ) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <% ["Date & time", "Reservation", "Guest details", "Payment mode", "Remarks", "Amount"].each_with_index do |heading, index| %>
+            <th scope="col" class="<%= index == 5 ? "text-right" : "text-left" %>"><%= heading %></th>
+          <% end %>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% @non_cash_rows.each do |row| %>
+          <tr data-testid="non-cash-row">
+            <td class="whitespace-nowrap text-muted-foreground">
+              <%= row.posting_date.strftime("%d %b %Y") %>
+              <% if row.posted_at %><span class="block text-xs"><%= row.posted_at.strftime("%H:%M") %></span><% end %>
+            </td>
+            <td><%= row.booking_reference %></td>
+            <td>
+              <%= row.guest_name %>
+              <span class="block text-xs text-muted-foreground">Room <%= row.room_number %></span>
+            </td>
+            <td><%= row.settlement_mode %></td>
+            <td><%= row.description %></td>
+            <td class="whitespace-nowrap text-right font-semibold"><%= row.currency %> <%= format_number(row.signed_amount, precision: 2) %></td>
+          </tr>
+        <% end %>
+        <tr class="bg-muted/40 font-semibold">
+          <th scope="row" colspan="5">Total not counted as cash</th>
+          <td class="whitespace-nowrap text-right"><%= format_number(@cashier_report.non_cash_totals[:net_cash], precision: 2) %></td>
+        </tr>
+      <% end %>
     <% end %>
   </section>
 <% end %>

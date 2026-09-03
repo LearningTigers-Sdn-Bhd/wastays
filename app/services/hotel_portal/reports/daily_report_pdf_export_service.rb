@@ -49,8 +49,8 @@ module HotelPortal
 
       def draw_overview_report(pdf)
         draw_kpi_section(pdf, "Revenue (Accrual)", revenue_kpis)
-        draw_kpi_section(pdf, "Cashier Sales (Cash Flow)", cashier_kpis)
-        draw_note(pdf, "Revenue records when charges are earned. Cashier Sales records when payments or refunds move.")
+        draw_kpi_section(pdf, "Cashier Activity (Cash Flow)", cashier_kpis)
+        draw_note(pdf, "Revenue records when charges are earned. Cashier Activity records when payments or refunds move.")
       end
 
       def draw_revenue_report(pdf)
@@ -64,12 +64,21 @@ module HotelPortal
       end
 
       def draw_cashier_report(pdf)
-        draw_kpi_section(pdf, "Cashier Sales Summary", cashier_kpis)
-        draw_cashier_transaction_table(pdf, "Advance", @cashier_report.advance_scope)
-        pdf.start_new_page(layout: :landscape)
-        draw_cashier_transaction_table(pdf, "Settlement", @cashier_report.settlement_scope)
+        draw_kpi_section(pdf, "Cashier Activity Summary", cashier_kpis)
+        draw_cashier_transaction_table(
+          pdf, "Cashier Activity", @cashier_report.cash_transactions,
+          "Payments and refunds handled by hotel staff"
+        )
         pdf.start_new_page(layout: :landscape)
         draw_cashier_summaries(pdf)
+
+        return if @cashier_report.non_cash_transactions.empty?
+
+        pdf.start_new_page(layout: :landscape)
+        draw_cashier_transaction_table(
+          pdf, "Not Counted As Cash", @cashier_report.non_cash_transactions,
+          "Gateway and OTA money that no cashier handled"
+        )
       end
 
       def draw_kpi_section(pdf, title, cards)
@@ -147,32 +156,37 @@ module HotelPortal
         )
       end
 
-      def draw_cashier_transaction_table(pdf, title, transactions)
-        draw_section_heading(pdf, title, "Payment movements classified as #{title.downcase}")
-        rows = transactions.map { |transaction| cashier_transaction_row(transaction) }
-        if rows.empty?
+      def draw_cashier_transaction_table(pdf, title, transactions, description)
+        draw_section_heading(pdf, title, description)
+        presented = transactions.map { |transaction| cashier_row(transaction) }
+        if presented.empty?
           draw_empty_state(pdf, "No records for this selected period.")
           return
         end
 
-        total = transactions.sum { |transaction| DailyReportTransactionRow.new(transaction).signed_amount }
-        rows << [ "Total", nil, nil, nil, nil, nil, nil, nil, "MYR #{money(total)}" ]
+        rows = presented.map { |row| cashier_transaction_row(row) }
+        total = presented.sum(&:signed_amount)
+        rows << [ "Total", nil, nil, nil, nil, nil, nil, nil, nil, "MYR #{money(total)}" ]
         draw_data_table(
           pdf,
           DailyReportTransactionRow::CASHIER_VISUAL_HEADERS,
           rows,
-          numeric_columns: [ 8 ], total_row: rows.size,
+          numeric_columns: [ 9 ], total_row: rows.size,
           # This table already fills the page, so the amount column borrows its 8pt from the
           # description beside it, which wraps freely.
-          column_widths: [ 68, 96, 92, 74, 55, 82, 72, 162, 77 ]
+          column_widths: [ 68, 88, 88, 70, 52, 78, 58, 68, 132, 76 ]
         )
       end
 
-      def cashier_transaction_row(transaction)
-        row = DailyReportTransactionRow.new(
+      def cashier_row(transaction)
+        DailyReportTransactionRow.new(
           transaction,
-          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
+          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
+          section: @cashier_report.section_by_transaction_id[transaction.id]
         )
+      end
+
+      def cashier_transaction_row(row)
         [
           date_time_label(row),
           row.booking_reference,
@@ -180,6 +194,7 @@ module HotelPortal
           row.folio_number,
           row.invoice_number.to_s,
           row.settlement_mode,
+          row.section,
           row.received_by,
           row.description,
           "#{row.currency} #{money(row.signed_amount)}"
@@ -314,7 +329,7 @@ module HotelPortal
       end
 
       def tab_title
-        { "revenue" => "Revenue", "cashier" => "Cashier Sales" }.fetch(@tab, "Overview")
+        { "revenue" => "Revenue", "cashier" => "Cashier Activity" }.fetch(@tab, "Overview")
       end
 
       def period_label

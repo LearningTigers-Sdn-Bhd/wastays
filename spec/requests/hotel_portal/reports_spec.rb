@@ -1499,9 +1499,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("[data-slot='report-page'][data-report='daily-report']")
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 8)
       expect(page).to have_css("#daily-report-tabs.tabs-root--line nav.tabs-list--line")
-      expect(page).to have_link("Cashier sales")
+      expect(page).to have_link("Cashier activity")
       expect(page.text).to include("Revenue (accrual)", "Bookings engaged", "Total charges", "Net revenue")
-      expect(page.text).to include("Cashier sales (cash flow)", "Cash movements", "Total collected", "Total refunded", "Net cash")
+      expect(page.text).to include("Cashier activity (cash flow)", "Cash movements", "Total collected", "Total refunded", "Net cash")
       expect(page).to have_css("form[data-slot='report-toolbar']")
       expect(page).to have_css("[data-slot='report-export']")
       expect(page).to have_select("date_preset")
@@ -1737,13 +1737,13 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       end
     end
 
-    describe "cashier sales tab" do
+    describe "cashier activity tab" do
       it "renders compact sentence-style report tables" do
         get daily_report_hotel_reports_path(hotel, tab: "cashier",
           start_date: start_date.to_s, end_date: start_date.to_s)
 
         page = Capybara.string(response.body)
-        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 4)
+        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 3)
         expect(page.text).to include("Cashier summary", "Currency summary")
 
         document = Nokogiri::HTML(response.body)
@@ -1758,7 +1758,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(currency_summary_headers).to eq([ "Currency", "Description", "Amount (in)", "Amount (out)", "Balance" ])
       end
 
-      it "splits Advance and Settlement payment rows" do
+      it "lists every staff-handled payment in one table with its type" do
         booking = create(:booking, hotel: hotel)
         folio = create(:booking_folio, booking: booking, hotel: hotel)
         bank_code = hotel.transaction_codes.find_by!(system_key: "bank_payment")
@@ -1777,28 +1777,34 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
 
         expect(response).to have_http_status(:success)
+        expect(response.body).to include("Cashier activity")
         expect(response.body).to include("Advance")
         expect(response.body).to include("Settlement")
         expect(response.body).to include("Remarks")
 
-        headers = Nokogiri::HTML(response.body)
-          .css("[aria-labelledby='cashier-advance-heading'] thead th")
+        document = Nokogiri::HTML(response.body)
+        headers = document
+          .css("[aria-labelledby='cashier-activity-heading'] thead th")
           .map { |header| header.text.strip }
         expect(headers).to eq([
-          "Select all advance transactions",
+          "Select all cashier transactions",
           "Date & time", "Reservation", "Guest details", "Folio", "Invoice",
-          "Payment mode", "Received by", "Remarks", "Amount"
+          "Payment mode", "Type", "Received by", "Remarks", "Amount"
         ])
 
-        advance_row = Nokogiri::HTML(response.body).at_css('[data-testid="advance-row"]')
+        rows = document.css('[data-testid="cashier-row"]')
+        expect(rows.size).to eq(2)
+
+        advance_row = rows.find { |row| row.text.include?("Bank Transfer Payment") }
         advance_cells = advance_row.css("td")
-        expect(advance_cells.size).to eq(10)
+        expect(advance_cells.size).to eq(11)
         expect(advance_cells[3].text.squish).to include(booking.guest_name, "Room —")
         expect(advance_cells[4].text.strip).to eq(folio.folio_reference_display)
         expect(advance_cells[5].text.strip).to eq("—")
-        expect(advance_row.text).to include("Bank Transfer Payment")
+        expect(advance_cells[7].text.strip).to eq("Advance")
 
-        settlement_row = Nokogiri::HTML(response.body).at_css('[data-testid="settlement-row"]')
+        settlement_row = rows.find { |row| row.css("td")[7].text.strip == "Settlement" }
+        expect(settlement_row).to be_present
         [ advance_row, settlement_row ].each do |row|
           expect(row.css("td").last["class"].split).to include("whitespace-nowrap")
         end
@@ -1811,9 +1817,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
 
-        settlement_row = Nokogiri::HTML(response.body).at_css('[data-testid="settlement-row"]')
-        expect(settlement_row.text).to include("Cash Payment")
-        expect(settlement_row.text).not_to include("Refund")
+        refund_row = Nokogiri::HTML(response.body).at_css('[data-testid="cashier-row"]')
+        expect(refund_row.text).to include("Cash Payment")
+        expect(refund_row.css("td")[7].text.strip).to eq("Refund")
       end
 
       it "hides Razorpay payments from cashier rows and summary metrics" do
@@ -1843,10 +1849,11 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
 
         document = Nokogiri::HTML(response.body)
-        metrics = document.at_css('[aria-label="Cashier sales summary"]').text.squish
-        expect(document.css('[data-testid="settlement-row"]').size).to eq(1)
+        metrics = document.at_css('[aria-label="Cashier activity summary"]').text.squish
+        expect(document.css('[data-testid="cashier-row"]').size).to eq(1)
         expect(response.body).to include("Visible front desk cash")
-        expect(response.body).not_to include("Hidden Razorpay payment", "999.00")
+        expect(document.css('[data-testid="non-cash-row"]').size).to eq(1)
+        expect(document.at_css('[data-testid="non-cash-row"]').text).to include("Hidden Razorpay payment")
         expect(metrics).to include("Cash movements 1", "Total collected MYR 100.00", "Net cash MYR 100.00")
       end
 
@@ -1868,7 +1875,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       it "exports only the combined KPI summary on the overview tab" do
         get daily_report_hotel_reports_path(hotel, tab: "overview", format: :csv, start_date: start_date.to_s, end_date: start_date.to_s)
 
-        expect(response.body).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "Net Revenue", "Net Cash")
+        expect(response.body).to include("Revenue (Accrual)", "Cashier Activity (Cash Flow)", "Net Revenue", "Net Cash")
         expect(response.body).not_to include("Posting Date", "Daily Breakdown")
       end
 
@@ -1896,7 +1903,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(response.body).not_to include("Cashier Summary")
       end
 
-      it "exports the combined Advance + Settlement list on the cashier tab" do
+      it "exports the cashier activity list on the cashier tab" do
         booking = create(:booking, hotel: hotel)
         folio = create(:booking_folio, booking: booking, hotel: hotel, invoice_number: 20260506)
         cash_code = hotel.transaction_codes.find_by!(system_key: "cash_payment")
@@ -1917,8 +1924,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         expect(response).to have_http_status(:success)
         expect(response.body).to include(
-          "Advance", "Settlement", "Cashier Summary", "Currency Summary",
-          "Date & Time,Reservation,Guest,Room,Folio,Invoice,Payment Mode,Received By,Remarks,Currency,Amount",
+          "Cashier Activity", "Cashier Summary", "Currency Summary",
+          "Date & Time,Reservation,Guest,Room,Folio,Invoice,Payment Mode,Type,Received By,Remarks,Currency,Amount",
           "Cash Payment", "20260506", "Cashier note"
         )
         expect(response.body).to include("#{start_date.iso8601}T")

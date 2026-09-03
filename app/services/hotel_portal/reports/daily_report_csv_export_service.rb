@@ -37,7 +37,7 @@ module HotelPortal
           [ "Adjustments", decimal(revenue[:adjustments]), "MYR" ],
           [ "Net Revenue", decimal(revenue[:net_revenue]), "MYR" ]
         ])
-        append_metrics(csv, "Cashier Sales (Cash Flow)", [
+        append_metrics(csv, "Cashier Activity (Cash Flow)", [
           [ "Cash Movements", cashier[:movement_count], nil ],
           [ "Total Collected", decimal(cashier[:total_collected]), "MYR" ],
           [ "Total Refunded", decimal(cashier[:total_refunded]), "MYR" ],
@@ -81,8 +81,7 @@ module HotelPortal
       end
 
       def append_cashier(csv)
-        append_cashier_transactions(csv, "Advance", @cashier_report.advance_scope)
-        append_cashier_transactions(csv, "Settlement", @cashier_report.settlement_scope)
+        append_cashier_transactions(csv, "Cashier Activity", @cashier_report.cash_transactions)
 
         csv << [ "Cashier Summary" ]
         csv << [ "Mode", "Currency", "Description", "Amount (IN)", "Amount (OUT)", "Balance" ]
@@ -101,6 +100,11 @@ module HotelPortal
         end
         grand = @cashier_report.grand_total
         csv << [ "Grand Total", nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
+
+        return if @cashier_report.non_cash_transactions.empty?
+
+        csv << []
+        append_cashier_transactions(csv, "Not Counted As Cash", @cashier_report.non_cash_transactions)
       end
 
       def append_transactions(csv, title, transactions)
@@ -118,7 +122,7 @@ module HotelPortal
           csv << [
             cashier_date_time(row),
             row.booking_reference, row.guest_name, row.room_number, row.folio_number, row.invoice_number,
-            row.settlement_mode, row.received_by, row.description, row.currency, decimal(row.signed_amount)
+            row.settlement_mode, row.section, row.received_by, row.description, row.currency, decimal(row.signed_amount)
           ]
         end
         csv << []
@@ -127,7 +131,8 @@ module HotelPortal
       def cashier_row(transaction)
         DailyReportTransactionRow.new(
           transaction,
-          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
+          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
+          section: @cashier_report.section_by_transaction_id[transaction.id]
         )
       end
 

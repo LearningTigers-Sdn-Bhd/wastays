@@ -7,7 +7,7 @@ module HotelPortal
     class DailyReportExcelExportService
       CASHIER_HEADERS = [
         "Date & Time", "Reservation", "Guest", "Room", "Folio", "Invoice",
-        "Payment Mode", "Received By", "Remarks", "Currency", "Amount"
+        "Payment Mode", "Type", "Received By", "Remarks", "Currency", "Amount"
       ].freeze
 
       COLORS = ExcelExportStyles::COLORS
@@ -106,7 +106,7 @@ module HotelPortal
           [ "Net Revenue", decimal(@revenue_report.totals[:net_revenue]), "MYR" ]
         ])
         sheet.add_row([])
-        add_metric_section(sheet, "Cashier Sales (Cash Flow)", [
+        add_metric_section(sheet, "Cashier Activity (Cash Flow)", [
           [ "Cash Movements", @cashier_report.totals[:movement_count], nil ],
           [ "Total Collected", decimal(@cashier_report.totals[:total_collected]), "MYR" ],
           [ "Total Refunded", decimal(@cashier_report.totals[:total_refunded]), "MYR" ],
@@ -156,22 +156,14 @@ module HotelPortal
       end
 
       def build_cashier_workbook
-        advance = add_sheet("Advance", CASHIER_HEADERS.size, widths: cashier_widths)
-        add_report_header(advance, "Cashier Sales - Advance", CASHIER_HEADERS.size)
-        add_metric_section(advance, "Cashier Sales Summary", cashier_metrics)
-        advance.add_row([])
-        advance_rows = cashier_rows(@cashier_report.advance_scope)
+        activity = add_sheet("Cashier Activity", CASHIER_HEADERS.size, widths: cashier_widths)
+        add_report_header(activity, "Cashier Activity", CASHIER_HEADERS.size)
+        add_metric_section(activity, "Cashier Activity Summary", cashier_metrics)
+        activity.add_row([])
+        activity_rows = cashier_rows(@cashier_report.cash_transactions)
         add_table(
-          advance, headers: CASHIER_HEADERS, rows: advance_rows,
-          datetime_columns: [ 0 ], money_columns: [ 10 ], total_row: total_for_cashier(advance_rows)
-        )
-
-        settlement = add_sheet("Settlement", CASHIER_HEADERS.size, widths: cashier_widths)
-        add_report_header(settlement, "Cashier Sales - Settlement", CASHIER_HEADERS.size)
-        settlement_rows = cashier_rows(@cashier_report.settlement_scope)
-        add_table(
-          settlement, headers: CASHIER_HEADERS, rows: settlement_rows,
-          datetime_columns: [ 0 ], money_columns: [ 10 ], total_row: total_for_cashier(settlement_rows)
+          activity, headers: CASHIER_HEADERS, rows: activity_rows,
+          datetime_columns: [ 0 ], money_columns: [ 11 ], total_row: total_for_cashier(activity_rows)
         )
 
         summary = add_sheet("Cashier Summary", 6, widths: [ 28, 13, 16, 18, 18, 18 ])
@@ -199,6 +191,16 @@ module HotelPortal
           headers: [ "Currency", "Section", "Amount In", "Amount Out", "Balance" ],
           rows: currency_rows, money_columns: [ 2, 3, 4 ],
           total_row: [ "Grand Total", nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
+        )
+
+        return if @cashier_report.non_cash_transactions.empty?
+
+        non_cash = add_sheet("Not Counted As Cash", CASHIER_HEADERS.size, widths: cashier_widths)
+        add_report_header(non_cash, "Not Counted As Cash", CASHIER_HEADERS.size)
+        non_cash_rows = cashier_rows(@cashier_report.non_cash_transactions)
+        add_table(
+          non_cash, headers: CASHIER_HEADERS, rows: non_cash_rows,
+          datetime_columns: [ 0 ], money_columns: [ 11 ], total_row: total_for_cashier(non_cash_rows)
         )
       end
 
@@ -321,7 +323,7 @@ module HotelPortal
           row = cashier_row(transaction)
           [
             transaction_datetime(row), row.booking_reference, row.guest_name, row.room_number,
-            row.folio_number, row.invoice_number, row.settlement_mode, row.received_by,
+            row.folio_number, row.invoice_number, row.settlement_mode, row.section, row.received_by,
             row.description, row.currency, decimal(row.signed_amount)
           ]
         end
@@ -330,7 +332,8 @@ module HotelPortal
       def cashier_row(transaction)
         DailyReportTransactionRow.new(
           transaction,
-          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id]
+          settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
+          section: @cashier_report.section_by_transaction_id[transaction.id]
         )
       end
 
@@ -342,8 +345,8 @@ module HotelPortal
       end
 
       def total_for_cashier(rows)
-        total = rows.sum { |row| row[10].to_d }
-        [ "Total", *Array.new(8), rows.first&.[](9) || "MYR", decimal(total) ]
+        total = rows.sum { |row| row[11].to_d }
+        [ "Total", *Array.new(9), rows.first&.[](10) || "MYR", decimal(total) ]
       end
 
       def total_for_register(rows, column_count, amount_indexes:)
@@ -360,7 +363,7 @@ module HotelPortal
       end
 
       def cashier_widths
-        [ 20, 25, 22, 12, 20, 16, 24, 20, 42, 12, 16 ]
+        [ 20, 25, 22, 12, 20, 16, 24, 14, 20, 42, 12, 16 ]
       end
 
       def period_label

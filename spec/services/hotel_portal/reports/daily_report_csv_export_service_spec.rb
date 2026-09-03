@@ -37,9 +37,12 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
         total_refunded: 0.to_d,
         net_cash: 100.to_d
       },
-      advance_scope: [],
-      settlement_scope: [],
+      cash_transactions: [],
+      non_cash_transactions: [],
+      non_cash_totals: { movement_count: 0, total_collected: 0.to_d, total_refunded: 0.to_d, net_cash: 0.to_d },
       mode_by_transaction_id: {},
+      section_by_transaction_id: {},
+      mode_order: [],
       mode_summary_rows: [],
       mode_totals: [],
       currency_summary_rows: [],
@@ -81,9 +84,9 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     expect(csv).to start_with(described_class::BOM)
     expect(csv).to include(
       "Revenue (Accrual),Net Revenue,498.40,MYR",
-      "Cashier Sales (Cash Flow),Net Cash,100.00,MYR"
+      "Cashier Activity (Cash Flow),Net Cash,100.00,MYR"
     )
-    expect(csv).not_to include("Daily Breakdown", "Advance")
+    expect(csv).not_to include("Daily Breakdown", "Cashier Summary")
   end
 
   it "exports revenue analysis and the Revenue Register" do
@@ -107,12 +110,13 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
       posting_date: date,
       description: "Front desk cash"
     )
-    cashier_report.advance_scope = [ payment ]
+    cashier_report.cash_transactions = [ payment ]
     cashier_report.mode_by_transaction_id = { payment.id => "Cash Payment" }
+    cashier_report.section_by_transaction_id = { payment.id => "Settlement" }
 
     csv = generate("cashier")
 
-    expect(csv).to include("Advance", "Settlement", "Cashier Summary", "Currency Summary")
+    expect(csv).to include("Cashier Activity", "Cashier Summary", "Currency Summary")
     expect(csv).to include("Cash Guest", "Cash Payment", "Front desk cash", "MYR,100.00")
     expect(csv).not_to include("Daily Breakdown", "Revenue Register")
   end

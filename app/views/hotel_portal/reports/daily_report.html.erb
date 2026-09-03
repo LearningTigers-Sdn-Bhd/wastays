@@ -8,7 +8,7 @@
 <%= tag.div class: "w-full space-y-4", data: { slot: "report-page", report: "daily-report", **page_data } do %>
   <% cashier_export_params = cashier_tab ? { cashier_start_time: params[:cashier_start_time], cashier_end_time: params[:cashier_end_time] }.compact_blank : {} %>
   <% cashier_time_range_active = cashier_tab && cashier_export_params.present? %>
-  <%= render PanelsUI::PageHeader.new(title: "Daily report", description: "Review daily revenue, charge activity, and cashier sales for the selected period.") do |header| %>
+  <%= render PanelsUI::PageHeader.new(title: "Daily report", description: "Review daily revenue, charge activity, and cashier activity for the selected period.") do |header| %>
     <% header.with_caption do %>
       <p class="text-sm text-muted-foreground">
         <%= current_hotel.name %> ·
@@ -50,7 +50,7 @@
         aria_label: "Daily report sections") do |tabs| %>
     <% tabs.with_tab(name: "overview", label: "Overview", href: daily_report_hotel_reports_path(current_hotel, preserved_params.merge(tab: "overview")), data: { testid: "daily-report-tab-overview" }) %>
     <% tabs.with_tab(name: "revenue", label: "Revenue", href: daily_report_hotel_reports_path(current_hotel, preserved_params.merge(tab: "revenue")), data: { testid: "daily-report-tab-revenue" }) %>
-    <% tabs.with_tab(name: "cashier", label: "Cashier sales", href: daily_report_hotel_reports_path(current_hotel, preserved_params.merge(tab: "cashier")), data: { testid: "daily-report-tab-cashier" }) %>
+    <% tabs.with_tab(name: "cashier", label: "Cashier activity", href: daily_report_hotel_reports_path(current_hotel, preserved_params.merge(tab: "cashier")), data: { testid: "daily-report-tab-cashier" }) %>
   <% end %>
 
   <% case @daily_report_tab %>
@@ -71,7 +71,7 @@
     </section>
 
     <section class="space-y-3" aria-labelledby="overview-cashier-heading">
-      <h2 id="overview-cashier-heading" class="text-base font-semibold">Cashier sales (cash flow)</h2>
+      <h2 id="overview-cashier-heading" class="text-base font-semibold">Cashier activity (cash flow)</h2>
       <%= render "daily_report_metric_row", aria_label: "Cashier sales summary", metrics: [
         { label: "Cash movements", value: format_number(@cashier_report.totals[:movement_count]), detail: "Payments and refunds" },
         { label: "Total collected", value: "MYR #{format_number(@cashier_report.totals[:total_collected], precision: 2)}", detail: "Amount in" },
