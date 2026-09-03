@@ -18,11 +18,41 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
 
   describe "GET /guest-registration-card/:token" do
     it "renders the card for signing" do
+      booking.update!(guest_home_address: "12 Public Street, Kuching")
+
       get guest_registration_card_path(card.public_token)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include(booking.guest_registration_card_number_display)
+      expect(response.body).to include("Address", "12 Public Street, Kuching")
       expect(response.body).to include("Sign registration card")
+    end
+
+    it "hides the address when the hotel disables it" do
+      hotel.update!(guest_registration_card_fields: %w[phone email])
+      booking.update!(guest_home_address: "12 Hidden Street, Kuching")
+
+      get guest_registration_card_path(card.public_token)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.css("dt").map { |node| node.text.strip }).not_to include("Address")
+      expect(response.body).not_to include("12 Hidden Street, Kuching")
+    end
+
+    it "shows the address for the guest assigned to the public card" do
+      additional = create(
+        :booking_guest,
+        booking: booking,
+        is_primary: false,
+        home_address_snapshot: "56 Additional Lane, Sibu"
+      )
+      additional_card = create(:guest_registration_card, hotel: hotel, booking: booking, booking_guest: additional)
+      booking.update!(guest_home_address: "12 Primary Street, Kuching")
+
+      get guest_registration_card_path(additional_card.public_token)
+
+      expect(response.body).to include("Address", "56 Additional Lane, Sibu")
+      expect(response.body).not_to include("12 Primary Street, Kuching")
     end
 
     it "404s for an unknown token" do

@@ -40,6 +40,20 @@ RSpec.describe Guests::GuestPresenter do
     end
   end
 
+  describe "#home_address" do
+    it "returns the home address" do
+      guest.home_address = "No. 12, Jalan Ampang"
+
+      expect(presenter.home_address).to eq("No. 12, Jalan Ampang")
+    end
+
+    it "returns a dash if the home address is blank" do
+      guest.home_address = nil
+
+      expect(presenter.home_address).to eq("—")
+    end
+  end
+
   describe "safe attributes" do
     it "handles decryption errors gracefully" do
       allow(guest).to receive(:name).and_raise(ActiveRecord::Encryption::Errors::Decryption)

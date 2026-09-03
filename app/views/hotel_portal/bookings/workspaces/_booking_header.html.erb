@@ -1,4 +1,4 @@
-<header class="flex flex-col gap-4 px-5 pt-4 lg:flex-row lg:items-start lg:justify-between" data-testid="booking-workspace-header">
+<header class="flex flex-col gap-2 px-5 pt-3 lg:flex-row lg:items-start lg:justify-between" data-testid="booking-workspace-header">
   <div class="flex min-w-0 items-start gap-3">
     <%= link_to hotel_front_desk_path(current_hotel, tab: "bookings", view: "list"),
           class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -51,8 +51,7 @@
           <% end %>
         <% end %>
       </div>
-      <p class="text-xs text-muted-foreground"><%= presenter.header_party_line %></p>
-      <p class="text-xs text-muted-foreground"><%= presenter.header_stay_line %></p>
+      <p class="text-xs text-muted-foreground"><%= presenter.header_party_and_stay_line %></p>
       <% if presenter.stay_dates_vary? %>
         <dl class="flex flex-wrap gap-x-6 gap-y-1 pt-0.5 text-xs text-muted-foreground">
           <div class="flex gap-1.5">
