@@ -453,6 +453,8 @@ RSpec.describe "Hotel onboarding shell", type: :system do
       .to have_attributes(payment_method_type: "cash", guest_advance: false, default_cash: true)
     expect(hotel.hotel_payment_methods.joins(:transaction_code).find_by!(transaction_codes: { system_key: "cash_prepayment" }))
       .to have_attributes(payment_method_type: "cash", guest_advance: true, default_cash: false)
+    expect(hotel.hotel_payment_methods.joins(:transaction_code).find_by!(transaction_codes: { system_key: "card_prepayment" }))
+      .to have_attributes(payment_method_type: "bank_gateway", guest_advance: true, default_cash: false)
     expect(Invitation.count).to eq(0)
   end
 end

@@ -3,7 +3,7 @@
 module PaymentMethods
   class EnsureDefaults
     CASH_SYSTEM_KEYS = %w[cash_payment cash_prepayment].freeze
-    SYSTEM_KEYS = %w[cash_payment cash_prepayment card_payment bank_payment gateway_manual_recovery_payment ota_collected_payment].freeze
+    SYSTEM_KEYS = %w[cash_payment cash_prepayment card_payment card_prepayment bank_payment gateway_manual_recovery_payment ota_collected_payment].freeze
 
     def self.call(hotel)
       new(hotel).call
