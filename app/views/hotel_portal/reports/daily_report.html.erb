@@ -1,13 +1,29 @@
+<% cashier_activity_empty = @cashier_report.totals[:movement_count].zero? && @cashier_report.non_cash_totals[:movement_count].zero? %>
 <% export_disabled = case @daily_report_tab
    when "revenue" then @revenue_report.rows.empty?
-   when "cashier" then @cashier_report.totals[:movement_count].zero?
-   else @revenue_report.rows.empty? && @cashier_report.totals[:movement_count].zero?
+   when "cashier" then cashier_activity_empty
+   else @revenue_report.rows.empty? && cashier_activity_empty
    end %>
 <% cashier_tab = @daily_report_tab == "cashier" %>
-<% page_data = cashier_tab ? { controller: "cashier-report-table", action: "change->cashier-report-table#changed" } : {} %>
+<% page_data = cashier_tab ? {
+     controller: "cashier-report-table",
+     action: "change->cashier-report-table#changed",
+     cashier_report_table_preference_url_value: hotel_cashier_activity_view_preference_path(current_hotel)
+   } : {} %>
 <%= tag.div class: "w-full space-y-4", data: { slot: "report-page", report: "daily-report", **page_data } do %>
-  <% cashier_export_params = cashier_tab ? { cashier_start_time: params[:cashier_start_time], cashier_end_time: params[:cashier_end_time] }.compact_blank : {} %>
-  <% cashier_time_range_active = cashier_tab && cashier_export_params.present? %>
+  <% cashier_export_params = cashier_tab ? {
+       cashier_start_time: params[:cashier_start_time], cashier_end_time: params[:cashier_end_time],
+       cashier_view: @cashier_view, cashier_group_by: @cashier_group_by,
+       cashier_handling: params[:cashier_handling], cashier_payment_modes: params[:cashier_payment_modes],
+       cashier_stages: params[:cashier_stages], cashier_received_by: params[:cashier_received_by],
+       cashier_currencies: params[:cashier_currencies]
+     }.compact_blank : {} %>
+  <% cashier_time_range_dirty = cashier_tab && (params[:cashier_start_time].present? || params[:cashier_end_time].present?) %>
+  <% daily_report_export_items = [
+       ["Export PDF", daily_report_hotel_reports_path(current_hotel, cashier_export_params.merge(start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :pdf)), (cashier_tab ? { id: "cashier-export-pdf-link" } : nil)],
+       ["Export Excel", daily_report_hotel_reports_path(current_hotel, cashier_export_params.merge(start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :xlsx)), (cashier_tab ? { id: "cashier-export-excel-link" } : nil)],
+       ["Export CSV", daily_report_hotel_reports_path(current_hotel, cashier_export_params.merge(start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :csv)), (cashier_tab ? { id: "cashier-export-csv-link" } : nil)]
+     ] %>
   <%= render PanelsUI::PageHeader.new(title: "Daily report", description: "Review daily revenue, charge activity, and cashier activity for the selected period.") do |header| %>
     <% header.with_caption do %>
       <p class="text-sm text-muted-foreground">
@@ -23,22 +39,19 @@
       <%= render "preset_report_actions",
         form_url: daily_report_hotel_reports_path(current_hotel),
         form_id: "daily-revenue-range-form",
-        hidden_params: { tab: @daily_report_tab },
+        hidden_params: { tab: @daily_report_tab }.merge(cashier_export_params.except(:cashier_start_time, :cashier_end_time)),
         date_preset: @date_preset,
         start_date: @revenue_report.start_date,
         end_date: @revenue_report.end_date,
         show_time_range: cashier_tab,
         time_range_start: params[:cashier_start_time],
         time_range_end: params[:cashier_end_time],
-        clear_time_range_path: (cashier_time_range_active ? daily_report_hotel_reports_path(current_hotel, tab: "cashier", start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset) : nil),
-        show_export: feature_enabled_for_hotel?("excel_pdf_export"),
+        clear_time_range_path: (cashier_time_range_dirty ? daily_report_hotel_reports_path(current_hotel, cashier_export_params.except(:cashier_start_time, :cashier_end_time).merge(tab: "cashier", start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset)) : nil),
+        show_export: feature_enabled_for_hotel?("excel_pdf_export") && !cashier_tab,
         export_disabled: export_disabled,
+        export_label: (cashier_tab ? "Export #{@cashier_view == 'full' ? 'full report' : @cashier_view}" : "Export"),
         export_menu_id: "daily-revenue-export",
-        export_items: [
-          ["Export PDF", daily_report_hotel_reports_path(current_hotel, cashier_export_params.merge(start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :pdf)), (cashier_tab ? { id: "cashier-export-pdf-link" } : nil)],
-          ["Export Excel", daily_report_hotel_reports_path(current_hotel, cashier_export_params.merge(start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :xlsx)), (cashier_tab ? { id: "cashier-export-excel-link" } : nil)],
-          ["Export CSV", daily_report_hotel_reports_path(current_hotel, cashier_export_params.merge(start_date: @revenue_report.start_date, end_date: @revenue_report.end_date, date_preset: @date_preset, tab: @daily_report_tab, format: :csv)), (cashier_tab ? { id: "cashier-export-csv-link" } : nil)]
-        ] %>
+        export_items: daily_report_export_items %>
     <% end %>
   <% end %>
 
@@ -57,7 +70,11 @@
   <% when "revenue" %>
     <%= render "daily_report_revenue" %>
   <% when "cashier" %>
-    <%= render "daily_report_cashier_sales" %>
+    <%= render "daily_report_cashier_sales",
+          export_enabled: feature_enabled_for_hotel?("excel_pdf_export"),
+          export_disabled: export_disabled,
+          export_label: "Export #{@cashier_view == 'full' ? 'full report' : @cashier_view}",
+          export_items: daily_report_export_items %>
   <% else %>
     <section class="space-y-3" aria-labelledby="overview-revenue-heading">
       <% adjustment = daily_report_adjustment_presentation(@revenue_report.totals[:adjustments]) %>

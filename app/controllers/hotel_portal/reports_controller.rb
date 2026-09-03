@@ -14,6 +14,7 @@ module HotelPortal
     BIBO_ALL = "all"
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
     DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
+    CASHIER_VIEWS = %w[full activity summary].freeze
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
     OTA_SETTLEMENT_STATUS_FILTERS = {
       "all" => nil,
@@ -230,6 +231,10 @@ module HotelPortal
     def daily_report
       @report_start_date, @report_end_date = parse_report_date_range
       @daily_report_tab = params[:tab].presence_in(DAILY_REPORT_TABS) || "overview"
+      @cashier_view = params[:cashier_view].presence_in(CASHIER_VIEWS) || "full"
+      @cashier_group_by = params[:cashier_group_by].presence_in(HotelPortal::Reports::CashierActivityTable::GROUPINGS) ||
+        HotelPortal::Reports::CashierActivityTable::DEFAULT_GROUPING
+      @cashier_visible_columns = cashier_visible_columns
 
       @revenue_report = HotelPortal::Reports::DailyRevenueReport.new(
         hotel: current_hotel,
@@ -259,6 +264,8 @@ module HotelPortal
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
             cashier_report: cashier_export_report,
+            cashier_view: @cashier_view,
+            visible_columns: @cashier_visible_columns,
             charge_register: @charge_register_result.rows
           ).generate
           send_data csv,
@@ -271,6 +278,8 @@ module HotelPortal
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
             cashier_report: cashier_export_report,
+            cashier_view: @cashier_view,
+            visible_columns: @cashier_visible_columns,
             charge_register: @charge_register_result.rows
           ).generate
           send_data workbook,
@@ -284,6 +293,8 @@ module HotelPortal
             tab: @daily_report_tab,
             revenue_report: @revenue_report,
             cashier_report: cashier_export_report,
+            cashier_view: @cashier_view,
+            visible_columns: @cashier_visible_columns,
             charge_register: @charge_register_result.rows,
             prepared_by: current_user.name
           ).generate
@@ -926,29 +937,45 @@ module HotelPortal
     def cashier_report_filters
       {
         start_time: params[:cashier_start_time],
-        end_time: params[:cashier_end_time]
+        end_time: params[:cashier_end_time],
+        handling: params[:cashier_handling],
+        payment_modes: params[:cashier_payment_modes],
+        stages: params[:cashier_stages],
+        received_by: params[:cashier_received_by],
+        currencies: params[:cashier_currencies]
       }
     end
 
     def cashier_export_report
-      return @cashier_report unless params[:selected_transaction_ids].present?
+      selection = HotelPortal::Reports::CashierActivitySelection.new(
+        report: @cashier_report,
+        group_by: params[:cashier_selection_group_by] || @cashier_group_by,
+        transaction_ids: params[:selected_transaction_ids],
+        group_values: params[:selected_cashier_groups],
+        excluded_transaction_ids: params[:excluded_transaction_ids]
+      )
+      return @cashier_report unless selection.selected?
 
       HotelPortal::Reports::CashierSalesReport.new(
         hotel: current_hotel,
         start_date: @report_start_date,
         end_date: @report_end_date,
         **cashier_report_filters,
-        transaction_ids: Array(params[:selected_transaction_ids])
+        transaction_ids: selection.selected_ids.to_a
       ).call
     end
 
     def prepare_cashier_lists
       return unless request.format.html?
 
-      @cashier_transactions = Kaminari.paginate_array(@cashier_report.cash_transactions)
+      @cashier_activity_table = HotelPortal::Reports::CashierActivityTable.new(
+        report: @cashier_report, group_by: @cashier_group_by
+      )
+      ordered_transactions = @cashier_activity_table.groups.flat_map(&:transactions)
+      @cashier_transactions = Kaminari.paginate_array(ordered_transactions)
                                       .page(params[:cashier_page]).per(50)
       @cashier_rows = cashier_rows_for(@cashier_transactions)
-      @non_cash_rows = cashier_rows_for(@cashier_report.non_cash_transactions)
+      @cashier_group_totals = @cashier_activity_table.groups.index_by(&:key)
     end
 
     def cashier_rows_for(transactions)
@@ -957,9 +984,20 @@ module HotelPortal
           transaction,
           settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
           section: @cashier_report.section_by_transaction_id[transaction.id],
-          origin: @cashier_report.non_cash_origin_by_transaction_id[transaction.id]
+          origin: @cashier_report.non_cash_origin_by_transaction_id[transaction.id],
+          handling: @cashier_report.handling_by_transaction_id[transaction.id],
+          received_by_key: @cashier_report.received_by_key_by_transaction_id[transaction.id]
         )
       end
+    end
+
+    def cashier_visible_columns
+      ReportViewPreferences::Read.new(
+        hotel: current_hotel,
+        user: current_user,
+        report_key: "daily_report_cashier_activity",
+        columns: HotelPortal::Reports::CashierActivityColumns
+      ).visible_columns
     end
 
     def load_guest_registration_cards(start_date: nil, end_date: nil)

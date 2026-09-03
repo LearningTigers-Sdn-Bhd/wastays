@@ -67,6 +67,7 @@
     <%= render "hotel_portal/reports/export_dropdown",
       menu_id: export_menu_id,
       items: export_items,
+      label: local_assigns.fetch(:export_label, "Export"),
       disabled: local_assigns.fetch(:export_disabled, false) %>
   <% end %>
 <% end %>

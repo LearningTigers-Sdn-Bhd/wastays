@@ -5,11 +5,11 @@ module HotelPortal
     class DailyReportTransactionRow
       CASHIER_LIST_HEADERS = [
         "Date & Time", "Reservation", "Guest", "Room", "Folio", "Invoice",
-        "Payment Mode", "Type", "Received By", "Remarks", "Amount"
+        "Payment Mode", "Stage", "Received By", "Remarks", "Amount"
       ].freeze
       CASHIER_VISUAL_HEADERS = [
         "Date & Time", "Reservation", "Guest Details", "Folio", "Invoice",
-        "Payment Mode", "Type", "Received By", "Remarks", "Amount"
+        "Payment Mode", "Stage", "Received By", "Remarks", "Amount"
       ].freeze
 
       attr_reader :transaction
@@ -17,15 +17,29 @@ module HotelPortal
       delegate :posting_date, :posted_at, :transaction_type, :category, :description,
         :currency, to: :transaction
 
-      def initialize(transaction, settlement_mode: nil, section: nil, origin: nil)
+      def initialize(transaction, settlement_mode: nil, section: nil, origin: nil, handling: nil, received_by_key: nil)
         @transaction = transaction
         @settlement_mode = settlement_mode
         @section = section
         @origin = origin
+        @handling = handling
+        @received_by_key = received_by_key
       end
 
       # Set only on rows no cashier handled: which side the money sits on.
       attr_reader :origin
+
+      def handling_key
+        @handling.presence || (origin.present? ? origin.parameterize(separator: "_") : "at_desk")
+      end
+
+      def handling
+        CashierSalesReport::HANDLING_LABELS.fetch(handling_key)
+      end
+
+      def received_by_key
+        @received_by_key.presence || (transaction.user_id ? "user:#{transaction.user_id}" : "unassigned")
+      end
 
       # What the movement did to the drawer: money taken before the charge
       # exists, money taken against a charge, or money given back.
@@ -56,7 +70,15 @@ module HotelPortal
       end
 
       def booking_reference
-        booking.confirmation_token
+        booking_number
+      end
+
+      def booking_number
+        booking.formatted_reservation_number.presence || "—"
+      end
+
+      def confirmation_code
+        booking.confirmation_token.presence || "—"
       end
 
       def folio_number
@@ -64,7 +86,13 @@ module HotelPortal
       end
 
       def invoice_number
-        folio.invoice_number.presence || "—"
+        folio.invoice_reference.presence ||
+          DocumentIdentifiers::Issuer.format(
+            hotel: folio.hotel,
+            type: :invoice,
+            year: folio.invoice_year,
+            number: folio.invoice_number
+          ).presence || "—"
       end
 
       def guest_name
@@ -100,7 +128,7 @@ module HotelPortal
       end
 
       def received_by
-        return "Payment Gateway" if gateway_receipt?
+        return "Payment Gateway" if origin == "Gateway"
 
         transaction.user&.name.presence || "—"
       end
@@ -132,10 +160,6 @@ module HotelPortal
 
       def metadata
         transaction.metadata.to_h.stringify_keys
-      end
-
-      def gateway_receipt?
-        metadata["payment_transaction_id"].present? || posting_source == "gateway_payment"
       end
     end
   end

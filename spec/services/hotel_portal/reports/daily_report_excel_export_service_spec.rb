@@ -101,19 +101,22 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
       ).call
     ).call.rows
 
-    generate = lambda do |tab|
+    generate = lambda do |tab, cashier_view = "full"|
       described_class.new(
         hotel: hotel,
         tab: tab,
         revenue_report: revenue_report,
         cashier_report: cashier_report,
-        charge_register: charge_register
+        charge_register: charge_register,
+        cashier_view: cashier_view
       ).generate
     end
 
     overview = generate.call("overview")
     revenue = generate.call("revenue")
     cashier_content = generate.call("cashier")
+    cashier_activity_content = generate.call("cashier", "activity")
+    cashier_summary_content = generate.call("cashier", "summary")
 
     expect(overview).to start_with("PK")
     expect(revenue).to start_with("PK")
@@ -122,6 +125,8 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
     overview_entries = workbook_entries(overview)
     revenue_entries = workbook_entries(revenue)
     cashier_entries = workbook_entries(cashier_content)
+    cashier_activity_entries = workbook_entries(cashier_activity_content)
+    cashier_summary_entries = workbook_entries(cashier_summary_content)
     overview_rows = worksheet_rows(overview_entries, worksheet_xml(overview_entries, "Overview"))
     metadata_cell = overview_rows.find { |row| row["A"]&.fetch(:value)&.start_with?("Reporting period:") }.fetch("A")
     section_cell = overview_rows.find { |row| row["A"]&.fetch(:value) == "Revenue (Accrual)" }.fetch("A")
@@ -130,7 +135,11 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
 
     expect(sheet_names(overview_entries)).to eq([ "Overview" ])
     expect(sheet_names(revenue_entries)).to eq([ "Daily Breakdown", "Revenue by Source", "Revenue Register" ])
-    expect(sheet_names(cashier_entries)).to eq([ "Cashier Activity", "Activity By Payment Mode", "Currency Summary" ])
+    expect(sheet_names(cashier_entries)).to eq([ "Payment Activity", "Activity By Payment Mode", "Currency Summary" ])
+    expect(sheet_names(cashier_activity_entries)).to eq([ "Payment Activity" ])
+    expect(sheet_names(cashier_summary_entries)).to eq([ "Activity By Payment Mode", "Currency Summary" ])
+    expect(described_class::CASHIER_HEADERS).to include("Stage")
+    expect(described_class::CASHIER_HEADERS).not_to include("Type")
     expect(font_size(overview_entries, metadata_cell.fetch(:style))).to eq(11)
     expect(font_size(overview_entries, section_cell.fetch(:style))).to eq(12)
     expect(font_size(overview_entries, metric_header.fetch(:style))).to eq(11)
@@ -154,8 +163,9 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
     expect(revenue_xml).to match(/<row[^>]+ht="22"/)
     expect(workbook_text).to include(
       "Daily Report", "Room Revenue", "Currency", "Amount", "Tax",
-      "Paid at front desk", "Aisha Cashier", "Advance deposit", "Bank Transfer Payment"
+      "Aisha Cashier", "Bank Transfer Payment"
     )
+    expect(workbook_text).not_to include("Paid at front desk", "Advance deposit")
     expect(charge_register_header.values.map { |cell| cell[:value] }).to eq(HotelPortal::Reports::DailyRevenueTransactionsCsvExportService::HEADERS)
     expect(charge_register_document.xpath("//xmlns:cols/xmlns:col").sum { |column| column["max"].to_i - column["min"].to_i + 1 }).to eq(14)
     expect(charge_register_document.xpath("//xmlns:mergeCell").map { |cell| cell["ref"] }).to include("A1:N1")

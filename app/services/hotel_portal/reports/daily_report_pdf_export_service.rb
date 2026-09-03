@@ -9,13 +9,16 @@ module HotelPortal
       THEME = Exports::PdfTheme
       COLORS = THEME::COLORS
 
-      def initialize(hotel:, tab:, revenue_report:, cashier_report:, prepared_by:, charge_register: [])
+      def initialize(hotel:, tab:, revenue_report:, cashier_report:, prepared_by:, charge_register: [],
+                     cashier_view: "full", visible_columns: CashierActivityColumns::DEFAULT_KEYS)
         @hotel = hotel
         @tab = tab
         @revenue_report = revenue_report
         @cashier_report = cashier_report
         @prepared_by = prepared_by
         @charge_register = charge_register
+        @cashier_view = cashier_view.to_s.presence_in(%w[full activity summary]) || "full"
+        @visible_columns = visible_columns
       end
 
       def generate
@@ -64,21 +67,12 @@ module HotelPortal
       end
 
       def draw_cashier_report(pdf)
-        draw_kpi_section(pdf, "Cashier Activity Summary", cashier_kpis)
-        draw_cashier_transaction_table(
-          pdf, "Cashier Activity", @cashier_report.cash_transactions,
-          "Payments and refunds handled by hotel staff"
-        )
-        pdf.start_new_page(layout: :landscape)
+        draw_cashier_transaction_table(pdf) if %w[full activity].include?(@cashier_view)
+        return unless %w[full summary].include?(@cashier_view)
+
+        pdf.start_new_page(layout: :landscape) if @cashier_view == "full"
+        draw_cashier_summary_metrics(pdf)
         draw_cashier_summaries(pdf)
-
-        return if @cashier_report.non_cash_transactions.empty?
-
-        pdf.start_new_page(layout: :landscape)
-        draw_cashier_transaction_table(
-          pdf, "Not Handled At The Desk", @cashier_report.non_cash_transactions,
-          "Gateway and OTA money that no cashier handled"
-        )
       end
 
       def draw_kpi_section(pdf, title, cards)
@@ -156,25 +150,29 @@ module HotelPortal
         )
       end
 
-      def draw_cashier_transaction_table(pdf, title, transactions, description)
-        draw_section_heading(pdf, title, description)
-        presented = transactions.map { |transaction| cashier_row(transaction) }
-        if presented.empty?
+      def draw_cashier_transaction_table(pdf)
+        draw_section_heading(pdf, "Payment Activity", "At-desk, gateway, and OTA payment movements")
+        table = CashierActivityExportTable.new(report: @cashier_report, visible_columns: @visible_columns)
+        rows = table.pdf_rows
+        if rows.empty?
           draw_empty_state(pdf, "No records for this selected period.")
           return
         end
 
-        rows = presented.map { |row| cashier_transaction_row(row) }
-        total = presented.sum(&:signed_amount)
-        rows << [ "Total", nil, nil, nil, nil, nil, nil, nil, nil, "MYR #{money(total)}" ]
+        amount_index = table.pdf_headers.index("Amount")
+        rows.each { |row| row[amount_index] = money(row[amount_index]) } if amount_index
+        total = Array.new(table.pdf_headers.size)
+        total[0] = "Total"
+        total[amount_index] = money((@cashier_report.all_totals || @cashier_report.totals)[:net_cash]) if amount_index
+        rows << total
+        widths = table.pdf_widths
+        scale = [ pdf.bounds.width / widths.sum.to_f, 1 ].min
         draw_data_table(
           pdf,
-          DailyReportTransactionRow::CASHIER_VISUAL_HEADERS,
+          table.pdf_headers,
           rows,
-          numeric_columns: [ 9 ], total_row: rows.size,
-          # This table already fills the page, so the amount column borrows its 8pt from the
-          # description beside it, which wraps freely.
-          column_widths: [ 68, 88, 88, 70, 52, 78, 58, 68, 132, 76 ]
+          numeric_columns: [ amount_index ].compact, total_row: rows.size,
+          column_widths: widths.map { |width| width * scale }
         )
       end
 
@@ -182,7 +180,8 @@ module HotelPortal
         DailyReportTransactionRow.new(
           transaction,
           settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
-          section: @cashier_report.section_by_transaction_id[transaction.id]
+          section: @cashier_report.section_by_transaction_id[transaction.id],
+          origin: @cashier_report.non_cash_origin_by_transaction_id&.[](transaction.id)
         )
       end
 
@@ -203,19 +202,21 @@ module HotelPortal
 
       def draw_cashier_summaries(pdf)
         draw_section_heading(pdf, "Activity By Payment Mode", "Amounts grouped by payment mode")
-        rows = @cashier_report.mode_summary_rows.map do |row|
-          [ row[:mode], row[:currency], row[:section], money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
+        rows = (@cashier_report.all_mode_summary_rows || @cashier_report.mode_summary_rows).map do |row|
+          [ row[:handling_label], row[:mode], row[:currency], row[:section], money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
         end
-        rows += @cashier_report.mode_totals.map do |row|
-          [ "#{row[:mode]} Total", nil, nil, money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
+        rows += cashier_handling_totals.map do |row|
+          [ "#{row[:handling_label]} Subtotal", nil, nil, nil, money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
         end
+        grand = cashier_grand_total
+        rows << [ "Grand Total", nil, nil, nil, money(grand[:amount_in]), money(grand[:amount_out]), money(grand[:balance]) ]
 
         if rows.present?
           draw_data_table(
             pdf,
-            [ "Payment Mode", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
+            [ "Handling", "Payment Mode", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
             rows,
-            numeric_columns: [ 3, 4, 5 ]
+            numeric_columns: [ 4, 5, 6 ], total_row: rows.size
           )
         else
           draw_empty_state(pdf, "No cashier activity for this selected period.")
@@ -223,22 +224,51 @@ module HotelPortal
 
         pdf.move_down THEME::SPACE[:lg]
         draw_section_heading(pdf, "Currency Summary", "Cash movement totals by currency")
-        currency_rows = @cashier_report.currency_summary_rows.map do |row|
-          [ row[:currency], row[:section], money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
+        currency_rows = (@cashier_report.all_currency_summary_rows || @cashier_report.currency_summary_rows).map do |row|
+          [ row[:handling_label], row[:currency], row[:section], money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
         end
-        grand = @cashier_report.grand_total
-        currency_rows << [ "Grand Total", nil, money(grand[:amount_in]), money(grand[:amount_out]), money(grand[:balance]) ]
+        currency_rows += cashier_handling_totals.map do |row|
+          [ "#{row[:handling_label]} Subtotal", nil, nil, money(row[:amount_in]), money(row[:amount_out]), money(row[:balance]) ]
+        end
+        grand = cashier_grand_total
+        currency_rows << [ "Grand Total", nil, nil, money(grand[:amount_in]), money(grand[:amount_out]), money(grand[:balance]) ]
 
-        if @cashier_report.currency_summary_rows.present?
+        if (@cashier_report.all_currency_summary_rows || @cashier_report.currency_summary_rows).present?
           draw_data_table(
             pdf,
-            [ "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
+            [ "Handling", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
             currency_rows,
-            numeric_columns: [ 2, 3, 4 ], total_row: currency_rows.size
+            numeric_columns: [ 3, 4, 5 ], total_row: currency_rows.size
           )
         else
           draw_empty_state(pdf, "No cashier activity for this selected period.")
         end
+      end
+
+      def draw_cashier_summary_metrics(pdf)
+        draw_kpi_section(pdf, "At Desk", cashier_metric_cards(@cashier_report.at_desk_totals || @cashier_report.totals, "Net At Desk"))
+        draw_kpi_section(
+          pdf,
+          "Not Handled At The Desk",
+          cashier_metric_cards(@cashier_report.non_desk_totals || @cashier_report.non_cash_totals, "Net Gateway And OTA")
+        )
+      end
+
+      def cashier_handling_totals
+        @cashier_report.respond_to?(:handling_totals) ? Array(@cashier_report.handling_totals) : []
+      end
+
+      def cashier_grand_total
+        @cashier_report.all_grand_total || @cashier_report.grand_total
+      end
+
+      def cashier_metric_cards(totals, net_label)
+        [
+          [ "Movements", totals[:movement_count].to_s ],
+          [ "Amount In", "MYR #{money(totals[:total_collected])}" ],
+          [ "Amount Out", "MYR #{money(totals[:total_refunded])}" ],
+          [ net_label, "MYR #{money(totals[:net_cash])}" ]
+        ]
       end
 
       def draw_data_table(pdf, headers, rows, numeric_columns: [], negative_cells: [], total_row: nil, column_widths: nil)

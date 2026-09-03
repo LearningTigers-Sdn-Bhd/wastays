@@ -69,12 +69,13 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     )
   end
 
-  def generate(tab, charge_register: [])
+  def generate(tab, charge_register: [], cashier_view: "full")
     described_class.new(
       tab: tab,
       revenue_report: revenue_report,
       cashier_report: cashier_report,
-      charge_register: charge_register
+      charge_register: charge_register,
+      cashier_view: cashier_view
     ).generate
   end
 
@@ -113,11 +114,24 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     cashier_report.cash_transactions = [ payment ]
     cashier_report.mode_by_transaction_id = { payment.id => "Cash Payment" }
     cashier_report.section_by_transaction_id = { payment.id => "Settlement" }
+    cashier_report.non_cash_origin_by_transaction_id = {}
 
     csv = generate("cashier")
 
-    expect(csv).to include("Cashier Activity", "Activity By Payment Mode", "Currency Summary")
-    expect(csv).to include("Cash Guest", "Cash Payment", "Front desk cash", "MYR,100.00")
+    expect(csv).to include("Payment Activity", "Activity By Payment Mode", "Currency Summary")
+    expect(csv).to include("Payment Mode,Stage,Received By")
+    expect(csv).to include("Cash Guest", "At desk", "Cash Payment", "MYR,100.00")
+    expect(csv).not_to include("Front desk cash")
     expect(csv).not_to include("Daily Breakdown", "Revenue Register")
+  end
+
+  it "scopes cashier content to activity and summary views" do
+    activity = generate("cashier", cashier_view: "activity")
+    summary = generate("cashier", cashier_view: "summary")
+
+    expect(activity).to include("Payment Activity")
+    expect(activity).not_to include("At Desk,Movements", "Activity By Payment Mode", "Currency Summary")
+    expect(summary).to include("At Desk,Movements", "Activity By Payment Mode", "Currency Summary")
+    expect(summary).not_to include("Payment Activity")
   end
 end

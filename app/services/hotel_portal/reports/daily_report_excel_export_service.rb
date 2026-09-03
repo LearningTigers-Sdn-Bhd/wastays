@@ -7,18 +7,21 @@ module HotelPortal
     class DailyReportExcelExportService
       CASHIER_HEADERS = [
         "Date & Time", "Reservation", "Guest", "Room", "Folio", "Invoice",
-        "Payment Mode", "Type", "Received By", "Remarks", "Currency", "Amount"
+        "Payment Mode", "Stage", "Received By", "Remarks", "Currency", "Amount"
       ].freeze
 
       COLORS = ExcelExportStyles::COLORS
       FONT_SIZES = ExcelExportStyles::FONT_SIZES
 
-      def initialize(hotel:, tab:, revenue_report:, cashier_report:, charge_register: [])
+      def initialize(hotel:, tab:, revenue_report:, cashier_report:, charge_register: [], cashier_view: "full",
+                     visible_columns: CashierActivityColumns::DEFAULT_KEYS)
         @hotel = hotel
         @tab = tab
         @revenue_report = revenue_report
         @cashier_report = cashier_report
         @charge_register = charge_register
+        @cashier_view = cashier_view.to_s.presence_in(%w[full activity summary]) || "full"
+        @visible_columns = visible_columns
       end
 
       def generate
@@ -156,52 +159,64 @@ module HotelPortal
       end
 
       def build_cashier_workbook
-        activity = add_sheet("Cashier Activity", CASHIER_HEADERS.size, widths: cashier_widths)
-        add_report_header(activity, "Cashier Activity", CASHIER_HEADERS.size)
-        add_metric_section(activity, "Cashier Activity Summary", cashier_metrics)
-        activity.add_row([])
-        activity_rows = cashier_rows(@cashier_report.cash_transactions)
-        add_table(
-          activity, headers: CASHIER_HEADERS, rows: activity_rows,
-          datetime_columns: [ 0 ], money_columns: [ 11 ], total_row: total_for_cashier(activity_rows)
-        )
+        build_cashier_activity_sheet if %w[full activity].include?(@cashier_view)
+        build_cashier_summary_sheets if %w[full summary].include?(@cashier_view)
+      end
 
-        summary = add_sheet("Activity By Payment Mode", 6, widths: [ 28, 13, 16, 18, 18, 18 ])
-        add_report_header(summary, "Activity By Payment Mode", 6)
-        summary_rows = @cashier_report.mode_summary_rows.map do |row|
-          [ row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+      def build_cashier_activity_sheet
+        table = CashierActivityExportTable.new(report: @cashier_report, visible_columns: @visible_columns)
+        activity = add_sheet("Payment Activity", table.headers.size, widths: table.excel_widths)
+        add_report_header(activity, "Payment Activity", table.headers.size)
+        rows = table.rows.map { |row| row.map { |value| value.is_a?(BigDecimal) ? decimal(value) : value } }
+        amount_index = table.headers.index("Amount")
+        total = Array.new(table.headers.size)
+        total[0] = "Total"
+        total[amount_index] = decimal(rows.sum { |row| row[amount_index].to_d }) if amount_index
+        add_table(activity, headers: table.headers, rows:, money_columns: [ amount_index ].compact, total_row: total)
+      end
+
+      def build_cashier_summary_sheets
+        summary = add_sheet("Activity By Payment Mode", 7, widths: [ 20, 28, 13, 16, 18, 18, 18 ])
+        add_report_header(summary, "Activity By Payment Mode", 7)
+        add_metric_section(summary, "At Desk", cashier_metric_rows(@cashier_report.at_desk_totals || @cashier_report.totals))
+        add_metric_section(summary, "Not Handled At The Desk", cashier_metric_rows(@cashier_report.non_desk_totals || @cashier_report.non_cash_totals))
+        summary.add_row([])
+        summary_rows = (@cashier_report.all_mode_summary_rows || @cashier_report.mode_summary_rows).map do |row|
+          [ row[:handling_label], row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
-        summary_rows += @cashier_report.mode_totals.map do |row|
-          [ "#{row[:mode]} Total", nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        summary_rows += cashier_handling_totals.map do |row|
+          [ "#{row[:handling_label]} Subtotal", nil, nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
+        grand = cashier_grand_total
         add_table(
           summary,
-          headers: [ "Payment Mode", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
-          rows: summary_rows, money_columns: [ 3, 4, 5 ]
+          headers: [ "Handling", "Payment Mode", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
+          rows: summary_rows, money_columns: [ 4, 5, 6 ],
+          total_row: [ "Grand Total", nil, nil, nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
         )
 
-        currency = add_sheet("Currency Summary", 5, widths: [ 16, 18, 20, 20, 20 ])
-        add_report_header(currency, "Currency Summary", 5)
-        currency_rows = @cashier_report.currency_summary_rows.map do |row|
-          [ row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        currency = add_sheet("Currency Summary", 6, widths: [ 20, 16, 18, 20, 20, 20 ])
+        add_report_header(currency, "Currency Summary", 6)
+        currency_rows = (@cashier_report.all_currency_summary_rows || @cashier_report.currency_summary_rows).map do |row|
+          [ row[:handling_label], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
-        grand = @cashier_report.grand_total
+        currency_rows += cashier_handling_totals.map do |row|
+          [ "#{row[:handling_label]} Subtotal", nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        end
         add_table(
           currency,
-          headers: [ "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
-          rows: currency_rows, money_columns: [ 2, 3, 4 ],
-          total_row: [ "Grand Total", nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
+          headers: [ "Handling", "Currency", "Stage", "Amount In", "Amount Out", "Balance" ],
+          rows: currency_rows, money_columns: [ 3, 4, 5 ],
+          total_row: [ "Grand Total", nil, nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
         )
+      end
 
-        return if @cashier_report.non_cash_transactions.empty?
+      def cashier_handling_totals
+        @cashier_report.respond_to?(:handling_totals) ? Array(@cashier_report.handling_totals) : []
+      end
 
-        non_cash = add_sheet("Not Handled At The Desk", CASHIER_HEADERS.size, widths: cashier_widths)
-        add_report_header(non_cash, "Not Handled At The Desk", CASHIER_HEADERS.size)
-        non_cash_rows = cashier_rows(@cashier_report.non_cash_transactions)
-        add_table(
-          non_cash, headers: CASHIER_HEADERS, rows: non_cash_rows,
-          datetime_columns: [ 0 ], money_columns: [ 11 ], total_row: total_for_cashier(non_cash_rows)
-        )
+      def cashier_grand_total
+        @cashier_report.all_grand_total || @cashier_report.grand_total
       end
 
       def add_sheet(name, column_count, widths:)
@@ -302,6 +317,15 @@ module HotelPortal
         ]
       end
 
+      def cashier_metric_rows(totals)
+        [
+          [ "Movements", totals[:movement_count], nil ],
+          [ "Amount In", decimal(totals[:total_collected]), "MYR" ],
+          [ "Amount Out", decimal(totals[:total_refunded]), "MYR" ],
+          [ "Net", decimal(totals[:net_cash]), "MYR" ]
+        ]
+      end
+
       def revenue_row(row, label_key)
         [
           row[label_key], row[:booking_count], decimal(row[:accommodation]), decimal(row[:other_charges]),
@@ -333,7 +357,8 @@ module HotelPortal
         DailyReportTransactionRow.new(
           transaction,
           settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
-          section: @cashier_report.section_by_transaction_id[transaction.id]
+          section: @cashier_report.section_by_transaction_id[transaction.id],
+          origin: @cashier_report.non_cash_origin_by_transaction_id&.[](transaction.id)
         )
       end
 

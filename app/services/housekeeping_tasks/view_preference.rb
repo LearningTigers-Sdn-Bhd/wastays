@@ -10,18 +10,19 @@ module HousekeepingTasks
     end
 
     def visible_columns
-      stored = ReportViewPreference.find_by(hotel:, user:, report_key: REPORT_KEY)&.visible_columns
-      normalized = Columns.normalize(stored)
-      normalized.presence || Columns::KEYS
+      preference.visible_columns
     end
 
     def reset!
-      ReportViewPreference.where(hotel:, user:, report_key: REPORT_KEY).delete_all
-      Columns::KEYS
+      preference.reset!
     end
 
     private
 
     attr_reader :hotel, :user
+
+    def preference
+      ReportViewPreferences::Read.new(hotel:, user:, report_key: REPORT_KEY, columns: Columns)
+    end
   end
 end

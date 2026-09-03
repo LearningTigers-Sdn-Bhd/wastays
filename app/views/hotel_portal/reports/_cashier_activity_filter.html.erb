@@ -1,0 +1,14 @@
+<% selected = Array(params[param_name]).map(&:to_s) %>
+<%= render PanelsUI::DropdownMenu.new(id: "#{param_name.dasherize}-filter", placement: :bottom_start, class: "w-64") do |menu| %>
+  <% menu.with_trigger(
+       variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
+       aria_label: "Filter #{title.downcase}, #{selected.empty? ? 'all selected' : "#{selected.size} selected"}") do %>
+    <%= title %>
+    <% if selected.any? %><span class="text-xs text-muted-foreground">(<%= selected.size %>)</span><% end %>
+    <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+  <% end %>
+  <% menu.with_checkbox(name: "#{param_name}[]", value: "__all__", checked: selected.empty?) { "All #{title.downcase}" } %>
+  <% options.each do |label, value| %>
+    <% menu.with_checkbox(name: "#{param_name}[]", value:, checked: selected.empty? || selected.include?(value.to_s)) { label } %>
+  <% end %>
+<% end %>

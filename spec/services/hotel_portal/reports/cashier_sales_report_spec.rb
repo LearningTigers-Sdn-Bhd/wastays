@@ -13,7 +13,29 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     create(:folio_transaction, booking_folio: folio, transaction_type: "payment", **attrs)
   end
 
-  it "splits payments into Advance (booking_payment) vs Settlement (everything else)" do
+  it "summarizes and filters all handling types without changing at-desk totals" do
+    cash = payment(category: "cash", amount: 100, posting_date: start_date)
+    gateway_payment = create(:payment_transaction, booking:, gateway: "razorpay")
+    gateway = payment(
+      category: "gateway_payment", amount: 70, posting_date: start_date,
+      metadata: { payment_transaction_id: gateway_payment.id, posting_source: "gateway_payment" }
+    )
+
+    report = described_class.new(hotel:, start_date:, end_date:).call
+    expect(report.transactions).to contain_exactly(cash, gateway)
+    expect(report.handling_by_transaction_id).to include(cash.id => "at_desk", gateway.id => "gateway")
+    expect(report.totals[:net_cash]).to eq(100.to_d)
+    expect(report.all_totals[:net_cash]).to eq(170.to_d)
+    expect(report.all_mode_summary_rows.map { |row| row[:handling] }).to contain_exactly("at_desk", "gateway")
+
+    filtered = described_class.new(
+      hotel:, start_date:, end_date:, handling: [ "gateway" ], currencies: [ "MYR" ], stages: [ "Settlement" ]
+    ).call
+    expect(filtered.transactions).to contain_exactly(gateway)
+    expect(filtered.all_totals[:net_cash]).to eq(70.to_d)
+  end
+
+  it "labels advances, settlements, and refunds with one stage rule" do
     advance = payment(category: "booking_payment", amount: 100, posting_date: Date.new(2026, 6, 16))
     settlement = payment(category: "cash", amount: 360, posting_date: Date.new(2026, 6, 17))
     refund = payment(category: "refund", amount: -50, posting_date: Date.new(2026, 6, 18))
@@ -24,7 +46,7 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     expect(report.cash_transactions).to contain_exactly(advance, settlement, refund)
     expect(report.section_by_transaction_id[advance.id]).to eq("Advance")
     expect(report.section_by_transaction_id[settlement.id]).to eq("Settlement")
-    expect(report.section_by_transaction_id[refund.id]).to eq("Settlement")
+    expect(report.section_by_transaction_id[refund.id]).to eq("Refund")
     expect(report.cash_transactions).not_to include(charge)
   end
 
@@ -232,9 +254,11 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
     expect(report.cash_transactions).to contain_exactly(advance, refund)
-    expect(report.section_by_transaction_id[refund.id]).to eq("Advance")
+    expect(report.section_by_transaction_id[refund.id]).to eq("Refund")
     bank_advance = report.mode_summary_rows.find { |row| row[:mode] == "Bank Transfer Payment" && row[:section] == "Advance" }
-    expect(bank_advance).to include(amount_in: 100.to_d, amount_out: 40.to_d, balance: 60.to_d)
+    bank_refund = report.mode_summary_rows.find { |row| row[:mode] == "Bank Transfer Payment" && row[:section] == "Refund" }
+    expect(bank_advance).to include(amount_in: 100.to_d, amount_out: 0.to_d, balance: 100.to_d)
+    expect(bank_refund).to include(amount_in: 0.to_d, amount_out: 40.to_d, balance: -40.to_d)
   end
 
   it "uses refund source metadata as the mode when no original payment is linked" do
@@ -249,7 +273,7 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
 
     expect(report.cash_transactions).to contain_exactly(refund)
     expect(report.mode_by_transaction_id[refund.id]).to eq("Cash Payment")
-    cash = report.mode_summary_rows.find { |row| row[:mode] == "Cash Payment" && row[:section] == "Settlement" }
+    cash = report.mode_summary_rows.find { |row| row[:mode] == "Cash Payment" && row[:section] == "Refund" }
     expect(cash).to include(amount_in: 0.to_d, amount_out: 25.to_d, balance: -25.to_d)
   end
 
@@ -292,7 +316,9 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
     cash_settlement = report.mode_summary_rows.find { |r| r[:mode] == "Cash Payment" && r[:section] == "Settlement" }
-    expect(cash_settlement).to include(amount_in: 2_070.79.to_d, amount_out: 50.to_d, balance: 2_020.79.to_d)
+    cash_refund = report.mode_summary_rows.find { |r| r[:mode] == "Cash Payment" && r[:section] == "Refund" }
+    expect(cash_settlement).to include(amount_in: 2_070.79.to_d, amount_out: 0.to_d, balance: 2_070.79.to_d)
+    expect(cash_refund).to include(amount_in: 0.to_d, amount_out: 50.to_d, balance: -50.to_d)
 
     cash_total = report.mode_totals.find { |r| r[:mode] == "Cash Payment" }
     expect(cash_total).to include(amount_in: 2_070.79.to_d, amount_out: 50.to_d, balance: 2_020.79.to_d)
@@ -312,7 +338,10 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     expect(advance_row).to include(amount_in: 1_205.20.to_d, amount_out: 0.to_d, balance: 1_205.20.to_d)
 
     settlement_row = report.currency_summary_rows.find { |r| r[:currency] == "MYR" && r[:section] == "Settlement" }
-    expect(settlement_row).to include(amount_in: 258.56.to_d, amount_out: 50.to_d, balance: 208.56.to_d)
+    expect(settlement_row).to include(amount_in: 258.56.to_d, amount_out: 0.to_d, balance: 258.56.to_d)
+
+    refund_row = report.currency_summary_rows.find { |r| r[:currency] == "MYR" && r[:section] == "Refund" }
+    expect(refund_row).to include(amount_in: 0.to_d, amount_out: 50.to_d, balance: -50.to_d)
 
     expect(report.grand_total).to eq(amount_in: 1_463.76.to_d, amount_out: 50.to_d, balance: 1_413.76.to_d)
   end

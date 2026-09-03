@@ -7,11 +7,14 @@ module HotelPortal
     class DailyReportCsvExportService
       BOM = "\xEF\xBB\xBF"
 
-      def initialize(tab:, revenue_report:, cashier_report:, charge_register: [])
+      def initialize(tab:, revenue_report:, cashier_report:, charge_register: [], cashier_view: "full",
+                     visible_columns: CashierActivityColumns::DEFAULT_KEYS)
         @tab = tab
         @revenue_report = revenue_report
         @cashier_report = cashier_report
         @charge_register = charge_register
+        @cashier_view = cashier_view.to_s.presence_in(%w[full activity summary]) || "full"
+        @visible_columns = visible_columns
       end
 
       def generate
@@ -81,30 +84,47 @@ module HotelPortal
       end
 
       def append_cashier(csv)
-        append_cashier_transactions(csv, "Cashier Activity", @cashier_report.cash_transactions)
+        append_cashier_metrics(csv) if %w[full summary].include?(@cashier_view)
+        append_cashier_transactions(csv) if %w[full activity].include?(@cashier_view)
+        append_cashier_summaries(csv) if %w[full summary].include?(@cashier_view)
+      end
 
+      def append_cashier_metrics(csv)
+        append_cashier_metric_group(csv, "At Desk", @cashier_report.at_desk_totals || @cashier_report.totals)
+        append_cashier_metric_group(csv, "Not Handled At The Desk", @cashier_report.non_desk_totals || @cashier_report.non_cash_totals)
+        csv << []
+      end
+
+      def append_cashier_metric_group(csv, title, totals)
+        csv << [ title, "Movements", totals[:movement_count] ]
+        csv << [ title, "Amount In", decimal(totals[:total_collected]), "MYR" ]
+        csv << [ title, "Amount Out", decimal(totals[:total_refunded]), "MYR" ]
+        csv << [ title, "Net", decimal(totals[:net_cash]), "MYR" ]
+      end
+
+      def append_cashier_summaries(csv)
         csv << [ "Activity By Payment Mode" ]
-        csv << [ "Mode", "Currency", "Stage", "Amount (IN)", "Amount (OUT)", "Balance" ]
-        @cashier_report.mode_summary_rows.each do |row|
-          csv << [ row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        csv << [ "Handling", "Mode", "Currency", "Stage", "Amount (IN)", "Amount (OUT)", "Balance" ]
+        cashier_all_mode_summary_rows.each do |row|
+          csv << [ row[:handling_label], row[:mode], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
-        @cashier_report.mode_totals.each do |row|
-          csv << [ "#{row[:mode]} Total", nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        cashier_handling_totals.each do |row|
+          csv << [ "#{row[:handling_label]} Subtotal", nil, nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
+        grand = cashier_grand_total
+        csv << [ "Grand Total", nil, nil, nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
         csv << []
 
         csv << [ "Currency Summary" ]
-        csv << [ "Currency", "Stage", "Amount (IN)", "Amount (OUT)", "Balance" ]
-        @cashier_report.currency_summary_rows.each do |row|
-          csv << [ row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        csv << [ "Handling", "Currency", "Stage", "Amount (IN)", "Amount (OUT)", "Balance" ]
+        cashier_all_currency_summary_rows.each do |row|
+          csv << [ row[:handling_label], row[:currency], row[:section], decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
         end
-        grand = @cashier_report.grand_total
-        csv << [ "Grand Total", nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
-
-        return if @cashier_report.non_cash_transactions.empty?
-
-        csv << []
-        append_cashier_transactions(csv, "Not Handled At The Desk", @cashier_report.non_cash_transactions)
+        cashier_handling_totals.each do |row|
+          csv << [ "#{row[:handling_label]} Subtotal", nil, nil, decimal(row[:amount_in]), decimal(row[:amount_out]), decimal(row[:balance]) ]
+        end
+        grand = cashier_grand_total
+        csv << [ "Grand Total", nil, nil, decimal(grand[:amount_in]), decimal(grand[:amount_out]), decimal(grand[:balance]) ]
       end
 
       def append_transactions(csv, title, transactions)
@@ -114,17 +134,11 @@ module HotelPortal
         csv << []
       end
 
-      def append_cashier_transactions(csv, title, transactions)
-        csv << [ title ]
-        csv << HotelPortal::Reports::DailyReportExcelExportService::CASHIER_HEADERS
-        transactions.each do |transaction|
-          row = cashier_row(transaction)
-          csv << [
-            cashier_date_time(row),
-            row.booking_reference, row.guest_name, row.room_number, row.folio_number, row.invoice_number,
-            row.settlement_mode, row.section, row.received_by, row.description, row.currency, decimal(row.signed_amount)
-          ]
-        end
+      def append_cashier_transactions(csv)
+        table = CashierActivityExportTable.new(report: @cashier_report, visible_columns: @visible_columns)
+        csv << [ "Payment Activity" ]
+        csv << table.headers
+        table.rows.each { |row| csv << row.map { |value| value.is_a?(BigDecimal) ? decimal(value) : value } }
         csv << []
       end
 
@@ -132,7 +146,8 @@ module HotelPortal
         DailyReportTransactionRow.new(
           transaction,
           settlement_mode: @cashier_report.mode_by_transaction_id[transaction.id],
-          section: @cashier_report.section_by_transaction_id[transaction.id]
+          section: @cashier_report.section_by_transaction_id[transaction.id],
+          origin: @cashier_report.non_cash_origin_by_transaction_id&.[](transaction.id)
         )
       end
 
@@ -145,6 +160,11 @@ module HotelPortal
       def decimal(value)
         format("%.2f", value.to_d)
       end
+
+      def cashier_all_mode_summary_rows = @cashier_report.all_mode_summary_rows || @cashier_report.mode_summary_rows
+      def cashier_all_currency_summary_rows = @cashier_report.all_currency_summary_rows || @cashier_report.currency_summary_rows
+      def cashier_handling_totals = @cashier_report.respond_to?(:handling_totals) ? Array(@cashier_report.handling_totals) : []
+      def cashier_grand_total = @cashier_report.all_grand_total || @cashier_report.grand_total
     end
   end
 end
