@@ -31,6 +31,7 @@ module HotelPortal
 
       def call
         transactions = filter_by_time_range(base_scope.to_a)
+        @gateway = ::Folios::Payments::GatewayOriginated.for(transactions.map { |t| classification_transaction(t) })
         cash, non_cash = transactions.partition { |transaction| cashier_handled?(transaction) }
 
         Result.new(
@@ -60,7 +61,7 @@ module HotelPortal
       end
 
       def gateway_movement?(transaction)
-        ::Folios::Payments::GatewayOriginated.call(classification_transaction(transaction)) ||
+        @gateway.call(classification_transaction(transaction)) ||
           transaction.metadata.to_h.stringify_keys["refund_source"] == "gateway"
       end
 

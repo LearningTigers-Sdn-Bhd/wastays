@@ -380,6 +380,24 @@ RSpec.describe HotelPortal::Reports::CashierSalesReport do
     expect(report.totals[:net_cash]).to eq(780.to_d)
   end
 
+  it "keeps a payment that manual booking recorded, not treating its link as a gateway charge" do
+    direct = create(:payment_transaction, booking: booking, gateway: "manual", event_source: "manual_booking")
+    bank_code = hotel.transaction_codes.find_by!(system_key: "bank_payment")
+    staff_transfer = payment(
+      category: "booking_payment",
+      amount: 500,
+      posting_date: Date.new(2026, 6, 17),
+      transaction_code: bank_code,
+      metadata: { payment_transaction_id: direct.id, posting_source: "gateway_payment" }
+    )
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.cash_transactions).to contain_exactly(staff_transfer)
+    expect(report.non_cash_transactions).to be_empty
+    expect(report.totals[:net_cash]).to eq(500.to_d)
+  end
+
   it "orders payment modes the way the hotel ordered its payment methods" do
     PaymentMethods::EnsureDefaults.call(hotel)
     cash_code = hotel.transaction_codes.find_by!(system_key: "cash_payment")

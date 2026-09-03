@@ -46,6 +46,34 @@ RSpec.describe Folios::Payments::GatewayOriginated do
     expect(described_class.call(transaction)).to be(false)
   end
 
+  describe ".for" do
+    it "keeps a payment that manual booking recorded, despite its gateway metadata" do
+      direct = create(:payment_transaction, booking: booking, gateway: "manual", event_source: "manual_booking")
+      transaction = payment(
+        category: "booking_payment", amount: 500,
+        metadata: { payment_transaction_id: direct.id, posting_source: "gateway_payment" }
+      )
+
+      expect(described_class.for([ transaction ]).call(transaction)).to be(false)
+    end
+
+    it "still excludes a payment an online gateway captured" do
+      online = create(:payment_transaction, booking: booking, gateway: "razorpay")
+      transaction = payment(
+        category: "gateway_payment", amount: 500,
+        metadata: { payment_transaction_id: online.id, posting_source: "gateway_payment" }
+      )
+
+      expect(described_class.for([ transaction ]).call(transaction)).to be(true)
+    end
+
+    it "falls back to the posting metadata when no payment transaction is linked" do
+      transaction = payment(category: "booking_payment", amount: 100, metadata: { posting_source: "gateway_payment" })
+
+      expect(described_class.for([ transaction ]).call(transaction)).to be(true)
+    end
+  end
+
   it "is false for a charge, whatever its metadata says" do
     charge = create(
       :folio_transaction, booking_folio: folio, transaction_type: "charge",
