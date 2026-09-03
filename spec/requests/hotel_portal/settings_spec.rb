@@ -101,6 +101,19 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       grc_settings = Nokogiri::HTML(response.body).at_css("#guest-registration-card")
       expect(grc_settings["class"]).to include("scroll-mt-6")
       expect(grc_settings["class"]).not_to include("border-t", "bg-card", "shadow-sm")
+      address_toggle = grc_settings.at_css("input[name='hotel[guest_registration_card_fields][]'][value='address']")
+      expect(address_toggle).to be_present
+      expect(address_toggle["checked"]).to eq("checked")
+    end
+
+    it "does not enable the address for a saved field selection" do
+      hotel.update!(guest_registration_card_fields: %w[phone email])
+
+      get hotel_general_settings_path(hotel)
+
+      grc_settings = Nokogiri::HTML(response.body).at_css("#guest-registration-card")
+      address_toggle = grc_settings.at_css("input[name='hotel[guest_registration_card_fields][]'][value='address']")
+      expect(address_toggle["checked"]).to be_nil
     end
 
     it "renders the guest registration card terms and conditions field" do
@@ -403,11 +416,11 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     it "updates guest registration card fields" do
       patch hotel_general_settings_path(hotel), params: {
         form_id: "hotel_settings",
-        hotel: { guest_registration_card_fields: %w[phone room_type check_in] }
+        hotel: { guest_registration_card_fields: %w[phone address room_type check_in] }
       }
 
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
-      expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone room_type check_in])
+      expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone address room_type check_in])
     end
 
     it "updates the guest registration card terms and conditions" do

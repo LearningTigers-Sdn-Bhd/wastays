@@ -27,7 +27,8 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Guest Registration No.")
       expect(response.body).to include("Pending check-in")
-      expect(response.body).to include("Please read the terms and conditions carefully before signing")
+      expect(response.body).to include("Review before signing")
+      expect(response.body).to include("The signature confirms that the guest reviewed")
       expect(response.body.scan("Print official form").size).to eq(1)
       expect(response.body).not_to include("Hotel acknowledgement")
       expect(response.body).not_to include("Cancellation Policy")
@@ -232,6 +233,74 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(document.at_css("article.grc-print").text).to include("Room type", "Deluxe King")
     end
 
+    it "shows the primary guest address snapshot on screen and print card" do
+      primary = booking.booking_guests.find(&:primary?) || create(:booking_guest, booking: booking, is_primary: true)
+      primary.update!(home_address_snapshot: "12 Snapshot Street, Kuching")
+      booking.update!(guest_home_address: "34 Booking Road, Kuching")
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      document = Nokogiri::HTML(response.body)
+      [ document.at_css("section.grc-no-print"), document.at_css("article.grc-print") ].each do |rendered_card|
+        expect(rendered_card.text).to include("Address", "12 Snapshot Street, Kuching")
+        expect(rendered_card.text).not_to include("34 Booking Road, Kuching")
+      end
+    end
+
+    it "uses aligned detail grids and quiet secondary actions on screen" do
+      role.permissions << (Permission.find_by(slug: "manage_hotel_profile") || create(:permission, slug: "manage_hotel_profile"))
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      screen = Nokogiri::HTML(response.body).at_css("section.grc-no-print")
+      expect(screen.css("h2").map { |node| node.text.strip }).to include("Guest details", "Stay details", "Payment details")
+      expect(screen.at_xpath(".//dt[normalize-space()='Address']/parent::*")["class"]).to include("sm:col-span-2")
+      expect(screen.css("dl dd").map { |node| node.text.squish }).to all(satisfy { |text| !text.start_with?(":") })
+
+      actions = screen.at_xpath(".//h2[normalize-space()='Actions']/parent::section")
+      email_button = actions.at_xpath(".//button[contains(normalize-space(), 'Email to guest')]")
+      settings_button = actions.at_xpath(".//a[contains(normalize-space(), 'Configure displayed details')]")
+      expect(email_button["data-variant"]).to eq("neutral")
+      expect(settings_button["data-variant"]).to eq("neutral")
+    end
+
+    it "uses the booking address when the primary guest has no address snapshot" do
+      booking.update!(guest_home_address: "34 Booking Road, Kuching")
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).to include("Address", "34 Booking Road, Kuching")
+    end
+
+    it "does not expose the primary guest address on an additional guest card" do
+      additional = create(:booking_guest, booking: booking, is_primary: false, home_address_snapshot: nil)
+      booking.update!(guest_home_address: "34 Primary Road, Kuching")
+      booking.booking_guests.reload
+
+      get hotel_booking_guest_registration_card_path(hotel, booking, booking_guest_id: additional.id)
+
+      document = Nokogiri::HTML(response.body)
+      [ document.at_css("section.grc-no-print"), document.at_css("article.grc-print") ].each do |rendered_card|
+        address = rendered_card.xpath(".//dt[normalize-space()='Address']/following-sibling::dd").first
+        expect(address.text.squish).to include("Not provided")
+        expect(rendered_card.text).not_to include("34 Primary Road, Kuching")
+      end
+    end
+
+    it "shows the additional guest address snapshot" do
+      additional = create(
+        :booking_guest,
+        booking: booking,
+        is_primary: false,
+        home_address_snapshot: "56 Additional Lane, Sibu"
+      )
+      booking.booking_guests.reload
+
+      get hotel_booking_guest_registration_card_path(hotel, booking, booking_guest_id: additional.id)
+
+      expect(response.body).to include("Address", "56 Additional Lane, Sibu")
+    end
+
     it "hides disabled fields on draft screen and print card" do
       hotel.update!(guest_registration_card_fields: %w[room_type check_in check_out])
 
@@ -241,13 +310,14 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       [ document.at_css("section.grc-no-print"), document.at_css("article.grc-print") ].each do |card|
         labels = card.css("dt").map { |node| node.text.strip }
         expect(labels).to include("Name", "Room type", "Check-in", "Check-out")
-        expect(labels).not_to include("Phone", "Email", "Guests", "Room(s)", "Booking")
+        expect(labels).not_to include("Phone", "Email", "Address", "Guests", "Room(s)", "Booking")
       end
       expect(document.at_css("section.grc-no-print").text).not_to include("Booking #{booking.confirmation_token}")
     end
 
     it "keeps signed fields after hotel settings change" do
-      card = create(:guest_registration_card, :signed, booking: booking, hotel: hotel, display_fields_snapshot: %w[email room_type])
+      card = create(:guest_registration_card, :signed, booking: booking, hotel: hotel, display_fields_snapshot: %w[email address room_type])
+      booking.update!(guest_home_address: "12 Signed Street, Kuching")
       hotel.update!(guest_registration_card_fields: %w[phone check_in])
 
       get hotel_booking_guest_registration_card_path(hotel, booking)
@@ -255,10 +325,10 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       document = Nokogiri::HTML(response.body)
       [ document.at_css("section.grc-no-print"), document.at_css("article.grc-print") ].each do |rendered_card|
         labels = rendered_card.css("dt").map { |node| node.text.strip }
-        expect(labels).to include("Email", "Room type")
+        expect(labels).to include("Email", "Address", "Room type")
         expect(labels).not_to include("Phone", "Check-in")
       end
-      expect(card.reload.display_fields_snapshot).to eq(%w[email room_type])
+      expect(card.reload.display_fields_snapshot).to eq(%w[email address room_type])
     end
 
     it "renders the booking's special requests as Remark, with check-in/check-out times combined into the date" do
@@ -378,7 +448,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
     end
 
     it "snapshots visible fields when signed" do
-      hotel.update!(guest_registration_card_fields: %w[email room_type])
+      hotel.update!(guest_registration_card_fields: %w[email address room_type])
 
       patch hotel_booking_guest_registration_card_path(hotel, booking), params: {
         guest_registration_card: {
@@ -387,7 +457,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
         }
       }
 
-      expect(booking.reload.guest_registration_card.display_fields_snapshot).to eq(%w[email room_type])
+      expect(booking.reload.guest_registration_card.display_fields_snapshot).to eq(%w[email address room_type])
     end
 
     it "does not modify an already-signed card" do
