@@ -28,6 +28,8 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body).to include("Guest Registration No.")
       expect(response.body).to include("Pending check-in")
       expect(response.body).to include("Review before signing")
+      expect(response.body).to include("Collect the guest's digital signature here")
+      expect(response.body).to include("sign the printed form")
       expect(response.body).to include("The signature confirms that the guest reviewed")
       expect(response.body.scan("Print official form").size).to eq(1)
       expect(response.body).not_to include("Hotel acknowledgement")
