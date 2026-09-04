@@ -1,363 +1,157 @@
-<div class="w-full space-y-3.5">
+<% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+<% can_delete = current_user.has_permission?("delete_guest_record", hotel: current_hotel) %>
+<% tabs = [
+     { name: "all", label: "All", icon: "users" },
+     { name: "vip", label: "VIP", icon: "crown" },
+     { name: "repeat", label: "Repeat", icon: "repeat" },
+     { name: "blacklisted", label: "Blacklisted", icon: "ban" }
+   ] %>
+<%# "banned" is the older name for the same filter, and links to it still exist. %>
+<% requested_tag = params[:tag].to_s == "banned" ? "blacklisted" : params[:tag].to_s %>
+<% active_tag = tabs.any? { |tab| tab[:name] == requested_tag } ? requested_tag : "all" %>
+
+<div class="w-full space-y-4">
   <%= render PanelsUI::PageHeader.new(title: "Guest Records", description: "Review guest profiles, contact details, and property stay history.") do |header| %>
-    <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
+    <% if can_manage %>
       <% header.with_actions do %>
         <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel), variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
-          <%= cached_icon "plus", stroke_width: 2.5, class: "size-4" %>
-          New Guest Records
+          <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+          New guest record
         <% end %>
       <% end %>
     <% end %>
   <% end %>
 
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <div class="flex items-center justify-between border-b border-border px-6 py-5 sm:px-8">
-      <div>
-        <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Guest Directory</h2>
-        <p class="mt-1 text-sm font-medium text-muted-foreground">All guests who have stayed at this property.</p>
+  <section class="space-y-4" aria-label="Guest directory">
+    <%= render PanelsUI::Tabs.new(
+          id: "guest-tag-tabs",
+          active: active_tag,
+          variant: :line,
+          aria_label: "Filter guests by status") do |strip| %>
+      <% tabs.each do |tab| %>
+        <% strip.with_tab(
+             name: tab[:name],
+             label: tab[:label],
+             icon: tab[:icon],
+             count: @tag_counts[tab[:name]],
+             href: hotel_guests_path(current_hotel,
+               tag: (tab[:name] unless tab[:name] == "all"),
+               query: params[:query].presence,
+               country: params[:country].presence),
+             data: { turbo_frame: "guests_results", turbo_action: "advance" }) %>
+      <% end %>
+    <% end %>
+
+    <%= form_with url: hotel_guests_path(current_hotel), method: :get,
+          class: "flex flex-col gap-3 sm:flex-row sm:items-end",
+          data: { controller: "auto-submit", turbo_frame: "guests_results", turbo_action: "advance" } do |form| %>
+      <%= form.hidden_field :tag, value: active_tag unless active_tag == "all" %>
+
+      <div class="flex-1">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :query, label: "Search guests", label_hidden: true, size: :sm) do |field| %>
+          <% field.with_input(
+               type: :search,
+               value: params[:query],
+               placeholder: "Search by name, email, phone or ID",
+               data: { action: "input->auto-submit#submit" }) %>
+        <% end %>
       </div>
-      <span class="text-sm font-medium text-muted-foreground">Guest Records <span class="font-semibold text-foreground"><%= @guests.total_count %></span></span>
-    </div>
 
-    <div class="border-b border-border bg-muted/70 px-6 py-4 sm:px-8">
-      <%= form_with url: hotel_guests_path(current_hotel), method: :get, class: "flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between", data: { controller: "auto-submit", turbo_frame: "guests_results" } do |f| %>
-        <div class="flex w-full flex-col gap-3 lg:flex-row">
-          <label class="relative block flex-1">
-            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-muted-foreground">
-              <%= cached_icon "search", stroke_width: 2, class: "size-4" %>
-            </span>
-            <%= f.text_field :query, value: params[:query], placeholder: "Search guests...", autocomplete: "off", class: "w-full rounded-xl border border-border bg-card py-2.5 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { action: "input->auto-submit#submit" } %>
-          </label>
-
-          <%= f.select :country, @country_options, { include_blank: "All Countries", selected: params[:country] }, class: "rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submit" } %>
-
-          <%= f.select :tag, [["VIP", "vip"], ["Repeat", "repeat"], ["Blacklisted", "blacklisted"]], { include_blank: "All Tags", selected: params[:tag] }, class: "rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0", data: { action: "change->auto-submit#submit" } %>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <% if params[:query].present? || params[:country].present? || params[:tag].present? %>
-            <%= link_to "Clear", hotel_guests_path(current_hotel), class: "inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted", data: { turbo_frame: "guests_results" } %>
+      <% if @country_options.any? %>
+        <div class="w-full sm:w-56">
+          <%= render PanelsUI::FormField.new(form: form, attribute: :country, label: "Country", label_hidden: true, size: :sm) do |field| %>
+            <% field.with_select_menu(
+                 @country_options.map { |country| [ country, country ] },
+                 prompt: "All countries",
+                 include_blank: true,
+                 selected: params[:country],
+                 data: { action: "change->auto-submit#submitNow" }) %>
           <% end %>
         </div>
       <% end %>
-    </div>
+
+      <% if params[:query].present? || params[:country].present? %>
+        <%= render PanelsUI::Button.new(as: :a, href: hotel_guests_path(current_hotel, tag: (active_tag unless active_tag == "all")), variant: :secondary, size: :sm, data: { turbo_frame: "guests_results", turbo_action: "advance" }) do %>
+          Clear
+        <% end %>
+      <% end %>
+    <% end %>
 
     <%= turbo_frame_tag "guests_results" do %>
-      <% can_delete = current_user.has_permission?("delete_guest_record", hotel: current_hotel) %>
-      <div <% if can_delete %>data-controller="bulk-select"<% end %> class="relative">
+      <div class="relative space-y-4"
+           data-controller="<%= [ ("bulk-select" if can_delete), ("guest-blacklist" if can_manage) ].compact.join(" ") %>">
         <% if @guests.any? %>
-          <div class="hidden lg:block overflow-x-auto">
-            <table class="min-w-full table-fixed">
-              <colgroup>
+          <%= render PanelsUI::Table.new(
+                caption: "Guests matching the current filters",
+                density: :compact,
+                header_style: :sentence,
+                hoverable: true,
+                sticky_column: true,
+                wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+            <% table.with_header do %>
+              <tr>
                 <% if can_delete %>
-                  <col class="w-[3%]">
-                  <col class="w-[19%]">
-                <% else %>
-                  <col class="w-[22%]">
+                  <th scope="col" class="w-10">
+                    <%= render PanelsUI::Checkbox.new(
+                          name: "select_all_guests",
+                          label: "Select every guest on this page",
+                          label_hidden: true,
+                          size: :sm,
+                          data: { bulk_select_target: "selectAll", action: "change->bulk-select#toggleAll" }) %>
+                  </th>
                 <% end %>
-                <col class="w-[8%]">
-                <col class="w-[18%]">
-                <col class="w-[11%]">
-                <col class="w-[6%]">
-                <col class="w-[11%]">
-                <col class="w-[11%]">
-                <col class="w-[13%]">
-              </colgroup>
-              <thead class="bg-muted">
-                <tr>
-                  <% if can_delete %>
-                    <th scope="col" class="py-4 pl-4 pr-0 text-left sm:pl-6">
-                      <input type="checkbox"
-                             data-bulk-select-target="selectAll"
-                             data-action="change->bulk-select#toggleAll"
-                             class="size-4 rounded border-border-interactive text-foreground focus:ring-ring cursor-pointer">
-                    </th>
-                    <th scope="col" class="py-4 pl-2 pr-3 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:pl-3 sm:pr-4 whitespace-nowrap">Guest</th>
-                  <% else %>
-                    <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-8 whitespace-nowrap">Guest</th>
-                  <% end %>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-4 whitespace-nowrap">Country</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-4 whitespace-nowrap">Contact</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-4 whitespace-nowrap">ID / Passport</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-4 whitespace-nowrap">Stays</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-4 whitespace-nowrap">Last Stayed</th>
-                  <th scope="col" class="px-3 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:px-4 whitespace-nowrap">Lifetime Value</th>
-                  <th scope="col" class="py-4 pl-3 pr-4 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:pl-4 sm:pr-6 whitespace-nowrap">Action</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-border bg-card">
-                <% @guests.each_with_index do |guest, index| %>
-                  <% presenter = Guests::GuestPresenter.new(guest) %>
-                  <% totals = guest_currency_totals(guest) %>
-                  <tr class="group align-top <%= guest.blacklisted_at?(current_hotel) ? 'bg-rose-100' : (index.even? ? 'bg-card hover:bg-muted/80 transition-colors' : 'bg-muted/55 hover:bg-muted/80 transition-colors') %>">
-                    <% if can_delete %>
-                      <td class="py-4 pr-0 <%= guest.blacklisted_at?(current_hotel) ? 'border-l-4 border-l-rose-600 pl-3 sm:pl-5' : 'pl-4 sm:pl-6' %>">
-                        <input type="checkbox"
-                               value="<%= guest.id %>"
-                               data-bulk-select-target="checkbox"
-                               data-action="change->bulk-select#toggleSingle"
-                               class="size-4 rounded border-border-interactive text-foreground focus:ring-ring cursor-pointer">
-                      </td>
-                      <td class="py-4 pl-2 pr-3 sm:pl-3 sm:pr-4">
-                    <% else %>
-                      <td class="py-4 pr-6 sm:pr-8 <%= guest.blacklisted_at?(current_hotel) ? 'border-l-4 border-l-rose-600 pl-5 sm:pl-7' : 'pl-6 sm:pl-8' %>">
-                    <% end %>
-                      <div class="flex flex-col gap-1.5">
-                        <div class="flex items-center gap-x-2">
-                          <span class="text-sm font-semibold text-foreground block truncate max-w-[140px] xl:max-w-none" title="<%= presenter.formatted_name %>"><%= presenter.formatted_name %></span>
-                          <% if guest.vip?(hotel: current_hotel) %>
-                            <span class="inline-flex items-center gap-x-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20 whitespace-nowrap">
-                              <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-3.5 text-amber-500 fill-amber-500" %>
-                              VIP
-                            </span>
-                          <% end %>
-                          <% if guest.blacklisted_at?(current_hotel) %>
-                            <span class="inline-flex items-center gap-x-1 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">
-                              <div class="relative size-3.5 flex items-center justify-center shrink-0">
-                                <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3 translate-x-0.3 text-rose-500" %>
-                                <%= cached_icon "ban", class: "absolute inset-0 size-3.5 translate-y-0.3 text-rose-500" %>
-                              </div>
-                              Blacklisted
-                            </span>
-                          <% end %>
-                          <% if guest.repeat? %>
-                            <span class="inline-flex items-center gap-x-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-600/20 whitespace-nowrap">
-                              <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-3.5 text-blue-500" %>
-                              Repeat
-                            </span>
-                          <% end %>
-                        </div>
-                        <span class="text-xs text-muted-foreground">
-                          <%= presenter.formatted_gender %>
-                        </span>
-                      </div>
-                    </td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-foreground sm:px-4">
-                      <%= presenter.formatted_country %>
-                    </td>
-                    <td class="px-3 py-4 sm:px-4">
-                      <div class="flex flex-col gap-1">
-                        <span class="text-sm text-foreground block truncate max-w-[160px] xl:max-w-none" title="<%= presenter.email %>"><%= presenter.email %></span>
-                        <span class="text-sm text-muted-foreground"><%= presenter.phone %></span>
-                      </div>
-                    </td>
-                    <td class="px-3 py-4 sm:px-4">
-                      <div class="flex flex-col gap-1">
-                        <span class="text-sm font-medium text-foreground"><%= presenter.government_id %></span>
-                        <span class="text-xs uppercase tracking-[0.08em] text-muted-foreground"><%= presenter.formatted_document_type %></span>
-                      </div>
-                    </td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-foreground sm:px-4">
-                      <%= presenter.formatted_stays_count(guest_stays_count(guest)) %>
-                    </td>
-                    <td class="px-3 py-4 text-sm text-foreground sm:px-4">
-                      <% if presenter.last_stay_present? %>
-                        <div class="flex flex-col gap-0.5">
-                          <span class="font-medium text-foreground"><%= presenter.last_stay_time %></span>
-                          <span class="text-xs text-muted-foreground"><%= presenter.last_stay_date %></span>
-                        </div>
-                      <% else %>
-                        —
-                      <% end %>
-                    </td>
-                    <td class="px-3 py-4 text-left sm:px-4 whitespace-nowrap">
-                      <div class="flex justify-start gap-1.5">
-                        <% currency_list = presenter.formatted_currency_totals(totals) %>
-                        <% if currency_list.any? %>
-                          <% currency_list.each do |formatted_amount| %>
-                            <span class="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground whitespace-nowrap">
-                              <%= formatted_amount %>
-                            </span>
-                          <% end %>
-                        <% else %>
-                          <span class="text-sm text-muted-foreground">—</span>
-                        <% end %>
-                      </div>
-                    </td>
-                    <td class="py-4 pl-3 pr-4 text-right whitespace-nowrap sm:pl-4 sm:pr-6">
-                      <div class="flex items-center justify-end gap-2">
-                        <%= link_to details_hotel_guest_path(current_hotel, guest), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted", data: { turbo_frame: "_top" } do %>
-                          <%= cached_icon "eye", stroke_width: 2.2, class: "size-3.5" %>
-                          View Timeline
-                        <% end %>
-                        <% if can_delete %>
-                          <%= button_to hotel_guest_path(current_hotel, guest),
-                                        method: :delete,
-                                        data: { turbo_confirm: "Are you sure you want to delete this guest record? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guest", turbo_confirm_color: "red", turbo_frame: "_top" },
-                                        class: "opacity-0 group-hover:opacity-100 transition-opacity duration-200 inline-flex items-center justify-center size-8 rounded-lg border border-red-200 bg-card text-red-500 shadow-sm hover:bg-red-50 hover:text-red-700",
-                                        title: "Delete Guest" do %>
-                            <%= cached_icon "trash-2", class: "size-4" %>
-                          <% end %>
-                        <% end %>
-                      </div>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="space-y-4 p-4 sm:p-6 lg:hidden">
-            <% if can_delete %>
-              <label class="flex items-center justify-between bg-muted border border-border rounded-2xl px-4 py-3 shadow-sm cursor-pointer select-none">
-                <span class="text-sm font-semibold text-foreground">Select All Guests</span>
-                <input type="checkbox"
-                       data-bulk-select-target="selectAll"
-                       data-action="change->bulk-select#toggleAll"
-                       class="size-5 rounded border-border-interactive text-foreground focus:ring-ring cursor-pointer">
-              </label>
+                <th scope="col">Guest</th>
+                <th scope="col" class="hidden lg:table-cell">Contact</th>
+                <th scope="col" class="hidden xl:table-cell">ID / Passport</th>
+                <th scope="col" class="hidden sm:table-cell">Stays</th>
+                <th scope="col" class="hidden md:table-cell">Last stayed</th>
+                <th scope="col" class="hidden text-right md:table-cell">Lifetime value</th>
+                <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+              </tr>
             <% end %>
-            <% @guests.each do |guest| %>
-              <% presenter = Guests::GuestPresenter.new(guest) %>
-              <% totals = guest_currency_totals(guest) %>
-              <div class="rounded-2xl border border-border p-4 shadow-sm relative <%= guest.blacklisted_at?(current_hotel) ? 'bg-rose-100 border-t-4 border-t-rose-600 pt-3' : 'bg-muted/60' %>">
-                <% if can_delete %>
-                  <div class="absolute top-4 right-4">
-                    <input type="checkbox"
-                           value="<%= guest.id %>"
-                           data-bulk-select-target="checkbox"
-                           data-action="change->bulk-select#toggleSingle"
-                           class="size-4 rounded border-border-interactive text-foreground focus:ring-ring cursor-pointer">
-                  </div>
-                <% end %>
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Guest</p>
-                    <div class="flex items-center gap-x-2 mt-1">
-                      <p class="text-sm font-semibold text-foreground"><%= presenter.formatted_name %></p>
-                      <% if guest.vip?(hotel: current_hotel) %>
-                        <span class="inline-flex items-center gap-x-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20 whitespace-nowrap">
-                          <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-3.5 text-amber-500 fill-amber-500" %>
-                          VIP
-                        </span>
-                      <% end %>
-                      <% if guest.blacklisted_at?(current_hotel) %>
-                        <span class="inline-flex items-center gap-x-1 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20 whitespace-nowrap">
-                          <div class="relative size-3.5 flex items-center justify-center shrink-0">
-                            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-3 translate-x-0.3 text-rose-500" %>
-                            <%= cached_icon "ban", class: "absolute inset-0 size-3.5 translate-y-0.3 text-rose-500" %>
-                          </div>
-                          Blacklisted
-                        </span>
-                      <% end %>
-                      <% if guest.repeat? %>
-                        <span class="inline-flex items-center gap-x-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-600/20 whitespace-nowrap">
-                          <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-3.5 text-blue-500" %>
-                          Repeat
-                        </span>
-                      <% end %>
-                    </div>
-                    <p class="mt-1 text-xs text-muted-foreground">
-                      <%= presenter.formatted_gender %>
-                    </p>
-                  </div>
-                </div>
 
-                <dl class="mt-4 space-y-3 text-sm">
-                  <div>
-                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Country</dt>
-                    <dd class="mt-1 text-foreground"><%= presenter.formatted_country %></dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Contact</dt>
-                    <dd class="mt-1 text-foreground"><%= presenter.email %></dd>
-                    <dd class="text-muted-foreground"><%= presenter.phone %></dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">ID / Passport</dt>
-                    <dd class="mt-1 text-foreground"><%= presenter.government_id %></dd>
-                  </div>
-                  <div class="flex items-start justify-between gap-3">
-                    <div>
-                      <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Stays</dt>
-                      <dd class="mt-1 text-foreground"><%= presenter.formatted_stays_count(guest_stays_count(guest)) %></dd>
-                    </div>
-                    <div class="text-right">
-                      <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Last Stayed</dt>
-                      <dd class="mt-1 text-foreground">
-                        <% if presenter.last_stay_present? %>
-                          <span class="block font-medium text-foreground"><%= presenter.last_stay_time %></span>
-                          <span class="block text-xs text-muted-foreground"><%= presenter.last_stay_date %></span>
-                        <% else %>
-                          —
-                        <% end %>
-                      </dd>
-                    </div>
-                  </div>
-                  <div>
-                    <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Lifetime Value</dt>
-                    <dd class="mt-1 flex flex-wrap gap-1.5">
-                      <% currency_list = presenter.formatted_currency_totals(totals) %>
-                      <% if currency_list.any? %>
-                        <% currency_list.each do |formatted_amount| %>
-                          <span class="inline-flex items-center rounded-full border border-border bg-card px-2 py-1 text-xs font-medium text-foreground">
-                            <%= formatted_amount %>
-                          </span>
-                        <% end %>
-                      <% else %>
-                        <span class="text-muted-foreground">—</span>
-                      <% end %>
-                    </dd>
-                  </div>
-                </dl>
-
-                <div class="mt-4 flex justify-end gap-2">
-                  <%= link_to details_hotel_guest_path(current_hotel, guest), class: "inline-flex items-center gap-x-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition hover:border-border-interactive hover:bg-muted", data: { turbo_frame: "_top" } do %>
-                    <%= cached_icon "eye", stroke_width: 2.2, class: "size-3.5" %>
-                    View Timeline
-                  <% end %>
-                  <% if can_delete %>
-                    <%= button_to hotel_guest_path(current_hotel, guest),
-                                  method: :delete,
-                                  data: { turbo_confirm: "Are you sure you want to delete this guest record? This will hide them from the directory but preserve their historic booking data.", turbo_confirm_title: "Delete Guest", turbo_confirm_color: "red", turbo_frame: "_top" },
-                                  class: "inline-flex items-center justify-center rounded-lg border border-red-200 bg-card px-3 py-1.5 text-red-500 shadow-sm transition hover:bg-red-50 hover:text-red-700",
-                                  title: "Delete Guest" do %>
-                      <%= cached_icon "trash-2", class: "size-4" %>
-                    <% end %>
-                  <% end %>
-                </div>
-              </div>
+            <% table.with_body do %>
+              <% @guests.each do |guest| %>
+                <%= render "guest_row",
+                      guest: guest,
+                      selectable: can_delete,
+                      can_manage: can_manage,
+                      can_delete: can_delete,
+                      repeat_ids: @repeat_ids,
+                      stays_count: guest_stays_count(guest),
+                      currency_totals: guest_currency_totals(guest) %>
+              <% end %>
             <% end %>
-          </div>
+          <% end %>
+
+          <% if @guests.total_pages > 1 %>
+            <div class="flex justify-center">
+              <%= paginate @guests, data: { turbo_action: "advance" } %>
+            </div>
+          <% end %>
         <% else %>
-          <div class="px-6 py-12 text-center sm:px-8">
-            <p class="text-sm font-medium text-muted-foreground">No guests recorded yet for this property.</p>
-          </div>
+          <%= render PanelsUI::EmptyState.new(
+                title: "No guest records found",
+                description: "Change the search term or pick another status tab.",
+                icon: "users") do |empty| %>
+            <% if can_manage %>
+              <% empty.with_action do %>
+                <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel), variant: :primary, size: :sm) do %>
+                  New guest record
+                <% end %>
+              <% end %>
+            <% end %>
+          <% end %>
         <% end %>
 
-        <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center sm:px-8">
-          <%= paginate @guests %>
-        </div>
-
         <% if can_delete %>
-          <!-- Floating Bulk Action Banner -->
-          <div data-bulk-select-target="banner"
-               class="fixed bottom-[76px] lg:bottom-6 left-1/2 lg:left-[58%] -translate-x-1/2 z-50 hidden items-center justify-between lg:justify-start w-[calc(100%-2rem)] lg:w-auto gap-3 lg:gap-4 bg-card text-foreground px-4 py-3 lg:px-6 lg:py-3.5 rounded-2xl shadow-xl border border-border ring-4 ring-ring/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
-            <div class="flex items-center gap-1.5">
-              <span data-bulk-select-target="count" class="text-sm font-semibold text-foreground">0 guests selected</span>
-              <button type="button"
-                      data-action="click->bulk-select#clear"
-                      class="inline-flex items-center justify-center rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-muted-foreground transition"
-                      title="Clear selection">
-                <%= cached_icon "x", stroke_width: 2.5, class: "size-3.5" %>
-              </button>
-            </div>
-            <div class="h-4 w-px bg-muted"></div>
-            <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete do |f| %>
-              <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
-              <button type="submit"
-                      data-turbo-confirm="Are you sure you want to delete the selected guest records? This will hide them from the directory but preserve their historic booking data."
-                      data-turbo-confirm-title="Delete Guests"
-                      data-turbo-confirm-color="red"
-                      data-turbo-frame="_top"
-                      class="inline-flex items-center gap-x-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-red-500 transition">
-                <%= cached_icon "trash-2", class: "size-3.5" %>
-                Delete
-              </button>
-            <% end %>
-          </div>
+          <%= render "bulk_actions" %>
+        <% end %>
+
+        <% if can_manage %>
+          <%= render "blacklist_dialog" %>
         <% end %>
       </div>
     <% end %>
-  </div>
+  </section>
 </div>

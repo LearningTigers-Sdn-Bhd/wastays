@@ -1,0 +1,95 @@
+<%# The menu escapes the table on its own: PanelsUI::DropdownMenu renders its
+    panel as a popover, so it is not clipped by the scroll container. %>
+<%= render PanelsUI::DropdownMenu.new(id: "guest-row-actions-#{guest.id}", placement: :bottom_end, class: "w-56") do |menu| %>
+  <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "Actions for #{presenter.name}") do %>
+    <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+  <% end %>
+
+  <% menu.with_item(href: details_hotel_guest_path(current_hotel, guest), data: { turbo_frame: "_top" }) do %>
+    <%= app_icon "eye", class: "size-4 shrink-0", aria: { hidden: true } %>
+    <span>View record</span>
+  <% end %>
+
+  <% if can_manage %>
+    <% menu.with_item(href: edit_hotel_guest_path(current_hotel, guest), data: { turbo_frame: "_top" }) do %>
+      <%= app_icon "pencil", class: "size-4 shrink-0", aria: { hidden: true } %>
+      <span>Edit profile</span>
+    <% end %>
+
+    <% if vip %>
+      <% menu.with_item(
+           href: unvip_hotel_guest_path(current_hotel, guest),
+           method: :patch,
+           data: {
+             turbo_frame: "_top",
+             turbo_confirm: "#{presenter.name} will no longer be marked VIP at #{current_hotel.name}.",
+             turbo_confirm_title: "Remove VIP",
+             turbo_confirm_tone: "default"
+           }) do %>
+        <%= app_icon "crown", class: "size-4 shrink-0", aria: { hidden: true } %>
+        <span>Remove VIP</span>
+      <% end %>
+    <% else %>
+      <% menu.with_item(
+           href: vip_hotel_guest_path(current_hotel, guest),
+           method: :patch,
+           data: {
+             turbo_frame: "_top",
+             turbo_confirm: "#{presenter.name} will be marked VIP at #{current_hotel.name}.",
+             turbo_confirm_title: "Mark as VIP",
+             turbo_confirm_tone: "default"
+           }) do %>
+        <%= app_icon "crown", class: "size-4 shrink-0", aria: { hidden: true } %>
+        <span>Mark as VIP</span>
+      <% end %>
+    <% end %>
+
+    <% if blacklisted %>
+      <% menu.with_item(
+           href: unblacklist_hotel_guest_path(current_hotel, guest),
+           method: :patch,
+           variant: :warning,
+           data: {
+             turbo_frame: "_top",
+             turbo_confirm: "#{presenter.name} will be able to book at #{current_hotel.name} again. The reason on record is removed.",
+             turbo_confirm_title: "Remove blacklist",
+             turbo_confirm_tone: "warning"
+           }) do %>
+        <%= app_icon "user-round-check", class: "size-4 shrink-0", aria: { hidden: true } %>
+        <span>Remove blacklist</span>
+      <% end %>
+    <% else %>
+      <%# The reason is required, so this opens the one dialog the page carries
+          and hands it this row's action and guest name. %>
+      <% menu.with_item(
+           variant: :danger,
+           command: "show-modal",
+           commandfor: "guest-blacklist-dialog",
+           data: {
+             action: "guest-blacklist#open",
+             guest_blacklist_url_param: blacklist_hotel_guest_path(current_hotel, guest),
+             guest_blacklist_name_param: presenter.name
+           }) do %>
+        <%= app_icon "user-round-x", class: "size-4 shrink-0", aria: { hidden: true } %>
+        <span>Blacklist guest</span>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if can_delete %>
+    <% menu.with_separator %>
+    <% menu.with_item(
+         href: hotel_guest_path(current_hotel, guest),
+         method: :delete,
+         variant: :danger,
+         data: {
+           turbo_frame: "_top",
+           turbo_confirm: "#{presenter.name} is removed from the directory. Their booking history stays on record.",
+           turbo_confirm_title: "Delete guest record",
+           turbo_confirm_tone: "destructive"
+         }) do %>
+      <%= app_icon "trash-2", class: "size-4 shrink-0", aria: { hidden: true } %>
+      <span>Delete guest record</span>
+    <% end %>
+  <% end %>
+<% end %>

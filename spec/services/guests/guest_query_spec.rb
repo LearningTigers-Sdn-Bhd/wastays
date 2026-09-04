@@ -85,6 +85,45 @@ RSpec.describe Guests::GuestQuery do
     end
   end
 
+  describe "#tag_counts" do
+    it "counts every tab in one query, ignoring the tab that is open" do
+      guest1.update!(vip: true, metadata: { "vip_hotel_ids" => [ hotel.id ] })
+      guest2.update!(blacklisted: true, metadata: { "blacklisted_hotel_ids" => [ hotel.id ] })
+
+      counts = described_class.new(hotel: hotel, params: { tag: "vip" }).tag_counts
+
+      expect(counts).to eq("all" => 2, "vip" => 1, "repeat" => 0, "blacklisted" => 1)
+    end
+
+    it "counts within the search and country filters" do
+      counts = described_class.new(hotel: hotel, params: { country: "Singapore" }).tag_counts
+
+      expect(counts["all"]).to eq(1)
+    end
+
+    it "counts a repeat guest" do
+      booking_c = create(:booking, hotel: hotel, status: "completed")
+      create(:booking_guest, booking: booking_c, guest: guest2)
+
+      expect(described_class.new(hotel: hotel, params: {}).tag_counts["repeat"]).to eq(1)
+    end
+  end
+
+  describe ".repeat_ids" do
+    it "returns the guests with more than one booking and a completed stay" do
+      booking_c = create(:booking, hotel: hotel, status: "completed")
+      create(:booking_guest, booking: booking_c, guest: guest2)
+
+      ids = described_class.repeat_ids([ guest1.id, guest2.id ])
+
+      expect(ids).to contain_exactly(guest2.id)
+    end
+
+    it "returns nothing without ids, running no query" do
+      expect(described_class.repeat_ids([])).to be_empty
+    end
+  end
+
   describe "#country_options" do
     it "returns unique countries for the hotel's guests" do
       query = described_class.new(hotel: hotel, params: {})

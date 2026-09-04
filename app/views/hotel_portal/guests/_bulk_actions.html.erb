@@ -1,0 +1,32 @@
+<%# Floating bar for the current selection. Step 5 adds VIP and blacklist here. %>
+<div data-bulk-select-target="banner"
+     class="fixed bottom-[76px] left-1/2 z-overlay hidden w-[calc(100%-2rem)] -translate-x-1/2 items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-card-foreground shadow-lg lg:bottom-6 lg:w-auto lg:justify-start lg:gap-4"
+     role="region"
+     aria-label="Bulk actions">
+  <div class="flex items-center gap-1.5">
+    <span data-bulk-select-target="count" class="text-sm font-medium text-foreground" aria-live="polite">0 guests selected</span>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :icon_xs, aria: { label: "Clear selection" }, data: { action: "bulk-select#clear" }) do %>
+      <%= app_icon "x", class: "size-3.5", aria: { hidden: true } %>
+    <% end %>
+  </div>
+
+  <div class="h-4 w-px bg-border" aria-hidden="true"></div>
+
+  <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+    <%= render PanelsUI::Button.new(
+          as: :button,
+          type: :submit,
+          variant: :destructive,
+          size: :sm,
+          data: {
+            turbo_frame: "_top",
+            turbo_confirm: "The selected guests are removed from the directory. Their booking history stays on record.",
+            turbo_confirm_title: "Delete guest records",
+            turbo_confirm_tone: "destructive"
+          }) do %>
+      <%= app_icon "trash-2", class: "size-3.5", aria: { hidden: true } %>
+      Delete
+    <% end %>
+  <% end %>
+</div>

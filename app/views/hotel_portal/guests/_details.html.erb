@@ -73,15 +73,7 @@
         <div>
           <dt class="text-xs text-muted-foreground">Status at <%= current_hotel.name %></dt>
           <dd class="mt-1 flex flex-wrap gap-1.5">
-            <% if is_vip %>
-              <%= render PanelsUI::Badge.new(label: "VIP", variant: :warning, size: :sm) %>
-            <% end %>
-            <% if is_blacklisted %>
-              <%= render PanelsUI::Badge.new(label: "Blacklisted", variant: :destructive, size: :sm) %>
-            <% end %>
-            <% if guest.repeat? %>
-              <%= render PanelsUI::Badge.new(label: "Repeat", variant: :info, size: :sm) %>
-            <% end %>
+            <%= render "guest_badges", vip: is_vip, blacklisted: is_blacklisted, repeat: guest.repeat? %>
             <% unless is_vip || is_blacklisted || guest.repeat? %>
               <span class="text-sm text-muted-foreground">No status set.</span>
             <% end %>

@@ -18,6 +18,8 @@ module HotelPortal
       unless current_hotel
         @guests = Guest.none.page(params[:page]).per(25)
         @country_options = []
+        @tag_counts = Hash.new(0)
+        @repeat_ids = Set.new
         @guest_stays_count = {}
         @guest_currency_totals = {}
         return
@@ -27,8 +29,12 @@ module HotelPortal
 
       @guests = query.call.page(params[:page]).per(25)
       @country_options = query.country_options
+      @tag_counts = query.tag_counts
 
-      stats = Guests::StatsService.new(hotel: current_hotel, guest_ids: @guests.map(&:id)).call
+      guest_ids = @guests.map(&:id)
+      @repeat_ids = Guests::GuestQuery.repeat_ids(guest_ids)
+
+      stats = Guests::StatsService.new(hotel: current_hotel, guest_ids: guest_ids).call
       @guest_stays_count = stats[:stays_count]
       @guest_currency_totals = stats[:currency_totals]
     end

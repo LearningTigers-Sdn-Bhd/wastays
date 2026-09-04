@@ -53,12 +53,12 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Ravi Menon")
       expect(body_text).to include(hotel.name[0...10])
       expect(body_text).to include("Guest Records")
-      expect(body_text).to include("Country")
+      expect(body_text).to include("Contact")
       expect(body_text).to include("Stays")
-      expect(body_text).to include("Last Stayed")
-      expect(body_text).to include("Lifetime Value")
+      expect(body_text).to include("Last stayed")
+      expect(body_text).to include("Lifetime value")
       expect(body_text).to include("02:30 PM")
-      expect(body_text).to include("View Timeline")
+      expect(body_text).to include("View record")
     end
 
     it "only counts checked in and completed bookings in lifetime value" do
@@ -118,11 +118,93 @@ RSpec.describe "HotelPortal::Guests", type: :request do
 
       expect(response).to have_http_status(:success)
       body_text = CGI.unescapeHTML(response.body)
-      expect(body_text).to include("Guest Directory")
-      expect(body_text).to include("Guest Records")
-      expect(body_text).to include("All Countries")
+            expect(body_text).to include("Guest Records")
+      expect(body_text).to include("All countries")
       expect(body_text).to include("Ravi Menon")
       expect(body_text).not_to include("Aisha Tan")
+    end
+
+    it "renders a tab per status with its own count" do
+      vip = Guest.create!(name: "Vip Guest", email: "vip@example.com", vip: true, country: "Malaysia")
+      plain = Guest.create!(name: "Plain Guest", email: "plain@example.com", country: "Malaysia")
+      [ vip, plain ].each do |guest|
+        booking = create(:booking, hotel: hotel, status: "completed", guest_name: guest.name, guest_email: guest.email)
+        create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+      end
+
+      get hotel_guests_path(hotel), params: { tag: "vip" }
+
+      expect(response).to have_http_status(:success)
+      strip = response.body[/<nav[^>]*guest-tag-tabs.*?<\/nav>/m] || response.body
+      expect(strip).to include("Blacklisted")
+      expect(strip).to include("Repeat")
+      expect(strip).to match(/aria-current="page"[^>]*>(?:(?!<\/a>).)*VIP/m)
+    end
+
+    it "treats the legacy banned tag as the blacklisted tab" do
+      get hotel_guests_path(hotel), params: { tag: "banned" }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to match(/aria-current="page"[^>]*>(?:(?!<\/a>).)*Blacklisted/m)
+    end
+
+    it "offers every row action in one menu" do
+      guest = Guest.create!(name: "Ravi Menon", email: "ravi@example.com", country: "India",
+                            document_type: "passport", government_id: "A1234567",
+                            date_of_birth: Date.new(1985, 1, 2))
+      booking = create(:booking, hotel: hotel, status: "completed", guest_name: guest.name, guest_email: guest.email)
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      get hotel_guests_path(hotel)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Actions for Ravi Menon")
+      expect(body_text).to include("View record")
+      expect(body_text).to include("Edit profile")
+      expect(body_text).to include("Mark as VIP")
+      expect(body_text).to include("Blacklist guest")
+      expect(body_text).to include(vip_hotel_guest_path(hotel, guest))
+    end
+
+    it "renders the design system checkbox for selection" do
+      role = user.user_hotel_accesses.first.role
+      role.permissions << (Permission.find_by(slug: "delete_guest_record") || create(:permission, slug: "delete_guest_record"))
+
+      guest = Guest.create!(name: "Ravi Menon", email: "ravi@example.com", country: "Malaysia")
+      booking = create(:booking, hotel: hotel, status: "completed", guest_name: guest.name, guest_email: guest.email)
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      get hotel_guests_path(hotel)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("panel-checkbox")
+      expect(body_text).to include("Select Ravi Menon")
+      expect(body_text).to include("Select every guest on this page")
+      expect(body_text).not_to include("Select All Guests")
+    end
+
+    it "reads the repeat flag for the whole page in one query" do
+      3.times do |index|
+        guest = Guest.create!(name: "Guest #{index}", email: "guest#{index}@example.com", country: "Malaysia")
+        2.times do
+          booking = create(:booking, hotel: hotel, status: "completed", guest_name: guest.name, guest_email: guest.email)
+          create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+        end
+      end
+
+      queries = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        queries << payload[:sql] if payload[:sql].include?("booking_guests") && payload[:sql].include?("HAVING")
+      end
+
+      get hotel_guests_path(hotel)
+
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+
+      expect(response).to have_http_status(:success)
+      expect(CGI.unescapeHTML(response.body)).to include("Repeat")
+      # One for the tab counts, one for the page's rows — not one per guest.
+      expect(queries.size).to be <= 2
     end
 
     it "filters guests by status tags" do

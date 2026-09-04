@@ -1,0 +1,11 @@
+<%# One set of status badges. The directory row, the record header, and the
+    stay summary all read from here, so a wording change lands in one place. %>
+<% if vip %>
+  <%= render PanelsUI::Badge.new(label: "VIP", variant: :warning, size: :sm) %>
+<% end %>
+<% if blacklisted %>
+  <%= render PanelsUI::Badge.new(label: "Blacklisted", variant: :destructive, size: :sm) %>
+<% end %>
+<% if repeat %>
+  <%= render PanelsUI::Badge.new(label: "Repeat", variant: :info, size: :sm) %>
+<% end %>
