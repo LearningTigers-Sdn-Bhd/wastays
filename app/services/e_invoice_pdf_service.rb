@@ -162,11 +162,7 @@ class EInvoicePdfService
       @hotel.country.presence
     ].compact.join(", ")
 
-    buyer_address = [
-      @booking.guest_home_address.presence,
-      @booking.guest_city.presence,
-      @booking.guest_country.presence
-    ].compact.join(", ")
+    buyer_address = buyer_address_presenter.display
 
     pdf.table(
       [
@@ -176,7 +172,7 @@ class EInvoicePdfService
         ],
         [
           { content: @submission.supplier_name.presence || @hotel.name, font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [] },
-          { content: @booking.guest_name, font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [] }
+          { content: buyer_value("name", @booking.guest_name), font_style: :bold, size: 11, text_color: TEXT_PRIMARY, borders: [] }
         ],
         [
           { content: "TIN: #{@submission.supplier_tin.presence || '—'}", size: 9, text_color: TEXT_MUTED, borders: [] },
@@ -184,11 +180,11 @@ class EInvoicePdfService
         ],
         [
           { content: supplier_location, size: 9, text_color: TEXT_MUTED, borders: [] },
-          { content: buyer_address.presence || @booking.guest_email.to_s, size: 9, text_color: TEXT_MUTED, borders: [] }
+          { content: buyer_address.presence || "Not provided", size: 9, text_color: TEXT_MUTED, borders: [] }
         ],
         [
           { content: "", borders: [] },
-          { content: "#{@booking.guest_phone}\nBooking #{@booking.confirmation_token}", size: 9, text_color: TEXT_MUTED, borders: [] }
+          { content: "#{buyer_value('contact_email', @booking.guest_email)}\n#{buyer_value('contact_phone', @booking.guest_phone)}\nBooking #{@booking.confirmation_token}", size: 9, text_color: TEXT_MUTED, borders: [] }
         ]
       ],
       width: pdf.bounds.width,
@@ -316,9 +312,25 @@ class EInvoicePdfService
   end
 
   def buyer_identity_line
-    label = @booking.guest_document_type.to_s == "ic" ? "IC" : "Passport"
-    identifier = @booking.guest_government_id.presence || "—"
+    label = buyer_value("document_type", @booking.guest_document_type).to_s == "ic" ? "IC" : "Passport"
+    identifier = buyer_value("government_id", @booking.guest_government_id).presence || "—"
     "ID: #{label} #{identifier}"
+  end
+
+  def buyer_snapshot
+    @buyer_snapshot ||= @submission.buyer_snapshot.to_h.stringify_keys
+  end
+
+  def buyer_value(key, fallback = nil)
+    buyer_snapshot[key].presence || fallback
+  end
+
+  def buyer_address_presenter
+    @buyer_address_presenter ||= if buyer_snapshot["billing_address"].present?
+      PostalAddresses::Presenter.from_snapshot(buyer_snapshot["billing_address"])
+    else
+      PostalAddresses::Presenter.from_booking(@booking)
+    end
   end
 
   def validation_qr_png

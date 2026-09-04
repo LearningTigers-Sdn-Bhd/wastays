@@ -55,6 +55,10 @@ module Invoices
         reservation_reference: @booking.formatted_reservation_number,
         guest_name: @booking.guest_name,
         guest_country: @booking.guest_country,
+        guest_city: @booking.guest_city,
+        guest_state_code: @booking.guest_state_code,
+        guest_postal_code: @booking.guest_postal_code,
+        guest_address_country: @booking.guest_address_country,
         # The invoice bills a party at an address. Invoices issued before this was
         # captured have none, so the document's bill-to block collapses to what it has.
         guest_home_address: @booking.guest_home_address,
@@ -81,6 +85,11 @@ module Invoices
       party = @folio.booking_billing_party
       relationship = @folio.hotel_corporate_account || party&.hotel_corporate_account
       terms = party&.billing_terms
+      guest_payer = @folio.payer_type == "guest"
+      guest_address = if guest_payer
+        primary = @booking.booking_guests.find_by(is_primary: true)
+        PostalAddresses::Presenter.from_booking_guest(primary, fallback_booking: @booking).snapshot
+      end
 
       {
         type: @folio.payer_type,
@@ -91,7 +100,10 @@ module Invoices
         settlement_type: terms&.settlement_type,
         purchase_order_reference: terms&.purchase_order_reference,
         authorization_reference: terms&.authorization_reference,
-        payment_terms_days: relationship&.payment_terms_days
+        payment_terms_days: relationship&.payment_terms_days,
+        contact_email: guest_payer ? @booking.guest_email : nil,
+        contact_phone: guest_payer ? @booking.guest_phone : nil,
+        billing_address: relationship ? CorporateAccounts::BillingAddressPresenter.new(relationship).snapshot : guest_address
       }
     end
 
