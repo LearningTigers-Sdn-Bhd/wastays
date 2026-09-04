@@ -337,6 +337,7 @@
           <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-8 w-auto" %>
           <h2 class="mt-2 text-md font-black text-foreground print:mt-0.5 print:text-sm print:leading-tight"><%= current_hotel.name %></h2>
           <p class="mt-1 text-sm text-muted-foreground print:mt-0 print:text-xs print:leading-tight"><%= @presenter.hotel_address_display %></p>
+          <p class="mt-1 text-xs text-muted-foreground print:mt-0 print:text-xs print:leading-tight"><%= @presenter.hotel_registration_display %></p>
         </div>
         <div class="min-w-64 overflow-hidden rounded-md border border-border-interactive bg-card">
           <div class="border-b border-border-interactive bg-muted px-4 py-2 text-center text-xs font-bold uppercase text-muted-foreground">Guest Registration Card No.</div>

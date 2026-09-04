@@ -25,6 +25,14 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
       expect(response.body).to include("Sign registration card")
     end
 
+    it "shows the hotel's registration number and SST" do
+      hotel.update!(ssm_number: "SSM-12345", sst_registration_number: "SST-67890")
+
+      get guest_registration_card_path(card.public_token)
+
+      expect(response.body).to include("Reg. No: SSM-12345", "SST: SST-67890")
+    end
+
     it "404s for an unknown token" do
       get guest_registration_card_path("does-not-exist")
 

@@ -57,6 +57,7 @@ class GuestRegistrationCardPdfService
     HotelPortal::Reports::Exports::PdfReportFrame.new(
       pdf: pdf,
       hotel: @hotel,
+      hotel_identifiers: @presenter.hotel_registration_display,
       eyebrow: "Guest Registration Card",
       report_name: @booking.guest_registration_card_number_display,
       metadata: [

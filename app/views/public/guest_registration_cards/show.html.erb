@@ -6,6 +6,7 @@
       <p class="text-xs font-black uppercase tracking-widest text-primary">Guest Registration Card</p>
       <h1 class="mt-2 text-3xl font-black text-foreground"><%= @hotel.name %></h1>
       <p class="mt-2 text-sm text-muted-foreground">Registration No. <%= @booking.guest_registration_card_number_display %></p>
+      <p class="mt-1 text-xs text-muted-foreground"><%= @presenter.hotel_registration_display %></p>
     </div>
 
     <% if flash[:notice].present? %>

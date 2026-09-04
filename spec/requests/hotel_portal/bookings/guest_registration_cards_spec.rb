@@ -33,6 +33,14 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body).not_to include("Cancellation Policy")
     end
 
+    it "shows the hotel's registration number and SST" do
+      hotel.update!(ssm_number: "SSM-12345", sst_registration_number: "SST-67890")
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).to include("Reg. No: SSM-12345", "SST: SST-67890")
+    end
+
     it "shows formatted guest registration number after check-in number exists" do
       year = hotel.current_business_date.year
       booking.update!(guest_registration_number: 1, guest_registration_year: year)
