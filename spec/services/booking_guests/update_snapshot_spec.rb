@@ -17,7 +17,11 @@ RSpec.describe BookingGuests::UpdateSnapshot do
       document_type: "passport",
       government_id: "P9988",
       date_of_birth: "1992-03-04",
-      home_address: "No. 12, Jalan Ampang"
+      home_address: "No. 12, Jalan Ampang",
+      city: "Kuala Lumpur",
+      state_code: "14",
+      postal_code: "50450",
+      address_country: "Malaysia"
     }
   end
 
@@ -32,9 +36,21 @@ RSpec.describe BookingGuests::UpdateSnapshot do
       name_snapshot: "Stay Name",
       government_id_snapshot: "p9988",
       date_of_birth_snapshot: Date.new(1992, 3, 4),
-      home_address_snapshot: "No. 12, Jalan Ampang"
+      home_address_snapshot: "No. 12, Jalan Ampang",
+      city_snapshot: "Kuala Lumpur",
+      state_code_snapshot: "14",
+      postal_code_snapshot: "50450",
+      address_country_snapshot: "Malaysia"
     )
-    expect(booking.reload).to have_attributes(guest_name: "Stay Name", guest_email: "stay@example.com", guest_home_address: "No. 12, Jalan Ampang")
+    expect(booking.reload).to have_attributes(
+      guest_name: "Stay Name",
+      guest_email: "stay@example.com",
+      guest_home_address: "No. 12, Jalan Ampang",
+      guest_city: "Kuala Lumpur",
+      guest_state_code: "14",
+      guest_postal_code: "50450",
+      guest_address_country: "Malaysia"
+    )
     expect(guest.reload.name).to eq(original_profile_name)
     expect(guest.reload.home_address).to eq(original_profile_address)
   end
@@ -44,7 +60,15 @@ RSpec.describe BookingGuests::UpdateSnapshot do
 
     expect(result).to be_success
     expect(booking_guest.reload.name_snapshot).to eq("Stay Name")
-    expect(guest.reload).to have_attributes(name: "Stay Name", date_of_birth: Date.new(1992, 3, 4), home_address: "No. 12, Jalan Ampang")
+    expect(guest.reload).to have_attributes(
+      name: "Stay Name",
+      date_of_birth: Date.new(1992, 3, 4),
+      home_address: "No. 12, Jalan Ampang",
+      city: "Kuala Lumpur",
+      state_code: "14",
+      postal_code: "50450",
+      address_country: "Malaysia"
+    )
   end
 
   it "does not partially update any layer when validation fails" do

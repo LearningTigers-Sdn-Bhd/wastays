@@ -65,7 +65,7 @@
       <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone") do |field| %>
         <% field.with_input(type: :tel, autocomplete: "tel") %>
       <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true) do |field| %>
         <% field.with_combobox(country_choices, selected: guest.country, prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
       <% end %>
       <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
@@ -88,9 +88,29 @@
       <% end %>
     </div>
 
-    <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Address") do |field| %>
-      <% field.with_text_area(value: guest.home_address, rows: 2, placeholder: "Street address, city, postcode") %>
-    <% end %>
+    <section class="space-y-4 border-t border-border pt-5" aria-labelledby="guest-address-heading">
+      <div>
+        <h3 id="guest-address-heading" class="text-sm font-semibold text-foreground">Address</h3>
+        <p class="mt-1 text-xs text-muted-foreground">The address for this guest and stay.</p>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Street address", class: "sm:col-span-2") do |field| %>
+          <% field.with_text_area(value: guest.home_address, rows: 2, placeholder: "Street, building, and unit") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :city, label: "City") do |field| %>
+          <% field.with_input(autocomplete: "address-level2") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :state_code, label: "State") do |field| %>
+          <% field.with_select_menu(EInvoice::MalaysiaStates.options, selected: guest.state_code, prompt: "Select state") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :postal_code, label: "Postcode") do |field| %>
+          <% field.with_input(autocomplete: "postal-code") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :address_country, label: "Address country") do |field| %>
+          <% field.with_combobox(country_choices, selected: guest.address_country, prompt: "Search for a country") %>
+        <% end %>
+      </div>
+    </section>
   <% end %>
 <% end %>
 <% end %>

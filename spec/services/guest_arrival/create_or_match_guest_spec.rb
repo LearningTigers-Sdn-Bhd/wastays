@@ -7,6 +7,10 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
       email: "JANE@EXAMPLE.COM",
       phone: "+60111111111",
       city: "kota kinabalu",
+      state_code: "12",
+      postal_code: "88000",
+      address_country: "Malaysia",
+      home_address: "12 Jalan Pantai",
       government_id: "A123456",
       gender: "FEMALE",
       country: "Singapore",
@@ -22,6 +26,12 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
     expect(result.guest).to be_persisted
     expect(result.guest.email).to eq("jane@example.com")
     expect(result.guest.city).to eq("Kota Kinabalu")
+    expect(result.guest).to have_attributes(
+      state_code: "12",
+      postal_code: "88000",
+      address_country: "Malaysia",
+      home_address: "12 Jalan Pantai"
+    )
     expect(result.guest.date_of_birth).to eq(Date.new(1990, 5, 6))
     expect(result.is_repeat?).to be(false)
   end
@@ -72,7 +82,7 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
       date_of_birth: nil
     )
 
-    result = described_class.new(params).call
+    result = described_class.new(params.merge(update_profile: true)).call
 
     expect(result.guest.id).to eq(existing.id)
     expect(existing.reload.date_of_birth).to eq(Date.new(1990, 5, 6))
@@ -84,19 +94,33 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
     Guest.connection.execute("UPDATE guests SET government_id = #{quoted} WHERE id = #{existing.id}")
 
     result = nil
-    expect { result = described_class.new(params).call }.not_to raise_error
+    expect { result = described_class.new(params.merge(update_profile: true)).call }.not_to raise_error
 
     expect(result.success?).to be(true)
     expect(result.guest.id).to eq(existing.id)
     expect(result.guest.reload.government_id).to eq("a123456")
   end
 
-  it "fills blank city for an existing guest" do
+  it "does not change a matched profile unless explicitly requested" do
     existing = create(:guest, email: "jane@example.com", city: nil)
 
     result = described_class.new(params).call
 
     expect(result.guest.id).to eq(existing.id)
-    expect(existing.reload.city).to eq("Kota Kinabalu")
+    expect(existing.reload.city).to be_nil
+  end
+
+  it "updates all structured profile address fields when explicitly requested" do
+    existing = create(:guest, email: "jane@example.com", city: nil, home_address: nil)
+
+    described_class.new(params.merge(update_profile: true)).call
+
+    expect(existing.reload).to have_attributes(
+      city: "Kota Kinabalu",
+      state_code: "12",
+      postal_code: "88000",
+      address_country: "Malaysia",
+      home_address: "12 Jalan Pantai"
+    )
   end
 end

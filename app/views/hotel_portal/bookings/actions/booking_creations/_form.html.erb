@@ -171,16 +171,35 @@ end %>
                            }) %>
                     <% end %>
                   </div>
-                  <% address_present = @booking.guest_home_address.present? %>
+                  <% address_present = [
+                       @booking.guest_home_address, @booking.guest_city, @booking.guest_state_code,
+                       @booking.guest_postal_code, @booking.guest_address_country
+                     ].any?(&:present?) %>
                   <div>
                     <button type="button" class="text-xs font-medium text-primary hover:underline" <%= "hidden" if address_present %>
                             data-action="booking-guest-autofill#toggleAddress" data-booking-guest-autofill-target="addressToggle">
                       + Add address
                     </button>
-                    <div <%= "hidden" unless address_present %> data-booking-guest-autofill-target="addressField">
-                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_home_address, label: "Address") do |field| %>
-                        <% field.with_text_area(value: @booking.guest_home_address, rows: 2, placeholder: "Street address, city, postcode",
+                    <div class="mt-3 grid gap-4 md:grid-cols-2" <%= "hidden" unless address_present %> data-booking-guest-autofill-target="addressField">
+                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_home_address, label: "Street address", class: "md:col-span-2") do |field| %>
+                        <% field.with_text_area(value: @booking.guest_home_address, rows: 2, placeholder: "Street, building, and unit",
                              data: { booking_guest_autofill_target: "addressInput" }) %>
+                      <% end %>
+                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_city, label: "City",
+                            data: { booking_guest_autofill_target: "cityField" }) do |field| %>
+                        <% field.with_input(autocomplete: "address-level2") %>
+                      <% end %>
+                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_state_code, label: "State",
+                            data: { booking_guest_autofill_target: "stateField" }) do |field| %>
+                        <% field.with_select_menu(EInvoice::MalaysiaStates.options, selected: @booking.guest_state_code, prompt: "Select state") %>
+                      <% end %>
+                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_postal_code, label: "Postcode",
+                            data: { booking_guest_autofill_target: "postalCodeField" }) do |field| %>
+                        <% field.with_input(autocomplete: "postal-code") %>
+                      <% end %>
+                      <%= render PanelsUI::FormField.new(form: f, attribute: :guest_address_country, label: "Address country",
+                            data: { booking_guest_autofill_target: "addressCountryField" }) do |field| %>
+                        <% field.with_combobox(COUNTRY_OPTIONS, selected: @booking.guest_address_country, prompt: "Select address country") %>
                       <% end %>
                     </div>
                   </div>

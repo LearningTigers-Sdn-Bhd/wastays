@@ -141,7 +141,10 @@ class Booking < ApplicationRecord
   def e_invoice_buyer_details_missing
     missing = []
     missing << "city" if guest_city.blank?
-    if EInvoice::MalaysiaStates.resolve(state_code: guest_state_code, city: guest_city, country_code: nil).blank?
+    missing << "address country" if guest_address_country.blank?
+    address_country_code = ISO3166::Country.find_country_by_any_name(guest_address_country.to_s)&.alpha3
+    if address_country_code == "MYS" &&
+        EInvoice::MalaysiaStates.resolve(state_code: guest_state_code, city: guest_city, country_code: "MYS").blank?
       missing << "state"
     end
     missing << "tax number" if buyer_tin_for_e_invoice.blank? && !foreign_guest?

@@ -56,14 +56,26 @@
                 <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
                   <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
                 <% end %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true) do |field| %>
                   <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
                 <% end %>
                 <div class="sm:col-span-2">
-                  <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Address") do |field| %>
-                    <% field.with_text_area(value: snapshots[:home_address], rows: 2, placeholder: "Street address, city, postcode") %>
+                  <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Street address") do |field| %>
+                    <% field.with_text_area(value: snapshots[:home_address], rows: 2, placeholder: "Street, building, and unit") %>
                   <% end %>
                 </div>
+                <%= render PanelsUI::FormField.new(form:, attribute: :city, label: "City") do |field| %>
+                  <% field.with_input(value: snapshots[:city], autocomplete: "address-level2") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :state_code, label: "State") do |field| %>
+                  <% field.with_select_menu(EInvoice::MalaysiaStates.options, selected: snapshots[:state_code], prompt: "Select state") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :postal_code, label: "Postcode") do |field| %>
+                  <% field.with_input(value: snapshots[:postal_code], autocomplete: "postal-code") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :address_country, label: "Address country") do |field| %>
+                  <% field.with_combobox(country_choices, selected: snapshots[:address_country], prompt: "Search for a country") %>
+                <% end %>
               </div>
               <% end %>
             <% end %>

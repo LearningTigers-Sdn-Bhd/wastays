@@ -4,7 +4,8 @@ export default class extends Controller {
   static targets = [
     "nameField", "emailField", "phoneField", "dateOfBirthField", "genderField", "countryField",
     "existingGuestId", "profileRow", "linkedName", "linkedDescription", "blacklistWarning", "updateSwitch",
-    "addressField", "addressInput", "addressToggle"
+    "addressField", "addressInput", "cityField", "stateField", "postalCodeField",
+    "addressCountryField", "addressToggle"
   ]
 
   selectGuest(event) {
@@ -23,6 +24,11 @@ export default class extends Controller {
       this.addressInputTarget.dispatchEvent(new Event("input", { bubbles: true }))
       this.showAddress()
     }
+    if (this.hasCityFieldTarget) this.setControl(this.cityFieldTarget, guest.city)
+    if (this.hasStateFieldTarget) this.setControl(this.stateFieldTarget, guest.state_code)
+    if (this.hasPostalCodeFieldTarget) this.setControl(this.postalCodeFieldTarget, guest.postal_code)
+    if (this.hasAddressCountryFieldTarget) this.setControl(this.addressCountryFieldTarget, guest.address_country)
+    if (guest.city || guest.state_code || guest.postal_code || guest.address_country) this.showAddress()
 
     this.existingGuestIdTarget.value = result.value
     this.linkedNameTarget.textContent = guest.name || result.label || "Existing guest"

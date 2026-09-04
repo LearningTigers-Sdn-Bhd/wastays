@@ -130,8 +130,14 @@
           </div>
 
           <div>
-            <%= f.label :guest_home_address, "Home Address", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
-            <%= f.text_area :guest_home_address, value: @booking.guest_home_address, class: "form-input py-3 px-5 border border-border", required: true, rows: 3, placeholder: "e.g. No. 12, Jalan Ampang, 50450 Kuala Lumpur, Malaysia" %>
+            <%= f.label :guest_home_address, "Street address", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+            <%= f.text_area :guest_home_address, value: @booking.guest_home_address, class: "form-input py-3 px-5 border border-border", required: true, rows: 3, placeholder: "Street, building, and unit" %>
+          </div>
+          <div>
+            <%= f.label :guest_address_country, "Address country", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+            <%= f.select :guest_address_country, country_options,
+                  { selected: @presenter.default_address_country, prompt: "Select address country" },
+                  class: "form-input py-3 px-5 border border-border", required: true %>
           </div>
         </div>
       </div>
