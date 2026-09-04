@@ -49,6 +49,23 @@ RSpec.describe Guests::GuestQuery do
       expect(results).not_to include(guest2)
     end
 
+    it "shows a VIP marked at this property only" do
+      Guests::SetVip.new(guests: guest2, hotel: hotel, vip: true).call
+
+      results = described_class.new(hotel: hotel, params: { tag: "vip" }).call
+      expect(results).to include(guest2)
+
+      results = described_class.new(hotel: other_hotel, params: { tag: "vip" }).call
+      expect(results).not_to include(guest2)
+    end
+
+    it "filters by Blacklisted status tag" do
+      guest1.update!(blacklisted: true)
+      results = described_class.new(hotel: hotel, params: { tag: "blacklisted" }).call
+      expect(results).to include(guest1)
+      expect(results).not_to include(guest2)
+    end
+
     it "filters by Banned status tag" do
       guest1.update!(blacklisted: true)
       query = described_class.new(hotel: hotel, params: { tag: "banned" })

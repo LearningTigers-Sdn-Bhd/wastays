@@ -332,7 +332,7 @@ class Booking < ApplicationRecord
   end
 
   def vip?
-    primary_guest&.vip? || self[:vip] || false
+    primary_guest&.vip?(hotel: hotel) || self[:vip] || false
   end
 
   def blacklisted?

@@ -8,7 +8,7 @@
     <%# Desktop Actions %>
     <div class="hidden md:flex items-center gap-x-3">
       <%= button_to toggle_vip_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit" do %>
-        <% if @guest.vip? %>
+        <% if @guest.vip?(hotel: current_hotel) %>
           <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
           Remove VIP
         <% else %>
@@ -54,7 +54,7 @@
         <% end %>
 
         <%= button_to toggle_vip_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition" do %>
-          <% if @guest.vip? %>
+          <% if @guest.vip?(hotel: current_hotel) %>
             <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
             Remove VIP
           <% else %>
@@ -103,7 +103,7 @@
       <div>
         <div class="flex items-center gap-x-2">
           <h1 class="text-xl font-bold text-foreground"><%= @presenter.name %></h1>
-          <% if @guest.vip? %>
+          <% if @guest.vip?(hotel: current_hotel) %>
             <%= render PanelsUI::Tooltip.new(text: "VIP guest", delay: 150) do %>
               <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="VIP guest">
                 <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-5 text-amber-500 fill-amber-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>

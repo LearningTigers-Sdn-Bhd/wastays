@@ -35,7 +35,7 @@ class Guest < ApplicationRecord
   before_validation :normalize_guest_data
   before_validation :populate_date_of_birth_from_malaysian_ic
 
-  after_update :propagate_vip_status, if: :saved_change_to_vip?
+  after_update :propagate_vip_status, if: :vip_scope_changed?
 
   def self.blacklisted?(email: nil, name: nil, hotel: nil)
     return false if email.blank? && name.blank?
@@ -117,6 +117,28 @@ class Guest < ApplicationRecord
     return nil unless hotel
     hotel_id = hotel.is_a?(ActiveRecord::Base) ? hotel.id : hotel.to_i
     metadata&.dig("blacklist_details", hotel_id.to_s)
+  end
+
+  # VIP is set per property, the same way a blacklist is. The property ids live
+  # in `metadata["vip_hotel_ids"]` and the `vip` column stays true while any
+  # property still holds the flag.
+  def vip?(hotel: nil)
+    if hotel
+      vip_at?(hotel)
+    else
+      super()
+    end
+  end
+
+  def vip_at?(hotel)
+    return false unless hotel
+    hotel_id = hotel.is_a?(ActiveRecord::Base) ? hotel.id : hotel.to_i
+
+    if metadata&.dig("vip_hotel_ids").present?
+      metadata["vip_hotel_ids"].include?(hotel_id)
+    else
+      self[:vip] && (created_by_hotel_id.nil? || created_by_hotel_id == hotel_id)
+    end
   end
 
   def repeat?
@@ -273,7 +295,25 @@ class Guest < ApplicationRecord
     "is required for passport guests"
   end
 
+  # Fires when the VIP column moves, or when the set of properties holding the
+  # flag moves. A blacklist write also touches metadata, so compare the VIP key
+  # rather than the whole column.
+  def vip_scope_changed?
+    return true if saved_change_to_vip?
+    return false unless saved_change_to_metadata?
+
+    before, after = saved_change_to_metadata
+    before&.dig("vip_hotel_ids") != after&.dig("vip_hotel_ids")
+  end
+
   def propagate_vip_status
-    bookings.update_all(vip: vip)
+    hotel_ids = metadata&.dig("vip_hotel_ids")
+
+    # Records written before the per-property flag existed carry the column
+    # alone. Guest#vip_at? reads them at every property, so propagate the same.
+    return bookings.update_all(vip: self[:vip]) if hotel_ids.blank?
+
+    bookings.where(hotel_id: hotel_ids).update_all(vip: true)
+    bookings.where.not(hotel_id: hotel_ids).update_all(vip: false)
   end
 end

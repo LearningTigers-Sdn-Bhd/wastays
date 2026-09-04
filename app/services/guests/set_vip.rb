@@ -3,36 +3,59 @@
 require "ostruct"
 
 module Guests
-  # Sets the VIP flag on one or more guest records to an explicit value.
+  # Marks or clears the VIP flag on one or more guest records for one property.
   #
-  # VIP is a property of the guest record itself, not of one property, so this
-  # service takes no hotel. The Guest model propagates the flag to the guest's
-  # bookings after update, so each record is saved on its own.
+  # A guest record is shared by every property the guest has booked with, so
+  # VIP is stored per property. The property ids live in
+  # `metadata["vip_hotel_ids"]`, and the `vip` column stays true while any
+  # property still holds the flag. Guest#propagate_vip_status reads the list and
+  # updates only that property's bookings.
   class SetVip
-    def initialize(guests:, vip:)
+    def initialize(guests:, hotel:, vip:)
       @guests = Array(guests)
+      @hotel = hotel
       @vip = ActiveModel::Type::Boolean.new.cast(vip) || false
     end
 
     def call
-      return empty_selection if @guests.empty?
+      return failure("No guest records selected.") if @guests.empty?
+      return failure("No property selected.") if @hotel.blank?
 
-      changed = @guests.reject { |guest| guest.vip? == @vip }
+      changed = @guests.reject { |guest| guest.vip_at?(@hotel) == @vip }
       return no_change if changed.empty?
 
       Guest.transaction do
-        changed.each { |guest| guest.update!(vip: @vip) }
+        changed.each { |guest| apply(guest) }
       end
 
       success(changed.size)
     rescue => e
-      OpenStruct.new(success?: false, changed_count: 0, message: "Failed to update VIP status: #{e.message}")
+      failure("Failed to update VIP status: #{e.message}")
     end
 
     private
 
-    def empty_selection
-      OpenStruct.new(success?: false, changed_count: 0, message: "No guest records selected.")
+    def apply(guest)
+      metadata = (guest.metadata || {}).deep_dup
+      hotel_ids = normalized_hotel_ids(guest, metadata)
+
+      @vip ? hotel_ids << @hotel.id : hotel_ids.delete(@hotel.id)
+
+      metadata["vip_hotel_ids"] = hotel_ids.uniq
+      guest.metadata = metadata
+      guest.vip = metadata["vip_hotel_ids"].present?
+      guest.save!
+    end
+
+    # A record marked VIP before the per-property list existed carries the
+    # column alone, and Guest#vip_at? reads it at every property. Seed the list
+    # from what that record already shows so no property loses the flag.
+    def normalized_hotel_ids(guest, metadata)
+      stored = metadata["vip_hotel_ids"]
+      return stored.dup if stored.is_a?(Array) && stored.present?
+      return [] unless guest[:vip]
+
+      guest.bookings.distinct.pluck(:hotel_id).compact | [ guest.created_by_hotel_id ].compact
     end
 
     def no_change
@@ -40,12 +63,13 @@ module Guests
     end
 
     def success(count)
-      OpenStruct.new(success?: true, changed_count: count, message: success_message(count))
+      noun = "guest record".pluralize(count)
+      message = @vip ? "#{count} #{noun} marked as VIP." : "VIP removed from #{count} #{noun}."
+      OpenStruct.new(success?: true, changed_count: count, message: message)
     end
 
-    def success_message(count)
-      noun = "guest record".pluralize(count)
-      @vip ? "#{count} #{noun} marked as VIP." : "VIP removed from #{count} #{noun}."
+    def failure(message)
+      OpenStruct.new(success?: false, changed_count: 0, message: message)
     end
   end
 end

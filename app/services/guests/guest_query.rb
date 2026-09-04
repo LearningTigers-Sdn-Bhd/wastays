@@ -55,7 +55,11 @@ module Guests
     if @params[:tag].present?
       case @params[:tag].to_s
       when "vip"
-        scope = scope.where(vip: true)
+        scope = scope.where(vip: true).where(
+          "guests.metadata @> :h_json OR (COALESCE(guests.metadata->'vip_hotel_ids', '[]'::jsonb) = '[]'::jsonb AND (guests.created_by_hotel_id IS NULL OR guests.created_by_hotel_id = :h_id))",
+          h_json: { vip_hotel_ids: [ @hotel.id ] }.to_json,
+          h_id: @hotel.id
+        )
       when "blacklisted", "banned"
         scope = scope.where(blacklisted: true).where(
           "guests.metadata @> :h_json OR (COALESCE(guests.metadata->'blacklisted_hotel_ids', '[]'::jsonb) = '[]'::jsonb AND (guests.created_by_hotel_id IS NULL OR guests.created_by_hotel_id = :h_id))",

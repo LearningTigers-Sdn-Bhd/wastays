@@ -73,7 +73,7 @@ class BookingGuest < ApplicationRecord
   end
 
   def sync_booking_vip_status
-    return unless guest&.vip? && booking_id.present?
+    return unless booking_id.present? && guest&.vip?(hotel: booking&.hotel)
 
     Booking.where(id: booking_id, vip: false).update_all(vip: true)
   end

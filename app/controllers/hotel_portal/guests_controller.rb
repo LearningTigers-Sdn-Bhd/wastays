@@ -102,7 +102,11 @@ module HotelPortal
     end
 
     def toggle_vip
-      result = Guests::SetVip.new(guests: @guest, vip: !@guest.vip).call
+      result = Guests::SetVip.new(
+        guests: @guest,
+        hotel: current_hotel,
+        vip: !@guest.vip_at?(current_hotel)
+      ).call
 
       if result.success?
         redirect_to hotel_guest_path(current_hotel, @guest), notice: result.message
