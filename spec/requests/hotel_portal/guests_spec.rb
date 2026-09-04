@@ -265,6 +265,17 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("colspan=")
     end
 
+    it "pins the tabs and the filter row while the rows scroll past" do
+      get hotel_guests_path(hotel)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("sticky top-0 z-sticky")
+      # A directory is an ordinary page: it keeps the shell's own padding and
+      # its own scroller, rather than becoming a full-height workspace.
+      expect(body_text).not_to include("panel-page--workspace")
+      expect(body_text).to include("overflow-y-auto [scrollbar-gutter:stable]")
+    end
+
     it "filters guests by status tags" do
       ravi = Guest.create!(
         name: "Ravi Vip",

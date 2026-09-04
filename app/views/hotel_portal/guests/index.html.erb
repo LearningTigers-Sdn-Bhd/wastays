@@ -24,62 +24,68 @@
   <% end %>
 
   <section aria-label="Guest directory">
-    <%# The strip, the filters and the table all live inside the frame. A tab
-        that swaps only the rows below it leaves its own highlight behind. %>
+    <%# The strip, the filters and the rows all sit inside the frame. A tab that
+        swaps only the rows below it leaves its own highlight behind, and the
+        filter form would keep posting the tab the user just left. %>
     <%= turbo_frame_tag "guests_results", class: "block space-y-4" do %>
-      <%= render PanelsUI::Tabs.new(
-            id: "guest-tag-tabs",
-            active: active_tag,
-            variant: :line,
-            aria_label: "Filter guests by status") do |strip| %>
-        <% tabs.each do |tab| %>
-          <% strip.with_tab(
-               name: tab[:name],
-               label: tab[:label],
-               icon: tab[:icon],
-               count: @tag_counts[tab[:name]],
-               href: hotel_guests_path(current_hotel,
-                 tag: (tab[:name] unless tab[:name] == "all"),
-                 query: params[:query].presence,
-                 country: params[:country].presence),
-               data: { turbo_frame: "guests_results", turbo_action: "advance" }) %>
-        <% end %>
-      <% end %>
-
-      <%= form_with url: hotel_guests_path(current_hotel), method: :get,
-            class: "flex flex-col gap-3 sm:flex-row sm:items-end",
-            data: { controller: "auto-submit", turbo_frame: "guests_results", turbo_action: "advance" } do |form| %>
-        <%= form.hidden_field :tag, value: active_tag unless active_tag == "all" %>
-
-        <div class="flex-1">
-          <%= render PanelsUI::FormField.new(form: form, attribute: :query, label: "Search guests", label_hidden: true, size: :sm) do |field| %>
-            <% field.with_input(
-                 type: :search,
-                 value: params[:query],
-                 placeholder: "Search by name, email, phone or ID",
-                 data: { action: "input->auto-submit#submit" }) %>
+      <%# The strip and the filters stay in view while the rows scroll past
+          under them. The negative margin lets the bar span the page's own
+          padding, so no row shows through at its edges. %>
+      <div class="sticky top-0 z-sticky -mx-2.5 space-y-4 bg-background px-2.5 py-2.5">
+        <%= render PanelsUI::Tabs.new(
+              id: "guest-tag-tabs",
+              active: active_tag,
+              variant: :line,
+              aria_label: "Filter guests by status") do |strip| %>
+          <% tabs.each do |tab| %>
+            <% strip.with_tab(
+                 name: tab[:name],
+                 label: tab[:label],
+                 icon: tab[:icon],
+                 count: @tag_counts[tab[:name]],
+                 href: hotel_guests_path(current_hotel,
+                   tag: (tab[:name] unless tab[:name] == "all"),
+                   query: params[:query].presence,
+                   country: params[:country].presence),
+                 data: { turbo_frame: "guests_results", turbo_action: "advance" }) %>
           <% end %>
-        </div>
+        <% end %>
 
-        <% if @country_options.any? %>
-          <div class="w-full sm:w-56">
-            <%= render PanelsUI::FormField.new(form: form, attribute: :country, label: "Country", label_hidden: true, size: :sm) do |field| %>
-              <% field.with_select_menu(
-                   @country_options.map { |country| [ country, country ] },
-                   prompt: "All countries",
-                   include_blank: true,
-                   selected: params[:country],
-                   data: { action: "change->auto-submit#submitNow" }) %>
+        <%= form_with url: hotel_guests_path(current_hotel), method: :get,
+              class: "flex flex-col gap-3 sm:flex-row sm:items-end",
+              data: { controller: "auto-submit", turbo_frame: "guests_results", turbo_action: "advance" } do |form| %>
+          <%= form.hidden_field :tag, value: active_tag unless active_tag == "all" %>
+
+          <div class="flex-1">
+            <%= render PanelsUI::FormField.new(form: form, attribute: :query, label: "Search guests", label_hidden: true, size: :sm) do |field| %>
+              <% field.with_input(
+                   type: :search,
+                   value: params[:query],
+                   placeholder: "Search by name, email, phone or ID",
+                   data: { action: "input->auto-submit#submit" }) %>
             <% end %>
           </div>
-        <% end %>
 
-        <% if params[:query].present? || params[:country].present? %>
-          <%= render PanelsUI::Button.new(as: :a, href: hotel_guests_path(current_hotel, tag: (active_tag unless active_tag == "all")), variant: :secondary, size: :sm, data: { turbo_frame: "guests_results", turbo_action: "advance" }) do %>
-            Clear
+          <% if @country_options.any? %>
+            <div class="w-full sm:w-56">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :country, label: "Country", label_hidden: true, size: :sm) do |field| %>
+                <% field.with_select_menu(
+                     @country_options.map { |country| [ country, country ] },
+                     prompt: "All countries",
+                     include_blank: true,
+                     selected: params[:country],
+                     data: { action: "change->auto-submit#submitNow" }) %>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if params[:query].present? || params[:country].present? %>
+            <%= render PanelsUI::Button.new(as: :a, href: hotel_guests_path(current_hotel, tag: (active_tag unless active_tag == "all")), variant: :secondary, size: :sm, data: { turbo_frame: "guests_results", turbo_action: "advance" }) do %>
+              Clear
+            <% end %>
           <% end %>
         <% end %>
-      <% end %>
+      </div>
 
       <div class="relative space-y-4"
            data-controller="<%= [ ("bulk-select" if selectable), ("guest-blacklist" if can_manage) ].compact.join(" ") %>"
