@@ -51,19 +51,16 @@
         <%= f.text_area :home_address, rows: 2, placeholder: "Street, building, and unit", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
       </div>
 
-      <div class="grid sm:grid-cols-2 gap-6">
+      <div class="grid sm:grid-cols-2 gap-6" data-controller="address-state">
         <div>
           <%= f.label :city, "City", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
           <%= f.text_field :city, placeholder: "e.g. Kota Kinabalu", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
         </div>
 
-        <div>
-          <%= f.label :state_code, "State", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
-          <%= f.select :state_code,
-                EInvoice::MalaysiaStates.options,
-                { include_blank: "Select state" },
-                class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
-        </div>
+        <%= render "shared/plain_state_code_field", form: f, attribute: :state_code, value: guest.state_code,
+              country: guest.address_country,
+              field_class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
+              label_class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
 
         <div>
           <%= f.label :postal_code, "Postcode", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
@@ -72,7 +69,8 @@
 
         <div>
           <%= f.label :address_country, "Address country", class: "block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2" %>
-          <%= f.text_field :address_country, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm" %>
+          <%= f.text_field :address_country, placeholder: "e.g. Malaysia", class: "w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0 shadow-sm",
+                data: { address_state_target: "country", action: "change->address-state#refresh input->address-state#refresh" } %>
         </div>
 
         <div>

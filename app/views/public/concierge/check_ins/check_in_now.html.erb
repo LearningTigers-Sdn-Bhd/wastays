@@ -97,13 +97,11 @@
             <%= f.text_field :guest_city, value: @booking.guest_city, class: "form-input py-3 px-5 border border-border", required: true, placeholder: "e.g. Petaling Jaya" %>
           </div>
 
-          <div>
-            <%= f.label :guest_state_code, "State", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
-            <%= f.select :guest_state_code,
-                  EInvoice::MalaysiaStates.options,
-                  { include_blank: "Select state", selected: @booking.guest_state_code },
-                  class: "form-input py-3 px-5 border border-border", required: true %>
-          </div>
+          <%= render "shared/plain_state_code_field", form: f, attribute: :guest_state_code, value: @booking.guest_state_code,
+                country: @presenter.default_address_country,
+                field_class: "form-input py-3 px-5 border border-border",
+                label_class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2",
+                required: true %>
 
           <div>
             <%= f.label :guest_postal_code, "Postcode", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
@@ -137,6 +135,7 @@
             <%= f.label :guest_address_country, "Address country", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
             <%= f.select :guest_address_country, country_options,
                   { selected: @presenter.default_address_country, prompt: "Select address country" },
+                  data: { address_state_target: "country", action: "change->address-state#refresh input->address-state#refresh" },
                   class: "form-input py-3 px-5 border border-border", required: true %>
           </div>
         </div>
