@@ -2,6 +2,8 @@
 
 module HotelPortal
   class GuestsController < HotelPortal::BaseController
+    include SheetActionCompletion
+
     helper_method :guest_stays_count, :guest_currency_totals
 
     TAB_ACTIONS = %i[details booking_history].freeze
@@ -111,8 +113,12 @@ module HotelPortal
                        bookings: @bookings, currency_totals: @currency_totals }
     end
 
+    # New and edit are the same sheet, served into the shell's action-sheet
+    # frame. `return_to` carries the caller, so New lands back on the directory
+    # and Edit lands back on the record it was opened from.
     def new
       @guest = Guest.new(city: current_hotel.city, country: current_hotel.country)
+      render layout: false
     end
 
     def create
@@ -120,19 +126,21 @@ module HotelPortal
       @guest.created_by_hotel = current_hotel
 
       if @guest.save
-        redirect_to details_hotel_guest_path(current_hotel, @guest), notice: "Guest record created successfully."
+        finish_sheet("Guest record created successfully.", fallback: details_hotel_guest_path(current_hotel, @guest))
       else
-        render :new, status: :unprocessable_content
+        render :new, layout: false, status: :unprocessable_content
       end
     end
 
-    def edit; end
+    def edit
+      render layout: false
+    end
 
     def update
       if @guest.update(guest_params)
-        redirect_to details_hotel_guest_path(current_hotel, @guest), notice: "Guest record updated successfully."
+        finish_sheet("Guest record updated successfully.", fallback: details_hotel_guest_path(current_hotel, @guest))
       else
-        render :edit, status: :unprocessable_content
+        render :edit, layout: false, status: :unprocessable_content
       end
     end
 
@@ -237,6 +245,14 @@ module HotelPortal
     # Keep the tab and search the user was on when they acted.
     def filter_params
       params.permit(:tag, :query, :country).to_h.compact_blank
+    end
+
+    def finish_sheet(notice, fallback:)
+      complete_sheet_action(
+        destination: sheet_action_return_to(fallback: fallback),
+        notice: notice,
+        frame: turbo_frame_request_id.presence || "settings_action_sheet"
+      )
     end
 
     def bookings_query

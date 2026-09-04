@@ -383,6 +383,90 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     end
   end
 
+  describe "the shared action sheet" do
+    let(:guest) { create(:guest, created_by_hotel: hotel) }
+
+    it "serves new and edit as one sheet in the shell's frame" do
+      get new_hotel_guest_path(hotel), params: { return_to: hotel_guests_path(hotel) }
+
+      expect(response).to have_http_status(:success)
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include(%(<turbo-frame id="settings_action_sheet">))
+      expect(body_text).to include(%(<dialog id="new-guest-sheet"))
+      expect(body_text).to include("panels-ui--sheet-frame")
+      expect(body_text).to include("New guest record")
+      expect(body_text).to include("Create guest record")
+      # No page chrome: the sheet arrives on its own.
+      expect(body_text).not_to include("<body")
+
+      get edit_hotel_guest_path(hotel, guest)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include(%(<dialog id="edit-guest-sheet"))
+      expect(body_text).to include("Edit guest record")
+      expect(body_text).to include("Save changes")
+      # One partial serves both, so both carry the same fields.
+      expect(body_text).to include("Tax identification number")
+      expect(body_text).to include("Identity verification")
+    end
+
+    it "uses the design system controls, not native selects" do
+      get new_hotel_guest_path(hotel)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Select gender")
+      expect(body_text).to include("Select document type")
+      expect(body_text).to include("panel-select-menu")
+      # Both country fields search the one shared list, the way the booking
+      # guest forms already do.
+      expect(body_text).to include("Search for a country")
+      expect(body_text).to include(%(id="guest_country-combobox"))
+      expect(body_text).to include(%(id="guest_address_country-combobox"))
+      expect(body_text).to include(COUNTRY_OPTIONS.first)
+    end
+
+    it "closes the sheet at the page it was opened from" do
+      post hotel_guests_path(hotel),
+           params: { return_to: hotel_guests_path(hotel, tag: "vip"),
+                     guest: { name: "Sheet Guest", email: "sheet@example.com", country: "Malaysia" } },
+           headers: { "Accept" => Mime[:turbo_stream].to_s }
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("complete_sheet")
+      expect(response.body).to include(hotel_guests_path(hotel, tag: "vip"))
+      expect(flash[:notice]).to include("created successfully")
+    end
+
+    it "returns to the record page after an edit" do
+      patch hotel_guest_path(hotel, guest),
+            params: { return_to: details_hotel_guest_path(hotel, guest),
+                      guest: { name: "Renamed Guest" } },
+            headers: { "Accept" => Mime[:turbo_stream].to_s }
+
+      expect(response.body).to include(details_hotel_guest_path(hotel, guest))
+      expect(guest.reload.name).to eq("Renamed Guest")
+    end
+
+    it "ignores a return_to that points off the property" do
+      post hotel_guests_path(hotel),
+           params: { return_to: "https://evil.example.com/steal",
+                     guest: { name: "Sheet Guest", email: "safe@example.com", country: "Malaysia" } },
+           headers: { "Accept" => Mime[:turbo_stream].to_s }
+
+      expect(response.body).not_to include("evil.example.com")
+      expect(response.body).to include(details_hotel_guest_path(hotel, Guest.last))
+    end
+
+    it "re-renders the sheet with the errors when the record will not save" do
+      post hotel_guests_path(hotel), params: { guest: { name: "", country: "" } }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Guest record could not be saved")
+      expect(body_text).not_to include("<body")
+    end
+  end
+
   describe "POST /create" do
     it "permits date of birth when creating a guest" do
       post hotel_guests_path(hotel), params: {

@@ -19,7 +19,7 @@
   <%= render PanelsUI::PageHeader.new(title: "Guest Records", description: "Review guest profiles, contact details, and property stay history.") do |header| %>
     <% if can_manage %>
       <% header.with_actions do %>
-        <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel), variant: :primary, size: :md, class: "w-full lg:w-auto") do %>
+        <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel, return_to: request.fullpath), variant: :primary, size: :md, class: "w-full lg:w-auto", data: { turbo_frame: "settings_action_sheet" }) do %>
           <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
           New guest record
         <% end %>
@@ -157,7 +157,7 @@
                           icon: "users") do |empty| %>
                       <% if can_manage %>
                         <% empty.with_action do %>
-                          <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel), variant: :primary, size: :sm) do %>
+                          <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel, return_to: request.fullpath), variant: :primary, size: :sm, data: { turbo_frame: "settings_action_sheet" }) do %>
                             New guest record
                           <% end %>
                         <% end %>
