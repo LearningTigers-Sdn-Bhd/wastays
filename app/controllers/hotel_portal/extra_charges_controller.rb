@@ -81,7 +81,7 @@ module HotelPortal
           frame: turbo_frame_request_id.presence || "settings_action_sheet"
         )
       else
-        render template, formats: :html, layout: false, status: :unprocessable_entity
+        render template, formats: :html, layout: false, status: :unprocessable_content
       end
     end
 
