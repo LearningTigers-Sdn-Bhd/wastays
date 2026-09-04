@@ -410,6 +410,25 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Identity verification")
     end
 
+    it "orders the four sections and keeps date of birth with nationality" do
+      get new_hotel_guest_path(hotel)
+
+      body_text = CGI.unescapeHTML(response.body)
+      headings = body_text.scan(%r{<h3 id="guest-[^"]+"[^>]*>([^<]+)</h3>}).flatten
+      expect(headings).to eq([ "Basic information", "Address", "Identity verification", "Tax management" ])
+
+      # guest-dob reads the nationality and writes the date of birth, so the two
+      # sit in one row rather than two sections apart.
+      basics = body_text[/guest-basics-heading.*?guest-address-heading/m]
+      expect(basics).to include("Nationality")
+      expect(basics).to include("Gender")
+      expect(basics).to include("Date of birth")
+
+      tax = body_text[/guest-tax-heading.*/m]
+      expect(tax).to include("Tax identification number")
+      expect(tax).to include("For example, IG5678901234")
+    end
+
     it "uses the design system controls, not native selects" do
       get new_hotel_guest_path(hotel)
 

@@ -51,7 +51,10 @@
               <% end %>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <%# Date of birth sits with nationality and gender: guest-dob reads
+                the nationality and the ID to fill it in, so the field it writes
+                belongs beside the fields it reads. %>
+            <div class="grid gap-4 sm:grid-cols-3">
               <%= render PanelsUI::FormField.new(
                     form: form, attribute: :country, label: "Nationality", required: true) do |field| %>
                 <% field.with_combobox(
@@ -67,6 +70,10 @@
                      include_blank: true,
                      prompt: "Select gender",
                      selected: guest.gender) %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :date_of_birth, label: "Date of birth") do |field| %>
+                <% field.with_input(type: :date, data: { guest_dob_target: "dateOfBirth" }) %>
               <% end %>
             </div>
           </section>
@@ -106,14 +113,6 @@
               <% end %>
             </div>
 
-            <%# Checked against LHDN here so a wrong digit is caught now, not
-                when the e-invoice is rejected days later. %>
-            <%= render PanelsUI::FormField.new(
-                  form: form, attribute: :tin, label: "Tax identification number",
-                  hint: "Only if the guest claims their stays.") do |field| %>
-              <% field.with_input(data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
-            <% end %>
-            <p data-tin-validation-target="feedback" class="-mt-2 text-xs text-muted-foreground" hidden></p>
           </section>
 
           <section class="space-y-4" aria-labelledby="guest-identity-heading">
@@ -145,11 +144,27 @@
                        action: "input->guest-dob#autofill blur->tin-validation#check"
                      }) %>
               <% end %>
-
-              <%= render PanelsUI::FormField.new(form: form, attribute: :date_of_birth, label: "Date of birth") do |field| %>
-                <% field.with_input(type: :date, data: { guest_dob_target: "dateOfBirth" }) %>
-              <% end %>
             </div>
+          </section>
+
+          <section class="space-y-4" aria-labelledby="guest-tax-heading">
+            <div>
+              <h3 id="guest-tax-heading" class="text-base font-semibold text-foreground">Tax management</h3>
+              <p class="mt-1 text-sm text-muted-foreground">Needed only when the guest claims their stays.</p>
+            </div>
+
+            <%# Checked against LHDN here so a wrong digit is caught now, not
+                when the e-invoice is rejected days later. %>
+            <%= render PanelsUI::FormField.new(
+                  form: form, attribute: :tin, label: "Tax identification number") do |field| %>
+              <%# An individual's LHDN TIN carries the IG prefix. A company uses C,
+                  and a company books through a corporate account, not here. %>
+              <% field.with_input(
+                   placeholder: "For example, IG5678901234",
+                   autocomplete: "off",
+                   data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
+            <% end %>
+            <p data-tin-validation-target="feedback" class="-mt-2 text-xs text-muted-foreground" hidden></p>
           </section>
         <% end %>
       <% end %>
