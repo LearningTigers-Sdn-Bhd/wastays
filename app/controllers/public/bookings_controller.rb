@@ -197,7 +197,7 @@ class Public::BookingsController < ApplicationController
     end
   end
 
-  def respond_to_e_invoice_request_error(message, status = :unprocessable_entity)
+  def respond_to_e_invoice_request_error(message, status = :unprocessable_content)
     respond_to do |format|
       format.html { redirect_to booking_path(@booking.confirmation_token), alert: message }
       format.json { render json: { status: "failed", message: message }, status: status }

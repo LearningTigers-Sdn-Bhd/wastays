@@ -172,6 +172,7 @@ Rails.application.routes.draw do
   scope "/corporate", module: :corporate_portal, as: :corporate do
     get "dashboard", to: "dashboard#index", as: :dashboard
     resource :profile, only: [ :show ]
+    resources :hotel_relationships, only: [ :edit, :update ], path: "linked-hotels"
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
     resources :ar_statements, only: [ :index, :show ], path: "statements" do
       get "pdf/:filename", action: :pdf, as: :pdf, on: :member, constraints: { filename: /[^\/]+\.pdf/ }

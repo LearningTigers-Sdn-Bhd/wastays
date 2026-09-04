@@ -14,16 +14,19 @@ module Reports
       end
 
       def generate
+        generated_at = Time.current
         builder = Exports::PdfReportBuilder.new(
           hotel: @report.hotel,
           title: "Account Statement",
-          subtitle: account_subtitle,
-          period_label: period_label,
+          period_label: nil,
           prepared_by: @printed_by,
+          metadata: [],
+          generated_at: generated_at,
           page_layout: :landscape,
           confidential: false
         )
         builder.add_header
+        builder.add_party_blocks(party_blocks(generated_at))
         builder.add_summary(balance_metrics)
         add_aging(builder)
         @detail ? add_invoice_details(builder) : add_summary_ledger(builder)
@@ -33,12 +36,32 @@ module Reports
 
       private
 
-      def account_subtitle
-        "Corporate Account: #{@report.corporate_account.name} · Contact: #{account_contact}"
-      end
-
       def period_label
         "#{format_date(@report.start_date)} - #{format_date(@report.end_date)}"
+      end
+
+      def party_blocks(generated_at)
+        address = CorporateAccounts::BillingAddressPresenter.new(@report.hotel_corporate_account)
+        [
+          {
+            heading: "Corporate account",
+            entries: [
+              [ "Name", @report.corporate_account.name ],
+              [ "Billing address", address.display.presence || "Not provided" ],
+              [ "Contact email", @report.contact_email.presence || "-" ],
+              [ "Contact phone", @report.hotel_corporate_account.contact_phone.presence || "-" ]
+            ]
+          },
+          {
+            heading: "Statement details",
+            entries: [
+              [ "Period", period_label ],
+              [ "Currency", @report.currency ],
+              [ "Generated", Exports::PdfTheme.format_time(generated_at, @report.hotel.hotel_time_zone) ],
+              [ "Prepared by", @printed_by ]
+            ]
+          }
+        ]
       end
 
       def balance_metrics
@@ -213,10 +236,6 @@ module Reports
       def format_amount(amount) = Exports::PdfTheme.money(amount)
 
       def format_date(date) = Exports::PdfTheme.format_date(date)
-
-      def account_contact
-        [ @report.contact_email, @report.hotel_corporate_account.contact_phone ].compact_blank.join(" · ").presence || "-"
-      end
 
       def escape(value) = CGI.escapeHTML(value.to_s.presence || "-")
     end

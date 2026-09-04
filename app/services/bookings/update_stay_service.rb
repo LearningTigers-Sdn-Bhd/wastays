@@ -305,6 +305,10 @@ module Bookings
         email: booking.guest_email,
         phone: booking.guest_phone,
         city: booking.guest_city,
+        state_code: booking.guest_state_code,
+        postal_code: booking.guest_postal_code,
+        address_country: booking.guest_address_country,
+        home_address: booking.guest_home_address,
         country: booking.guest_country.presence || @hotel.country,
         gender: booking.guest_gender,
         document_type: booking.guest_document_type,
@@ -325,6 +329,9 @@ module Bookings
         end
         booking.booking_guests.create!(guest: guest_result.guest, is_primary: true)
       end
+
+      primary = booking.booking_guests.find_by(guest: guest_result.guest, is_primary: true)
+      BookingGuests::CapturePrimaryStay.call(booking_guest: primary) if primary
     end
   end
 end

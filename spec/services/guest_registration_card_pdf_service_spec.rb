@@ -24,7 +24,11 @@ RSpec.describe GuestRegistrationCardPdfService do
     create(:booking_guest, booking: booking, guest: create(:guest), is_primary: true,
       name_snapshot: "Aisha Tan", email_snapshot: "aisha.tan@example.com",
       phone_snapshot: "+60123456789", country_snapshot: "Malaysia",
-      home_address_snapshot: "34 Snapshot Street, Kota Kinabalu")
+      home_address_snapshot: "34 Snapshot Street",
+      city_snapshot: "Kota Kinabalu",
+      state_code_snapshot: "12",
+      postal_code_snapshot: "88000",
+      address_country_snapshot: "Malaysia")
     create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00")
   end
 
@@ -44,7 +48,8 @@ RSpec.describe GuestRegistrationCardPdfService do
     text = pdf_text(described_class.new(card, booking, presenter).generate)
 
     expect(text).to include("Aisha Tan", "aisha.tan@example.com", "+60123456789", "1 adult, 1 child")
-    expect(text).to include("Address", "34 Snapshot Street, Kota Kinabalu")
+    expect(text).to include("Address", "34 Snapshot Street", "88000 Kota Kinabalu", "Sabah, Malaysia")
+    expect(text).to include("Nationality", "Malaysia")
     expect(text).not_to include("12 Booking Road, Kota Kinabalu")
     expect(text).to include("11 Jul 2026, 03:00 PM")
     expect(text).to include("13 Jul 2026, 12:00 PM")
@@ -55,7 +60,15 @@ RSpec.describe GuestRegistrationCardPdfService do
 
     text = pdf_text(described_class.new(card, booking, presenter).generate)
 
-    expect(text).not_to include("34 Snapshot Street, Kota Kinabalu")
+    expect(text).not_to include("34 Snapshot Street")
+  end
+
+  it "omits the nationality when the field is disabled" do
+    hotel.update!(guest_registration_card_fields: %w[phone email])
+
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).not_to include("Nationality")
   end
 
   it "renders the hotel's fixed terms and conditions when configured" do

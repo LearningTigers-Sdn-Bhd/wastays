@@ -73,7 +73,7 @@ module HotelPortal
         @presenter = presenter
         @configuration_errors = configuration.errors.full_messages
         append_room_revenue_tab_breadcrumb
-        render :show, status: :unprocessable_entity
+        render :show, status: :unprocessable_content
       end
     end
 
@@ -149,7 +149,7 @@ module HotelPortal
       @tax_rule_errors = [ message ]
       @proposed_tax_rule_keys = tax_rule_keys_param
       append_room_revenue_tab_breadcrumb
-      render :show, status: :unprocessable_entity
+      render :show, status: :unprocessable_content
     end
 
     def transaction_configuration_params

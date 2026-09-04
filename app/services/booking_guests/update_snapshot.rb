@@ -3,7 +3,10 @@
 module BookingGuests
   class UpdateSnapshot
     Result = Data.define(:success?, :errors)
-    SNAPSHOT_ATTRIBUTES = %i[name email phone government_id gender country document_type date_of_birth home_address].freeze
+    SNAPSHOT_ATTRIBUTES = %i[
+      name email phone government_id gender country document_type date_of_birth
+      home_address city state_code postal_code address_country
+    ].freeze
     BIBO_ATTRIBUTES = %i[boat_in_at boat_out_at].freeze
 
     def self.call(booking_guest:, attributes:, actor:, update_profile: false, bibo_attributes: {})
@@ -57,6 +60,10 @@ module BookingGuests
         guest_email: values[:email],
         guest_phone: values[:phone],
         guest_country: values[:country],
+        guest_city: values[:city],
+        guest_state_code: values[:state_code],
+        guest_postal_code: values[:postal_code],
+        guest_address_country: values[:address_country],
         guest_gender: values[:gender],
         guest_document_type: values[:document_type],
         guest_home_address: values[:home_address]

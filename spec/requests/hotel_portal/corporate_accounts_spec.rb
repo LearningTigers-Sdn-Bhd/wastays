@@ -120,7 +120,29 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).to include('dialog id="external-account-sheet"')
     expect(response.body).to include(relationship.corporate_account.name)
+    expect(response.body).to include("Billing address", "Billing address missing")
     expect(response.body).to include("external-account-suspend-#{relationship.id}")
+  end
+
+  it "updates the hotel-specific billing address" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+
+    patch hotel_corporate_account_path(hotel, relationship), params: {
+      hotel_corporate_account: {
+        billing_address_line1: "12 Jalan Lintas",
+        billing_city: "Kota Kinabalu",
+        billing_state: "Sabah",
+        billing_postal_code: "88300",
+        billing_country: "Malaysia"
+      }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+    expect(response).to have_http_status(:success)
+    expect(relationship.reload).to have_attributes(
+      billing_address_line1: "12 Jalan Lintas",
+      billing_city: "Kota Kinabalu",
+      billing_country: "Malaysia"
+    )
   end
 
   it "creates an invitation and completes the sheet back to the filtered index" do

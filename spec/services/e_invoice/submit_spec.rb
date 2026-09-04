@@ -6,7 +6,18 @@ RSpec.describe EInvoice::Submit, type: :service do
     let!(:e_invoice_setting) do
       create(:e_invoice_setting, hotel: hotel)
     end
-    let(:booking) { create(:booking, hotel: hotel, booking_quote: nil, payment_status: "captured") }
+    let(:booking) do
+      create(
+        :booking,
+        hotel: hotel,
+        booking_quote: nil,
+        payment_status: "captured",
+        guest_home_address: "12 Jalan Ampang",
+        guest_city: "Kuala Lumpur",
+        guest_state_code: "14",
+        guest_address_country: "Malaysia"
+      )
+    end
     let!(:folio) { create(:booking_folio, booking: booking, status: "closed") }
     let!(:booking_room) { create(:booking_room, booking: booking, subtotal: 200.0) }
 
@@ -108,6 +119,42 @@ RSpec.describe EInvoice::Submit, type: :service do
           supplier_tin: "C9988776655",
           represented_taxpayer_tin: nil
         )
+        expect(result[:submission].buyer_snapshot).to include(
+          "name" => booking.guest_name,
+          "contact_email" => booking.guest_email,
+          "contact_phone" => booking.guest_phone
+        )
+        expect(result[:submission].buyer_snapshot.dig("billing_address", "city")).to eq("Kuala Lumpur")
+      end
+
+      it "preserves a pending submission buyer snapshot during an automatic retry" do
+        original_snapshot = EInvoice::BuyerSnapshot.capture(booking)
+        submission = create(:e_invoice_submission,
+          hotel:,
+          booking:,
+          status: "pending",
+          buyer_snapshot: original_snapshot)
+        booking.update!(guest_name: "Changed Guest", guest_home_address: "Changed address")
+
+        result = described_class.call(submission)
+
+        expect(result[:success]).to be(true)
+        expect(result[:submission].buyer_snapshot).to eq(original_snapshot)
+      end
+
+      it "recaptures buyer details when an invalid submission is explicitly retried" do
+        submission = create(:e_invoice_submission,
+          hotel:,
+          booking:,
+          status: "invalid",
+          buyer_snapshot: { "name" => "Old Guest", "billing_address" => { "city" => "Old City" } })
+        booking.update!(guest_name: "Corrected Guest", guest_city: "Kuching", guest_state_code: "13")
+
+        result = described_class.call(submission)
+
+        expect(result[:success]).to be(true)
+        expect(result[:submission].buyer_snapshot["name"]).to eq("Corrected Guest")
+        expect(result[:submission].buyer_snapshot.dig("billing_address", "city")).to eq("Kuching")
       end
 
       it "resets attributes when resubmitting a cancelled or rejected invoice" do
@@ -141,7 +188,19 @@ RSpec.describe EInvoice::Submit, type: :service do
     end
 
     context "when the hotel collected payment directly" do
-      let(:booking) { create(:booking, :direct_hotel_payment, hotel: hotel, booking_quote: nil, payment_status: "captured") }
+      let(:booking) do
+        create(
+          :booking,
+          :direct_hotel_payment,
+          hotel: hotel,
+          booking_quote: nil,
+          payment_status: "captured",
+          guest_home_address: "12 Jalan Ampang",
+          guest_city: "Kuala Lumpur",
+          guest_state_code: "14",
+          guest_address_country: "Malaysia"
+        )
+      end
 
       before do
         e_invoice_setting.update!(intermediary_enabled: true)

@@ -55,13 +55,18 @@ module Reports
       # Nationality leads the guest block: it is the reason this guest was charged a tax
       # most guests do not pay, and without it nothing on the document explains itself.
       def party_blocks
+        address = PostalAddresses::Presenter.from_booking_guest(
+          booking.booking_guests.find(&:primary?),
+          fallback_booking: booking
+        )
+
         [
           {
             heading: "Guest details",
             entries: [
               [ "Name", booking.guest_name ],
               [ "Nationality", booking.guest_country.presence || "Not recorded" ],
-              [ "Address", booking.guest_home_address.presence || "Not provided" ]
+              [ "Address", address.display.presence || "Not provided" ]
             ]
           },
           {

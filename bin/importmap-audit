@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Wraps `bin/importmap audit`.
+#
+# The audit posts every pinned package to npm's bulk advisory endpoint
+# (POST /-/npm/v1/security/advisories/bulk). That endpoint is often slow or
+# down, and the gem lets the exception escape with a full stack trace. CI then
+# fails for a reason that has nothing to do with our code.
+#
+# This script splits the two failure kinds:
+#   network problem  -> retry once, then print one line and pass
+#   vulnerability    -> print the report and fail, every time
+
+require "open3"
+
+ATTEMPTS = Integer(ENV.fetch("IMPORTMAP_AUDIT_ATTEMPTS", 2))
+ATTEMPT_TIMEOUT = Integer(ENV.fetch("IMPORTMAP_AUDIT_TIMEOUT", 45)) # the gem sets no timeout of its own
+RETRY_DELAY = Integer(ENV.fetch("IMPORTMAP_AUDIT_RETRY_DELAY", 3))
+
+# Matches transport-level failures only. A real advisory prints a table and
+# exits 1 without any of these strings.
+NETWORK_ERROR = /
+  Net::(?:Read|Open|Write)Timeout
+  | Importmap::Npm::HTTPError
+  | Unexpected\ error\ response\ 5\d\d
+  | SocketError
+  | OpenSSL::SSL
+  | Errno::(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH)
+  | execution\ expired
+/x
+
+# The audit binary. Overridable so the spec can point at a stub.
+def audit_command
+  ENV.fetch("IMPORTMAP_BIN") { File.expand_path("importmap", __dir__) }
+end
+
+# Runs the command, killing it if it outruns the timeout.
+# Returns [output, :ok | :failed | :timeout, exit_status].
+def run_audit(timeout)
+  output = +""
+
+  Open3.popen2e(audit_command, "audit", pgroup: true) do |stdin, out, wait_thr|
+    stdin.close
+    reader = Thread.new { output << out.read }
+
+    unless wait_thr.join(timeout)
+      kill_tree(wait_thr.pid)
+      reader.join(2)
+      return [ output, :timeout, nil ]
+    end
+
+    reader.join(5)
+    status = wait_thr.value
+    return [ output, status.success? ? :ok : :failed, status.exitstatus ]
+  end
+end
+
+def kill_tree(pid)
+  Process.kill("TERM", -pid)
+  sleep 2
+  Process.kill("KILL", -pid)
+rescue Errno::ESRCH, Errno::EPERM
+  nil
+end
+
+ATTEMPTS.times do |attempt|
+  output, result, exit_status = run_audit(ATTEMPT_TIMEOUT)
+
+  if result == :ok
+    print output
+    exit 0
+  end
+
+  if result == :failed && !output.match?(NETWORK_ERROR)
+    # A real vulnerability, or a genuine bug. Show everything and fail.
+    print output
+    exit exit_status || 1
+  end
+
+  reason = result == :timeout ? "timed out after #{ATTEMPT_TIMEOUT}s" : "returned a network error"
+  warn "Importmap audit #{reason} (attempt #{attempt + 1} of #{ATTEMPTS})."
+  sleep RETRY_DELAY unless attempt == ATTEMPTS - 1
+end
+
+warn "Importmap audit skipped: npm's advisory endpoint stayed unreachable. This is not a code failure."
+exit 0

@@ -8,6 +8,7 @@ module Concierge
     include ActiveModel::Model
 
     attr_accessor :booking, :guest_name, :guest_email, :guest_phone, :guest_country,
+                  :guest_city, :guest_state_code, :guest_postal_code, :guest_address_country,
                   :guest_document_type, :guest_government_id, :guest_date_of_birth, :guest_home_address, :signature
     attr_writer :id_front, :id_back
 
@@ -22,6 +23,7 @@ module Concierge
     delegate :id, :to_param, :persisted?, to: :booking
 
     validates :guest_name, :guest_email, :guest_phone, :guest_country,
+              :guest_city, :guest_address_country,
               :guest_document_type, :guest_government_id, :guest_home_address,
               presence: true, if: :needs_registration?
 
@@ -79,7 +81,11 @@ module Concierge
     end
 
     def registration_keys
-      %w[guest_name guest_email guest_phone guest_country guest_document_type guest_government_id guest_date_of_birth guest_home_address]
+      %w[
+        guest_name guest_email guest_phone guest_country guest_city guest_state_code
+        guest_postal_code guest_address_country guest_document_type guest_government_id
+        guest_date_of_birth guest_home_address
+      ]
     end
 
     def registration_attributes
@@ -88,6 +94,10 @@ module Concierge
         guest_email: guest_email,
         guest_phone: guest_phone,
         guest_country: guest_country,
+        guest_city: guest_city,
+        guest_state_code: resolved_state_code,
+        guest_postal_code: guest_postal_code,
+        guest_address_country: guest_address_country,
         guest_document_type: guest_document_type,
         guest_government_id: guest_government_id,
         guest_date_of_birth: guest_date_of_birth,
@@ -114,6 +124,11 @@ module Concierge
         email: booking.guest_email,
         phone: booking.guest_phone,
         government_id: booking.guest_government_id,
+        city: booking.guest_city,
+        state_code: booking.guest_state_code,
+        postal_code: booking.guest_postal_code,
+        address_country: booking.guest_address_country,
+        home_address: booking.guest_home_address,
         country: booking.guest_country,
         document_type: booking.guest_document_type,
         date_of_birth: booking.guest_date_of_birth,
@@ -123,6 +138,13 @@ module Concierge
       primary_booking_guest = booking.booking_guests.find_or_initialize_by(is_primary: true)
       primary_booking_guest.guest = guest_result.guest
       primary_booking_guest.save!
+      BookingGuests::CapturePrimaryStay.call(booking_guest: primary_booking_guest)
+    end
+
+    def resolved_state_code
+      return EInvoice::MalaysiaStates::NOT_APPLICABLE unless guest_address_country.to_s.casecmp?("Malaysia")
+
+      guest_state_code
     end
 
     def attach_signature

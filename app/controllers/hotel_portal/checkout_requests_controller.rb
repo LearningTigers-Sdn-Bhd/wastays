@@ -22,7 +22,7 @@ module HotelPortal
       else
         respond_to do |format|
           format.html { redirect_to hotel_requests_path(current_hotel), alert: "Request cannot be completed." }
-          format.json { render json: { ok: false }, status: :unprocessable_entity }
+          format.json { render json: { ok: false }, status: :unprocessable_content }
         end
       end
     end

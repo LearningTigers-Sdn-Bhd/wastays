@@ -28,6 +28,29 @@ RSpec.describe "Public::PreCheckins", type: :request do
       expect(response.body).to include(booking.confirmation_token)
       expect(response.body).to include("guest_date_of_birth")
     end
+
+    it "offers the state as a code list for a Malaysian address" do
+      booking.update!(guest_address_country: "Malaysia", guest_state_code: "12")
+
+      get pre_checkin_path(pre_checkin.token)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("[data-address-state-target='coded']")["hidden"]).to be_nil
+      expect(document.at_css("[data-address-state-target='free']")["hidden"]).not_to be_nil
+    end
+
+    it "offers the state as a text box for an address outside Malaysia" do
+      booking.update!(guest_address_country: "Japan", guest_state_code: "Hokkaido")
+
+      get pre_checkin_path(pre_checkin.token)
+
+      document = Nokogiri::HTML(response.body)
+      free = document.at_css("[data-address-state-target='free']")
+
+      expect(document.at_css("[data-address-state-target='coded']")["hidden"]).not_to be_nil
+      expect(free["hidden"]).to be_nil
+      expect(free.at_css("input[name='booking[guest_state_code]']")["value"]).to eq("Hokkaido")
+    end
   end
 
   describe "PATCH /pre-checkin/:token" do
@@ -39,6 +62,11 @@ RSpec.describe "Public::PreCheckins", type: :request do
           guest_phone: "+60123456789",
           guest_gender: "female",
           guest_country: "Malaysia",
+          guest_home_address: "No. 12, Jalan Ampang",
+          guest_city: "Kuala Lumpur",
+          guest_state_code: "14",
+          guest_postal_code: "50450",
+          guest_address_country: "Malaysia",
           guest_document_type: "ic",
           guest_government_id: "900101-10-1234",
           estimated_arrival_time: "15:30",
@@ -65,6 +93,10 @@ RSpec.describe "Public::PreCheckins", type: :request do
           guest_document_type: "ic",
           guest_government_id: "900101-10-1234",
           guest_home_address: "No. 12, Jalan Ampang, 50450 Kuala Lumpur",
+          guest_city: "Kuala Lumpur",
+          guest_state_code: "14",
+          guest_postal_code: "50450",
+          guest_address_country: "Malaysia",
           estimated_arrival_time: "15:30",
           signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
         }
@@ -96,6 +128,10 @@ RSpec.describe "Public::PreCheckins", type: :request do
           guest_email: "aisha.tan@example.com",
           guest_phone: "+60123456789",
           guest_country: "Singapore",
+          guest_home_address: "1 Orchard Road",
+          guest_city: "Singapore",
+          guest_postal_code: "238823",
+          guest_address_country: "Singapore",
           guest_document_type: "passport",
           guest_government_id: "P1234567",
           guest_date_of_birth: "1994-08-21",
@@ -115,6 +151,10 @@ RSpec.describe "Public::PreCheckins", type: :request do
           guest_email: "aisha.tan@example.com",
           guest_phone: "+60123456789",
           guest_country: "Singapore",
+          guest_home_address: "1 Orchard Road",
+          guest_city: "Singapore",
+          guest_postal_code: "238823",
+          guest_address_country: "Singapore",
           guest_document_type: "passport",
           guest_government_id: "P1234567",
           guest_date_of_birth: "",

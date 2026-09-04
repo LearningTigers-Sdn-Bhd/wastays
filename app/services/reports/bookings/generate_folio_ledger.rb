@@ -92,11 +92,12 @@ module Reports
           # The folio reference is the title; the eyebrow says what the reference belongs to.
           eyebrow: "Folio ledger",
           report_name: folio_reference,
-          metadata: identity_pairs
+          # Party blocks carry the guest and its address, so the strip stays empty.
+          metadata: []
         )
 
         frame.draw_header
-        HotelPortal::Reports::Exports::PdfDetailGrid.new(pdf: pdf).draw(account_pairs)
+        HotelPortal::Reports::Exports::PdfPartyBlocks.new(pdf: pdf).draw(party_blocks)
         draw_transactions(pdf)
         frame.stamp_page_furniture
         pdf.render
@@ -139,24 +140,47 @@ module Reports
       # Who and what the ledger is for goes in the frame's strip; how the account itself is
       # filed goes in the grid below it. Blank pairs are dropped by both, so an unlabelled
       # folio costs a column rather than printing a dash.
-      def identity_pairs
+      # Three blocks rather than a metadata strip and a detail grid. The strip holds one
+      # short value per label on a single line, so it could never carry an address; the
+      # blocks let the guest column run as many lines as the address needs.
+      def party_blocks
         [
-          [ "Booking ref", booking.confirmation_token ],
-          [ "Guest", booking.guest_name ],
-          [ "Room / type", room_summary ],
-          [ "Stay", stay_dates ]
+          {
+            heading: "Guest details",
+            entries: [
+              [ "Guest", booking.guest_name ],
+              [ "Address", guest_address ],
+              [ "Nationality", booking.guest_country ]
+            ]
+          },
+          {
+            heading: "Contact details",
+            entries: [
+              [ "Email", booking.guest_email ],
+              [ "Phone", booking.guest_phone ],
+              { columns: [ [ "Booking no.", booking.formatted_reservation_number ],
+                           [ "Confirmation", booking.confirmation_token ] ] }
+            ]
+          },
+          {
+            heading: "Account details",
+            entries: [
+              [ "Account ref", folio_account_reference ],
+              { columns: [ [ "Window", folio_window_label ], [ "Status", folio.status.to_s.titleize ] ] },
+              [ "Room / type", room_summary ],
+              [ "Stay", stay_dates ],
+              { columns: [ [ "Currency", currency ], [ "Printed by", printed_by ] ] },
+              [ "Generated", THEME.format_time(Time.current, hotel.hotel_time_zone) ]
+            ]
+          }
         ]
       end
 
-      def account_pairs
-        [
-          [ "Account ref", folio_account_reference ],
-          [ "Window", folio_window_label ],
-          [ "Status", folio.status.to_s.titleize ],
-          [ "Currency", currency ],
-          [ "Printed by", printed_by ],
-          [ "Generated", THEME.format_time(Time.current, hotel.hotel_time_zone) ]
-        ]
+      def guest_address
+        PostalAddresses::Presenter.from_booking_guest(
+          booking.booking_guests.find(&:primary?),
+          fallback_booking: booking
+        ).display.presence || "Not provided"
       end
 
       def draw_transactions(pdf)

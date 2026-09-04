@@ -189,9 +189,59 @@ module Reports
 
         [
           [ "Guest", snapshot_or_live("booking", "guest_name") { booking.guest_name } ],
-          [ "Address", snapshot_or_live("booking", "guest_home_address") { booking.guest_home_address } ],
-          [ "Country", snapshot_or_live("booking", "guest_country") { booking.guest_country } ]
+          [ "Billing address", guest_billing_address ],
+          [ "Contact email", snapshot_payer_value("contact_email") ],
+          [ "Contact phone", snapshot_payer_value("contact_phone") ]
         ]
+      end
+
+      # The address is the one exception to the issue-time freeze. Everything else on
+      # this document is what it was when the invoice was issued, but a wrong address
+      # is a clerical slip, not a change of fact: the front desk fixes it on the guest
+      # and every reprint carries the correction. Making them credit and reissue an
+      # invoice to correct a postcode is not a workflow anybody wants.
+      def guest_billing_address
+        live_guest_address.presence || frozen_guest_address.presence || "Not provided"
+      end
+
+      # Read fresh rather than through the folio's association. "Live" has to mean the
+      # row as it stands now, not whatever was cached when the folio was loaded.
+      def live_guest_address
+        return if booking.blank?
+
+        current = Booking.includes(:booking_guests).find_by(id: booking.id)
+        return if current.blank?
+
+        PostalAddresses::Presenter.from_booking_guest(
+          current.booking_guests.find(&:primary?),
+          fallback_booking: current
+        ).display
+      end
+
+      # What the address was when the invoice was issued. Read only when the guest
+      # record no longer answers - a deleted booking, or an invoice from before the
+      # address fields existed.
+      def frozen_guest_address
+        payer = @snapshot["payer"]
+        if payer.is_a?(Hash) && payer.key?("billing_address")
+          return PostalAddresses::Presenter.from_snapshot(payer["billing_address"]).display
+        end
+
+        values = @snapshot["booking"]
+        return unless values.is_a?(Hash)
+
+        PostalAddresses::Presenter.new(
+          address_line1: values["guest_home_address"],
+          city: values["guest_city"],
+          state: PostalAddresses::Presenter.printable_state(values["guest_state_code"]),
+          postal_code: values["guest_postal_code"],
+          country: values["guest_address_country"].presence || values["guest_country"]
+        ).display
+      end
+
+      def snapshot_payer_value(key)
+        payer = @snapshot["payer"]
+        payer[key] if payer.is_a?(Hash) && payer.key?(key)
       end
 
       def invoice_detail_entries
@@ -374,10 +424,37 @@ module Reports
         end
         [
           [ "Payer", snapshot_or_live("payer", "name") { document_live_payer_name } ],
+          [ "Billing address", corporate_billing_address ],
           [ "Account type", account_type.to_s.humanize.presence ],
           [ "PO ref", snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference } ],
           [ "Auth", snapshot_or_live("payer", "authorization_reference") { terms&.authorization_reference } ]
         ]
+      end
+
+      # Follows the same rule as the guest address: the account's current billing
+      # address wins, and the issue-time snapshot answers only when the relationship
+      # is gone or never carried one.
+      def corporate_billing_address
+        live_corporate_address.presence || frozen_corporate_address.presence || "Not provided"
+      end
+
+      # Read fresh, for the same reason as live_guest_address.
+      def live_corporate_address
+        relationship_id = folio.hotel_corporate_account_id ||
+          folio.booking_billing_party&.hotel_corporate_account_id
+        return if relationship_id.blank?
+
+        relationship = HotelCorporateAccount.find_by(id: relationship_id)
+        return if relationship.blank?
+
+        CorporateAccounts::BillingAddressPresenter.new(relationship).display
+      end
+
+      def frozen_corporate_address
+        payer = @snapshot["payer"]
+        return unless payer.is_a?(Hash) && payer.key?("billing_address")
+
+        CorporateAccounts::BillingAddressPresenter.new(payer["billing_address"] || {}).display
       end
 
       def direct_bill_term_entries

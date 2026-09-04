@@ -1,0 +1,20 @@
+<%# State for the guest-facing and plain hotel forms. Same rule as the PanelsUI
+    version in shared/_state_code_field: a code list for Malaysia, a text box for
+    every other country and for a country that is still empty. See
+    app/javascript/controllers/address_state_controller.js. %>
+<% wrapper_class = local_assigns.fetch(:wrapper_class, nil) %>
+<% required = local_assigns.fetch(:required, false) %>
+<% coded = country.to_s.strip.casecmp?("Malaysia") %>
+<div class="<%= wrapper_class %>" data-address-state-target="coded" <%= "hidden" unless coded %>>
+  <%= form.label attribute, "State", class: label_class %>
+  <%= form.select attribute,
+        EInvoice::MalaysiaStates.options,
+        { include_blank: "Select state", selected: value },
+        class: field_class, required: required, disabled: !coded %>
+</div>
+<div class="<%= wrapper_class %>" data-address-state-target="free" <%= "hidden" if coded %>>
+  <%= form.label attribute, "State or province", class: label_class %>
+  <%= form.text_field attribute,
+        value: PostalAddresses::Presenter.printable_state(value),
+        class: field_class, required: required, disabled: coded, placeholder: "e.g. Hokkaido" %>
+</div>

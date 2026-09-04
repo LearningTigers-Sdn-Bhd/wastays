@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_092000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -396,9 +396,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
   end
 
   create_table "booking_guests", force: :cascade do |t|
+    t.string "address_country_snapshot"
     t.datetime "boat_in_at"
     t.datetime "boat_out_at"
     t.bigint "booking_id", null: false
+    t.string "city_snapshot"
     t.string "country_snapshot"
     t.datetime "created_at", null: false
     t.date "date_of_birth_snapshot"
@@ -411,7 +413,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
     t.boolean "is_primary"
     t.string "name_snapshot"
     t.string "phone_snapshot"
+    t.string "postal_code_snapshot"
     t.string "role", default: "additional", null: false
+    t.string "state_code_snapshot"
     t.datetime "updated_at", null: false
     t.index ["boat_in_at"], name: "index_booking_guests_on_boat_in_at"
     t.index ["boat_out_at"], name: "index_booking_guests_on_boat_out_at"
@@ -560,6 +564,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
     t.bigint "group_booking_id"
     t.integer "group_position"
     t.string "guarantee_method"
+    t.string "guest_address_country"
     t.string "guest_city"
     t.string "guest_country"
     t.string "guest_document_type"
@@ -1000,6 +1005,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
 
   create_table "e_invoice_submissions", force: :cascade do |t|
     t.bigint "booking_id"
+    t.jsonb "buyer_snapshot", default: {}, null: false
     t.datetime "cancelled_at"
     t.boolean "consolidated", default: false, null: false
     t.uuid "consolidation_batch_id"
@@ -1319,6 +1325,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
   end
 
   create_table "guests", force: :cascade do |t|
+    t.string "address_country"
     t.boolean "blacklisted", default: false, null: false
     t.string "city"
     t.string "country"
@@ -1422,6 +1429,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_130100) do
     t.string "account_type", default: "company", null: false
     t.string "agent_code"
     t.boolean "auto_allocate_payments", default: false, null: false
+    t.string "billing_address_line1"
+    t.string "billing_address_line2"
+    t.string "billing_city"
+    t.string "billing_country"
+    t.string "billing_postal_code"
+    t.string "billing_state"
     t.string "brn"
     t.string "contact_email"
     t.string "contact_phone"

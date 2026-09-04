@@ -191,7 +191,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       flash[:notice] = result[:message]
       render json: { success: true, message: result[:message] }
     else
-      render json: { success: false, error: result[:error] }, status: :unprocessable_entity
+      render json: { success: false, error: result[:error] }, status: :unprocessable_content
     end
   end
 
@@ -243,7 +243,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
       set_active_tabs
       append_inventory_breadcrumbs
       flash.now[:alert] = sync_result[:error] || "Error saving pricing rules."
-      return render :index, status: :unprocessable_entity
+      return render :index, status: :unprocessable_content
     end
 
     apply_start_date = sync_result[:apply_start_date]

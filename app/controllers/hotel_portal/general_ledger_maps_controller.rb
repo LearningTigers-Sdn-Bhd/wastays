@@ -16,7 +16,7 @@ class HotelPortal::GeneralLedgerMapsController < HotelPortal::SettingsBaseContro
     if @gl_map.update(gl_map_params)
       redirect_to hotel_general_ledger_maps_path(current_hotel), notice: "General Ledger mapping updated successfully."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

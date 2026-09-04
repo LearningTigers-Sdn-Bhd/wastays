@@ -21,7 +21,7 @@ module HotelPortal
         redirect_to registry_path, notice: "Tax settings updated successfully."
       else
         prepare_taxes_fees_page
-        render :show, status: :unprocessable_entity
+        render :show, status: :unprocessable_content
       end
     end
 
@@ -43,7 +43,7 @@ module HotelPortal
           )
         end
       else
-        render :edit_system, formats: :html, layout: false, status: :unprocessable_entity
+        render :edit_system, formats: :html, layout: false, status: :unprocessable_content
       end
     end
 
