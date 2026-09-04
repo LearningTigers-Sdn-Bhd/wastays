@@ -35,17 +35,21 @@ module HotelPortal
               .where("check_in <= ? AND check_out >= ?", @end_date, @start_date)
               .where.not(guest_country: [ nil, "" ])
               .where.not("LOWER(guest_country) = ?", "malaysia")
-              .includes(booking_rooms: :room_type, guests: {})
+              .includes(booking_rooms: :room_type, booking_guests: :guest)
               .order(:check_in, :created_at, :id)
       end
 
       def row_for(booking)
+        primary_guest = booking.booking_guests.find(&:primary?)
         {
           booking_id: booking.id,
           guest_name: booking.guest_name,
           guest_country: booking.guest_country,
-          guest_home_address: booking.guest_home_address,
-          date_of_birth: booking.primary_guest&.date_of_birth,
+          guest_home_address: PostalAddresses::Presenter.from_booking_guest(
+            booking.booking_guests.find(&:primary?),
+            fallback_booking: booking
+          ).display,
+          date_of_birth: primary_guest&.date_of_birth_snapshot || booking.guest_date_of_birth,
           booking_reference: booking.invoice_number.presence || booking.confirmation_token,
           check_in: booking.check_in,
           checked_in_at: booking.checked_in_at,

@@ -20,7 +20,14 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
       :booking,
       hotel: hotel,
       guest_name: "John Doe",
+      guest_email: "john@example.com",
+      guest_phone: "+60 12-345 6789",
       guest_country: "Foreign Tourist",
+      guest_home_address: "No. 12, Jalan Ampang",
+      guest_city: "Kuala Lumpur",
+      guest_state_code: "14",
+      guest_postal_code: "50450",
+      guest_address_country: "Malaysia",
       confirmation_token: "BK-778291",
       reservation_number: 451,
       guest_registration_number: 77,
@@ -146,11 +153,36 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
       fixed_line_number: nil, contact_phone: "+60 12-345 6789", contact_email: "frontdesk@example.com"
     )
 
-    expect(records.bill_to_entries).to include([ "Guest", "John Doe" ], [ "Country", "Foreign Tourist" ])
+    expect(records.bill_to_entries).to include(
+      [ "Guest", "John Doe" ],
+      [ "Billing address", "No. 12, Jalan Ampang\n50450 Kuala Lumpur\nWilayah Persekutuan Kuala Lumpur, Malaysia" ],
+      [ "Contact email", "john@example.com" ],
+      [ "Contact phone", "+60 12-345 6789" ]
+    )
     expect(records.invoice_detail_entries).to include([ "Folio no.", folio.folio_reference_display ])
     # The folio number already carries the account reference, so the invoice prints one.
     expect(records.invoice_detail_entries.map(&:first)).not_to include("Account ref")
     expect(records.stay_detail_entries).to include([ "Confirm no.", "BK-778291" ], [ "Room / type", "412 / Deluxe King" ])
+  end
+
+  it "keeps the issued guest address and contacts after the stay changes" do
+    booking.update!(
+      guest_home_address: "New address",
+      guest_city: "Kuching",
+      guest_state_code: "13",
+      guest_postal_code: "93000",
+      guest_email: "new@example.com",
+      guest_phone: "+60199999999"
+    )
+
+    entries = described_class.new(folio: folio.reload).call.bill_to_entries
+
+    expect(entries).to include(
+      [ "Billing address", "No. 12, Jalan Ampang\n50450 Kuala Lumpur\nWilayah Persekutuan Kuala Lumpur, Malaysia" ],
+      [ "Contact email", "john@example.com" ],
+      [ "Contact phone", "+60 12-345 6789" ]
+    )
+    expect(entries.flatten).not_to include("New address", "new@example.com", "+60199999999")
   end
 
   it "reaches the hotel as it can be reached now, not as at the time it billed" do

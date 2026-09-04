@@ -30,6 +30,8 @@ module HotelPortal
 
         def add_note(text) = PdfProseBlock.new(pdf: @pdf).draw_muted(text)
 
+        def add_party_blocks(blocks) = PdfPartyBlocks.new(pdf: @pdf).draw(blocks)
+
         # Sections keep their keyword interface; the table itself lives in PdfDataTable so a
         # document that drives Prawn directly can draw the same one.
         def add_table(...) = PdfDataTable.new(pdf: @pdf).draw(...)

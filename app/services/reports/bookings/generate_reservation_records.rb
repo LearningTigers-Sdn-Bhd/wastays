@@ -289,13 +289,18 @@ module Reports
       def tourism_tax_collected? = @bookings.any?(&:tourism_tax_collected?)
 
       def booking_party_blocks
+        address = PostalAddresses::Presenter.from_booking_guest(
+          booking.booking_guests.find(&:primary?),
+          fallback_booking: booking
+        )
+
         [
           {
             heading: "Guest details",
             entries: [
               [ "Guest", booking.guest_name ],
-              [ "Address", booking.guest_home_address.presence || "Not provided" ],
-              [ "Country", booking.guest_country ]
+              [ "Address", address.display.presence || "Not provided" ],
+              [ "Nationality", booking.guest_country ]
             ]
           },
           {

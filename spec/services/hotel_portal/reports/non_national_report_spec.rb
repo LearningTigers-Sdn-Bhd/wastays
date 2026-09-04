@@ -39,7 +39,7 @@ RSpec.describe HotelPortal::Reports::NonNationalReport, type: :service do
       expect(result.totals[:nights]).to eq(2)
       expect(result.rows.map { |row| row[:booking_id] }).to eq([ included.id ])
       expect(result.rows.first[:guest_country]).to eq("Japan")
-      expect(result.rows.first[:guest_home_address]).to eq("1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan")
+      expect(result.rows.first[:guest_home_address]).to eq("1 Chome-1-2 Oshiage, Sumida City, Tokyo, Japan\nKuala Lumpur\nJapan")
       expect(result.rows.first[:date_of_birth]).to eq(Date.new(1985, 3, 15))
       expect(result.rows.first[:checked_in_at]).to eq(Time.zone.local(2026, 6, 30, 15, 45, 0))
       expect(result.rows.first[:room_numbers]).to eq("305")

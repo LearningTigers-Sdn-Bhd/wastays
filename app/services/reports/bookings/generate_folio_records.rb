@@ -189,9 +189,34 @@ module Reports
 
         [
           [ "Guest", snapshot_or_live("booking", "guest_name") { booking.guest_name } ],
-          [ "Address", snapshot_or_live("booking", "guest_home_address") { booking.guest_home_address } ],
-          [ "Country", snapshot_or_live("booking", "guest_country") { booking.guest_country } ]
+          [ "Billing address", guest_billing_address ],
+          [ "Contact email", snapshot_payer_value("contact_email") ],
+          [ "Contact phone", snapshot_payer_value("contact_phone") ]
         ]
+      end
+
+      def guest_billing_address
+        payer = @snapshot["payer"]
+        if payer.is_a?(Hash) && payer.key?("billing_address")
+          return PostalAddresses::Presenter.from_snapshot(payer["billing_address"]).display.presence || "Not provided"
+        end
+
+        values = @snapshot["booking"]
+        return "Not provided" unless values.is_a?(Hash)
+
+        legacy_address = {
+          address_line1: values["guest_home_address"],
+          city: values["guest_city"],
+          state: PostalAddresses::Presenter.printable_state(values["guest_state_code"]),
+          postal_code: values["guest_postal_code"],
+          country: values["guest_address_country"].presence || values["guest_country"]
+        }
+        PostalAddresses::Presenter.new(legacy_address).display.presence || "Not provided"
+      end
+
+      def snapshot_payer_value(key)
+        payer = @snapshot["payer"]
+        payer[key] if payer.is_a?(Hash) && payer.key?(key)
       end
 
       def invoice_detail_entries
@@ -374,10 +399,19 @@ module Reports
         end
         [
           [ "Payer", snapshot_or_live("payer", "name") { document_live_payer_name } ],
+          [ "Billing address", corporate_billing_address ],
           [ "Account type", account_type.to_s.humanize.presence ],
           [ "PO ref", snapshot_or_live("payer", "purchase_order_reference") { terms&.purchase_order_reference } ],
           [ "Auth", snapshot_or_live("payer", "authorization_reference") { terms&.authorization_reference } ]
         ]
+      end
+
+      # Corporate addresses only come from the issue-time snapshot. An invoice issued
+      # before address capture existed remains unchanged when it is printed again.
+      def corporate_billing_address
+        payer = @snapshot["payer"]
+        address = payer["billing_address"] if payer.is_a?(Hash) && payer.key?("billing_address")
+        CorporateAccounts::BillingAddressPresenter.new(address || {}).display.presence || "Not provided"
       end
 
       def direct_bill_term_entries

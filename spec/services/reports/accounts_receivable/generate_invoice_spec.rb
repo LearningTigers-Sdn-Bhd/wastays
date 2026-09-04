@@ -13,7 +13,13 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
       hotel:,
       corporate_account: create(:account, :corporate, name: "Acme Holdings"),
       account_type: "company",
-      payment_terms_days: 30)
+      payment_terms_days: 30,
+      billing_address_line1: "Lot 8, Jalan Lintas",
+      billing_address_line2: "Level 3",
+      billing_city: "Kota Kinabalu",
+      billing_state: "Sabah",
+      billing_postal_code: "88300",
+      billing_country: "Malaysia")
   end
   let(:party) { create(:booking_billing_party, :company, booking:, hotel:, hotel_corporate_account: relationship) }
   let(:folio) do
@@ -50,6 +56,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
     expect(text).to include("ACCOUNTS RECEIVABLE INVOICE")
     expect(text).to include(invoice.formatted_invoice_number)
     expect(text).to include("Acme Holdings", "Company", "BK-AR-PDF")
+    expect(text).to include("Billing address", "Lot 8, Jalan Lintas", "88300 Kota Kinabalu", "Sabah, Malaysia")
     expect(text).to include(folio.folio_reference_display, "501 / Executive Suite")
     expect(text).to include("PO-7788", "AUTH-22", "Net 30 days")
     expect(text).to include("Executive Suite accommodation", "RM-AR")
@@ -61,12 +68,44 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
   it "keeps issue-time payer and reference values after source records change" do
     invoice = Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio:, balance: 450)
     relationship.corporate_account.update!(name: "Renamed Company")
+    relationship.update!(billing_address_line1: "New address")
     party.billing_terms.update!(purchase_order_reference: "PO-NEW")
 
     text = pdf_text(described_class.new(invoice:).generate)
 
-    expect(text).to include("Acme Holdings", "PO-7788")
-    expect(text).not_to include("Renamed Company", "PO-NEW")
+    expect(text).to include("Acme Holdings", "PO-7788", "Lot 8, Jalan Lintas")
+    expect(text).not_to include("Renamed Company", "PO-NEW", "New address")
+  end
+
+  it "does not fall back to the live relationship for a pre-address snapshot" do
+    invoice = Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio:, balance: 450)
+    revision = invoice.invoice.current_revision
+    old_snapshot = revision.snapshot.deep_dup
+    old_snapshot.fetch("payer").delete("billing_address")
+    revision.update_column(:snapshot, old_snapshot)
+    relationship.update!(billing_address_line1: "Address added after issue")
+
+    text = pdf_text(described_class.new(invoice:).generate)
+
+    expect(text).to include("Billing address", "Not provided")
+    expect(text).not_to include("Address added after issue")
+  end
+
+
+  it "allows an AR invoice without a billing address and prints the missing value" do
+    relationship.update!(
+      billing_address_line1: nil,
+      billing_address_line2: nil,
+      billing_city: nil,
+      billing_state: nil,
+      billing_postal_code: nil,
+      billing_country: nil
+    )
+
+    invoice = Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio:, balance: 450)
+    text = pdf_text(described_class.new(invoice:).generate)
+
+    expect(text).to include("Billing address", "Not provided")
   end
 
   it "keeps an issued blank authorization blank when it is populated later" do
