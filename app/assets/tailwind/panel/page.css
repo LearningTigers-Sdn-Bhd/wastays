@@ -1,12 +1,25 @@
 @layer components {
   /* Shared role-portal content viewport. Width is intentionally uncapped for PMS
      dashboards, tables, and operational workspaces. Pages own their internal layout,
-     while this wrapper owns standard-page padding and mobile-nav clearance. */
+     while this wrapper owns standard-page padding and mobile-nav clearance.
+
+     The default page grows with its content and the shell scrolls it. That is
+     what almost every page wants, a directory and a table included: one scroll
+     region, and the shell owns it. To keep a filter bar or a heading in view
+     while rows pass under it, use `position: sticky` — not the modifier below. */
   .panel-page {
     @apply w-full p-2.5;
   }
 
-  .panel-page--workspace {
+  /* Sized to the shell instead of to its content. The shell gives up its own
+     scroller and its padding, so the page must supply both: its own padding,
+     and a scroll region for anything that can overflow. Nothing scrolls until
+     the page says what does.
+
+     Reach for this only when a screen needs two or more regions scrolling
+     independently — a workspace with a pinned header, a list, and a detail pane
+     that each move on their own. One scrolling list is not a reason. */
+  .panel-page--full-height {
     @apply flex min-h-0 flex-1 flex-col p-0;
   }
 }
