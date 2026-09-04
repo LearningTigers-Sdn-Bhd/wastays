@@ -659,8 +659,12 @@ Rails.application.routes.draw do
         delete :bulk_destroy
       end
       member do
-        patch :toggle_vip
-        patch :toggle_blacklist
+        get :details
+        get :booking_history
+        patch :vip
+        patch :unvip
+        patch :blacklist
+        patch :unblacklist
       end
     end
     resources :in_house_guests, only: [ :index ]

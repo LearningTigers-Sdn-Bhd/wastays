@@ -1,0 +1,143 @@
+<div class="space-y-6">
+  <%= render "actions", guest: @guest, presenter: @presenter %>
+
+  <div class="grid gap-4">
+    <div class="legacy-card">
+      <div class="p-4 border-b border-border">
+        <p class="text-xs uppercase font-black tracking-widest text-muted-foreground">Currency Totals</p>
+      </div>
+      <div class="p-4 space-y-3">
+        <% if @currency_totals.any? %>
+          <% @currency_totals.each do |currency, amount| %>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-muted-foreground"><%= currency %></span>
+              <span class="text-sm font-semibold text-foreground"><%= @presenter.formatted_currency_amount(amount, currency) %></span>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="text-xs text-muted-foreground">No bookings recorded yet.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="flex items-center justify-between border-b border-border px-6 py-5">
+      <div>
+        <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Booking History</h2>
+        <p class="mt-1 text-sm font-medium text-muted-foreground">Timeline of this guest's stays at the property.</p>
+      </div>
+      <span class="text-sm font-medium text-muted-foreground">Stays <span class="font-semibold text-foreground"><%= @stays_count %></span></span>
+    </div>
+
+    <% if @bookings.any? %>
+      <div class="hidden md:block overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="bg-muted">
+            <tr>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Confirmation</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Stay</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Status</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Amount</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Created At</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Pre-Check-In</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border bg-card">
+            <% @bookings.each_with_index do |booking, index| %>
+              <% booking_presenter = Guests::BookingPresenter.new(booking) %>
+              <tr class="transition-colors hover:bg-muted/80 <%= index.even? ? 'bg-card' : 'bg-muted/55' %>">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground"><%= booking_presenter.confirmation_token %></td>
+                <td class="px-6 py-4 text-sm text-foreground">
+                  <div class="flex flex-col gap-0.5">
+                    <span><%= booking_presenter.check_in_formatted %> - <%= booking_presenter.check_out_formatted %></span>
+                    <span class="text-xs text-muted-foreground">
+                      <%= booking_presenter.nights_label %>
+                    </span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking_presenter.status) %>">
+                    <%= booking_presenter.status_humanized %>
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm font-medium text-foreground">
+                  <div class="flex flex-col gap-0.5">
+                    <span><%= booking_presenter.formatted_total_amount %></span>
+                    <% if booking_presenter.tourism_tax? %>
+                      <span class="text-xs text-muted-foreground"><%= booking_presenter.formatted_tourism_tax_amount %></span>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-foreground">
+                  <div class="flex flex-col gap-0.5">
+                    <span><%= booking_presenter.created_at_time_formatted %></span>
+                    <span class="text-xs text-muted-foreground"><%= booking_presenter.created_at_date_formatted %></span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-muted-foreground">
+                  <%= booking_presenter.pre_checkin_status_label %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="space-y-4 p-4 md:hidden">
+        <% @bookings.each do |booking| %>
+          <% booking_presenter = Guests::BookingPresenter.new(booking) %>
+          <div class="rounded-2xl border border-border bg-muted/60 p-4 shadow-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Confirmation</p>
+                <p class="mt-1 text-sm font-semibold text-foreground"><%= booking_presenter.confirmation_token %></p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Status</p>
+                <span class="inline-flex items-center rounded-full mt-1 px-2.5 py-0.5 text-xs font-medium <%= booking_status_class(booking_presenter.status) %>">
+                  <%= booking_presenter.status_humanized %>
+                </span>
+              </div>
+            </div>
+
+            <dl class="mt-4 space-y-3 text-sm">
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Stay</dt>
+                <dd class="mt-1 text-foreground"><%= booking_presenter.check_in_formatted %> - <%= booking_presenter.check_out_formatted %></dd>
+              </div>
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Amount</dt>
+                  <dd class="mt-1 text-foreground"><%= booking_presenter.formatted_total_amount %></dd>
+                </div>
+                <div class="text-right">
+                  <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Pre-Check-In</dt>
+                  <dd class="mt-1 text-foreground"><%= booking_presenter.pre_checkin_status_label %></dd>
+                </div>
+              </div>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Created At</dt>
+                <dd class="mt-1 text-foreground">
+                  <div class="flex flex-col gap-0.5">
+                    <span><%= booking_presenter.created_at_time_formatted %></span>
+                    <span class="text-xs text-muted-foreground"><%= booking_presenter.created_at_date_formatted %></span>
+                  </div>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="px-6 py-12 text-center">
+        <p class="text-sm font-medium text-muted-foreground">No bookings yet.</p>
+      </div>
+    <% end %>
+
+    <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center">
+      <%= paginate @bookings %>
+    </div>
+  </div>
+</div>

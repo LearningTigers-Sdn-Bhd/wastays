@@ -78,8 +78,10 @@ module Guests
     @guest.date_of_birth&.strftime("%d %b %Y") || "—"
   end
 
-  def last_stay_checkout_date(all_bookings)
-    all_bookings.first&.check_out&.strftime("%d %b %Y") || "—"
+  # The caller passes the latest check-out date. Reading it from an unordered
+  # scope returned an arbitrary booking, not the last stay.
+  def last_stay_checkout_date(checkout_on)
+    checkout_on&.strftime("%d %b %Y") || "—"
   end
 
   def formatted_currency_amount(amount, currency)

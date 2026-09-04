@@ -1,0 +1,92 @@
+<div class="space-y-6">
+  <%= render "actions", guest: @guest, presenter: @presenter %>
+
+  <div class="legacy-card <%= @guest.blacklisted_at?(current_hotel) ? 'border-rose-200 bg-rose-50/20' : '' %>">
+    <div class="p-4 border-b border-border <%= @guest.blacklisted_at?(current_hotel) ? 'bg-rose-50/30 border-rose-200' : '' %>">
+      <div>
+        <div class="flex items-center gap-x-2">
+          <h1 class="text-xl font-bold text-foreground"><%= @presenter.name %></h1>
+          <% if @guest.vip?(hotel: current_hotel) %>
+            <%= render PanelsUI::Tooltip.new(text: "VIP guest", delay: 150) do %>
+              <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="VIP guest">
+                <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-5 text-amber-500 fill-amber-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+              </span>
+            <% end %>
+          <% end %>
+          <% if @guest.blacklisted_at?(current_hotel) %>
+            <div class="relative size-5 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-5 translate-x-0.5 text-rose-600" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-6 -translate-y-0.5 text-rose-600" %>
+            </div>
+          <% end %>
+          <% if @guest.repeat? %>
+            <%= render PanelsUI::Tooltip.new(text: "Repeat guest", delay: 150) do %>
+              <span class="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" tabindex="0" aria-label="Repeat guest">
+                <%= cached_icon "repeat", library: "lucide", variant: "outline", class: "size-5 text-blue-500 shrink-0", aria: { hidden: "true" }, focusable: "false" %>
+              </span>
+            <% end %>
+          <% end %>
+        </div>
+        <% if (detail = @guest.blacklist_detail(current_hotel)).present? %>
+          <p class="mt-1 text-xs text-rose-700">
+            Blacklisted by <span class="font-semibold"><%= detail["blacklisted_by_name"] %></span>
+            <% if detail["reason"].present? %> &middot; <%= detail["reason"] %><% end %>
+          </p>
+        <% end %>
+      </div>
+    </div>
+    <div class="p-4 space-y-3 grid gap-3 md:grid-cols-2">
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Email</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.email %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Phone</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.phone %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Gender</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.gender %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Passport Country</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.country %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Document Type</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.document_type %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">ID / Passport</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.government_id %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Date of Birth</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.date_of_birth_formatted %></p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Last Stay</p>
+        <p class="text-sm font-semibold text-foreground">
+          <%= @presenter.last_stay_checkout_date(@last_checkout_on) %>
+        </p>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Total Visits</p>
+        <p class="text-sm font-semibold text-foreground"><%= @stays_count %></p>
+      </div>
+      <div class="md:col-span-2">
+        <p class="text-[10px] uppercase tracking-widest text-muted-foreground">Address</p>
+        <p class="text-sm font-semibold text-foreground"><%= @presenter.home_address %></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="legacy-card">
+    <div class="p-4 border-b border-border">
+      <p class="text-xs uppercase font-black tracking-widest text-muted-foreground">Recent Notes</p>
+    </div>
+    <div class="p-4 text-xs text-muted-foreground">
+      Open Booking History to review stay history, documentation status, and payment summaries.
+    </div>
+  </div>
+</div>

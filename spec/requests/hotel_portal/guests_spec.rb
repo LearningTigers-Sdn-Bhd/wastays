@@ -241,7 +241,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_guest_path(hotel, Guest.last))
+      expect(response).to redirect_to(details_hotel_guest_path(hotel, Guest.last))
       expect(Guest.last.date_of_birth).to eq(Date.new(1990, 8, 9))
     end
 
@@ -255,7 +255,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_guest_path(hotel, Guest.last))
+      expect(response).to redirect_to(details_hotel_guest_path(hotel, Guest.last))
       expect(Guest.last.home_address).to eq("No. 12, Jalan Ampang")
     end
   end
@@ -276,12 +276,12 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         }
       }
 
-      expect(response).to redirect_to(hotel_guest_path(hotel, guest))
+      expect(response).to redirect_to(details_hotel_guest_path(hotel, guest))
       expect(guest.reload.date_of_birth).to eq(Date.new(1992, 3, 4))
     end
   end
 
-  describe "GET /show" do
+  describe "GET /details and /booking_history" do
     it "renders the guest timeline without grouped query errors" do
       guest = Guest.create!(
         name: "Ravi Menon",
@@ -318,21 +318,26 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       create(:booking_guest, booking: myr_booking, guest: guest, is_primary: true)
       create(:booking_guest, booking: usd_booking, guest: guest)
 
-      get hotel_guest_path(hotel, guest)
+      get details_hotel_guest_path(hotel, guest)
       body_text = CGI.unescapeHTML(response.body)
 
       expect(response).to have_http_status(:success)
       expect(body_text).to include(hotel.name[0...10])
       expect(body_text).to include("Guest Records")
       expect(body_text).to include("Ravi Menon")
+      expect(body_text.downcase).to include("india")
+      expect(body_text).to include("No. 12, Jalan Ampang")
+
+      get booking_history_hotel_guest_path(hotel, guest)
+      body_text = CGI.unescapeHTML(response.body)
+
+      expect(response).to have_http_status(:success)
       expect(body_text).to include("Currency Totals")
       expect(body_text).to include("Booking History")
       expect(body_text).to include("Confirmation")
       expect(body_text).to include("Pre-Check-In")
       expect(body_text).to include("MYR")
       expect(body_text).to include("USD")
-      expect(body_text.downcase).to include("india")
-      expect(body_text).to include("No. 12, Jalan Ampang")
     end
 
     it "only totals checked in and completed bookings" do
@@ -356,7 +361,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       create(:booking_guest, booking: completed_booking, guest: guest)
       create(:booking_guest, booking: cancelled_booking, guest: guest)
 
-      get hotel_guest_path(hotel, guest)
+      get booking_history_hotel_guest_path(hotel, guest)
       body_text = CGI.unescapeHTML(response.body)
 
       expect(response).to have_http_status(:success)
@@ -381,12 +386,47 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       create(:booking_guest, booking: confirmed_booking, guest: guest, is_primary: true)
       create(:booking_guest, booking: cancelled_booking, guest: guest)
 
-      get hotel_guest_path(hotel, guest)
+      get booking_history_hotel_guest_path(hotel, guest)
       body_text = CGI.unescapeHTML(response.body)
 
       expect(response).to have_http_status(:success)
       expect(body_text).to include(confirmed_booking.confirmation_token)
       expect(body_text).to include(cancelled_booking.confirmation_token)
+    end
+  end
+
+  describe "GET /show" do
+    it "sends the reader to the details tab" do
+      guest = create(:guest, created_by_hotel: hotel)
+
+      get hotel_guest_path(hotel, guest)
+
+      expect(response).to redirect_to(details_hotel_guest_path(hotel, guest))
+    end
+  end
+
+  describe "tab query cost" do
+    let(:guest) { create(:guest, created_by_hotel: hotel) }
+
+    before do
+      booking = create(:booking, hotel: hotel, status: "completed", currency: "MYR", total_amount: 300.0)
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+    end
+
+    it "does not load the booking rows on the details tab" do
+      expect_any_instance_of(Guests::GuestBookingsQuery).not_to receive(:bookings)
+      expect_any_instance_of(Guests::GuestBookingsQuery).not_to receive(:currency_totals)
+
+      get details_hotel_guest_path(hotel, guest)
+
+      expect(response).to have_http_status(:success)
+    end
+
+    it "loads the booking rows on the booking history tab" do
+      get booking_history_hotel_guest_path(hotel, guest)
+
+      expect(response).to have_http_status(:success)
+      expect(CGI.unescapeHTML(response.body)).to include("RM 300.00")
     end
   end
 
@@ -426,13 +466,13 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     end
   end
 
-  describe "PATCH /toggle_vip" do
+  describe "PATCH /vip and /unvip" do
     let(:guest) { create(:guest, created_by_hotel: hotel) }
 
     it "marks the guest record as VIP" do
-      patch toggle_vip_hotel_guest_path(hotel, guest)
+      patch vip_hotel_guest_path(hotel, guest)
 
-      expect(response).to redirect_to(hotel_guest_path(hotel, guest))
+      expect(response).to redirect_to(details_hotel_guest_path(hotel, guest))
       expect(flash[:notice]).to include("marked as VIP")
       expect(guest.reload.vip).to be true
     end
@@ -440,20 +480,20 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     it "removes VIP from the guest record" do
       guest.update!(vip: true)
 
-      patch toggle_vip_hotel_guest_path(hotel, guest)
+      patch unvip_hotel_guest_path(hotel, guest)
 
       expect(flash[:notice]).to include("VIP removed")
       expect(guest.reload.vip).to be false
     end
   end
 
-  describe "PATCH /toggle_blacklist" do
+  describe "PATCH /blacklist and /unblacklist" do
     let(:guest) { create(:guest, created_by_hotel: hotel) }
 
     it "blacklists the guest record with a reason" do
-      patch toggle_blacklist_hotel_guest_path(hotel, guest), params: { blacklist_reason: "Damaged the room" }
+      patch blacklist_hotel_guest_path(hotel, guest), params: { blacklist_reason: "Damaged the room" }
 
-      expect(response).to redirect_to(hotel_guest_path(hotel, guest))
+      expect(response).to redirect_to(details_hotel_guest_path(hotel, guest))
       expect(flash[:notice]).to include("blacklisted")
       guest.reload
       expect(guest.blacklisted_at?(hotel)).to be true
@@ -462,7 +502,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     end
 
     it "refuses to blacklist without a reason" do
-      patch toggle_blacklist_hotel_guest_path(hotel, guest), params: { blacklist_reason: "" }
+      patch blacklist_hotel_guest_path(hotel, guest), params: { blacklist_reason: "" }
 
       expect(flash[:alert]).to include("provide a reason")
       expect(guest.reload.blacklisted_at?(hotel)).to be false
@@ -471,7 +511,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     it "clears the blacklist" do
       Guests::SetBlacklist.new(guests: guest, hotel: hotel, blacklisted: true, actor: user, reason: "Damage").call
 
-      patch toggle_blacklist_hotel_guest_path(hotel, guest)
+      patch unblacklist_hotel_guest_path(hotel, guest)
 
       expect(flash[:notice]).to include("Blacklist removed")
       expect(guest.reload.blacklisted_at?(hotel)).to be false

@@ -4,12 +4,15 @@ module HotelPortal
   class GuestsController < HotelPortal::BaseController
     helper_method :guest_stays_count, :guest_currency_totals
 
+    TAB_ACTIONS = %i[details booking_history].freeze
+    STATUS_ACTIONS = %i[vip unvip blacklist unblacklist].freeze
+
     before_action -> { require_feature!("unified_guest_profile") }
-    before_action :authorize_view_guest_records!, only: %i[index show]
-    before_action :authorize_manage_bookings!, only: %i[search check_banned new create edit update toggle_vip toggle_blacklist]
+    before_action :authorize_view_guest_records!, only: [ :index, :show, *TAB_ACTIONS ]
+    before_action :authorize_manage_bookings!, only: [ :search, :check_banned, :new, :create, :edit, :update, *STATUS_ACTIONS ]
     before_action :authorize_delete_guest_record!, only: %i[destroy bulk_destroy]
-    before_action :set_guest, only: [ :show, :edit, :update, :destroy, :toggle_vip, :toggle_blacklist ]
-    before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
+    before_action :set_guest, only: [ :show, :edit, :update, :destroy, *TAB_ACTIONS, *STATUS_ACTIONS ]
+    before_action :set_breadcrumbs, only: [ :new, :create, :edit, :update, *TAB_ACTIONS ]
 
     def index
       unless current_hotel
@@ -68,10 +71,23 @@ module HotelPortal
       render json: { banned: is_banned }
     end
 
+    # The record page is two tabs, each with its own action, so opening the
+    # details never runs the booking history queries.
     def show
+      redirect_to details_hotel_guest_path(current_hotel, @guest)
+    end
+
+    def details
       @presenter = Guests::GuestPresenter.new(@guest)
-      query = Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)
-      @all_bookings = query.all_bookings
+      query = bookings_query
+      @stays_count = query.stays_count
+      @last_checkout_on = query.last_checkout_on
+    end
+
+    def booking_history
+      @presenter = Guests::GuestPresenter.new(@guest)
+      query = bookings_query
+      @stays_count = query.stays_count
       @bookings = query.bookings(page: params[:page])
       @currency_totals = query.currency_totals
     end
@@ -85,7 +101,7 @@ module HotelPortal
       @guest.created_by_hotel = current_hotel
 
       if @guest.save
-        redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest record created successfully."
+        redirect_to details_hotel_guest_path(current_hotel, @guest), notice: "Guest record created successfully."
       else
         render :new, status: :unprocessable_content
       end
@@ -95,40 +111,29 @@ module HotelPortal
 
     def update
       if @guest.update(guest_params)
-        redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest record updated successfully."
+        redirect_to details_hotel_guest_path(current_hotel, @guest), notice: "Guest record updated successfully."
       else
         render :edit, status: :unprocessable_content
       end
     end
 
-    def toggle_vip
-      result = Guests::SetVip.new(
-        guests: @guest,
-        hotel: current_hotel,
-        vip: !@guest.vip_at?(current_hotel)
-      ).call
-
-      if result.success?
-        redirect_to hotel_guest_path(current_hotel, @guest), notice: result.message
-      else
-        redirect_to hotel_guest_path(current_hotel, @guest), alert: result.message
-      end
+    # Explicit actions rather than one toggle. A toggle reads the current state
+    # on the server, so a stale page flips the wrong way, and it has no sensible
+    # meaning across a mixed bulk selection.
+    def vip
+      set_vip(true)
     end
 
-    def toggle_blacklist
-      result = Guests::SetBlacklist.new(
-        guests: @guest,
-        hotel: current_hotel,
-        blacklisted: !@guest.blacklisted_at?(current_hotel),
-        actor: current_user,
-        reason: params[:blacklist_reason]
-      ).call
+    def unvip
+      set_vip(false)
+    end
 
-      if result.success?
-        redirect_to hotel_guest_path(current_hotel, @guest), notice: result.message
-      else
-        redirect_to hotel_guest_path(current_hotel, @guest), alert: result.message
-      end
+    def blacklist
+      set_blacklisted(true, reason: params[:blacklist_reason])
+    end
+
+    def unblacklist
+      set_blacklisted(false)
     end
 
     def destroy
@@ -169,6 +174,36 @@ module HotelPortal
 
     private
 
+    def bookings_query
+      Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)
+    end
+
+    def set_vip(value)
+      result = Guests::SetVip.new(guests: @guest, hotel: current_hotel, vip: value).call
+      redirect_after_status_change(result)
+    end
+
+    def set_blacklisted(value, reason: nil)
+      result = Guests::SetBlacklist.new(
+        guests: @guest,
+        hotel: current_hotel,
+        blacklisted: value,
+        actor: current_user,
+        reason: reason
+      ).call
+      redirect_after_status_change(result)
+    end
+
+    def redirect_after_status_change(result)
+      destination = details_hotel_guest_path(current_hotel, @guest)
+
+      if result.success?
+        redirect_to destination, notice: result.message
+      else
+        redirect_to destination, alert: result.message
+      end
+    end
+
     def set_guest
       @guest = ActiveRecord::Encryption.without_encryption { Guest.kept.find(params[:id]) }
 
@@ -182,8 +217,9 @@ module HotelPortal
     def set_breadcrumbs
       if @guest&.persisted?
         presenter = Guests::GuestPresenter.new(@guest)
-        append_breadcrumb presenter.name, hotel_guest_path(current_hotel, @guest)
+        append_breadcrumb presenter.name, details_hotel_guest_path(current_hotel, @guest)
         append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
+        append_breadcrumb "Booking History" if action_name == "booking_history"
       else
         append_breadcrumb "New"
       end

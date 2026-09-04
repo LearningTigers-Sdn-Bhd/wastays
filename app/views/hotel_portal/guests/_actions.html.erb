@@ -1,0 +1,98 @@
+ <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <%= link_to hotel_guests_path(current_hotel), class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground hover:text-blue-600 focus:outline-none focus:text-blue-600" do %>
+      <%= cached_icon "chevron-left", class: "flex-shrink-0 w-4 h-4" %>
+      Back to Guest Records
+    <% end %>
+
+    <%# Desktop Actions %>
+    <div class="hidden md:flex items-center gap-x-3">
+      <%= button_to(@guest.vip?(hotel: current_hotel) ? unvip_hotel_guest_path(current_hotel, @guest) : vip_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit") do %>
+        <% if @guest.vip?(hotel: current_hotel) %>
+          <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+          Remove VIP
+        <% else %>
+          <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-muted-foreground shrink-0" %>
+          Mark as VIP
+        <% end %>
+      <% end %>
+
+      <% if @guest.blacklisted_at?(current_hotel) %>
+        <%= button_to(unblacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit") do %>
+          <div class="relative size-4 flex items-center justify-center shrink-0">
+            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-rose-600" %>
+            <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-rose-600" %>
+          </div>
+          Remove Blacklist
+        <% end %>
+      <% else %>
+        <button type="button" command="show-modal" commandfor="guest-blacklist-dialog" class="inline-flex items-center gap-x-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted w-fit">
+          <div class="relative size-4 flex items-center justify-center shrink-0">
+            <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-muted-foreground" %>
+            <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-muted-foreground" %>
+          </div>
+          Blacklist Guest
+        </button>
+      <% end %>
+
+      <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "inline-flex items-center gap-x-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:bg-primary-hover w-fit" do %>
+        <%= cached_icon "pencil", class: "size-4" %>
+        Edit Profile
+      <% end %>
+    </div>
+
+    <%# Mobile Actions (Three-lines dropdown) %>
+    <div class="md:hidden relative inline-block text-left self-end" data-controller="dropdown" data-dropdown-align="right">
+      <button data-action="click->dropdown#toggle" type="button" class="inline-flex items-center justify-center size-10 rounded-xl border border-border bg-card text-foreground shadow-sm hover:bg-muted active:scale-95 transition-all" aria-label="Guest Actions">
+        <%= cached_icon "menu", class: "size-5" %>
+      </button>
+
+      <div data-dropdown-target="menu" class="hidden absolute right-0 mt-2 w-48 origin-top-right rounded-2xl border border-border bg-card p-1.5 shadow-xl z-50 focus:outline-none" role="menu">
+        <%= link_to edit_hotel_guest_path(current_hotel, @guest), class: "flex items-center gap-x-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition" do %>
+          <%= cached_icon "pencil", class: "size-4 text-muted-foreground" %>
+          Edit Profile
+        <% end %>
+
+        <%= button_to(@guest.vip?(hotel: current_hotel) ? unvip_hotel_guest_path(current_hotel, @guest) : vip_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition") do %>
+          <% if @guest.vip?(hotel: current_hotel) %>
+            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-amber-500 fill-amber-500 shrink-0" %>
+            Remove VIP
+          <% else %>
+            <%= cached_icon "crown-simple", library: "phosphor", variant: "duotone", class: "size-4 text-muted-foreground shrink-0" %>
+            Mark as VIP
+          <% end %>
+        <% end %>
+
+        <% if @guest.blacklisted_at?(current_hotel) %>
+          <%= button_to(unblacklist_hotel_guest_path(current_hotel, @guest), method: :patch, class: "flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition") do %>
+            <div class="relative size-4 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-rose-600" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-rose-600" %>
+            </div>
+            Remove Blacklist
+          <% end %>
+        <% else %>
+          <button type="button" command="show-modal" commandfor="guest-blacklist-dialog" class="flex w-full items-center gap-x-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted transition">
+            <div class="relative size-4 flex items-center justify-center shrink-0">
+              <%= cached_icon "user", library: "phosphor", variant: "light", class: "size-4 translate-x-0.5 text-muted-foreground" %>
+              <%= cached_icon "ban", class: "absolute inset-0 size-5 -translate-y-0.5 text-muted-foreground" %>
+            </div>
+            Blacklist Guest
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <%= form_with url: blacklist_hotel_guest_path(current_hotel, @guest), method: :patch do |f| %>
+    <%= render PanelsUI::Dialog.new(id: "guest-blacklist-dialog", title: "Blacklist guest", description: "#{@presenter.name} will be flagged as blacklisted for #{current_hotel.name}.", size: :md) do |dialog| %>
+      <% dialog.with_body do %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :blacklist_reason, label: "Reason", required: true) do |field| %>
+          <% field.with_text_area(rows: 4, placeholder: "Explain why this guest is being blacklisted.") %>
+        <% end %>
+      <% end %>
+      <% dialog.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Blacklist guest<% end %>
+      <% end %>
+    <% end %>
+  <% end %>
