@@ -262,18 +262,21 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("<table")
       expect(body_text).to include("Lifetime value")
       expect(body_text).to include("No guest records found")
-      expect(body_text).to include("colspan=")
+      # The empty row stretches so the state sits in the middle of the card.
+      expect(body_text).to match(/colspan="\d+" class="h-full align-middle"/)
     end
 
-    it "pins the tabs and the filter row while the rows scroll past" do
+    it "scrolls the rows, not the page, so the tabs and filters stay put" do
       get hotel_guests_path(hotel)
 
       body_text = CGI.unescapeHTML(response.body)
-      expect(body_text).to include("sticky top-0 z-sticky")
-      # A directory is an ordinary page: it keeps the shell's own padding and
-      # its own scroller, rather than becoming a full-height workspace.
-      expect(body_text).not_to include("panel-page--full-height")
-      expect(body_text).to include("overflow-y-auto [scrollbar-gutter:stable]")
+      expect(body_text).to include("panel-page--full-height")
+      # The shell hands over its scroller, so the table has to own one.
+      expect(body_text).not_to include("overflow-y-auto [scrollbar-gutter:stable]")
+      expect(body_text).to include("panel-scroll-area__viewport")
+      expect(body_text).to include("data-sticky-header=\"true\"")
+      # The shell hands over its padding too, so the page applies its own.
+      expect(body_text).to include(%(<div class="flex min-h-0 w-full flex-1 flex-col gap-4 p-2.5">))
     end
 
     it "filters guests by status tags" do

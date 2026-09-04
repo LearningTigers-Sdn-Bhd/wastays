@@ -10,8 +10,12 @@
 <% requested_tag = params[:tag].to_s == "banned" ? "blacklisted" : params[:tag].to_s %>
 <% active_tag = tabs.any? { |tab| tab[:name] == requested_tag } ? requested_tag : "all" %>
 <% selectable = can_manage || can_delete %>
+<%# The page is sized to the shell, so the rows scroll inside the table and the
+    tabs, the filters and the column headings never move. A full-height page
+    gives up the shell's padding, so it applies the same p-2.5 itself. %>
+<% content_for :full_height_page, true %>
 
-<div class="w-full space-y-4">
+<div class="flex min-h-0 w-full flex-1 flex-col gap-4 p-2.5">
   <%= render PanelsUI::PageHeader.new(title: "Guest Records", description: "Review guest profiles, contact details, and property stay history.") do |header| %>
     <% if can_manage %>
       <% header.with_actions do %>
@@ -23,15 +27,12 @@
     <% end %>
   <% end %>
 
-  <section aria-label="Guest directory">
+  <section class="flex min-h-0 flex-1 flex-col" aria-label="Guest directory">
     <%# The strip, the filters and the rows all sit inside the frame. A tab that
         swaps only the rows below it leaves its own highlight behind, and the
         filter form would keep posting the tab the user just left. %>
-    <%= turbo_frame_tag "guests_results", class: "block space-y-4" do %>
-      <%# The strip and the filters stay in view while the rows scroll past
-          under them. The negative margin lets the bar span the page's own
-          padding, so no row shows through at its edges. %>
-      <div class="sticky top-0 z-sticky -mx-2.5 space-y-4 bg-background px-2.5 py-2.5">
+    <%= turbo_frame_tag "guests_results", class: "flex min-h-0 flex-1 flex-col gap-4" do %>
+      <div class="shrink-0 space-y-4">
         <%= render PanelsUI::Tabs.new(
               id: "guest-tag-tabs",
               active: active_tag,
@@ -87,76 +88,90 @@
         <% end %>
       </div>
 
-      <div class="relative space-y-4"
+      <div class="relative flex min-h-0 flex-1 flex-col gap-4"
            data-controller="<%= [ ("bulk-select" if selectable), ("guest-blacklist" if can_manage) ].compact.join(" ") %>"
            data-bulk-select-noun-value="guest">
-        <%= render PanelsUI::Table.new(
-              caption: "Guests matching the current filters",
-              density: :compact,
-              header_style: :sentence,
-              hoverable: true,
-              sticky_column: true,
-              wrapper_class: "rounded-md border border-border bg-card") do |table| %>
-          <% table.with_header do %>
-            <tr>
-              <% if selectable %>
-                <th scope="col" class="w-10">
-                  <%= render PanelsUI::Checkbox.new(
-                        name: "select_all_guests",
-                        label: "Select every guest on this page",
-                        label_hidden: true,
-                        size: :sm,
-                        data: { bulk_select_target: "selectAll", action: "change->bulk-select#toggleAll" }) %>
-                </th>
-              <% end %>
-              <th scope="col">Guest</th>
-              <th scope="col" class="hidden lg:table-cell">Contact</th>
-              <th scope="col" class="hidden xl:table-cell">ID / Passport</th>
-              <th scope="col" class="hidden sm:table-cell">Stays</th>
-              <th scope="col" class="hidden md:table-cell">Last stayed</th>
-              <th scope="col" class="hidden text-right md:table-cell">Lifetime value</th>
-              <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
-            </tr>
-          <% end %>
-
-          <% table.with_body do %>
-            <% @guests.each do |guest| %>
-              <%= render "guest_row",
-                    guest: guest,
-                    selectable: selectable,
-                    can_manage: can_manage,
-                    can_delete: can_delete,
-                    repeat_ids: @repeat_ids,
-                    stays_count: guest_stays_count(guest),
-                    currency_totals: guest_currency_totals(guest) %>
+        <%# PanelsUI::ScrollArea owns the scrolling, the way the cashier activity
+            table does: the native bar is hidden and an overlay thumb stands in
+            for it. The table wrapper stays overflow-visible so the sticky
+            column headings pin against the scroll area, not against it. %>
+        <%= render PanelsUI::ScrollArea.new(
+              orientation: :both,
+              class: "flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card",
+              viewport_class: "min-h-0 flex-1") do %>
+          <%# With no rows, the table stretches so the empty state sits in the
+              middle of the card rather than stranded under the headings. With
+              rows, it keeps its natural height so the last row is not tall. %>
+          <%= render PanelsUI::Table.new(
+                caption: "Guests matching the current filters",
+                density: :compact,
+                header_style: :sentence,
+                hoverable: true,
+                sticky_header: true,
+                sticky_column: true,
+                class: ("h-full" if @guests.none?),
+                wrapper_class: "overflow-visible#{' h-full' if @guests.none?}") do |table| %>
+            <% table.with_header do %>
+              <tr>
+                <% if selectable %>
+                  <th scope="col" class="w-10">
+                    <%= render PanelsUI::Checkbox.new(
+                          name: "select_all_guests",
+                          label: "Select every guest on this page",
+                          label_hidden: true,
+                          size: :sm,
+                          data: { bulk_select_target: "selectAll", action: "change->bulk-select#toggleAll" }) %>
+                  </th>
+                <% end %>
+                <th scope="col">Guest</th>
+                <th scope="col" class="hidden lg:table-cell">Contact</th>
+                <th scope="col" class="hidden xl:table-cell">ID / Passport</th>
+                <th scope="col" class="hidden sm:table-cell">Stays</th>
+                <th scope="col" class="hidden md:table-cell">Last stayed</th>
+                <th scope="col" class="hidden text-right md:table-cell">Lifetime value</th>
+                <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+              </tr>
             <% end %>
 
-            <%# The empty state sits in the table, not in place of it. The
-                column headings stay on screen, so it reads as a filter that
-                found nothing rather than as a directory that vanished. %>
-            <% if @guests.none? %>
-              <tr>
-                <td colspan="<%= selectable ? 8 : 7 %>">
-                  <%= render PanelsUI::EmptyState.new(
-                        title: "No guest records found",
-                        description: "Change the search term or pick another status tab.",
-                        icon: "users") do |empty| %>
-                    <% if can_manage %>
-                      <% empty.with_action do %>
-                        <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel), variant: :primary, size: :sm) do %>
-                          New guest record
+            <% table.with_body do %>
+              <% @guests.each do |guest| %>
+                <%= render "guest_row",
+                      guest: guest,
+                      selectable: selectable,
+                      can_manage: can_manage,
+                      can_delete: can_delete,
+                      repeat_ids: @repeat_ids,
+                      stays_count: guest_stays_count(guest),
+                      currency_totals: guest_currency_totals(guest) %>
+              <% end %>
+
+              <%# The empty state sits in the table, not in place of it. The
+                  column headings stay on screen, so it reads as a filter that
+                  found nothing rather than as a directory that vanished. %>
+              <% if @guests.none? %>
+                <tr>
+                  <td colspan="<%= selectable ? 8 : 7 %>" class="h-full align-middle">
+                    <%= render PanelsUI::EmptyState.new(
+                          title: "No guest records found",
+                          description: "Change the search term or pick another status tab.",
+                          icon: "users") do |empty| %>
+                      <% if can_manage %>
+                        <% empty.with_action do %>
+                          <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel), variant: :primary, size: :sm) do %>
+                            New guest record
+                          <% end %>
                         <% end %>
                       <% end %>
                     <% end %>
-                  <% end %>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+              <% end %>
             <% end %>
           <% end %>
         <% end %>
 
         <% if @guests.total_pages > 1 %>
-          <div class="flex justify-center">
+          <div class="flex shrink-0 justify-center">
             <%= paginate @guests, data: { turbo_action: "advance" } %>
           </div>
         <% end %>
