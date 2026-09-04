@@ -32,6 +32,14 @@ class Guest < ApplicationRecord
   scope :kept, -> { where(discarded_at: nil) }
   scope :discarded, -> { where.not(discarded_at: nil) }
 
+  # A guest record is shared across properties. A property may read it once the
+  # guest has booked there, or once that property created the record.
+  scope :for_hotel, ->(hotel) {
+    left_outer_joins(:bookings)
+      .where("guests.created_by_hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: hotel.id)
+      .distinct
+  }
+
   before_validation :normalize_guest_data
   before_validation :populate_date_of_birth_from_malaysian_ic
 

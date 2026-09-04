@@ -9,6 +9,7 @@
 <%# "banned" is the older name for the same filter, and links to it still exist. %>
 <% requested_tag = params[:tag].to_s == "banned" ? "blacklisted" : params[:tag].to_s %>
 <% active_tag = tabs.any? { |tab| tab[:name] == requested_tag } ? requested_tag : "all" %>
+<% selectable = can_manage || can_delete %>
 
 <div class="w-full space-y-4">
   <%= render PanelsUI::PageHeader.new(title: "Guest Records", description: "Review guest profiles, contact details, and property stay history.") do |header| %>
@@ -79,7 +80,8 @@
 
     <%= turbo_frame_tag "guests_results" do %>
       <div class="relative space-y-4"
-           data-controller="<%= [ ("bulk-select" if can_delete), ("guest-blacklist" if can_manage) ].compact.join(" ") %>">
+           data-controller="<%= [ ("bulk-select" if selectable), ("guest-blacklist" if can_manage) ].compact.join(" ") %>"
+           data-bulk-select-noun-value="guest">
         <% if @guests.any? %>
           <%= render PanelsUI::Table.new(
                 caption: "Guests matching the current filters",
@@ -90,7 +92,7 @@
                 wrapper_class: "rounded-md border border-border bg-card") do |table| %>
             <% table.with_header do %>
               <tr>
-                <% if can_delete %>
+                <% if selectable %>
                   <th scope="col" class="w-10">
                     <%= render PanelsUI::Checkbox.new(
                           name: "select_all_guests",
@@ -114,7 +116,7 @@
               <% @guests.each do |guest| %>
                 <%= render "guest_row",
                       guest: guest,
-                      selectable: can_delete,
+                      selectable: selectable,
                       can_manage: can_manage,
                       can_delete: can_delete,
                       repeat_ids: @repeat_ids,
@@ -144,8 +146,8 @@
           <% end %>
         <% end %>
 
-        <% if can_delete %>
-          <%= render "bulk_actions" %>
+        <% if selectable %>
+          <%= render "bulk_actions", can_manage: can_manage, can_delete: can_delete %>
         <% end %>
 
         <% if can_manage %>

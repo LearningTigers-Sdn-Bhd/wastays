@@ -657,6 +657,10 @@ Rails.application.routes.draw do
         get :search
         get :check_banned
         delete :bulk_destroy
+        patch :bulk_vip
+        patch :bulk_unvip
+        patch :bulk_blacklist
+        patch :bulk_unblacklist
       end
       member do
         get :details

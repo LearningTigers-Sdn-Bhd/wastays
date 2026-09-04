@@ -10,13 +10,9 @@ module Guests
     end
 
     def call
-      # Retrieve and filter guests that belong to this hotel (safety check and same authorization as set_guest in controller)
-      # Uses a single database query avoiding N+1 check in Ruby memory
-      allowed_guests = Guest.kept
-                            .where(id: @guest_ids)
-                            .left_outer_joins(:bookings)
-                            .where("guests.created_by_hotel_id = :hotel_id OR bookings.hotel_id = :hotel_id", hotel_id: @hotel.id)
-                            .distinct
+      # One query, and the same rule the record page uses to decide whether this
+      # property may read the guest at all.
+      allowed_guests = Guest.kept.where(id: @guest_ids).for_hotel(@hotel)
 
       if allowed_guests.empty?
         return OpenStruct.new(success?: false, message: "No valid guest records selected for deletion.")

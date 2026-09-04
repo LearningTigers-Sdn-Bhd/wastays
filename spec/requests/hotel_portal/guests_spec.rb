@@ -207,6 +207,41 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(queries.size).to be <= 2
     end
 
+    it "renders the bulk bar with the counts each action would change" do
+      role = user.user_hotel_accesses.first.role
+      role.permissions << (Permission.find_by(slug: "delete_guest_record") || create(:permission, slug: "delete_guest_record"))
+
+      guest = Guest.create!(name: "Ravi Menon", email: "ravi@example.com", country: "Malaysia")
+      booking = create(:booking, hotel: hotel, status: "completed", guest_name: guest.name, guest_email: guest.email)
+      create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      get hotel_guests_path(hotel)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("data-bulk-select-target=\"banner\"")
+      expect(body_text).to include("data-bulk-select-noun-value=\"guest\"")
+      expect(body_text).to include("data-bulk-kind=\"vip\"")
+      expect(body_text).to include("data-bulk-kind=\"unblacklist\"")
+      expect(body_text).to include("{skipped} already VIP.")
+      expect(body_text).to include("Blacklist selected guests")
+      # Each row states its own status so the confirm can count without asking
+      # the server.
+      expect(body_text).to include("data-vip=\"false\"")
+      expect(body_text).to include("data-blacklisted=\"false\"")
+    end
+
+    it "hides every bulk action from a read-only user" do
+      role = user.user_hotel_accesses.first.role
+      role.permissions.destroy(Permission.find_by(slug: "manage_bookings"))
+
+      get hotel_guests_path(hotel)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).not_to include("data-bulk-select-target=\"banner\"")
+      expect(body_text).not_to include("Blacklist selected guests")
+      expect(body_text).not_to include("Mark as VIP")
+    end
+
     it "filters guests by status tags" do
       ravi = Guest.create!(
         name: "Ravi Vip",
@@ -620,6 +655,80 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         expect(response).to redirect_to(root_path)
         expect(flash[:alert]).to include("not authorized")
       end
+    end
+  end
+
+  describe "bulk status actions" do
+    let!(:vip_guest) { create(:guest, created_by_hotel: hotel) }
+    let!(:plain_guest) { create(:guest, created_by_hotel: hotel) }
+    let(:other_hotel_guest) { create(:guest) }
+
+    before { Guests::SetVip.new(guests: vip_guest, hotel: hotel, vip: true).call }
+
+    def ids(*guests) = { guest_ids: guests.map(&:id).to_json }
+
+    it "marks every selected record VIP and skips the ones already VIP" do
+      patch bulk_vip_hotel_guests_path(hotel), params: ids(vip_guest, plain_guest)
+
+      expect(response).to have_http_status(:see_other)
+      expect(flash[:notice]).to include("1 guest record marked as VIP")
+      expect(plain_guest.reload.vip_at?(hotel)).to be true
+      expect(vip_guest.reload.vip_at?(hotel)).to be true
+    end
+
+    it "removes VIP from the selection" do
+      patch bulk_unvip_hotel_guests_path(hotel), params: ids(vip_guest, plain_guest)
+
+      expect(flash[:notice]).to include("VIP removed from 1 guest record")
+      expect(vip_guest.reload.vip_at?(hotel)).to be false
+    end
+
+    it "blacklists the selection under one shared reason" do
+      patch bulk_blacklist_hotel_guests_path(hotel),
+            params: ids(vip_guest, plain_guest).merge(blacklist_reason: "Group no-show")
+
+      expect(flash[:notice]).to include("2 guest records blacklisted")
+      [ vip_guest, plain_guest ].each do |guest|
+        expect(guest.reload.blacklisted_at?(hotel)).to be true
+        expect(guest.blacklist_detail(hotel)["reason"]).to eq("Group no-show")
+        expect(guest.blacklist_detail(hotel)["blacklisted_by_id"]).to eq(user.id)
+      end
+    end
+
+    it "refuses a bulk blacklist with no reason" do
+      patch bulk_blacklist_hotel_guests_path(hotel), params: ids(plain_guest)
+
+      expect(flash[:alert]).to include("provide a reason")
+      expect(plain_guest.reload.blacklisted_at?(hotel)).to be false
+    end
+
+    it "clears the blacklist across the selection" do
+      Guests::SetBlacklist.new(guests: [ vip_guest ], hotel: hotel, blacklisted: true, actor: user, reason: "Damage").call
+
+      patch bulk_unblacklist_hotel_guests_path(hotel), params: ids(vip_guest, plain_guest)
+
+      expect(flash[:notice]).to include("Blacklist removed from 1 guest record")
+      expect(vip_guest.reload.blacklisted_at?(hotel)).to be false
+    end
+
+    it "ignores a record this property cannot read" do
+      patch bulk_vip_hotel_guests_path(hotel), params: ids(other_hotel_guest)
+
+      expect(flash[:alert]).to include("No guest records selected")
+      expect(other_hotel_guest.reload.vip_at?(hotel)).to be false
+    end
+
+    it "survives a malformed selection" do
+      patch bulk_vip_hotel_guests_path(hotel), params: { guest_ids: "not json" }
+
+      expect(response).to have_http_status(:see_other)
+      expect(flash[:alert]).to include("No guest records selected")
+    end
+
+    it "returns to the tab the action was fired from" do
+      patch bulk_vip_hotel_guests_path(hotel), params: ids(plain_guest).merge(tag: "vip")
+
+      expect(response).to redirect_to(hotel_guests_path(hotel, tag: "vip"))
     end
   end
 

@@ -16,7 +16,12 @@
             label: "Select #{presenter.name}",
             label_hidden: true,
             size: :sm,
-            data: { bulk_select_target: "checkbox", action: "change->bulk-select#toggleSingle" }) %>
+            data: {
+              bulk_select_target: "checkbox",
+              action: "change->bulk-select#toggleSingle",
+              vip: vip.to_s,
+              blacklisted: blacklisted.to_s
+            }) %>
     </td>
   <% end %>
 

@@ -6,10 +6,11 @@ module HotelPortal
 
     TAB_ACTIONS = %i[details booking_history].freeze
     STATUS_ACTIONS = %i[vip unvip blacklist unblacklist].freeze
+    BULK_STATUS_ACTIONS = %i[bulk_vip bulk_unvip bulk_blacklist bulk_unblacklist].freeze
 
     before_action -> { require_feature!("unified_guest_profile") }
     before_action :authorize_view_guest_records!, only: [ :index, :show, *TAB_ACTIONS ]
-    before_action :authorize_manage_bookings!, only: [ :search, :check_banned, :new, :create, :edit, :update, *STATUS_ACTIONS ]
+    before_action :authorize_manage_bookings!, only: [ :search, :check_banned, :new, :create, :edit, :update, *STATUS_ACTIONS, *BULK_STATUS_ACTIONS ]
     before_action :authorize_delete_guest_record!, only: %i[destroy bulk_destroy]
     before_action :set_guest, only: [ :show, :edit, :update, :destroy, *TAB_ACTIONS, *STATUS_ACTIONS ]
     before_action :set_breadcrumbs, only: [ :new, :create, :edit, :update, *TAB_ACTIONS ]
@@ -165,19 +166,36 @@ module HotelPortal
     end
 
     def bulk_destroy
-      guest_ids = begin
-        JSON.parse(params[:guest_ids] || "[]")
-      rescue JSON::ParserError
-        []
-      end
-
-      result = Guests::BulkDestroyService.new(guest_ids: guest_ids, hotel: current_hotel).call
+      result = Guests::BulkDestroyService.new(guest_ids: selected_guest_ids, hotel: current_hotel).call
 
       if result.success?
         redirect_to hotel_guests_path(current_hotel), notice: result.message, status: :see_other
       else
         redirect_to hotel_guests_path(current_hotel), alert: result.message, status: :see_other
       end
+    end
+
+    # The same services the row menu uses. They already take a collection, so a
+    # selection of one and a selection of forty follow the same path.
+    def bulk_vip
+      apply_bulk(Guests::SetVip.new(guests: selected_guests, hotel: current_hotel, vip: true))
+    end
+
+    def bulk_unvip
+      apply_bulk(Guests::SetVip.new(guests: selected_guests, hotel: current_hotel, vip: false))
+    end
+
+    def bulk_blacklist
+      apply_bulk(Guests::SetBlacklist.new(
+        guests: selected_guests, hotel: current_hotel, blacklisted: true,
+        actor: current_user, reason: params[:blacklist_reason]
+      ))
+    end
+
+    def bulk_unblacklist
+      apply_bulk(Guests::SetBlacklist.new(
+        guests: selected_guests, hotel: current_hotel, blacklisted: false, actor: current_user
+      ))
     end
 
 
@@ -191,6 +209,35 @@ module HotelPortal
     end
 
     private
+
+    def apply_bulk(service)
+      result = service.call
+      destination = hotel_guests_path(current_hotel, filter_params)
+
+      if result.success?
+        redirect_to destination, notice: result.message, status: :see_other
+      else
+        redirect_to destination, alert: result.message, status: :see_other
+      end
+    end
+
+    # The selection travels as a JSON array in one hidden field, so the browser
+    # never has to serialise forty separate inputs.
+    def selected_guest_ids
+      ids = JSON.parse(params[:guest_ids].presence || "[]")
+      ids.is_a?(Array) ? ids : []
+    rescue JSON::ParserError
+      []
+    end
+
+    def selected_guests
+      Guest.kept.where(id: selected_guest_ids).for_hotel(current_hotel).to_a
+    end
+
+    # Keep the tab and search the user was on when they acted.
+    def filter_params
+      params.permit(:tag, :query, :country).to_h.compact_blank
+    end
 
     def bookings_query
       Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)

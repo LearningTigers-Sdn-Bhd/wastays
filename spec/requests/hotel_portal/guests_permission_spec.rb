@@ -57,4 +57,37 @@ RSpec.describe "HotelPortal::Guests Permissions", type: :request do
       end
     end
   end
+
+  describe "bulk status actions" do
+    context "when the user can only view guest records" do
+      before do
+        role = create(:role, account: account)
+        role.permissions << (Permission.find_by(slug: 'view_guest_records') || create(:permission, slug: 'view_guest_records'))
+        UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+        sign_in_as(user)
+      end
+
+      it "denies every bulk status change" do
+        params = { guest_ids: [ guest.id ].to_json, blacklist_reason: "Damage" }
+
+        [ :bulk_vip, :bulk_unvip, :bulk_blacklist, :bulk_unblacklist ].each do |action|
+          patch public_send("#{action}_hotel_guests_path", hotel), params: params
+
+          expect(response).to have_http_status(:found)
+          expect(flash[:alert]).to include("not authorized")
+        end
+
+        guest.reload
+        expect(guest.vip_at?(hotel)).to be false
+        expect(guest.blacklisted_at?(hotel)).to be false
+      end
+
+      it "denies a bulk delete" do
+        delete bulk_destroy_hotel_guests_path(hotel), params: { guest_ids: [ guest.id ].to_json }
+
+        expect(response).to have_http_status(:found)
+        expect(guest.reload.discarded_at).to be_nil
+      end
+    end
+  end
 end
