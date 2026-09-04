@@ -101,6 +101,7 @@ module Public
           :guest_city,
           :guest_state_code,
           :guest_postal_code,
+          :guest_address_country,
           :guest_tin,
           :guest_country,
           :guest_document_type,

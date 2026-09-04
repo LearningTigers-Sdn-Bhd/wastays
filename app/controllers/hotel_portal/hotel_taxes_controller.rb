@@ -24,7 +24,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::SettingsBaseController
     if @hotel_tax.save
       complete_tax_sheet("Tax or fee added.")
     else
-      render "hotel_portal/taxes_fees/new", formats: :html, layout: false, status: :unprocessable_entity
+      render "hotel_portal/taxes_fees/new", formats: :html, layout: false, status: :unprocessable_content
     end
   end
 
@@ -36,7 +36,7 @@ class HotelPortal::HotelTaxesController < HotelPortal::SettingsBaseController
         complete_tax_sheet("Tax or fee updated.")
       end
     else
-      render "hotel_portal/taxes_fees/edit", formats: :html, layout: false, status: :unprocessable_entity
+      render "hotel_portal/taxes_fees/edit", formats: :html, layout: false, status: :unprocessable_content
     end
   end
 

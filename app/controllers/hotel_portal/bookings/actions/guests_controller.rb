@@ -16,7 +16,11 @@ module HotelPortal
           return update if request.patch? && @mode != "add"
           raise ActiveRecord::RecordNotFound unless request.get? && @mode == "add"
 
-          @guest = Guest.new(country: current_hotel.country.presence || "Malaysia", document_type: "ic")
+          @guest = Guest.new(
+            country: current_hotel.country.presence || "Malaysia",
+            address_country: current_hotel.country.presence || "Malaysia",
+            document_type: "ic"
+          )
           render :show, layout: false
         end
 
@@ -150,7 +154,10 @@ module HotelPortal
         end
 
         def guest_params
-          params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth, :home_address)
+          params.require(:guest).permit(
+            :name, :email, :phone, :country, :gender, :document_type, :government_id,
+            :date_of_birth, :home_address, :city, :state_code, :postal_code, :address_country
+          )
         end
 
         def resolved_guest_target

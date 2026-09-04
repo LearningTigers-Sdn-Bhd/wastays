@@ -60,7 +60,7 @@ module HotelPortal
               "Request cannot be moved",
               type: :error,
               description: result.error
-            ), status: :unprocessable_entity
+            ), status: :unprocessable_content
           end
         end
         format.html do
@@ -68,7 +68,7 @@ module HotelPortal
                       notice: (result.ok? ? "Request moved." : nil),
                       alert: result.error
         end
-        format.json { render json: { ok: result.ok?, error: result.error }, status: (result.ok? ? :ok : :unprocessable_entity) }
+        format.json { render json: { ok: result.ok?, error: result.error }, status: (result.ok? ? :ok : :unprocessable_content) }
       end
     end
 
@@ -90,7 +90,7 @@ module HotelPortal
         redirect_target = safe_redirect_target(hotel_requests_path(current_hotel))
         respond_to do |format|
           format.html { redirect_to redirect_target, alert: "Cancellation note is required." }
-          format.json { render json: { ok: false }, status: :unprocessable_entity }
+          format.json { render json: { ok: false }, status: :unprocessable_content }
         end
       end
     end
@@ -123,10 +123,10 @@ module HotelPortal
       else
         respond_to do |format|
           format.turbo_stream do
-            render turbo_stream: toast_stream("Failed to update request", type: :error), status: :unprocessable_entity
+            render turbo_stream: toast_stream("Failed to update request", type: :error), status: :unprocessable_content
           end
           format.html { redirect_to redirect_target, alert: "Failed to update request." }
-          format.json { render json: { ok: false }, status: :unprocessable_entity }
+          format.json { render json: { ok: false }, status: :unprocessable_content }
         end
       end
     end
@@ -147,7 +147,7 @@ module HotelPortal
       else
         respond_to do |format|
           format.html { redirect_to redirect_target, alert: "Failed to archive request." }
-          format.json { render json: { ok: false }, status: :unprocessable_entity }
+          format.json { render json: { ok: false }, status: :unprocessable_content }
         end
       end
     end
@@ -168,7 +168,7 @@ module HotelPortal
       else
         respond_to do |format|
           format.html { redirect_to redirect_target, alert: "Failed to restore request." }
-          format.json { render json: { ok: false }, status: :unprocessable_entity }
+          format.json { render json: { ok: false }, status: :unprocessable_content }
         end
       end
     end

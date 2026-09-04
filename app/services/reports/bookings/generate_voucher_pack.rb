@@ -48,11 +48,12 @@ module Reports
 
       private
 
-      # Each voucher reads its booking's hotel for the masthead and the stay times, so the
-      # hotel is loaded here rather than once per room.
+      # Each voucher reads its booking's hotel for the masthead and the stay times, and
+      # its primary booking guest for the address block, so both are loaded here rather
+      # than once per room.
       def ordered_bookings
         @group_booking.bookings
-          .includes(:hotel, booking_rooms: :room_type)
+          .includes(:hotel, :booking_guests, booking_rooms: :room_type)
           .order(:group_position, :id)
           .to_a
       end

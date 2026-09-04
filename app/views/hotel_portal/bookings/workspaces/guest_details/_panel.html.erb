@@ -36,7 +36,7 @@
                   description: "Guest details recorded for this stay.",
                   disabled: !presenter.can_manage_bookings?(current_user)) do %>
               <%= render PanelsUI::FieldGroup.new do %>
-              <div class="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
                 <div class="sm:col-span-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :booking_assignment, label: "Booking", hint: "A guest stay record remains attached to its current room.", disabled: true) do |field| %>
                     <% field.with_select_menu([[presenter.selected_entity_label, entity_booking.id]], selected: entity_booking.id) %>
@@ -56,14 +56,26 @@
                 <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
                   <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
                 <% end %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country", required: true) do |field| %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true) do |field| %>
                   <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
                 <% end %>
                 <div class="sm:col-span-2">
-                  <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Address") do |field| %>
-                    <% field.with_text_area(value: snapshots[:home_address], rows: 2, placeholder: "Street address, city, postcode") %>
+                  <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Street address") do |field| %>
+                    <% field.with_text_area(value: snapshots[:home_address], rows: 2, placeholder: "Street, building, and unit") %>
                   <% end %>
                 </div>
+                <%= render PanelsUI::FormField.new(form:, attribute: :city, label: "City") do |field| %>
+                  <% field.with_input(value: snapshots[:city], autocomplete: "address-level2") %>
+                <% end %>
+                <%= render "shared/state_code_field", form:, attribute: :state_code, value: snapshots[:state_code],
+                      country: snapshots[:address_country] %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :postal_code, label: "Postcode") do |field| %>
+                  <% field.with_input(value: snapshots[:postal_code], autocomplete: "postal-code") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :address_country, label: "Address country",
+                      data: { address_state_target: "country", action: "change->address-state#refresh input->address-state#refresh" }) do |field| %>
+                  <% field.with_combobox(country_choices, selected: snapshots[:address_country], prompt: "Search for a country") %>
+                <% end %>
               </div>
               <% end %>
             <% end %>

@@ -15,7 +15,7 @@ class Api::V1::Bookings::ComplaintRequestsController < Api::V1::BaseController
       render json: {
         error: "Failed to create complaint request",
         details: @complaint_request.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 

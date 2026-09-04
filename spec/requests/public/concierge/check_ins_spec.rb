@@ -217,7 +217,11 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
           guest_country: "Malaysia",
           guest_document_type: "ic",
           guest_government_id: "900101011234",
-          guest_home_address: "No. 12, Jalan Ampang, 50450 KL"
+          guest_home_address: "No. 12, Jalan Ampang",
+          guest_city: "Kuala Lumpur",
+          guest_state_code: "14",
+          guest_postal_code: "50450",
+          guest_address_country: "Malaysia"
         }
       }
 
@@ -228,7 +232,13 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       post concierge_submit_check_in_path(hotel)
       expect(response).to redirect_to(concierge_check_in_success_path(hotel))
       expect(booking.reload.status).to eq("checked_in")
-      expect(booking.reload.guest_home_address).to eq("No. 12, Jalan Ampang, 50450 KL")
+      expect(booking.reload).to have_attributes(
+        guest_home_address: "No. 12, Jalan Ampang",
+        guest_city: "Kuala Lumpur",
+        guest_state_code: "14",
+        guest_postal_code: "50450",
+        guest_address_country: "Malaysia"
+      )
       expect(BookingAuditLog.where(auditable: booking, action_type: "guest_updated", source: "guest").count).to eq(1)
     end
 
@@ -243,6 +253,8 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
           guest_government_id: "P1234567",
           guest_date_of_birth: "1994-08-21",
           guest_home_address: "No. 12, Jalan Ampang, 50450 KL",
+          guest_city: "Singapore",
+          guest_address_country: "Singapore",
           signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
         }
       }
@@ -262,6 +274,8 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
           guest_government_id: "P1234567",
           guest_date_of_birth: "",
           guest_home_address: "No. 12, Jalan Ampang, 50450 KL",
+          guest_city: "Singapore",
+          guest_address_country: "Singapore",
           signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
         }
       }
@@ -280,7 +294,10 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
           guest_country: "Malaysia",
           guest_document_type: "ic",
           guest_government_id: "900101011234",
-          guest_home_address: "No. 12, Jalan Ampang"
+          guest_home_address: "No. 12, Jalan Ampang",
+          guest_city: "Kuala Lumpur",
+          guest_state_code: "14",
+          guest_address_country: "Malaysia"
         }
       }
 

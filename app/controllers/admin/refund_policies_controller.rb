@@ -9,7 +9,7 @@ class Admin::RefundPoliciesController < Admin::BaseController
     if @refund_policy.update(refund_policy_params)
       redirect_to admin_refund_policy_path, notice: "Refund policy updated."
     else
-      render "admin/refund_policy/show", status: :unprocessable_entity
+      render "admin/refund_policy/show", status: :unprocessable_content
     end
   end
 

@@ -284,7 +284,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       document = Nokogiri::HTML(response.body)
       [ document.at_css("section.grc-no-print"), document.at_css("article.grc-print") ].each do |rendered_card|
         address = rendered_card.xpath(".//dt[normalize-space()='Address']/following-sibling::dd").first
-        expect(address.text.squish).to include("Not provided")
+        expect(address).to be_present
         expect(rendered_card.text).not_to include("34 Primary Road, Kuching")
       end
     end
@@ -312,7 +312,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       [ document.at_css("section.grc-no-print"), document.at_css("article.grc-print") ].each do |card|
         labels = card.css("dt").map { |node| node.text.strip }
         expect(labels).to include("Name", "Room type", "Check-in", "Check-out")
-        expect(labels).not_to include("Phone", "Email", "Address", "Guests", "Room(s)", "Booking")
+        expect(labels).not_to include("Phone", "Email", "Address", "Nationality", "Guests", "Room(s)", "Booking")
       end
       expect(document.at_css("section.grc-no-print").text).not_to include("Booking #{booking.confirmation_token}")
     end

@@ -3,7 +3,7 @@ class Api::V1::Bookings::HousekeepingRequestsController < Api::V1::BaseControlle
 
   def create
     unless Bookings::Occupancy.accepts_guest_requests?(@booking)
-      render json: { error: "Housekeeping requests can only be created for active bookings." }, status: :unprocessable_entity
+      render json: { error: "Housekeeping requests can only be created for active bookings." }, status: :unprocessable_content
       return
     end
 
@@ -21,7 +21,7 @@ class Api::V1::Bookings::HousekeepingRequestsController < Api::V1::BaseControlle
       render json: {
         error: "Failed to create housekeeping request",
         details: @housekeeping_request.errors.full_messages
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
     end
   end
 

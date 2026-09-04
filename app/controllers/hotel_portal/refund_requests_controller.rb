@@ -39,7 +39,7 @@ class HotelPortal::RefundRequestsController < HotelPortal::BaseController
       redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "booking_details"), notice: "Refund request submitted to Superadmin."
     else
       @presenter = RefundRequestPresenter.new(@refund_request)
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 

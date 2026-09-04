@@ -1195,7 +1195,16 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
     end
 
     it "gives the guest form unmasked encrypted values" do
-      guest = create(:guest, name: "Hanami Ume", email: "hanami@mail.com", phone: "+60123451234", government_id: "P4821")
+      guest = create(:guest,
+        name: "Hanami Ume",
+        email: "hanami@mail.com",
+        phone: "+60123451234",
+        government_id: "P4821",
+        home_address: "8 Sakura Road",
+        city: "Tokyo",
+        state_code: "17",
+        postal_code: "100-0001",
+        address_country: "Japan")
       booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)
 
       snapshots = described_class.new(booking, params: { tab: "guest_details", booking_guest_id: booking_guest.id }).guest_details_snapshots
@@ -1205,7 +1214,12 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(snapshots).to include(
         email: "hanami@mail.com",
         phone: "+60123451234",
-        government_id: booking_guest.government_id_snapshot
+        government_id: booking_guest.government_id_snapshot,
+        home_address: "8 Sakura Road",
+        city: "Tokyo",
+        state_code: "17",
+        postal_code: "100-0001",
+        address_country: "Japan"
       )
       expect(snapshots[:government_id]).to eq("p4821")
     end

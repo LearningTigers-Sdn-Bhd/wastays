@@ -23,8 +23,10 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     document = Nokogiri::HTML(response.body)
     expect(document.at_css("turbo-frame#booking_action_sheet dialog#booking-guest-sheet")).to be_present
     expect(document.at_css("input[name='guest[name]'][autofocus]")).to be_present
-    expect(document.css("[data-controller~='panels-ui--combobox']").size).to eq(1)
-    expect(document.css("[data-controller~='panels-ui--select-menu']").size).to eq(3)
+    # Nationality and address country are comboboxes; gender, document type,
+    # apply-to and the Malaysian state code list are select menus.
+    expect(document.css("[data-controller~='panels-ui--combobox']").size).to eq(2)
+    expect(document.css("[data-controller~='panels-ui--select-menu']").size).to eq(4)
     expect(document.at_css("#guest_apply_to-select-menu[data-disabled='true']")).to be_present
     expect(document.at_css("[data-controller~='panels-ui--date-picker'] input[name='guest[date_of_birth]']")).to be_present
     country_options = document.css("select[name='guest[country]'] option").map { |option| [ option.text, option["value"] ] }

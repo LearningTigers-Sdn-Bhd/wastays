@@ -16,7 +16,7 @@ module Admin
         redirect_to admin_webhook_endpoints_path, notice: "Webhook endpoint created successfully."
       else
         load_index
-        render :index, status: :unprocessable_entity
+        render :index, status: :unprocessable_content
       end
     end
 
@@ -25,7 +25,7 @@ module Admin
         redirect_to admin_webhook_endpoints_path, notice: "Webhook endpoint updated successfully."
       else
         load_index
-        render :index, status: :unprocessable_entity
+        render :index, status: :unprocessable_content
       end
     end
 

@@ -211,53 +211,6 @@ run_step() {
   printf "${BOLD}${CYAN}└──────────────────────────────────────────────${RESET}\n\n"
 }
 
-run_optional_step() {
-  local icon="$1"
-  local label="$2"
-  local command="$3"
-  local warning_message="$4"
-
-  CURRENT_STEP_LABEL="$label"
-  CURRENT_STEP_ICON="$icon"
-  local output_file
-  output_file=$(mktemp)
-  TMP_FILES+=("$output_file")
-  CURRENT_STEP_OUTPUT="$output_file"
-
-  print_section "$icon" "$label"
-
-  if (( INTERACTIVE )); then
-    bash -c "$command" >"$output_file" 2>&1 &
-    local pid=$!
-    show_animation "$pid" "$label" "$icon"
-    if wait "$pid"; then
-      play_finish_animation "$label" "$icon"
-      printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
-      print_step_output "$output_file"
-      record_result "pass" "$icon" "$label"
-    else
-      printf "${BOLD}${YELLOW}│ ⚠ %s warning${RESET}\n" "$label"
-      print_step_output "$output_file"
-      printf "│ ${YELLOW}%s${RESET}\n" "$warning_message"
-      record_result "warn" "$icon" "$label"
-    fi
-  else
-    if bash -c "$command" >"$output_file" 2>&1; then
-      play_finish_animation "$label" "$icon"
-      printf "${BOLD}${GREEN}│ ✓ %s complete${RESET}\n" "$label"
-      print_step_output "$output_file"
-      record_result "pass" "$icon" "$label"
-    else
-      printf "${BOLD}${YELLOW}│ ⚠ %s warning${RESET}\n" "$label"
-      print_step_output "$output_file"
-      printf "│ ${YELLOW}%s${RESET}\n" "$warning_message"
-      record_result "warn" "$icon" "$label"
-    fi
-  fi
-
-  printf "${BOLD}${CYAN}└──────────────────────────────────────────────${RESET}\n\n"
-}
-
 print_summary() {
   local passes=0
   local warns=0
@@ -315,7 +268,7 @@ run_step "🧹" "Rails Cache Clear" "bin/rails tmp:cache:clear"
 run_step "🔍" "RuboCop" "bin/rubocop"
 run_step "🔰" "Brakeman" "bin/brakeman --no-pager"
 run_step "💎" "Bundle Audit" "bundle exec bundle-audit update && bundle exec bundle-audit check"
-run_optional_step "📦" "Importmap Audit" "bin/importmap audit" "Importmap audit failed; continuing because this can be caused by network or SSL issues."
+run_step "📦" "Importmap Audit" "bin/importmap-audit"
 run_step "🎨" "Tailwind Build" "bin/rails tailwindcss:build"
 run_step "🗄️" "Parallel DB Setup" "bundle exec rake parallel:prepare"
 

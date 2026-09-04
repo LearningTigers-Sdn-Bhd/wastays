@@ -20,15 +20,15 @@ module Reports
         builder = Exports::PdfReportBuilder.new(
           hotel: @hotel,
           title: "Group Accounts Receivable Statement",
-          subtitle: @group_booking.formatted_reservation_number.to_s,
           period_label: nil,
           prepared_by: @printed_by,
-          metadata: metadata(generated_at),
+          metadata: [],
           generated_at: generated_at,
           page_layout: :landscape,
           confidential: false
         )
         builder.add_header
+        builder.add_party_blocks(party_blocks(generated_at))
         add_invoices(builder)
         builder.render
       end
@@ -58,13 +58,33 @@ module Reports
         @account = @invoices.first.corporate_account
       end
 
-      def metadata(generated_at)
+      def party_blocks(generated_at)
+        address = CorporateAccounts::BillingAddressPresenter.new(@hotel_corporate_account)
         [
-          [ "Corporate account", @account.name ],
-          [ "Currency", @currency ],
-          [ "Invoices", @invoices.size.to_s ],
-          [ "Generated", Exports::PdfTheme.format_time(generated_at, @hotel.hotel_time_zone) ],
-          [ "Prepared by", @printed_by ]
+          {
+            heading: "Corporate account",
+            entries: [
+              [ "Name", @account.name ],
+              [ "Billing address", address.display.presence || "Not provided" ],
+              [ "Contact email", @hotel_corporate_account.effective_contact_email.presence || "-" ],
+              [ "Contact phone", @hotel_corporate_account.contact_phone.presence || "-" ]
+            ]
+          },
+          {
+            heading: "Group details",
+            entries: [
+              [ "Booking", @group_booking.formatted_reservation_number.to_s ],
+              [ "Invoices", @invoices.size.to_s ]
+            ]
+          },
+          {
+            heading: "Statement details",
+            entries: [
+              [ "Currency", @currency ],
+              [ "Generated", Exports::PdfTheme.format_time(generated_at, @hotel.hotel_time_zone) ],
+              [ "Prepared by", @printed_by ]
+            ]
+          }
         ]
       end
 

@@ -1,4 +1,5 @@
 <div data-controller="panels-ui--sheet-frame">
+  <% billing_address = CorporateAccounts::BillingAddressPresenter.new(@relationship) %>
   <%= render PanelsUI::Sheet.new(
     id: "external-account-sheet",
     side: :right,
@@ -58,6 +59,45 @@
             <%= render PanelsUI::FormField.new(form: form, attribute: :sst_registration_number, label: "SST registration number") do |field| %>
               <% field.with_input(autocomplete: "off") %>
             <% end %>
+          </section>
+
+          <section class="space-y-4">
+            <div>
+              <h3 class="text-sm font-semibold text-foreground">Billing address</h3>
+              <p class="mt-1 text-xs text-muted-foreground">The address shown on this account's invoices and statements.</p>
+            </div>
+
+            <% unless billing_address.complete? %>
+              <%= render PanelsUI::Alert.new(tone: :warning, title: billing_address.status_label, role: :status) do |alert| %>
+                <% alert.with_description do %>Direct-bill invoices remain available, but the billing address will show as incomplete.<% end %>
+              <% end %>
+            <% end %>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form:, attribute: :billing_address_line1, label: "Address line 1", class: "sm:col-span-2") do |field| %>
+                <% field.with_input(autocomplete: "address-line1") %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form:, attribute: :billing_address_line2, label: "Address line 2", class: "sm:col-span-2") do |field| %>
+                <% field.with_input(autocomplete: "address-line2") %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form:, attribute: :billing_city, label: "City") do |field| %>
+                <% field.with_input(autocomplete: "address-level2") %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form:, attribute: :billing_state, label: "State") do |field| %>
+                <% field.with_input(autocomplete: "address-level1") %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form:, attribute: :billing_postal_code, label: "Postal code") do |field| %>
+                <% field.with_input(autocomplete: "postal-code") %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form:, attribute: :billing_country, label: "Country") do |field| %>
+                <% field.with_combobox(
+                     country_options.map { |country| [ country, country ] },
+                     prompt: "Search and select a country",
+                     selected: @relationship.billing_country,
+                     max_options: 50,
+                     empty_text: "No countries found") %>
+              <% end %>
+            </div>
           </section>
 
           <%= render "hotel_portal/corporate_accounts/billing_terms_fields",

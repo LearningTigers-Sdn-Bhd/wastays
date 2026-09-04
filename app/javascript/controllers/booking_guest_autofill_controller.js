@@ -4,7 +4,8 @@ export default class extends Controller {
   static targets = [
     "nameField", "emailField", "phoneField", "dateOfBirthField", "genderField", "countryField",
     "existingGuestId", "profileRow", "linkedName", "linkedDescription", "blacklistWarning", "updateSwitch",
-    "addressField", "addressInput", "addressToggle"
+    "addressField", "addressInput", "cityField", "stateField", "postalCodeField",
+    "addressCountryField", "addressToggle"
   ]
 
   selectGuest(event) {
@@ -23,6 +24,14 @@ export default class extends Controller {
       this.addressInputTarget.dispatchEvent(new Event("input", { bubbles: true }))
       this.showAddress()
     }
+    if (this.hasCityFieldTarget) this.setControl(this.cityFieldTarget, guest.city)
+    // The country goes in first. It decides whether the state field is the
+    // Malaysian code list or a free text box, so the state must be written
+    // after the right control is on screen.
+    if (this.hasAddressCountryFieldTarget) this.setControl(this.addressCountryFieldTarget, guest.address_country)
+    if (this.hasStateFieldTarget) this.setControl(this.stateFieldTarget, guest.state_code)
+    if (this.hasPostalCodeFieldTarget) this.setControl(this.postalCodeFieldTarget, guest.postal_code)
+    if (guest.city || guest.state_code || guest.postal_code || guest.address_country) this.showAddress()
 
     this.existingGuestIdTarget.value = result.value
     this.linkedNameTarget.textContent = guest.name || result.label || "Existing guest"
@@ -42,7 +51,11 @@ export default class extends Controller {
   }
 
   setControl(container, value) {
-    const control = container.querySelector("input, select")
+    // A container may hold two controls for one field — the state is a code
+    // list or a text box depending on the country. Only one is ever enabled,
+    // so fill that one.
+    const control = container.querySelector("input:not([disabled]), select:not([disabled])") ||
+      container.querySelector("input, select")
     if (!control) return
 
     control.value = value || ""

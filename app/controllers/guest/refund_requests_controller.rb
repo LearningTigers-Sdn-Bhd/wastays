@@ -71,7 +71,7 @@ class Guest::RefundRequestsController < Guest::BaseController
     else
       @presenter = RefundRequestPresenter.new(@refund_request)
       flash.now[:alert] = result.error
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 

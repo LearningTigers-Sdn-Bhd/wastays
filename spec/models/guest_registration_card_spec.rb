@@ -128,6 +128,17 @@ RSpec.describe GuestRegistrationCard, type: :model do
       expect(card.field_visible?(:phone)).to be(false)
     end
 
+    it "treats the nationality as an optional field" do
+      hotel = create(:hotel, guest_registration_card_fields: %w[email nationality])
+      card = build(:guest_registration_card, hotel: hotel, booking: build(:booking, hotel: hotel))
+
+      expect(card.field_visible?(:nationality)).to be(true)
+
+      hotel.guest_registration_card_fields = %w[email]
+
+      expect(card.field_visible?(:nationality)).to be(false)
+    end
+
     it "uses its saved snapshot after signing" do
       hotel = create(:hotel, guest_registration_card_fields: %w[email room_type])
       card = build(:guest_registration_card, :signed, hotel: hotel, booking: build(:booking, hotel: hotel), display_fields_snapshot: %w[phone unknown])

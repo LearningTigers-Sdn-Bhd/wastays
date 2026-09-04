@@ -68,7 +68,7 @@ module Admin
         bucket_name = AppConfig.get("r2_bucket")
 
         if bucket_name.blank?
-          render json: { success: false, message: "Bucket name is missing." }, status: :unprocessable_entity
+          render json: { success: false, message: "Bucket name is missing." }, status: :unprocessable_content
           return
         end
 

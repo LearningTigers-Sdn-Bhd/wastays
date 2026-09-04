@@ -6,7 +6,11 @@ RSpec.describe ChannelManagers::IngestBookingService do
   let(:booking_data) do
     {
       hotel: hotel,
-      guest_details: { name: "John Doe", email: "john@example.com", phone: "123", country: "US" },
+      guest_details: {
+        name: "John Doe", email: "john@example.com", phone: "123", country: "US",
+        address: "8 Market Street", city: "San Francisco", state_code: "17",
+        postal_code: "94105", address_country: "United States"
+      },
       check_in: Date.tomorrow,
       check_out: Date.tomorrow + 2.days,
       status: "confirmed",
@@ -41,6 +45,20 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(result.booking.guest_name).to eq("John Doe")
     expect(result.booking.fund_collector).to eq("unknown")
     expect(result.booking.primary_guest).to have_attributes(name: "John Doe", email: "john@example.com")
+    expect(result.booking).to have_attributes(
+      guest_home_address: "8 Market Street",
+      guest_city: "San Francisco",
+      guest_state_code: "17",
+      guest_postal_code: "94105",
+      guest_address_country: "United States"
+    )
+    expect(result.booking.booking_guests.find(&:primary?)).to have_attributes(
+      home_address_snapshot: "8 Market Street",
+      city_snapshot: "San Francisco",
+      state_code_snapshot: "17",
+      postal_code_snapshot: "94105",
+      address_country_snapshot: "United States"
+    )
     expect(result.booking.primary_guest.metadata).to include(
       "profile_source" => "channel_manager",
       "profile_incomplete" => true

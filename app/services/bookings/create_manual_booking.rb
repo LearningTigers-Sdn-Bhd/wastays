@@ -290,6 +290,9 @@ module Bookings
         guest_email: booking.guest_email.presence || guest.email,
         guest_phone: booking.guest_phone.presence || guest.phone,
         guest_city: booking.guest_city.presence || guest.city,
+        guest_state_code: booking.guest_state_code.presence || guest.state_code,
+        guest_postal_code: booking.guest_postal_code.presence || guest.postal_code,
+        guest_address_country: booking.guest_address_country.presence || guest.address_country,
         guest_country: booking.guest_country.presence || guest.country,
         guest_gender: booking.guest_gender.presence || guest.gender,
         guest_document_type: booking.guest_document_type.presence || guest.document_type,
@@ -313,7 +316,8 @@ module Bookings
       end
 
       if guest && !booking.booking_guests.exists?(guest: guest)
-        booking.booking_guests.create!(guest: guest, is_primary: true)
+        booking_guest = booking.booking_guests.create!(guest: guest, is_primary: true)
+        BookingGuests::CapturePrimaryStay.call(booking_guest: booking_guest)
       end
     end
 
@@ -368,6 +372,9 @@ module Bookings
         email: booking.guest_email,
         phone: booking.guest_phone,
         city: booking.guest_city,
+        state_code: booking.guest_state_code,
+        postal_code: booking.guest_postal_code,
+        address_country: booking.guest_address_country,
         country: booking.guest_country.presence || @hotel.country,
         gender: booking.guest_gender,
         document_type: booking.guest_document_type,
@@ -384,6 +391,13 @@ module Bookings
       updates[:email] = booking.guest_email if booking.guest_email.present? && guest.email != booking.guest_email
       updates[:phone] = booking.guest_phone if booking.guest_phone.present? && guest.phone != booking.guest_phone
       updates[:city] = booking.guest_city if booking.guest_city.present? && guest.city != booking.guest_city
+      updates[:state_code] = booking.guest_state_code if booking.guest_state_code.present? && guest.state_code != booking.guest_state_code
+      if booking.guest_postal_code.present? && guest.postal_code != booking.guest_postal_code
+        updates[:postal_code] = booking.guest_postal_code
+      end
+      if booking.guest_address_country.present? && guest.address_country != booking.guest_address_country
+        updates[:address_country] = booking.guest_address_country
+      end
       updates[:country] = booking.guest_country if booking.guest_country.present? && guest.country != booking.guest_country
       updates[:gender] = booking.guest_gender if booking.guest_gender.present? && guest.gender != booking.guest_gender
       if booking.guest_date_of_birth.present? && guest.date_of_birth != booking.guest_date_of_birth
