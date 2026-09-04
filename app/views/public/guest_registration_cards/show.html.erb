@@ -34,7 +34,9 @@
           <% if @card.field_visible?(:address) %>
             <div class="md:col-span-2"><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Address</dt><dd class="whitespace-pre-line font-semibold text-foreground"><%= @presenter.guest_address_display %></dd></div>
           <% end %>
-          <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Nationality</dt><dd class="font-semibold text-foreground"><%= @presenter.guest_country_display %></dd></div>
+          <% if @card.field_visible?(:nationality) %>
+            <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Nationality</dt><dd class="font-semibold text-foreground"><%= @presenter.guest_country_display %></dd></div>
+          <% end %>
           <% if @card.field_visible?(:booking_number) %>
             <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Booking</dt><dd class="font-semibold text-foreground"><%= @booking.confirmation_token %></dd></div>
           <% end %>

@@ -63,6 +63,14 @@ RSpec.describe GuestRegistrationCardPdfService do
     expect(text).not_to include("34 Snapshot Street")
   end
 
+  it "omits the nationality when the field is disabled" do
+    hotel.update!(guest_registration_card_fields: %w[phone email])
+
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).not_to include("Nationality")
+  end
+
   it "renders the hotel's fixed terms and conditions when configured" do
     hotel.update!(guest_registration_card_terms: "Valid photo ID is required at check-in.")
 
