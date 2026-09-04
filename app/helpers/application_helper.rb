@@ -166,8 +166,8 @@ module ApplicationHelper
     date.to_s
   end
 
-  def format_currency(amount, currency:, symbol: true)
-    CurrencyFormatter.format(amount, currency: currency, symbol: symbol)
+  def format_currency(amount, currency:, unit: :symbol)
+    CurrencyFormatter.format(amount, currency: currency, unit: unit)
   end
 
   def format_number(number, precision: nil)

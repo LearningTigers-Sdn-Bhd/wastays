@@ -1,4 +1,4 @@
 <div class="space-y-4">
-  <%= render "record_header", guest: @guest, presenter: @presenter, active_tab: "booking_history", stays_count: @stays_count %>
-  <%= render "booking_history", presenter: @presenter, bookings: @bookings, currency_totals: @currency_totals %>
+  <%= render "record_header", guest: @guest, presenter: @presenter %>
+  <%= render "booking_history", guest: @guest, presenter: @presenter, stays_count: @stays_count, bookings: @bookings, currency_totals: @currency_totals %>
 </div>

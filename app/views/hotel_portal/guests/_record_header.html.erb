@@ -3,7 +3,7 @@
 <% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
 <% can_delete = current_user.has_permission?("delete_guest_record", hotel: current_hotel) %>
 
-<header class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+<header class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between" data-testid="guest-record-header">
   <div class="flex min-w-0 items-start gap-3">
     <%= link_to hotel_guests_path(current_hotel),
           class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -28,12 +28,6 @@
       <p class="text-xs text-muted-foreground">
         <%= [ presenter.email, presenter.phone, presenter.formatted_country ].compact_blank.join(" · ") %>
       </p>
-
-      <% if (detail = guest.blacklist_detail(current_hotel)).present? %>
-        <p class="text-xs text-muted-foreground">
-          Blacklisted by <span class="font-medium text-foreground"><%= detail["blacklisted_by_name"] %></span><% if detail["reason"].present? %> · <%= detail["reason"] %><% end %>
-        </p>
-      <% end %>
     </div>
   </div>
 
@@ -137,23 +131,3 @@
     <% end %>
   <% end %>
 <% end %>
-
-<div class="border-b border-border">
-  <%= render PanelsUI::Tabs.new(
-        id: "guest-record-tabs",
-        active: active_tab,
-        variant: :line,
-        aria_label: "Guest record tabs") do |tabs| %>
-    <% tabs.with_tab(
-         name: "details",
-         label: "Details",
-         href: details_hotel_guest_path(current_hotel, guest),
-         data: { turbo_frame: "guest_record", turbo_action: "advance" }) %>
-    <% tabs.with_tab(
-         name: "booking_history",
-         label: "Booking History",
-         count: stays_count,
-         href: booking_history_hotel_guest_path(current_hotel, guest),
-         data: { turbo_frame: "guest_record", turbo_action: "advance" }) %>
-  <% end %>
-</div>

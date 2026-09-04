@@ -31,11 +31,11 @@ module Guests
     end
 
     def formatted_total_amount
-      CurrencyFormatter.format(total_amount, currency: currency)
+      CurrencyFormatter.format(total_amount, currency: currency, unit: :code)
     end
 
     def formatted_tourism_tax_amount
-      "Tax #{CurrencyFormatter.format(tourism_tax_amount, currency: currency)}"
+      "Tax #{CurrencyFormatter.format(tourism_tax_amount, currency: currency, unit: :code)}"
     end
 
     def created_at_time_formatted

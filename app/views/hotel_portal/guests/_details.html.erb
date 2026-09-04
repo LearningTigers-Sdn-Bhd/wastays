@@ -1,16 +1,22 @@
 <%= turbo_frame_tag "guest_record" do %>
-  <div class="space-y-6 pt-5">
-    <section class="space-y-3" aria-labelledby="guest-identity-heading">
-      <h2 id="guest-identity-heading" class="text-base font-semibold text-foreground">Identity</h2>
+  <%= render "tabs", guest: guest, active_tab: "details", stays_count: stays_count %>
 
-      <dl class="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+  <% address = PostalAddresses::Presenter.from_guest(guest) %>
+  <% is_vip = guest.vip?(hotel: current_hotel) %>
+  <% is_blacklisted = guest.blacklisted_at?(current_hotel) %>
+
+  <div class="grid gap-6 pt-5 lg:grid-cols-3">
+    <section class="space-y-3" aria-labelledby="guest-identity-heading">
+      <h2 id="guest-identity-heading" class="text-base font-semibold text-foreground">Guest identity</h2>
+
+      <dl class="space-y-3">
         <div>
           <dt class="text-xs text-muted-foreground">Email</dt>
-          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.email %></dd>
+          <dd class="mt-0.5 break-words text-sm text-foreground"><%= presenter.email %></dd>
         </div>
         <div>
           <dt class="text-xs text-muted-foreground">Phone</dt>
-          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.phone %></dd>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.phone %></dd>
         </div>
         <div>
           <dt class="text-xs text-muted-foreground">Gender</dt>
@@ -25,24 +31,37 @@
           <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_country %></dd>
         </div>
         <div>
-          <dt class="text-xs text-muted-foreground">Document type</dt>
-          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_document_type %></dd>
-        </div>
-        <div>
-          <dt class="text-xs text-muted-foreground">ID or passport</dt>
+          <dt class="text-xs text-muted-foreground"><%= presenter.formatted_document_type %></dt>
           <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.government_id %></dd>
         </div>
-        <div class="sm:col-span-2">
-          <dt class="text-xs text-muted-foreground">Address</dt>
-          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.home_address %></dd>
-        </div>
       </dl>
+    </section>
+
+    <section class="space-y-3" aria-labelledby="guest-address-heading">
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 id="guest-address-heading" class="text-base font-semibold text-foreground">Guest address</h2>
+        <% if address.missing? %>
+          <%= render PanelsUI::Badge.new(label: address.status_label, variant: :neutral, size: :sm) %>
+        <% elsif address.incomplete? %>
+          <%= render PanelsUI::Badge.new(label: address.status_label, variant: :warning, size: :sm) %>
+        <% end %>
+      </div>
+
+      <% if address.missing? %>
+        <p class="text-sm text-muted-foreground">No address on record.</p>
+      <% else %>
+        <address class="text-sm not-italic text-foreground">
+          <% address.lines.each do |line| %>
+            <span class="block"><%= line %></span>
+          <% end %>
+        </address>
+      <% end %>
     </section>
 
     <section class="space-y-3" aria-labelledby="guest-stay-summary-heading">
       <h2 id="guest-stay-summary-heading" class="text-base font-semibold text-foreground">Stay summary</h2>
 
-      <dl class="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+      <dl class="space-y-3">
         <div>
           <dt class="text-xs text-muted-foreground">Total stays</dt>
           <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= stays_count %></dd>
@@ -51,11 +70,36 @@
           <dt class="text-xs text-muted-foreground">Last stay</dt>
           <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.last_stay_checkout_date(last_checkout_on) %></dd>
         </div>
-      </dl>
+        <div>
+          <dt class="text-xs text-muted-foreground">Status at <%= current_hotel.name %></dt>
+          <dd class="mt-1 flex flex-wrap gap-1.5">
+            <% if is_vip %>
+              <%= render PanelsUI::Badge.new(label: "VIP", variant: :warning, size: :sm) %>
+            <% end %>
+            <% if is_blacklisted %>
+              <%= render PanelsUI::Badge.new(label: "Blacklisted", variant: :destructive, size: :sm) %>
+            <% end %>
+            <% if guest.repeat? %>
+              <%= render PanelsUI::Badge.new(label: "Repeat", variant: :info, size: :sm) %>
+            <% end %>
+            <% unless is_vip || is_blacklisted || guest.repeat? %>
+              <span class="text-sm text-muted-foreground">No status set.</span>
+            <% end %>
+          </dd>
+        </div>
 
-      <p class="text-xs text-muted-foreground">
-        Open Booking History for the full list of stays, amounts and pre-check-in status.
-      </p>
+        <% if (detail = guest.blacklist_detail(current_hotel)).present? %>
+          <div>
+            <dt class="text-xs text-muted-foreground">Blacklist reason</dt>
+            <dd class="mt-0.5 text-sm text-foreground">
+              <%= detail["reason"].presence || "—" %>
+              <span class="mt-0.5 block text-xs text-muted-foreground">
+                Set by <%= detail["blacklisted_by_name"] %>
+              </span>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
     </section>
   </div>
 <% end %>

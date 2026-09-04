@@ -86,7 +86,8 @@ module HotelPortal
       return unless turbo_frame_request?
 
       render partial: "details",
-             locals: { presenter: @presenter, stays_count: @stays_count, last_checkout_on: @last_checkout_on }
+             locals: { guest: @guest, presenter: @presenter, stays_count: @stays_count,
+                       last_checkout_on: @last_checkout_on }
     end
 
     def booking_history
@@ -99,7 +100,8 @@ module HotelPortal
       return unless turbo_frame_request?
 
       render partial: "booking_history",
-             locals: { presenter: @presenter, bookings: @bookings, currency_totals: @currency_totals }
+             locals: { guest: @guest, presenter: @presenter, stays_count: @stays_count,
+                       bookings: @bookings, currency_totals: @currency_totals }
     end
 
     def new

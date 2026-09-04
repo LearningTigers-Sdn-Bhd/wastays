@@ -526,7 +526,7 @@ module HotelPortal
     end
 
     def formatted_total_amount_dashboard
-      "RM #{view_context.number_with_precision(booking.total_amount, precision: 2, delimiter: ",")}"
+      CurrencyFormatter.format(booking.total_amount, currency: currency, unit: :code)
     end
 
     def self.status_pill_style(status)
@@ -586,7 +586,7 @@ module HotelPortal
     end
 
     def formatted_currency_total
-      "#{currency} #{view_context.number_with_precision(booking.total_amount, precision: 2, delimiter: ",")}"
+      CurrencyFormatter.format(booking.total_amount, currency: currency, unit: :code)
     end
 
     def guest_email_display
@@ -615,7 +615,7 @@ module HotelPortal
     end
 
     def format_currency(amount)
-      "#{currency} #{view_context.number_with_precision(amount, precision: 2, delimiter: ",")}"
+      CurrencyFormatter.format(amount, currency: currency, unit: :code)
     end
 
     def view_context

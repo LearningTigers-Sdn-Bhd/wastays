@@ -49,25 +49,25 @@ RSpec.describe Guests::BookingPresenter do
 
   describe "#formatted_total_amount" do
     it "returns formatted currency and amount" do
-      expect(presenter.formatted_total_amount).to eq("RM 300.00")
+      expect(presenter.formatted_total_amount).to eq("MYR 300.00")
     end
 
     it "labels a currency the property does not trade in every day" do
       booking.currency = "SGD"
 
-      expect(presenter.formatted_total_amount).to eq("S$ 300.00")
+      expect(presenter.formatted_total_amount).to eq("SGD 300.00")
     end
 
     it "drops the decimals on a zero-decimal currency" do
       booking.currency = "JPY"
 
-      expect(presenter.formatted_total_amount).to eq("¥ 300")
+      expect(presenter.formatted_total_amount).to eq("JPY 300")
     end
   end
 
   describe "#formatted_tourism_tax_amount" do
     it "returns formatted tax amount" do
-      expect(presenter.formatted_tourism_tax_amount).to eq("Tax RM 20.00")
+      expect(presenter.formatted_tourism_tax_amount).to eq("Tax MYR 20.00")
     end
   end
 

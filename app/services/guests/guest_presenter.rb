@@ -85,7 +85,7 @@ module Guests
   end
 
   def formatted_currency_amount(amount, currency)
-    CurrencyFormatter.format(amount, currency: currency)
+    CurrencyFormatter.format(amount, currency: currency, unit: :code)
   end
 
   def formatted_stays_count(count)
@@ -95,7 +95,7 @@ module Guests
   def formatted_currency_totals(totals)
     return [] if totals.blank?
 
-    totals.map { |currency, amount| CurrencyFormatter.format(amount, currency: currency) }
+    totals.map { |currency, amount| CurrencyFormatter.format(amount, currency: currency, unit: :code) }
   end
 
   def email_display

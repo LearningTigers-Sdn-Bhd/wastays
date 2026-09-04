@@ -1,0 +1,19 @@
+<div class="border-b border-border">
+  <%= render PanelsUI::Tabs.new(
+        id: "guest-record-tabs",
+        active: active_tab,
+        variant: :line,
+        aria_label: "Guest record tabs") do |tabs| %>
+    <% tabs.with_tab(
+         name: "details",
+         label: "Details",
+         href: details_hotel_guest_path(current_hotel, guest),
+         data: { turbo_frame: "guest_record", turbo_action: "advance" }) %>
+    <% tabs.with_tab(
+         name: "booking_history",
+         label: "Booking History",
+         count: stays_count,
+         href: booking_history_hotel_guest_path(current_hotel, guest),
+         data: { turbo_frame: "guest_record", turbo_action: "advance" }) %>
+  <% end %>
+</div>

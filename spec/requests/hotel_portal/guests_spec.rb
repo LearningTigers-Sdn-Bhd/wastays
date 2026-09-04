@@ -83,9 +83,9 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       get hotel_guests_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(CGI.unescapeHTML(response.body)).to include("RM 300.00")
-      expect(CGI.unescapeHTML(response.body)).not_to include("RM 500.00")
-      expect(CGI.unescapeHTML(response.body)).not_to include("RM 200.00")
+      expect(CGI.unescapeHTML(response.body)).to include("MYR 300.00")
+      expect(CGI.unescapeHTML(response.body)).not_to include("MYR 500.00")
+      expect(CGI.unescapeHTML(response.body)).not_to include("MYR 200.00")
     end
 
     it "filters guests by search query and country" do
@@ -325,6 +325,9 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include(hotel.name[0...10])
       expect(body_text).to include("Guest Records")
       expect(body_text).to include("Ravi Menon")
+      expect(body_text).to include("Guest identity")
+      expect(body_text).to include("Guest address")
+      expect(body_text).to include("Stay summary")
       expect(body_text.downcase).to include("india")
       expect(body_text).to include("No. 12, Jalan Ampang")
 
@@ -337,8 +340,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Booking History")
       expect(body_text).to include("Confirmation")
       expect(body_text).to include("Pre-check-in")
-      expect(body_text).to include("RM")
-      expect(body_text).to include("$")
+      expect(body_text).to include("MYR")
+      expect(body_text).to include("USD")
     end
 
     it "only totals checked in and completed bookings" do
@@ -366,8 +369,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       body_text = CGI.unescapeHTML(response.body)
 
       expect(response).to have_http_status(:success)
-      expect(body_text).to include("RM 300.00")
-      expect(body_text).to include("$ 100.00")
+      expect(body_text).to include("MYR 300.00")
+      expect(body_text).to include("USD 100.00")
     end
 
     it "keeps confirmed and cancelled bookings visible in the history" do
@@ -427,7 +430,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       get booking_history_hotel_guest_path(hotel, guest)
 
       expect(response).to have_http_status(:success)
-      expect(CGI.unescapeHTML(response.body)).to include("RM 300.00")
+      expect(CGI.unescapeHTML(response.body)).to include("MYR 300.00")
     end
   end
 
@@ -458,15 +461,47 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).not_to include("Mark as VIP")
     end
 
-    it "returns only the tab body to a turbo frame request" do
+    # The badges are the at-a-glance marker beside the name. The Stay summary
+    # section carries the same state with its detail; both are wanted.
+    it "shows the status badges in the header and again in the stay summary" do
+      Guests::SetVip.new(guests: guest, hotel: hotel, vip: true).call
+      Guests::SetBlacklist.new(guests: guest, hotel: hotel, blacklisted: true, actor: user, reason: "Damaged the room").call
+
+      get details_hotel_guest_path(hotel, guest)
+
+      body_text = CGI.unescapeHTML(response.body)
+      header = body_text[/<header[^>]*data-testid="guest-record-header"[\s\S]*?<\/header>/]
+      expect(header).to include("VIP")
+      expect(header).to include("Blacklisted")
+
+      expect(body_text).to include("Status at #{hotel.name}")
+      expect(body_text).to include("Blacklist reason")
+      expect(body_text).to include("Damaged the room")
+    end
+
+    it "returns the tab strip and body, without the page shell, to a frame request" do
       get details_hotel_guest_path(hotel, guest), headers: { "Turbo-Frame" => "guest_record" }
 
       expect(response).to have_http_status(:success)
       body_text = CGI.unescapeHTML(response.body)
       expect(body_text).to include("guest_record")
-      expect(body_text).to include("Identity")
-      expect(body_text).not_to include("guest-record-tabs")
+      expect(body_text).to include("Guest identity")
       expect(body_text).not_to include("<!DOCTYPE html>")
+      expect(body_text).not_to include("guest-record-actions")
+    end
+
+    # The tab strip has to travel inside the frame. Left outside it, the
+    # highlight stays on whichever tab the reader arrived on.
+    it "marks the tab it returns as the current one" do
+      get details_hotel_guest_path(hotel, guest), headers: { "Turbo-Frame" => "guest_record" }
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to match(/id="guest-record-tabs-tab-details"[^>]*aria-current="page"/)
+      expect(body_text).not_to match(/id="guest-record-tabs-tab-booking_history"[^>]*aria-current="page"/)
+
+      get booking_history_hotel_guest_path(hotel, guest), headers: { "Turbo-Frame" => "guest_record" }
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to match(/id="guest-record-tabs-tab-booking_history"[^>]*aria-current="page"/)
+      expect(body_text).not_to match(/id="guest-record-tabs-tab-details"[^>]*aria-current="page"/)
     end
   end
 

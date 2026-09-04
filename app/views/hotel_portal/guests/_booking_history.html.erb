@@ -1,4 +1,6 @@
 <%= turbo_frame_tag "guest_record" do %>
+  <%= render "tabs", guest: guest, active_tab: "booking_history", stays_count: stays_count %>
+
   <div class="space-y-6 pt-5">
     <section class="space-y-3" aria-labelledby="guest-stays-heading">
       <h2 id="guest-stays-heading" class="text-base font-semibold text-foreground">Stays</h2>
