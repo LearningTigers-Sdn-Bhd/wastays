@@ -11,7 +11,7 @@ export default class extends Controller {
   toggleUploads(immediate = false) {
     const docType = this.selectTarget.value
 
-    if (docType === "ic") {
+    if (["ic", "malaysian_nric", "national_id"].includes(docType)) {
       this.showSection(this.uploadSectionTarget, immediate)
       this.showElement(this.frontContainerTarget, immediate)
       this.showElement(this.backContainerTarget, immediate)

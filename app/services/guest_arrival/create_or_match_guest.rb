@@ -7,6 +7,7 @@ module GuestArrival
       @email = params[:email]&.downcase&.strip
       @phone = params[:phone]&.strip
       @government_id = params[:government_id]&.downcase&.strip
+      @passport_number = params[:passport_number]&.downcase&.strip
       @gender = params[:gender]&.downcase&.strip
       @city = params[:city]&.strip
       @state_code = params[:state_code].presence
@@ -15,7 +16,8 @@ module GuestArrival
       @home_address = params[:home_address]&.strip
       @tin = params[:tin]&.strip
       @country = params[:country]&.downcase&.strip
-      @document_type = params[:document_type]&.downcase&.strip
+      @document_type = GuestIdentityDocuments::NormalizeType.call(value: params[:document_type], country: @country) ||
+        params[:document_type]&.downcase&.strip
       @date_of_birth = params[:date_of_birth].presence
       @marketing_consent = params[:marketing_consent]
       @privacy_consent = params[:privacy_consent]
@@ -40,6 +42,7 @@ module GuestArrival
           updates[:gender] = @gender if @gender.present? && guest.gender != @gender
           updates[:document_type] = @document_type if @document_type.present? && guest.document_type != @document_type
           updates[:government_id] = @government_id if @government_id.present? && guest.safely_read_encrypted(:government_id) != @government_id
+          updates[:passport_number] = @passport_number if @passport_number.present? && guest.safely_read_encrypted(:passport_number) != @passport_number
           updates[:date_of_birth] = @date_of_birth if @date_of_birth.present? && guest.date_of_birth != @date_of_birth
         end
 
@@ -85,6 +88,7 @@ module GuestArrival
           email: @email,
           phone: @phone,
           government_id: @government_id,
+          passport_number: @passport_number,
           city: @city,
           state_code: @state_code,
           postal_code: @postal_code,
@@ -100,7 +104,11 @@ module GuestArrival
         )
       end
 
-      OpenStruct.new(success?: true, guest: guest, is_repeat?: guest.bookings.revenue_generating.exists?)
+      OpenStruct.new(
+        success?: true,
+        guest: guest,
+        is_repeat?: guest.bookings.revenue_generating.exists?
+      )
     end
 
     private
@@ -108,7 +116,12 @@ module GuestArrival
     def find_existing_guest
       # 1. Match by government ID if provided
       if @government_id.present?
-        guest = Guest.find_by(government_id: @government_id)
+        guest = guest_for_document_number(@government_id)
+        return guest if guest
+      end
+
+      if @passport_number.present?
+        guest = guest_for_document_number(@passport_number)
         return guest if guest
       end
 
@@ -125,6 +138,10 @@ module GuestArrival
       end
 
       nil
+    end
+
+    def guest_for_document_number(number)
+      Guest.find_by(government_id: number) || Guest.find_by(passport_number: number)
     end
   end
 end

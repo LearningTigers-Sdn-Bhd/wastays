@@ -111,7 +111,7 @@ module HotelPortal
     end
 
     def guest_identity
-      active_booking_guest&.government_id_snapshot.presence ||
+      active_booking_guest&.safely_read_encrypted(:government_id_snapshot).presence ||
         (active_booking_guest&.primary? ? @booking.guest_government_id.presence : nil) ||
         "Not provided"
     end

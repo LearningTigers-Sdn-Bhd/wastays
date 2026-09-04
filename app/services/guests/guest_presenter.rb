@@ -55,7 +55,7 @@ module Guests
   end
 
   def formatted_document_type
-    safe_attr(:document_type)&.upcase || "ID"
+    legacy_document_label
   end
 
   def formatted_country
@@ -115,10 +115,31 @@ module Guests
   end
 
   def document_type_display
-    safe_attr(:document_type)&.upcase || "IC/PASSPORT"
+    formatted_document_type
+  end
+
+  def passport_number
+    safe_attr(:passport_number).presence || "—"
+  end
+
+  # A foreign guest with a national identity card needs a passport number
+  # before the hotel can issue an individual e-invoice.
+  def passport_status
+    return unless @guest.lhdn_passport_required?
+
+    safe_attr(:passport_number).present? ? "Passport on file" : "Passport needed"
   end
 
   private
+
+  def legacy_document_label
+    case safe_attr(:document_type)
+    when "ic", "malaysian_nric" then "MyKad"
+    when "national_id" then "National identity card"
+    when "passport" then "Passport"
+    else "Identity document"
+    end
+  end
 
   def safe_attr(attribute)
     @guest.public_send(attribute)

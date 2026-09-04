@@ -86,6 +86,7 @@ module Guests
         search_conditions = search_conditions.or(Guest.where(email: raw_query))
                                              .or(Guest.where(phone: raw_query))
                                              .or(Guest.where(government_id: raw_query))
+                                             .or(Guest.where(passport_number: raw_query))
 
         scope = scope.merge(search_conditions)
       end

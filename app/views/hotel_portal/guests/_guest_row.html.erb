@@ -44,7 +44,7 @@
 
   <td class="hidden xl:table-cell">
     <span class="block tabular-nums text-foreground"><%= presenter.government_id_display %></span>
-    <span class="mt-0.5 block text-xs text-muted-foreground"><%= presenter.formatted_document_type %></span>
+    <span class="mt-0.5 block text-xs text-muted-foreground"><%= [ presenter.formatted_document_type, presenter.passport_status ].compact.join(" · ") %></span>
   </td>
 
   <td class="hidden tabular-nums text-muted-foreground sm:table-cell"><%= stays_count %></td>

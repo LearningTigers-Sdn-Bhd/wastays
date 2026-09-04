@@ -34,6 +34,12 @@
           <dt class="text-xs text-muted-foreground"><%= presenter.formatted_document_type %></dt>
           <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.government_id %></dd>
         </div>
+        <% if guest.lhdn_passport_required? %>
+          <div>
+            <dt class="text-xs text-muted-foreground">Passport</dt>
+            <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.passport_number %></dd>
+          </div>
+        <% end %>
       </dl>
     </section>
 

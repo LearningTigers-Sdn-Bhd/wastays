@@ -18,7 +18,7 @@ export default class extends Controller {
     const docType = this.resolveDocumentType()
     if (!country || !docType) return false
 
-    return country === "malaysia" && docType === "ic"
+    return country === "malaysia" && ["ic", "malaysian_nric"].includes(docType)
   }
 
   resolveCountry() {

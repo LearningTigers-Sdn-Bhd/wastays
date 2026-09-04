@@ -43,7 +43,8 @@ class Booking < ApplicationRecord
   has_one :booking_confirmation_token, dependent: :destroy
   has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
-  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :guest_date_of_birth, :status_transition_event
+  attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :guest_date_of_birth,
+    :guest_passport_number, :status_transition_event
 
   def online?
     source.present? && source != "walk_in" && guarantee_method != "manual_at_hotel"
@@ -148,6 +149,7 @@ class Booking < ApplicationRecord
       missing << "state"
     end
     missing << "tax number" if buyer_tin_for_e_invoice.blank? && !foreign_guest?
+    missing << "passport number" if EInvoice::GuestIdentityResolver.for_booking(self).missing_passport?
     missing
   end
 
@@ -287,6 +289,17 @@ class Booking < ApplicationRecord
     @guest_government_id = value
   end
 
+  def guest_passport_number
+    @guest_passport_number.presence ||
+      pre_checkin&.metadata&.dig("guest_passport_number").presence ||
+      primary_booking_guest&.safely_read_encrypted(:passport_number_snapshot).presence ||
+      primary_guest&.safely_read_encrypted(:passport_number)
+  end
+
+  def primary_booking_guest
+    booking_guests.loaded? ? booking_guests.find(&:primary?) : booking_guests.find_by(role: "primary")
+  end
+
   STATUSES = %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required cancelled completed overbooked no_show voided].freeze
   OCCUPIED_STATUSES = %w[checked_in due_out_detected checkout_required].freeze
   # Statuses that occupy a room on the timeline (arrival/occupied/departure). Shared by the
@@ -299,7 +312,8 @@ class Booking < ApplicationRecord
   GUARANTEE_METHODS = %w[none pre_checkin_completed manual_at_hotel card_authorization_document charge_now].freeze
   DEPOSIT_STATUSES = %w[not_required pending_at_hotel authorized held collected released failed].freeze
   DOCUMENT_TYPES = [
-    [ "Identity Card (IC)", "ic" ],
+    [ "Malaysian identity card (MyKad)", "malaysian_nric" ],
+    [ "National identity card", "national_id" ],
     [ "Passport", "passport" ]
   ].freeze
 

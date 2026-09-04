@@ -25,13 +25,16 @@ module EInvoice
       country_code = country_code_for(address_country)
       state_code = resolved_state_code(country_code)
 
+      identity = EInvoice::GuestIdentityResolver.for_booking(@booking)
+      raise ArgumentError, "Enter the guest's passport number before issuing an individual e-invoice." if identity.missing_passport?
+
       {
         "name" => @booking.guest_name,
         "contact_email" => @booking.guest_email,
         "contact_phone" => @booking.guest_phone,
         "tin" => @booking.buyer_tin_for_e_invoice,
-        "government_id" => @booking.guest_government_id,
-        "document_type" => @booking.guest_document_type,
+        "government_id" => identity.document_number,
+        "document_type" => identity.document_type,
         "nationality" => @booking.guest_country,
         "billing_address" => address.merge(
           "state_code" => state_code,

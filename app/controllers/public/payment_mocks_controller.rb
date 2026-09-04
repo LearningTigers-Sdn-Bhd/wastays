@@ -38,6 +38,6 @@ class Public::PaymentMocksController < ApplicationController
   end
 
   def guest_details_params
-    params.require(:guest_details).permit(:name, :email, :phone, :government_id, :gender, :country, :document_type, :date_of_birth)
+    params.require(:guest_details).permit(:name, :email, :phone, :government_id, :passport_number, :gender, :country, :document_type, :date_of_birth)
   end
 end

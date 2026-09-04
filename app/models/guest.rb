@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Guest < ApplicationRecord
+  attr_accessor :lhdn_document_type
   belongs_to :created_by_hotel, class_name: "Hotel", optional: true
   has_many :booking_guests, dependent: :destroy
   has_many :bookings, through: :booking_guests
@@ -12,6 +13,7 @@ class Guest < ApplicationRecord
   encrypts :email, deterministic: true
   encrypts :phone, deterministic: true
   encrypts :government_id, deterministic: true
+  encrypts :passport_number, deterministic: true
 
   OTP_EXPIRY = 10.minutes
   MAGIC_LINK_EXPIRY = 24.hours
@@ -21,13 +23,13 @@ class Guest < ApplicationRecord
   validates :name, presence: true
   validates :country, presence: true
   validates :gender, inclusion: { in: %w[male female other], message: "must be male, female, or other" }, allow_blank: true
-  validates :document_type, inclusion: { in: %w[ic passport], message: "must be IC or passport" }, allow_blank: true
+  validates :document_type, inclusion: { in: %w[malaysian_nric national_id passport], message: "must be MyKad, national ID, or passport" }, allow_blank: true
   validate :date_of_birth_must_be_before_today, if: :date_of_birth?
   validate :date_of_birth_required_for_passport_guests
   validate :date_of_birth_required_for_reporting_guests
 
   GENDERS = %w[male female other].freeze
-  DOCUMENT_TYPES = %w[ic passport].freeze
+  DOCUMENT_TYPES = %w[malaysian_nric national_id passport].freeze
 
   scope :kept, -> { where(discarded_at: nil) }
   scope :discarded, -> { where.not(discarded_at: nil) }
@@ -231,6 +233,29 @@ class Guest < ApplicationRecord
     city&.split&.map(&:capitalize)&.join(" ")
   end
 
+  def identity_document_type
+    document_type
+  end
+
+  def identity_document_number
+    safely_read_encrypted(:government_id)
+  end
+
+  # LHDN accepts a MyKad or a passport only. A guest who holds a foreign
+  # national identity card must also give a passport number.
+  def lhdn_passport_required?
+    document_type == "national_id"
+  end
+
+  def identity_document_label
+    case document_type
+    when "malaysian_nric" then "MyKad"
+    when "national_id" then "National identity card"
+    when "passport" then "Passport"
+    else "Identity document"
+    end
+  end
+
   # Guards against ActiveRecord::Encryption::Errors::Decryption for guest
   # records whose encrypted attributes were written under a since-rotated or
   # mismatched encryption key. Callers get nil instead of a raised error, so a
@@ -248,10 +273,13 @@ class Guest < ApplicationRecord
   def normalize_guest_data
     self.email = email&.downcase&.strip
     self.government_id = government_id&.downcase&.strip
+    self.passport_number = passport_number&.downcase&.strip
     self.gender = gender&.downcase
-    self.document_type = document_type&.downcase
+    normalized_document_type = GuestIdentityDocuments::NormalizeType.call(value: document_type, country: country)
+    self.document_type = normalized_document_type || document_type&.downcase
     self.city = normalized_city
     self.country = normalized_country
+    self.passport_issuing_country_code = passport_number.present? ? GuestIdentityDocuments::NormalizeType.country_code(country) : nil
   end
 
   def populate_date_of_birth_from_malaysian_ic
@@ -288,7 +316,7 @@ class Guest < ApplicationRecord
   end
 
   def malaysian_ic_guest?
-    country == "Malaysia" && document_type == "ic"
+    country == "Malaysia" && document_type == "malaysian_nric"
   end
 
   def passport_guest?

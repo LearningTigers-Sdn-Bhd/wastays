@@ -166,7 +166,7 @@
                 <div>
                   <label for="document_type" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Document Type</label>
                   <%= f.select "guest_details[document_type]",
-                               options_for_select([["MyKad / IC", "ic"], ["Passport", "passport"]]),
+                               options_for_select(Booking::DOCUMENT_TYPES),
                                { required: true, prompt: "Select document type" },
                                class: "form-select w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
                                data: {
@@ -185,6 +185,21 @@
                                    placeholder: "Enter document number",
                                    data: { checkout_details_target: "documentInput field", guest_field: "government_id", guest_dob_target: "governmentId", action: "input->guest-dob#autofill" },
                                    disabled: true %>
+                </div>
+                <div data-checkout-details-target="passportField" class="hidden md:col-span-2 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">LHDN document type</label>
+                    <input type="text" value="Passport" readonly class="form-input w-full rounded-xl border border-border bg-muted py-3 px-4">
+                  </div>
+                  <div>
+                    <label for="passport_number" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Passport number</label>
+                    <%= f.text_field "guest_details[passport_number]",
+                                     id: "passport_number",
+                                     class: "form-input w-full rounded-xl border border-border py-3 px-4 focus:border-primary focus:ring-primary/20",
+                                     disabled: true,
+                                     data: { checkout_details_target: "passportInput field", guest_field: "passport_number" } %>
+                    <p class="text-[10px] text-muted-foreground mt-2">Required for an individual e-invoice.</p>
+                  </div>
                 </div>
                 <div data-checkout-details-target="documentField" class="hidden">
                   <label for="date_of_birth" class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Date of Birth</label>

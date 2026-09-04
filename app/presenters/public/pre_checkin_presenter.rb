@@ -75,7 +75,7 @@ module Public
     end
 
     def back_container_class
-      guest_document_type == "ic" ? "" : HIDDEN_CLASSES
+      guest_document_type.in?(%w[ic malaysian_nric national_id]) ? "" : HIDDEN_CLASSES
     end
 
     def front_scanner_label

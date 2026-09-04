@@ -106,6 +106,7 @@ module Public
           :guest_country,
           :guest_document_type,
           :guest_government_id,
+          :guest_passport_number,
           :guest_date_of_birth,
           :guest_home_address,
           :id_front,

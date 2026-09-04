@@ -4,8 +4,8 @@ module BookingGuests
   class UpdateSnapshot
     Result = Data.define(:success?, :errors)
     SNAPSHOT_ATTRIBUTES = %i[
-      name email phone government_id gender country document_type date_of_birth
-      home_address city state_code postal_code address_country
+      name email phone government_id passport_number gender country document_type
+      date_of_birth home_address city state_code postal_code address_country
     ].freeze
     BIBO_ATTRIBUTES = %i[boat_in_at boat_out_at].freeze
 
@@ -66,9 +66,13 @@ module BookingGuests
         guest_address_country: values[:address_country],
         guest_gender: values[:gender],
         guest_document_type: values[:document_type],
+        guest_government_id: values[:government_id],
+        guest_passport_number: values[:passport_number],
+        guest_date_of_birth: values[:date_of_birth],
         guest_home_address: values[:home_address]
       )
     end
+
 
     def record_audit!(old_values, values)
       Bookings::RecordAuditLog.call!(

@@ -57,6 +57,7 @@ module BookingEngine
         email: @payment_details[:guest_email],
         phone: @payment_details[:guest_phone],
         government_id: @payment_details[:guest_government_id],
+        passport_number: @payment_details[:guest_passport_number],
         gender: normalized_gender,
         country: normalized_country,
         document_type: normalized_document_type,
@@ -126,7 +127,7 @@ module BookingEngine
         nightly_rate_snapshot: normalized_snapshot(item.nightly_rate_snapshot),
         occupancy_snapshot: item.occupancy_snapshot
       )
-      booking.booking_guests.create!(guest: guest, is_primary: true)
+      booking_guest = booking.booking_guests.create!(guest: guest, is_primary: true)
       GuestArrival::StartPreCheckin.new(booking).call
       Folios::Lifecycle::InitializeForBooking.call(
         booking: booking,
@@ -197,7 +198,9 @@ module BookingEngine
     end
 
     def normalized_document_type
-      @normalized_document_type ||= @payment_details[:document_type]&.downcase&.strip
+      @normalized_document_type ||= GuestIdentityDocuments::NormalizeType.call(
+        value: @payment_details[:document_type], country: normalized_country
+      )
     end
 
     def normalized_country

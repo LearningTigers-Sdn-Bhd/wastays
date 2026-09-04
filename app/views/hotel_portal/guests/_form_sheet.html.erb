@@ -20,7 +20,7 @@
               id: form_id,
               class: "space-y-6 py-2",
               data: {
-                controller: "guest-dob tin-validation",
+                controller: "guest-dob guest-identity tin-validation",
                 tin_validation_url_value: hotel_validate_tin_path(current_hotel)
               } do |form| %>
           <%= hidden_field_tag :return_to, return_to if return_to.present? %>
@@ -61,7 +61,7 @@
                      country_choices,
                      selected: guest.country,
                      prompt: "Search for a country",
-                     data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
+                     data: { guest_dob_target: "country", guest_identity_target: "country", tin_validation_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" }) %>
               <% end %>
 
               <%= render PanelsUI::FormField.new(form: form, attribute: :gender, label: "Gender") do |field| %>
@@ -124,18 +124,19 @@
             <div class="grid gap-4 sm:grid-cols-2">
               <%= render PanelsUI::FormField.new(form: form, attribute: :document_type, label: "Document type") do |field| %>
                 <% field.with_select_menu(
-                     Guest::DOCUMENT_TYPES.map { |type| { label: type.upcase, value: type } },
+                     Booking::DOCUMENT_TYPES.map { |label, value| { label:, value: } },
                      include_blank: true,
                      prompt: "Select document type",
                      selected: guest.document_type,
                      data: {
                        guest_dob_target: "documentType",
+                       guest_identity_target: "documentType",
                        tin_validation_target: "documentType",
-                       action: "change->guest-dob#autofill change->tin-validation#check"
+                       action: "change->guest-dob#autofill change->guest-identity#documentChanged change->tin-validation#check"
                      }) %>
               <% end %>
 
-              <%= render PanelsUI::FormField.new(form: form, attribute: :government_id, label: "ID or passport number") do |field| %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :government_id, label: "Identity document number", data: { guest_identity_target: "numberLabel" }) do |field| %>
                 <% field.with_input(
                      placeholder: "Enter ID number",
                      data: {
@@ -144,6 +145,17 @@
                        action: "input->guest-dob#autofill blur->tin-validation#check"
                      }) %>
               <% end %>
+
+              <div class="sm:col-span-2" data-guest-identity-target="passportRow" <%= "hidden" unless guest.document_type == "national_id" %>>
+                <div class="grid gap-4 sm:grid-cols-2 sm:col-span-2">
+                  <%= render PanelsUI::FormField.new(form: form, attribute: :lhdn_document_type, label: "LHDN document type", disabled: true) do |field| %>
+                    <% field.with_input(value: "Passport", readonly: true) %>
+                  <% end %>
+                  <%= render PanelsUI::FormField.new(form: form, attribute: :passport_number, label: "Passport number", hint: "Required for an individual e-invoice.") do |field| %>
+                    <% field.with_input(autocomplete: "off", spellcheck: false, disabled: guest.document_type != "national_id", data: { guest_identity_target: "passportInput", tin_validation_target: "passportNumber", action: "blur->tin-validation#check" }) %>
+                  <% end %>
+                </div>
+              </div>
             </div>
           </section>
 
