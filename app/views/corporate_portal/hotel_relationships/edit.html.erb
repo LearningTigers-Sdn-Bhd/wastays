@@ -1,0 +1,75 @@
+<div class="w-full space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Billing details",
+        description: "The address that #{@relationship.hotel.name} uses on your invoices and statements.") %>
+
+  <%= form_with model: @relationship,
+        url: corporate_hotel_relationship_path(@relationship),
+        method: :patch,
+        class: "space-y-6" do |form| %>
+    <% if @relationship.errors.any? %>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Billing details could not be saved") do |alert| %>
+        <% alert.with_description do %><%= @relationship.errors.full_messages.to_sentence %><% end %>
+      <% end %>
+    <% elsif !@billing_address.complete? %>
+      <%= render PanelsUI::Alert.new(tone: :warning, title: @billing_address.status_label, role: :status) do |alert| %>
+        <% alert.with_description do %>Invoices remain available, but the billing address will show as incomplete.<% end %>
+      <% end %>
+    <% end %>
+
+    <section class="space-y-4" aria-labelledby="billing-contact-heading">
+      <div>
+        <h2 id="billing-contact-heading" class="text-base font-semibold">Billing contact</h2>
+        <p class="mt-1 text-sm text-muted-foreground">This hotel uses these details for account and payment questions.</p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form:, attribute: :contact_email, label: "Contact email") do |field| %>
+          <% field.with_input(type: :email, autocomplete: "email") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :contact_phone, label: "Contact phone") do |field| %>
+          <% field.with_input(type: :tel, autocomplete: "tel") %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="space-y-4 border-t border-border pt-6" aria-labelledby="billing-address-heading">
+      <div>
+        <h2 id="billing-address-heading" class="text-base font-semibold">Billing address</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Address line 1, city, and country make the address complete.</p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form:, attribute: :billing_address_line1, label: "Address line 1", class: "sm:col-span-2") do |field| %>
+          <% field.with_input(autocomplete: "address-line1") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :billing_address_line2, label: "Address line 2", class: "sm:col-span-2") do |field| %>
+          <% field.with_input(autocomplete: "address-line2") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :billing_city, label: "City") do |field| %>
+          <% field.with_input(autocomplete: "address-level2") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :billing_state, label: "State") do |field| %>
+          <% field.with_input(autocomplete: "address-level1") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :billing_postal_code, label: "Postal code") do |field| %>
+          <% field.with_input(autocomplete: "postal-code") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :billing_country, label: "Country") do |field| %>
+          <% field.with_combobox(
+               country_options.map { |country| [ country, country ] },
+               prompt: "Search and select a country",
+               selected: @relationship.billing_country,
+               max_options: 50,
+               empty_text: "No countries found") %>
+        <% end %>
+      </div>
+    </section>
+
+    <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
+      <%= render PanelsUI::Button.new(as: :a, href: corporate_profile_path, variant: :ghost) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary,
+            data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
+    </div>
+  <% end %>
+</div>
