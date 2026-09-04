@@ -31,12 +31,11 @@ module Guests
     end
 
     def formatted_total_amount
-      prefix = (currency == "USD" ? "USD" : "RM")
-      "#{prefix} #{helpers.number_with_precision(total_amount, precision: 2, delimiter: ",")}"
+      CurrencyFormatter.format(total_amount, currency: currency)
     end
 
     def formatted_tourism_tax_amount
-      "Tax RM #{helpers.number_with_precision(tourism_tax_amount, precision: 2, delimiter: ",")}"
+      "Tax #{CurrencyFormatter.format(tourism_tax_amount, currency: currency)}"
     end
 
     def created_at_time_formatted
@@ -49,6 +48,16 @@ module Guests
 
     def pre_checkin_status_label
       pre_checkin_status&.humanize || "Pending"
+    end
+
+    # PanelsUI::Badge vocabulary, so the history table carries no palette colours.
+    def status_badge_variant
+      case status.to_s
+      when "confirmed", "checked_in", "completed" then :success
+      when "cancelled", "voided", "no_show" then :destructive
+      when "pending", "no_show_detected" then :warning
+      else :neutral
+      end
     end
 
     private

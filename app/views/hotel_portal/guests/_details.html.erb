@@ -1,0 +1,61 @@
+<%= turbo_frame_tag "guest_record" do %>
+  <div class="space-y-6 pt-5">
+    <section class="space-y-3" aria-labelledby="guest-identity-heading">
+      <h2 id="guest-identity-heading" class="text-base font-semibold text-foreground">Identity</h2>
+
+      <dl class="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <dt class="text-xs text-muted-foreground">Email</dt>
+          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.email %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-muted-foreground">Phone</dt>
+          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.phone %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-muted-foreground">Gender</dt>
+          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_gender %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-muted-foreground">Date of birth</dt>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.date_of_birth_formatted %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-muted-foreground">Nationality</dt>
+          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_country %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-muted-foreground">Document type</dt>
+          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_document_type %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-muted-foreground">ID or passport</dt>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.government_id %></dd>
+        </div>
+        <div class="sm:col-span-2">
+          <dt class="text-xs text-muted-foreground">Address</dt>
+          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.home_address %></dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="space-y-3" aria-labelledby="guest-stay-summary-heading">
+      <h2 id="guest-stay-summary-heading" class="text-base font-semibold text-foreground">Stay summary</h2>
+
+      <dl class="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <dt class="text-xs text-muted-foreground">Total stays</dt>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= stays_count %></dd>
+        </div>
+        <div>
+          <dt class="text-xs text-muted-foreground">Last stay</dt>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.last_stay_checkout_date(last_checkout_on) %></dd>
+        </div>
+      </dl>
+
+      <p class="text-xs text-muted-foreground">
+        Open Booking History for the full list of stays, amounts and pre-check-in status.
+      </p>
+    </section>
+  </div>
+<% end %>

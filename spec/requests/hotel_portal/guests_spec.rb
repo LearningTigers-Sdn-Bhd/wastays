@@ -83,9 +83,9 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       get hotel_guests_path(hotel)
 
       expect(response).to have_http_status(:success)
-      expect(CGI.unescapeHTML(response.body)).to include("MYR 300.00")
-      expect(CGI.unescapeHTML(response.body)).not_to include("MYR 500.00")
-      expect(CGI.unescapeHTML(response.body)).not_to include("MYR 200.00")
+      expect(CGI.unescapeHTML(response.body)).to include("RM 300.00")
+      expect(CGI.unescapeHTML(response.body)).not_to include("RM 500.00")
+      expect(CGI.unescapeHTML(response.body)).not_to include("RM 200.00")
     end
 
     it "filters guests by search query and country" do
@@ -332,12 +332,13 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       body_text = CGI.unescapeHTML(response.body)
 
       expect(response).to have_http_status(:success)
-      expect(body_text).to include("Currency Totals")
+      expect(body_text).to include("Lifetime value")
+      expect(body_text).to include("<tfoot>")
       expect(body_text).to include("Booking History")
       expect(body_text).to include("Confirmation")
-      expect(body_text).to include("Pre-Check-In")
-      expect(body_text).to include("MYR")
-      expect(body_text).to include("USD")
+      expect(body_text).to include("Pre-check-in")
+      expect(body_text).to include("RM")
+      expect(body_text).to include("$")
     end
 
     it "only totals checked in and completed bookings" do
@@ -366,7 +367,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(body_text).to include("RM 300.00")
-      expect(body_text).to include("USD 100.00")
+      expect(body_text).to include("$ 100.00")
     end
 
     it "keeps confirmed and cancelled bookings visible in the history" do
@@ -427,6 +428,45 @@ RSpec.describe "HotelPortal::Guests", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(CGI.unescapeHTML(response.body)).to include("RM 300.00")
+    end
+  end
+
+  describe "record page shell" do
+    let(:guest) { create(:guest, created_by_hotel: hotel, name: "Ravi Menon") }
+
+    it "carries the header, both tabs and the actions menu" do
+      get details_hotel_guest_path(hotel, guest)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Ravi Menon")
+      expect(body_text).to include("guest-record-tabs")
+      expect(body_text).to include("Booking History")
+      expect(body_text).to include("guest-record-actions")
+      expect(body_text).to include("Mark as VIP")
+      expect(body_text).to include("Blacklist guest")
+    end
+
+    it "offers the reverse actions once the guest is marked" do
+      Guests::SetVip.new(guests: guest, hotel: hotel, vip: true).call
+      Guests::SetBlacklist.new(guests: guest, hotel: hotel, blacklisted: true, actor: user, reason: "Damage").call
+
+      get details_hotel_guest_path(hotel, guest)
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Remove VIP")
+      expect(body_text).to include("Remove blacklist")
+      expect(body_text).not_to include("Mark as VIP")
+    end
+
+    it "returns only the tab body to a turbo frame request" do
+      get details_hotel_guest_path(hotel, guest), headers: { "Turbo-Frame" => "guest_record" }
+
+      expect(response).to have_http_status(:success)
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("guest_record")
+      expect(body_text).to include("Identity")
+      expect(body_text).not_to include("guest-record-tabs")
+      expect(body_text).not_to include("<!DOCTYPE html>")
     end
   end
 

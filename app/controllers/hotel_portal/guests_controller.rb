@@ -82,6 +82,11 @@ module HotelPortal
       query = bookings_query
       @stays_count = query.stays_count
       @last_checkout_on = query.last_checkout_on
+
+      return unless turbo_frame_request?
+
+      render partial: "details",
+             locals: { presenter: @presenter, stays_count: @stays_count, last_checkout_on: @last_checkout_on }
     end
 
     def booking_history
@@ -90,6 +95,11 @@ module HotelPortal
       @stays_count = query.stays_count
       @bookings = query.bookings(page: params[:page])
       @currency_totals = query.currency_totals
+
+      return unless turbo_frame_request?
+
+      render partial: "booking_history",
+             locals: { presenter: @presenter, bookings: @bookings, currency_totals: @currency_totals }
     end
 
     def new

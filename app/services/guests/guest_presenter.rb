@@ -85,8 +85,7 @@ module Guests
   end
 
   def formatted_currency_amount(amount, currency)
-    unit = (currency == "USD" ? "USD " : "RM ")
-    ActionController::Base.helpers.number_to_currency(amount, unit: unit, delimiter: ",")
+    CurrencyFormatter.format(amount, currency: currency)
   end
 
   def formatted_stays_count(count)
@@ -96,9 +95,7 @@ module Guests
   def formatted_currency_totals(totals)
     return [] if totals.blank?
 
-    totals.map do |currency, amount|
-      "#{currency} #{ActionController::Base.helpers.number_with_precision(amount, precision: 2, delimiter: ",")}"
-    end
+    totals.map { |currency, amount| CurrencyFormatter.format(amount, currency: currency) }
   end
 
   def email_display

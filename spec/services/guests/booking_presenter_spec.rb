@@ -51,11 +51,41 @@ RSpec.describe Guests::BookingPresenter do
     it "returns formatted currency and amount" do
       expect(presenter.formatted_total_amount).to eq("RM 300.00")
     end
+
+    it "labels a currency the property does not trade in every day" do
+      booking.currency = "SGD"
+
+      expect(presenter.formatted_total_amount).to eq("S$ 300.00")
+    end
+
+    it "drops the decimals on a zero-decimal currency" do
+      booking.currency = "JPY"
+
+      expect(presenter.formatted_total_amount).to eq("¥ 300")
+    end
   end
 
   describe "#formatted_tourism_tax_amount" do
     it "returns formatted tax amount" do
       expect(presenter.formatted_tourism_tax_amount).to eq("Tax RM 20.00")
+    end
+  end
+
+  describe "#status_badge_variant" do
+    it "maps each status onto a badge variant" do
+      {
+        "confirmed" => :success,
+        "checked_in" => :success,
+        "completed" => :success,
+        "cancelled" => :destructive,
+        "voided" => :destructive,
+        "no_show" => :destructive,
+        "pending" => :warning,
+        "no_show_detected" => :warning
+      }.each do |status, variant|
+        booking.status = status
+        expect(described_class.new(booking).status_badge_variant).to eq(variant)
+      end
     end
   end
 

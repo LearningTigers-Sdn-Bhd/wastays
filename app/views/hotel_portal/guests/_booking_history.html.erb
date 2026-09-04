@@ -1,0 +1,80 @@
+<%= turbo_frame_tag "guest_record" do %>
+  <div class="space-y-6 pt-5">
+    <section class="space-y-3" aria-labelledby="guest-stays-heading">
+      <h2 id="guest-stays-heading" class="text-base font-semibold text-foreground">Stays</h2>
+
+      <% if bookings.any? %>
+        <%= render PanelsUI::Table.new(
+              caption: "Stays booked by this guest at this property, with lifetime value per currency",
+              density: :compact,
+              header_style: :sentence,
+              hoverable: true,
+              wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Confirmation</th>
+              <th scope="col">Stay</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="hidden md:table-cell">Booked</th>
+              <th scope="col" class="hidden lg:table-cell">Pre-check-in</th>
+              <th scope="col" class="text-right">Amount</th>
+            </tr>
+          <% end %>
+
+          <% table.with_body do %>
+            <% bookings.each do |booking| %>
+              <% booking_presenter = Guests::BookingPresenter.new(booking) %>
+              <tr>
+                <td class="font-medium tabular-nums"><%= booking_presenter.confirmation_token %></td>
+                <td>
+                  <span class="tabular-nums"><%= booking_presenter.check_in_formatted %> – <%= booking_presenter.check_out_formatted %></span>
+                  <span class="mt-0.5 block text-xs font-normal text-muted-foreground"><%= booking_presenter.nights_label %></span>
+                </td>
+                <td>
+                  <%= render PanelsUI::Badge.new(label: booking_presenter.status_humanized, variant: booking_presenter.status_badge_variant, size: :sm) %>
+                </td>
+                <td class="hidden tabular-nums text-muted-foreground md:table-cell">
+                  <%= booking_presenter.created_at_date_formatted %>
+                  <span class="mt-0.5 block text-xs"><%= booking_presenter.created_at_time_formatted %></span>
+                </td>
+                <td class="hidden text-muted-foreground lg:table-cell"><%= booking_presenter.pre_checkin_status_label %></td>
+                <td class="text-right tabular-nums">
+                  <%= booking_presenter.formatted_total_amount %>
+                  <% if booking_presenter.tourism_tax? %>
+                    <span class="mt-0.5 block text-xs font-normal text-muted-foreground"><%= booking_presenter.formatted_tourism_tax_amount %></span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+
+          <% if currency_totals.any? %>
+            <% table.with_footer do %>
+              <% currency_totals.each_with_index do |(currency, amount), index| %>
+                <tr>
+                  <th scope="row" colspan="3" class="text-left font-medium">
+                    Lifetime value<span class="text-muted-foreground"> · <%= currency %></span>
+                    <% if index.zero? %>
+                      <span class="mt-0.5 block text-xs font-normal text-muted-foreground">Checked in and completed stays only.</span>
+                    <% end %>
+                  </th>
+                  <td class="hidden md:table-cell"></td>
+                  <td class="hidden lg:table-cell"></td>
+                  <td class="text-right font-medium tabular-nums"><%= presenter.formatted_currency_amount(amount, currency) %></td>
+                </tr>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+
+        <div class="flex justify-center pt-2">
+          <%= paginate bookings %>
+        </div>
+      <% else %>
+        <%= render PanelsUI::EmptyState.new(
+              title: "No stays yet",
+              description: "This guest has no bookings at #{current_hotel.name}.") %>
+      <% end %>
+    </section>
+  </div>
+<% end %>
