@@ -23,13 +23,15 @@ class PaymentReceiptPdfService
       # The number is the title; the eyebrow says what the number belongs to.
       eyebrow: @presentation.title,
       report_name: @receipt.public_number,
-      metadata: metadata_pairs,
+      # Party blocks carry the payer and its address, so the strip stays empty.
+      metadata: [],
       # Goes to the payer, not into the hotel's filing cabinet.
       confidential: false
     )
 
     frame.draw_header
     draw_void_notice(pdf) if @receipt.voided?
+    HotelPortal::Reports::Exports::PdfPartyBlocks.new(pdf: pdf).draw(party_blocks)
     HotelPortal::Reports::Exports::PdfStatStrip.new(pdf: pdf).draw([ [ @presentation.amount_label, amount_label ] ])
     draw_note(pdf)
     frame.stamp_page_furniture
@@ -55,18 +57,75 @@ class PaymentReceiptPdfService
     pdf.fill_color THEME::COLORS[:ink]
   end
 
-  # Not period-based, so it supplies its own strip. Blank pairs are dropped by the
-  # frame, which is why a missing reference costs a column rather than printing a dash.
-  def metadata_pairs
+  # Three blocks rather than one metadata strip: a payer has an address, and an address
+  # needs its own lines. The strip holds one short value per label, so it cannot carry one.
+  # Blank entries are dropped by the block, so a fact nobody captured costs a line.
+  def party_blocks
     [
-      [ "Received", THEME.format_time(@receipt.received_at, @hotel.hotel_time_zone) ],
-      [ "Payer", payer_name ],
-      [ "Payment method", @receipt.payment_method.to_s.humanize ],
-      [ "Reference", @receipt.external_reference ]
+      {
+        heading: "Payer details",
+        entries: [
+          [ "Payer", payer_name ],
+          [ "Address", payer_address ]
+        ]
+      },
+      {
+        heading: "Contact details",
+        entries: [
+          [ "Email", payer_value("email") ],
+          [ "Phone", payer_value("phone") ]
+        ]
+      },
+      {
+        heading: "Payment details",
+        entries: [
+          [ "Received", THEME.format_time(@receipt.received_at, @hotel.hotel_time_zone) ],
+          [ "Payment method", @receipt.payment_method.to_s.humanize ],
+          [ "Reference", @receipt.external_reference ],
+          { columns: [ [ "Booking no.", booking_number ],
+                       [ "Confirmation", @receipt.context_snapshot.to_h["booking_confirmation_token"] ] ] }
+        ]
+      }
     ]
   end
 
   def amount_label = "#{@receipt.currency} #{THEME.money(@receipt.amount)}"
 
-  def payer_name = @receipt.payer_snapshot.to_h["name"].presence || "Not provided"
+  def payer_name = payer_value("name").presence || "Not provided"
+
+  def payer_value(key) = @receipt.payer_snapshot.to_h[key]
+
+  # The confirmation token is frozen on the receipt; the booking number is not stored
+  # there, so it is read from the booking the receipt names.
+  def booking_number = receipt_booking&.formatted_reservation_number
+
+  def receipt_booking
+    return @receipt_booking if defined?(@receipt_booking)
+
+    booking_id = @receipt.context_snapshot.to_h["booking_id"]
+    @receipt_booking = booking_id.present? ? Booking.includes(:booking_guests).find_by(id: booking_id) : nil
+  end
+
+  # The guest record wins, so correcting an address reaches every reprint. The
+  # issue-time snapshot answers only when the booking is gone.
+  def payer_address
+    live_payer_address.presence || frozen_payer_address.presence || "Not provided"
+  end
+
+  def live_payer_address
+    booking = receipt_booking
+    return if booking.blank?
+
+    PostalAddresses::Presenter.from_booking_guest(
+      booking.booking_guests.find(&:primary?),
+      fallback_booking: booking
+    ).display
+  end
+
+  def frozen_payer_address
+    address = payer_value("billing_address")
+    return if address.blank?
+
+    PostalAddresses::Presenter.from_snapshot(address).display
+  end
 end

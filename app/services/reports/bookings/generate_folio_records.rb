@@ -195,23 +195,48 @@ module Reports
         ]
       end
 
+      # The address is the one exception to the issue-time freeze. Everything else on
+      # this document is what it was when the invoice was issued, but a wrong address
+      # is a clerical slip, not a change of fact: the front desk fixes it on the guest
+      # and every reprint carries the correction. Making them credit and reissue an
+      # invoice to correct a postcode is not a workflow anybody wants.
       def guest_billing_address
+        live_guest_address.presence || frozen_guest_address.presence || "Not provided"
+      end
+
+      # Read fresh rather than through the folio's association. "Live" has to mean the
+      # row as it stands now, not whatever was cached when the folio was loaded.
+      def live_guest_address
+        return if booking.blank?
+
+        current = Booking.includes(:booking_guests).find_by(id: booking.id)
+        return if current.blank?
+
+        PostalAddresses::Presenter.from_booking_guest(
+          current.booking_guests.find(&:primary?),
+          fallback_booking: current
+        ).display
+      end
+
+      # What the address was when the invoice was issued. Read only when the guest
+      # record no longer answers - a deleted booking, or an invoice from before the
+      # address fields existed.
+      def frozen_guest_address
         payer = @snapshot["payer"]
         if payer.is_a?(Hash) && payer.key?("billing_address")
-          return PostalAddresses::Presenter.from_snapshot(payer["billing_address"]).display.presence || "Not provided"
+          return PostalAddresses::Presenter.from_snapshot(payer["billing_address"]).display
         end
 
         values = @snapshot["booking"]
-        return "Not provided" unless values.is_a?(Hash)
+        return unless values.is_a?(Hash)
 
-        legacy_address = {
+        PostalAddresses::Presenter.new(
           address_line1: values["guest_home_address"],
           city: values["guest_city"],
           state: PostalAddresses::Presenter.printable_state(values["guest_state_code"]),
           postal_code: values["guest_postal_code"],
           country: values["guest_address_country"].presence || values["guest_country"]
-        }
-        PostalAddresses::Presenter.new(legacy_address).display.presence || "Not provided"
+        ).display
       end
 
       def snapshot_payer_value(key)
@@ -406,12 +431,30 @@ module Reports
         ]
       end
 
-      # Corporate addresses only come from the issue-time snapshot. An invoice issued
-      # before address capture existed remains unchanged when it is printed again.
+      # Follows the same rule as the guest address: the account's current billing
+      # address wins, and the issue-time snapshot answers only when the relationship
+      # is gone or never carried one.
       def corporate_billing_address
+        live_corporate_address.presence || frozen_corporate_address.presence || "Not provided"
+      end
+
+      # Read fresh, for the same reason as live_guest_address.
+      def live_corporate_address
+        relationship_id = folio.hotel_corporate_account_id ||
+          folio.booking_billing_party&.hotel_corporate_account_id
+        return if relationship_id.blank?
+
+        relationship = HotelCorporateAccount.find_by(id: relationship_id)
+        return if relationship.blank?
+
+        CorporateAccounts::BillingAddressPresenter.new(relationship).display
+      end
+
+      def frozen_corporate_address
         payer = @snapshot["payer"]
-        address = payer["billing_address"] if payer.is_a?(Hash) && payer.key?("billing_address")
-        CorporateAccounts::BillingAddressPresenter.new(address || {}).display.presence || "Not provided"
+        return unless payer.is_a?(Hash) && payer.key?("billing_address")
+
+        CorporateAccounts::BillingAddressPresenter.new(payer["billing_address"] || {}).display
       end
 
       def direct_bill_term_entries

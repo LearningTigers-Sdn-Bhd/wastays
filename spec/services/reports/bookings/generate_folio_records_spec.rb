@@ -165,12 +165,15 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     expect(records.stay_detail_entries).to include([ "Confirm no.", "BK-778291" ], [ "Room / type", "412 / Deluxe King" ])
   end
 
-  it "keeps the issued guest address and contacts after the stay changes" do
+  # The address is the one field that follows the guest record. A wrong address is a
+  # clerical slip, and correcting it must not need a credit note and a reissue.
+  it "reprints the corrected guest address while the rest stays as issued" do
     booking.update!(
       guest_home_address: "New address",
       guest_city: "Kuching",
       guest_state_code: "13",
       guest_postal_code: "93000",
+      guest_address_country: "Malaysia",
       guest_email: "new@example.com",
       guest_phone: "+60199999999"
     )
@@ -178,11 +181,25 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     entries = described_class.new(folio: folio.reload).call.bill_to_entries
 
     expect(entries).to include(
-      [ "Billing address", "No. 12, Jalan Ampang\n50450 Kuala Lumpur\nWilayah Persekutuan Kuala Lumpur, Malaysia" ],
+      [ "Billing address", "New address\n93000 Kuching\nSarawak, Malaysia" ],
       [ "Contact email", "john@example.com" ],
       [ "Contact phone", "+60 12-345 6789" ]
     )
-    expect(entries.flatten).not_to include("New address", "new@example.com", "+60199999999")
+    expect(entries.flatten).not_to include("new@example.com", "+60199999999")
+  end
+
+  # A booking that is gone can no longer answer, so the issue-time snapshot does.
+  it "falls back to the issued address when the guest record no longer answers" do
+    entries = described_class.new(folio: folio.reload).call
+    booking.update!(
+      guest_home_address: nil, guest_city: nil, guest_state_code: nil,
+      guest_postal_code: nil, guest_address_country: nil, guest_country: nil
+    )
+
+    expect(described_class.new(folio: folio.reload).call.bill_to_entries).to include(
+      [ "Billing address", "No. 12, Jalan Ampang\n50450 Kuala Lumpur\nWilayah Persekutuan Kuala Lumpur, Malaysia" ]
+    )
+    expect(entries.bill_to_entries.map(&:first)).to include("Billing address")
   end
 
   it "reaches the hotel as it can be reached now, not as at the time it billed" do

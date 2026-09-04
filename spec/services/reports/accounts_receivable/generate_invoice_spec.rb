@@ -65,7 +65,9 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
     expect(text).to include("Issued by", "Finance User")
   end
 
-  it "keeps issue-time payer and reference values after source records change" do
+  # The payer name and the references are what they were at issue. Only the billing
+  # address follows the account, so a wrong address is corrected in one place.
+  it "keeps issue-time payer and reference values but reprints the corrected address" do
     invoice = Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio:, balance: 450)
     relationship.corporate_account.update!(name: "Renamed Company")
     relationship.update!(billing_address_line1: "New address")
@@ -73,11 +75,11 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
 
     text = pdf_text(described_class.new(invoice:).generate)
 
-    expect(text).to include("Acme Holdings", "PO-7788", "Lot 8, Jalan Lintas")
-    expect(text).not_to include("Renamed Company", "PO-NEW", "New address")
+    expect(text).to include("Acme Holdings", "PO-7788", "New address")
+    expect(text).not_to include("Renamed Company", "PO-NEW", "Lot 8, Jalan Lintas")
   end
 
-  it "does not fall back to the live relationship for a pre-address snapshot" do
+  it "reads the account for an invoice issued before addresses were captured" do
     invoice = Folios::Lifecycle::CreateDirectBillArInvoice.call!(folio:, balance: 450)
     revision = invoice.invoice.current_revision
     old_snapshot = revision.snapshot.deep_dup
@@ -87,8 +89,7 @@ RSpec.describe Reports::AccountsReceivable::GenerateInvoice do
 
     text = pdf_text(described_class.new(invoice:).generate)
 
-    expect(text).to include("Billing address", "Not provided")
-    expect(text).not_to include("Address added after issue")
+    expect(text).to include("Billing address", "Address added after issue")
   end
 
 

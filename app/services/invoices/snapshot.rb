@@ -81,6 +81,10 @@ module Invoices
       }
     end
 
+    # The billing address is captured here as the audit record of what the address was
+    # when the invoice was issued. The printed document does not read it: the address is
+    # the one field that follows the live guest or corporate record, so a clerical fix
+    # reaches every reprint. See Reports::Bookings::GenerateFolioRecords.
     def payer_snapshot
       party = @folio.booking_billing_party
       relationship = @folio.hotel_corporate_account || party&.hotel_corporate_account
