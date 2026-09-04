@@ -165,6 +165,13 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Aisha Banned")
       expect(body_text).not_to include("Ravi Vip")
 
+      # The directory sends "blacklisted"; it must match the same records.
+      get hotel_guests_path(hotel), params: { tag: "blacklisted" }
+      expect(response).to have_http_status(:success)
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("Aisha Banned")
+      expect(body_text).not_to include("Ravi Vip")
+
       # 3. Repeat filter
       ravi_booking2 = create(:booking, hotel: hotel, status: "completed")
       create(:booking_guest, booking: ravi_booking2, guest: ravi)
@@ -416,6 +423,58 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         expect(response).to redirect_to(root_path)
         expect(flash[:alert]).to include("not authorized")
       end
+    end
+  end
+
+  describe "PATCH /toggle_vip" do
+    let(:guest) { create(:guest, created_by_hotel: hotel) }
+
+    it "marks the guest record as VIP" do
+      patch toggle_vip_hotel_guest_path(hotel, guest)
+
+      expect(response).to redirect_to(hotel_guest_path(hotel, guest))
+      expect(flash[:notice]).to include("marked as VIP")
+      expect(guest.reload.vip).to be true
+    end
+
+    it "removes VIP from the guest record" do
+      guest.update!(vip: true)
+
+      patch toggle_vip_hotel_guest_path(hotel, guest)
+
+      expect(flash[:notice]).to include("VIP removed")
+      expect(guest.reload.vip).to be false
+    end
+  end
+
+  describe "PATCH /toggle_blacklist" do
+    let(:guest) { create(:guest, created_by_hotel: hotel) }
+
+    it "blacklists the guest record with a reason" do
+      patch toggle_blacklist_hotel_guest_path(hotel, guest), params: { blacklist_reason: "Damaged the room" }
+
+      expect(response).to redirect_to(hotel_guest_path(hotel, guest))
+      expect(flash[:notice]).to include("blacklisted")
+      guest.reload
+      expect(guest.blacklisted_at?(hotel)).to be true
+      expect(guest.blacklist_detail(hotel)["reason"]).to eq("Damaged the room")
+      expect(guest.blacklist_detail(hotel)["blacklisted_by_id"]).to eq(user.id)
+    end
+
+    it "refuses to blacklist without a reason" do
+      patch toggle_blacklist_hotel_guest_path(hotel, guest), params: { blacklist_reason: "" }
+
+      expect(flash[:alert]).to include("provide a reason")
+      expect(guest.reload.blacklisted_at?(hotel)).to be false
+    end
+
+    it "clears the blacklist" do
+      Guests::SetBlacklist.new(guests: guest, hotel: hotel, blacklisted: true, actor: user, reason: "Damage").call
+
+      patch toggle_blacklist_hotel_guest_path(hotel, guest)
+
+      expect(flash[:notice]).to include("Blacklist removed")
+      expect(guest.reload.blacklisted_at?(hotel)).to be false
     end
   end
 end

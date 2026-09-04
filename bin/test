@@ -302,6 +302,8 @@ domain_paths() {
         spec/services/guest \
         spec/services/guests \
         spec/requests/guest \
+        spec/requests/hotel_portal/guests_spec.rb \
+        spec/requests/hotel_portal/guests_permission_spec.rb \
         spec/system/guest \
         spec/models/guest_spec.rb
       ;;
