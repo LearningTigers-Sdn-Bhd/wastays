@@ -36,10 +36,15 @@ module ChannelManagers
 
     def ensure_primary_guest!
       existing = @booking.booking_guests.find_by(role: "primary")
-      return existing if existing
+      if existing
+        BookingGuests::CapturePrimaryStay.call(booking_guest: existing)
+        return existing
+      end
 
       guest = find_guest || create_guest!
-      @booking.booking_guests.create!(guest:, is_primary: true)
+      booking_guest = @booking.booking_guests.create!(guest:, is_primary: true)
+      BookingGuests::CapturePrimaryStay.call(booking_guest: booking_guest)
+      booking_guest
     end
 
     def find_guest
@@ -65,6 +70,11 @@ module ChannelManagers
         email: @guest_details[:email],
         phone: @guest_details[:phone],
         government_id: @guest_details[:government_id],
+        home_address: @guest_details[:home_address] || @guest_details[:address],
+        city: @guest_details[:city],
+        state_code: @guest_details[:state_code],
+        postal_code: @guest_details[:postal_code],
+        address_country: @guest_details[:address_country],
         country: @guest_details[:country].presence || @hotel.country,
         gender: @guest_details[:gender],
         document_type: @guest_details[:document_type],

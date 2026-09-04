@@ -60,7 +60,7 @@
             </p>
           </div>
         <% else %>
-          <%= form_with model: @booking, url: pre_checkin_path(@pre_checkin.token), method: :patch, local: true, autocomplete: "off", class: "space-y-8" do |f| %>
+          <%= form_with model: @booking, url: pre_checkin_path(@pre_checkin.token), method: :patch, local: true, autocomplete: "off", class: "space-y-8", data: { controller: "address-state" } do |f| %>
             <% if @presenter.any_errors? %>
               <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 <p class="font-black uppercase tracking-widest text-xs">Please fix the following</p>
@@ -131,13 +131,11 @@
                   <%= f.text_field :guest_city, class: "form-input py-3 px-5 border border-border", required: true, placeholder: "e.g. Petaling Jaya" %>
                 </div>
 
-                <div>
-                  <%= f.label :guest_state_code, "State", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
-                  <%= f.select :guest_state_code,
-                        EInvoice::MalaysiaStates.options,
-                        { include_blank: "Select state" },
-                        class: "form-input py-3 px-5 border border-border", required: true %>
-                </div>
+                <%= render "shared/plain_state_code_field", form: f, attribute: :guest_state_code, value: @booking.guest_state_code,
+                      country: @presenter.guest_address_country_default,
+                      field_class: "form-input py-3 px-5 border border-border",
+                      label_class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2",
+                      required: true %>
 
                 <div>
                   <%= f.label :guest_postal_code, "Postcode", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
@@ -173,8 +171,15 @@
               </div>
 
               <div>
-                <%= f.label :guest_home_address, "Home Address", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
-                <%= f.text_area :guest_home_address, class: "form-input py-3 px-5 border border-border", required: true, rows: 3, placeholder: "e.g. No. 12, Jalan Ampang, 50450 Kuala Lumpur, Malaysia" %>
+                <%= f.label :guest_home_address, "Street address", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+                <%= f.text_area :guest_home_address, class: "form-input py-3 px-5 border border-border", required: true, rows: 3, placeholder: "Street, building, and unit" %>
+              </div>
+              <div>
+                <%= f.label :guest_address_country, "Address country", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+                <%= f.select :guest_address_country, country_options,
+                      { selected: @presenter.guest_address_country_default, prompt: "Select address country" },
+                      class: "form-input py-3 px-5 border border-border", required: true,
+                      data: { address_state_target: "country", action: "change->address-state#refresh input->address-state#refresh" } %>
               </div>
             </section>
 

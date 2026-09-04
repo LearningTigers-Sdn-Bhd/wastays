@@ -19,6 +19,9 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
     {
       "guest_name" => "Updated Guest",
       "guest_country" => "Singapore",
+      "guest_home_address" => "12 Orchard Road",
+      "guest_city" => "Singapore",
+      "guest_address_country" => "Singapore",
       "guest_document_type" => "passport",
       "guest_date_of_birth" => "1991-02-03",
       "guest_government_id" => "B7654321",

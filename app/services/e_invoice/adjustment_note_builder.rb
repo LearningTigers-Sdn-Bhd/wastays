@@ -31,7 +31,7 @@ module EInvoice
       "_B" => "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
     }.freeze
 
-    def initialize(booking:, original_submission:, adjustment_amount:, document_type:)
+    def initialize(booking:, original_submission:, adjustment_amount:, document_type:, buyer_snapshot: nil)
       @booking = booking
       @hotel = booking.hotel
       @original_submission = original_submission
@@ -39,6 +39,7 @@ module EInvoice
       @document_type = document_type
       @context = EInvoice::SubmissionContext.for(booking)
       @setting = booking.hotel&.e_invoice_setting
+      @buyer = buyer_snapshot.to_h.stringify_keys.presence
       validate_required_data!
     end
 
@@ -188,16 +189,16 @@ module EInvoice
           "PostalZone" => [ { "_" => buyer_postal_code } ],
           "CountrySubentityCode" => [ { "_" => buyer_state_code } ],
           "AddressLine" => [
-            { "Line" => [ { "_" => "NA" } ] },
-            { "Line" => [ { "_" => "" } ] },
+            { "Line" => [ { "_" => buyer_address_value("address_line1", @booking.guest_home_address).presence || "NA" } ] },
+            { "Line" => [ { "_" => buyer_address_value("address_line2").to_s } ] },
             { "Line" => [ { "_" => "" } ] }
           ],
-          "Country" => [ { "IdentificationCode" => [ country_identification_code(ORIGIN_COUNTRY_CODE) ] } ]
+          "Country" => [ { "IdentificationCode" => [ country_identification_code(guest_country_code) ] } ]
         } ],
-        "PartyLegalEntity" => [ { "RegistrationName" => [ { "_" => @booking.guest_name.to_s } ] } ],
+        "PartyLegalEntity" => [ { "RegistrationName" => [ { "_" => buyer_value("name", @booking.guest_name).to_s } ] } ],
         "Contact" => [ {
-          "Telephone" => [ { "_" => format_phone(@booking.guest_phone) } ],
-          "ElectronicMail" => [ { "_" => @booking.guest_email.to_s } ]
+          "Telephone" => [ { "_" => format_phone(buyer_value("contact_phone", @booking.guest_phone)) } ],
+          "ElectronicMail" => [ { "_" => buyer_value("contact_email", @booking.guest_email).to_s } ]
         } ]
       }
     end
@@ -265,13 +266,13 @@ module EInvoice
     end
 
     def buyer_city
-      @booking.guest_city.to_s.presence || raise(ArgumentError, "Booking guest city is required")
+      buyer_address_value("city", @booking.guest_city).to_s.presence || raise(ArgumentError, "Booking guest city is required")
     end
 
     def buyer_state_code
       EInvoice::MalaysiaStates.resolve(
-        state_code: @booking.guest_state_code,
-        city: @booking.guest_city,
+        state_code: buyer_address_value("state_code", @booking.guest_state_code),
+        city: buyer_city,
         country_code: guest_country_code
       ) || raise(ArgumentError, "Booking needs a buyer state before it can be filed with LHDN")
     end
@@ -280,20 +281,20 @@ module EInvoice
     # references, or LHDN cannot match the two (confirmed live: DR308 "Buyer
     # of document ... is not the same as referenced document").
     def buyer_tin
-      tin = @booking.buyer_tin_for_e_invoice.presence
+      tin = buyer_value("tin", @booking.buyer_tin_for_e_invoice).presence
       return tin if tin
-      return FOREIGN_BUYER_TIN if @booking.foreign_guest?
+      return FOREIGN_BUYER_TIN if foreign_buyer?
 
       raise ArgumentError, "This guest has no tax number on file. LHDN's general public TIN cannot be used on an individual (non-consolidated) e-invoice."
     end
 
     def buyer_identifier
-      value = @booking.guest_government_id.to_s.gsub(/[^A-Za-z0-9]/, "").presence || "NA"
+      value = buyer_value("government_id", @booking.guest_government_id).to_s.gsub(/[^A-Za-z0-9]/, "").presence || "NA"
       { "_" => value, "schemeID" => buyer_identifier_scheme }
     end
 
     def buyer_identifier_scheme
-      case @booking.guest_document_type.to_s
+      case buyer_value("document_type", @booking.guest_document_type).to_s
       when "ic" then "NRIC"
       when "passport" then "PASSPORT"
       else "BRN"
@@ -301,11 +302,13 @@ module EInvoice
     end
 
     def buyer_postal_code
-      @booking.guest_postal_code.to_s.gsub(/\D/, "").presence || "00000"
+      buyer_address_value("postal_code", @booking.guest_postal_code).to_s.gsub(/\D/, "").presence || "00000"
     end
 
     def guest_country_code
-      country = @booking.guest_country.presence || @hotel.country
+      return buyer_address_value("country_code") if buyer_address_value("country_code").present?
+
+      country = @booking.guest_address_country.presence || @booking.guest_country.presence || @hotel.country
       return ORIGIN_COUNTRY_CODE if country.blank?
 
       if defined?(ISO3166::Country)
@@ -314,6 +317,19 @@ module EInvoice
       else
         ORIGIN_COUNTRY_CODE
       end
+    end
+
+    def buyer_value(key, fallback = nil)
+      @buyer&.fetch(key, nil).presence || fallback
+    end
+
+    def buyer_address_value(key, fallback = nil)
+      @buyer&.dig("billing_address", key).presence || fallback
+    end
+
+    def foreign_buyer?
+      nationality = buyer_value("nationality", @booking.guest_country).presence || @hotel.country
+      ISO3166::Country.find_country_by_any_name(nationality)&.alpha3 != "MYS"
     end
 
     def zero_allowance_charge

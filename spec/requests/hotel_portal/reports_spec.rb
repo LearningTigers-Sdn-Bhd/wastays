@@ -2017,7 +2017,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       it "rejects an empty preference and requires report permission" do
         patch hotel_cashier_activity_view_preference_path(hotel), params: { visible_columns: [] }, as: :json
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
 
         role.permissions.delete(Permission.find_by!(slug: "view_reports"))
         patch hotel_cashier_activity_view_preference_path(hotel), params: { visible_columns: [ "amount" ] }, as: :json

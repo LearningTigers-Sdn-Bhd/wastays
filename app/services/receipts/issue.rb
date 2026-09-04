@@ -95,14 +95,32 @@ module Receipts
         transaction.booking_quote&.hotel_id
     end
 
+    # The address is captured as the audit record of what it was when the receipt was
+    # issued. The printed receipt reads the guest record instead, so a clerical fix
+    # reaches every reprint. Same rule the invoice follows.
     def payer_snapshot
       booking = source_booking
       guest = @source.group_booking&.organizer_guest if @source.is_a?(Deposit) && @source.group_booking.present?
       {
         name: booking&.guest_name || guest&.name,
         email: booking&.guest_email || guest&.email,
-        phone: booking&.guest_phone || guest&.phone
+        phone: booking&.guest_phone || guest&.phone,
+        billing_address: billing_address_for(booking, guest)
       }.compact
+    end
+
+    def billing_address_for(booking, guest)
+      address = if booking.present?
+        PostalAddresses::Presenter.from_booking_guest(
+          booking.booking_guests.find(&:primary?),
+          fallback_booking: booking
+        )
+      elsif guest.present?
+        PostalAddresses::Presenter.from_guest(guest)
+      end
+      return if address.blank? || address.missing?
+
+      address.snapshot
     end
 
     def context_snapshot

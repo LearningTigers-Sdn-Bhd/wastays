@@ -4,7 +4,7 @@ RSpec.describe EInvoice::IssueAdjustment, type: :service do
   let(:hotel) { create(:hotel, tin: "C1234567890", ssm_number: "202301012345") }
   let!(:e_invoice_setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
   let(:booking) do
-    create(:booking, hotel: hotel, payment_status: "captured", total_amount: 500.0, fund_collector: "wastays", guest_city: "Kota Kinabalu", guest_country: "Malaysia", guest_tin: "IG12345678901")
+    create(:booking, hotel: hotel, payment_status: "captured", total_amount: 500.0, fund_collector: "wastays", guest_city: "Kota Kinabalu", guest_country: "Malaysia", guest_address_country: "Malaysia", guest_tin: "IG12345678901")
   end
   let(:credentials_hash) do
     {

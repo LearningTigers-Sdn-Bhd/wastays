@@ -39,6 +39,15 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
       expect(response.body).not_to include("12 Hidden Street, Kuching")
     end
 
+    it "hides the nationality when the hotel disables it" do
+      hotel.update!(guest_registration_card_fields: %w[phone email])
+
+      get guest_registration_card_path(card.public_token)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.css("dt").map { |node| node.text.strip }).not_to include("Nationality")
+    end
+
     it "shows the address for the guest assigned to the public card" do
       additional = create(
         :booking_guest,

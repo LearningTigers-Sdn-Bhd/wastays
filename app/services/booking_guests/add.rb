@@ -3,7 +3,10 @@
 module BookingGuests
   class Add
     Result = Data.define(:success?, :guest, :booking_guest, :errors)
-    AUDIT_ATTRIBUTES = %w[name email phone country gender document_type date_of_birth home_address].freeze
+    AUDIT_ATTRIBUTES = %w[
+      name email phone country gender document_type date_of_birth home_address
+      city state_code postal_code address_country
+    ].freeze
 
     def self.call(booking:, attributes:, actor:)
       new(booking:, attributes:, actor:).call

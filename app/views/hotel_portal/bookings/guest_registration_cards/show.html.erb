@@ -105,14 +105,16 @@
                   <dd class="mt-1 break-all text-sm font-medium text-foreground"><%= @presenter.guest_email %></dd>
                 </div>
               <% end %>
-              <div class="min-w-0">
-                <dt class="text-xs font-medium text-muted-foreground">Country</dt>
-                <dd class="mt-1 break-words text-sm font-medium text-foreground"><%= @presenter.guest_country_display %></dd>
-              </div>
+              <% if @card.field_visible?(:nationality) %>
+                <div class="min-w-0">
+                  <dt class="text-xs font-medium text-muted-foreground">Nationality</dt>
+                  <dd class="mt-1 break-words text-sm font-medium text-foreground"><%= @presenter.guest_country_display %></dd>
+                </div>
+              <% end %>
               <% if @card.field_visible?(:address) %>
                 <div class="min-w-0 sm:col-span-2">
                   <dt class="text-xs font-medium text-muted-foreground">Address</dt>
-                  <dd class="mt-1 break-words text-sm font-medium text-foreground"><%= @presenter.guest_address_display %></dd>
+                  <dd class="mt-1 whitespace-pre-line break-words text-sm font-medium text-foreground"><%= @presenter.guest_address_display %></dd>
                 </div>
               <% end %>
               <% if @card.field_visible?(:guest_count) %>
@@ -362,8 +364,8 @@
           <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Name</dt><dd class="text-foreground">: <%= @presenter.guest_name %></dd></div>
           <% if @card.field_visible?(:phone) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Phone</dt><dd class="text-foreground">: <%= @presenter.guest_phone %></dd></div><% end %>
           <% if @card.field_visible?(:email) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Email</dt><dd class="break-all text-foreground">: <%= @presenter.guest_email %></dd></div><% end %>
-          <% if @card.field_visible?(:address) %><div class="col-span-2 grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Address</dt><dd class="text-foreground">: <%= @presenter.guest_address_display %></dd></div><% end %>
-          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Country</dt><dd class="text-foreground">: <%= @presenter.guest_country_display %></dd></div>
+          <% if @card.field_visible?(:address) %><div class="col-span-2 grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Address</dt><dd class="whitespace-pre-line text-foreground">: <%= @presenter.guest_address_display %></dd></div><% end %>
+          <% if @card.field_visible?(:nationality) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Nationality</dt><dd class="text-foreground">: <%= @presenter.guest_country_display %></dd></div><% end %>
           <% if @card.field_visible?(:guest_count) %><div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Guests</dt><dd class="text-foreground">: <%= @presenter.guest_count_display %></dd></div><% end %>
           <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Identity</dt><dd class="text-foreground">: <%= @presenter.guest_identity %></dd></div>
         </dl>

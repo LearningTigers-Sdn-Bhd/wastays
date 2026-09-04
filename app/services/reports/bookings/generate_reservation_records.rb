@@ -176,7 +176,7 @@ module Reports
         end
 
         @group_booking = group_booking
-        @bookings = group_booking ? group_booking.bookings.includes(booking_rooms: :room_type).to_a : [ booking ]
+        @bookings = group_booking ? group_booking.bookings.includes(:booking_guests, booking_rooms: :room_type).to_a : [ booking ]
         # Policy, cancellation terms and check-in times are properties of the stay rather
         # than of the group, so the group borrows them from its first room.
         @booking = booking || @bookings.first
@@ -289,13 +289,18 @@ module Reports
       def tourism_tax_collected? = @bookings.any?(&:tourism_tax_collected?)
 
       def booking_party_blocks
+        address = PostalAddresses::Presenter.from_booking_guest(
+          booking.booking_guests.find(&:primary?),
+          fallback_booking: booking
+        )
+
         [
           {
             heading: "Guest details",
             entries: [
               [ "Guest", booking.guest_name ],
-              [ "Address", booking.guest_home_address.presence || "Not provided" ],
-              [ "Country", booking.guest_country ]
+              [ "Address", address.display.presence || "Not provided" ],
+              [ "Nationality", booking.guest_country ]
             ]
           },
           {

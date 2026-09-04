@@ -189,6 +189,10 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         document_type: "passport",
         date_of_birth: Date.new(1994, 6, 7),
         home_address: "No. 12, Jalan Ampang",
+        city: "Kuala Lumpur",
+        state_code: "14",
+        postal_code: "50450",
+        address_country: "Malaysia",
         created_by_hotel: hotel
       )
 
@@ -209,6 +213,10 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         "gender" => "female",
         "date_of_birth" => "1994-06-07",
         "home_address" => "No. 12, Jalan Ampang",
+        "city" => "Kuala Lumpur",
+        "state_code" => "14",
+        "postal_code" => "50450",
+        "address_country" => "Malaysia",
         "blacklisted" => false
       )
     end

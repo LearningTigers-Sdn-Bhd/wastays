@@ -7,7 +7,14 @@ RSpec.describe Bookings::SetPrimaryGuest do
     booking = create(:booking)
     actor = create(:user, account: booking.hotel.account)
     previous = create(:booking_guest, booking: booking, is_primary: true)
-    selected = create(:booking_guest, booking: booking, is_primary: false)
+    selected_guest = create(:guest,
+      name: "Selected Guest",
+      home_address: "8 Market Street",
+      city: "Kuching",
+      state_code: "13",
+      postal_code: "93000",
+      address_country: "Malaysia")
+    selected = create(:booking_guest, booking: booking, guest: selected_guest, is_primary: false)
 
     expect {
       @result = described_class.call(booking: booking, booking_guest: selected, actor: actor)
@@ -19,6 +26,14 @@ RSpec.describe Bookings::SetPrimaryGuest do
     expect(result.booking_guest).to eq(selected)
     expect(previous.reload).to have_attributes(role: "additional", is_primary: false)
     expect(selected.reload).to have_attributes(role: "primary", is_primary: true)
+    expect(booking.reload).to have_attributes(
+      guest_name: "Selected Guest",
+      guest_home_address: "8 Market Street",
+      guest_city: "Kuching",
+      guest_state_code: "13",
+      guest_postal_code: "93000",
+      guest_address_country: "Malaysia"
+    )
     expect(audit_log).to have_attributes(
       auditable: booking,
       user: actor,

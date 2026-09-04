@@ -11,6 +11,8 @@ module GuestArrival
       @city = params[:city]&.strip
       @state_code = params[:state_code].presence
       @postal_code = params[:postal_code]&.strip
+      @address_country = params[:address_country]&.strip
+      @home_address = params[:home_address]&.strip
       @tin = params[:tin]&.strip
       @country = params[:country]&.downcase&.strip
       @document_type = params[:document_type]&.downcase&.strip
@@ -18,6 +20,7 @@ module GuestArrival
       @marketing_consent = params[:marketing_consent]
       @privacy_consent = params[:privacy_consent]
       @created_by_hotel_id = params[:created_by_hotel_id]
+      @update_profile = params[:update_profile] == true
     end
 
     def call
@@ -25,16 +28,20 @@ module GuestArrival
 
       if guest
         updates = {}
-        updates[:name] = @name if @name.present? && guest.name != @name
-        updates[:city] = @city if @city.present? && guest.city.blank?
-        updates[:state_code] = @state_code if @state_code.present? && guest.state_code.blank?
-        updates[:postal_code] = @postal_code if @postal_code.present? && guest.postal_code.blank?
-        updates[:tin] = @tin if @tin.present? && guest.tin.blank?
-        updates[:country] = @country if @country.present? && guest.country.blank?
-        updates[:gender] = @gender if @gender.present? && guest.gender.blank?
-        updates[:document_type] = @document_type if @document_type.present? && guest.document_type.blank?
-        updates[:government_id] = @government_id if @government_id.present? && guest.safely_read_encrypted(:government_id).blank?
-        updates[:date_of_birth] = @date_of_birth if @date_of_birth.present? && guest.date_of_birth.blank?
+        if @update_profile
+          updates[:name] = @name if @name.present? && guest.name != @name
+          updates[:city] = @city if @city.present? && guest.city != @city
+          updates[:state_code] = @state_code if @state_code.present? && guest.state_code != @state_code
+          updates[:postal_code] = @postal_code if @postal_code.present? && guest.postal_code != @postal_code
+          updates[:address_country] = @address_country if @address_country.present? && guest.address_country != @address_country
+          updates[:home_address] = @home_address if @home_address.present? && guest.home_address != @home_address
+          updates[:tin] = @tin if @tin.present? && guest.tin != @tin
+          updates[:country] = @country if @country.present? && guest.country != @country
+          updates[:gender] = @gender if @gender.present? && guest.gender != @gender
+          updates[:document_type] = @document_type if @document_type.present? && guest.document_type != @document_type
+          updates[:government_id] = @government_id if @government_id.present? && guest.safely_read_encrypted(:government_id) != @government_id
+          updates[:date_of_birth] = @date_of_birth if @date_of_birth.present? && guest.date_of_birth != @date_of_birth
+        end
 
         if @marketing_consent.present? || @privacy_consent.present?
           guest.metadata ||= {}
@@ -81,6 +88,8 @@ module GuestArrival
           city: @city,
           state_code: @state_code,
           postal_code: @postal_code,
+          address_country: @address_country,
+          home_address: @home_address,
           tin: @tin,
           country: @country,
           gender: @gender,

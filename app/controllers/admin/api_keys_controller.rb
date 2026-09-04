@@ -22,7 +22,7 @@ class Admin::ApiKeysController < Admin::BaseController
       session[:generated_api_key_name] = @api_key.name
       redirect_to admin_api_keys_path
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 

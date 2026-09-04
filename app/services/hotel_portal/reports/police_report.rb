@@ -27,19 +27,18 @@ module HotelPortal
 
       def row_for(booking)
         primary_guest = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
-        guest = primary_guest&.guest
-        date_of_birth = primary_guest&.date_of_birth_snapshot || guest&.date_of_birth || booking.guest_date_of_birth
-        phone = primary_guest&.phone_snapshot.presence || guest&.phone || booking.guest_phone
+        date_of_birth = primary_guest&.date_of_birth_snapshot || booking.guest_date_of_birth
+        phone = primary_guest&.phone_snapshot.presence || booking.guest_phone
 
         {
           booking_id: booking.id,
-          guest_name: primary_guest&.name_snapshot.presence || guest&.name || booking.guest_name,
+          guest_name: primary_guest&.name_snapshot.presence || booking.guest_name,
           confirmation_token: booking.confirmation_token,
           room_number: booking.booking_rooms.filter_map(&:room_number).presence&.join(", ") || "-",
-          nationality: primary_guest&.country_snapshot.presence || guest&.country || booking.guest_country || "-",
-          gender: (primary_guest&.gender_snapshot.presence || guest&.gender || booking.guest_gender)&.humanize || "-",
+          nationality: primary_guest&.country_snapshot.presence || booking.guest_country || "-",
+          gender: (primary_guest&.gender_snapshot.presence || booking.guest_gender)&.humanize || "-",
           date_of_birth: date_of_birth&.strftime("%d %b %Y") || "-",
-          address: booking.guest_home_address.presence || "-",
+          address: PostalAddresses::Presenter.from_booking_guest(primary_guest, fallback_booking: booking).display.presence || "-",
           contact: phone.presence || "-",
           check_in_date: booking.check_in.to_date,
           scheduled_check_in: booking.check_in.in_time_zone(@hotel.hotel_time_zone).strftime("%d %b %Y"),

@@ -30,6 +30,31 @@ module GuestArrival
         )
       end
 
+      missing_address_fields = %w[guest_home_address guest_city guest_address_country].select { |key| @params[key].blank? }
+      if missing_address_fields.any?
+        return OpenStruct.new(
+          success?: false,
+          message: "Street address, city, and address country are required.",
+          submitted_arrival_time: submitted_arrival_time,
+          submitted_government_id: submitted_government_id,
+          submitted_date_of_birth: submitted_date_of_birth
+        )
+      end
+
+      if @params["guest_address_country"].to_s.casecmp?("Malaysia")
+        unless EInvoice::MalaysiaStates.valid?(@params["guest_state_code"])
+          return OpenStruct.new(
+            success?: false,
+            message: "State is required for a Malaysian address.",
+            submitted_arrival_time: submitted_arrival_time,
+            submitted_government_id: submitted_government_id,
+            submitted_date_of_birth: submitted_date_of_birth
+          )
+        end
+      else
+        @params["guest_state_code"] = EInvoice::MalaysiaStates::NOT_APPLICABLE
+      end
+
       @booking.estimated_arrival_time = submitted_arrival_time
 
       ActiveRecord::Base.transaction do
@@ -55,6 +80,8 @@ module GuestArrival
           city: @booking.guest_city,
           state_code: @booking.guest_state_code,
           postal_code: @booking.guest_postal_code,
+          address_country: @booking.guest_address_country,
+          home_address: @booking.guest_home_address,
           tin: @booking.guest_tin,
           country: @booking.guest_country,
           document_type: @booking.guest_document_type,
@@ -64,6 +91,7 @@ module GuestArrival
         primary_booking_guest = @booking.booking_guests.find_or_initialize_by(is_primary: true)
         primary_booking_guest.guest = guest_result.guest
         primary_booking_guest.save!
+        BookingGuests::CapturePrimaryStay.call(booking_guest: primary_booking_guest)
 
         @pre_checkin.update!(
           status: "completed",

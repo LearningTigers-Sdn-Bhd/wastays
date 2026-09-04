@@ -48,7 +48,7 @@ RSpec.describe HotelPortal::Reports::PoliceReport, type: :service do
         nationality: "Japan",
         gender: "Female",
         date_of_birth: "12 Apr 1990",
-        address: "12 Jalan Example, Kuching",
+          address: "12 Jalan Example, Kuching\nKuala Lumpur",
         contact: "+60123456789",
         scheduled_check_in: "21 Jul 2026",
         actual_check_in: "21 Jul 2026\n10:30 PM",

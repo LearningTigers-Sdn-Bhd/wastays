@@ -20,7 +20,7 @@ class Api::V1::QuotesController < Api::V1::BaseController
         expires_at: presenter.expires_at
       }, status: :created
     else
-      render json: { success: false, error: result.message }, status: :unprocessable_entity
+      render json: { success: false, error: result.message }, status: :unprocessable_content
     end
   end
 

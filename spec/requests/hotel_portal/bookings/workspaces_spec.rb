@@ -911,6 +911,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Guest details", "Guest details recorded for this stay.")
       expect(response.body).not_to include("Stay Record", "Guest Profile")
       expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Enter IC or passport number", "Select date of birth")
+      expect(form.at_css("textarea[name='guest[home_address]']")).to be_present
+      expect(form.at_css("input[name='guest[city]']")).to be_present
+      expect(form.at_css("input[name='guest[postal_code]']")).to be_present
+      expect(form.at_css("select[name='guest[address_country]']")).to be_present
+      expect(response.body).to include("Nationality", "Street address", "Address country")
       expect(save_dialog).to be_present
       expect(save_dialog.at_xpath(".//input[@name='save_scope' and @value='snapshot' and @form='guest-details-form' and @checked]")).to be_present
       expect(save_dialog.at_xpath(".//input[@name='save_scope' and @value='snapshot_and_profile' and @form='guest-details-form']")).to be_present
@@ -1491,13 +1496,86 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)
 
       patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
-        guest: { name: "Stay Snapshot", email: "stay@example.com", country: "Malaysia", document_type: "passport" },
+        guest: {
+          name: "Stay Snapshot",
+          email: "stay@example.com",
+          country: "Malaysia",
+          document_type: "passport",
+          home_address: "No. 12, Jalan Ampang",
+          city: "Kuala Lumpur",
+          state_code: "14",
+          postal_code: "50450",
+          address_country: "Malaysia"
+        },
         save_scope: "snapshot"
       }
 
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id))
-      expect(booking_guest.reload).to have_attributes(name_snapshot: "Stay Snapshot", email_snapshot: "stay@example.com")
+      expect(booking_guest.reload).to have_attributes(
+        name_snapshot: "Stay Snapshot",
+        email_snapshot: "stay@example.com",
+        home_address_snapshot: "No. 12, Jalan Ampang",
+        city_snapshot: "Kuala Lumpur",
+        state_code_snapshot: "14",
+        postal_code_snapshot: "50450",
+        address_country_snapshot: "Malaysia"
+      )
+      expect(booking.reload).to have_attributes(
+        guest_home_address: "No. 12, Jalan Ampang",
+        guest_city: "Kuala Lumpur",
+        guest_state_code: "14",
+        guest_postal_code: "50450",
+        guest_address_country: "Malaysia"
+      )
       expect(guest.reload.name).to eq("Reusable Guest")
+    end
+
+    it "offers the state as a code list only for a Malaysian address" do
+      guest = create(:guest, name: "Coded Guest")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true,
+        address_country_snapshot: "Malaysia", state_code_snapshot: "12")
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+
+      document = Nokogiri::HTML(response.body)
+      coded = document.at_css("[data-address-state-target='coded']")
+      free = document.at_css("[data-address-state-target='free']")
+
+      expect(coded["hidden"]).to be_nil
+      expect(coded.at_css("select[name='guest[state_code]']")["disabled"]).to be_nil
+      expect(free["hidden"]).not_to be_nil
+      expect(free.at_css("input[name='guest[state_code]']")["disabled"]).not_to be_nil
+    end
+
+    it "offers the state as a text box for an address outside Malaysia" do
+      guest = create(:guest, name: "Free Guest")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true,
+        address_country_snapshot: "Japan", state_code_snapshot: "Hokkaido")
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+
+      document = Nokogiri::HTML(response.body)
+      coded = document.at_css("[data-address-state-target='coded']")
+      free = document.at_css("[data-address-state-target='free']")
+
+      expect(coded["hidden"]).not_to be_nil
+      expect(coded.at_css("select[name='guest[state_code]']")["disabled"]).not_to be_nil
+      expect(free["hidden"]).to be_nil
+      expect(free.at_css("input[name='guest[state_code]']")["disabled"]).to be_nil
+      expect(free.at_css("input[name='guest[state_code]']")["value"]).to eq("Hokkaido")
+    end
+
+    it "offers the state as a text box while the address country is blank" do
+      guest = create(:guest, name: "Blank Country Guest")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true,
+        address_country_snapshot: nil)
+      booking.update!(guest_address_country: nil)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("[data-address-state-target='coded']")["hidden"]).not_to be_nil
+      expect(document.at_css("[data-address-state-target='free']")["hidden"]).to be_nil
     end
 
     it "updates the reusable guest only through the explicit split-save scope" do

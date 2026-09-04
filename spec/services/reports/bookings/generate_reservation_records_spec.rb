@@ -63,7 +63,7 @@ RSpec.describe Reports::Bookings::GenerateReservationRecords do
         entries: [
           [ "Guest", "Aisha Rahman" ],
           [ "Address", "12 Jalan Pantai, Kota Kinabalu" ],
-          [ "Country", booking.guest_country ]
+          [ "Nationality", booking.guest_country ]
         ]
       },
       {

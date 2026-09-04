@@ -106,11 +106,8 @@ module HotelPortal
     end
 
     def guest_address_display
-      snapshot_address = active_booking_guest&.home_address_snapshot.presence
-      return snapshot_address if snapshot_address
-      return @booking.guest_home_address.presence || "Not provided" if active_booking_guest.nil? || active_booking_guest.primary?
-
-      "Not provided"
+      fallback = active_booking_guest.nil? || active_booking_guest.primary? ? @booking : nil
+      PostalAddresses::Presenter.from_booking_guest(active_booking_guest, fallback_booking: fallback).display.presence || "Not provided"
     end
 
     def guest_identity
