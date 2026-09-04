@@ -176,7 +176,7 @@ module Reports
         end
 
         @group_booking = group_booking
-        @bookings = group_booking ? group_booking.bookings.includes(booking_rooms: :room_type).to_a : [ booking ]
+        @bookings = group_booking ? group_booking.bookings.includes(:booking_guests, booking_rooms: :room_type).to_a : [ booking ]
         # Policy, cancellation terms and check-in times are properties of the stay rather
         # than of the group, so the group borrows them from its first room.
         @booking = booking || @bookings.first
