@@ -23,127 +23,136 @@
     <% end %>
   <% end %>
 
-  <section class="space-y-4" aria-label="Guest directory">
-    <%= render PanelsUI::Tabs.new(
-          id: "guest-tag-tabs",
-          active: active_tag,
-          variant: :line,
-          aria_label: "Filter guests by status") do |strip| %>
-      <% tabs.each do |tab| %>
-        <% strip.with_tab(
-             name: tab[:name],
-             label: tab[:label],
-             icon: tab[:icon],
-             count: @tag_counts[tab[:name]],
-             href: hotel_guests_path(current_hotel,
-               tag: (tab[:name] unless tab[:name] == "all"),
-               query: params[:query].presence,
-               country: params[:country].presence),
-             data: { turbo_frame: "guests_results", turbo_action: "advance" }) %>
-      <% end %>
-    <% end %>
-
-    <%= form_with url: hotel_guests_path(current_hotel), method: :get,
-          class: "flex flex-col gap-3 sm:flex-row sm:items-end",
-          data: { controller: "auto-submit", turbo_frame: "guests_results", turbo_action: "advance" } do |form| %>
-      <%= form.hidden_field :tag, value: active_tag unless active_tag == "all" %>
-
-      <div class="flex-1">
-        <%= render PanelsUI::FormField.new(form: form, attribute: :query, label: "Search guests", label_hidden: true, size: :sm) do |field| %>
-          <% field.with_input(
-               type: :search,
-               value: params[:query],
-               placeholder: "Search by name, email, phone or ID",
-               data: { action: "input->auto-submit#submit" }) %>
+  <section aria-label="Guest directory">
+    <%# The strip, the filters and the table all live inside the frame. A tab
+        that swaps only the rows below it leaves its own highlight behind. %>
+    <%= turbo_frame_tag "guests_results", class: "block space-y-4" do %>
+      <%= render PanelsUI::Tabs.new(
+            id: "guest-tag-tabs",
+            active: active_tag,
+            variant: :line,
+            aria_label: "Filter guests by status") do |strip| %>
+        <% tabs.each do |tab| %>
+          <% strip.with_tab(
+               name: tab[:name],
+               label: tab[:label],
+               icon: tab[:icon],
+               count: @tag_counts[tab[:name]],
+               href: hotel_guests_path(current_hotel,
+                 tag: (tab[:name] unless tab[:name] == "all"),
+                 query: params[:query].presence,
+                 country: params[:country].presence),
+               data: { turbo_frame: "guests_results", turbo_action: "advance" }) %>
         <% end %>
-      </div>
+      <% end %>
 
-      <% if @country_options.any? %>
-        <div class="w-full sm:w-56">
-          <%= render PanelsUI::FormField.new(form: form, attribute: :country, label: "Country", label_hidden: true, size: :sm) do |field| %>
-            <% field.with_select_menu(
-                 @country_options.map { |country| [ country, country ] },
-                 prompt: "All countries",
-                 include_blank: true,
-                 selected: params[:country],
-                 data: { action: "change->auto-submit#submitNow" }) %>
+      <%= form_with url: hotel_guests_path(current_hotel), method: :get,
+            class: "flex flex-col gap-3 sm:flex-row sm:items-end",
+            data: { controller: "auto-submit", turbo_frame: "guests_results", turbo_action: "advance" } do |form| %>
+        <%= form.hidden_field :tag, value: active_tag unless active_tag == "all" %>
+
+        <div class="flex-1">
+          <%= render PanelsUI::FormField.new(form: form, attribute: :query, label: "Search guests", label_hidden: true, size: :sm) do |field| %>
+            <% field.with_input(
+                 type: :search,
+                 value: params[:query],
+                 placeholder: "Search by name, email, phone or ID",
+                 data: { action: "input->auto-submit#submit" }) %>
           <% end %>
         </div>
-      <% end %>
 
-      <% if params[:query].present? || params[:country].present? %>
-        <%= render PanelsUI::Button.new(as: :a, href: hotel_guests_path(current_hotel, tag: (active_tag unless active_tag == "all")), variant: :secondary, size: :sm, data: { turbo_frame: "guests_results", turbo_action: "advance" }) do %>
-          Clear
+        <% if @country_options.any? %>
+          <div class="w-full sm:w-56">
+            <%= render PanelsUI::FormField.new(form: form, attribute: :country, label: "Country", label_hidden: true, size: :sm) do |field| %>
+              <% field.with_select_menu(
+                   @country_options.map { |country| [ country, country ] },
+                   prompt: "All countries",
+                   include_blank: true,
+                   selected: params[:country],
+                   data: { action: "change->auto-submit#submitNow" }) %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if params[:query].present? || params[:country].present? %>
+          <%= render PanelsUI::Button.new(as: :a, href: hotel_guests_path(current_hotel, tag: (active_tag unless active_tag == "all")), variant: :secondary, size: :sm, data: { turbo_frame: "guests_results", turbo_action: "advance" }) do %>
+            Clear
+          <% end %>
         <% end %>
       <% end %>
-    <% end %>
 
-    <%= turbo_frame_tag "guests_results" do %>
       <div class="relative space-y-4"
            data-controller="<%= [ ("bulk-select" if selectable), ("guest-blacklist" if can_manage) ].compact.join(" ") %>"
            data-bulk-select-noun-value="guest">
-        <% if @guests.any? %>
-          <%= render PanelsUI::Table.new(
-                caption: "Guests matching the current filters",
-                density: :compact,
-                header_style: :sentence,
-                hoverable: true,
-                sticky_column: true,
-                wrapper_class: "rounded-md border border-border bg-card") do |table| %>
-            <% table.with_header do %>
+        <%= render PanelsUI::Table.new(
+              caption: "Guests matching the current filters",
+              density: :compact,
+              header_style: :sentence,
+              hoverable: true,
+              sticky_column: true,
+              wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <% if selectable %>
+                <th scope="col" class="w-10">
+                  <%= render PanelsUI::Checkbox.new(
+                        name: "select_all_guests",
+                        label: "Select every guest on this page",
+                        label_hidden: true,
+                        size: :sm,
+                        data: { bulk_select_target: "selectAll", action: "change->bulk-select#toggleAll" }) %>
+                </th>
+              <% end %>
+              <th scope="col">Guest</th>
+              <th scope="col" class="hidden lg:table-cell">Contact</th>
+              <th scope="col" class="hidden xl:table-cell">ID / Passport</th>
+              <th scope="col" class="hidden sm:table-cell">Stays</th>
+              <th scope="col" class="hidden md:table-cell">Last stayed</th>
+              <th scope="col" class="hidden text-right md:table-cell">Lifetime value</th>
+              <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+            </tr>
+          <% end %>
+
+          <% table.with_body do %>
+            <% @guests.each do |guest| %>
+              <%= render "guest_row",
+                    guest: guest,
+                    selectable: selectable,
+                    can_manage: can_manage,
+                    can_delete: can_delete,
+                    repeat_ids: @repeat_ids,
+                    stays_count: guest_stays_count(guest),
+                    currency_totals: guest_currency_totals(guest) %>
+            <% end %>
+
+            <%# The empty state sits in the table, not in place of it. The
+                column headings stay on screen, so it reads as a filter that
+                found nothing rather than as a directory that vanished. %>
+            <% if @guests.none? %>
               <tr>
-                <% if selectable %>
-                  <th scope="col" class="w-10">
-                    <%= render PanelsUI::Checkbox.new(
-                          name: "select_all_guests",
-                          label: "Select every guest on this page",
-                          label_hidden: true,
-                          size: :sm,
-                          data: { bulk_select_target: "selectAll", action: "change->bulk-select#toggleAll" }) %>
-                  </th>
-                <% end %>
-                <th scope="col">Guest</th>
-                <th scope="col" class="hidden lg:table-cell">Contact</th>
-                <th scope="col" class="hidden xl:table-cell">ID / Passport</th>
-                <th scope="col" class="hidden sm:table-cell">Stays</th>
-                <th scope="col" class="hidden md:table-cell">Last stayed</th>
-                <th scope="col" class="hidden text-right md:table-cell">Lifetime value</th>
-                <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+                <td colspan="<%= selectable ? 8 : 7 %>">
+                  <%= render PanelsUI::EmptyState.new(
+                        title: "No guest records found",
+                        description: "Change the search term or pick another status tab.",
+                        icon: "users") do |empty| %>
+                    <% if can_manage %>
+                      <% empty.with_action do %>
+                        <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel), variant: :primary, size: :sm) do %>
+                          New guest record
+                        <% end %>
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                </td>
               </tr>
             <% end %>
+          <% end %>
+        <% end %>
 
-            <% table.with_body do %>
-              <% @guests.each do |guest| %>
-                <%= render "guest_row",
-                      guest: guest,
-                      selectable: selectable,
-                      can_manage: can_manage,
-                      can_delete: can_delete,
-                      repeat_ids: @repeat_ids,
-                      stays_count: guest_stays_count(guest),
-                      currency_totals: guest_currency_totals(guest) %>
-              <% end %>
-            <% end %>
-          <% end %>
-
-          <% if @guests.total_pages > 1 %>
-            <div class="flex justify-center">
-              <%= paginate @guests, data: { turbo_action: "advance" } %>
-            </div>
-          <% end %>
-        <% else %>
-          <%= render PanelsUI::EmptyState.new(
-                title: "No guest records found",
-                description: "Change the search term or pick another status tab.",
-                icon: "users") do |empty| %>
-            <% if can_manage %>
-              <% empty.with_action do %>
-                <%= render PanelsUI::Button.new(as: :a, href: new_hotel_guest_path(current_hotel), variant: :primary, size: :sm) do %>
-                  New guest record
-                <% end %>
-              <% end %>
-            <% end %>
-          <% end %>
+        <% if @guests.total_pages > 1 %>
+          <div class="flex justify-center">
+            <%= paginate @guests, data: { turbo_action: "advance" } %>
+          </div>
         <% end %>
 
         <% if selectable %>

@@ -242,6 +242,29 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).not_to include("Mark as VIP")
     end
 
+    it "keeps the tab strip inside the frame the tabs replace" do
+      get hotel_guests_path(hotel), params: { tag: "vip" }
+
+      expect(response.body).to include("guests_results")
+      frame = response.body[/<turbo-frame[^>]*guests_results.*?<\/turbo-frame>/m]
+      expect(frame).to be_present
+      # Outside the frame, a tab swaps the rows and leaves its own highlight
+      # behind, and the filter form keeps posting the tab the user just left.
+      expect(frame).to include("guest-tag-tabs")
+      expect(frame).to match(/aria-current="page"[^>]*>(?:(?!<\/a>).)*VIP/m)
+      expect(frame).to include("Search guests")
+    end
+
+    it "keeps the table and its headings when a filter finds nothing" do
+      get hotel_guests_path(hotel), params: { query: "nobody-by-this-name" }
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("<table")
+      expect(body_text).to include("Lifetime value")
+      expect(body_text).to include("No guest records found")
+      expect(body_text).to include("colspan=")
+    end
+
     it "filters guests by status tags" do
       ravi = Guest.create!(
         name: "Ravi Vip",
