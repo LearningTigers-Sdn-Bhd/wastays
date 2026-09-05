@@ -65,6 +65,7 @@ module HotelPortal
             document_type: guest.document_type,
             government_id: guest.safely_read_encrypted(:government_id),
             passport_number: guest.safely_read_encrypted(:passport_number),
+            tin: guest.tin,
             blacklisted: guest.blacklisted_at?(current_hotel)
           }
         }

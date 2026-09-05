@@ -78,10 +78,19 @@ module HotelPortal
             return render_guest_review
           end
 
+          existing_guest = picked_guest
+          update_profile = existing_guest.present? && params.dig(:guest, :update_profile) == "1"
+
           result = if target == :group
-            ::BookingGuests::AddToGroup.call(group_booking: @booking.group_booking, attributes: guest_params, actor: current_user)
+            ::BookingGuests::AddToGroup.call(
+              group_booking: @booking.group_booking, attributes: guest_params, actor: current_user,
+              existing_guest:, update_profile:
+            )
           else
-            ::BookingGuests::Add.call(booking: target, attributes: guest_params, actor: current_user)
+            ::BookingGuests::Add.call(
+              booking: target, attributes: guest_params, actor: current_user,
+              existing_guest:, update_profile:
+            )
           end
           @guest = result.guest
           return complete_action(notice: "Guest added.") if result.success?
@@ -153,10 +162,21 @@ module HotelPortal
           params[:save_scope].presence_in(%w[snapshot snapshot_and_profile]) || "snapshot"
         end
 
+        # The sheet searches the guest directory, so an added guest is often
+        # someone the hotel already knows. The picked record is read here, not
+        # trusted from the form: a stale or foreign id must not link a guest the
+        # desk cannot see.
+        def picked_guest
+          id = params.dig(:guest, :existing_guest_id).presence
+          return if id.blank?
+
+          ::Guests::GuestQuery.new(hotel: current_hotel, params: {}).call.find_by(id:)
+        end
+
         def guest_params
           params.require(:guest).permit(
             :name, :email, :phone, :country, :gender, :document_type, :government_id, :passport_number,
-            :date_of_birth, :home_address, :city, :state_code, :postal_code, :address_country
+            :date_of_birth, :home_address, :city, :state_code, :postal_code, :address_country, :tin
           )
         end
 

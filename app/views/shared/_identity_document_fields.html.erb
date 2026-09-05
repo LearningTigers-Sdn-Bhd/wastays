@@ -10,6 +10,10 @@
     document_type, a Booking form uses guest_document_type), so the caller names
     all three.
 
+    Pass `country:` to have the partial settle the document type against the
+    nationality, the way Guests::GuestPresenter does. Leave it out when the
+    caller has settled the type already.
+
     The partial emits two grid children: the document type and its number sit
     side by side on one row, and the passport row spans the next. Give the
     parent a two-column grid and pass the matching span_class. %>
@@ -17,23 +21,35 @@
   span_class = local_assigns.fetch(:span_class, "sm:col-span-2")
   passport_grid_class = local_assigns.fetch(:passport_grid_class, "sm:grid-cols-2")
   document_type_data = local_assigns.fetch(:document_type_data, {})
+  document_type_field_data = local_assigns.fetch(:document_type_field_data, {})
   government_id_data = local_assigns.fetch(:government_id_data, {})
   passport_number_data = local_assigns.fetch(:passport_number_data, {})
   government_id_field_data = local_assigns.fetch(:government_id_field_data, {})
   passport_number_field_data = local_assigns.fetch(:passport_number_field_data, {})
   government_id_value = local_assigns[:government_id]
   passport_number_value = local_assigns[:passport_number]
+  # A caller that knows the nationality hands it over and gets the settled type
+  # back. A caller that has already settled it passes no country, because
+  # normalising against a missing nationality would read as "not Malaysian" and
+  # turn a MyKad back into a national identity card.
+  document_type = if local_assigns.key?(:country)
+    Guests::GuestPresenter.normalize_document_type(document_type, local_assigns[:country])
+  else
+    document_type
+  end
   national_id = document_type == "national_id"
 %>
-<%= render PanelsUI::FormField.new(form: form, attribute: document_type_attribute, label: "Document type") do |field| %>
+<%= render PanelsUI::FormField.new(form: form, attribute: document_type_attribute, label: "Document type",
+      data: document_type_field_data) do |field| %>
   <% field.with_select_menu(
-       Booking::DOCUMENT_TYPES,
+       Booking::DOCUMENT_TYPES.map { |label, value| { label:, value: } },
+       include_blank: true,
        selected: document_type,
        prompt: "Select a document type",
        data: { guest_identity_target: "documentType" }.merge(document_type_data)) %>
 <% end %>
 <%= render PanelsUI::FormField.new(form: form, attribute: government_id_attribute,
-      label: "Identity document number",
+      label: Guests::GuestPresenter.identity_number_label(document_type),
       data: { guest_identity_target: "numberLabel" }.merge(government_id_field_data)) do |field| %>
   <% field.with_input(
        value: government_id_value,

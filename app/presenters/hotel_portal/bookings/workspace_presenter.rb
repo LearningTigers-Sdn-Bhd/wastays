@@ -63,7 +63,7 @@ module HotelPortal
     DOCUMENT_TYPE_ORDER = DOCUMENT_SECTION_BY_TYPE.keys.each_with_index.to_h.freeze
     GUEST_FORM_ATTRIBUTES = %i[
       name email phone country gender document_type government_id passport_number date_of_birth
-      home_address city state_code postal_code address_country
+      home_address city state_code postal_code address_country tin
     ].freeze
     BADGE_VARIANTS = {
       "slate" => :neutral, "blue" => :info, "amber" => :warning,
@@ -617,12 +617,14 @@ module HotelPortal
       g = selected_guest
       return {} unless bg && g
 
-      return GUEST_FORM_ATTRIBUTES.to_h { |attribute| [ attribute, g.public_send(attribute) ] } if @guest_form
+      if @guest_form
+        return settle_guest_snapshots(GUEST_FORM_ATTRIBUTES.to_h { |attribute| [ attribute, g.public_send(attribute) ] })
+      end
 
       # The three encrypted columns exist on both the stay snapshot and the
       # reusable profile, so an unreadable value on either side falls through
       # rather than raising on the way into the form.
-      {
+      settle_guest_snapshots(
         name: bg.name_snapshot.presence || g.name,
         email: safe_encrypted_value(bg, :email_snapshot) || safe_encrypted_value(g, :email),
         phone: safe_encrypted_value(bg, :phone_snapshot) || safe_encrypted_value(g, :phone),
@@ -636,8 +638,24 @@ module HotelPortal
         city: bg.city_snapshot.presence || g.city,
         state_code: bg.state_code_snapshot.presence || g.state_code,
         postal_code: bg.postal_code_snapshot.presence || g.postal_code,
-        address_country: bg.address_country_snapshot.presence || g.address_country
-      }
+        address_country: bg.address_country_snapshot.presence || g.address_country,
+        # The tax number has no snapshot column and needs none: Booking#buyer_tin
+        # reads the stay's own guest_tin ahead of the profile's tin.
+        tin: bg.booking.guest_tin.presence || g.tin
+      )
+    end
+
+    # The workspace paints the same settled values as the guest record page.
+    # The document type follows the nationality, so a Malaysian guest reads
+    # MyKad on both screens and the passport row opens for the right guests.
+    # An address country that is still empty is not confirmed as foreign, only
+    # unfilled, so it opens on the property's own country and the state field
+    # offers the LHDN list rather than a free text box.
+    def settle_guest_snapshots(values)
+      values.merge(
+        document_type: ::Guests::GuestPresenter.normalize_document_type(values[:document_type], values[:country]),
+        address_country: values[:address_country].presence || hotel.country
+      )
     end
 
     def boat_schedule
