@@ -642,6 +642,18 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     end
   end
 
+  describe "the city field" do
+    it "offers the property's city as a placeholder rather than a prefilled value" do
+      hotel.update!(city: "Langkawi")
+
+      get new_hotel_guest_path(hotel)
+
+      city = response.parsed_body.at_css("input[name='guest[city]']")
+      expect(city[:value]).to be_blank
+      expect(city[:placeholder]).to eq("For example, Langkawi")
+    end
+  end
+
   describe "the address block's state field" do
     it "opens on the property's country, so an unfilled address gets the state list" do
       guest = create(:guest, created_by_hotel: hotel, address_country: nil, country: "Malaysia")

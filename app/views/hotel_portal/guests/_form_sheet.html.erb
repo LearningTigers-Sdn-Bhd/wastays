@@ -98,7 +98,7 @@
 
             <div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
               <%= render PanelsUI::FormField.new(form: form, attribute: :city, label: "City") do |field| %>
-                <% field.with_input(placeholder: "For example, Kota Kinabalu", autocomplete: "address-level2") %>
+                <% field.with_input(placeholder: "For example, #{current_hotel.city.presence || "Kota Kinabalu"}", autocomplete: "address-level2") %>
               <% end %>
 
               <%= render "shared/state_code_field",

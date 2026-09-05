@@ -117,8 +117,10 @@ module HotelPortal
     # frame. `return_to` carries the caller, so New lands back on the directory
     # and Edit lands back on the record it was opened from.
     def new
+      # The country is prefilled because the state field reads it. The city is
+      # not: the property's city is a likely answer, not a known one, so it is
+      # offered as a placeholder and the desk types what the guest says.
       @guest = Guest.new(
-        city: current_hotel.city,
         country: current_hotel.country,
         address_country: current_hotel.country
       )
