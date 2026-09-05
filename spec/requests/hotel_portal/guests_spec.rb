@@ -224,6 +224,15 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("data-bulk-kind=\"unblacklist\"")
       expect(body_text).to include("{skipped} already VIP.")
       expect(body_text).to include("Blacklist selected guests")
+      document = Nokogiri::HTML(response.body)
+      menu = document.at_css("#guest-bulk-actions-menu")
+      expect(menu.css("[role='menuitem']").size).to eq(5)
+      expect(document.at_css("#guest-bulk-actions-trigger").text).to include("Actions")
+      menu.css("button[type='submit']").each do |button|
+        form = document.at_css("form##{button['form']}")
+        expect(form).to be_present
+        expect(form.at_css("input[data-bulk-select-target='idsInput']")).to be_present
+      end
       # Each row states its own status so the confirm can count without asking
       # the server.
       expect(body_text).to include("data-vip=\"false\"")

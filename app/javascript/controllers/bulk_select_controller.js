@@ -77,6 +77,7 @@ export default class extends Controller {
     this.actionTargets.forEach(action => {
       const { changed } = this.preview(action, selected)
       action.disabled = changed === 0
+      action.setAttribute("aria-disabled", String(changed === 0))
       action.dataset.turboConfirm = this.sentence(action, selected)
     })
 

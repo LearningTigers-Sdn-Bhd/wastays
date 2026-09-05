@@ -33,7 +33,7 @@ module PanelsUI
         aria: { label: @aria_label },
         class: tw_merge(
           "fixed bottom-[76px] left-1/2 z-overlay hidden w-[calc(100%-2rem)] -translate-x-1/2 " \
-          "items-center justify-between gap-3 rounded-lg border border-border bg-card " \
+          "flex-nowrap items-center justify-between gap-3 rounded-lg border border-border bg-card " \
           "px-4 py-3 text-card-foreground shadow-lg " \
           "lg:bottom-6 lg:w-auto lg:justify-start lg:gap-4",
           @class

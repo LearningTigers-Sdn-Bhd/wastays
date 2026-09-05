@@ -1,14 +1,35 @@
-<%# The counts in each confirm are worked out from the selection itself, so
-    "Mark VIP" says how many records actually change and how many are already
-    VIP. An action that would change nothing is disabled. %>
+<% if can_manage %>
+  <%= form_with url: bulk_vip_hotel_guests_path(current_hotel), method: :patch, id: "guest-bulk-vip-form" do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+    <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
+  <% end %>
+  <%= form_with url: bulk_unvip_hotel_guests_path(current_hotel), method: :patch, id: "guest-bulk-unvip-form" do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+    <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
+  <% end %>
+  <%= form_with url: bulk_unblacklist_hotel_guests_path(current_hotel), method: :patch, id: "guest-bulk-unblacklist-form" do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+    <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
+  <% end %>
+<% end %>
+
+<% if can_delete %>
+  <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete, id: "guest-bulk-destroy-form" do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+  <% end %>
+<% end %>
+
 <%= render PanelsUI::BulkActionBar.new(noun: "guest") do |bar| %>
-  <% if can_manage %>
-    <% bar.with_action do %>
-      <%= form_with url: bulk_vip_hotel_guests_path(current_hotel), method: :patch, class: "contents" do |f| %>
-        <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
-        <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
-        <%= render PanelsUI::Button.new(
-              as: :button, type: :submit, variant: :secondary, size: :sm,
+  <% bar.with_action do %>
+    <%= render PanelsUI::DropdownMenu.new(id: "guest-bulk-actions", placement: :top_end, class: "w-56") do |menu| %>
+      <% menu.with_trigger(variant: :secondary, size: :sm, class: "min-h-11 sm:min-h-0") do %>
+        Actions
+        <%= app_icon "chevron-up", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+
+      <% if can_manage %>
+        <% menu.with_item(
+              form_id: "guest-bulk-vip-form", type: :submit, variant: :default,
               data: {
                 bulk_select_target: "action",
                 bulk_kind: "vip",
@@ -21,15 +42,9 @@
           <%= app_icon "crown", class: "size-3.5", aria: { hidden: true } %>
           Mark VIP
         <% end %>
-      <% end %>
-    <% end %>
 
-    <% bar.with_action do %>
-      <%= form_with url: bulk_unvip_hotel_guests_path(current_hotel), method: :patch, class: "contents" do |f| %>
-        <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
-        <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
-        <%= render PanelsUI::Button.new(
-              as: :button, type: :submit, variant: :secondary, size: :sm,
+        <% menu.with_item(
+              form_id: "guest-bulk-unvip-form", type: :submit, variant: :default,
               data: {
                 bulk_select_target: "action",
                 bulk_kind: "unvip",
@@ -42,25 +57,17 @@
           <%= app_icon "crown", class: "size-3.5", aria: { hidden: true } %>
           Remove VIP
         <% end %>
-      <% end %>
-    <% end %>
 
-    <% bar.with_action do %>
-      <%= render PanelsUI::Button.new(
-            as: :button, type: :button, variant: :secondary, size: :sm,
-            command: "show-modal", commandfor: "guest-bulk-blacklist-dialog",
-            data: { bulk_select_target: "action", bulk_kind: "blacklist" }) do %>
-        <%= app_icon "user-round-x", class: "size-3.5", aria: { hidden: true } %>
-        Blacklist
-      <% end %>
-    <% end %>
+        <% menu.with_item(
+              variant: :danger,
+              command: "show-modal", commandfor: "guest-bulk-blacklist-dialog",
+              data: { bulk_select_target: "action", bulk_kind: "blacklist" }) do %>
+          <%= app_icon "user-round-x", class: "size-3.5", aria: { hidden: true } %>
+          Blacklist
+        <% end %>
 
-    <% bar.with_action do %>
-      <%= form_with url: bulk_unblacklist_hotel_guests_path(current_hotel), method: :patch, class: "contents" do |f| %>
-        <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
-        <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
-        <%= render PanelsUI::Button.new(
-              as: :button, type: :submit, variant: :warning, size: :sm,
+        <% menu.with_item(
+              form_id: "guest-bulk-unblacklist-form", type: :submit, variant: :warning,
               data: {
                 bulk_select_target: "action",
                 bulk_kind: "unblacklist",
@@ -74,15 +81,11 @@
           Remove blacklist
         <% end %>
       <% end %>
-    <% end %>
-  <% end %>
 
-  <% if can_delete %>
-    <% bar.with_action do %>
-      <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete, class: "contents" do |f| %>
-        <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
-        <%= render PanelsUI::Button.new(
-              as: :button, type: :submit, variant: :destructive, size: :sm,
+      <% if can_delete %>
+        <% menu.with_separator if can_manage %>
+        <% menu.with_item(
+              form_id: "guest-bulk-destroy-form", type: :submit, variant: :danger,
               data: {
                 bulk_select_target: "action",
                 bulk_confirm: "{selected} {selectedNoun} are removed from the directory. Their booking history stays on record.",
