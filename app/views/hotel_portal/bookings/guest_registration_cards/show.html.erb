@@ -5,6 +5,7 @@
     <div>
       <p class="text-xs font-semibold uppercase text-muted-foreground">Front desk document</p>
       <h1 class="text-2xl font-bold">Guest Registration Card</h1>
+      <p class="mt-1 text-xs text-muted-foreground"><%= @presenter.hotel_registration_display %></p>
     </div>
   </div>
 
@@ -87,7 +88,7 @@
 
         <div class="text-sm">
           <div class="border-b border-border p-5">
-            <h2 class="mb-4 text-sm font-bold uppercase font-semibold text-foreground">Guest</h2>
+            <h2 class="text-sm font-bold uppercase font-semibold text-foreground">Guest</h2>
             <dl class="grid gap-x-8 sm:grid-cols-2">
               <div class="grid grid-cols-[3rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Name</dt>
@@ -123,7 +124,7 @@
           </div>
 
           <div class="border-b border-border p-5">
-            <h2 class="mb-4 text-sm font-bold uppercase font-semibold text-foreground">Stay</h2>
+            <h2 class="text-sm font-bold uppercase font-semibold text-foreground">Stay</h2>
             <dl class="grid gap-x-12 sm:grid-cols-2">
               <% if @card.field_visible?(:booking_number) %>
                 <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
@@ -167,7 +168,7 @@
           </div>
 
           <div class="p-5">
-            <h2 class="mb-4 text-sm font-bold uppercase font-semibold text-foreground">Payment</h2>
+            <h2 class="text-sm font-bold uppercase font-semibold text-foreground">Payment</h2>
             <dl class="grid gap-x-12 sm:grid-cols-2">
               <div class="grid grid-cols-[6.4rem_1fr] gap-x-2">
                 <dt class="text-muted-foreground">Room price</dt>
@@ -194,7 +195,7 @@
 
           <% if @presenter.boat_transfer? %>
             <div class="border-t border-border p-5">
-              <h2 class="mb-4 text-sm font-bold uppercase font-semibold text-foreground">Boat Transfer</h2>
+              <h2 class="text-sm font-bold uppercase font-semibold text-foreground">Boat Transfer</h2>
               <dl class="grid gap-x-12 sm:grid-cols-2">
                 <div class="grid grid-cols-[4.5rem_1fr] gap-x-2">
                   <dt class="text-muted-foreground">Boat-in</dt>
