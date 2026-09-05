@@ -21,6 +21,7 @@
   span_class = local_assigns.fetch(:span_class, "sm:col-span-2")
   passport_grid_class = local_assigns.fetch(:passport_grid_class, "sm:grid-cols-2")
   document_type_data = local_assigns.fetch(:document_type_data, {})
+  document_type_field_data = local_assigns.fetch(:document_type_field_data, {})
   government_id_data = local_assigns.fetch(:government_id_data, {})
   passport_number_data = local_assigns.fetch(:passport_number_data, {})
   government_id_field_data = local_assigns.fetch(:government_id_field_data, {})
@@ -38,7 +39,8 @@
   end
   national_id = document_type == "national_id"
 %>
-<%= render PanelsUI::FormField.new(form: form, attribute: document_type_attribute, label: "Document type") do |field| %>
+<%= render PanelsUI::FormField.new(form: form, attribute: document_type_attribute, label: "Document type",
+      data: document_type_field_data) do |field| %>
   <% field.with_select_menu(
        Booking::DOCUMENT_TYPES.map { |label, value| { label:, value: } },
        include_blank: true,

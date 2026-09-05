@@ -22,7 +22,17 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(response).to have_http_status(:success)
     document = Nokogiri::HTML(response.body)
     expect(document.at_css("turbo-frame#booking_action_sheet dialog#booking-guest-sheet")).to be_present
-    expect(document.at_css("input[name='guest[name]'][autofocus]")).to be_present
+    # Four sections: room assignment, basic information, address, identity.
+    expect(document.css("dialog#booking-guest-sheet section h3").map(&:text)).to eq(
+      [ "Room assignment", "Basic information", "Address", "Identity verification" ]
+    )
+    # The name, email and phone search the guest directory, and the linked
+    # record row carries the switch that writes the sheet back to the profile.
+    expect(document.css("[data-controller~='panels-ui--autocomplete'] input").map { |input| input["name"] })
+      .to eq([ "guest[name]", "guest[email]", "guest[phone]" ])
+    expect(document.at_css("input[name='guest[existing_guest_id]']")).to be_present
+    expect(document.at_css("[data-booking-guest-autofill-target='profileRow'][hidden]")).to be_present
+    expect(document.at_css("input[name='guest[update_profile]']")).to be_present
     # Nationality and address country are comboboxes; gender, document type,
     # apply-to and the Malaysian state code list are select menus.
     expect(document.css("[data-controller~='panels-ui--combobox']").size).to eq(2)
@@ -43,6 +53,55 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).to include('action="complete_sheet"', 'target="booking_action_sheet_secondary"')
     expect(booking.booking_guests.find_by!(is_primary: false).guest.name).to eq("Added Guest")
+  end
+
+  it "links a picked guest record instead of creating a second one" do
+    existing = create(:guest, name: "Repeat Guest", phone: "+60111111111")
+    create(:booking_guest, booking: create(:booking, hotel:), guest: existing)
+
+    expect {
+      post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
+        params: { guest: {
+          existing_guest_id: existing.id, name: "Repeat Guest", phone: "+60122222222",
+          country: "Malaysia", document_type: "passport", date_of_birth: "1993-04-05"
+        } }
+    }.not_to change(Guest, :count)
+
+    booking_guest = booking.booking_guests.find_by!(is_primary: false)
+    expect(booking_guest.guest_id).to eq(existing.id)
+    # The stay keeps what the desk typed. The record keeps its own number.
+    expect(booking_guest.phone_snapshot).to eq("+60122222222")
+    expect(existing.reload.phone).to eq("+60111111111")
+  end
+
+  it "writes the sheet back to the guest record when the profile switch is on" do
+    existing = create(:guest, name: "Repeat Guest", phone: "+60111111111")
+    create(:booking_guest, booking: create(:booking, hotel:), guest: existing)
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
+      params: { guest: {
+        existing_guest_id: existing.id, update_profile: "1", name: "Repeat Guest",
+        phone: "+60122222222", country: "Malaysia", document_type: "passport",
+        date_of_birth: "1993-04-05"
+      } }
+
+    expect(existing.reload.phone).to eq("+60122222222")
+  end
+
+  it "refuses a guest who is already on the booking" do
+    existing = create(:guest, name: "Repeat Guest")
+    create(:booking_guest, booking:, guest: existing, is_primary: false)
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
+      params: { guest: {
+        existing_guest_id: existing.id, name: "Repeat Guest", country: "Malaysia",
+        document_type: "passport", date_of_birth: "1993-04-05"
+      } },
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("is already on this booking")
+    expect(booking.booking_guests.where(guest_id: existing.id).count).to eq(1)
   end
 
   it "adds one reusable guest to every eligible child when group apply is selected" do

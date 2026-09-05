@@ -101,13 +101,16 @@ export default class extends Controller {
 
   toggleAddress(event) {
     event.preventDefault()
-    this.showAddress()
+    this.showAddress({ focus: true })
   }
 
-  showAddress() {
+  // Picking a guest opens the block as a side effect, so focus moves only when
+  // the desk pressed the button itself. A sheet that shows the address from the
+  // start has no button, and must not have the caret pulled out of the name.
+  showAddress({ focus = false } = {}) {
     if (!this.hasAddressFieldTarget) return
     this.addressFieldTarget.hidden = false
     if (this.hasAddressToggleTarget) this.addressToggleTarget.hidden = true
-    this.addressInputTarget?.focus()
+    if (focus && this.hasAddressInputTarget) this.addressInputTarget.focus()
   }
 }
