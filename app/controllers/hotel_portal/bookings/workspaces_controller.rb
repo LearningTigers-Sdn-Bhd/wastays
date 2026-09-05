@@ -145,7 +145,7 @@ module HotelPortal
     def guest_params
       params.require(:guest).permit(
         :name, :email, :phone, :country, :gender, :document_type, :government_id, :passport_number,
-        :date_of_birth, :home_address, :city, :state_code, :postal_code, :address_country
+        :date_of_birth, :home_address, :city, :state_code, :postal_code, :address_country, :tin
       )
     end
 
