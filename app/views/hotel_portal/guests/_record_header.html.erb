@@ -33,7 +33,7 @@
 
         <% if can_manage %>
           <% menu.with_item(
-               href: edit_hotel_guest_path(current_hotel, guest, return_to: request.fullpath),
+               href: edit_hotel_guest_path(current_hotel, guest, return_to: sheet_return_to("guest_record_page")),
                data: { turbo_frame: "settings_action_sheet" }) do %>
             <%= app_icon "pencil", class: "size-4 shrink-0", aria: { hidden: true } %>
             <span>Edit profile</span>

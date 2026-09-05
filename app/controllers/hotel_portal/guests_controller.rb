@@ -92,7 +92,7 @@ module HotelPortal
       @stays_count = query.stays_count
       @last_checkout_on = query.last_checkout_on
 
-      return unless turbo_frame_request?
+      return unless tab_frame_request?
 
       render partial: "details",
              locals: { guest: @guest, presenter: @presenter, stays_count: @stays_count,
@@ -106,7 +106,7 @@ module HotelPortal
       @bookings = query.bookings(page: params[:page])
       @currency_totals = query.currency_totals
 
-      return unless turbo_frame_request?
+      return unless tab_frame_request?
 
       render partial: "booking_history",
              locals: { guest: @guest, presenter: @presenter, stays_count: @stays_count,
@@ -253,6 +253,13 @@ module HotelPortal
         notice: notice,
         frame: turbo_frame_request_id.presence || "settings_action_sheet"
       )
+    end
+
+    # A tab click asks for the inner frame, so it gets the tab body alone. The
+    # outer record frame asks after a sheet edits the guest, and it needs the
+    # header as well — the full page template, which Turbo then extracts.
+    def tab_frame_request?
+      turbo_frame_request_id == "guest_record"
     end
 
     def bookings_query

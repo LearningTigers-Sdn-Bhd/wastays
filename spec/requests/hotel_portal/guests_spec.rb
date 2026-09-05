@@ -475,6 +475,32 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(guest.reload.name).to eq("Renamed Guest")
     end
 
+    # A destination that names a parent frame refreshes that frame alone. The
+    # layout never re-renders with it, so the confirmation has to ride along in
+    # the same response instead of waiting in the session.
+    it "sends the confirmation with the response when only a frame reloads" do
+      patch hotel_guest_path(hotel, guest),
+            params: { return_to: details_hotel_guest_path(hotel, guest, parent_frame: "guest_record_page"),
+                      guest: { name: "Framed Guest" } },
+            headers: { "Accept" => Mime[:turbo_stream].to_s }
+
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("complete_sheet")
+      expect(body_text).to include("parent_frame=guest_record_page")
+      expect(body_text).to include("updated successfully")
+      expect(flash[:notice]).not_to include("updated successfully")
+    end
+
+    it "keeps the confirmation in the flash when the whole page reloads" do
+      patch hotel_guest_path(hotel, guest),
+            params: { return_to: details_hotel_guest_path(hotel, guest),
+                      guest: { name: "Whole Page Guest" } },
+            headers: { "Accept" => Mime[:turbo_stream].to_s }
+
+      expect(response.body).not_to include("parent_frame")
+      expect(flash[:notice]).to include("updated successfully")
+    end
+
     it "ignores a return_to that points off the property" do
       post hotel_guests_path(hotel),
            params: { return_to: "https://evil.example.com/steal",
@@ -754,6 +780,18 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Guest identity")
       expect(body_text).not_to include("<!DOCTYPE html>")
       expect(body_text).not_to include("guest-record-actions")
+    end
+
+    # The outer frame carries the header. An edit that renames the guest has to
+    # refresh the name and badges above the tabs, not only the tab body.
+    it "returns the header as well to the outer record frame" do
+      get details_hotel_guest_path(hotel, guest), headers: { "Turbo-Frame" => "guest_record_page" }
+
+      expect(response).to have_http_status(:success)
+      body_text = CGI.unescapeHTML(response.body)
+      expect(body_text).to include("guest_record_page")
+      expect(body_text).to include("guest-record-header")
+      expect(body_text).to include("Guest identity")
     end
 
     # The tab strip has to travel inside the frame. Left outside it, the

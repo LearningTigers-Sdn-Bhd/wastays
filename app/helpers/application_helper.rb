@@ -79,6 +79,14 @@ module ApplicationHelper
     tag.span(text, class: "italic text-muted-foreground")
   end
 
+  # Return path for a sheet that should refresh one frame instead of the whole
+  # document. `complete_sheet` reads `parent_frame` off the destination, so the
+  # name has to travel inside the return path itself. Current filters and page
+  # survive, because the caller's own query string is kept.
+  def sheet_return_to(frame)
+    "#{request.path}?#{request.query_parameters.merge("parent_frame" => frame).to_query}"
+  end
+
   def booking_status_class(status)
     case status
     when "confirmed" then "bg-green-100 text-green-800"
