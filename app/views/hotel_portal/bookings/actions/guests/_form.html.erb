@@ -71,20 +71,14 @@
       <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
         <% field.with_select_menu([[ "Male", "male" ], [ "Female", "female" ], [ "Other", "other" ]], selected: guest.gender, prompt: "Select a gender") %>
       <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
-        <% field.with_select_menu(Booking::DOCUMENT_TYPES, selected: guest.document_type, prompt: "Select a document type", data: { guest_dob_target: "documentType", guest_identity_target: "documentType", action: "change->guest-dob#autofill change->guest-identity#documentChanged" }) %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "Identity document number", data: { guest_identity_target: "numberLabel" }) do |field| %>
-        <% field.with_input(autocomplete: "off", spellcheck: false, data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
-      <% end %>
-      <div class="sm:col-span-2 grid gap-4 sm:grid-cols-2" data-guest-identity-target="passportRow" <%= "hidden" unless guest.document_type == "national_id" %>>
-        <%= render PanelsUI::FormField.new(form:, attribute: :lhdn_document_type, label: "LHDN document type", disabled: true) do |field| %>
-          <% field.with_input(value: "Passport", readonly: true) %>
-        <% end %>
-        <%= render PanelsUI::FormField.new(form:, attribute: :passport_number, label: "Passport number", hint: "Required for an individual e-invoice.") do |field| %>
-          <% field.with_input(autocomplete: "off", spellcheck: false, disabled: guest.document_type != "national_id", data: { guest_identity_target: "passportInput" }) %>
-        <% end %>
-      </div>
+      <%= render "shared/identity_document_fields",
+            form: form,
+            document_type_attribute: :document_type,
+            government_id_attribute: :government_id,
+            passport_number_attribute: :passport_number,
+            document_type: guest.document_type,
+            document_type_data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill change->guest-identity#documentChanged" },
+            government_id_data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
       <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
         <% field.with_date_picker(
              value: guest.date_of_birth&.iso8601,

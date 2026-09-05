@@ -62,6 +62,9 @@ module HotelPortal
             gender: guest.gender,
             date_of_birth: guest.date_of_birth&.iso8601,
             home_address: guest.home_address,
+            document_type: guest.document_type,
+            government_id: guest.safely_read_encrypted(:government_id),
+            passport_number: guest.safely_read_encrypted(:passport_number),
             blacklisted: guest.blacklisted_at?(current_hotel)
           }
         }

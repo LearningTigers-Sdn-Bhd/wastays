@@ -1,0 +1,60 @@
+<%# Identity documents for a PanelsUI form.
+
+    The three fields always travel together: the document type decides what the
+    number field is called, and a foreign national identity card also needs a
+    passport number because LHDN accepts a MyKad or a passport only.
+
+    The guest-identity Stimulus targets live here, so put
+    data-controller="guest-identity" on a container that holds this partial and
+    the nationality field. Attribute names differ per form (a Guest form uses
+    document_type, a Booking form uses guest_document_type), so the caller names
+    all three.
+
+    The partial emits two grid children: the document type and its number sit
+    side by side on one row, and the passport row spans the next. Give the
+    parent a two-column grid and pass the matching span_class. %>
+<%
+  span_class = local_assigns.fetch(:span_class, "sm:col-span-2")
+  passport_grid_class = local_assigns.fetch(:passport_grid_class, "sm:grid-cols-2")
+  document_type_data = local_assigns.fetch(:document_type_data, {})
+  government_id_data = local_assigns.fetch(:government_id_data, {})
+  passport_number_data = local_assigns.fetch(:passport_number_data, {})
+  government_id_field_data = local_assigns.fetch(:government_id_field_data, {})
+  passport_number_field_data = local_assigns.fetch(:passport_number_field_data, {})
+  government_id_value = local_assigns[:government_id]
+  passport_number_value = local_assigns[:passport_number]
+  national_id = document_type == "national_id"
+%>
+<%= render PanelsUI::FormField.new(form: form, attribute: document_type_attribute, label: "Document type") do |field| %>
+  <% field.with_select_menu(
+       Booking::DOCUMENT_TYPES,
+       selected: document_type,
+       prompt: "Select a document type",
+       data: { guest_identity_target: "documentType" }.merge(document_type_data)) %>
+<% end %>
+<%= render PanelsUI::FormField.new(form: form, attribute: government_id_attribute,
+      label: "Identity document number",
+      data: { guest_identity_target: "numberLabel" }.merge(government_id_field_data)) do |field| %>
+  <% field.with_input(
+       value: government_id_value,
+       autocomplete: "off",
+       spellcheck: false,
+       placeholder: local_assigns[:government_id_placeholder],
+       data: government_id_data) %>
+<% end %>
+<div class="<%= span_class %> grid gap-4 <%= passport_grid_class %>" data-guest-identity-target="passportRow" <%= "hidden" unless national_id %>>
+  <%= render PanelsUI::FormField.new(form: form, attribute: :lhdn_document_type, label: "LHDN document type", disabled: true) do |field| %>
+    <% field.with_input(value: "Passport", readonly: true) %>
+  <% end %>
+  <%# FormField owns the disabled state: it hands the control its own value, so
+      a disabled: passed to with_input never reaches the input. %>
+  <%= render PanelsUI::FormField.new(form: form, attribute: passport_number_attribute, label: "Passport number",
+        hint: "Required for an individual e-invoice.", disabled: !national_id,
+        data: passport_number_field_data) do |field| %>
+    <% field.with_input(
+         value: passport_number_value,
+         autocomplete: "off",
+         spellcheck: false,
+         data: { guest_identity_target: "passportInput" }.merge(passport_number_data)) %>
+  <% end %>
+</div>

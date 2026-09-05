@@ -120,6 +120,50 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(dialog.at_css('input[name="booking[payment_amount]"]')).to be_nil
     end
 
+    it "keeps the identity documents behind a toggle on both creation sheets" do
+      [ hotel_booking_action_new_booking_path(hotel), hotel_booking_action_quick_booking_path(hotel) ].each do |path|
+        get path, headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+        dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
+        section = dialog.at_css("section[data-controller='guest-identity']")
+        expect(section).to be_present
+
+        toggle = section.at_css('[data-booking-guest-autofill-target="identityToggle"]')
+        expect(toggle.text.squish).to eq("+ Add identity documents")
+        expect(toggle["data-action"]).to eq("booking-guest-autofill#toggleIdentity")
+        expect(toggle["hidden"]).to be_nil
+
+        fields = section.at_css('[data-booking-guest-autofill-target="identityField"]')
+        expect(fields["hidden"]).not_to be_nil
+        expect(fields.at_css('select[name="booking[guest_document_type]"]')).to be_present
+        expect(fields.at_css('input[name="booking[guest_government_id]"]')).to be_present
+
+        # Picking an existing guest fills these through booking-guest-autofill,
+        # so each control needs its own target.
+        %w[documentTypeField governmentIdField passportNumberField].each do |target|
+          expect(fields.at_css(%([data-booking-guest-autofill-target="#{target}"]))).to be_present
+        end
+
+        passport_row = fields.at_css('[data-guest-identity-target="passportRow"]')
+        expect(passport_row["hidden"]).not_to be_nil
+        expect(passport_row.at_css('input[name="booking[guest_passport_number]"]')["disabled"]).not_to be_nil
+      end
+    end
+
+    it "opens the identity documents when the form already carries one" do
+      get hotel_booking_action_new_booking_path(hotel),
+          params: { booking: { guest_document_type: "national_id", guest_government_id: "A1234567" } },
+          headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      dialog = Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
+      expect(dialog.at_css('[data-booking-guest-autofill-target="identityToggle"]')["hidden"]).not_to be_nil
+      expect(dialog.at_css('[data-booking-guest-autofill-target="identityField"]')["hidden"]).to be_nil
+
+      passport_row = dialog.at_css('[data-guest-identity-target="passportRow"]')
+      expect(passport_row["hidden"]).to be_nil
+      expect(passport_row.at_css('input[name="booking[guest_passport_number]"]')["disabled"]).to be_nil
+    end
+
     it "hydrates the full form from transferred Quick Booking values" do
       guest = create(:guest, created_by_hotel: hotel, name: "Existing Guest")
       get hotel_booking_action_new_booking_path(hotel), params: {

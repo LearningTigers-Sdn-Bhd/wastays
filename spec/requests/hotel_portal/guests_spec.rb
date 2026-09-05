@@ -387,6 +387,9 @@ RSpec.describe "HotelPortal::Guests", type: :request do
         "state_code" => "14",
         "postal_code" => "50450",
         "address_country" => "Malaysia",
+        "document_type" => "passport",
+        "government_id" => "p123456",
+        "passport_number" => nil,
         "blacklisted" => false
       )
     end
