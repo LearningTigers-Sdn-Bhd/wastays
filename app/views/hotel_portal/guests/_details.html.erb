@@ -12,32 +12,32 @@
       <dl class="space-y-3">
         <div>
           <dt class="text-xs text-muted-foreground">Email</dt>
-          <dd class="mt-0.5 break-words text-sm text-foreground"><%= presenter.email %></dd>
+          <dd class="mt-0.5 break-words text-sm text-foreground"><%= presenter.email.presence || blank_value %></dd>
         </div>
         <div>
           <dt class="text-xs text-muted-foreground">Phone</dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.phone %></dd>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.phone.presence || blank_value %></dd>
         </div>
         <div>
           <dt class="text-xs text-muted-foreground">Gender</dt>
-          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_gender %></dd>
+          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_gender || blank_value %></dd>
         </div>
         <div>
           <dt class="text-xs text-muted-foreground">Date of birth</dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.date_of_birth_formatted %></dd>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.date_of_birth_formatted || blank_value %></dd>
         </div>
         <div>
           <dt class="text-xs text-muted-foreground">Nationality</dt>
-          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_country %></dd>
+          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_country || blank_value %></dd>
         </div>
         <div>
           <dt class="text-xs text-muted-foreground"><%= presenter.formatted_document_type %></dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.government_id %></dd>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.government_id.presence || blank_value %></dd>
         </div>
         <% if guest.lhdn_passport_required? %>
           <div>
             <dt class="text-xs text-muted-foreground">Passport</dt>
-            <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.passport_number %></dd>
+            <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.passport_number || blank_value %></dd>
           </div>
         <% end %>
       </dl>
@@ -54,7 +54,7 @@
       </div>
 
       <% if address.missing? %>
-        <p class="text-sm text-muted-foreground">No address on record.</p>
+        <p class="text-sm"><%= blank_value %></p>
       <% else %>
         <address class="text-sm not-italic text-foreground">
           <% address.lines.each do |line| %>
@@ -74,14 +74,14 @@
         </div>
         <div>
           <dt class="text-xs text-muted-foreground">Last stay</dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.last_stay_checkout_date(last_checkout_on) %></dd>
+          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.last_stay_checkout_date(last_checkout_on) || blank_value("None yet") %></dd>
         </div>
         <div>
           <dt class="text-xs text-muted-foreground">Status at <%= current_hotel.name %></dt>
           <dd class="mt-1 flex flex-wrap gap-1.5">
             <%= render "guest_badges", vip: is_vip, blacklisted: is_blacklisted, repeat: guest.repeat? %>
             <% unless is_vip || is_blacklisted || guest.repeat? %>
-              <span class="text-sm text-muted-foreground">No status set.</span>
+              <span class="text-sm"><%= blank_value("None") %></span>
             <% end %>
           </dd>
         </div>
@@ -90,7 +90,7 @@
           <div>
             <dt class="text-xs text-muted-foreground">Blacklist reason</dt>
             <dd class="mt-0.5 text-sm text-foreground">
-              <%= detail["reason"].presence || "—" %>
+              <%= detail["reason"].presence || blank_value("No reason recorded") %>
               <span class="mt-0.5 block text-xs text-muted-foreground">
                 Set by <%= detail["blacklisted_by_name"] %>
               </span>

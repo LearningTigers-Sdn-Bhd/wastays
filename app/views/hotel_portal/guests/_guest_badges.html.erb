@@ -1,11 +1,21 @@
 <%# One set of status badges. The directory row, the record header, and the
-    stay summary all read from here, so a wording change lands in one place. %>
+    stay summary all read from here, so a wording change lands in one place.
+    Each badge pairs an icon with its label, so the status reads at a glance. %>
 <% if vip %>
-  <%= render PanelsUI::Badge.new(label: "VIP", variant: :warning, size: :sm) %>
+  <%= render PanelsUI::Badge.new(variant: :warning, size: :sm) do %>
+    <%= app_icon "crown", class: "size-3 shrink-0", aria: { hidden: true } %>
+    <span>VIP</span>
+  <% end %>
 <% end %>
 <% if blacklisted %>
-  <%= render PanelsUI::Badge.new(label: "Blacklisted", variant: :destructive, size: :sm) %>
+  <%= render PanelsUI::Badge.new(variant: :destructive, size: :sm) do %>
+    <%= app_icon "user-round-x", class: "size-3 shrink-0", aria: { hidden: true } %>
+    <span>Blacklisted</span>
+  <% end %>
 <% end %>
 <% if repeat %>
-  <%= render PanelsUI::Badge.new(label: "Repeat", variant: :info, size: :sm) %>
+  <%= render PanelsUI::Badge.new(variant: :info, size: :sm) do %>
+    <%= app_icon "repeat", class: "size-3 shrink-0", aria: { hidden: true } %>
+    <span>Repeat</span>
+  <% end %>
 <% end %>

@@ -18,7 +18,7 @@
       </div>
 
       <p class="text-xs text-muted-foreground">
-        <%= [ presenter.email, presenter.phone, presenter.formatted_country ].compact_blank.join(" · ") %>
+        <%= [ presenter.email, presenter.phone, presenter.formatted_country ].compact_blank.join(" · ").presence || blank_value %>
       </p>
     </div>
   </div>

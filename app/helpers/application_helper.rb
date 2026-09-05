@@ -72,6 +72,13 @@ module ApplicationHelper
     render(AppIconComponent.new(name, **arguments))
   end
 
+  # One way to show a gap in a record. "Not on file" means the hotel should
+  # hold this value and does not, so staff can chase it. "None yet" means the
+  # event has not happened, so there is nothing to chase.
+  def blank_value(text = "Not on file")
+    tag.span(text, class: "italic text-muted-foreground")
+  end
+
   def booking_status_class(status)
     case status
     when "confirmed" then "bg-green-100 text-green-800"

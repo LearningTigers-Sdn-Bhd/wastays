@@ -33,28 +33,34 @@
       <%= render "guest_badges", vip: vip, blacklisted: blacklisted, repeat: repeat %>
     </div>
     <span class="mt-0.5 block text-xs font-normal text-muted-foreground">
-      <%= [ presenter.formatted_gender, presenter.formatted_country ].compact_blank.join(" · ") %>
+      <%= [ presenter.formatted_gender, presenter.formatted_country ].compact_blank.join(" · ").presence || blank_value %>
     </span>
   </td>
 
   <td class="hidden lg:table-cell">
-    <span class="block truncate text-foreground" title="<%= presenter.email %>"><%= presenter.email_display %></span>
-    <span class="mt-0.5 block text-xs text-muted-foreground"><%= presenter.phone_display %></span>
+    <span class="block truncate text-foreground" title="<%= presenter.email %>"><%= presenter.email.presence || blank_value %></span>
+    <span class="mt-0.5 block text-xs text-muted-foreground"><%= presenter.phone.presence || blank_value %></span>
   </td>
 
   <td class="hidden xl:table-cell">
-    <span class="block tabular-nums text-foreground"><%= presenter.government_id_display %></span>
-    <span class="mt-0.5 block text-xs text-muted-foreground"><%= [ presenter.formatted_document_type, presenter.passport_status ].compact.join(" · ") %></span>
+    <% government_id = presenter.government_id.presence %>
+    <span class="block tabular-nums text-foreground"><%= government_id || blank_value %></span>
+    <%# The document type only helps next to a number. With nothing on file it
+        repeats the column heading, so the row shows the blank state alone. %>
+    <% meta = [ (presenter.formatted_document_type if government_id), presenter.passport_status ].compact %>
+    <% if meta.any? %>
+      <span class="mt-0.5 block text-xs text-muted-foreground"><%= meta.join(" · ") %></span>
+    <% end %>
   </td>
 
-  <td class="hidden tabular-nums text-muted-foreground sm:table-cell"><%= stays_count %></td>
+  <td class="hidden text-center tabular-nums text-muted-foreground sm:table-cell"><%= stays_count %></td>
 
   <td class="hidden text-muted-foreground md:table-cell">
     <% if presenter.last_stay_present? %>
       <span class="block tabular-nums text-foreground"><%= presenter.last_stay_date %></span>
       <span class="mt-0.5 block text-xs"><%= presenter.last_stay_time %></span>
     <% else %>
-      —
+      <%= blank_value("None yet") %>
     <% end %>
   </td>
 
@@ -64,7 +70,7 @@
         <span class="block tabular-nums text-foreground"><%= formatted_amount %></span>
       <% end %>
     <% else %>
-      <span class="text-muted-foreground">—</span>
+      <%= blank_value("None yet") %>
     <% end %>
   </td>
 
