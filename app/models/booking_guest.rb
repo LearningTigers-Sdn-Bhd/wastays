@@ -11,6 +11,7 @@ class BookingGuest < ApplicationRecord
   encrypts :email_snapshot, deterministic: true
   encrypts :phone_snapshot, deterministic: true
   encrypts :government_id_snapshot, deterministic: true
+  encrypts :passport_number_snapshot, deterministic: true
 
   validates :is_primary, inclusion: { in: [ true, false ] }
   validates :role, presence: true, inclusion: { in: ROLES }
@@ -38,6 +39,12 @@ class BookingGuest < ApplicationRecord
     boat_out_at.present?
   end
 
+  def safely_read_encrypted(attribute)
+    public_send(attribute)
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    nil
+  end
+
   private
 
   def synchronize_role
@@ -57,6 +64,8 @@ class BookingGuest < ApplicationRecord
     self.email_snapshot ||= guest.safely_read_encrypted(:email)
     self.phone_snapshot ||= guest.safely_read_encrypted(:phone)
     self.government_id_snapshot ||= guest.safely_read_encrypted(:government_id)
+    self.passport_number_snapshot ||= guest.safely_read_encrypted(:passport_number)
+    self.passport_issuing_country_code_snapshot ||= guest.passport_issuing_country_code
     self.gender_snapshot ||= guest.gender
     self.country_snapshot ||= guest.country
     self.city_snapshot ||= guest.city
@@ -73,7 +82,7 @@ class BookingGuest < ApplicationRecord
   end
 
   def sync_booking_vip_status
-    return unless guest&.vip? && booking_id.present?
+    return unless booking_id.present? && guest&.vip?(hotel: booking&.hotel)
 
     Booking.where(id: booking_id, vip: false).update_all(vip: true)
   end

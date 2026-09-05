@@ -1,0 +1,34 @@
+<% country_choices = COUNTRY_OPTIONS.map { |country| [ country, country ] } %>
+<%# An address with no country is not confirmed as foreign, only unfilled. It
+    opens on the property's own country, so a Malaysian hotel gets the LHDN
+    state list rather than a free text box asking for a prefecture. %>
+<% address_country = guest.address_country.presence || current_hotel.country %>
+
+<%= render PanelsUI::FormField.new(form: form, attribute: :home_address, label: "Street address") do |field| %>
+  <% field.with_text_area(rows: 2, placeholder: "Street, building, and unit") %>
+<% end %>
+
+<div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
+  <%= render PanelsUI::FormField.new(form: form, attribute: :city, label: "City") do |field| %>
+    <% field.with_input(placeholder: "For example, #{current_hotel.city.presence || "Kota Kinabalu"}", autocomplete: "address-level2") %>
+  <% end %>
+
+  <%= render "shared/state_code_field",
+        form: form, attribute: :state_code,
+        value: guest.state_code, country: address_country %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :postal_code, label: "Postcode") do |field| %>
+    <% field.with_input(placeholder: "For example, 88000", inputmode: "numeric", autocomplete: "postal-code") %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :address_country, label: "Address country") do |field| %>
+    <% field.with_combobox(
+         country_choices,
+         selected: address_country,
+         prompt: "Search for a country",
+         data: {
+           address_state_target: "country",
+           action: "change->address-state#refresh"
+         }) %>
+  <% end %>
+</div>

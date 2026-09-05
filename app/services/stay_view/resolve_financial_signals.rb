@@ -262,7 +262,7 @@ module StayView
     end
 
     def money(amount, currency)
-      "#{currency} #{CurrencyFormatter.format(amount, currency:, symbol: false)}"
+      CurrencyFormatter.format(amount, currency:, unit: :code)
     end
 
     def immutable_signals(signals)

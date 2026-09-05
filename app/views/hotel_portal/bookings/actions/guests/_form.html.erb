@@ -4,6 +4,14 @@
 <% guest = @guest %>
 <% country_choices = COUNTRY_OPTIONS.map { |country| [country, country] } %>
 <% form_id = "booking-guest-form" %>
+<%# An address with no country is not confirmed as foreign, only unfilled. It
+    opens on the property's own country, so a Malaysian hotel gets the LHDN
+    state list rather than a free text box asking for a prefecture. %>
+<% address_country = guest.address_country.presence || current_hotel.country %>
+<%# The desk often adds someone the hotel already knows. The name, email and
+    phone search the guest directory, and picking a result fills the sheet and
+    links the record, so a returning guest gets one profile, not a second one. %>
+<% selected_guest_id = params.dig(:guest, :existing_guest_id).presence %>
 <% footer = capture do %>
   <div class="flex w-full items-center justify-end gap-2">
     <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
@@ -16,100 +24,219 @@
       title: "Add guest",
       description: @booking.guest_name,
       side: :right,
-      size: :lg,
+      size: :xl,
       footer: footer do %>
   <%= form_with model: guest,
         url: hotel_booking_action_manage_guest_path(current_hotel, @booking, mode: "add"),
         method: :post,
         id: form_id,
-        class: "space-y-5",
-        data: { controller: "guest-dob" } do |form| %>
+        class: "space-y-6 py-2",
+        data: {
+          controller: "guest-dob guest-identity booking-guest-autofill tin-validation",
+          tin_validation_url_value: hotel_validate_tin_path(current_hotel),
+          action: "panels-ui:autocomplete-select->booking-guest-autofill#selectGuest"
+        } do |form| %>
     <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
 
     <% if guest.errors.any? %>
-      <div class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1">
-        <p class="font-medium">Guest could not be saved.</p>
-        <p class="mt-1"><%= guest.errors.full_messages.to_sentence %></p>
-      </div>
-    <% end %>
-
-    <% if @booking.group_booking_id? %>
-      <% children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
-      <% group_eligible = children.any? && children.all? { |child| child.status.in?(BookingGuests::AddToGroup::ELIGIBLE_STATUSES) } %>
-      <% choices = children.map do |child|
-           room = child.booking_rooms.first
-           label = room&.room_number.present? ? "Room #{room.room_number}" : child.formatted_reservation_number
-           { label: label, value: "booking:#{child.id}" }
-         end %>
-      <% choices << { label: "Apply to group booking (#{children.size} rooms)", value: "group", disabled: !group_eligible } %>
-      <%= render PanelsUI::FormField.new(
-            form:, attribute: :apply_to, label: "Apply to",
-            hint: group_eligible ? "Applying to the group creates one guest record and links it to every room." : "Group apply is unavailable because one or more rooms cannot accept guests in their current status.") do |field| %>
-        <% field.with_select_menu(choices, selected: params.dig(:guest, :apply_to).presence || "booking:#{@booking.id}") %>
-      <% end %>
-    <% else %>
-      <%= hidden_field_tag "guest[apply_to]", "booking:#{@booking.id}" %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :apply_to, label: "Apply to", hint: "Standalone bookings can only add guests to their current room.", disabled: true) do |field| %>
-        <% field.with_select_menu([["Current room", "booking:#{@booking.id}"]], selected: "booking:#{@booking.id}") %>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Guest could not be saved", role: :alert) do |alert| %>
+        <% alert.with_description { guest.errors.full_messages.to_sentence } %>
       <% end %>
     <% end %>
 
-    <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true) do |field| %>
-      <% field.with_input(autocomplete: "name", autofocus: true) %>
-    <% end %>
-
-    <div class="grid gap-4 sm:grid-cols-2">
-      <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email") do |field| %>
-        <% field.with_input(type: :email, autocomplete: "email", spellcheck: false) %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone") do |field| %>
-        <% field.with_input(type: :tel, autocomplete: "tel") %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true) do |field| %>
-        <% field.with_combobox(country_choices, selected: guest.country, prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
-        <% field.with_select_menu([[ "Male", "male" ], [ "Female", "female" ], [ "Other", "other" ]], selected: guest.gender, prompt: "Select a gender") %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
-        <% field.with_select_menu([[ "IC", "ic" ], [ "Passport", "passport" ]], selected: guest.document_type, prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
-        <% field.with_input(autocomplete: "off", spellcheck: false, data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
-        <% field.with_date_picker(
-             value: guest.date_of_birth&.iso8601,
-             max: Date.yesterday,
-             caption_layout: :dropdown,
-             year_range: (Date.current.year - 120)..Date.current.year,
-             placeholder: "Select date of birth",
-             data: { guest_dob_target: "dateOfBirth" }) %>
-      <% end %>
-    </div>
-
-    <section class="space-y-4 border-t border-border pt-5" aria-labelledby="guest-address-heading">
+    <section class="space-y-4" aria-labelledby="booking-guest-scope-heading">
       <div>
-        <h3 id="guest-address-heading" class="text-sm font-semibold text-foreground">Address</h3>
-        <p class="mt-1 text-xs text-muted-foreground">The address for this guest and stay.</p>
+        <h3 id="booking-guest-scope-heading" class="text-base font-semibold text-foreground">Room assignment</h3>
+        <p class="mt-1 text-sm text-muted-foreground">The rooms this guest is added to.</p>
       </div>
-      <div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
-        <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Street address", class: "sm:col-span-2") do |field| %>
-          <% field.with_text_area(value: guest.home_address, rows: 2, placeholder: "Street, building, and unit") %>
+
+      <% if @booking.group_booking_id? %>
+        <% children = @booking.group_booking.bookings.includes(booking_rooms: :room_type).where(hotel_id: current_hotel.id).order(:group_position, :id) %>
+        <% group_eligible = children.any? && children.all? { |child| child.status.in?(BookingGuests::AddToGroup::ELIGIBLE_STATUSES) } %>
+        <% choices = children.map do |child|
+             room = child.booking_rooms.first
+             label = room&.room_number.present? ? "Room #{room.room_number}" : child.formatted_reservation_number
+             { label: label, value: "booking:#{child.id}" }
+           end %>
+        <% choices << { label: "Apply to group booking (#{children.size} rooms)", value: "group", disabled: !group_eligible } %>
+        <%= render PanelsUI::FormField.new(
+              form:, attribute: :apply_to, label: "Apply to",
+              hint: group_eligible ? "Applying to the group creates one guest record and links it to every room." : "Group apply is unavailable because one or more rooms cannot accept guests in their current status.") do |field| %>
+          <% field.with_select_menu(choices, selected: params.dig(:guest, :apply_to).presence || "booking:#{@booking.id}") %>
         <% end %>
-        <%= render PanelsUI::FormField.new(form:, attribute: :city, label: "City") do |field| %>
+      <% else %>
+        <%= hidden_field_tag "guest[apply_to]", "booking:#{@booking.id}" %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :apply_to, label: "Apply to", hint: "Standalone bookings can only add guests to their current room.", disabled: true) do |field| %>
+          <% field.with_select_menu([["Current room", "booking:#{@booking.id}"]], selected: "booking:#{@booking.id}") %>
+        <% end %>
+      <% end %>
+    </section>
+
+    <section class="space-y-4" aria-labelledby="booking-guest-basics-heading">
+      <div>
+        <h3 id="booking-guest-basics-heading" class="text-base font-semibold text-foreground">Basic information</h3>
+        <p class="mt-1 text-sm text-muted-foreground">Who the guest is, and how to reach them. Search to reuse a guest record.</p>
+      </div>
+
+      <%= hidden_field_tag "guest[existing_guest_id]", selected_guest_id, data: { booking_guest_autofill_target: "existingGuestId" } %>
+      <div class="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between"
+           <%= "hidden" if selected_guest_id.blank? %>
+           data-booking-guest-autofill-target="profileRow">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="truncate text-sm font-medium text-foreground" tabindex="-1" data-booking-guest-autofill-target="linkedName"><%= guest.name.presence || "Existing guest" %></span>
+            <button type="button" class="text-xs font-medium text-primary hover:underline" data-action="booking-guest-autofill#clearGuest">Change guest</button>
+          </div>
+          <p class="truncate text-xs text-muted-foreground" data-booking-guest-autofill-target="linkedDescription"><%= [guest.email, guest.phone].compact_blank.join(" · ") %></p>
+          <p class="text-xs text-destructive" hidden data-booking-guest-autofill-target="blacklistWarning">This guest is blacklisted at this hotel.</p>
+        </div>
+        <%= render PanelsUI::Switch.new(
+              name: "guest[update_profile]",
+              value: "1",
+              unchecked_value: "0",
+              checked: params.dig(:guest, :update_profile) == "1",
+              label: "Update guest profile",
+              description: "Save the guest information entered here to the guest database.",
+              data: { booking_guest_autofill_target: "updateSwitch" }) %>
+      </div>
+
+      <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true,
+            data: { booking_guest_autofill_target: "nameField" }) do |field| %>
+        <% field.with_autocomplete(
+             endpoint: search_hotel_guests_path(current_hotel),
+             required: true,
+             placeholder: "Search a guest, or type a new name") %>
+      <% end %>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email",
+              data: { booking_guest_autofill_target: "emailField" }) do |field| %>
+          <% field.with_autocomplete(
+               endpoint: search_hotel_guests_path(current_hotel),
+               type: :email,
+               placeholder: "guest@example.com") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone",
+              data: { booking_guest_autofill_target: "phoneField" }) do |field| %>
+          <% field.with_autocomplete(
+               endpoint: search_hotel_guests_path(current_hotel),
+               type: :tel,
+               placeholder: "+60 12-345 6789") %>
+        <% end %>
+      </div>
+
+      <%# Date of birth sits with nationality: guest-dob reads the nationality
+          and the identity number to fill it in, so the field it writes belongs
+          beside the fields it reads. %>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true,
+              data: { booking_guest_autofill_target: "countryField" }) do |field| %>
+          <% field.with_combobox(country_choices, selected: guest.country, prompt: "Search for a country",
+               data: { guest_dob_target: "country", guest_identity_target: "country", tin_validation_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" }) %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender",
+              data: { booking_guest_autofill_target: "genderField" }) do |field| %>
+          <% field.with_select_menu(
+               Guest::GENDERS.map { |gender| [gender.capitalize, gender] },
+               include_blank: true,
+               selected: guest.gender,
+               prompt: "Select a gender") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth",
+              data: { booking_guest_autofill_target: "dateOfBirthField" }) do |field| %>
+          <% field.with_date_picker(
+               value: guest.date_of_birth&.iso8601,
+               max: Date.yesterday,
+               caption_layout: :dropdown,
+               year_range: (Date.current.year - 120)..Date.current.year,
+               placeholder: "Select date of birth",
+               data: { guest_dob_target: "dateOfBirth" }) %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="space-y-4" aria-labelledby="booking-guest-address-heading">
+      <div>
+        <h3 id="booking-guest-address-heading" class="text-base font-semibold text-foreground">Address</h3>
+        <p class="mt-1 text-sm text-muted-foreground">Used on the folio and on an e-invoice.</p>
+      </div>
+
+      <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Street address",
+            data: { booking_guest_autofill_target: "addressField" }) do |field| %>
+        <% field.with_text_area(value: guest.home_address, rows: 2, placeholder: "Street, building, and unit",
+             data: { booking_guest_autofill_target: "addressInput" }) %>
+      <% end %>
+
+      <div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
+        <%= render PanelsUI::FormField.new(form:, attribute: :city, label: "City",
+              data: { booking_guest_autofill_target: "cityField" }) do |field| %>
           <% field.with_input(autocomplete: "address-level2") %>
         <% end %>
         <%= render "shared/state_code_field", form:, attribute: :state_code, value: guest.state_code,
-              country: guest.address_country %>
-        <%= render PanelsUI::FormField.new(form:, attribute: :postal_code, label: "Postcode") do |field| %>
+              country: address_country,
+              container_attributes: { data: { booking_guest_autofill_target: "stateField" } } %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :postal_code, label: "Postcode",
+              data: { booking_guest_autofill_target: "postalCodeField" }) do |field| %>
           <% field.with_input(autocomplete: "postal-code") %>
         <% end %>
         <%= render PanelsUI::FormField.new(form:, attribute: :address_country, label: "Address country",
-              data: { address_state_target: "country", action: "change->address-state#refresh input->address-state#refresh" }) do |field| %>
-          <% field.with_combobox(country_choices, selected: guest.address_country, prompt: "Search for a country") %>
+              data: { booking_guest_autofill_target: "addressCountryField", address_state_target: "country",
+                      action: "change->address-state#refresh input->address-state#refresh" }) do |field| %>
+          <% field.with_combobox(country_choices, selected: address_country, prompt: "Search for a country") %>
         <% end %>
       </div>
+    </section>
+
+    <section class="space-y-4" aria-labelledby="booking-guest-identity-heading">
+      <div>
+        <h3 id="booking-guest-identity-heading" class="text-base font-semibold text-foreground">Identity verification</h3>
+        <p class="mt-1 text-sm text-muted-foreground">Legal identification, as recorded at check-in.</p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= render "shared/identity_document_fields",
+              form: form,
+              document_type_attribute: :document_type,
+              government_id_attribute: :government_id,
+              passport_number_attribute: :passport_number,
+              document_type: guest.document_type,
+              country: guest.country,
+              government_id: guest.government_id,
+              passport_number: guest.passport_number,
+              government_id_placeholder: "Enter document number",
+              document_type_data: { guest_dob_target: "documentType", tin_validation_target: "documentType", action: "change->guest-dob#autofill change->guest-identity#documentChanged change->tin-validation#check" },
+              government_id_data: { guest_dob_target: "governmentId", tin_validation_target: "idValue", action: "input->guest-dob#autofill blur->tin-validation#check" },
+              passport_number_data: { tin_validation_target: "passportNumber", action: "blur->tin-validation#check" },
+              document_type_field_data: { booking_guest_autofill_target: "documentTypeField" },
+              government_id_field_data: { booking_guest_autofill_target: "governmentIdField" },
+              passport_number_field_data: { booking_guest_autofill_target: "passportNumberField" } %>
+      </div>
+    </section>
+
+    <%# The added guest is never the primary, so the stay has no column of its
+        own for a tax number. It belongs to the person, and it reaches the
+        record on the same terms as the rest of the sheet. %>
+    <section class="space-y-4" aria-labelledby="booking-guest-tax-heading">
+      <div>
+        <h3 id="booking-guest-tax-heading" class="text-base font-semibold text-foreground">Tax management</h3>
+        <p class="mt-1 text-sm text-muted-foreground">Needed only when the guest claims their stays.</p>
+      </div>
+
+      <%# Checked against LHDN here so a wrong digit is caught now, not when the
+          e-invoice is rejected days later. %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :tin, label: "Tax identification number",
+            hint: "Saved to the guest record.",
+            data: { booking_guest_autofill_target: "tinField" }) do |field| %>
+        <%# An individual's LHDN TIN carries the IG prefix. A company uses C, and
+            a company bills through a corporate account, not here. %>
+        <% field.with_input(
+             value: guest.tin,
+             placeholder: "For example, IG5678901234",
+             autocomplete: "off",
+             spellcheck: false,
+             data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
+      <% end %>
+      <p data-tin-validation-target="feedback" class="-mt-2 text-xs text-muted-foreground" hidden></p>
     </section>
   <% end %>
 <% end %>

@@ -16,6 +16,8 @@ module BookingGuests
         gender_snapshot: booking.guest_gender,
         document_type_snapshot: booking.guest_document_type,
         government_id_snapshot: booking.guest_government_id,
+        passport_number_snapshot: booking.guest_passport_number,
+        passport_issuing_country_code_snapshot: GuestIdentityDocuments::NormalizeType.country_code(booking.guest_country),
         date_of_birth_snapshot: booking.guest_date_of_birth,
         home_address_snapshot: booking.guest_home_address
       )

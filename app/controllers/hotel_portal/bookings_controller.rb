@@ -64,7 +64,8 @@ class HotelPortal::BookingsController < HotelPortal::BaseController
     params.fetch(:booking, {}).permit(
       :guest_name, :guest_email, :guest_phone, :checked_in_at, :checked_out_at,
       :guest_country, :guest_city, :guest_state_code, :guest_postal_code, :guest_address_country,
-      :guest_home_address, :guest_tin, :guest_gender, :guest_document_type, :guest_government_id, :guest_date_of_birth, :guest_update_intent,
+      :guest_home_address, :guest_tin, :guest_gender, :guest_document_type, :guest_government_id,
+      :guest_passport_number, :guest_date_of_birth, :guest_update_intent,
       :room_type_id, :room_number, :check_in, :check_out, :adults, :children, :total_amount,
       :record_payment, :payment_method, :payment_amount, :payment_reference,
       :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,

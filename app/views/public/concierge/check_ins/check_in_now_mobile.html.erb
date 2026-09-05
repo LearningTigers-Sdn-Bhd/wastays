@@ -90,7 +90,7 @@
             <div class="space-y-2">
               <%= f.label :guest_document_type, "Document Type", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
               <div class="relative" data-controller="searchable-select">
-                <%= f.hidden_field :guest_document_type, value: @booking.guest_document_type, data: { searchable_select_target: "hiddenInput", guest_dob_target: "documentType", pre_checkin_document_target: "select", action: "change->guest-dob#autofill change->pre-checkin-document#toggleUploads" } %>
+                <%= f.hidden_field :guest_document_type, value: @booking.guest_document_type, data: { searchable_select_target: "hiddenInput", guest_dob_target: "documentType", guest_identity_target: "documentType", pre_checkin_document_target: "select", action: "change->guest-dob#autofill change->guest-identity#documentChanged change->pre-checkin-document#toggleUploads" } %>
                 <div class="relative cursor-pointer" data-action="click->searchable-select#toggle">
                   <input type="text" readonly 
                          data-searchable-select-target="input"
@@ -116,11 +116,23 @@
             </div>
 
             <div class="space-y-2">
-              <%= f.label :guest_government_id, "IC / Passport Number", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.label :guest_government_id, "Identity document number", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1", data: { guest_identity_target: "numberLabel" } %>
               <%= f.text_field :guest_government_id, value: @booking.guest_government_id, 
                     class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
                     required: true, placeholder: "e.g. 900101011234",
                     data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+            </div>
+
+            <div class="space-y-4" data-guest-identity-target="passportRow" <%= "hidden" unless @booking.guest_document_type == "national_id" %>>
+              <div class="space-y-2">
+                <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">LHDN document type</label>
+                <input type="text" value="Passport" readonly class="w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium">
+              </div>
+              <div class="space-y-2">
+                <%= f.label :guest_passport_number, "Passport number", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+                <%= f.text_field :guest_passport_number, value: @booking.guest_passport_number, disabled: @booking.guest_document_type != "national_id", class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium", data: { guest_identity_target: "passportInput" } %>
+                <p class="text-xs text-muted-foreground">Required for an individual e-invoice.</p>
+              </div>
             </div>
 
             <div class="space-y-2">
@@ -166,7 +178,7 @@
             <div class="space-y-2">
               <%= f.label :guest_country, "Nationality", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
               <div class="relative" data-controller="searchable-select">
-                <%= f.hidden_field :guest_country, value: @presenter.default_country, data: { searchable_select_target: "hiddenInput", guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
+                <%= f.hidden_field :guest_country, value: @presenter.default_country, data: { searchable_select_target: "hiddenInput", guest_dob_target: "country", guest_identity_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" } %>
                 <div class="relative">
                   <input type="text" 
                          data-searchable-select-target="input"

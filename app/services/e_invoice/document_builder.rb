@@ -323,16 +323,20 @@ module EInvoice
     end
 
     def buyer_identifier
-      value = buyer_value("government_id", @booking.guest_government_id).to_s.gsub(/[^A-Za-z0-9]/, "").presence || "NA"
+      value = buyer_value("government_id", resolved_guest_identity.document_number).to_s.gsub(/[^A-Za-z0-9]/, "").presence || "NA"
       { "_" => value, "schemeID" => buyer_identifier_scheme }
     end
 
     def buyer_identifier_scheme
-      case buyer_value("document_type", @booking.guest_document_type).to_s
+      case buyer_value("document_type", resolved_guest_identity.document_type).to_s
       when "ic" then "NRIC"
       when "passport" then "PASSPORT"
       else "BRN"
       end
+    end
+
+    def resolved_guest_identity
+      @resolved_guest_identity ||= EInvoice::GuestIdentityResolver.for_booking(@booking)
     end
 
     def buyer_city

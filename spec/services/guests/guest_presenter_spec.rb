@@ -12,45 +12,98 @@ RSpec.describe Guests::GuestPresenter do
     end
   end
 
-  describe "#gender" do
+  describe "#formatted_gender" do
     it "returns capitalized gender" do
-      expect(presenter.gender).to eq("Male")
+      expect(presenter.formatted_gender).to eq("Male")
     end
 
-    it "returns dash if blank" do
+    it "returns nil when the gender is blank" do
       guest.gender = nil
-      expect(presenter.gender).to eq("—")
+      expect(presenter.formatted_gender).to be_nil
     end
   end
 
-  describe "#document_type" do
-    it "returns uppercased document type" do
-      expect(presenter.document_type).to eq("PASSPORT")
+  describe "#formatted_document_type" do
+    it "names the document the guest handed over" do
+      expect(presenter.formatted_document_type).to eq("Passport")
     end
 
-    it "returns dash if blank" do
+    it "falls back to a generic document label" do
       guest.document_type = nil
-      expect(presenter.document_type).to eq("—")
+      expect(presenter.formatted_document_type).to eq("Identity document")
     end
   end
 
-  describe "#country" do
+  describe "#formatted_country" do
     it "returns the country" do
-      expect(presenter.country).to eq("Malaysia")
+      expect(presenter.formatted_country).to eq("Malaysia")
+    end
+
+    it "returns nil when the country is blank" do
+      guest.country = nil
+      expect(presenter.formatted_country).to be_nil
     end
   end
 
-  describe "#home_address" do
-    it "returns the home address" do
-      guest.home_address = "No. 12, Jalan Ampang"
+  describe "#date_of_birth_formatted" do
+    it "returns nil when there is no date of birth" do
+      guest.date_of_birth = nil
+      expect(presenter.date_of_birth_formatted).to be_nil
+    end
+  end
 
-      expect(presenter.home_address).to eq("No. 12, Jalan Ampang")
+  describe "#last_stay_checkout_date" do
+    it "returns nil when there is no check-out date" do
+      expect(presenter.last_stay_checkout_date(nil)).to be_nil
+    end
+  end
+
+  describe "#normalized_document_type" do
+    it "reads a national identity card as a MyKad for a Malaysian guest" do
+      guest.country = "Malaysia"
+      guest.document_type = "national_id"
+
+      expect(presenter.normalized_document_type).to eq("malaysian_nric")
     end
 
-    it "returns a dash if the home address is blank" do
-      guest.home_address = nil
+    it "reads a MyKad as a national identity card for a foreign guest" do
+      guest.country = "Japan"
+      guest.document_type = "malaysian_nric"
 
-      expect(presenter.home_address).to eq("—")
+      expect(presenter.normalized_document_type).to eq("national_id")
+    end
+
+    it "leaves every other pairing alone" do
+      guest.country = "Japan"
+      guest.document_type = "passport"
+
+      expect(presenter.normalized_document_type).to eq("passport")
+
+      guest.document_type = nil
+
+      expect(presenter.normalized_document_type).to be_nil
+    end
+  end
+
+  describe "#identity_number_label" do
+    it "names the document the guest handed over" do
+      guest.country = "Japan"
+
+      guest.document_type = "passport"
+      expect(presenter.identity_number_label).to eq("Passport number")
+
+      guest.document_type = "national_id"
+      expect(presenter.identity_number_label).to eq("National identity card number")
+
+      guest.country = "Malaysia"
+      guest.document_type = "national_id"
+      expect(presenter.identity_number_label).to eq("MyKad number")
+    end
+
+    it "stays generic until a document type is chosen" do
+      guest.document_type = nil
+
+      expect(presenter.identity_number_label).to eq("Identity document number")
     end
   end
 

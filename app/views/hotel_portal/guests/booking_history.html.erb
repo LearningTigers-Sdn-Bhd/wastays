@@ -1,0 +1,8 @@
+<%# The whole record — header and tab frame — sits in one frame, so a sheet
+    that edits the guest refreshes the name and badges in the header too. %>
+<%= turbo_frame_tag "guest_record_page" do %>
+  <div class="space-y-4">
+    <%= render "record_header", guest: @guest, presenter: @presenter %>
+    <%= render "booking_history", guest: @guest, presenter: @presenter, stays_count: @stays_count, bookings: @bookings, currency_totals: @currency_totals %>
+  </div>
+<% end %>

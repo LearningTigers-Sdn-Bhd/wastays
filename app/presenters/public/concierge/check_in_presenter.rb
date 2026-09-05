@@ -27,10 +27,7 @@ module Public
       end
 
       def document_types
-        [
-          [ "MyKad (IC)", "ic" ],
-          [ "Passport", "passport" ]
-        ]
+        Booking::DOCUMENT_TYPES
       end
 
       def default_country
@@ -67,7 +64,7 @@ module Public
       end
 
       def form_data(view_context, is_mobile: false)
-        controllers = [ "scanner", "pre-checkin-document" ]
+        controllers = [ "scanner", "pre-checkin-document", "guest-identity" ]
         controllers << "guest-dob" if registration_required?
         controllers << "geolocation-check-in" if geolocation_active?
 
@@ -110,7 +107,7 @@ module Public
       end
 
       def back_container_class
-        guest_document_type == "ic" ? "" : HIDDEN_CLASSES
+        guest_document_type.in?(%w[ic malaysian_nric national_id]) ? "" : HIDDEN_CLASSES
       end
 
       def front_scanner_label

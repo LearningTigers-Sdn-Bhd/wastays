@@ -693,11 +693,11 @@ module HotelDemoManagement
 
     def guest_profiles
       @guest_profiles ||= [
-        { country: "Malaysia", name: "Ahmad Bin Ibrahim", email: "ahmad.ibrahim@example.com", phone: "+60123456789", gender: "male", document_type: "ic", government_id: "920310-14-5183", date_of_birth: Date.new(1992, 3, 10) },
-        { country: "Malaysia", name: "Siti Aminah Binti Mansor", email: "siti.aminah@example.com", phone: "+60139876543", gender: "female", document_type: "ic", government_id: "950101-14-1234", date_of_birth: Date.new(1995, 1, 1) },
-        { country: "Malaysia", name: "Tan Wei Shen", email: "tan.weishen@example.com", phone: "+60172345678", gender: "male", document_type: "ic", government_id: "931205-10-5679", date_of_birth: Date.new(1993, 12, 5) },
-        { country: "Malaysia", name: "Muthu Kumar", email: "muthu.kumar@example.com", phone: "+60163456789", gender: "male", document_type: "ic", government_id: "900820-08-6011", date_of_birth: Date.new(1990, 8, 20) },
-        { country: "Malaysia", name: "Nurul Izzah", email: "nurul.izzah@example.com", phone: "+60194567890", gender: "female", document_type: "ic", government_id: "940515-14-5544", date_of_birth: Date.new(1994, 5, 15) },
+        { country: "Malaysia", name: "Ahmad Bin Ibrahim", email: "ahmad.ibrahim@example.com", phone: "+60123456789", gender: "male", document_type: "malaysian_nric", government_id: "920310-14-5183", date_of_birth: Date.new(1992, 3, 10) },
+        { country: "Malaysia", name: "Siti Aminah Binti Mansor", email: "siti.aminah@example.com", phone: "+60139876543", gender: "female", document_type: "malaysian_nric", government_id: "950101-14-1234", date_of_birth: Date.new(1995, 1, 1) },
+        { country: "Malaysia", name: "Tan Wei Shen", email: "tan.weishen@example.com", phone: "+60172345678", gender: "male", document_type: "malaysian_nric", government_id: "931205-10-5679", date_of_birth: Date.new(1993, 12, 5) },
+        { country: "Malaysia", name: "Muthu Kumar", email: "muthu.kumar@example.com", phone: "+60163456789", gender: "male", document_type: "malaysian_nric", government_id: "900820-08-6011", date_of_birth: Date.new(1990, 8, 20) },
+        { country: "Malaysia", name: "Nurul Izzah", email: "nurul.izzah@example.com", phone: "+60194567890", gender: "female", document_type: "malaysian_nric", government_id: "940515-14-5544", date_of_birth: Date.new(1994, 5, 15) },
         { country: "Japan", name: "Kenji Sato", email: "kenji.sato@example.co.jp", phone: "+819012345678", gender: "male", document_type: "passport", government_id: "TK9876543", date_of_birth: Date.new(1988, 5, 14) },
         { country: "Japan", name: "Yuka Tanaka", email: "yuka.tanaka@example.co.jp", phone: "+819087654321", gender: "female", document_type: "passport", government_id: "TK1234567", date_of_birth: Date.new(1992, 1, 22) },
         { country: "Japan", name: "Hiroshi Watanabe", email: "hiroshi.watanabe@example.co.jp", phone: "+818023456789", gender: "male", document_type: "passport", government_id: "TK2345678", date_of_birth: Date.new(1985, 9, 3) },

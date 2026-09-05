@@ -76,7 +76,7 @@ RSpec.describe HotelDemoManagement::SeedRealtimeScenario, frozen_time: :business
 
       expect(result).to be_success
       guest = Guest.find_by!(name: "Ahmad Bin Ibrahim", created_by_hotel: hotel)
-      expect(guest).to have_attributes(gender: "male", document_type: "ic", date_of_birth: Date.new(1992, 3, 10))
+      expect(guest).to have_attributes(gender: "male", document_type: "malaysian_nric", date_of_birth: Date.new(1992, 3, 10))
       expect(guest.booking_guests.first).to have_attributes(
         government_id_snapshot: "920310-14-5183",
         date_of_birth_snapshot: Date.new(1992, 3, 10)

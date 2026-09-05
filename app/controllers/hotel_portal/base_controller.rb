@@ -69,7 +69,10 @@ module HotelPortal
       "HotelPortal::RequestsController" => %w[move update_status cancel_request archive_request unarchive_request],
       "HotelPortal::CheckoutRequestsController" => %w[complete],
       "HotelPortal::RoomLocksController" => %w[create release],
-      "HotelPortal::GuestsController" => %w[create update destroy bulk_destroy toggle_vip toggle_blacklist]
+      "HotelPortal::GuestsController" => %w[
+        create update destroy bulk_destroy vip unvip blacklist unblacklist
+        bulk_vip bulk_unvip bulk_blacklist bulk_unblacklist
+      ]
     }.freeze
 
     TRAINING_ALWAYS_WRITABLE_CONTROLLERS = %w[

@@ -520,7 +520,7 @@ module HotelPortal
       return "-" if price.blank?
       currency ||= display_currency
 
-      CurrencyFormatter.format(price, currency: currency, symbol: false)
+      CurrencyFormatter.format(price, currency: currency, unit: :none)
     end
 
     def channel_availability_cell(room_type, channel, date)

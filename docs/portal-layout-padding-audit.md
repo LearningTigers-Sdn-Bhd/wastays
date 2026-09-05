@@ -29,7 +29,7 @@ The standard padding lives in one place — `app/assets/tailwind/panel/page.css`
 
 ```css
 .panel-page            { @apply w-full p-4; }                         /* the standard */
-.panel-page--workspace { @apply flex min-h-0 flex-1 flex-col p-0; }  /* full_height_page opt-out */
+.panel-page--full-height { @apply flex min-h-0 flex-1 flex-col p-0; }  /* full_height_page opt-out */
 ```
 
 The shell already provides correct, uniform edge padding. **All inconsistency
@@ -42,7 +42,7 @@ comes from page templates fighting that standard.**
 | **T** = extra top pad | header block wrapped in `mt-5` (or `pt-*`) — copied from `shared/components/_page_header` | "big padding top" |
 | **X** = edge-bleed | root uses negative margin `-mx-/-m-` | "padding-x none" |
 | **R** = root pad | page re-declares its own `p-*` on root | double / off padding |
-| **W** = workspace | `content_for :full_height_page` → `p-0` | intentional (board/folio) |
+| **F** = full height | `content_for :full_height_page` → `p-0` | intentional (board/folio) |
 
 ### Header situation
 
@@ -108,7 +108,7 @@ The 15 `reports/*` pages are collapsed — they are identical: header ✓, inlin
 | ar_statements/show | ✓ | ✓ partial | ✓ **T** |
 | arrivals/index | ✓ | ✓ inline | ✓ **T** |
 | audit_logs/index | ✓ | ✓ inline | ✓ **T** |
-| workspaces/show | – | – | ✓ **W+R** (workspace) |
+| workspaces/show | – | – | ✓ **F+R** (full height) |
 | bookings/board/index | ✓ | ✓ partial | ✓ **T** |
 | bookings/index/index | ✓ | ✓ inline | ✓ **T+X** (edge-bleed) |
 | checked_out_guests/index | ✓ | ✓ inline | ✓ **T** |
@@ -212,7 +212,7 @@ Corporate is the **most consistent** portal — AR pages already use extracted
    `-m-1.5` wrapping an inner `p-1.5` (scrollbar breathing room). A grep for
    negative margins large enough to escape `panel-page`'s `p-4` returns
    nothing. No full-bleed override exists — nothing to normalize.
-4. **`W` workspace (`full_height_page` → `p-0`) — one page, now padded to match.**
+4. **`F` full height (`full_height_page` → `p-0`) — one page, now padded to match.**
    Only `hotel_portal/bookings/workspaces/show` opts in; its `work_area` is a
    genuine full-height flex-fill workspace (divided `grid min-h-0 flex-1`, internal
    `overflow-y-auto` panes, `h-dvh` drawer) that requires the `full_height_page`
@@ -235,7 +235,7 @@ The original `mt-5` header top-pad was fixed in Phase 1. Phase 2 replaced
 conventional inline and local-partial headers with `PanelsUI::PageHeader` across
 all four portals, including newer AR, agent-account, and housekeeping headers
 that had reintroduced header-owned `mt-*`, `pt-*`, or `px-*` spacing. Edge-bleed
-(`X`), workspace (`W`), and root-pad (`R`) remain verified as non-issues or
+(`X`), full height (`F`), and root-pad (`R`) remain verified as non-issues or
 intentional exceptions.
 
 ### Suggested standard

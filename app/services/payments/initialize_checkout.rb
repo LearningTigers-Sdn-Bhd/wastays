@@ -81,6 +81,7 @@ module Payments
         guest_email: guest_details[:email],
         guest_phone: guest_details[:phone],
         government_id: guest_details[:government_id],
+        passport_number: guest_details[:passport_number],
         gender: guest_details[:gender],
         city: guest_details[:city],
         country: guest_details[:country],

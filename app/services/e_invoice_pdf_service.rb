@@ -312,8 +312,9 @@ class EInvoicePdfService
   end
 
   def buyer_identity_line
-    label = buyer_value("document_type", @booking.guest_document_type).to_s == "ic" ? "IC" : "Passport"
-    identifier = buyer_value("government_id", @booking.guest_government_id).presence || "—"
+    identity = EInvoice::GuestIdentityResolver.for_booking(@booking)
+    label = buyer_value("document_type", identity.document_type).to_s == "ic" ? "MyKad" : "Passport"
+    identifier = buyer_value("government_id", identity.document_number).presence || "—"
     "ID: #{label} #{identifier}"
   end
 

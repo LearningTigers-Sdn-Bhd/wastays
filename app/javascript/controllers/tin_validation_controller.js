@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // identity to match it to. Advisory: it never blocks the form, because LHDN
 // being slow must not stop a check-in.
 export default class extends Controller {
-  static targets = ["tin", "idValue", "documentType", "feedback"]
+  static targets = ["tin", "idValue", "passportNumber", "country", "documentType", "feedback"]
   static values = { url: String }
 
   // For a manually-triggered "Test connection" button rather than a field
@@ -36,6 +36,8 @@ export default class extends Controller {
     body.append("tin", tin)
     body.append("id_value", idValue)
     if (this.hasDocumentTypeTarget) body.append("document_type", this.documentTypeTarget.value)
+    if (this.hasPassportNumberTarget) body.append("passport_number", this.passportNumberTarget.value)
+    if (this.hasCountryTarget) body.append("country", this.countryTarget.value)
 
     fetch(this.urlValue, {
       method: "POST",

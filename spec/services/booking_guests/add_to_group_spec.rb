@@ -31,4 +31,28 @@ RSpec.describe BookingGuests::AddToGroup do
     expect(booking_one.booking_guests).to be_empty
     expect(booking_two.booking_guests).to be_empty
   end
+  it "links a picked guest to every child and leaves the record alone" do
+    existing = create(:guest, name: "Repeat Guest", phone: "+60111111111")
+
+    result = described_class.call(
+      group_booking: group, attributes: attributes.merge(name: "Repeat Guest", phone: "+60122222222"),
+      actor:, existing_guest: existing
+    )
+
+    expect(result).to be_success
+    expect(result.guest.id).to eq(existing.id)
+    expect(result.booking_guests.map(&:phone_snapshot).uniq).to eq([ "+60122222222" ])
+    expect(existing.reload.phone).to eq("+60111111111")
+  end
+
+  it "writes the typed values to the record when the profile update is asked for" do
+    existing = create(:guest, name: "Repeat Guest", phone: "+60111111111")
+
+    described_class.call(
+      group_booking: group, attributes: attributes.merge(name: "Repeat Guest", phone: "+60122222222"),
+      actor:, existing_guest: existing, update_profile: true
+    )
+
+    expect(existing.reload.phone).to eq("+60122222222")
+  end
 end

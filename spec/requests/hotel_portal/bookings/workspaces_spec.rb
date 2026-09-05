@@ -908,9 +908,14 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(view_grc["href"]).to eq(hotel_booking_guest_registration_card_path(hotel, booking))
       expect(view_grc["target"]).to eq("_blank")
       expect(discard_alert["role"]).to eq("alertdialog")
-      expect(response.body).to include("Guest details", "Guest details recorded for this stay.")
+      expect(response.body).to include(
+        "Guest identity", "Who the guest is, and how to reach them.",
+        "Identity verification", "Legal identification, as recorded at check-in.",
+        "Guest address", "Used on the folio and on an e-invoice.",
+        "Tax management", "Needed only when the guest claims their stays."
+      )
       expect(response.body).not_to include("Stay Record", "Guest Profile")
-      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Enter IC or passport number", "Select date of birth")
+      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Passport number", "Select date of birth")
       expect(form.at_css("textarea[name='guest[home_address]']")).to be_present
       expect(form.at_css("input[name='guest[city]']")).to be_present
       expect(form.at_css("input[name='guest[postal_code]']")).to be_present
@@ -1565,7 +1570,54 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(free.at_css("input[name='guest[state_code]']")["value"]).to eq("Hokkaido")
     end
 
-    it "offers the state as a text box while the address country is blank" do
+    it "keeps the tax number on the stay, and on the profile only with the wider scope" do
+      guest = create(:guest, name: "Tax Guest", tin: "IG1111111111")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Tax Guest", country: "Malaysia", document_type: "passport", tin: "IG5678901234" }
+      }
+
+      # booking_guests has no tin_snapshot column and needs none: Booking#buyer_tin
+      # reads the stay's own guest_tin ahead of the profile's tin.
+      expect(booking.reload.guest_tin).to eq("IG5678901234")
+      expect(guest.reload.tin).to eq("IG1111111111")
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Tax Guest", country: "Malaysia", document_type: "passport", tin: "IG9999999999" },
+        save_scope: "snapshot_and_profile"
+      }
+
+      expect(guest.reload.tin).to eq("IG9999999999")
+    end
+
+    it "settles the document type against the nationality, as the guest record does" do
+      guest = create(:guest, name: "Foreign Guest", country: "Japan", document_type: "national_id")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true,
+        country_snapshot: "Japan", document_type_snapshot: "national_id")
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+
+      # LHDN accepts a MyKad or a passport, so a foreign national identity card
+      # needs a passport number beside it.
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("[data-guest-identity-target='passportRow']")["hidden"]).to be_nil
+      expect(response.body).to include("National identity card number")
+    end
+
+    it "reads a Malaysian national identity card as a MyKad" do
+      guest = create(:guest, name: "Local Guest", country: "Malaysia", document_type: "national_id")
+      booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true,
+        country_snapshot: "Malaysia", document_type_snapshot: "national_id")
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("[data-guest-identity-target='passportRow']")["hidden"]).not_to be_nil
+      expect(response.body).to include("MyKad number")
+    end
+
+    it "opens a blank address country on the property's own country" do
       guest = create(:guest, name: "Blank Country Guest")
       booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true,
         address_country_snapshot: nil)
@@ -1573,9 +1625,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id)
 
+      # A blank address country is not confirmed as foreign, only unfilled, so a
+      # Malaysian property offers the LHDN state list, as the guest record does.
       document = Nokogiri::HTML(response.body)
-      expect(document.at_css("[data-address-state-target='coded']")["hidden"]).not_to be_nil
-      expect(document.at_css("[data-address-state-target='free']")["hidden"]).to be_nil
+      expect(document.at_css("[data-address-state-target='coded']")["hidden"]).to be_nil
+      expect(document.at_css("[data-address-state-target='free']")["hidden"]).not_to be_nil
     end
 
     it "updates the reusable guest only through the explicit split-save scope" do

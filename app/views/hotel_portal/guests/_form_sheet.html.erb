@@ -1,0 +1,204 @@
+<%# One sheet for both new and edit. The two pages differed only in their title,
+    their submit label and where they returned to, so they shared every field by
+    copy. `return_to` carries the caller: New opens from the directory, Edit
+    opens from the record page, and each lands back where it started. %>
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% persisted = guest.persisted? %>
+<% form_id = persisted ? "edit-guest-#{guest.id}-form" : "new-guest-form" %>
+<% country_choices = COUNTRY_OPTIONS.map { |country| [ country, country ] } %>
+<%# The document type and the number's label are settled here, not worked out by
+    guest-identity on connect. Reading them in the browser swapped the type and
+    rewrote the label after the sheet had already painted. %>
+<% presenter = Guests::GuestPresenter.new(guest) %>
+<%# An address with no country is not confirmed as foreign, only unfilled. It
+    opens on the property's own country, so a Malaysian hotel gets the LHDN
+    state list rather than a free text box asking for a prefecture. %>
+<% address_country = guest.address_country.presence || current_hotel.country %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: persisted ? "edit-guest-sheet" : "new-guest-sheet",
+          side: :right,
+          size: :xl,
+          title: title,
+          description: description) do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: [ current_hotel, guest ],
+              id: form_id,
+              class: "space-y-6 py-2",
+              data: {
+                controller: "guest-dob guest-identity tin-validation",
+                tin_validation_url_value: hotel_validate_tin_path(current_hotel)
+              } do |form| %>
+          <%= hidden_field_tag :return_to, return_to if return_to.present? %>
+
+          <% if guest.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Guest record could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { guest.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <section class="space-y-4" aria-labelledby="guest-basics-heading">
+            <div>
+              <h3 id="guest-basics-heading" class="text-base font-semibold text-foreground">Basic information</h3>
+              <p class="mt-1 text-sm text-muted-foreground">Who the guest is, and how to reach them.</p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Full name", required: true) do |field| %>
+              <% field.with_input(placeholder: "For example, John Doe", autocomplete: "name") %>
+            <% end %>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :email, label: "Email address") do |field| %>
+                <% field.with_input(type: :email, placeholder: "For example, john@example.com", autocomplete: "email") %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :phone, label: "Phone number") do |field| %>
+                <% field.with_input(type: :tel, placeholder: "For example, +60 12 345 6789", autocomplete: "tel") %>
+              <% end %>
+            </div>
+
+            <%# Date of birth sits with nationality and gender: guest-dob reads
+                the nationality and the ID to fill it in, so the field it writes
+                belongs beside the fields it reads. %>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <%= render PanelsUI::FormField.new(
+                    form: form, attribute: :country, label: "Nationality", required: true) do |field| %>
+                <% field.with_combobox(
+                     country_choices,
+                     selected: guest.country,
+                     prompt: "Search for a country",
+                     data: { guest_dob_target: "country", guest_identity_target: "country", tin_validation_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" }) %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :gender, label: "Gender") do |field| %>
+                <% field.with_select_menu(
+                     Guest::GENDERS.map { |gender| { label: gender.capitalize, value: gender } },
+                     include_blank: true,
+                     prompt: "Select gender",
+                     selected: guest.gender) %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :date_of_birth, label: "Date of birth") do |field| %>
+                <% field.with_input(type: :date, data: { guest_dob_target: "dateOfBirth" }) %>
+              <% end %>
+            </div>
+          </section>
+
+          <section class="space-y-4" aria-labelledby="guest-address-heading">
+            <div>
+              <h3 id="guest-address-heading" class="text-base font-semibold text-foreground">Address</h3>
+              <p class="mt-1 text-sm text-muted-foreground">Used on the folio and on an e-invoice.</p>
+            </div>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :home_address, label: "Street address") do |field| %>
+              <% field.with_text_area(rows: 2, placeholder: "Street, building, and unit") %>
+            <% end %>
+
+            <div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :city, label: "City") do |field| %>
+                <% field.with_input(placeholder: "For example, #{current_hotel.city.presence || "Kota Kinabalu"}", autocomplete: "address-level2") %>
+              <% end %>
+
+              <%= render "shared/state_code_field",
+                    form: form, attribute: :state_code,
+                    value: guest.state_code, country: address_country %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :postal_code, label: "Postcode") do |field| %>
+                <% field.with_input(placeholder: "For example, 88000", inputmode: "numeric", autocomplete: "postal-code") %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :address_country, label: "Address country") do |field| %>
+                <% field.with_combobox(
+                     country_choices,
+                     selected: address_country,
+                     prompt: "Search for a country",
+                     data: {
+                       address_state_target: "country",
+                       action: "change->address-state#refresh"
+                     }) %>
+              <% end %>
+            </div>
+
+          </section>
+
+          <section class="space-y-4" aria-labelledby="guest-identity-heading">
+            <div>
+              <h3 id="guest-identity-heading" class="text-base font-semibold text-foreground">Identity verification</h3>
+              <p class="mt-1 text-sm text-muted-foreground">Legal identification, as recorded at check-in.</p>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <%= render PanelsUI::FormField.new(form: form, attribute: :document_type, label: "Document type") do |field| %>
+                <% field.with_select_menu(
+                     Booking::DOCUMENT_TYPES.map { |label, value| { label:, value: } },
+                     include_blank: true,
+                     prompt: "Select document type",
+                     selected: presenter.normalized_document_type,
+                     data: {
+                       guest_dob_target: "documentType",
+                       guest_identity_target: "documentType",
+                       tin_validation_target: "documentType",
+                       action: "change->guest-dob#autofill change->guest-identity#documentChanged change->tin-validation#check"
+                     }) %>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form: form, attribute: :government_id, label: presenter.identity_number_label, data: { guest_identity_target: "numberLabel" }) do |field| %>
+                <% field.with_input(
+                     placeholder: "Enter ID number",
+                     data: {
+                       guest_dob_target: "governmentId",
+                       tin_validation_target: "idValue",
+                       action: "input->guest-dob#autofill blur->tin-validation#check"
+                     }) %>
+              <% end %>
+
+              <div class="sm:col-span-2" data-guest-identity-target="passportRow" <%= "hidden" unless presenter.normalized_document_type == "national_id" %>>
+                <div class="grid gap-4 sm:grid-cols-2 sm:col-span-2">
+                  <%= render PanelsUI::FormField.new(form: form, attribute: :lhdn_document_type, label: "LHDN document type", disabled: true) do |field| %>
+                    <% field.with_input(value: "Passport", readonly: true) %>
+                  <% end %>
+                  <%= render PanelsUI::FormField.new(form: form, attribute: :passport_number, label: "Passport number", hint: "Required for an individual e-invoice.") do |field| %>
+                    <% field.with_input(autocomplete: "off", spellcheck: false, disabled: presenter.normalized_document_type != "national_id", data: { guest_identity_target: "passportInput", tin_validation_target: "passportNumber", action: "blur->tin-validation#check" }) %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="space-y-4" aria-labelledby="guest-tax-heading">
+            <div>
+              <h3 id="guest-tax-heading" class="text-base font-semibold text-foreground">Tax management</h3>
+              <p class="mt-1 text-sm text-muted-foreground">Needed only when the guest claims their stays.</p>
+            </div>
+
+            <%# Checked against LHDN here so a wrong digit is caught now, not
+                when the e-invoice is rejected days later. %>
+            <%= render PanelsUI::FormField.new(
+                  form: form, attribute: :tin, label: "Tax identification number") do |field| %>
+              <%# An individual's LHDN TIN carries the IG prefix. A company uses C,
+                  and a company books through a corporate account, not here. %>
+              <% field.with_input(
+                   placeholder: "For example, IG5678901234",
+                   autocomplete: "off",
+                   data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
+            <% end %>
+            <p data-tin-validation-target="feedback" class="-mt-2 text-xs text-muted-foreground" hidden></p>
+          </section>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: persisted ? "Saving…" : "Creating…" }) do %>
+          <%= submit_label %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

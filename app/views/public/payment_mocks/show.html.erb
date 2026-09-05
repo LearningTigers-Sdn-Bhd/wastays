@@ -34,7 +34,7 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <%= f.label "guest_details[document_type]", "Document Type", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
-            <%= f.select "guest_details[document_type]", options_for_select([["MyKad / IC", "ic"], ["Passport", "passport"]]), { prompt: "Select" }, { id: "guest_details_document_type", required: true, class: "form-select w-full rounded-xl" } %>
+            <%= f.select "guest_details[document_type]", options_for_select(Booking::DOCUMENT_TYPES), { prompt: "Select" }, { id: "guest_details_document_type", required: true, class: "form-select w-full rounded-xl" } %>
           </div>
           <div>
             <%= f.label "guest_details[government_id]", "ID / Passport Number", class: "block text-xs font-bold uppercase tracking-widest text-neutral-text-secondary mb-2" %>
