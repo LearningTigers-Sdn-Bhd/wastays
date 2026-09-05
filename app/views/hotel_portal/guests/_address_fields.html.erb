@@ -1,0 +1,30 @@
+<% country_choices = COUNTRY_OPTIONS.map { |country| [ country, country ] } %>
+
+<%= render PanelsUI::FormField.new(form: form, attribute: :home_address, label: "Street address") do |field| %>
+  <% field.with_text_area(rows: 2, placeholder: "Street, building, and unit") %>
+<% end %>
+
+<div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
+  <%= render PanelsUI::FormField.new(form: form, attribute: :city, label: "City") do |field| %>
+    <% field.with_input(placeholder: "For example, Kota Kinabalu", autocomplete: "address-level2") %>
+  <% end %>
+
+  <%= render "shared/state_code_field",
+        form: form, attribute: :state_code,
+        value: guest.state_code, country: guest.address_country %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :postal_code, label: "Postcode") do |field| %>
+    <% field.with_input(placeholder: "For example, 88000", inputmode: "numeric", autocomplete: "postal-code") %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :address_country, label: "Address country") do |field| %>
+    <% field.with_combobox(
+         country_choices,
+         selected: guest.address_country,
+         prompt: "Search for a country",
+         data: {
+           address_state_target: "country",
+           action: "change->address-state#refresh"
+         }) %>
+  <% end %>
+</div>

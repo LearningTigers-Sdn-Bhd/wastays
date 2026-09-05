@@ -1,0 +1,15 @@
+<%# Checked against LHDN here so a wrong digit is caught now, not when the
+    e-invoice is rejected days later. tin-validation reads the document type and
+    the ID number out of the verification block; it writes only the line below,
+    so it never wakes another block's Save. %>
+<%= render PanelsUI::FormField.new(
+      form: form, attribute: :tin, label: "Tax identification number") do |field| %>
+  <%# An individual's LHDN TIN carries the IG prefix. A company uses C, and a
+      company books through a corporate account, not here. %>
+  <% field.with_input(
+       placeholder: "For example, IG5678901234",
+       autocomplete: "off",
+       data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
+<% end %>
+
+<p data-tin-validation-target="feedback" class="-mt-2 text-xs text-muted-foreground" hidden></p>

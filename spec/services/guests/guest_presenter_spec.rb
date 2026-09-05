@@ -58,6 +58,55 @@ RSpec.describe Guests::GuestPresenter do
     end
   end
 
+  describe "#normalized_document_type" do
+    it "reads a national identity card as a MyKad for a Malaysian guest" do
+      guest.country = "Malaysia"
+      guest.document_type = "national_id"
+
+      expect(presenter.normalized_document_type).to eq("malaysian_nric")
+    end
+
+    it "reads a MyKad as a national identity card for a foreign guest" do
+      guest.country = "Japan"
+      guest.document_type = "malaysian_nric"
+
+      expect(presenter.normalized_document_type).to eq("national_id")
+    end
+
+    it "leaves every other pairing alone" do
+      guest.country = "Japan"
+      guest.document_type = "passport"
+
+      expect(presenter.normalized_document_type).to eq("passport")
+
+      guest.document_type = nil
+
+      expect(presenter.normalized_document_type).to be_nil
+    end
+  end
+
+  describe "#identity_number_label" do
+    it "names the document the guest handed over" do
+      guest.country = "Japan"
+
+      guest.document_type = "passport"
+      expect(presenter.identity_number_label).to eq("Passport number")
+
+      guest.document_type = "national_id"
+      expect(presenter.identity_number_label).to eq("National identity card number")
+
+      guest.country = "Malaysia"
+      guest.document_type = "national_id"
+      expect(presenter.identity_number_label).to eq("MyKad number")
+    end
+
+    it "stays generic until a document type is chosen" do
+      guest.document_type = nil
+
+      expect(presenter.identity_number_label).to eq("Identity document number")
+    end
+  end
+
   describe "safe attributes" do
     it "handles decryption errors gracefully" do
       allow(guest).to receive(:name).and_raise(ActiveRecord::Encryption::Errors::Decryption)

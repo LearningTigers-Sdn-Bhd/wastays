@@ -1,103 +1,34 @@
 <%= turbo_frame_tag "guest_record" do %>
   <%= render "tabs", guest: guest, active_tab: "details", stays_count: stays_count %>
 
-  <% address = PostalAddresses::Presenter.from_guest(guest) %>
-  <% is_vip = guest.vip?(hotel: current_hotel) %>
-  <% is_blacklisted = guest.blacklisted_at?(current_hotel) %>
+  <%# The three identity controllers sit on the wrapper, not on a form, because
+      they read fields in one block and write fields in another. Each write is
+      dispatched on the input it changes, so it bubbles through that input's own
+      form and wakes that block's Save and no other. %>
+  <div class="space-y-6 pt-5"
+       data-controller="guest-dob guest-identity tin-validation"
+       data-tin-validation-url-value="<%= hotel_validate_tin_path(current_hotel) %>">
+    <%= render "stat_cards",
+               guest: guest,
+               presenter: presenter,
+               stays_count: stays_count,
+               last_checkout_on: last_checkout_on,
+               vip: guest.vip?(hotel: current_hotel),
+               blacklisted: guest.blacklisted_at?(current_hotel) %>
 
-  <div class="grid gap-6 pt-5 lg:grid-cols-3">
-    <section class="space-y-3" aria-labelledby="guest-identity-heading">
-      <h2 id="guest-identity-heading" class="text-base font-semibold text-foreground">Guest identity</h2>
-
-      <dl class="space-y-3">
-        <div>
-          <dt class="text-xs text-muted-foreground">Email</dt>
-          <dd class="mt-0.5 break-words text-sm text-foreground"><%= presenter.email.presence || blank_value %></dd>
-        </div>
-        <div>
-          <dt class="text-xs text-muted-foreground">Phone</dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.phone.presence || blank_value %></dd>
-        </div>
-        <div>
-          <dt class="text-xs text-muted-foreground">Gender</dt>
-          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_gender || blank_value %></dd>
-        </div>
-        <div>
-          <dt class="text-xs text-muted-foreground">Date of birth</dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.date_of_birth_formatted || blank_value %></dd>
-        </div>
-        <div>
-          <dt class="text-xs text-muted-foreground">Nationality</dt>
-          <dd class="mt-0.5 text-sm text-foreground"><%= presenter.formatted_country || blank_value %></dd>
-        </div>
-        <div>
-          <dt class="text-xs text-muted-foreground"><%= presenter.formatted_document_type %></dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.government_id.presence || blank_value %></dd>
-        </div>
-        <% if guest.lhdn_passport_required? %>
-          <div>
-            <dt class="text-xs text-muted-foreground">Passport</dt>
-            <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.passport_number || blank_value %></dd>
-          </div>
-        <% end %>
-      </dl>
-    </section>
-
-    <section class="space-y-3" aria-labelledby="guest-address-heading">
-      <div class="flex flex-wrap items-center gap-2">
-        <h2 id="guest-address-heading" class="text-base font-semibold text-foreground">Guest address</h2>
-        <% if address.missing? %>
-          <%= render PanelsUI::Badge.new(label: address.status_label, variant: :neutral, size: :sm) %>
-        <% elsif address.incomplete? %>
-          <%= render PanelsUI::Badge.new(label: address.status_label, variant: :warning, size: :sm) %>
-        <% end %>
+    <%# Two independent columns rather than a four-cell grid: the blocks have
+        very different heights, and row-aligned cells leave a tall gap under the
+        short ones. %>
+    <div class="grid grid-cols-1 items-start gap-x-8 gap-y-10 lg:grid-cols-2">
+      <div class="space-y-10">
+        <%= render "details_section", guest: guest, section: "identity" %>
+        <%= render "details_section", guest: guest, section: "verification" %>
       </div>
 
-      <% if address.missing? %>
-        <p class="text-sm"><%= blank_value %></p>
-      <% else %>
-        <address class="text-sm not-italic text-foreground">
-          <% address.lines.each do |line| %>
-            <span class="block"><%= line %></span>
-          <% end %>
-        </address>
-      <% end %>
-    </section>
-
-    <section class="space-y-3" aria-labelledby="guest-stay-summary-heading">
-      <h2 id="guest-stay-summary-heading" class="text-base font-semibold text-foreground">Stay summary</h2>
-
-      <dl class="space-y-3">
-        <div>
-          <dt class="text-xs text-muted-foreground">Total stays</dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= stays_count %></dd>
-        </div>
-        <div>
-          <dt class="text-xs text-muted-foreground">Last stay</dt>
-          <dd class="mt-0.5 text-sm tabular-nums text-foreground"><%= presenter.last_stay_checkout_date(last_checkout_on) || blank_value("None yet") %></dd>
-        </div>
-        <div>
-          <dt class="text-xs text-muted-foreground">Status at <%= current_hotel.name %></dt>
-          <dd class="mt-1 flex flex-wrap gap-1.5">
-            <%= render "guest_badges", vip: is_vip, blacklisted: is_blacklisted, repeat: guest.repeat? %>
-            <% unless is_vip || is_blacklisted || guest.repeat? %>
-              <span class="text-sm"><%= blank_value("None") %></span>
-            <% end %>
-          </dd>
-        </div>
-
-        <% if (detail = guest.blacklist_detail(current_hotel)).present? %>
-          <div>
-            <dt class="text-xs text-muted-foreground">Blacklist reason</dt>
-            <dd class="mt-0.5 text-sm text-foreground">
-              <%= detail["reason"].presence || blank_value("No reason recorded") %>
-              <span class="mt-0.5 block text-xs text-muted-foreground">
-                Set by <%= detail["blacklisted_by_name"] %>
-              </span>
-            </dd>
-          </div>
-        <% end %>
-      </dl>
-    </section>
+      <div class="space-y-10">
+        <%= render "details_section", guest: guest, section: "address" %>
+        <%= render "details_section", guest: guest, section: "tax" %>
+      </div>
+    </div>
   </div>
 <% end %>

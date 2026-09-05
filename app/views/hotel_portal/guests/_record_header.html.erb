@@ -2,126 +2,125 @@
 <% is_blacklisted = guest.blacklisted_at?(current_hotel) %>
 <% can_manage = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
 <% can_delete = current_user.has_permission?("delete_guest_record", hotel: current_hotel) %>
+<div id="guest-record-header">
+  <header class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between" data-testid="guest-record-header">
+    <div class="flex min-w-0 items-start gap-3">
+      <%# The whole record sits in the guest_record_page frame, so a plain link
+          loads the directory into that frame, finds no frame to match, and
+          leaves the reader with nothing. Back leaves the frame instead. %>
+      <%= link_to hotel_guests_path(current_hotel),
+            class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            data: { turbo_frame: "_top" },
+            aria: { label: "Back to Guest Records" } do %>
+        <%= app_icon "arrow-left", class: "size-4", aria: { hidden: true } %>
+      <% end %>
 
-<header class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between" data-testid="guest-record-header">
-  <div class="flex min-w-0 items-start gap-3">
-    <%= link_to hotel_guests_path(current_hotel),
-          class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          aria: { label: "Back to Guest Records" } do %>
-      <%= app_icon "arrow-left", class: "size-4", aria: { hidden: true } %>
-    <% end %>
+      <div class="min-w-0 space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="min-w-0 max-w-full truncate text-base font-semibold tracking-tight text-foreground"><%= presenter.name %></h1>
+          <%= render "guest_badges", vip: is_vip, blacklisted: is_blacklisted, repeat: guest.repeat? %>
+        </div>
 
-    <div class="min-w-0 space-y-1">
-      <div class="flex flex-wrap items-center gap-2">
-        <h1 class="min-w-0 max-w-full truncate text-base font-semibold tracking-tight text-foreground"><%= presenter.name %></h1>
-        <%= render "guest_badges", vip: is_vip, blacklisted: is_blacklisted, repeat: guest.repeat? %>
+        <p class="text-xs text-muted-foreground">
+          <%= [ presenter.email, presenter.phone, presenter.formatted_country ].compact_blank.join(" · ").presence || blank_value %>
+        </p>
       </div>
-
-      <p class="text-xs text-muted-foreground">
-        <%= [ presenter.email, presenter.phone, presenter.formatted_country ].compact_blank.join(" · ").presence || blank_value %>
-      </p>
     </div>
-  </div>
 
-  <% if can_manage || can_delete %>
-    <div class="shrink-0">
-      <%= render PanelsUI::DropdownMenu.new(id: "guest-record-actions", placement: :bottom_end, class: "w-56") do |menu| %>
-        <% menu.with_trigger(variant: :primary, size: :md, aria_label: "Guest record actions") do %>
-          Actions
-          <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
-        <% end %>
-
-        <% if can_manage %>
-          <% menu.with_item(
-               href: edit_hotel_guest_path(current_hotel, guest, return_to: sheet_return_to("guest_record_page")),
-               data: { turbo_frame: "settings_action_sheet" }) do %>
-            <%= app_icon "pencil", class: "size-4 shrink-0", aria: { hidden: true } %>
-            <span>Edit profile</span>
+    <% if can_manage || can_delete %>
+      <div class="shrink-0">
+        <%= render PanelsUI::DropdownMenu.new(id: "guest-record-actions", placement: :bottom_end, class: "w-56") do |menu| %>
+          <% menu.with_trigger(variant: :primary, size: :md, aria_label: "Guest record actions") do %>
+            Actions
+            <%= app_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
           <% end %>
 
-          <% if is_vip %>
+          <% if can_manage %>
+            <% if is_vip %>
+              <% menu.with_item(
+                   href: unvip_hotel_guest_path(current_hotel, guest),
+                   method: :patch,
+                   data: {
+                     turbo_confirm: "#{presenter.name} will no longer be marked VIP at #{current_hotel.name}.",
+                     turbo_confirm_title: "Remove VIP",
+                     turbo_confirm_tone: "default"
+                   }) do %>
+                <%= app_icon "crown", class: "size-4 shrink-0", aria: { hidden: true } %>
+                <span>Remove VIP</span>
+              <% end %>
+            <% else %>
+              <% menu.with_item(
+                   href: vip_hotel_guest_path(current_hotel, guest),
+                   method: :patch,
+                   data: {
+                     turbo_confirm: "#{presenter.name} will be marked VIP at #{current_hotel.name}.",
+                     turbo_confirm_title: "Mark as VIP",
+                     turbo_confirm_tone: "default"
+                   }) do %>
+                <%= app_icon "crown", class: "size-4 shrink-0", aria: { hidden: true } %>
+                <span>Mark as VIP</span>
+              <% end %>
+            <% end %>
+
+            <% if is_blacklisted %>
+              <% menu.with_item(
+                   href: unblacklist_hotel_guest_path(current_hotel, guest),
+                   method: :patch,
+                   variant: :warning,
+                   data: {
+                     turbo_confirm: "#{presenter.name} will be able to book at #{current_hotel.name} again. The reason on record is removed.",
+                     turbo_confirm_title: "Remove blacklist",
+                     turbo_confirm_tone: "warning"
+                   }) do %>
+                <%= app_icon "user-round-check", class: "size-4 shrink-0", aria: { hidden: true } %>
+                <span>Remove blacklist</span>
+              <% end %>
+            <% else %>
+              <% menu.with_item(variant: :danger, command: "show-modal", commandfor: "guest-blacklist-dialog") do %>
+                <%= app_icon "user-round-x", class: "size-4 shrink-0", aria: { hidden: true } %>
+                <span>Blacklist guest</span>
+              <% end %>
+            <% end %>
+          <% end %>
+
+          <% if can_delete %>
+            <% menu.with_separator %>
             <% menu.with_item(
-                 href: unvip_hotel_guest_path(current_hotel, guest),
-                 method: :patch,
+                 href: hotel_guest_path(current_hotel, guest),
+                 method: :delete,
+                 variant: :danger,
+                 form: { data: { turbo_frame: "_top" } },
                  data: {
-                   turbo_confirm: "#{presenter.name} will no longer be marked VIP at #{current_hotel.name}.",
-                   turbo_confirm_title: "Remove VIP",
-                   turbo_confirm_tone: "default"
+                   turbo_confirm: "#{presenter.name} is removed from the directory. Their booking history stays on record.",
+                   turbo_confirm_title: "Delete guest record",
+                   turbo_confirm_tone: "destructive"
                  }) do %>
-              <%= app_icon "crown", class: "size-4 shrink-0", aria: { hidden: true } %>
-              <span>Remove VIP</span>
-            <% end %>
-          <% else %>
-            <% menu.with_item(
-                 href: vip_hotel_guest_path(current_hotel, guest),
-                 method: :patch,
-                 data: {
-                   turbo_confirm: "#{presenter.name} will be marked VIP at #{current_hotel.name}.",
-                   turbo_confirm_title: "Mark as VIP",
-                   turbo_confirm_tone: "default"
-                 }) do %>
-              <%= app_icon "crown", class: "size-4 shrink-0", aria: { hidden: true } %>
-              <span>Mark as VIP</span>
-            <% end %>
-          <% end %>
-
-          <% if is_blacklisted %>
-            <% menu.with_item(
-                 href: unblacklist_hotel_guest_path(current_hotel, guest),
-                 method: :patch,
-                 variant: :warning,
-                 data: {
-                   turbo_confirm: "#{presenter.name} will be able to book at #{current_hotel.name} again. The reason on record is removed.",
-                   turbo_confirm_title: "Remove blacklist",
-                   turbo_confirm_tone: "warning"
-                 }) do %>
-              <%= app_icon "user-round-check", class: "size-4 shrink-0", aria: { hidden: true } %>
-              <span>Remove blacklist</span>
-            <% end %>
-          <% else %>
-            <% menu.with_item(variant: :danger, command: "show-modal", commandfor: "guest-blacklist-dialog") do %>
-              <%= app_icon "user-round-x", class: "size-4 shrink-0", aria: { hidden: true } %>
-              <span>Blacklist guest</span>
+              <%= app_icon "trash-2", class: "size-4 shrink-0", aria: { hidden: true } %>
+              <span>Delete guest record</span>
             <% end %>
           <% end %>
         <% end %>
+      </div>
+    <% end %>
+  </header>
 
-        <% if can_delete %>
-          <% menu.with_separator %>
-          <% menu.with_item(
-               href: hotel_guest_path(current_hotel, guest),
-               method: :delete,
-               variant: :danger,
-               data: {
-                 turbo_confirm: "#{presenter.name} is removed from the directory. Their booking history stays on record.",
-                 turbo_confirm_title: "Delete guest record",
-                 turbo_confirm_tone: "destructive"
-               }) do %>
-            <%= app_icon "trash-2", class: "size-4 shrink-0", aria: { hidden: true } %>
-            <span>Delete guest record</span>
+  <% if can_manage && !is_blacklisted %>
+    <%= form_with url: blacklist_hotel_guest_path(current_hotel, guest), method: :patch do |f| %>
+      <%= render PanelsUI::Dialog.new(
+            id: "guest-blacklist-dialog",
+            title: "Blacklist guest",
+            description: "#{presenter.name} will be flagged as blacklisted for #{current_hotel.name}. Other properties are not affected.",
+            size: :md) do |dialog| %>
+        <% dialog.with_body do %>
+          <%= render PanelsUI::FormField.new(form: f, attribute: :blacklist_reason, label: "Reason", required: true) do |field| %>
+            <% field.with_text_area(rows: 4, placeholder: "Explain why this guest is being blacklisted.") %>
           <% end %>
         <% end %>
-      <% end %>
-    </div>
-  <% end %>
-</header>
-
-<% if can_manage && !is_blacklisted %>
-  <%= form_with url: blacklist_hotel_guest_path(current_hotel, guest), method: :patch do |f| %>
-    <%= render PanelsUI::Dialog.new(
-          id: "guest-blacklist-dialog",
-          title: "Blacklist guest",
-          description: "#{presenter.name} will be flagged as blacklisted for #{current_hotel.name}. Other properties are not affected.",
-          size: :md) do |dialog| %>
-      <% dialog.with_body do %>
-        <%= render PanelsUI::FormField.new(form: f, attribute: :blacklist_reason, label: "Reason", required: true) do |field| %>
-          <% field.with_text_area(rows: 4, placeholder: "Explain why this guest is being blacklisted.") %>
+        <% dialog.with_footer do %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Blacklist guest<% end %>
         <% end %>
-      <% end %>
-      <% dialog.with_footer do %>
-        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
-        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Blacklist guest<% end %>
       <% end %>
     <% end %>
   <% end %>
-<% end %>
+</div>

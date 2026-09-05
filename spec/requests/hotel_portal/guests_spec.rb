@@ -573,6 +573,75 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     end
   end
 
+  describe "PATCH /update with a section" do
+    let(:guest) do
+      create(:guest,
+             created_by_hotel: hotel,
+             name: "Ravi Menon",
+             home_address: "No. 12, Jalan Ampang",
+             city: "Kuala Lumpur",
+             tin: "IG1111111111")
+    end
+
+    def save_section(section, attributes)
+      patch hotel_guest_path(hotel, guest),
+            params: { section: section, guest: attributes },
+            headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    end
+
+    it "writes only the fields of the block that saved" do
+      save_section("tax", tin: "IG2222222222")
+
+      expect(response).to have_http_status(:success)
+      expect(guest.reload.tin).to eq("IG2222222222")
+      expect(guest.home_address).to eq("No. 12, Jalan Ampang")
+      expect(guest.city).to eq("Kuala Lumpur")
+    end
+
+    it "ignores fields that belong to another block" do
+      save_section("tax", tin: "IG3333333333", home_address: "Somewhere else")
+
+      expect(guest.reload.tin).to eq("IG3333333333")
+      expect(guest.home_address).to eq("No. 12, Jalan Ampang")
+    end
+
+    it "replaces the saved block alone" do
+      save_section("address", city: "Kota Kinabalu")
+
+      expect(guest.reload.city).to eq("Kota Kinabalu")
+      expect(response.body).to include("guest_section_address")
+      expect(response.body).not_to include("guest_section_tax")
+    end
+
+    it "refreshes the header when the identity block saves" do
+      save_section("identity", name: "Ravi Menon Jr")
+
+      expect(guest.reload.name).to eq("Ravi Menon Jr")
+      expect(response.body).to include("guest-record-header")
+    end
+
+    it "leaves the header alone when another block saves" do
+      save_section("address", city: "Kota Kinabalu")
+
+      expect(response.body).not_to include("guest-record-header")
+    end
+
+    it "re-renders the block with its errors when the save fails" do
+      save_section("identity", name: "")
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(guest.reload.name).to eq("Ravi Menon")
+      expect(CGI.unescapeHTML(response.body)).to include("This section could not be saved")
+    end
+
+    it "rejects a section name it does not know" do
+      save_section("payroll", tin: "IG4444444444")
+
+      expect(response).to have_http_status(:not_found)
+      expect(guest.reload.tin).to eq("IG1111111111")
+    end
+  end
+
   describe "GET /details and /booking_history" do
     it "renders the guest timeline without grouped query errors" do
       guest = Guest.create!(
@@ -618,8 +687,10 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Guest Records")
       expect(body_text).to include("Ravi Menon")
       expect(body_text).to include("Guest identity")
+      expect(body_text).to include("Identity verification")
       expect(body_text).to include("Guest address")
-      expect(body_text).to include("Stay summary")
+      expect(body_text).to include("Tax management")
+      expect(body_text).to include("Total stays")
       expect(body_text.downcase).to include("india")
       expect(body_text).to include("No. 12, Jalan Ampang")
 
@@ -741,6 +812,27 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Blacklist guest")
     end
 
+    # The record sits in the guest_record_page frame. A link that stayed inside
+    # it would pull the directory into a frame the directory does not have, and
+    # Turbo would leave the reader with an empty panel.
+    it "sends Back and Delete out of the record frame" do
+      access = UserHotelAccess.find_by(user: user, hotel: hotel)
+      access.role.permissions << (Permission.find_by(slug: "delete_guest_record") || create(:permission, slug: "delete_guest_record"))
+
+      get details_hotel_guest_path(hotel, guest)
+
+      document = response.parsed_body
+      back = document.at_css("a[href='#{hotel_guests_path(hotel)}'][aria-label='Back to Guest Records']")
+      expect(back["data-turbo-frame"]).to eq("_top")
+
+      # Delete is a button_to, so the frame target belongs on its form. The four
+      # section forms post to the same path, so pick the one carrying DELETE.
+      delete = document.css("form[action='#{hotel_guest_path(hotel, guest)}']").find do |form|
+        form.at_css("input[name='_method'][value='delete']")
+      end
+      expect(delete["data-turbo-frame"]).to eq("_top")
+    end
+
     it "offers the reverse actions once the guest is marked" do
       Guests::SetVip.new(guests: guest, hotel: hotel, vip: true).call
       Guests::SetBlacklist.new(guests: guest, hotel: hotel, blacklisted: true, actor: user, reason: "Damage").call
@@ -753,9 +845,9 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).not_to include("Mark as VIP")
     end
 
-    # The badges are the at-a-glance marker beside the name. The Stay summary
-    # section carries the same state with its detail; both are wanted.
-    it "shows the status badges in the header and again in the stay summary" do
+    # The badges are the at-a-glance marker beside the name. The status cards
+    # carry the same state with its detail; both are wanted.
+    it "shows the status badges in the header and again in the status cards" do
       Guests::SetVip.new(guests: guest, hotel: hotel, vip: true).call
       Guests::SetBlacklist.new(guests: guest, hotel: hotel, blacklisted: true, actor: user, reason: "Damaged the room").call
 
@@ -766,8 +858,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(header).to include("VIP")
       expect(header).to include("Blacklisted")
 
-      expect(body_text).to include("Status at #{hotel.name}")
-      expect(body_text).to include("Blacklist reason")
+      expect(body_text).to include("VIP at #{hotel.name}")
       expect(body_text).to include("Damaged the room")
     end
 

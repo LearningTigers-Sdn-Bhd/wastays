@@ -1,0 +1,54 @@
+<%# guest-dob reads the document type and the ID number from here and fills the
+    date of birth in the identity block. A Malaysian IC therefore wakes two
+    Saves, which is honest: it changed a field in each block.
+
+    The document type and the number's label both come from the presenter, so
+    the block paints in its settled state. guest-identity used to work both out
+    on connect, which swapped the type and rewrote the label after the page was
+    already on screen. %>
+<% presenter = Guests::GuestPresenter.new(guest) %>
+<div class="grid gap-4 sm:grid-cols-2">
+  <%= render PanelsUI::FormField.new(form: form, attribute: :document_type, label: "Document type") do |field| %>
+    <% field.with_select_menu(
+         Booking::DOCUMENT_TYPES.map { |label, value| { label:, value: } },
+         include_blank: true,
+         prompt: "Select document type",
+         selected: presenter.normalized_document_type,
+         data: {
+           guest_dob_target: "documentType",
+           guest_identity_target: "documentType",
+           tin_validation_target: "documentType",
+           action: "change->guest-dob#autofill change->guest-identity#documentChanged change->tin-validation#check"
+         }) %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :government_id, label: presenter.identity_number_label, data: { guest_identity_target: "numberLabel" }) do |field| %>
+    <% field.with_input(
+         placeholder: "Enter ID number",
+         data: {
+           guest_dob_target: "governmentId",
+           tin_validation_target: "idValue",
+           action: "input->guest-dob#autofill blur->tin-validation#check"
+         }) %>
+  <% end %>
+
+  <div class="sm:col-span-2" data-guest-identity-target="passportRow" <%= "hidden" unless presenter.normalized_document_type == "national_id" %>>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :lhdn_document_type, label: "LHDN document type", disabled: true) do |field| %>
+        <% field.with_input(value: "Passport", readonly: true) %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: form, attribute: :passport_number, label: "Passport number", hint: "Required for an individual e-invoice.") do |field| %>
+        <% field.with_input(
+             autocomplete: "off",
+             spellcheck: false,
+             disabled: presenter.normalized_document_type != "national_id",
+             data: {
+               guest_identity_target: "passportInput",
+               tin_validation_target: "passportNumber",
+               action: "blur->tin-validation#check"
+             }) %>
+      <% end %>
+    </div>
+  </div>
+</div>

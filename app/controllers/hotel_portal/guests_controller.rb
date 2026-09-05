@@ -137,6 +137,8 @@ module HotelPortal
     end
 
     def update
+      return update_section if params[:section].present?
+
       if @guest.update(guest_params)
         finish_sheet("Guest record updated successfully.", fallback: details_hotel_guest_path(current_hotel, @guest))
       else
@@ -217,6 +219,60 @@ module HotelPortal
     end
 
     private
+
+    # The details tab is four blocks, each with its own Save. A save writes the
+    # fields of the block that sent it and nothing else: a tax form that carried
+    # blank address keys would wipe the address on every submit.
+    def update_section
+      section = params[:section].to_s
+      fields = Guests::GuestPresenter::SECTIONS.dig(section, :fields)
+      raise ActiveRecord::RecordNotFound if fields.blank?
+
+      saved = @guest.update(guest_params.slice(*fields))
+      @presenter = Guests::GuestPresenter.new(@guest)
+
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: section_streams(section, saved: saved),
+                 status: saved ? :ok : :unprocessable_content
+        end
+        format.html do
+          destination = details_hotel_guest_path(current_hotel, @guest)
+
+          if saved
+            redirect_to destination, notice: "Guest record updated successfully.", status: :see_other
+          else
+            redirect_to destination, alert: @guest.errors.full_messages.to_sentence, status: :see_other
+          end
+        end
+      end
+    end
+
+    # Only the block that saved is replaced, so the other three keep whatever
+    # the desk had typed into them. The header comes along when the identity
+    # block saves, because it carries the name and the contact line.
+    def section_streams(section, saved:)
+      streams = [
+        helpers.turbo_stream.replace(
+          "guest_section_#{section}",
+          partial: "hotel_portal/guests/details_section",
+          locals: { guest: @guest, section: section }
+        )
+      ]
+
+      return streams unless saved
+
+      if section == "identity"
+        streams << helpers.turbo_stream.replace(
+          "guest-record-header",
+          partial: "hotel_portal/guests/record_header",
+          locals: { guest: @guest, presenter: @presenter }
+        )
+      end
+
+      streams << toast_stream("#{Guests::GuestPresenter::SECTIONS.dig(section, :title)} saved.", type: :success)
+      streams
+    end
 
     def apply_bulk(service)
       result = service.call

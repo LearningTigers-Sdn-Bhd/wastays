@@ -2,6 +2,32 @@
 
 module Guests
   class GuestPresenter
+    # The details tab is four blocks, each with its own Save. A block's copy is
+    # written once here, because the first render and the re-render after a
+    # save both need it, and `fields` decides what that block's save may write.
+    SECTIONS = {
+      "identity" => {
+        title: "Guest identity",
+        description: "Who the guest is, and how to reach them.",
+        fields: %i[name email phone country gender date_of_birth]
+      },
+      "verification" => {
+        title: "Identity verification",
+        description: "Legal identification, as recorded at check-in.",
+        fields: %i[document_type government_id passport_number]
+      },
+      "address" => {
+        title: "Guest address",
+        description: "Used on the folio and on an e-invoice.",
+        fields: %i[home_address city state_code postal_code address_country]
+      },
+      "tax" => {
+        title: "Tax management",
+        description: "Needed only when the guest claims their stays.",
+        fields: %i[tin]
+      }
+    }.freeze
+
     attr_reader :guest
 
     delegate :vip?, :repeat?, to: :guest
@@ -57,6 +83,32 @@ module Guests
 
     def formatted_country
       safe_attr(:country).presence
+    end
+
+    # The guest-identity controller swaps a national identity card for a MyKad
+    # when the nationality is Malaysia, and back again when it is not. It ran
+    # that swap on connect, which flipped the visible document type after the
+    # page had already painted and woke the block's Save on load. The server
+    # settles it first, so the controller finds nothing to change.
+    def normalized_document_type
+      current = safe_attr(:document_type)
+      malaysian = safe_attr(:country).to_s.casecmp?("malaysia")
+
+      return "malaysian_nric" if malaysian && current == "national_id"
+      return "national_id" if !malaysian && current == "malaysian_nric"
+
+      current
+    end
+
+    # The label above the number field names the document in hand. It is
+    # rendered here rather than rewritten in the browser, for the same reason.
+    def identity_number_label
+      case normalized_document_type
+      when "passport" then "Passport number"
+      when "national_id" then "National identity card number"
+      when "malaysian_nric", "ic" then "MyKad number"
+      else "Identity document number"
+      end
     end
 
     def last_stay_time
