@@ -37,6 +37,10 @@ class GuestRegistrationCardPdfService
     frame = build_frame(pdf)
 
     frame.draw_header
+    # Pulls the Name/Phone row up closer to the metadata strip above it — the
+    # frame's own gap is sized for reports with a section title in between,
+    # which this card doesn't have.
+    pdf.move_up 10
     draw_bordered_section(pdf, bottom_margin: 2) { draw_guest_section(pdf) }
     draw_bordered_section(pdf, bottom_margin: 2) { draw_stay_section(pdf) }
     draw_bordered_section(pdf, bottom_margin: @presenter.boat_transfer? ? 2 : 5) { draw_payment_section(pdf) }
