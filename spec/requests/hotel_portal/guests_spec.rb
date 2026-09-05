@@ -855,6 +855,20 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     # The record sits in the guest_record_page frame. A link that stayed inside
     # it would pull the directory into a frame the directory does not have, and
     # Turbo would leave the reader with an empty panel.
+    # The breadcrumb bar lives in the layout, outside the record frame, so a
+    # crumb naming the open tab would go stale the moment the reader switched.
+    it "ends the breadcrumb trail at the guest, on both tabs" do
+      get details_hotel_guest_path(hotel, guest)
+      trail = response.parsed_body.at_css(".portal-breadcrumb-bar").text.squish
+      expect(trail).to include("Ravi Menon")
+      expect(trail).not_to include("Booking History")
+
+      get booking_history_hotel_guest_path(hotel, guest)
+      trail = response.parsed_body.at_css(".portal-breadcrumb-bar").text.squish
+      expect(trail).to include("Ravi Menon")
+      expect(trail).not_to include("Booking History")
+    end
+
     it "sends Back and Delete out of the record frame" do
       access = UserHotelAccess.find_by(user: user, hotel: hotel)
       access.role.permissions << (Permission.find_by(slug: "delete_guest_record") || create(:permission, slug: "delete_guest_record"))

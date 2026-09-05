@@ -364,12 +364,15 @@ module HotelPortal
       raise ActiveRecord::RecordNotFound
     end
 
+    # The trail stops at the guest. The tabs swap the record frame while the
+    # breadcrumb bar sits outside it in the layout, so a crumb naming the tab
+    # was only ever right until the reader clicked the other one. The tab strip
+    # says which tab is open anyway. Edit is a sheet and renders no layout, so
+    # its crumb was never drawn either.
     def set_breadcrumbs
       if @guest&.persisted?
         presenter = Guests::GuestPresenter.new(@guest)
         append_breadcrumb presenter.name, details_hotel_guest_path(current_hotel, @guest)
-        append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
-        append_breadcrumb "Booking History" if action_name == "booking_history"
       else
         append_breadcrumb "New"
       end
