@@ -855,9 +855,9 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     # The record sits in the guest_record_page frame. A link that stayed inside
     # it would pull the directory into a frame the directory does not have, and
     # Turbo would leave the reader with an empty panel.
-    # The breadcrumb bar lives in the layout, outside the record frame, so a
-    # crumb naming the open tab would go stale the moment the reader switched.
-    it "ends the breadcrumb trail at the guest, on both tabs" do
+    # The breadcrumb bar lives in the layout, so the trail can only follow the
+    # tab while the tabs reload the page rather than one frame inside it.
+    it "names the open tab in the breadcrumb trail" do
       get details_hotel_guest_path(hotel, guest)
       trail = response.parsed_body.at_css(".portal-breadcrumb-bar").text.squish
       expect(trail).to include("Ravi Menon")
@@ -866,7 +866,17 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       get booking_history_hotel_guest_path(hotel, guest)
       trail = response.parsed_body.at_css(".portal-breadcrumb-bar").text.squish
       expect(trail).to include("Ravi Menon")
-      expect(trail).not_to include("Booking History")
+      expect(trail).to include("Booking History")
+    end
+
+    it "leaves the tab links to Turbo Drive, so the whole shell follows" do
+      get details_hotel_guest_path(hotel, guest)
+
+      document = response.parsed_body
+      %w[details booking_history].each do |tab|
+        link = document.at_css("#guest-record-tabs-tab-#{tab}")
+        expect(link["data-turbo-frame"]).to be_nil
+      end
     end
 
     it "sends Back and Delete out of the record frame" do
@@ -916,17 +926,6 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Damaged the room")
     end
 
-    it "returns the tab strip and body, without the page shell, to a frame request" do
-      get details_hotel_guest_path(hotel, guest), headers: { "Turbo-Frame" => "guest_record" }
-
-      expect(response).to have_http_status(:success)
-      body_text = CGI.unescapeHTML(response.body)
-      expect(body_text).to include("guest_record")
-      expect(body_text).to include("Guest identity")
-      expect(body_text).not_to include("<!DOCTYPE html>")
-      expect(body_text).not_to include("guest-record-actions")
-    end
-
     # The outer frame carries the header. An edit that renames the guest has to
     # refresh the name and badges above the tabs, not only the tab body.
     it "returns the header as well to the outer record frame" do
@@ -939,15 +938,13 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(body_text).to include("Guest identity")
     end
 
-    # The tab strip has to travel inside the frame. Left outside it, the
-    # highlight stays on whichever tab the reader arrived on.
-    it "marks the tab it returns as the current one" do
-      get details_hotel_guest_path(hotel, guest), headers: { "Turbo-Frame" => "guest_record" }
+    it "marks the tab it renders as the current one" do
+      get details_hotel_guest_path(hotel, guest)
       body_text = CGI.unescapeHTML(response.body)
       expect(body_text).to match(/id="guest-record-tabs-tab-details"[^>]*aria-current="page"/)
       expect(body_text).not_to match(/id="guest-record-tabs-tab-booking_history"[^>]*aria-current="page"/)
 
-      get booking_history_hotel_guest_path(hotel, guest), headers: { "Turbo-Frame" => "guest_record" }
+      get booking_history_hotel_guest_path(hotel, guest)
       body_text = CGI.unescapeHTML(response.body)
       expect(body_text).to match(/id="guest-record-tabs-tab-booking_history"[^>]*aria-current="page"/)
       expect(body_text).not_to match(/id="guest-record-tabs-tab-details"[^>]*aria-current="page"/)

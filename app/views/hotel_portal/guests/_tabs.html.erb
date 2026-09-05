@@ -1,3 +1,6 @@
+<%# The tabs are plain Turbo Drive links. Targeting the record frame kept the
+    page shell in place, and the breadcrumb bar lives in that shell, so the
+    trail could never follow the open tab. %>
 <div class="border-b border-border">
   <%= render PanelsUI::Tabs.new(
         id: "guest-record-tabs",
@@ -7,13 +10,11 @@
     <% tabs.with_tab(
          name: "details",
          label: "Details",
-         href: details_hotel_guest_path(current_hotel, guest),
-         data: { turbo_frame: "guest_record", turbo_action: "advance" }) %>
+         href: details_hotel_guest_path(current_hotel, guest)) %>
     <% tabs.with_tab(
          name: "booking_history",
          label: "Booking History",
          count: stays_count,
-         href: booking_history_hotel_guest_path(current_hotel, guest),
-         data: { turbo_frame: "guest_record", turbo_action: "advance" }) %>
+         href: booking_history_hotel_guest_path(current_hotel, guest)) %>
   <% end %>
 </div>

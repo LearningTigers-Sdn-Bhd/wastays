@@ -91,12 +91,6 @@ module HotelPortal
       query = bookings_query
       @stays_count = query.stays_count
       @last_checkout_on = query.last_checkout_on
-
-      return unless tab_frame_request?
-
-      render partial: "details",
-             locals: { guest: @guest, presenter: @presenter, stays_count: @stays_count,
-                       last_checkout_on: @last_checkout_on }
     end
 
     def booking_history
@@ -105,12 +99,6 @@ module HotelPortal
       @stays_count = query.stays_count
       @bookings = query.bookings(page: params[:page])
       @currency_totals = query.currency_totals
-
-      return unless tab_frame_request?
-
-      render partial: "booking_history",
-             locals: { guest: @guest, presenter: @presenter, stays_count: @stays_count,
-                       bookings: @bookings, currency_totals: @currency_totals }
     end
 
     # New and edit are the same sheet, served into the shell's action-sheet
@@ -317,13 +305,6 @@ module HotelPortal
       )
     end
 
-    # A tab click asks for the inner frame, so it gets the tab body alone. The
-    # outer record frame asks after a sheet edits the guest, and it needs the
-    # header as well — the full page template, which Turbo then extracts.
-    def tab_frame_request?
-      turbo_frame_request_id == "guest_record"
-    end
-
     def bookings_query
       Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)
     end
@@ -364,15 +345,12 @@ module HotelPortal
       raise ActiveRecord::RecordNotFound
     end
 
-    # The trail stops at the guest. The tabs swap the record frame while the
-    # breadcrumb bar sits outside it in the layout, so a crumb naming the tab
-    # was only ever right until the reader clicked the other one. The tab strip
-    # says which tab is open anyway. Edit is a sheet and renders no layout, so
-    # its crumb was never drawn either.
+    # Edit is a sheet and renders no layout, so it gets no crumb of its own.
     def set_breadcrumbs
       if @guest&.persisted?
         presenter = Guests::GuestPresenter.new(@guest)
         append_breadcrumb presenter.name, details_hotel_guest_path(current_hotel, @guest)
+        append_breadcrumb "Booking History" if action_name == "booking_history"
       else
         append_breadcrumb "New"
       end
