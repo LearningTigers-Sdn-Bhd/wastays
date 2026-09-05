@@ -869,13 +869,15 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(trail).to include("Booking History")
     end
 
-    it "leaves the tab links to Turbo Drive, so the whole shell follows" do
+    # The strip is inside the record frame, so an untargeted link would swap the
+    # frame and leave the URL and the shell where they were.
+    it "sends the tab links to the page, not to the record frame" do
       get details_hotel_guest_path(hotel, guest)
 
       document = response.parsed_body
       %w[details booking_history].each do |tab|
         link = document.at_css("#guest-record-tabs-tab-#{tab}")
-        expect(link["data-turbo-frame"]).to be_nil
+        expect(link["data-turbo-frame"]).to eq("_top")
       end
     end
 
