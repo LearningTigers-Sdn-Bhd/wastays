@@ -16,7 +16,7 @@ class HotelPortal::Bookings::MovesController < HotelPortal::BaseController
     if result.success?
       render json: { success: true, booking: @booking.as_json(only: %i[id check_in check_out status]) }
     else
-      render json: { success: false, errors: result.errors }, status: :unprocessable_entity
+      render json: { success: false, errors: result.errors }, status: :unprocessable_content
     end
   end
 

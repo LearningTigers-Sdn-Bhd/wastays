@@ -115,15 +115,28 @@ RSpec.describe GuestRegistrationCard, type: :model do
       card = build(:guest_registration_card)
 
       expect(card.visible_fields).to eq(GuestRegistrationCard::DISPLAY_FIELDS.keys)
+      expect(card.field_visible?(:address)).to be(true)
     end
 
     it "uses sanitized hotel settings while draft" do
-      hotel = create(:hotel, guest_registration_card_fields: %w[email room_type unknown])
+      hotel = create(:hotel, guest_registration_card_fields: %w[email address room_type unknown])
       card = build(:guest_registration_card, hotel: hotel, booking: build(:booking, hotel: hotel))
 
-      expect(card.visible_fields).to eq(%w[email room_type])
+      expect(card.visible_fields).to eq(%w[email address room_type])
+      expect(card.field_visible?(:address)).to be(true)
       expect(card.field_visible?(:room_type)).to be(true)
       expect(card.field_visible?(:phone)).to be(false)
+    end
+
+    it "treats the nationality as an optional field" do
+      hotel = create(:hotel, guest_registration_card_fields: %w[email nationality])
+      card = build(:guest_registration_card, hotel: hotel, booking: build(:booking, hotel: hotel))
+
+      expect(card.field_visible?(:nationality)).to be(true)
+
+      hotel.guest_registration_card_fields = %w[email]
+
+      expect(card.field_visible?(:nationality)).to be(false)
     end
 
     it "uses its saved snapshot after signing" do

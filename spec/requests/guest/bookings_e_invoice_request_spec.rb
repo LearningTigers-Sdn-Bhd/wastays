@@ -21,6 +21,7 @@ RSpec.describe "Guest::Bookings#request_e_invoice", type: :request do
       guest_tin: "IG12345678901",
       guest_home_address: "No. 12, Jalan Ampang",
       guest_city: "Kuala Lumpur",
+      guest_address_country: "Malaysia",
       guest_country: "Malaysia",
       total_amount: 300.0, currency: "MYR",
       payment_status: "captured",

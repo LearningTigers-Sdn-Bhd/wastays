@@ -16,7 +16,10 @@ module AiConcierge
     TIMING_KEYS = (DATE_KEYS + DURATION_KEYS).freeze
     PARTY_KEYS = (GUEST_KEYS + ROOM_KEYS).freeze
     SEARCH_KEYS = (TIMING_KEYS + PARTY_KEYS).freeze
-    DOWNSTREAM_KEYS = %w[suggested_options confirmation_candidate selected_option suggestion_set_version selected_rate_plan_id selected_rate_plan_name].freeze
+    DOWNSTREAM_KEYS = %w[
+      suggested_options viewed_option confirmation_candidate selected_option
+      suggestion_set_version selected_rate_plan_id selected_rate_plan_name
+    ].freeze
 
     def self.empty_branch
       {
@@ -35,6 +38,7 @@ module AiConcierge
         "clarification_needed" => nil,
         "suggested_options" => [],
         "suggestion_set_version" => 0,
+        "viewed_option" => nil,
         "confirmation_candidate" => nil,
         "selected_option" => nil,
         "selected_rate_plan_id" => nil,

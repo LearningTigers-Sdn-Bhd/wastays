@@ -65,7 +65,7 @@ RSpec.describe Reports::Bookings::GenerateTourismTaxVoucherRecords do
     expect(records.party_blocks.first[:entries]).to include(
       [ "Name", "Aisha Rahman" ],
       [ "Nationality", "Singapore" ],
-      [ "Address", "12 Jalan Pantai" ]
+        [ "Address", "12 Jalan Pantai\nSingapore" ]
     )
     expect(records.party_blocks.second[:entries]).to include([ "Room", "Ocean Suite - 204" ])
     expect(records.party_blocks.third[:entries]).to include(

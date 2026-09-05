@@ -59,8 +59,13 @@ class BookingGuest < ApplicationRecord
     self.government_id_snapshot ||= guest.safely_read_encrypted(:government_id)
     self.gender_snapshot ||= guest.gender
     self.country_snapshot ||= guest.country
+    self.city_snapshot ||= guest.city
+    self.state_code_snapshot ||= guest.state_code
+    self.postal_code_snapshot ||= guest.postal_code
+    self.address_country_snapshot ||= guest.address_country
     self.document_type_snapshot ||= guest.document_type
     self.date_of_birth_snapshot ||= guest.date_of_birth
+    self.home_address_snapshot ||= guest.home_address
   end
 
   def ensure_guest_billing_party

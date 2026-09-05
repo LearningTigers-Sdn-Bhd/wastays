@@ -142,14 +142,12 @@
                     required: true, placeholder: "e.g. Petaling Jaya" %>
             </div>
 
-            <div class="space-y-2">
-              <%= f.label :guest_state_code, "State", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
-              <%= f.select :guest_state_code,
-                    EInvoice::MalaysiaStates.options,
-                    { include_blank: "Select state", selected: @booking.guest_state_code },
-                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
-                    required: true %>
-            </div>
+            <%= render "shared/plain_state_code_field", form: f, attribute: :guest_state_code, value: @booking.guest_state_code,
+                  country: @presenter.default_address_country,
+                  wrapper_class: "space-y-2",
+                  field_class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
+                  label_class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1",
+                  required: true %>
 
             <div class="space-y-2">
               <%= f.label :guest_postal_code, "Postcode", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
@@ -204,10 +202,18 @@
             </div>
 
             <div class="space-y-2">
-              <%= f.label :guest_home_address, "Home Address", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.label :guest_home_address, "Street address", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
               <%= f.text_area :guest_home_address, value: @booking.guest_home_address,
                     class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
-                    required: true, rows: 3, placeholder: "e.g. No. 12, Jalan Ampang, 50450 Kuala Lumpur" %>
+                    required: true, rows: 3, placeholder: "Street, building, and unit" %>
+            </div>
+            <div class="space-y-2">
+              <%= f.label :guest_address_country, "Address country", class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1" %>
+              <%= f.select :guest_address_country, country_options,
+                    { selected: @presenter.default_address_country, prompt: "Select address country" },
+                    data: { address_state_target: "country", action: "change->address-state#refresh input->address-state#refresh" },
+                    class: "w-full bg-muted border-border/40 rounded-xl py-3.5 px-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all",
+                    required: true %>
             </div>
           </div>
         </div>

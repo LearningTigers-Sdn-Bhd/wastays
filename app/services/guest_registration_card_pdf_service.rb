@@ -84,7 +84,8 @@ class GuestRegistrationCardPdfService
     rows = [ [ "Name", @presenter.guest_name ] ]
     rows << [ "Phone", @presenter.guest_phone ] if @card.field_visible?(:phone)
     rows << [ "Email", @presenter.guest_email ] if @card.field_visible?(:email)
-    rows << [ "Country", @presenter.guest_country_display ]
+    rows << [ "Address", @presenter.guest_address_display ] if @card.field_visible?(:address)
+    rows << [ "Nationality", @presenter.guest_country_display ] if @card.field_visible?(:nationality)
     rows << [ "Guests", @presenter.guest_count_display ] if @card.field_visible?(:guest_count)
     rows << [ "Identity", @presenter.guest_identity ]
 

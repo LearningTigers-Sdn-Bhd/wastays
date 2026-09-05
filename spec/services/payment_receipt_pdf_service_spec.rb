@@ -24,13 +24,50 @@ RSpec.describe PaymentReceiptPdfService do
     expect(text_of(pdf)).to include("PAYMENT RECEIPT", receipt.public_number, "MYR 1,234.50")
   end
 
-  it "wears the shared frame and carries the receipt metadata" do
+  it "wears the shared frame and carries the receipt party blocks" do
     text = text_of(described_class.new(receipt).generate)
 
     expect(text).to include(
-      "Harbour View Hotel", "RECEIVED", "PAYER", "PAYMENT METHOD", "Bank transfer",
-      "REFERENCE", "AR-PAY-9001", "AMOUNT RECEIVED", "Page 1 of 1"
+      "Harbour View Hotel", "PAYER DETAILS", "Payer", "Address",
+      "PAYMENT DETAILS", "Received", "Payment method", "Bank transfer",
+      "Reference", "AR-PAY-9001", "AMOUNT RECEIVED", "Page 1 of 1"
     )
+  end
+
+  # A payer has an address, and an address needs its own lines. The metadata strip
+  # holds one short value per label, so the receipt wears party blocks instead.
+  it "prints the guest address on a booking receipt" do
+    booking = create(:booking, hotel: hotel,
+      guest_name: "Hanami Saki",
+      guest_email: "sakihanami@example.com",
+      guest_phone: "601212223344",
+      guest_home_address: "Hatsuboshi Gakuen Dorm A",
+      guest_city: "Hatsuboshi",
+      guest_postal_code: "123221",
+      guest_address_country: "Japan")
+    booking_receipt = create(:deposit, hotel: hotel, booking: booking, amount: 50).receipt
+
+    text = text_of(described_class.new(booking_receipt).generate)
+
+    expect(text).to include(
+      "PAYER DETAILS", "Hanami Saki", "Hatsuboshi Gakuen Dorm A", "123221 Hatsuboshi", "Japan",
+      "CONTACT DETAILS", "sakihanami@example.com", "601212223344",
+      "Booking no.", booking.formatted_reservation_number,
+      "Confirmation", booking.confirmation_token
+    )
+  end
+
+  # The address follows the guest record, so a clerical fix reaches every reprint.
+  it "reprints a corrected guest address" do
+    booking = create(:booking, hotel: hotel, guest_home_address: "Old address",
+      guest_city: "Ipoh", guest_postal_code: "30000", guest_address_country: "Malaysia")
+    booking_receipt = create(:deposit, hotel: hotel, booking: booking, amount: 50).receipt
+    booking.update!(guest_home_address: "New address", guest_city: "Kuching", guest_postal_code: "93000")
+
+    text = text_of(described_class.new(booking_receipt).generate)
+
+    expect(text).to include("New address", "93000 Kuching")
+    expect(text).not_to include("Old address")
   end
 
   it "leaves off the confidential mark it does not deserve" do
@@ -40,7 +77,7 @@ RSpec.describe PaymentReceiptPdfService do
   it "drops the reference column rather than printing a placeholder" do
     receipt.update!(external_reference: nil)
 
-    expect(text_of(described_class.new(receipt).generate)).not_to include("REFERENCE")
+    expect(text_of(described_class.new(receipt).generate)).not_to include("Reference")
   end
 
   it "marks a voided receipt before the amount" do

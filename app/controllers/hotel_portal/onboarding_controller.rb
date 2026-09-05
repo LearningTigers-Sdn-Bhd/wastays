@@ -262,8 +262,8 @@ module HotelPortal
                    .where.missing(:hotel_payment_method)
                    .order(:code)
                    .map do |code|
-        cash = code.system_key == "cash_payment"
-        default_cash = cash && !cash_claimed
+        cash = PaymentMethods::EnsureDefaults::CASH_SYSTEM_KEYS.include?(code.system_key)
+        default_cash = code.system_key == "cash_payment" && !cash_claimed
         cash_claimed ||= default_cash
         {
           "transaction_code_id" => code.id.to_s,
@@ -391,7 +391,7 @@ module HotelPortal
       return head :method_not_allowed if @current_entry.definition.key == "review"
 
       action = params.require(:navigation_action)
-      return head :unprocessable_entity unless action.in?(%w[save_draft save_continue])
+      return head :unprocessable_content unless action.in?(%w[save_draft save_continue])
 
       complete = action == "save_continue"
       result =
@@ -693,7 +693,7 @@ module HotelPortal
       when "save_draft" then save_draft
       when "save_continue" then save_and_continue
       when "skip" then skip_section
-      else head :unprocessable_entity
+      else head :unprocessable_content
       end
     end
 

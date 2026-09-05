@@ -37,6 +37,10 @@ module Public
         booking.guest_country.presence || "Malaysia"
       end
 
+      def default_address_country
+        booking.guest_address_country.presence || booking.guest_country.presence || "Malaysia"
+      end
+
       def error_message_for(error_code)
         case error_code
         when :wrong_date

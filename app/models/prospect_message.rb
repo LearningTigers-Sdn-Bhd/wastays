@@ -27,7 +27,7 @@ class ProspectMessage < ApplicationRecord
   after_create_commit :broadcast_to_both_sides
   after_create_commit :deliver_to_guest_channel
 
-  scope :chronological, -> { order(sent_at: :asc, created_at: :asc) }
+  scope :chronological, -> { order(sent_at: :asc, created_at: :asc, id: :asc) }
   scope :unread, -> { where(read_at: nil) }
   scope :from_guest, -> { where(sender_role: "guest") }
 

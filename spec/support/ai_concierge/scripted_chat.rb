@@ -41,6 +41,8 @@ module AiConciergeEval
       # the guards that exist to catch it would have nothing to catch.
       return Response.new(content: call[:prose]) if call[:prose].present?
 
+      call = normalize_legacy_call(call, message)
+
       tool = tools.find { |candidate| candidate.name == call.fetch(:tool) }
       raise ArgumentError, "fixture asked for unknown tool #{call[:tool]}" unless tool
 
@@ -55,6 +57,50 @@ module AiConciergeEval
     private
 
     attr_reader :tools, :scripted_turns, :classifier_summary, :interpretation
+
+    def normalize_legacy_call(call, message)
+      return call unless call[:tool].to_s.in?(%w[advance_booking answer_hotel_question get_nearby_attractions get_room_type_details])
+
+      arguments = (call[:arguments] || {}).deep_symbolize_keys
+      if call[:tool].to_s == "advance_booking"
+        return {
+          tool: "handle_guest_turn",
+          arguments: {
+            questions: [],
+            commercial: {
+              intent: "booking",
+              slots: arguments[:slots] || {},
+              signals: arguments[:signals] || {},
+              evidence: arguments[:evidence] || {}
+            }
+          }
+        }
+      end
+
+      kind, label, category = case call[:tool].to_s
+      when "get_nearby_attractions" then [ "nearby_attractions", "Nearby attractions", "general_info" ]
+      when "get_room_type_details" then [ "room_information", "Room", "general_info" ]
+      else [ arguments[:category].to_s == "policy" ? "hotel_policy" : "hotel_information", "Hotel information", arguments[:category] || "general_info" ]
+      end
+      {
+        tool: "handle_guest_turn",
+        arguments: {
+          questions: [
+            {
+              evidence: message,
+              label: label,
+              kind: kind,
+              category: category,
+              search_terms: arguments[:search_terms],
+              fact: arguments[:fact],
+              scope: arguments[:scope],
+              room_type_name: arguments[:room_type_name]
+            }.compact
+          ],
+          commercial: { intent: "none" }
+        }
+      }
+    end
 
     # A fixture that scripts a tool call gets exactly that. A spec that pins one
     # interpretation for the whole conversation gets that interpretation on every
@@ -81,17 +127,17 @@ module AiConciergeEval
       def call
         case interpretation["intent"]
         when "hotel_policy"
-          { tool: "answer_hotel_question", arguments: { "category" => "policy" } }
+          information_call("hotel_policy", "Policy", "policy")
         when "hotel_information"
-          { tool: "answer_hotel_question", arguments: { "category" => category_for_topic } }
+          information_call("hotel_information", "Hotel information", category_for_topic)
         when "nearby_attractions"
-          { tool: "get_nearby_attractions", arguments: {} }
+          information_call("nearby_attractions", "Nearby attractions", "general_info")
         when "room_information"
-          { tool: "get_room_type_details", arguments: room_arguments }
+          information_call("room_information", "Room", "general_info", room_type_name: room_arguments["room_type_name"])
         when "booking_context"
           { tool: "get_booking_context", arguments: {} }
         when "booking_search", "option_selection", "confirmation", "reset"
-          { tool: "advance_booking", arguments: booking_arguments }
+          { tool: "handle_guest_turn", arguments: { questions: [], commercial: { intent: "booking" }.merge(booking_arguments) } }
         end
       end
 
@@ -100,6 +146,28 @@ module AiConciergeEval
       attr_reader :interpretation, :message
 
       def category_for_topic = interpretation["topic"] == "hotel_faq" ? "faq" : "general_info"
+
+      def information_call(kind, label, category, room_type_name: nil)
+        hints = interpretation["retrieval_hints"].is_a?(Hash) ? interpretation["retrieval_hints"] : {}
+        {
+          tool: "handle_guest_turn",
+          arguments: {
+            questions: [
+              {
+                evidence: message,
+                label: label,
+                kind: kind,
+                category: category,
+                search_terms: Array(hints["terms"]).join(" ").presence,
+                fact: hints["fact"],
+                scope: interpretation["scope"],
+                room_type_name: room_type_name
+              }.compact
+            ],
+            commercial: { intent: "none" }
+          }
+        }
+      end
 
       def room_arguments
         { "room_type_name" => interpretation.dig("slots", "room_type_name") }.compact

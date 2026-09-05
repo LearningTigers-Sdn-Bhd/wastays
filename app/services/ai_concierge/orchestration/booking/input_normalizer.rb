@@ -33,6 +33,7 @@ module AiConcierge
       party_keys.each { |key| slots.delete(key) } unless party_evidence_in_message? || party_quoted?("party")
       slots.delete("check_out") unless explicit_checkout_in_message? || time_quoted?("checkout")
       apply_relative_month_timing!
+      apply_month_segment!
       apply_duration_answer!
       apply_guest_count_guards!
 
@@ -529,15 +530,15 @@ module AiConcierge
     end
 
     def message_contains_month_segment?
-      message.downcase.match?(/\b(?:early|mid|late)\b/)
+      resolved_month_segment.present?
     end
 
     def explicit_timing_in_message?
       normalized = message.downcase
-      return true if pending_question == "specific_timing" && normalized.match?(/\b(?:early|mid|late)\b/)
+      return true if pending_question == "specific_timing" && message_contains_month_segment?
       return true if pending_question == "specific_timing" && parse_specific_date_answer.present?
 
-      normalized.match?(/\b(?:early|mid|late)\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/) ||
+      (message_contains_month_segment? && message_names_a_month?) ||
         normalized.match?(/\b(?:this|next)\s+month\b/) ||
         normalized.match?(/\b\d+\s+months?\s+from\s+now\b/) ||
         parse_complete_date_range.present? ||
@@ -555,9 +556,19 @@ module AiConcierge
 
       slots["target_month"] = target.month
       slots["target_year"] = target.year
-      slots["month_segment"] = message_contains_month_segment? ? message.downcase[/\b(early|mid|late)\b/, 1] : ""
+      slots["month_segment"] = resolved_month_segment.to_s
       slots.delete("check_in") unless message_names_a_day?
       slots.delete("check_out") unless explicit_checkout_in_message?
+    end
+
+    def apply_month_segment!
+      slots["month_segment"] = resolved_month_segment if resolved_month_segment.present?
+    end
+
+    def resolved_month_segment
+      return @resolved_month_segment if defined?(@resolved_month_segment)
+
+      @resolved_month_segment = MonthSegmentReader.new(message).call
     end
 
     def relative_month_date

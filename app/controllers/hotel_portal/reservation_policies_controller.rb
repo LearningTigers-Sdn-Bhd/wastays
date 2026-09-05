@@ -21,7 +21,7 @@ module HotelPortal
           frame: turbo_frame_request_id.presence || "settings_action_sheet")
       else
         @policy.cancellation_tiers.build(pricing_type: "percentage", percentage_basis: "total_stay") if seed_tier?
-        render :edit, formats: :html, layout: false, status: :unprocessable_entity
+        render :edit, formats: :html, layout: false, status: :unprocessable_content
       end
     end
 

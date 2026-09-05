@@ -513,15 +513,40 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(result.booking.guest_document_type).to eq("passport")
   end
 
-  it "creates a new guest with an optional home address" do
-    params.merge!(guest_home_address: "No. 12, Jalan Ampang")
+  it "creates a new guest and stay snapshot with an optional structured address" do
+    params.merge!(
+      guest_home_address: "No. 12, Jalan Ampang",
+      guest_city: "Kuala Lumpur",
+      guest_state_code: "14",
+      guest_postal_code: "50450",
+      guest_address_country: "Malaysia"
+    )
 
     result = subject.call
 
     expect(result.success?).to be true
     guest = result.booking.guests.first
-    expect(guest.home_address).to eq("No. 12, Jalan Ampang")
-    expect(result.booking.guest_home_address).to eq("No. 12, Jalan Ampang")
+    expect(guest).to have_attributes(
+      home_address: "No. 12, Jalan Ampang",
+      city: "Kuala Lumpur",
+      state_code: "14",
+      postal_code: "50450",
+      address_country: "Malaysia"
+    )
+    expect(result.booking).to have_attributes(
+      guest_home_address: "No. 12, Jalan Ampang",
+      guest_city: "Kuala Lumpur",
+      guest_state_code: "14",
+      guest_postal_code: "50450",
+      guest_address_country: "Malaysia"
+    )
+    expect(result.booking.booking_guests.find(&:primary?)).to have_attributes(
+      home_address_snapshot: "No. 12, Jalan Ampang",
+      city_snapshot: "Kuala Lumpur",
+      state_code_snapshot: "14",
+      postal_code_snapshot: "50450",
+      address_country_snapshot: "Malaysia"
+    )
   end
 
   it "stores a nightly rate snapshot and tax posting snapshot" do

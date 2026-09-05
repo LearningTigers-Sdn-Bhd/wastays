@@ -13,13 +13,13 @@ class Guest::SessionsController < Guest::BaseController
 
     if guest.nil?
       flash.now[:alert] = "No account found for that phone number."
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
       return
     end
 
     unless guest.verify_otp(otp)
       flash.now[:alert] = "Invalid or expired code. Request a new one via WhatsApp."
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
       return
     end
 
@@ -33,7 +33,7 @@ class Guest::SessionsController < Guest::BaseController
 
     if email.blank?
       flash.now[:alert] = "Please enter your email address."
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
       return
     end
 
@@ -41,18 +41,23 @@ class Guest::SessionsController < Guest::BaseController
 
     unless guest
       flash.now[:alert] = "No account found for that email. Please create an account to continue."
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
       return
     end
 
-    if guest.magic_link_on_cooldown?
+    result = Guests::MagicLinks::Issue.new(guest: guest, source: :guest_portal).call
+
+    if result.error_code == :cooldown
       flash[:alert] = "A link was already sent. Please wait 2 minutes before requesting again."
       redirect_to guest_login_path
       return
     end
 
-    token = guest.generate_magic_token!
-    GuestMailer.magic_link(guest, token).deliver_later
+    unless result.success?
+      flash.now[:alert] = "We could not send your login link. Please try again."
+      render :new, status: :unprocessable_content
+      return
+    end
 
     redirect_to guest_login_path(email_sent: true)
   end

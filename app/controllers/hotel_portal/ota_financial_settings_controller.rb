@@ -32,7 +32,7 @@ module HotelPortal
       if @form.save
         redirect_to hotel_ota_financial_settings_path(current_hotel), notice: "OTA financial settings updated."
       else
-        render :show, status: :unprocessable_entity
+        render :show, status: :unprocessable_content
       end
     end
 

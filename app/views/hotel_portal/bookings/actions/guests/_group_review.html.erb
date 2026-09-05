@@ -17,7 +17,10 @@
     <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
     <%= hidden_field_tag :confirm_group, "1" %>
     <%= form.hidden_field :apply_to, value: "group" %>
-    <% %i[name email phone country gender document_type government_id date_of_birth].each do |attribute| %>
+    <% %i[
+      name email phone country gender document_type government_id date_of_birth
+      home_address city state_code postal_code address_country
+    ].each do |attribute| %>
       <%= form.hidden_field attribute, value: @guest.public_send(attribute) %>
     <% end %>
 

@@ -50,6 +50,10 @@ module Public
       booking.guest_country.presence || "Malaysia"
     end
 
+    def guest_address_country_default
+      booking.guest_address_country.presence || booking.guest_country.presence || "Malaysia"
+    end
+
     HIDDEN_CLASSES = "hidden opacity-0 scale-95 -translate-y-2"
 
     def guest_document_type

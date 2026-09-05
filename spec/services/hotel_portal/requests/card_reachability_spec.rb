@@ -63,8 +63,12 @@ RSpec.describe "board cards are reachable", type: :model do
       expect(card.request_id).to eq(checkout.id)
     end
 
+    # Ids repeat across the three request tables, so a card is named by its
+    # table and its id together -- the same pair `Card#dom_id` is built from.
     it "keeps the room's turnover off the Request Board" do
-      expect(board.board_columns.values.flatten.map { |card| card[:request_id] }).not_to include(turnover.id)
+      identities = board.board_columns.values.flatten.map { |card| [ card.record_kind, card.request_id ] }
+
+      expect(identities).not_to include([ "housekeeping", turnover.id ])
     end
 
     it "can be found from its own card" do

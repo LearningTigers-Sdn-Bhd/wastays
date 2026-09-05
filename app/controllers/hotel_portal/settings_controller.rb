@@ -58,7 +58,7 @@ module HotelPortal
         redirect_to settings_page_path(settings_page_for_form), notice: "Settings updated successfully."
       else
         prepare_settings_page
-        render :index, status: :unprocessable_entity
+        render :index, status: :unprocessable_content
       end
     end
 
@@ -72,7 +72,7 @@ module HotelPortal
       else
         @presenter = settings_presenter(page: "banking")
         @account.build_banking_detail unless @account.banking_detail
-        render :index, status: :unprocessable_entity
+        render :index, status: :unprocessable_content
       end
     end
 
@@ -86,7 +86,7 @@ module HotelPortal
       else
         @e_invoice_setting = form.setting
         @presenter = settings_presenter(page: "e_invoice")
-        render :index, status: :unprocessable_entity
+        render :index, status: :unprocessable_content
       end
     end
 
@@ -100,7 +100,7 @@ module HotelPortal
       else
         @notification_config = form.config
         @presenter = settings_presenter(page: "notifications")
-        render :index, status: :unprocessable_entity
+        render :index, status: :unprocessable_content
       end
     end
 

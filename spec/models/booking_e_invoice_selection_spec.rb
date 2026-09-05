@@ -104,7 +104,8 @@ RSpec.describe "Booking e-invoice buyer readiness", type: :model do
   let!(:setting) { create(:e_invoice_setting, hotel: hotel, enabled: true) }
   let(:booking) do
     create(:booking, hotel: hotel, payment_status: "captured",
-      guest_city: "Petaling Jaya", guest_state_code: "10", guest_tin: "IG12345678901")
+      guest_city: "Petaling Jaya", guest_state_code: "10", guest_address_country: "Malaysia",
+      guest_tin: "IG12345678901")
   end
 
   before { create(:payment_transaction, booking: booking, status: "captured", captured_at: Time.current) }
@@ -156,7 +157,8 @@ RSpec.describe "Booking OTA e-invoice treatment", type: :model do
   def ota_stay(collection_by:, total: 720.0, net: 633.60)
     booking = create(:booking, hotel: hotel, source: "agoda", payment_status: "captured",
       total_amount: total, net_amount: net,
-      guest_city: "Kuala Lumpur", guest_state_code: "14", guest_tin: "IG12345678901")
+      guest_city: "Kuala Lumpur", guest_state_code: "14", guest_address_country: "Malaysia",
+      guest_tin: "IG12345678901")
     create(:payment_transaction, booking: booking, status: "captured", captured_at: Time.current)
     if collection_by
       settlement = create(:channel_settlement, hotel: hotel, collection_by: collection_by)

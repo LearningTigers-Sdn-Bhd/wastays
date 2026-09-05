@@ -14,6 +14,8 @@ RSpec.describe EInvoicePdfService do
       guest_government_id: "820916125537",
       guest_home_address: "No. 12, Jalan Ampang",
       guest_city: "Kuala Lumpur",
+      guest_state_code: "14",
+      guest_address_country: "Malaysia",
       guest_country: "Malaysia",
       confirmation_token: "WS-TESTEINV1",
       total_amount: 300.0,
@@ -55,6 +57,30 @@ RSpec.describe EInvoicePdfService do
     expect(result).to be_a(String)
     expect(result.bytesize).to be > 3000
     expect(result.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
+  end
+
+  it "renders buyer identity, contact, and address from the validated snapshot" do
+    submission.update!(buyer_snapshot: {
+      "name" => "Snapshot Guest",
+      "contact_email" => "snapshot@example.com",
+      "contact_phone" => "+60112223333",
+      "government_id" => "A1234567",
+      "document_type" => "passport",
+      "billing_address" => {
+        "address_line1" => "8 Snapshot Road",
+        "city" => "Kuching",
+        "state" => "Sarawak",
+        "postal_code" => "93000",
+        "country" => "Malaysia"
+      }
+    })
+    booking.update!(guest_name: "Changed Guest", guest_home_address: "Changed address", guest_email: "changed@example.com")
+
+    text = PDF::Reader.new(StringIO.new(result)).pages.map(&:text).join("\n")
+
+    expect(text).to include("Snapshot Guest", "8 Snapshot Road", "93000 Kuching", "Sarawak, Malaysia")
+    expect(text).to include("snapshot@example.com", "+60112223333")
+    expect(text).not_to include("Changed Guest", "Changed address", "changed@example.com")
   end
 
   it "raises when booking has no valid guest e-invoice submission" do

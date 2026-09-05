@@ -46,7 +46,7 @@ module AiConcierge
 
           lines = [ list_intro ] + visible.map { |fact| "- #{clean(fact.text)}" }
           topics = reply.remaining_topics.compact_blank.uniq
-          lines << "You can also ask about #{join_topics(topics)}." if topics.any?
+          lines << "Other available topics include #{join_topics(topics)}." if topics.any?
           lines.join("\n")
         end
 
@@ -55,19 +55,19 @@ module AiConcierge
 
           case topic
           when "nearby attractions"
-            "The hotel has not listed nearby attractions yet. Please ask the front desk for local recommendations."
+            "The hotel has not listed nearby attractions yet."
           when "room type"
             "I could not match that room type. Please send the room type name."
           when "room type choice"
             reply.facts.first&.text.presence || "Please tell me which room type you mean."
           when "service information"
-            "The hotel has not listed that service yet. Please ask the front desk for the current details."
+            "The hotel has not listed that service yet."
           when "an FAQ answer"
-            "I could not find that answer in the hotel's FAQ. Please ask the front desk for the current details."
+            "I could not find that answer in the hotel's FAQ."
           when "policy information"
-            "The hotel has not added that policy yet. Please ask the front desk for the current details."
+            "The hotel has not added that policy yet."
           else
-            "The hotel has not added #{topic} yet. Please ask the front desk for the current details."
+            "The hotel has not added #{topic} yet."
           end
         end
 

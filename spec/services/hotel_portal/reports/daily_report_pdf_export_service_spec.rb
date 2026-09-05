@@ -64,20 +64,21 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
       prepared_by: "Aina Salleh",
       charge_register: charge_register
     )
-    cashier_row = pdf_service.send(:cashier_transaction_row, advance_payment)
-    expect(cashier_row.size).to eq(9)
+    cashier_row = pdf_service.send(:cashier_transaction_row, pdf_service.send(:cashier_row, advance_payment))
+    expect(cashier_row.size).to eq(10)
     expect(cashier_row[3]).to eq(folio.folio_reference_display)
-    expect(cashier_row[4]).to eq("20260721")
+    expect(cashier_row[4]).to eq(folio.invoice_reference)
 
     charge_register_tables = []
-    text_for = lambda do |tab|
+    text_for = lambda do |tab, cashier_view = "full"|
       service = described_class.new(
         hotel: hotel,
         tab: tab,
         revenue_report: revenue_report,
         cashier_report: cashier_report,
         prepared_by: "Aina Salleh",
-        charge_register: charge_register
+        charge_register: charge_register,
+        cashier_view: cashier_view
       )
       if tab == "revenue"
         allow(service).to receive(:draw_data_table).and_wrap_original do |method, pdf, headers, rows, **options|
@@ -93,8 +94,10 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     overview = text_for.call("overview")
     revenue = text_for.call("revenue")
     cashier = text_for.call("cashier")
+    cashier_activity = text_for.call("cashier", "activity")
+    cashier_summary = text_for.call("cashier", "summary")
 
-    expect(overview).to include("Revenue (Accrual)", "Cashier Sales (Cash Flow)", "NET REVENUE", "NET CASH")
+    expect(overview).to include("Revenue (Accrual)", "Cashier Activity (Cash Flow)", "NET REVENUE", "NET AT DESK")
     expect(overview).not_to include("Daily Breakdown", "Cashier Summary")
     expect(overview).to include(
       "Daily Report", "Overview", "PERIOD", "GENERATED", "PREPARED BY", "Aina Salleh",
@@ -108,7 +111,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     # Mixed case above is the table header; the stat strip carries the same words upcased,
     # so assert both rather than letting one stand in for the other.
     expect(revenue).to include("BOOKINGS ENGAGED", "TOTAL CHARGES", "NET REVENUE")
-    expect(revenue).not_to include("Cashier Summary", "Advance")
+    expect(revenue).not_to include("Activity By Payment Mode", "Cashier Activity")
     register_table = charge_register_tables.sole
     expect(register_table).to include(
       headers: [ "Date & Time", "Service / Code", "Booking / Folio", "Guest / Room Details", "Status", "Base Amount", "Tax", "Total Amount" ],
@@ -127,17 +130,22 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     expect(register_rows.flatten.compact.join(" ")).to include("G01 · Deluxe King")
 
     expect(cashier).to include(
-      "Cashier Sales", "Cashier Sales Summary", "Advance", "Settlement",
-      "Cashier Summary", "Currency Summary", "Grand Total", "Page 1 of"
+      "Cashier Activity", "Payment Activity", "At Desk", "Not Handled At The Desk",
+      "Activity By Payment Mode", "Currency Summary", "Grand Total", "Page 1 of"
     )
     expect(cashier).not_to include("Daily Breakdown", "Revenue Register")
     expect(cashier).to include(
-      "Date & Time", "Reservation", "Guest Details", "Folio", "Invoice",
-      "Payment Mode", "Received By", "Remarks", "Amount",
-      "Room —", "20260721", "—",
-      "Advance receipt", "Uninvoiced receipt", "Bank Transfer Payment"
+      "Date & Time", "Guest / Room", "Handling",
+      "Payment Mode", "Stage", "Received By", "Currency", "Amount",
+      "Room —", "Bank Transfer Payment"
     )
+    expect(cashier).to include("Booking No.")
+    expect(cashier).not_to include("Confirmation")
     expect(cashier).not_to include("Folio / Invoice", "Guest Room Folio Invoice")
     expect(cashier).not_to include("Room #", "Res. #", "Bill #")
+    expect(cashier_activity).to include("Payment Activity")
+    expect(cashier_activity).not_to include("Activity By Payment Mode", "Currency Summary")
+    expect(cashier_summary).to include("At Desk", "Not Handled At The Desk", "Activity By Payment Mode", "Currency Summary")
+    expect(cashier_summary).not_to include("Payment Activity")
   end
 end

@@ -5,6 +5,8 @@ class GuestRegistrationCard < ApplicationRecord
   DISPLAY_FIELDS = {
     "phone" => "Phone",
     "email" => "Email",
+    "address" => "Address",
+    "nationality" => "Nationality",
     "guest_count" => "Guest count",
     "room_type" => "Room type",
     "room_number" => "Room number",

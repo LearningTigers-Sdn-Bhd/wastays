@@ -1,0 +1,35 @@
+<%# State for a PanelsUI form.
+
+    LHDN publishes state codes for Malaysia only. A guest who lives anywhere
+    else has no code to pick, so the field becomes a text box and they type the
+    state or province themselves. An address country that is still empty is not
+    confirmed as Malaysian, so it gets the text box too.
+
+    Both controls carry the same field name. The hidden one is disabled, so the
+    form submits a single state value with or without JavaScript.
+    address_state_controller.js does the swap as the country changes; put
+    data-controller="address-state" on a container that holds this field and the
+    address country field. %>
+<% coded = country.to_s.strip.casecmp?("Malaysia") %>
+<%= tag.div(class: "contents", **local_assigns.fetch(:container_attributes, {})) do %>
+  <%= tag.div(hidden: !coded, data: { address_state_target: "coded" }) do %>
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: attribute,
+          label: "State",
+          id: "#{form.field_id(attribute)}_coded",
+          disabled: !coded) do |field| %>
+      <% field.with_select_menu(EInvoice::MalaysiaStates.options, selected: value, prompt: "Select state") %>
+    <% end %>
+  <% end %>
+  <%= tag.div(hidden: coded, data: { address_state_target: "free" }) do %>
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: attribute,
+          label: "State or province",
+          id: "#{form.field_id(attribute)}_free",
+          disabled: coded) do |field| %>
+      <% field.with_input(value: PostalAddresses::Presenter.printable_state(value), placeholder: "e.g. Hokkaido") %>
+    <% end %>
+  <% end %>
+<% end %>

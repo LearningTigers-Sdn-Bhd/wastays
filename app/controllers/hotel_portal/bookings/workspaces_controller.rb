@@ -143,7 +143,10 @@ module HotelPortal
     end
 
     def guest_params
-      params.require(:guest).permit(:name, :email, :phone, :country, :gender, :document_type, :government_id, :date_of_birth, :home_address)
+      params.require(:guest).permit(
+        :name, :email, :phone, :country, :gender, :document_type, :government_id,
+        :date_of_birth, :home_address, :city, :state_code, :postal_code, :address_country
+      )
     end
 
     # The form posts a time-of-day per slot; the stay supplies the calendar day.

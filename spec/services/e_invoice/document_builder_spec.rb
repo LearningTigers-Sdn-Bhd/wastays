@@ -14,6 +14,8 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
         guest_email: "john@example.com",
         guest_phone: "+60123456789",
         guest_city: "Kuala Lumpur",
+        guest_state_code: "14",
+        guest_address_country: "Malaysia",
         guest_tin: "IG12345678901",
         guest_document_type: "passport",
         check_in: 2.days.ago,
@@ -102,6 +104,31 @@ RSpec.describe EInvoice::DocumentBuilder, type: :service do
       expect(city).to eq("Kuala Lumpur")
       expect(state_code).to eq("14")
       expect(country).to include("_" => "MYS", "listID" => "ISO3166-1", "listAgencyID" => "6")
+    end
+
+    it "builds buyer details from the supplied immutable snapshot" do
+      snapshot = EInvoice::BuyerSnapshot.capture(booking).deep_merge(
+        "name" => "Snapshot Guest",
+        "contact_email" => "snapshot@example.com",
+        "billing_address" => {
+          "address_line1" => "8 Snapshot Road",
+          "city" => "Kuching",
+          "state_code" => "13",
+          "postal_code" => "93000",
+          "country" => "Malaysia",
+          "country_code" => "MYS"
+        }
+      )
+      booking.update!(guest_name: "Changed Guest", guest_city: "Johor Bahru", guest_state_code: "01")
+
+      result = described_class.new(booking, buyer_snapshot: snapshot).build
+      buyer = JSON.parse(Base64.strict_decode64(result[:document]))
+        .dig("Invoice", 0, "AccountingCustomerParty", 0, "Party", 0)
+
+      expect(buyer.dig("PartyLegalEntity", 0, "RegistrationName", 0, "_")).to eq("Snapshot Guest")
+      expect(buyer.dig("PostalAddress", 0, "CityName", 0, "_")).to eq("Kuching")
+      expect(buyer.dig("PostalAddress", 0, "CountrySubentityCode", 0, "_")).to eq("13")
+      expect(buyer.dig("Contact", 0, "ElectronicMail", 0, "_")).to eq("snapshot@example.com")
     end
 
     # WAStays is under the RM1m threshold and files nothing as itself, so the

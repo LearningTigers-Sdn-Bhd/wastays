@@ -235,27 +235,32 @@ module StayView
       end.freeze
     end
 
-    def primary_guest_name_column
-      primary_guest = BookingGuest.joins(:guest)
-        .where("booking_guests.booking_id = bookings.id", role: "primary")
-        .select("COALESCE(booking_guests.name_snapshot, guests.name)")
+    # The row this correlated subquery has to land on is the booking's primary
+    # guest. `where("sql", role: "primary")` does not say that: the hash after a
+    # string condition is read as bind values for that string, and a string with
+    # no `:role` placeholder drops it without a word. The subquery then took an
+    # arbitrary booking_guests row, so a booking with a companion could report
+    # the companion's name, boat times and VIP flag as the guest's own.
+    def primary_guest_scope
+      BookingGuest
+        .where("booking_guests.booking_id = bookings.id")
+        .where(role: "primary")
+        .order(:id)
         .limit(1)
+    end
+
+    def primary_guest_name_column
+      primary_guest = primary_guest_scope.joins(:guest)
+        .select("COALESCE(booking_guests.name_snapshot, guests.name)")
       Arel.sql("COALESCE((#{primary_guest.to_sql}), bookings.guest_name)")
     end
 
     def primary_guest_id_column
-      primary_guest = BookingGuest
-        .where("booking_guests.booking_id = bookings.id", role: "primary")
-        .select(:guest_id)
-        .limit(1)
-      Arel.sql("(#{primary_guest.to_sql})")
+      Arel.sql("(#{primary_guest_scope.select(:guest_id).to_sql})")
     end
 
     def primary_guest_attribute_column(attribute)
-      primary_guest = BookingGuest
-        .where("booking_guests.booking_id = bookings.id", role: "primary")
-        .select(BookingGuest.arel_table[attribute])
-        .limit(1)
+      primary_guest = primary_guest_scope.select(BookingGuest.arel_table[attribute])
       Arel.sql("(#{primary_guest.to_sql})")
     end
 

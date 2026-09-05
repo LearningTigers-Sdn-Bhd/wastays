@@ -13,18 +13,10 @@ module HousekeepingTasks
     end
 
     def call
-      return Result.new(preference: nil, visible_columns:, error: "Keep at least one column visible.") if visible_columns.empty?
-
-      preference = ReportViewPreference.find_or_initialize_by(
-        hotel:,
-        user:,
-        report_key: "housekeeping_tasks"
-      )
-      preference.visible_columns = visible_columns
-      preference.save!
-      Result.new(preference:, visible_columns:, error: nil)
-    rescue ActiveRecord::RecordInvalid => error
-      Result.new(preference:, visible_columns:, error: error.record.errors.full_messages.to_sentence)
+      result = ReportViewPreferences::Save.new(
+        hotel:, user:, report_key: "housekeeping_tasks", columns: Columns, visible_columns:
+      ).call
+      Result.new(preference: result.preference, visible_columns: result.visible_columns, error: result.error)
     end
 
     private

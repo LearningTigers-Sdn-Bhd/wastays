@@ -99,11 +99,7 @@ module Folios
       end
 
       def gateway_payment?
-        transaction.payment? && (
-          metadata["payment_source"] == "gateway" ||
-          metadata["payment_transaction_id"].present? ||
-          posting_source == "gateway_payment"
-        )
+        ::Folios::Payments::GatewayOriginated.call(transaction)
       end
 
       def ota_payment?

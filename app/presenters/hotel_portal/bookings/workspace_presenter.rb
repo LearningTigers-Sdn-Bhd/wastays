@@ -61,7 +61,10 @@ module HotelPortal
       "Group statement" => :statements
     }.freeze
     DOCUMENT_TYPE_ORDER = DOCUMENT_SECTION_BY_TYPE.keys.each_with_index.to_h.freeze
-    GUEST_FORM_ATTRIBUTES = %i[name email phone country gender document_type government_id date_of_birth home_address].freeze
+    GUEST_FORM_ATTRIBUTES = %i[
+      name email phone country gender document_type government_id date_of_birth
+      home_address city state_code postal_code address_country
+    ].freeze
     BADGE_VARIANTS = {
       "slate" => :neutral, "blue" => :info, "amber" => :warning,
       "emerald" => :success, "orange" => :warning, "rose" => :destructive
@@ -177,6 +180,10 @@ module HotelPortal
       else
         [ room_summary, short_stay_range, (pluralize_count(nights_count, "night") if nights_count) ].compact_blank.join(" · ")
       end
+    end
+
+    def header_party_and_stay_line
+      [ header_party_line, header_stay_line ].compact_blank.join(" · ")
     end
 
     def stay_dates_vary?
@@ -624,7 +631,11 @@ module HotelPortal
         document_type: bg.document_type_snapshot.presence || g.document_type.presence || "ic",
         government_id: safe_encrypted_value(bg, :government_id_snapshot) || safe_encrypted_value(g, :government_id),
         date_of_birth: bg.date_of_birth_snapshot.presence || g.date_of_birth,
-        home_address: bg.home_address_snapshot.presence || g.home_address
+        home_address: bg.home_address_snapshot.presence || g.home_address,
+        city: bg.city_snapshot.presence || g.city,
+        state_code: bg.state_code_snapshot.presence || g.state_code,
+        postal_code: bg.postal_code_snapshot.presence || g.postal_code,
+        address_country: bg.address_country_snapshot.presence || g.address_country
       }
     end
 

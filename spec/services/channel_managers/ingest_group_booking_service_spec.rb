@@ -8,7 +8,11 @@ RSpec.describe ChannelManagers::IngestGroupBookingService do
   let(:booking_data) do
     {
       hotel: hotel,
-      guest_details: { name: "John Doe", email: "john@example.com", phone: "123", country: "US" },
+      guest_details: {
+        name: "John Doe", email: "john@example.com", phone: "123", country: "US",
+        address: "8 Market Street", city: "San Francisco", state_code: "17",
+        postal_code: "94105", address_country: "United States"
+      },
       check_in: check_in,
       check_out: check_out,
       status: "confirmed",
@@ -49,6 +53,13 @@ RSpec.describe ChannelManagers::IngestGroupBookingService do
     expect(result.bookings.map(&:total_amount)).to all(eq(200.0))
     result.bookings.each do |booking|
       expect(booking.primary_guest).to be_present
+      expect(booking).to have_attributes(
+        guest_home_address: "8 Market Street",
+        guest_city: "San Francisco",
+        guest_state_code: "17",
+        guest_postal_code: "94105",
+        guest_address_country: "United States"
+      )
       expect(booking.booking_billing_parties.guests.active.sole.booking_guest).to eq(booking.booking_guests.sole)
       expect(booking.booking_folio).to have_attributes(
         is_primary: true,

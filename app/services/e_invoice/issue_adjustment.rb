@@ -86,14 +86,23 @@ module EInvoice
         original_invoice_internal_id: original.internal_id
       )
 
-      return skip("Adjustment already in progress.") if submission.persisted? && submission.status.in?(%w[pending submitted])
+      return skip("Adjustment already in progress.") if submission.persisted? && submission.submitted?
 
       context = EInvoice::SubmissionContext.for(@booking, document_scenario: original.document_scenario)
+      refresh_buyer_snapshot = submission.invalid?
+      submission.buyer_snapshot = original.buyer_snapshot.presence || EInvoice::BuyerSnapshot.capture(@booking) if refresh_buyer_snapshot || submission.buyer_snapshot.blank?
+      submission.assign_attributes(
+        status: "pending",
+        submission_mode: context.submission_mode,
+        fund_collector: context.fund_collector
+      )
+      submission.save!
       builder = EInvoice::AdjustmentNoteBuilder.new(
         booking: @booking,
         original_submission: original,
         adjustment_amount: delta,
-        document_type: document_type
+        document_type: document_type,
+        buyer_snapshot: submission.buyer_snapshot
       )
       doc = builder.build
 

@@ -36,6 +36,17 @@ RSpec.describe AiConcierge::Orchestration::Core::ConversationControlPolicy do
     expect(control).to be_cancel_attempt
   end
 
+  it "does not treat an existing-booking cancellation as an attempt cancellation" do
+    control = policy(message: "cancel my booking", conversation_state: state(active_flow: "booking_search"))
+
+    expect(control).not_to be_cancel_attempt
+  end
+
+  it "detects Malay and Chinese booking-attempt cancellation wording" do
+    expect(policy(message: "Batalkan percubaan tempahan", conversation_state: state)).to be_cancel_attempt
+    expect(policy(message: "取消预订尝试", conversation_state: state)).to be_cancel_attempt
+  end
+
   it "detects n8n wait-time end control messages" do
     control = policy(message: "codename: wait-time-end", conversation_state: state)
 

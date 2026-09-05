@@ -16,6 +16,7 @@ module PublicUI
       # rather than on the panel itself because the stream subscription has to
       # travel with it.
       REGION_ID = "concierge-chat-region"
+      INPUT_REGION_ID = "concierge-chat-input"
 
       renders_one :bar, PublicUI::Chat::Bar
       renders_one :log, PublicUI::Chat::Log
@@ -23,6 +24,8 @@ module PublicUI
       # to say is always about the message the guest just tried to send, and
       # that is where they are looking.
       renders_one :alert
+      renders_one :secure_input
+      renders_one :quick_replies, PublicUI::Chat::QuickReplies
       renders_one :composer, PublicUI::Chat::Composer
 
       def initialize(doodle: nil, class: nil, **attributes)

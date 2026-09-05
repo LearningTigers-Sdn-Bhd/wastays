@@ -4,6 +4,9 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
   let(:hotel) { create(:hotel, :with_ai_concierge) }
   let(:prospect) { create(:prospect, hotel: hotel, phone_number: "+60123456789") }
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect, pending_question: "confirm_selection", slots_payload: slots_payload) }
+  let(:idle_conversation_state) do
+    create(:prospect_conversation_state, prospect: create(:prospect, hotel: hotel), slots_payload: {})
+  end
   let(:selected_option) do
     {
       "selection_id" => "sel_1",
@@ -37,7 +40,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       hotel: hotel,
       message: "tell me about the hotel",
       interpretation: interpretation(intent: "hotel_information", topic: "general_hotel_info"),
-      conversation_state: conversation_state,
+      conversation_state: idle_conversation_state,
       pause: false
     ).call
 
@@ -46,8 +49,14 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result[:active_flow]).to be_nil
     expect(result.dig(:extra_context, :result, "name")).to eq(hotel.name)
     expect(result.dig(:extra_context, :result, "amenities")).to be_present
-    expect(result.dig(:slots_payload, "booking_task", "status")).to eq("waiting_for_confirmation")
+    expect(result.dig(:slots_payload, "booking_task", "status")).to eq("idle")
     expect(result.dig(:slots_payload, "information_task", "intent")).to eq("hotel_information")
+    answer = result.dig(:extra_context, :result, "answer")
+    expect(answer).to include(hotel.name, hotel.city)
+    expect(answer).not_to include(hotel.address)
+    expect(answer).to end_with("What matters most for your stay: facilities, location, or room choices?")
+    expect(result.dig(:slots_payload, "sales_task", "last_optional_action")).to eq("offer_guided_hotel_exploration")
+    expect(result.next_action.kind).to eq("offer_guided_hotel_exploration")
   end
 
   it "returns a hotel faq domain result" do
@@ -58,7 +67,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       hotel: hotel,
       message: "do you have an faq?",
       interpretation: interpretation(intent: "hotel_information", topic: "hotel_faq"),
-      conversation_state: conversation_state,
+      conversation_state: idle_conversation_state,
       pause: false
     ).call
 
@@ -73,13 +82,17 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       hotel: hotel,
       message: "what attractions are nearby?",
       interpretation: interpretation(intent: "nearby_attractions", topic: "nearby_attractions"),
-      conversation_state: conversation_state,
+      conversation_state: idle_conversation_state,
       pause: false
     ).call
 
     expect(result[:reply_type]).to eq(:nearby_attractions)
     expect(result.dig(:extra_context, :result, "attractions").first["name"]).to eq("Sky Bridge")
     expect(result.dig(:extra_context, :result, "answer")).to include("- Sky Bridge: Scenic landmark.")
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to end_with(
+        "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+      )
   end
 
   it "returns a room information success domain result" do
@@ -89,14 +102,42 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       hotel: hotel,
       message: "tell me about the executive suite",
       interpretation: interpretation(intent: "room_information", topic: "room_information", slots: { "room_type_name" => "Executive Suite" }),
-      conversation_state: conversation_state,
+      conversation_state: idle_conversation_state,
       pause: false
     ).call
 
     expect(result[:reply_type]).to eq(:room_type_details)
     expect(result.dig(:extra_context, :result, "matched_room_type_id")).to eq(room_type.id)
     expect(result.dig(:extra_context, :result, "amenities")).to include("Free WiFi", "Balcony / Terrace")
-    expect(result.dig(:extra_context, :result, "answer").split(/(?<=[.!?])\s+/).size).to be <= 2
+    factual_answer, action = result.dig(:extra_context, :result, "answer").split("\n\n")
+    expect(factual_answer.split(/(?<=[.!?])\s+/).size).to be <= 2
+    expect(action).to eq("Would you like me to check prices for this room for your travel dates?")
+    expect(result.next_action.kind).to eq("offer_price_search")
+  end
+
+  it "uses conditional booking copy after a restriction" do
+    allow_any_instance_of(HotelKnowledges::SearchService).to receive(:call).and_return([
+      {
+        "content" => "Pets are not allowed.",
+        "document_title" => "Pets",
+        "category" => "policy",
+        "distance" => 0.1
+      }
+    ])
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "can I bring a pet?",
+      interpretation: interpretation(intent: "hotel_policy", topic: "hotel_policy"),
+      conversation_state: idle_conversation_state,
+      pause: false
+    ).call
+
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to eq(
+        "Pets are not allowed.\n\n" \
+        "If that suits your plans, I can help you compare rooms for your dates. Is there anything else you’d like to know?"
+      )
   end
 
   it "returns an ambiguous room information domain result" do
@@ -118,6 +159,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result.dig(:slots_payload, "information_task", "pending_question")).to eq("room_type_choice")
     expect(result.dig(:slots_payload, "information_task", "context", "choices"))
       .to contain_exactly("Ocean Villa King", "Ocean Villa Twin")
+    expect(result.next_action).to be_none
   end
 
   it "returns a room type not found domain result" do
@@ -135,6 +177,7 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result.dig(:extra_context, :result, "error")).to eq("room_type_not_found")
     expect(result.dig(:extra_context, :result, "answer")).to eq("I could not match that room type. Please send the room type name.")
     expect(result.dig(:slots_payload, "information_task", "pending_question")).to eq("room_type_name")
+    expect(result.next_action).to be_none
   end
 
   it "records an opening-hours clarification as an open information question" do
@@ -150,6 +193,97 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       .to eq("Do you mean the hotel check-in time or the opening hours of a facility?")
     expect(result.dig(:slots_payload, "information_task", "pending_question")).to eq("opening_hours_subject")
     expect(result.dig(:slots_payload, "information_task", "context", "choices")).to eq([ "check-in", "facility" ])
+  end
+
+  it "gives one front-desk action when attraction information is missing" do
+    result = described_class.new(
+      hotel: hotel,
+      message: "what attractions are nearby?",
+      interpretation: interpretation(intent: "nearby_attractions", topic: "nearby_attractions"),
+      conversation_state: idle_conversation_state,
+      pause: false
+    ).call
+
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to eq("The hotel has not listed nearby attractions yet.\n\nPlease ask the front desk for local recommendations.")
+    expect(result.dig(:extra_context, :result, "answer").scan(/front desk/i).size).to eq(1)
+    expect(result.next_action.kind).to eq("offer_front_desk")
+  end
+
+  it "keeps front-desk guidance without consuming optional-offer suppression" do
+    offered = AiConcierge::State::ConversationTaskManager
+      .new(slots_payload: {})
+      .record_optional_sales_offer("offer_booking_help")
+    declined = AiConcierge::State::ConversationTaskManager.new(slots_payload: offered).decline_optional_sales_offer
+    idle_conversation_state.update!(slots_payload: declined)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "what attractions are nearby?",
+      interpretation: interpretation(intent: "nearby_attractions", topic: "nearby_attractions"),
+      conversation_state: idle_conversation_state,
+      pause: false
+    ).call
+
+    expect(result.next_action.kind).to eq("offer_front_desk")
+    expect(result.dig(:extra_context, :result, "answer")).to start_with("No problem.")
+    expect(result.dig(:slots_payload, "sales_task", "suppress_next_optional_offer")).to be(true)
+    expect(result.dig(:slots_payload, "sales_task", "refusal_acknowledgment_pending")).to be(false)
+  end
+
+  it "suppresses optional offers for the rest of the information run" do
+    hotel.update!(amenities: [ Hotel::HOTEL_AMENITIES.first.fetch(:id) ])
+    offered = AiConcierge::State::ConversationTaskManager
+      .new(slots_payload: {})
+      .record_optional_sales_offer("offer_booking_help")
+    declined = AiConcierge::State::ConversationTaskManager.new(slots_payload: offered).decline_optional_sales_offer
+    suppressed = AiConcierge::State::ConversationTaskManager.new(slots_payload: declined).clear_optional_sales_offer
+    idle_conversation_state.update!(slots_payload: suppressed)
+
+    first = described_class.new(
+      hotel: hotel,
+      message: "what amenities do you have?",
+      interpretation: interpretation(intent: "hotel_information", topic: "general_hotel_info"),
+      conversation_state: idle_conversation_state,
+      pause: false
+    ).call
+
+    expect(first.next_action).to be_none
+    expect(first.dig(:extra_context, :result, "answer")).not_to include("find a room")
+    expect(first.dig(:slots_payload, "sales_task", "suppress_next_optional_offer")).to be(false)
+
+    idle_conversation_state.update!(slots_payload: first.slots_payload)
+    second = described_class.new(
+      hotel: hotel,
+      message: "tell me about the hotel",
+      interpretation: interpretation(intent: "hotel_information", topic: "general_hotel_info"),
+      conversation_state: idle_conversation_state,
+      pause: false
+    ).call
+
+    expect(second.next_action).to be_none
+    expect(second.dig(:extra_context, :result, "answer")).not_to include("What matters most for your stay")
+  end
+
+  it "acknowledges a refusal before answering a new question" do
+    offered = AiConcierge::State::ConversationTaskManager
+      .new(slots_payload: {})
+      .record_optional_sales_offer("offer_booking_help")
+    declined = AiConcierge::State::ConversationTaskManager.new(slots_payload: offered).decline_optional_sales_offer
+    idle_conversation_state.update!(slots_payload: declined)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "no thanks, what time is check-out?",
+      interpretation: interpretation(intent: "hotel_policy", topic: "hotel_policy"),
+      conversation_state: idle_conversation_state,
+      pause: false
+    ).call
+
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to eq("No problem. Check-out is by 11:00 AM.\n\nIs there anything else you’d like to know?")
+    expect(result.next_action).to be_none
+    expect(result.dig(:slots_payload, "sales_task", "suppress_next_optional_offer")).to be(false)
   end
 
   it "does not repeat the previous restriction when the guest asks what else" do
@@ -178,7 +312,8 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
       pause: false
     ).call
 
-    expect(result.dig(:extra_context, :result, "answer")).to eq("I could not find another listed restriction.")
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to eq("I could not find another listed restriction.\n\nWould you like to continue your booking?")
   end
 
   it "does not suspend an active booking when pause is false" do
@@ -213,7 +348,8 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(result[:pending_question]).to be_nil
     expect(result[:action_name]).to be_nil
     expect(result.dig(:extra_context, :result, "check_in_time")).to eq("3:00 PM")
-    expect(result.dig(:extra_context, :result, "answer")).to eq("You can check in from 3:00 PM.")
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to eq("You can check in from 3:00 PM.\n\nWould you like to continue your booking?")
     expect(HotelKnowledgeDiagnostic.last.answer_mode).to eq("structured")
 
     payload = result[:slots_payload]
@@ -223,6 +359,28 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::Orchestrator do
     expect(payload.dig("information_task", "last_question")).to eq("what time is check in?")
     expect(payload).not_to have_key("active")
     expect(payload).not_to have_key("paused_flows")
+    expect(result.next_action.kind).to eq("resume_booking")
+  end
+
+  it "does not suppress booking resumption after a sales refusal" do
+    offered = AiConcierge::State::ConversationTaskManager
+      .new(slots_payload: slots_payload)
+      .record_optional_sales_offer("offer_booking_help")
+    declined = AiConcierge::State::ConversationTaskManager.new(slots_payload: offered).decline_optional_sales_offer
+    conversation_state.update!(slots_payload: declined)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "what time is check in?",
+      interpretation: interpretation(intent: "hotel_policy", topic: "hotel_policy"),
+      conversation_state: conversation_state,
+      pause: true
+    ).call
+
+    expect(result.next_action.kind).to eq("resume_booking")
+    expect(result.dig(:extra_context, :result, "answer"))
+      .to start_with("No problem. You can check in from 3:00 PM.")
+    expect(result.dig(:slots_payload, "sales_task", "suppress_next_optional_offer")).to be(true)
   end
 
   it "suspends the current merged booking branch when provided" do

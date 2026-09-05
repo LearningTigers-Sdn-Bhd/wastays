@@ -71,7 +71,16 @@ module Concierge
         sender_role: "guest",
         body: message
       )
+      clear_suggestions(prospect)
       prospect.touch_last_contact!
+    end
+
+    def clear_suggestions(prospect)
+      state = prospect.prospect_conversation_state
+      return unless state
+
+      manager = AiConcierge::State::ConversationTaskManager.new(slots_payload: state.slots_payload)
+      state.update!(slots_payload: manager.clear_suggestions)
     end
   end
 end

@@ -19,6 +19,7 @@ module EInvoice
 
       existing = submission_record
       return error("E-invoice already submitted with UUID: #{existing.uuid}") if existing&.validated?
+      refresh_buyer_snapshot = existing&.invalid?
 
       submission = existing || EInvoiceSubmission.new(
         hotel:         @hotel,
@@ -44,6 +45,17 @@ module EInvoice
 
       begin
         context = EInvoice::SubmissionContext.for(@booking, document_scenario: scenario)
+        if scenario != "payout_self_billed_invoice"
+          submission.buyer_snapshot = EInvoice::BuyerSnapshot.capture(@booking) if refresh_buyer_snapshot || submission.buyer_snapshot.blank?
+        end
+        submission.assign_attributes(
+          submission_mode: context.submission_mode,
+          fund_collector: context.fund_collector,
+          supplier_name: context.supplier_name,
+          supplier_tin: context.supplier_tin,
+          represented_taxpayer_tin: context.represented_taxpayer_tin
+        )
+        submission.save!
         doc = builder_for(submission, context).build
         client = MyInvois::ClientFactory.build(
           mode: context.submission_mode.to_sym,
@@ -120,7 +132,7 @@ module EInvoice
       if scenario == "payout_self_billed_invoice"
         EInvoice::PayoutSelfBilledDocumentBuilder.new(submission, context: context)
       else
-        EInvoice::DocumentBuilder.new(@booking, context: context)
+        EInvoice::DocumentBuilder.new(@booking, context: context, buyer_snapshot: submission.buyer_snapshot)
       end
     end
 
