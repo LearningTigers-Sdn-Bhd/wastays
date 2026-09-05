@@ -10,6 +10,10 @@
     guest-identity on connect. Reading them in the browser swapped the type and
     rewrote the label after the sheet had already painted. %>
 <% presenter = Guests::GuestPresenter.new(guest) %>
+<%# An address with no country is not confirmed as foreign, only unfilled. It
+    opens on the property's own country, so a Malaysian hotel gets the LHDN
+    state list rather than a free text box asking for a prefecture. %>
+<% address_country = guest.address_country.presence || current_hotel.country %>
 
 <%= turbo_frame_tag frame_id do %>
   <div data-controller="panels-ui--sheet-frame">
@@ -99,7 +103,7 @@
 
               <%= render "shared/state_code_field",
                     form: form, attribute: :state_code,
-                    value: guest.state_code, country: guest.address_country %>
+                    value: guest.state_code, country: address_country %>
 
               <%= render PanelsUI::FormField.new(form: form, attribute: :postal_code, label: "Postcode") do |field| %>
                 <% field.with_input(placeholder: "For example, 88000", inputmode: "numeric", autocomplete: "postal-code") %>
@@ -108,7 +112,7 @@
               <%= render PanelsUI::FormField.new(form: form, attribute: :address_country, label: "Address country") do |field| %>
                 <% field.with_combobox(
                      country_choices,
-                     selected: guest.address_country,
+                     selected: address_country,
                      prompt: "Search for a country",
                      data: {
                        address_state_target: "country",

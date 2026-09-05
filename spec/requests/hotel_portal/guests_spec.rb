@@ -642,6 +642,32 @@ RSpec.describe "HotelPortal::Guests", type: :request do
     end
   end
 
+  describe "the address block's state field" do
+    it "opens on the property's country, so an unfilled address gets the state list" do
+      guest = create(:guest, created_by_hotel: hotel, address_country: nil, country: "Malaysia")
+
+      get details_hotel_guest_path(hotel, guest)
+
+      document = response.parsed_body
+      coded = document.at_css("[data-address-state-target='coded']")
+      free = document.at_css("[data-address-state-target='free']")
+
+      expect(coded[:hidden]).to be_nil
+      expect(coded.at_css("select")[:disabled]).to be_nil
+      expect(free[:hidden]).to be_present
+    end
+
+    it "leaves a foreign address on the free text box" do
+      guest = create(:guest, created_by_hotel: hotel, address_country: "Japan", country: "Japan")
+
+      get details_hotel_guest_path(hotel, guest)
+
+      document = response.parsed_body
+      expect(document.at_css("[data-address-state-target='coded']")[:hidden]).to be_present
+      expect(document.at_css("[data-address-state-target='free']")[:hidden]).to be_nil
+    end
+  end
+
   describe "GET /details and /booking_history" do
     it "renders the guest timeline without grouped query errors" do
       guest = Guest.create!(

@@ -117,7 +117,11 @@ module HotelPortal
     # frame. `return_to` carries the caller, so New lands back on the directory
     # and Edit lands back on the record it was opened from.
     def new
-      @guest = Guest.new(city: current_hotel.city, country: current_hotel.country)
+      @guest = Guest.new(
+        city: current_hotel.city,
+        country: current_hotel.country,
+        address_country: current_hotel.country
+      )
       render layout: false
     end
 
