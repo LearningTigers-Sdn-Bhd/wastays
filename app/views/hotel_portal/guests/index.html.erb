@@ -97,7 +97,7 @@
             column headings pin against the scroll area, not against it. %>
         <%= render PanelsUI::ScrollArea.new(
               orientation: :both,
-              class: "flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card",
+              class: "flex min-h-[70dvh] flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card",
               viewport_class: "min-h-0 flex-1") do %>
           <%# With no rows, the table stretches so the empty state sits in the
               middle of the card rather than stranded under the headings. With
@@ -109,7 +109,7 @@
                 hoverable: true,
                 sticky_header: true,
                 sticky_column: true,
-                class: ("h-full" if @guests.none?),
+                class: (@guests.none? ? "h-full" : "[&_tbody_tr:last-child>*]:border-b [&_tbody_tr:last-child>*]:border-border"),
                 wrapper_class: "overflow-visible#{' h-full' if @guests.none?}") do |table| %>
             <% table.with_header do %>
               <tr>
