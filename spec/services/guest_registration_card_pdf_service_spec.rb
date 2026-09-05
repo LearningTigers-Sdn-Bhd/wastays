@@ -1,7 +1,10 @@
 require "rails_helper"
 
 RSpec.describe GuestRegistrationCardPdfService do
-  let(:hotel) { create(:hotel, name: "Seaview Hotel", city: "Kota Kinabalu", country: "Malaysia") }
+  let(:hotel) do
+    create(:hotel, name: "Seaview Hotel", city: "Kota Kinabalu", country: "Malaysia",
+      ssm_number: "SSM-12345", sst_registration_number: "SST-67890")
+  end
   let(:booking) do
     create(:booking,
       hotel: hotel,
@@ -53,6 +56,12 @@ RSpec.describe GuestRegistrationCardPdfService do
     expect(text).not_to include("12 Booking Road, Kota Kinabalu")
     expect(text).to include("11 Jul 2026, 03:00 PM")
     expect(text).to include("13 Jul 2026, 12:00 PM")
+  end
+
+  it "renders the hotel's registration number and SST" do
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).to include("Reg. No: SSM-12345", "SST: SST-67890")
   end
 
   it "omits the guest address when the field is disabled" do

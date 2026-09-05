@@ -93,7 +93,9 @@ RSpec.describe "Hotel onboarding shell", type: :request do
     get hotel_onboarding_section_path(hotel, section_key: "property_profile")
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.at_css("img[alt='#{hotel.name} hotel icon']")).to be_present
+    icon = response.parsed_body.at_css("img[alt$='hotel icon']")
+    expect(icon).to be_present
+    expect(icon["alt"]).to eq("#{hotel.name} hotel icon")
     expect(response.parsed_body.at_css("input[name='hotel[icon]']")).to be_nil
     expect(response.body).not_to include("Replace", "Undo remove")
   end

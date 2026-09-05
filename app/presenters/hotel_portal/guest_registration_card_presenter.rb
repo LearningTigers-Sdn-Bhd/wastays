@@ -146,6 +146,14 @@ module HotelPortal
       [ hotel.city, hotel.country ].compact_blank.join(", ")
     end
 
+    # Mirrors the dash-for-missing convention used elsewhere (e.g. Reports::HotelIdentifierLine)
+    # so an unregistered hotel still says so rather than silently dropping the line.
+    def hotel_registration_display
+      [ [ "Reg. No", hotel.ssm_number ], [ "SST", hotel.sst_registration_number ] ]
+        .map { |label, value| "#{label}: #{value.presence || '-'}" }
+        .join(" · ")
+    end
+
     def boat_transfer?
       active_booking_guest&.boat_in? || active_booking_guest&.boat_out?
     end

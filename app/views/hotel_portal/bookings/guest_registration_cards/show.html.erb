@@ -5,6 +5,7 @@
     <div>
       <p class="text-xs font-semibold uppercase text-muted-foreground">Front desk document</p>
       <h1 class="text-2xl font-bold">Guest Registration Card</h1>
+      <p class="mt-1 text-xs text-muted-foreground"><%= @presenter.hotel_registration_display %></p>
     </div>
   </div>
 
@@ -221,12 +222,6 @@
       <section>
         <% if @presenter.terms.present? %>
           <div class="grid gap-3 md:grid-cols-2">
-            <% if @presenter.terms_and_conditions.present? %>
-              <div class="rounded-md border border-border p-4 md:col-span-2">
-                <p class="text-xs font-bold uppercase text-muted-foreground">Terms &amp; Conditions</p>
-                <div class="mt-2 whitespace-pre-wrap text-sm text-foreground"><%= @presenter.terms_and_conditions %></div>
-              </div>
-            <% end %>
             <% if @presenter.cancellation_summary.present? %>
               <div class="rounded-md border border-border p-4 md:col-span-2">
                 <p class="text-xs font-bold uppercase text-muted-foreground">Cancellation Policy</p>
@@ -241,7 +236,7 @@
         <% end %>
       </section>
 
-      <div class="space-y-4">
+      <div class="space-y-4 !mt-2">
         <div class="space-y-2">
           <label for="guest_registration_card_special_requests" class="text-xs font-bold uppercase text-muted-foreground">Remark</label>
           <textarea id="guest_registration_card_special_requests" 
@@ -301,6 +296,12 @@
             <% alert.with_description do %>
               Collect the guest's digital signature here, or ask the guest to sign the printed form. The signature confirms that the guest reviewed the check-in, check-out, and hotel policy terms shown on this card.
             <% end %>
+            <% if @presenter.terms_and_conditions.present? %>
+              <% alert.with_actions do %>
+                <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :xs,
+                      command: "show-modal", commandfor: "grc-terms-dialog") do %>View T&amp;C<% end %>
+              <% end %>
+            <% end %>
           <% end %>
         </div>
 
@@ -342,6 +343,14 @@
     </aside>
   </section>
 
+  <% if @presenter.terms_and_conditions.present? %>
+    <%= render PanelsUI::Dialog.new(id: "grc-terms-dialog", title: "Terms & Conditions", size: :lg) do |dialog| %>
+      <% dialog.with_body do %>
+        <div class="whitespace-pre-wrap text-sm text-foreground"><%= @presenter.terms_and_conditions %></div>
+      <% end %>
+    <% end %>
+  <% end %>
+
   <article class="grc-print grc-print-page hidden overflow-hidden print:overflow-visible rounded-lg border border-border-interactive bg-card shadow-sm print:block print:rounded-none print:border-0 print:shadow-none">
     <header class="border-b-2 border-border-interactive px-6 py-3 print:px-0 print:pt-0 print:pb-2">
       <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
@@ -349,6 +358,7 @@
           <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-8 w-auto" %>
           <h2 class="mt-2 text-md font-black text-foreground print:mt-0.5 print:text-sm print:leading-tight"><%= current_hotel.name %></h2>
           <p class="mt-1 text-sm text-muted-foreground print:mt-0 print:text-xs print:leading-tight"><%= @presenter.hotel_address_display %></p>
+          <p class="mt-1 text-xs text-muted-foreground print:mt-0 print:text-xs print:leading-tight"><%= @presenter.hotel_registration_display %></p>
         </div>
         <div class="min-w-64 overflow-hidden rounded-md border border-border-interactive bg-card">
           <div class="border-b border-border-interactive bg-muted px-4 py-2 text-center text-xs font-bold uppercase text-muted-foreground">Guest Registration Card No.</div>
