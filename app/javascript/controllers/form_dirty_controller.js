@@ -5,10 +5,10 @@ import { Controller } from "@hotwired/stimulus"
 // settings page has four such forms, and a Save that is always live cannot say
 // which of them has anything to save.
 //
-// The submit button is enabled in the markup and disabled here on connect, so a
-// page without JS keeps a working Save rather than a permanently dead one.
-// Cancel is the reverse: it is a native reset that only means anything once the
-// form is dirty, and without JS there is nothing to discard mid-page anyway.
+// Save and Cancel both start switched off in the markup, because a form that
+// has just loaded has nothing to save and nothing to discard. Rendering Save
+// live and disabling it here flashed an enabled button on every page load, once
+// per form on a page that carries several.
 export default class extends Controller {
   static targets = ["submit", "cancel"]
 

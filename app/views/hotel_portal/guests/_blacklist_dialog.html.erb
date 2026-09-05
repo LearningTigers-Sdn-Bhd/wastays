@@ -1,0 +1,25 @@
+<%# One dialog for the whole page. The row that opens it sets the form action
+    and the guest name through the guest-blacklist controller. %>
+<%= form_with url: hotel_guests_path(current_hotel), method: :patch,
+      data: { guest_blacklist_target: "form", turbo_frame: "_top" } do |f| %>
+  <%= render PanelsUI::Dialog.new(
+        id: "guest-blacklist-dialog",
+        title: "Blacklist guest",
+        description: "The guest is flagged as blacklisted for #{current_hotel.name}. Other properties are not affected.",
+        size: :md) do |dialog| %>
+    <% dialog.with_body do %>
+      <p class="mb-3 text-sm text-muted-foreground">
+        Guest: <span class="font-medium text-foreground" data-guest-blacklist-target="name">—</span>
+      </p>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :blacklist_reason, label: "Reason", required: true) do |field| %>
+        <% field.with_text_area(rows: 4, placeholder: "Explain why this guest is being blacklisted.") %>
+      <% end %>
+    <% end %>
+
+    <% dialog.with_footer do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Blacklist guest<% end %>
+    <% end %>
+  <% end %>
+<% end %>

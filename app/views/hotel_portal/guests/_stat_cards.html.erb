@@ -1,0 +1,42 @@
+<%# VIP and blacklist always show, even when the answer is No. A card that
+    disappears when the guest is clean makes the desk wonder whether the page
+    failed to load the status or the guest simply has none. The Actions menu
+    still owns the change; these cards only report. %>
+<% detail = guest.blacklist_detail(current_hotel) %>
+<% blacklist_note = [ detail&.dig("reason").presence, detail&.dig("blacklisted_by_name").presence&.then { |name| "Set by #{name}" } ].compact.join(" · ") %>
+
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <%= render PanelsUI::MetricCard.new(
+        label: "Total stays",
+        value: stays_count,
+        detail: guest.repeat? ? "Repeat guest" : "First stay",
+        detail_variant: guest.repeat? ? :success : :neutral,
+        tone: guest.repeat? ? :success : :neutral,
+        icon: "bed-double",
+        density: :compact) %>
+
+  <%= render PanelsUI::MetricCard.new(
+        label: "Last stay",
+        value: presenter.last_stay_checkout_date(last_checkout_on) || "None yet",
+        detail: last_checkout_on ? "Checked out" : "No stay on record",
+        icon: "calendar-check",
+        density: :compact) %>
+
+  <%= render PanelsUI::MetricCard.new(
+        label: "VIP",
+        value: vip ? "Yes" : "No",
+        detail: vip ? "VIP at #{current_hotel.name}" : "Not marked VIP",
+        detail_variant: vip ? :warning : :neutral,
+        tone: vip ? :warning : :neutral,
+        icon: "crown",
+        density: :compact) %>
+
+  <%= render PanelsUI::MetricCard.new(
+        label: "Blacklist",
+        value: blacklisted ? "Yes" : "No",
+        detail: blacklisted ? blacklist_note.presence || "No reason recorded" : "Free to book",
+        detail_variant: blacklisted ? :destructive : :neutral,
+        tone: blacklisted ? :destructive : :neutral,
+        icon: "user-round-x",
+        density: :compact) %>
+</div>

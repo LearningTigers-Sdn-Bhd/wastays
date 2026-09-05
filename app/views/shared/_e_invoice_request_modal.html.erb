@@ -37,7 +37,8 @@
           <div>
             <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Document</dt>
             <dd class="mt-1 text-sm font-medium text-foreground">
-              <%= [ booking.guest_document_type&.upcase, booking.guest_government_id ].compact_blank.join(" • ").presence || "—" %>
+              <% identity = EInvoice::GuestIdentityResolver.for_booking(booking) %>
+              <%= [ identity.document_type&.upcase, identity.document_number ].compact_blank.join(" • ").presence || "—" %>
             </dd>
           </div>
           <div class="sm:col-span-2">

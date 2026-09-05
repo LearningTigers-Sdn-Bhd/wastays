@@ -228,7 +228,7 @@ module StayView
 
       Guest.where(id: guest_ids).select(:id, :vip, :blacklisted, :created_by_hotel_id, :metadata).each_with_object({}) do |guest, result|
         result[guest.id] = {
-          vip: guest.vip?,
+          vip: guest.vip_at?(hotel),
           blacklisted: guest.blacklisted_at?(hotel),
           completed_booking_count: completed_booking_counts.fetch(guest.id, 0)
         }.freeze

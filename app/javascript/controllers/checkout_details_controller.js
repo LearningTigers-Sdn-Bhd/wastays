@@ -3,7 +3,8 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "emailInput", "lookupButton", "feedback", "detailsPanel", "field",
-    "countryInput", "countryMenu", "documentSelect", "documentInput", "documentLabel", "documentField"
+    "countryInput", "countryMenu", "documentSelect", "documentInput", "documentLabel", "documentField",
+    "passportField", "passportInput"
   ]
   static values = {
     lookupUrl: String,
@@ -216,21 +217,30 @@ export default class extends Controller {
   autoSelectDocumentType() {
     const country = this.countryInputTarget.value.trim().toLowerCase()
     if (!country) return
-    if (this.documentManuallySet && this.documentSelectTarget.value) return
 
     const isMalaysia = ["malaysia", "my", "mys"].includes(country)
-    this.documentSelectTarget.value = isMalaysia ? "ic" : "passport"
+    const incompatible = isMalaysia ? "national_id" : "malaysian_nric"
+    const preferred = isMalaysia ? "malaysian_nric" : "national_id"
+    this.documentSelectTarget.querySelector(`option[value="${incompatible}"]`).hidden = true
+    this.documentSelectTarget.querySelector(`option[value="${preferred}"]`).hidden = false
+    if (!this.documentManuallySet || !this.documentSelectTarget.value || this.documentSelectTarget.value === incompatible) {
+      this.documentSelectTarget.value = preferred
+    }
     this.updateLabel()
     this.updateEnabled()
   }
 
   updateLabel() {
     if (!this.documentSelectTarget.value) {
-      this.documentLabelTarget.textContent = "IC / Passport Number"
+      this.documentLabelTarget.textContent = "Identity document number"
       return
     }
-    const label = this.documentSelectTarget.value === "ic" ? "IC Number" : "Passport Number"
+    const label = this.documentSelectTarget.value === "malaysian_nric" ? "MyKad number" :
+      (this.documentSelectTarget.value === "national_id" ? "National identity card number" : "Passport number")
     this.documentLabelTarget.textContent = label
+    const showPassport = this.documentSelectTarget.value === "national_id" && this.detailsUnlocked
+    if (this.hasPassportFieldTarget) this.passportFieldTarget.classList.toggle("hidden", !showPassport)
+    if (this.hasPassportInputTarget) this.passportInputTarget.disabled = !showPassport
   }
 
   renderCountryOptions(query) {

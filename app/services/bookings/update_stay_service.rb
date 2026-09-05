@@ -313,6 +313,7 @@ module Bookings
         gender: booking.guest_gender,
         document_type: booking.guest_document_type,
         government_id: booking.guest_government_id,
+        passport_number: booking.guest_passport_number,
         date_of_birth: booking.guest_date_of_birth,
         created_by_hotel_id: @hotel.id
       ).call
@@ -331,7 +332,9 @@ module Bookings
       end
 
       primary = booking.booking_guests.find_by(guest: guest_result.guest, is_primary: true)
-      BookingGuests::CapturePrimaryStay.call(booking_guest: primary) if primary
+      if primary
+        BookingGuests::CapturePrimaryStay.call(booking_guest: primary)
+      end
     end
   end
 end

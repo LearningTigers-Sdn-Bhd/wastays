@@ -55,6 +55,7 @@ module Bookings
         guest_gender: @booking_guest.gender_snapshot,
         guest_document_type: @booking_guest.document_type_snapshot,
         guest_government_id: @booking_guest.government_id_snapshot,
+        guest_passport_number: @booking_guest.safely_read_encrypted(:passport_number_snapshot),
         guest_date_of_birth: @booking_guest.date_of_birth_snapshot,
         guest_home_address: @booking_guest.home_address_snapshot
       )

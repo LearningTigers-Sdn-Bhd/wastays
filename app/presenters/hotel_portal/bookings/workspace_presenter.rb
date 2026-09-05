@@ -62,7 +62,7 @@ module HotelPortal
     }.freeze
     DOCUMENT_TYPE_ORDER = DOCUMENT_SECTION_BY_TYPE.keys.each_with_index.to_h.freeze
     GUEST_FORM_ATTRIBUTES = %i[
-      name email phone country gender document_type government_id date_of_birth
+      name email phone country gender document_type government_id passport_number date_of_birth
       home_address city state_code postal_code address_country
     ].freeze
     BADGE_VARIANTS = {
@@ -628,8 +628,9 @@ module HotelPortal
         phone: safe_encrypted_value(bg, :phone_snapshot) || safe_encrypted_value(g, :phone),
         country: bg.country_snapshot.presence || g.country.presence || hotel.country,
         gender: bg.gender_snapshot.presence || g.gender,
-        document_type: bg.document_type_snapshot.presence || g.document_type.presence || "ic",
+        document_type: bg.document_type_snapshot.presence || g.document_type.presence || "malaysian_nric",
         government_id: safe_encrypted_value(bg, :government_id_snapshot) || safe_encrypted_value(g, :government_id),
+        passport_number: safe_encrypted_value(bg, :passport_number_snapshot) || safe_encrypted_value(g, :passport_number),
         date_of_birth: bg.date_of_birth_snapshot.presence || g.date_of_birth,
         home_address: bg.home_address_snapshot.presence || g.home_address,
         city: bg.city_snapshot.presence || g.city,

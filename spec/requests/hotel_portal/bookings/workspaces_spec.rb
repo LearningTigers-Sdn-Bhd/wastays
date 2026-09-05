@@ -910,7 +910,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(discard_alert["role"]).to eq("alertdialog")
       expect(response.body).to include("Guest details", "Guest details recorded for this stay.")
       expect(response.body).not_to include("Stay Record", "Guest Profile")
-      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Enter IC or passport number", "Select date of birth")
+      expect(response.body).to include("Enter full name", "guest@example.com", "+60 12-345 6789", "Search for a country", "Select a gender", "Select a document type", "Identity document number", "Select date of birth")
       expect(form.at_css("textarea[name='guest[home_address]']")).to be_present
       expect(form.at_css("input[name='guest[city]']")).to be_present
       expect(form.at_css("input[name='guest[postal_code]']")).to be_present

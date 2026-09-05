@@ -43,12 +43,14 @@
         Cancel
       <% end %>
 
-      <%# Enabled in the markup and switched off by the controller on connect,
-          so a page whose JS never runs keeps a Save that works. %>
+      <%# Rendered disabled, because there is nothing to save yet. Enabling it
+          here and letting the controller switch it off on connect flashed a
+          live Save on every load, once per section. %>
       <%= render PanelsUI::Button.new(
             as: :button,
             type: :submit,
             size: :md,
+            disabled: true,
             data: { form_dirty_target: "submit" }) do %>
         Save
       <% end %>

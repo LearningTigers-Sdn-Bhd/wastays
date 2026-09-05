@@ -19,7 +19,7 @@ module HotelPortal
           @guest = Guest.new(
             country: current_hotel.country.presence || "Malaysia",
             address_country: current_hotel.country.presence || "Malaysia",
-            document_type: "ic"
+            document_type: "malaysian_nric"
           )
           render :show, layout: false
         end
@@ -155,7 +155,7 @@ module HotelPortal
 
         def guest_params
           params.require(:guest).permit(
-            :name, :email, :phone, :country, :gender, :document_type, :government_id,
+            :name, :email, :phone, :country, :gender, :document_type, :government_id, :passport_number,
             :date_of_birth, :home_address, :city, :state_code, :postal_code, :address_country
           )
         end

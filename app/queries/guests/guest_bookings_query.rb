@@ -11,6 +11,15 @@ module Guests
       base_scope
     end
 
+    # Two scalars for the details tab, so it never loads the booking rows.
+    def stays_count
+      base_scope.count
+    end
+
+    def last_checkout_on
+      base_scope.maximum(:check_out)
+    end
+
     def bookings(page: 1, per_page: 25)
       all_bookings.includes(:pre_checkin)
                   .order(check_out: :desc, id: :desc)

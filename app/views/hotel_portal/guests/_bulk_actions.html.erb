@@ -1,0 +1,136 @@
+<% if can_manage %>
+  <%= form_with url: bulk_vip_hotel_guests_path(current_hotel), method: :patch, id: "guest-bulk-vip-form" do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+    <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
+  <% end %>
+  <%= form_with url: bulk_unvip_hotel_guests_path(current_hotel), method: :patch, id: "guest-bulk-unvip-form" do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+    <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
+  <% end %>
+  <%= form_with url: bulk_unblacklist_hotel_guests_path(current_hotel), method: :patch, id: "guest-bulk-unblacklist-form" do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+    <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
+  <% end %>
+<% end %>
+
+<% if can_delete %>
+  <%= form_with url: bulk_destroy_hotel_guests_path(current_hotel), method: :delete, id: "guest-bulk-destroy-form" do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+  <% end %>
+<% end %>
+
+<%= render PanelsUI::BulkActionBar.new(noun: "guest") do |bar| %>
+  <% bar.with_action do %>
+    <%= render PanelsUI::DropdownMenu.new(id: "guest-bulk-actions", placement: :top_end, class: "w-56") do |menu| %>
+      <% menu.with_trigger(variant: :secondary, size: :sm, class: "min-h-11 sm:min-h-0") do %>
+        Actions
+        <%= app_icon "chevron-up", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+
+      <% if can_manage %>
+        <% menu.with_item(
+              form_id: "guest-bulk-vip-form", type: :submit, variant: :default,
+              data: {
+                bulk_select_target: "action",
+                bulk_kind: "vip",
+                bulk_confirm: "{changed} of {selected} selected {selectedNoun} will be marked VIP at #{current_hotel.name}.",
+                bulk_skipped: "{skipped} already VIP.",
+                turbo_frame: "_top",
+                turbo_confirm_title: "Mark as VIP",
+                turbo_confirm_tone: "default"
+              }) do %>
+          <%= app_icon "crown", class: "size-3.5", aria: { hidden: true } %>
+          Mark VIP
+        <% end %>
+
+        <% menu.with_item(
+              form_id: "guest-bulk-unvip-form", type: :submit, variant: :default,
+              data: {
+                bulk_select_target: "action",
+                bulk_kind: "unvip",
+                bulk_confirm: "{changed} of {selected} selected {selectedNoun} will lose VIP at #{current_hotel.name}.",
+                bulk_skipped: "{skipped} are not VIP.",
+                turbo_frame: "_top",
+                turbo_confirm_title: "Remove VIP",
+                turbo_confirm_tone: "default"
+              }) do %>
+          <%= app_icon "crown", class: "size-3.5", aria: { hidden: true } %>
+          Remove VIP
+        <% end %>
+
+        <% menu.with_item(
+              variant: :danger,
+              command: "show-modal", commandfor: "guest-bulk-blacklist-dialog",
+              data: { bulk_select_target: "action", bulk_kind: "blacklist" }) do %>
+          <%= app_icon "user-round-x", class: "size-3.5", aria: { hidden: true } %>
+          Blacklist
+        <% end %>
+
+        <% menu.with_item(
+              form_id: "guest-bulk-unblacklist-form", type: :submit, variant: :warning,
+              data: {
+                bulk_select_target: "action",
+                bulk_kind: "unblacklist",
+                bulk_confirm: "{changed} of {selected} selected {selectedNoun} can book at #{current_hotel.name} again. The reason on record is removed.",
+                bulk_skipped: "{skipped} are not blacklisted.",
+                turbo_frame: "_top",
+                turbo_confirm_title: "Remove blacklist",
+                turbo_confirm_tone: "warning"
+              }) do %>
+          <%= app_icon "user-round-check", class: "size-3.5", aria: { hidden: true } %>
+          Remove blacklist
+        <% end %>
+      <% end %>
+
+      <% if can_delete %>
+        <% menu.with_separator if can_manage %>
+        <% menu.with_item(
+              form_id: "guest-bulk-destroy-form", type: :submit, variant: :danger,
+              data: {
+                bulk_select_target: "action",
+                bulk_confirm: "{selected} {selectedNoun} are removed from the directory. Their booking history stays on record.",
+                turbo_frame: "_top",
+                turbo_confirm_title: "Delete guest records",
+                turbo_confirm_tone: "destructive"
+              }) do %>
+          <%= app_icon "trash-2", class: "size-3.5", aria: { hidden: true } %>
+          Delete
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if can_manage %>
+  <%# One dialog for the whole selection. The reason is shared: it is the reason
+      these guests are blacklisted together. %>
+  <%= form_with url: bulk_blacklist_hotel_guests_path(current_hotel), method: :patch,
+        data: { turbo_frame: "_top" } do |f| %>
+    <%= f.hidden_field :guest_ids, data: { bulk_select_target: "idsInput" } %>
+    <%= hidden_field_tag :tag, params[:tag] if params[:tag].present? %>
+
+    <%= render PanelsUI::Dialog.new(
+          id: "guest-bulk-blacklist-dialog",
+          title: "Blacklist selected guests",
+          description: "They are flagged as blacklisted for #{current_hotel.name}. Other properties are not affected.",
+          size: :md) do |dialog| %>
+      <% dialog.with_body do %>
+        <p class="mb-3 text-sm text-muted-foreground"
+           data-bulk-select-target="summary"
+           data-bulk-kind="blacklist"
+           data-bulk-confirm="{changed} of {selected} selected {selectedNoun} will be blacklisted."
+           data-bulk-skipped="{skipped} are already blacklisted."
+           aria-live="polite">No guests selected.</p>
+
+        <%= render PanelsUI::FormField.new(form: f, attribute: :blacklist_reason, label: "Reason", required: true) do |field| %>
+          <% field.with_text_area(rows: 4, placeholder: "Explain why these guests are being blacklisted.") %>
+        <% end %>
+      <% end %>
+
+      <% dialog.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Blacklist guests<% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,0 +1,65 @@
+<%# One editable block on the details tab. Each block is its own form, its own
+    frame and its own Save, so a desk fixing a tax number never re-submits the
+    address. `section` names the block: it picks the copy and the fields out of
+    GuestPresenter::SECTIONS, names the frame, and travels with the save so the
+    server writes that block's fields alone. %>
+<% meta = Guests::GuestPresenter::SECTIONS.fetch(section) %>
+<% frame_id = "guest_section_#{section}" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <%= form_with model: [ current_hotel, guest ],
+                method: :patch,
+                data: {
+                  controller: "form-dirty",
+                  action: "input->form-dirty#refresh change->form-dirty#refresh reset->form-dirty#restore"
+                } do |form| %>
+    <%= hidden_field_tag :section, section %>
+
+    <%# The block stops short of the full column on desktop, so the heading,
+        the inputs and the Save row all end on the same edge. %>
+    <section id="<%= section %>" class="lg:w-[85%]" aria-labelledby="<%= section %>-heading">
+      <header>
+        <h2 id="<%= section %>-heading" class="text-base font-semibold text-foreground"><%= meta[:title] %></h2>
+        <p class="mt-2 text-sm text-muted-foreground"><%= meta[:description] %></p>
+      </header>
+
+      <% if guest.errors.any? %>
+        <div class="mt-4">
+          <%= render PanelsUI::Alert.new(tone: :destructive, title: "This section could not be saved", role: :alert) do |alert| %>
+            <% alert.with_description { guest.errors.full_messages.to_sentence } %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="mt-5 space-y-4">
+        <%= render "#{section}_fields", form: form, guest: guest %>
+      </div>
+
+      <footer class="mt-5 flex justify-end gap-3">
+        <%# Cancel only exists while there is something to discard, so it starts
+            hidden and form-dirty reveals it alongside enabling Save. %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :reset,
+              variant: :secondary,
+              size: :md,
+              hidden: true,
+              data: { form_dirty_target: "cancel" }) do %>
+          Cancel
+        <% end %>
+
+        <%# Rendered disabled, because there is nothing to save yet. Enabling it
+            here and letting the controller switch it off on connect flashed a
+            live Save on every load, once per block. %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              size: :md,
+              disabled: true,
+              data: { form_dirty_target: "submit", turbo_submits_with: "Saving…" }) do %>
+          Save
+        <% end %>
+      </footer>
+    </section>
+  <% end %>
+<% end %>

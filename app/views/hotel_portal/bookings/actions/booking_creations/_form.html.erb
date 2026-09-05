@@ -33,7 +33,7 @@ end %>
   <%= render PanelsUI::Sheet.new(
         id: "booking-creation-sheet",
         side: quick ? :right : :bottom,
-        size: quick ? :lg : :full,
+        size: quick ? :xl : :full,
         title: sheet_title,
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
@@ -109,7 +109,7 @@ end %>
                       f: f,
                       allow_deferred_room: quick || initial_type == "reservation" %>
 
-                <section class="space-y-4">
+                <section class="space-y-4" data-controller="guest-identity">
                   <div>
                     <h3 class="text-base font-semibold text-foreground">Guest information</h3>
                     <p class="mt-1 text-sm text-muted-foreground">Primary guest contact and identity details.</p>
@@ -167,7 +167,8 @@ end %>
                            data: {
                              booking_room_rows_target: "guestCountry",
                              booking_guest_autofill_target: "countryField",
-                             action: "change->booking-room-rows#guestCountryChanged"
+                             guest_identity_target: "country",
+                             action: "change->booking-room-rows#guestCountryChanged change->guest-identity#refresh"
                            }) %>
                     <% end %>
                   </div>
@@ -201,6 +202,31 @@ end %>
                                     action: "change->address-state#refresh input->address-state#refresh" }) do |field| %>
                         <% field.with_combobox(COUNTRY_OPTIONS, selected: @booking.guest_address_country, prompt: "Select address country") %>
                       <% end %>
+                    </div>
+                  </div>
+                  <% identity_present = [
+                       @booking.guest_document_type, @booking.guest_government_id, @booking.guest_passport_number
+                     ].any?(&:present?) %>
+                  <div>
+                    <button type="button" class="text-xs font-medium text-primary hover:underline" <%= "hidden" if identity_present %>
+                            data-action="booking-guest-autofill#toggleIdentity" data-booking-guest-autofill-target="identityToggle">
+                      + Add identity documents
+                    </button>
+                    <div class="mt-3 grid gap-4 md:grid-cols-2" <%= "hidden" unless identity_present %> data-booking-guest-autofill-target="identityField">
+                      <%= render "shared/identity_document_fields",
+                            form: f,
+                            document_type_attribute: :guest_document_type,
+                            government_id_attribute: :guest_government_id,
+                            passport_number_attribute: :guest_passport_number,
+                            document_type: @booking.guest_document_type,
+                            government_id: @booking.guest_government_id,
+                            passport_number: @booking.guest_passport_number,
+                            government_id_placeholder: "Enter document number",
+                            span_class: "md:col-span-2",
+                            passport_grid_class: "md:grid-cols-2",
+                            document_type_data: { action: "change->guest-identity#documentChanged", booking_guest_autofill_target: "documentTypeField" },
+                            government_id_field_data: { booking_guest_autofill_target: "governmentIdField" },
+                            passport_number_field_data: { booking_guest_autofill_target: "passportNumberField" } %>
                     </div>
                   </div>
                   <% selected_guest_id = params.dig(:booking, :existing_guest_id).presence || @booking.existing_guest_id %>

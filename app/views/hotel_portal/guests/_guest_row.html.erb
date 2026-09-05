@@ -1,0 +1,86 @@
+<%# One row for every screen size. Columns drop out as the viewport narrows,
+    so the directory reads the same everywhere and the markup exists once. %>
+<% presenter = Guests::GuestPresenter.new(guest) %>
+<% vip = guest.vip?(hotel: current_hotel) %>
+<% blacklisted = guest.blacklisted_at?(current_hotel) %>
+<% repeat = repeat_ids.include?(guest.id) %>
+<% currency_list = presenter.formatted_currency_totals(currency_totals) %>
+
+<tr>
+  <% if selectable %>
+    <td class="w-10">
+      <%= render PanelsUI::Checkbox.new(
+            name: "guest_ids[]",
+            value: guest.id,
+            id: "select-guest-#{guest.id}",
+            label: "Select #{presenter.name}",
+            label_hidden: true,
+            size: :sm,
+            data: {
+              bulk_select_target: "checkbox",
+              action: "change->bulk-select#toggleSingle",
+              vip: vip.to_s,
+              blacklisted: blacklisted.to_s
+            }) %>
+    </td>
+  <% end %>
+
+  <td class="font-medium">
+    <div class="flex flex-wrap items-center gap-2">
+      <%= link_to presenter.formatted_name, details_hotel_guest_path(current_hotel, guest),
+            class: "text-foreground underline decoration-border-interactive underline-offset-2 hover:text-primary",
+            data: { turbo_frame: "_top" } %>
+      <%= render "guest_badges", vip: vip, blacklisted: blacklisted, repeat: repeat %>
+    </div>
+    <span class="mt-0.5 block text-xs font-normal text-muted-foreground">
+      <%= [ presenter.formatted_gender, presenter.formatted_country ].compact_blank.join(" · ").presence || blank_value %>
+    </span>
+  </td>
+
+  <td class="hidden lg:table-cell">
+    <span class="block truncate text-foreground" title="<%= presenter.email %>"><%= presenter.email.presence || blank_value %></span>
+    <span class="mt-0.5 block text-xs text-muted-foreground"><%= presenter.phone.presence || blank_value %></span>
+  </td>
+
+  <td class="hidden xl:table-cell">
+    <% government_id = presenter.government_id.presence %>
+    <span class="block tabular-nums text-foreground"><%= government_id || blank_value %></span>
+    <%# The document type only helps next to a number. With nothing on file it
+        repeats the column heading, so the row shows the blank state alone. %>
+    <% meta = [ (presenter.formatted_document_type if government_id), presenter.passport_status ].compact %>
+    <% if meta.any? %>
+      <span class="mt-0.5 block text-xs text-muted-foreground"><%= meta.join(" · ") %></span>
+    <% end %>
+  </td>
+
+  <td class="hidden text-center tabular-nums text-muted-foreground sm:table-cell"><%= stays_count %></td>
+
+  <td class="hidden text-muted-foreground md:table-cell">
+    <% if presenter.last_stay_present? %>
+      <span class="block tabular-nums text-foreground"><%= presenter.last_stay_date %></span>
+      <span class="mt-0.5 block text-xs"><%= presenter.last_stay_time %></span>
+    <% else %>
+      <%= blank_value("None yet") %>
+    <% end %>
+  </td>
+
+  <td class="hidden text-right md:table-cell">
+    <% if currency_list.any? %>
+      <% currency_list.each do |formatted_amount| %>
+        <span class="block tabular-nums text-foreground"><%= formatted_amount %></span>
+      <% end %>
+    <% else %>
+      <%= blank_value("None yet") %>
+    <% end %>
+  </td>
+
+  <td class="text-right">
+    <%= render "row_actions",
+          guest: guest,
+          presenter: presenter,
+          vip: vip,
+          blacklisted: blacklisted,
+          can_manage: can_manage,
+          can_delete: can_delete %>
+  </td>
+</tr>

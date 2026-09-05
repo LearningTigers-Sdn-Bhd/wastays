@@ -85,4 +85,16 @@ RSpec.describe EInvoice::ValidateTin do
     expect(validate(id_value: "").message).to include("IC, passport or business registration")
     expect(client).not_to have_received(:validate_tin)
   end
+
+  it "requires a passport when a foreign national card is used" do
+    allow(client).to receive(:validate_tin)
+
+    result = described_class.call(
+      tin: "IG12345678901", id_value: "S1234567", document_type: "national_id",
+      country: "Singapore", setting: setting
+    )
+
+    expect(result.message).to eq("Enter the guest's passport number before issuing an individual e-invoice.")
+    expect(client).not_to have_received(:validate_tin)
+  end
 end

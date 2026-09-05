@@ -185,11 +185,11 @@ module HotelPortal
     end
 
     def primary_guest_document_type
-      primary_guest&.document_type.presence || booking.guest_document_type.presence || "IC/Passport"
+      primary_guest&.identity_document_type.presence || booking.guest_document_type.presence || "Identity document"
     end
 
     def primary_guest_government_id
-      primary_guest&.government_id.presence || booking.guest_government_id.presence || "—"
+      primary_guest&.identity_document_number.presence || booking.guest_government_id.presence || "—"
     end
 
     def primary_guest_email_display
@@ -201,11 +201,11 @@ module HotelPortal
     end
 
     def primary_guest_document_type_display
-      primary_guest_document_type.to_s.upcase
+      Guest.new(document_type: primary_guest_document_type).identity_document_label
     end
 
     def guest_document_type_label(guest)
-      guest.document_type&.upcase || "IC/Passport"
+      guest.identity_document_label
     end
 
     def pre_checkin_metadata
@@ -526,7 +526,7 @@ module HotelPortal
     end
 
     def formatted_total_amount_dashboard
-      "RM #{view_context.number_with_precision(booking.total_amount, precision: 2, delimiter: ",")}"
+      CurrencyFormatter.format(booking.total_amount, currency: currency, unit: :code)
     end
 
     def self.status_pill_style(status)
@@ -586,7 +586,7 @@ module HotelPortal
     end
 
     def formatted_currency_total
-      "#{currency} #{view_context.number_with_precision(booking.total_amount, precision: 2, delimiter: ",")}"
+      CurrencyFormatter.format(booking.total_amount, currency: currency, unit: :code)
     end
 
     def guest_email_display
@@ -615,7 +615,7 @@ module HotelPortal
     end
 
     def format_currency(amount)
-      "#{currency} #{view_context.number_with_precision(amount, precision: 2, delimiter: ",")}"
+      CurrencyFormatter.format(amount, currency: currency, unit: :code)
     end
 
     def view_context

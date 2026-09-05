@@ -256,7 +256,7 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(guest.phone).to eq("+60999999999")
     expect(guest.country).to eq("Singapore")
     expect(guest.gender).to eq("female")
-    expect(guest.document_type).to eq("ic")
+    expect(guest.document_type).to eq("malaysian_nric")
     expect(guest.government_id).to eq("old-ic")
   end
 

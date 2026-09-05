@@ -2,19 +2,27 @@
 
 module HotelPortal
   class GuestsController < HotelPortal::BaseController
+    include SheetActionCompletion
+
     helper_method :guest_stays_count, :guest_currency_totals
 
+    TAB_ACTIONS = %i[details booking_history].freeze
+    STATUS_ACTIONS = %i[vip unvip blacklist unblacklist].freeze
+    BULK_STATUS_ACTIONS = %i[bulk_vip bulk_unvip bulk_blacklist bulk_unblacklist].freeze
+
     before_action -> { require_feature!("unified_guest_profile") }
-    before_action :authorize_view_guest_records!, only: %i[index show]
-    before_action :authorize_manage_bookings!, only: %i[search check_banned new create edit update toggle_vip toggle_blacklist]
+    before_action :authorize_view_guest_records!, only: [ :index, :show, *TAB_ACTIONS ]
+    before_action :authorize_manage_bookings!, only: [ :search, :check_banned, :new, :create, :edit, :update, *STATUS_ACTIONS, *BULK_STATUS_ACTIONS ]
     before_action :authorize_delete_guest_record!, only: %i[destroy bulk_destroy]
-    before_action :set_guest, only: [ :show, :edit, :update, :destroy, :toggle_vip, :toggle_blacklist ]
-    before_action :set_breadcrumbs, only: [ :show, :new, :create, :edit, :update ]
+    before_action :set_guest, only: [ :show, :edit, :update, :destroy, *TAB_ACTIONS, *STATUS_ACTIONS ]
+    before_action :set_breadcrumbs, only: [ :new, :create, :edit, :update, *TAB_ACTIONS ]
 
     def index
       unless current_hotel
         @guests = Guest.none.page(params[:page]).per(25)
         @country_options = []
+        @tag_counts = Hash.new(0)
+        @repeat_ids = Set.new
         @guest_stays_count = {}
         @guest_currency_totals = {}
         return
@@ -24,8 +32,12 @@ module HotelPortal
 
       @guests = query.call.page(params[:page]).per(25)
       @country_options = query.country_options
+      @tag_counts = query.tag_counts
 
-      stats = Guests::StatsService.new(hotel: current_hotel, guest_ids: @guests.map(&:id)).call
+      guest_ids = @guests.map(&:id)
+      @repeat_ids = Guests::GuestQuery.repeat_ids(guest_ids)
+
+      stats = Guests::StatsService.new(hotel: current_hotel, guest_ids: guest_ids).call
       @guest_stays_count = stats[:stays_count]
       @guest_currency_totals = stats[:currency_totals]
     end
@@ -50,6 +62,9 @@ module HotelPortal
             gender: guest.gender,
             date_of_birth: guest.date_of_birth&.iso8601,
             home_address: guest.home_address,
+            document_type: guest.document_type,
+            government_id: guest.safely_read_encrypted(:government_id),
+            passport_number: guest.safely_read_encrypted(:passport_number),
             blacklisted: guest.blacklisted_at?(current_hotel)
           }
         }
@@ -68,16 +83,39 @@ module HotelPortal
       render json: { banned: is_banned }
     end
 
+    # The record page is two tabs, each with its own action, so opening the
+    # details never runs the booking history queries.
     def show
+      redirect_to details_hotel_guest_path(current_hotel, @guest)
+    end
+
+    def details
       @presenter = Guests::GuestPresenter.new(@guest)
-      query = Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)
-      @all_bookings = query.all_bookings
+      query = bookings_query
+      @stays_count = query.stays_count
+      @last_checkout_on = query.last_checkout_on
+    end
+
+    def booking_history
+      @presenter = Guests::GuestPresenter.new(@guest)
+      query = bookings_query
+      @stays_count = query.stays_count
       @bookings = query.bookings(page: params[:page])
       @currency_totals = query.currency_totals
     end
 
+    # New and edit are the same sheet, served into the shell's action-sheet
+    # frame. `return_to` carries the caller, so New lands back on the directory
+    # and Edit lands back on the record it was opened from.
     def new
-      @guest = Guest.new(city: current_hotel.city, country: current_hotel.country)
+      # The country is prefilled because the state field reads it. The city is
+      # not: the property's city is a likely answer, not a known one, so it is
+      # offered as a placeholder and the desk types what the guest says.
+      @guest = Guest.new(
+        country: current_hotel.country,
+        address_country: current_hotel.country
+      )
+      render layout: false
     end
 
     def create
@@ -85,63 +123,43 @@ module HotelPortal
       @guest.created_by_hotel = current_hotel
 
       if @guest.save
-        redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest record created successfully."
+        finish_sheet("Guest record created successfully.", fallback: details_hotel_guest_path(current_hotel, @guest))
       else
-        render :new, status: :unprocessable_content
+        render :new, layout: false, status: :unprocessable_content
       end
     end
 
-    def edit; end
+    def edit
+      render layout: false
+    end
 
     def update
+      return update_section if params[:section].present?
+
       if @guest.update(guest_params)
-        redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest record updated successfully."
+        finish_sheet("Guest record updated successfully.", fallback: details_hotel_guest_path(current_hotel, @guest))
       else
-        render :edit, status: :unprocessable_content
+        render :edit, layout: false, status: :unprocessable_content
       end
     end
 
-    def toggle_vip
-      @guest.update!(vip: !@guest.vip)
-      redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest VIP status updated."
+    # Explicit actions rather than one toggle. A toggle reads the current state
+    # on the server, so a stale page flips the wrong way, and it has no sensible
+    # meaning across a mixed bulk selection.
+    def vip
+      set_vip(true)
     end
 
-    def toggle_blacklist
-      is_blacklisted_here = @guest.blacklisted_at?(current_hotel)
-      hotel_id = current_hotel.id
-      @guest.metadata ||= {}
+    def unvip
+      set_vip(false)
+    end
 
-      if is_blacklisted_here
-        if @guest.metadata["blacklisted_hotel_ids"].is_a?(Array)
-          @guest.metadata["blacklisted_hotel_ids"].delete(hotel_id)
-        end
-        @guest.metadata["blacklist_details"]&.delete(hotel_id.to_s)
-        if @guest.metadata["blacklisted_hotel_ids"].blank?
-          @guest.blacklisted = false
-        else
-          @guest.blacklisted = @guest.metadata["blacklisted_hotel_ids"].any?
-        end
-      else
-        reason = params[:blacklist_reason].to_s.strip
-        if reason.blank?
-          return redirect_to hotel_guest_path(current_hotel, @guest), alert: "Please provide a reason to blacklist this guest."
-        end
+    def blacklist
+      set_blacklisted(true, reason: params[:blacklist_reason])
+    end
 
-        @guest.metadata["blacklisted_hotel_ids"] ||= []
-        @guest.metadata["blacklisted_hotel_ids"] << hotel_id
-        @guest.metadata["blacklisted_hotel_ids"].uniq!
-        @guest.metadata["blacklist_details"] ||= {}
-        @guest.metadata["blacklist_details"][hotel_id.to_s] = {
-          "reason" => reason,
-          "blacklisted_by_id" => current_user.id,
-          "blacklisted_by_name" => current_user.name,
-          "blacklisted_at" => Time.current.iso8601
-        }
-        @guest.blacklisted = true
-      end
-      @guest.save!
-
-      redirect_to hotel_guest_path(current_hotel, @guest), notice: "Guest blacklist status updated."
+    def unblacklist
+      set_blacklisted(false)
     end
 
     def destroy
@@ -155,19 +173,36 @@ module HotelPortal
     end
 
     def bulk_destroy
-      guest_ids = begin
-        JSON.parse(params[:guest_ids] || "[]")
-      rescue JSON::ParserError
-        []
-      end
-
-      result = Guests::BulkDestroyService.new(guest_ids: guest_ids, hotel: current_hotel).call
+      result = Guests::BulkDestroyService.new(guest_ids: selected_guest_ids, hotel: current_hotel).call
 
       if result.success?
         redirect_to hotel_guests_path(current_hotel), notice: result.message, status: :see_other
       else
         redirect_to hotel_guests_path(current_hotel), alert: result.message, status: :see_other
       end
+    end
+
+    # The same services the row menu uses. They already take a collection, so a
+    # selection of one and a selection of forty follow the same path.
+    def bulk_vip
+      apply_bulk(Guests::SetVip.new(guests: selected_guests, hotel: current_hotel, vip: true))
+    end
+
+    def bulk_unvip
+      apply_bulk(Guests::SetVip.new(guests: selected_guests, hotel: current_hotel, vip: false))
+    end
+
+    def bulk_blacklist
+      apply_bulk(Guests::SetBlacklist.new(
+        guests: selected_guests, hotel: current_hotel, blacklisted: true,
+        actor: current_user, reason: params[:blacklist_reason]
+      ))
+    end
+
+    def bulk_unblacklist
+      apply_bulk(Guests::SetBlacklist.new(
+        guests: selected_guests, hotel: current_hotel, blacklisted: false, actor: current_user
+      ))
     end
 
 
@@ -182,6 +217,127 @@ module HotelPortal
 
     private
 
+    # The details tab is four blocks, each with its own Save. A save writes the
+    # fields of the block that sent it and nothing else: a tax form that carried
+    # blank address keys would wipe the address on every submit.
+    def update_section
+      section = params[:section].to_s
+      fields = Guests::GuestPresenter::SECTIONS.dig(section, :fields)
+      raise ActiveRecord::RecordNotFound if fields.blank?
+
+      saved = @guest.update(guest_params.slice(*fields))
+      @presenter = Guests::GuestPresenter.new(@guest)
+
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: section_streams(section, saved: saved),
+                 status: saved ? :ok : :unprocessable_content
+        end
+        format.html do
+          destination = details_hotel_guest_path(current_hotel, @guest)
+
+          if saved
+            redirect_to destination, notice: "Guest record updated successfully.", status: :see_other
+          else
+            redirect_to destination, alert: @guest.errors.full_messages.to_sentence, status: :see_other
+          end
+        end
+      end
+    end
+
+    # Only the block that saved is replaced, so the other three keep whatever
+    # the desk had typed into them. The header comes along when the identity
+    # block saves, because it carries the name and the contact line.
+    def section_streams(section, saved:)
+      streams = [
+        helpers.turbo_stream.replace(
+          "guest_section_#{section}",
+          partial: "hotel_portal/guests/details_section",
+          locals: { guest: @guest, section: section }
+        )
+      ]
+
+      return streams unless saved
+
+      if section == "identity"
+        streams << helpers.turbo_stream.replace(
+          "guest-record-header",
+          partial: "hotel_portal/guests/record_header",
+          locals: { guest: @guest, presenter: @presenter }
+        )
+      end
+
+      streams << toast_stream("#{Guests::GuestPresenter::SECTIONS.dig(section, :title)} saved.", type: :success)
+      streams
+    end
+
+    def apply_bulk(service)
+      result = service.call
+      destination = hotel_guests_path(current_hotel, filter_params)
+
+      if result.success?
+        redirect_to destination, notice: result.message, status: :see_other
+      else
+        redirect_to destination, alert: result.message, status: :see_other
+      end
+    end
+
+    # The selection travels as a JSON array in one hidden field, so the browser
+    # never has to serialise forty separate inputs.
+    def selected_guest_ids
+      ids = JSON.parse(params[:guest_ids].presence || "[]")
+      ids.is_a?(Array) ? ids : []
+    rescue JSON::ParserError
+      []
+    end
+
+    def selected_guests
+      Guest.kept.where(id: selected_guest_ids).for_hotel(current_hotel).to_a
+    end
+
+    # Keep the tab and search the user was on when they acted.
+    def filter_params
+      params.permit(:tag, :query, :country).to_h.compact_blank
+    end
+
+    def finish_sheet(notice, fallback:)
+      complete_sheet_action(
+        destination: sheet_action_return_to(fallback: fallback),
+        notice: notice,
+        frame: turbo_frame_request_id.presence || "settings_action_sheet"
+      )
+    end
+
+    def bookings_query
+      Guests::GuestBookingsQuery.new(hotel: current_hotel, guest: @guest)
+    end
+
+    def set_vip(value)
+      result = Guests::SetVip.new(guests: @guest, hotel: current_hotel, vip: value).call
+      redirect_after_status_change(result)
+    end
+
+    def set_blacklisted(value, reason: nil)
+      result = Guests::SetBlacklist.new(
+        guests: @guest,
+        hotel: current_hotel,
+        blacklisted: value,
+        actor: current_user,
+        reason: reason
+      ).call
+      redirect_after_status_change(result)
+    end
+
+    def redirect_after_status_change(result)
+      destination = details_hotel_guest_path(current_hotel, @guest)
+
+      if result.success?
+        redirect_to destination, notice: result.message
+      else
+        redirect_to destination, alert: result.message
+      end
+    end
+
     def set_guest
       @guest = ActiveRecord::Encryption.without_encryption { Guest.kept.find(params[:id]) }
 
@@ -192,11 +348,12 @@ module HotelPortal
       raise ActiveRecord::RecordNotFound
     end
 
+    # Edit is a sheet and renders no layout, so it gets no crumb of its own.
     def set_breadcrumbs
       if @guest&.persisted?
         presenter = Guests::GuestPresenter.new(@guest)
-        append_breadcrumb presenter.name, hotel_guest_path(current_hotel, @guest)
-        append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
+        append_breadcrumb presenter.name, details_hotel_guest_path(current_hotel, @guest)
+        append_breadcrumb "Booking History" if action_name == "booking_history"
       else
         append_breadcrumb "New"
       end
@@ -205,7 +362,8 @@ module HotelPortal
     def guest_params
       params.require(:guest).permit(
         :name, :email, :phone, :home_address, :city, :state_code, :postal_code,
-        :address_country, :tin, :country, :gender, :document_type, :government_id, :date_of_birth
+        :address_country, :tin, :country, :gender, :document_type, :government_id,
+        :passport_number, :date_of_birth
       )
     end
 

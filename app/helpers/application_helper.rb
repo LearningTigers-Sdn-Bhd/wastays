@@ -72,6 +72,21 @@ module ApplicationHelper
     render(AppIconComponent.new(name, **arguments))
   end
 
+  # One way to show a gap in a record. "Not on file" means the hotel should
+  # hold this value and does not, so staff can chase it. "None yet" means the
+  # event has not happened, so there is nothing to chase.
+  def blank_value(text = "Not on file")
+    tag.span(text, class: "italic text-muted-foreground")
+  end
+
+  # Return path for a sheet that should refresh one frame instead of the whole
+  # document. `complete_sheet` reads `parent_frame` off the destination, so the
+  # name has to travel inside the return path itself. Current filters and page
+  # survive, because the caller's own query string is kept.
+  def sheet_return_to(frame)
+    "#{request.path}?#{request.query_parameters.merge("parent_frame" => frame).to_query}"
+  end
+
   def booking_status_class(status)
     case status
     when "confirmed" then "bg-green-100 text-green-800"
@@ -166,8 +181,8 @@ module ApplicationHelper
     date.to_s
   end
 
-  def format_currency(amount, currency:, symbol: true)
-    CurrencyFormatter.format(amount, currency: currency, symbol: symbol)
+  def format_currency(amount, currency:, unit: :symbol)
+    CurrencyFormatter.format(amount, currency: currency, unit: unit)
   end
 
   def format_number(number, precision: nil)

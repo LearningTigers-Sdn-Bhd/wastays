@@ -1,0 +1,34 @@
+<%= turbo_frame_tag "guest_record" do %>
+  <%= render "tabs", guest: guest, active_tab: "details", stays_count: stays_count %>
+
+  <%# The three identity controllers sit on the wrapper, not on a form, because
+      they read fields in one block and write fields in another. Each write is
+      dispatched on the input it changes, so it bubbles through that input's own
+      form and wakes that block's Save and no other. %>
+  <div class="space-y-6 pt-5"
+       data-controller="guest-dob guest-identity tin-validation"
+       data-tin-validation-url-value="<%= hotel_validate_tin_path(current_hotel) %>">
+    <%= render "stat_cards",
+               guest: guest,
+               presenter: presenter,
+               stays_count: stays_count,
+               last_checkout_on: last_checkout_on,
+               vip: guest.vip?(hotel: current_hotel),
+               blacklisted: guest.blacklisted_at?(current_hotel) %>
+
+    <%# Two independent columns rather than a four-cell grid: the blocks have
+        very different heights, and row-aligned cells leave a tall gap under the
+        short ones. %>
+    <div class="grid grid-cols-1 items-start gap-x-8 gap-y-10 lg:grid-cols-2">
+      <div class="space-y-10">
+        <%= render "details_section", guest: guest, section: "identity" %>
+        <%= render "details_section", guest: guest, section: "verification" %>
+      </div>
+
+      <div class="space-y-10">
+        <%= render "details_section", guest: guest, section: "address" %>
+        <%= render "details_section", guest: guest, section: "tax" %>
+      </div>
+    </div>
+  </div>
+<% end %>

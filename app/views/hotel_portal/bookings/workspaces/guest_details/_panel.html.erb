@@ -12,7 +12,7 @@
         method: :patch,
         id: "guest-details-form",
         class: "flex min-h-0 flex-1 flex-col bg-card",
-        data: { turbo: false, controller: "guest-details-editor guest-dob", action: "input->guest-details-editor#markDirty change->guest-details-editor#markDirty submit->guest-details-editor#submit" } do |form| %>
+        data: { turbo: false, controller: "guest-details-editor guest-dob guest-identity", action: "input->guest-details-editor#markDirty change->guest-details-editor#markDirty submit->guest-details-editor#submit" } do |form| %>
       <%= hidden_field_tag :return_to, return_to %>
       <%= hidden_field_tag :presentation, "booking_workspace" %>
 
@@ -57,7 +57,7 @@
                   <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
                 <% end %>
                 <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true) do |field| %>
-                  <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
+                  <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", guest_identity_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" }) %>
                 <% end %>
                 <div class="sm:col-span-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Street address") do |field| %>
@@ -88,7 +88,7 @@
               <%= render PanelsUI::FieldGroup.new do %>
                 <div class="grid gap-4 sm:grid-cols-2">
                   <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
-                    <% field.with_select_menu([["IC", "ic"], ["Passport", "passport"]], selected: snapshots[:document_type], prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
+                    <% field.with_select_menu(Booking::DOCUMENT_TYPES, selected: snapshots[:document_type], prompt: "Select a document type", data: { guest_dob_target: "documentType", guest_identity_target: "documentType", action: "change->guest-dob#autofill change->guest-identity#documentChanged" }) %>
                   <% end %>
                   <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
                     <% field.with_date_picker(
@@ -100,8 +100,16 @@
                          data: { guest_dob_target: "dateOfBirth" }) %>
                   <% end %>
                   <div class="sm:col-span-2">
-                    <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
-                      <% field.with_input(value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "Identity document number", data: { guest_identity_target: "numberLabel" }) do |field| %>
+                      <% field.with_input(value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter document number", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
+                    <% end %>
+                  </div>
+                  <div class="sm:col-span-2 grid gap-4 sm:grid-cols-2" data-guest-identity-target="passportRow" <%= "hidden" unless snapshots[:document_type] == "national_id" %>>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :lhdn_document_type, label: "LHDN document type", disabled: true) do |field| %>
+                      <% field.with_input(value: "Passport", readonly: true) %>
+                    <% end %>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :passport_number, label: "Passport number", hint: "Required for an individual e-invoice.") do |field| %>
+                      <% field.with_input(value: snapshots[:passport_number], autocomplete: "off", spellcheck: false, disabled: snapshots[:document_type] != "national_id", data: { guest_identity_target: "passportInput" }) %>
                     <% end %>
                   </div>
                 </div>
