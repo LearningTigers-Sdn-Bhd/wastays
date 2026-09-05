@@ -32,7 +32,8 @@
         id: form_id,
         class: "space-y-6 py-2",
         data: {
-          controller: "guest-dob guest-identity booking-guest-autofill",
+          controller: "guest-dob guest-identity booking-guest-autofill tin-validation",
+          tin_validation_url_value: hotel_validate_tin_path(current_hotel),
           action: "panels-ui:autocomplete-select->booking-guest-autofill#selectGuest"
         } do |form| %>
     <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
@@ -131,7 +132,7 @@
         <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true,
               data: { booking_guest_autofill_target: "countryField" }) do |field| %>
           <% field.with_combobox(country_choices, selected: guest.country, prompt: "Search for a country",
-               data: { guest_dob_target: "country", guest_identity_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" }) %>
+               data: { guest_dob_target: "country", guest_identity_target: "country", tin_validation_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" }) %>
         <% end %>
         <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender",
               data: { booking_guest_autofill_target: "genderField" }) do |field| %>
@@ -203,12 +204,39 @@
               government_id: guest.government_id,
               passport_number: guest.passport_number,
               government_id_placeholder: "Enter document number",
-              document_type_data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill change->guest-identity#documentChanged" },
-              government_id_data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" },
+              document_type_data: { guest_dob_target: "documentType", tin_validation_target: "documentType", action: "change->guest-dob#autofill change->guest-identity#documentChanged change->tin-validation#check" },
+              government_id_data: { guest_dob_target: "governmentId", tin_validation_target: "idValue", action: "input->guest-dob#autofill blur->tin-validation#check" },
+              passport_number_data: { tin_validation_target: "passportNumber", action: "blur->tin-validation#check" },
               document_type_field_data: { booking_guest_autofill_target: "documentTypeField" },
               government_id_field_data: { booking_guest_autofill_target: "governmentIdField" },
               passport_number_field_data: { booking_guest_autofill_target: "passportNumberField" } %>
       </div>
+    </section>
+
+    <%# The added guest is never the primary, so the stay has no column of its
+        own for a tax number. It belongs to the person, and it reaches the
+        record on the same terms as the rest of the sheet. %>
+    <section class="space-y-4" aria-labelledby="booking-guest-tax-heading">
+      <div>
+        <h3 id="booking-guest-tax-heading" class="text-base font-semibold text-foreground">Tax management</h3>
+        <p class="mt-1 text-sm text-muted-foreground">Needed only when the guest claims their stays.</p>
+      </div>
+
+      <%# Checked against LHDN here so a wrong digit is caught now, not when the
+          e-invoice is rejected days later. %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :tin, label: "Tax identification number",
+            hint: "Saved to the guest record.",
+            data: { booking_guest_autofill_target: "tinField" }) do |field| %>
+        <%# An individual's LHDN TIN carries the IG prefix. A company uses C, and
+            a company bills through a corporate account, not here. %>
+        <% field.with_input(
+             value: guest.tin,
+             placeholder: "For example, IG5678901234",
+             autocomplete: "off",
+             spellcheck: false,
+             data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
+      <% end %>
+      <p data-tin-validation-target="feedback" class="-mt-2 text-xs text-muted-foreground" hidden></p>
     </section>
   <% end %>
 <% end %>

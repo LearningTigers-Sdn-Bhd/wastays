@@ -22,10 +22,11 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(response).to have_http_status(:success)
     document = Nokogiri::HTML(response.body)
     expect(document.at_css("turbo-frame#booking_action_sheet dialog#booking-guest-sheet")).to be_present
-    # Four sections: room assignment, basic information, address, identity.
+    # Five sections: room assignment, basic information, address, identity, tax.
     expect(document.css("dialog#booking-guest-sheet section h3").map(&:text)).to eq(
-      [ "Room assignment", "Basic information", "Address", "Identity verification" ]
+      [ "Room assignment", "Basic information", "Address", "Identity verification", "Tax management" ]
     )
+    expect(document.at_css("input[name='guest[tin]'][data-tin-validation-target='tin']")).to be_present
     # The name, email and phone search the guest directory, and the linked
     # record row carries the switch that writes the sheet back to the profile.
     expect(document.css("[data-controller~='panels-ui--autocomplete'] input").map { |input| input["name"] })
@@ -53,6 +54,33 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).to include('action="complete_sheet"', 'target="booking_action_sheet_secondary"')
     expect(booking.booking_guests.find_by!(is_primary: false).guest.name).to eq("Added Guest")
+  end
+
+  it "saves the tax number on a new guest record" do
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
+      params: { guest: {
+        name: "Taxed Guest", country: "Malaysia", document_type: "passport",
+        date_of_birth: "1993-04-05", tin: "IG5678901234"
+      } }
+
+    expect(booking.booking_guests.find_by!(is_primary: false).guest.tin).to eq("IG5678901234")
+  end
+
+  it "leaves a picked guest's tax number alone until the profile switch is on" do
+    existing = create(:guest, name: "Repeat Guest", tin: "IG1111111111")
+    create(:booking_guest, booking: create(:booking, hotel:), guest: existing)
+    attributes = {
+      existing_guest_id: existing.id, name: "Repeat Guest", country: "Malaysia",
+      document_type: "passport", date_of_birth: "1993-04-05", tin: "IG2222222222"
+    }
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"), params: { guest: attributes }
+    expect(existing.reload.tin).to eq("IG1111111111")
+
+    other = create(:booking, hotel:, status: "confirmed")
+    post hotel_booking_action_manage_guest_path(hotel, other, mode: "add"),
+      params: { guest: attributes.merge(update_profile: "1", apply_to: "booking:#{other.id}") }
+    expect(existing.reload.tin).to eq("IG2222222222")
   end
 
   it "links a picked guest record instead of creating a second one" do

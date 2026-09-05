@@ -14,6 +14,12 @@ module BookingGuests
       name email phone government_id passport_number gender country document_type
       date_of_birth home_address city state_code postal_code address_country
     ].freeze
+    # The tax number has no snapshot column, and needs none. An added guest is
+    # never the primary, so the stay has no number of its own to hold: the
+    # number belongs to the person, and it reaches the record only with the rest
+    # of the profile.
+    PROFILE_ATTRIBUTES = %i[tin].freeze
+    EDITABLE_ATTRIBUTES = (SNAPSHOT_ATTRIBUTES + PROFILE_ATTRIBUTES).freeze
 
     def self.call(booking:, attributes:, actor:, existing_guest: nil, update_profile: false)
       new(booking:, attributes:, actor:, existing_guest:, update_profile:).call
@@ -41,7 +47,7 @@ module BookingGuests
         return Result.new(false, candidate, nil, [ "#{guest.name} is already on this booking." ])
       end
 
-      normalized = candidate.attributes.symbolize_keys.slice(*SNAPSHOT_ATTRIBUTES)
+      normalized = candidate.attributes.symbolize_keys.slice(*EDITABLE_ATTRIBUTES)
 
       booking_guest = nil
       ActiveRecord::Base.transaction do

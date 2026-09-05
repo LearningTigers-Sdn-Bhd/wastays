@@ -27,7 +27,7 @@ module BookingGuests
       candidate.created_by_hotel = @group_booking.hotel unless guest.persisted?
       return Result.new(false, candidate, [], candidate.errors.full_messages) unless candidate.valid?
 
-      normalized = candidate.attributes.symbolize_keys.slice(*BookingGuests::Add::SNAPSHOT_ATTRIBUTES)
+      normalized = candidate.attributes.symbolize_keys.slice(*BookingGuests::Add::EDITABLE_ATTRIBUTES)
 
       booking_guests = []
       ActiveRecord::Base.transaction do

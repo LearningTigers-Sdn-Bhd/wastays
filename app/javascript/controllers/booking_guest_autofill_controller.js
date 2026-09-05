@@ -7,7 +7,7 @@ export default class extends Controller {
     "addressField", "addressInput", "cityField", "stateField", "postalCodeField",
     "addressCountryField", "addressToggle",
     "identityField", "identityToggle",
-    "documentTypeField", "governmentIdField", "passportNumberField"
+    "documentTypeField", "governmentIdField", "passportNumberField", "tinField"
   ]
 
   selectGuest(event) {
@@ -42,6 +42,9 @@ export default class extends Controller {
     if (this.hasGovernmentIdFieldTarget) this.setControl(this.governmentIdFieldTarget, guest.government_id)
     if (this.hasPassportNumberFieldTarget) this.setControl(this.passportNumberFieldTarget, guest.passport_number)
     if (guest.document_type || guest.government_id || guest.passport_number) this.showIdentity()
+    // Only a sheet that offers a tax number gets one. The booking sheet takes
+    // the stay's number on the billing rail, not here.
+    if (this.hasTinFieldTarget) this.setControl(this.tinFieldTarget, guest.tin)
 
     this.existingGuestIdTarget.value = result.value
     this.linkedNameTarget.textContent = guest.name || result.label || "Existing guest"
