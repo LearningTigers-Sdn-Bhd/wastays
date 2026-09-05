@@ -738,6 +738,8 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(response).to have_http_status(:success)
       expect(body_text).to include("Lifetime value")
       expect(body_text).to include("<tfoot>")
+      # The stays table scrolls inside 80dvh rather than running past the fold.
+      expect(body_text).to include("max-h-[80dvh]")
       expect(body_text).to include("Booking History")
       expect(body_text).to include("Confirmation")
       expect(body_text).to include("Pre-check-in")
