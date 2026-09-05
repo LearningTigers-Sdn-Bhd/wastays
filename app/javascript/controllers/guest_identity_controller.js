@@ -60,8 +60,11 @@ export default class extends Controller {
     if (this.hasNumberLabelTarget) {
       const label = this.numberLabelTarget.matches?.("label") ? this.numberLabelTarget : this.numberLabelTarget.querySelector("label")
       if (!label) return
-      label.textContent = type === "passport" ? "Passport number" :
-        (nationalId ? "National identity card number" : "MyKad number")
+      // Same wording as GuestPresenter#identity_number_label. The server paints
+      // it first; this only keeps up once the desk changes the document type.
+      label.textContent = !type ? "Identity document number" :
+        (type === "passport" ? "Passport number" :
+          (nationalId ? "National identity card number" : "MyKad number"))
     }
   }
 }

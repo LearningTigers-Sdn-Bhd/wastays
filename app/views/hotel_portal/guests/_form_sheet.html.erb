@@ -6,6 +6,10 @@
 <% persisted = guest.persisted? %>
 <% form_id = persisted ? "edit-guest-#{guest.id}-form" : "new-guest-form" %>
 <% country_choices = COUNTRY_OPTIONS.map { |country| [ country, country ] } %>
+<%# The document type and the number's label are settled here, not worked out by
+    guest-identity on connect. Reading them in the browser swapped the type and
+    rewrote the label after the sheet had already painted. %>
+<% presenter = Guests::GuestPresenter.new(guest) %>
 
 <%= turbo_frame_tag frame_id do %>
   <div data-controller="panels-ui--sheet-frame">
@@ -127,7 +131,7 @@
                      Booking::DOCUMENT_TYPES.map { |label, value| { label:, value: } },
                      include_blank: true,
                      prompt: "Select document type",
-                     selected: guest.document_type,
+                     selected: presenter.normalized_document_type,
                      data: {
                        guest_dob_target: "documentType",
                        guest_identity_target: "documentType",
@@ -136,7 +140,7 @@
                      }) %>
               <% end %>
 
-              <%= render PanelsUI::FormField.new(form: form, attribute: :government_id, label: "Identity document number", data: { guest_identity_target: "numberLabel" }) do |field| %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :government_id, label: presenter.identity_number_label, data: { guest_identity_target: "numberLabel" }) do |field| %>
                 <% field.with_input(
                      placeholder: "Enter ID number",
                      data: {
@@ -146,13 +150,13 @@
                      }) %>
               <% end %>
 
-              <div class="sm:col-span-2" data-guest-identity-target="passportRow" <%= "hidden" unless guest.document_type == "national_id" %>>
+              <div class="sm:col-span-2" data-guest-identity-target="passportRow" <%= "hidden" unless presenter.normalized_document_type == "national_id" %>>
                 <div class="grid gap-4 sm:grid-cols-2 sm:col-span-2">
                   <%= render PanelsUI::FormField.new(form: form, attribute: :lhdn_document_type, label: "LHDN document type", disabled: true) do |field| %>
                     <% field.with_input(value: "Passport", readonly: true) %>
                   <% end %>
                   <%= render PanelsUI::FormField.new(form: form, attribute: :passport_number, label: "Passport number", hint: "Required for an individual e-invoice.") do |field| %>
-                    <% field.with_input(autocomplete: "off", spellcheck: false, disabled: guest.document_type != "national_id", data: { guest_identity_target: "passportInput", tin_validation_target: "passportNumber", action: "blur->tin-validation#check" }) %>
+                    <% field.with_input(autocomplete: "off", spellcheck: false, disabled: presenter.normalized_document_type != "national_id", data: { guest_identity_target: "passportInput", tin_validation_target: "passportNumber", action: "blur->tin-validation#check" }) %>
                   <% end %>
                 </div>
               </div>
