@@ -53,7 +53,7 @@ module HotelPortal
         CurrencyFormatter.format(
           @summary.standard_rate.amount,
           currency: @summary.standard_rate.currency,
-          symbol: false
+          unit: :none
         )
       end
 

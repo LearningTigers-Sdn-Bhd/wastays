@@ -665,7 +665,7 @@ module HotelPortal
     end
 
     def money(amount)
-      "#{currency} #{number_with_delimiter(number_with_precision(amount.to_d, precision: 2))}"
+      CurrencyFormatter.format(amount.to_d, currency: currency, unit: :code)
     end
 
     def amount_label(amount)

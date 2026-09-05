@@ -1,0 +1,15 @@
+<div <%= tag.attributes(root_attributes) %>>
+  <div class="flex min-w-0 items-center gap-1.5">
+    <span class="min-w-0 truncate text-sm font-medium text-foreground" aria-live="polite" <%= tag.attributes(data: count_data) %>><%= empty_label %></span>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :icon_xs, class: "size-11 shrink-0 sm:size-6", aria: { label: "Clear selection" }, data: clear_data) do %>
+      <%= helpers.app_icon "x", class: "size-3.5", aria: { hidden: true } %>
+    <% end %>
+  </div>
+
+  <% if actions.any? %>
+    <div class="hidden h-4 w-px shrink-0 bg-border lg:block" aria-hidden="true"></div>
+    <div class="flex shrink-0 items-center gap-2">
+      <% actions.each do |action| %><%= action %><% end %>
+    </div>
+  <% end %>
+</div>

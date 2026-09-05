@@ -83,6 +83,15 @@
     white-space: nowrap;
   }
 
+  /* A toned card carries its status in the figure and the icon, so the state
+     reads before the words do. Neutral is the default and stays quiet. */
+  .panel-metric-card[data-tone="success"] .panel-metric-card__value,
+  .panel-metric-card[data-tone="success"] .panel-metric-card__icon { color: var(--status-success-foreground, var(--success)); }
+  .panel-metric-card[data-tone="warning"] .panel-metric-card__value,
+  .panel-metric-card[data-tone="warning"] .panel-metric-card__icon { color: var(--status-warning-foreground, var(--warning)); }
+  .panel-metric-card[data-tone="destructive"] .panel-metric-card__value,
+  .panel-metric-card[data-tone="destructive"] .panel-metric-card__icon { color: var(--status-destructive-foreground, var(--destructive)); }
+
   .panel-metric-card__detail[data-variant="success"] { color: var(--status-success-foreground, var(--success)); }
   .panel-metric-card__detail[data-variant="warning"] { color: var(--status-warning-foreground, var(--warning)); }
   .panel-metric-card__detail[data-variant="destructive"] { color: var(--status-destructive-foreground, var(--destructive)); }

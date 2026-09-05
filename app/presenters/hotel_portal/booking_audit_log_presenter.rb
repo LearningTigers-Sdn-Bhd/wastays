@@ -50,7 +50,7 @@ module HotelPortal
     SENSITIVE_FIELDS = %w[
       email guest_email email_snapshot guest_email_snapshot
       phone guest_phone phone_snapshot guest_phone_snapshot
-      government_id government_id_snapshot guest_government_id
+      government_id government_id_snapshot guest_government_id passport_number guest_passport_number
       date_of_birth date_of_birth_snapshot guest_date_of_birth
       home_address guest_home_address body
     ].freeze

@@ -657,10 +657,18 @@ Rails.application.routes.draw do
         get :search
         get :check_banned
         delete :bulk_destroy
+        patch :bulk_vip
+        patch :bulk_unvip
+        patch :bulk_blacklist
+        patch :bulk_unblacklist
       end
       member do
-        patch :toggle_vip
-        patch :toggle_blacklist
+        get :details
+        get :booking_history
+        patch :vip
+        patch :unvip
+        patch :blacklist
+        patch :unblacklist
       end
     end
     resources :in_house_guests, only: [ :index ]

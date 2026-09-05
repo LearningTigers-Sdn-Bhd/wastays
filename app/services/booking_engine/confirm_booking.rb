@@ -32,7 +32,9 @@ module BookingEngine
 
         guest_country = normalize_country(@payment_details[:country])
         gender = @payment_details[:gender]&.downcase&.strip
-        document_type = @payment_details[:document_type]&.downcase&.strip
+        document_type = GuestIdentityDocuments::NormalizeType.call(
+          value: @payment_details[:document_type], country: guest_country
+        )
 
         financial_snapshot = Bookings::BuildFinancialSnapshot.new(
           hotel: @quote.hotel,
@@ -114,6 +116,7 @@ module BookingEngine
             phone: @payment_details[:guest_phone],
             city: @payment_details[:guest_city],
             government_id: @payment_details[:guest_government_id],
+            passport_number: @payment_details[:guest_passport_number],
             gender: gender,
             country: guest_country,
             document_type: document_type,
@@ -123,7 +126,7 @@ module BookingEngine
           ).call
 
           if guest_result.success?
-            booking.booking_guests.create!(guest: guest_result.guest, is_primary: true)
+            booking_guest = booking.booking_guests.create!(guest: guest_result.guest, is_primary: true)
           end
 
           # 4. Initialize Pre-checkin

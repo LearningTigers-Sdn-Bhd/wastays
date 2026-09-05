@@ -1,0 +1,47 @@
+<%# Nationality, gender and date of birth are who the guest is, so they sit
+    together here rather than with the document. guest-dob reads the nationality
+    and the ID number and writes the date in; the write is dispatched on the
+    date input, so it wakes this block's Save and no other. %>
+<% country_choices = COUNTRY_OPTIONS.map { |country| [ country, country ] } %>
+
+<%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Full name", required: true) do |field| %>
+  <% field.with_input(placeholder: "For example, John Doe", autocomplete: "name") %>
+<% end %>
+
+<div class="grid gap-4 sm:grid-cols-2">
+  <%= render PanelsUI::FormField.new(form: form, attribute: :email, label: "Email address") do |field| %>
+    <% field.with_input(type: :email, placeholder: "For example, john@example.com", autocomplete: "email") %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :phone, label: "Phone number") do |field| %>
+    <% field.with_input(type: :tel, placeholder: "For example, +60 12 345 6789", autocomplete: "tel") %>
+  <% end %>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-3">
+  <%= render PanelsUI::FormField.new(
+        form: form, attribute: :country, label: "Nationality", required: true) do |field| %>
+    <% field.with_combobox(
+         country_choices,
+         selected: guest.country,
+         prompt: "Search for a country",
+         data: {
+           guest_dob_target: "country",
+           guest_identity_target: "country",
+           tin_validation_target: "country",
+           action: "change->guest-dob#autofill change->guest-identity#refresh"
+         }) %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :gender, label: "Gender") do |field| %>
+    <% field.with_select_menu(
+         Guest::GENDERS.map { |gender| { label: gender.capitalize, value: gender } },
+         include_blank: true,
+         prompt: "Select gender",
+         selected: guest.gender) %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :date_of_birth, label: "Date of birth") do |field| %>
+    <% field.with_input(type: :date, data: { guest_dob_target: "dateOfBirth" }) %>
+  <% end %>
+</div>

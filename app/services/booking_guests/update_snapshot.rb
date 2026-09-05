@@ -4,9 +4,15 @@ module BookingGuests
   class UpdateSnapshot
     Result = Data.define(:success?, :errors)
     SNAPSHOT_ATTRIBUTES = %i[
-      name email phone government_id gender country document_type date_of_birth
-      home_address city state_code postal_code address_country
+      name email phone government_id passport_number gender country document_type
+      date_of_birth home_address city state_code postal_code address_country
     ].freeze
+    # The tax number has no snapshot column, and needs none. Booking#buyer_tin
+    # already reads the stay's own guest_tin ahead of the profile's tin, so the
+    # stay keeps its number on the booking and the person keeps theirs on the
+    # profile.
+    PROFILE_ATTRIBUTES = %i[tin].freeze
+    EDITABLE_ATTRIBUTES = (SNAPSHOT_ATTRIBUTES + PROFILE_ATTRIBUTES).freeze
     BIBO_ATTRIBUTES = %i[boat_in_at boat_out_at].freeze
 
     def self.call(booking_guest:, attributes:, actor:, update_profile: false, bibo_attributes: {})
@@ -17,7 +23,7 @@ module BookingGuests
       @booking_guest = booking_guest
       @booking = booking_guest.booking
       @guest = booking_guest.guest
-      @attributes = attributes.to_h.symbolize_keys.slice(*SNAPSHOT_ATTRIBUTES)
+      @attributes = attributes.to_h.symbolize_keys.slice(*EDITABLE_ATTRIBUTES)
       @bibo_attributes = bibo_attributes.to_h.symbolize_keys.slice(*BIBO_ATTRIBUTES)
       @actor = actor
       @update_profile = update_profile
@@ -28,7 +34,7 @@ module BookingGuests
       candidate.assign_attributes(@attributes)
       return Result.new(false, candidate.errors.full_messages) unless candidate.valid?
 
-      normalized = candidate.attributes.symbolize_keys.slice(*SNAPSHOT_ATTRIBUTES)
+      normalized = candidate.attributes.symbolize_keys.slice(*EDITABLE_ATTRIBUTES)
       old_values = snapshot_values
 
       ActiveRecord::Base.transaction do
@@ -46,11 +52,12 @@ module BookingGuests
     private
 
     def snapshot_updates(values)
-      values.to_h { |key, value| [ :"#{key}_snapshot", value ] }
+      values.slice(*SNAPSHOT_ATTRIBUTES).to_h { |key, value| [ :"#{key}_snapshot", value ] }
     end
 
     def snapshot_values
       SNAPSHOT_ATTRIBUTES.to_h { |key| [ key.to_s, @booking_guest.public_send(:"#{key}_snapshot") ] }
+        .merge("tin" => @booking.guest_tin)
         .merge(BIBO_ATTRIBUTES.to_h { |key| [ key.to_s, @booking_guest.public_send(key) ] })
     end
 
@@ -66,9 +73,14 @@ module BookingGuests
         guest_address_country: values[:address_country],
         guest_gender: values[:gender],
         guest_document_type: values[:document_type],
-        guest_home_address: values[:home_address]
+        guest_government_id: values[:government_id],
+        guest_passport_number: values[:passport_number],
+        guest_date_of_birth: values[:date_of_birth],
+        guest_home_address: values[:home_address],
+        guest_tin: values[:tin]
       )
     end
+
 
     def record_audit!(old_values, values)
       Bookings::RecordAuditLog.call!(

@@ -29,15 +29,24 @@ module EInvoice
 
     def self.call(...) = new(...).call
 
-    def initialize(tin:, id_value:, document_type: nil, setting: nil)
+    def initialize(tin:, id_value:, document_type: nil, passport_number: nil, country: nil, setting: nil)
       @tin = tin.to_s.strip
-      @id_value = id_value.to_s.gsub(/[^A-Za-z0-9]/, "")
-      @document_type = document_type
+      @identity = EInvoice::GuestIdentityResolver.from_values(
+        document_type: document_type,
+        document_number: id_value,
+        passport_number: passport_number,
+        country: country
+      )
+      @id_value = @identity.document_number.to_s.gsub(/[^A-Za-z0-9]/, "")
+      @document_type = @identity.document_type
       @setting = setting
     end
 
     def call
       return unknown("Enter a tax number to check it.") if @tin.blank?
+      if @identity.missing_passport?
+        return unknown("Enter the guest's passport number before issuing an individual e-invoice.")
+      end
       return unknown("Enter the guest's IC, passport or business registration number to check the tax number.") if @id_value.blank?
       return unknown("Connect this hotel's LHDN account before checking tax numbers.") unless checkable?
 

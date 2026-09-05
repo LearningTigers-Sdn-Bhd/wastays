@@ -51,7 +51,7 @@
         </div>
       </div>
 
-      <div class="card p-6 md:p-8" data-controller="scanner guest-dob">
+      <div class="card p-6 md:p-8" data-controller="scanner guest-dob guest-identity">
         <% if @presenter.completed? %>
           <div class="rounded-2xl border border-green-200 bg-green-50 p-6">
             <h2 class="text-xl font-black text-foreground">Pre check-in completed</h2>
@@ -86,12 +86,24 @@
 
                 <div>
                   <%= f.label :guest_document_type, "Document Type", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
-                  <%= f.select :guest_document_type, @presenter.document_type_options, {}, class: "form-input py-3 px-5 border border-border", required: true, data: { guest_dob_target: "documentType", pre_checkin_document_target: "select", action: "change->guest-dob#autofill change->pre-checkin-document#toggleUploads" } %>
+                  <%= f.select :guest_document_type, @presenter.document_type_options, {}, class: "form-input py-3 px-5 border border-border", required: true, data: { guest_dob_target: "documentType", guest_identity_target: "documentType", pre_checkin_document_target: "select", action: "change->guest-dob#autofill change->guest-identity#documentChanged change->pre-checkin-document#toggleUploads" } %>
                 </div>
 
                 <div>
-                  <%= f.label :guest_government_id, "ID / Passport Number", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+                  <%= f.label :guest_government_id, "Identity document number", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2", data: { guest_identity_target: "numberLabel" } %>
                   <%= f.text_field :guest_government_id, class: "form-input py-3 px-5 border border-border", required: true, placeholder: "e.g. 900101011234", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" } %>
+                </div>
+
+                <div class="md:col-span-2 grid gap-4 md:grid-cols-2" data-guest-identity-target="passportRow" <%= "hidden" unless @booking.guest_document_type == "national_id" %>>
+                  <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">LHDN document type</label>
+                    <input type="text" value="Passport" readonly class="form-input py-3 px-5 border border-border bg-muted">
+                  </div>
+                  <div>
+                    <%= f.label :guest_passport_number, "Passport number", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
+                    <%= f.text_field :guest_passport_number, class: "form-input py-3 px-5 border border-border", disabled: @booking.guest_document_type != "national_id", data: { guest_identity_target: "passportInput" } %>
+                    <p class="mt-1 text-xs text-muted-foreground">Required for an individual e-invoice.</p>
+                  </div>
                 </div>
 
                 <div>
@@ -152,7 +164,7 @@
                   <%= f.select :guest_country,
                         country_options,
                         { selected: @presenter.guest_country_default, prompt: "Select nationality" },
-                        class: "form-input py-3 px-5 border border-border", required: true, data: { guest_dob_target: "country", action: "change->guest-dob#autofill" } %>
+                        class: "form-input py-3 px-5 border border-border", required: true, data: { guest_dob_target: "country", guest_identity_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" } %>
                 </div>
 
                 <div data-controller="time-picker">

@@ -6,6 +6,7 @@
       <p class="text-xs font-black uppercase tracking-widest text-primary">Guest Registration Card</p>
       <h1 class="mt-2 text-3xl font-black text-foreground"><%= @hotel.name %></h1>
       <p class="mt-2 text-sm text-muted-foreground">Registration No. <%= @booking.guest_registration_card_number_display %></p>
+      <p class="mt-1 text-xs text-muted-foreground"><%= @presenter.hotel_registration_display %></p>
     </div>
 
     <% if flash[:notice].present? %>
@@ -64,13 +65,6 @@
         </dl>
       </div>
 
-      <% if @presenter.terms_and_conditions.present? %>
-        <div class="card p-6 md:p-8">
-          <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Terms &amp; Conditions</h2>
-          <div class="mt-3 text-sm text-muted-foreground whitespace-pre-wrap"><%= @presenter.terms_and_conditions %></div>
-        </div>
-      <% end %>
-
       <% if @presenter.terms.present? && @presenter.cancellation_summary.present? %>
         <div class="card p-6 md:p-8">
           <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Cancellation Policy</h2>
@@ -83,7 +77,12 @@
       <div class="card p-6 md:p-8">
         <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Signature</h2>
         <p class="mt-2 text-sm text-muted-foreground">
-          Please read the terms and conditions above carefully. Your signature confirms you have reviewed the check-in, check-out, and hotel policy terms shown on this card.
+          Please read the terms and conditions carefully. Your signature confirms you have reviewed the check-in, check-out, and hotel policy terms shown on this card.
+          <% if @presenter.terms_and_conditions.present? %>
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :xs,
+                  command: "show-modal", commandfor: "grc-terms-dialog",
+                  class: "mt-1 h-auto p-0 underline") do %>View T&amp;C<% end %>
+          <% end %>
         </p>
 
         <% if @card.signed? && @card.signature_data_url.present? %>
@@ -121,5 +120,13 @@
         <% end %>
       </div>
     </div>
+
+    <% if @presenter.terms_and_conditions.present? %>
+      <%= render PanelsUI::Dialog.new(id: "grc-terms-dialog", title: "Terms & Conditions", size: :lg) do |dialog| %>
+        <% dialog.with_body do %>
+          <div class="whitespace-pre-wrap text-sm text-foreground"><%= @presenter.terms_and_conditions %></div>
+        <% end %>
+      <% end %>
+    <% end %>
   </div>
 </div>

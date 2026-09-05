@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_092000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_094000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -412,6 +412,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_092000) do
     t.string "home_address_snapshot"
     t.boolean "is_primary"
     t.string "name_snapshot"
+    t.string "passport_issuing_country_code_snapshot", limit: 3
+    t.string "passport_number_snapshot"
     t.string "phone_snapshot"
     t.string "postal_code_snapshot"
     t.string "role", default: "additional", null: false
@@ -1345,6 +1347,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_092000) do
     t.string "name"
     t.string "otp_code_digest"
     t.datetime "otp_sent_at"
+    t.string "passport_issuing_country_code", limit: 3
+    t.string "passport_number"
     t.string "phone"
     t.string "postal_code"
     t.string "state_code"
@@ -1355,6 +1359,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_092000) do
     t.index ["created_by_hotel_id"], name: "index_guests_on_created_by_hotel_id"
     t.index ["discarded_at"], name: "index_guests_on_discarded_at"
     t.index ["magic_token_digest"], name: "index_guests_on_magic_token_digest", unique: true, where: "(magic_token_digest IS NOT NULL)"
+    t.index ["passport_number"], name: "index_guests_on_passport_number"
   end
 
   create_table "hotel_boat_schedules", force: :cascade do |t|

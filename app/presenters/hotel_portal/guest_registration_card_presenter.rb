@@ -111,7 +111,7 @@ module HotelPortal
     end
 
     def guest_identity
-      active_booking_guest&.government_id_snapshot.presence ||
+      active_booking_guest&.safely_read_encrypted(:government_id_snapshot).presence ||
         (active_booking_guest&.primary? ? @booking.guest_government_id.presence : nil) ||
         "Not provided"
     end
@@ -144,6 +144,14 @@ module HotelPortal
 
     def hotel_address_display
       [ hotel.city, hotel.country ].compact_blank.join(", ")
+    end
+
+    # Mirrors the dash-for-missing convention used elsewhere (e.g. Reports::HotelIdentifierLine)
+    # so an unregistered hotel still says so rather than silently dropping the line.
+    def hotel_registration_display
+      [ [ "Reg. No", hotel.ssm_number ], [ "SST", hotel.sst_registration_number ] ]
+        .map { |label, value| "#{label}: #{value.presence || '-'}" }
+        .join(" · ")
     end
 
     def boat_transfer?

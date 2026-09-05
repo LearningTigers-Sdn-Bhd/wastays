@@ -13,24 +13,41 @@
 module SheetActionCompletion
   extend ActiveSupport::Concern
 
+  included do
+    include Toastable
+  end
+
   private
 
   def complete_sheet_action(destination:, notice:, frame:, html_status: :see_other)
     respond_to do |format|
       format.turbo_stream do
-        flash[:notice] = notice
-        render_sheet_action_completion(destination, frame: frame)
+        # A destination that names a parent frame reloads that frame alone, so
+        # the layout never re-renders and the flash region with it. Send the
+        # toast in the same response instead of leaving it in the session,
+        # where it would surface on some later full page load.
+        if parent_frame_reload?(destination)
+          render_sheet_action_completion(destination, frame: frame, notice: notice)
+        else
+          flash[:notice] = notice
+          render_sheet_action_completion(destination, frame: frame)
+        end
       end
       format.html { redirect_to destination, notice: notice, status: html_status }
     end
   end
 
-  def render_sheet_action_completion(destination, frame:)
-    render body: helpers.turbo_stream_action_tag(
-      :complete_sheet,
-      target: frame,
-      url: destination
-    ), content_type: Mime[:turbo_stream]
+  def render_sheet_action_completion(destination, frame:, notice: nil)
+    body = helpers.turbo_stream_action_tag(:complete_sheet, target: frame, url: destination)
+    body += toast_stream(notice, type: :success) if notice.present?
+
+    render body: body, content_type: Mime[:turbo_stream]
+  end
+
+  def parent_frame_reload?(destination)
+    Rack::Utils.parse_nested_query(URI.parse(destination.to_s).query)["parent_frame"].present?
+  rescue URI::InvalidURIError
+    false
   end
 
   # Only same-origin paths inside the current hotel are honoured, so a crafted

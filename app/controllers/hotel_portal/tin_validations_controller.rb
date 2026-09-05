@@ -12,6 +12,8 @@ module HotelPortal
         tin: params[:tin],
         id_value: params[:id_value],
         document_type: params[:document_type],
+        passport_number: params[:passport_number],
+        country: params[:country],
         setting: current_hotel.e_invoice_setting
       )
 

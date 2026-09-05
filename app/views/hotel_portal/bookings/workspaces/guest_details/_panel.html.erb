@@ -6,13 +6,20 @@
     <% return_to = presenter.guest_details_return_to %>
     <% snapshots = presenter.guest_details_snapshots %>
     <% country_choices = COUNTRY_OPTIONS.map { |country| [country, country] } %>
+    <% sections = Guests::GuestPresenter::SECTIONS %>
+    <% editable = presenter.can_manage_bookings?(current_user) %>
 
     <%= form_with model: presenter.selected_guest,
         url: hotel_booking_workspace_path(current_hotel, entity_booking, tab: "guest_details", booking_guest_id: presenter.selected_booking_guest.id),
         method: :patch,
         id: "guest-details-form",
         class: "flex min-h-0 flex-1 flex-col bg-card",
-        data: { turbo: false, controller: "guest-details-editor guest-dob", action: "input->guest-details-editor#markDirty change->guest-details-editor#markDirty submit->guest-details-editor#submit" } do |form| %>
+        data: {
+          turbo: false,
+          controller: "guest-details-editor guest-dob guest-identity tin-validation",
+          tin_validation_url_value: hotel_validate_tin_path(current_hotel),
+          action: "input->guest-details-editor#markDirty change->guest-details-editor#markDirty submit->guest-details-editor#submit"
+        } do |form| %>
       <%= hidden_field_tag :return_to, return_to %>
       <%= hidden_field_tag :presentation, "booking_workspace" %>
 
@@ -27,92 +34,147 @@
             </div>
           <% end %>
 
-          <%# Two columns at lg: who the guest is on the left, what documents and
-              transfers they arrived with on the right. Each section pairs its own
-              fields, so the columns stack below lg without the pairing changing. %>
+          <%# Four blocks, named and described by GuestPresenter::SECTIONS, the
+              same copy the guest record page reads. The workspace still saves
+              them as one form through the save-scope dialog; only the wording
+              is shared, not the per-block Save.
+
+              Two columns at lg: who the guest is on the left, what they can be
+              billed against on the right. Each block pairs its own fields, so
+              the columns stack below lg without the pairing changing. %>
           <div class="grid gap-x-8 gap-y-10 lg:grid-cols-2 lg:items-start">
-            <%= render PanelsUI::FieldSet.new(
-                  legend: "Guest details",
-                  description: "Guest details recorded for this stay.",
-                  disabled: !presenter.can_manage_bookings?(current_user)) do %>
-              <%= render PanelsUI::FieldGroup.new do %>
-              <div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
-                <div class="sm:col-span-2">
+            <div class="space-y-10">
+              <%= render PanelsUI::FieldSet.new(
+                    legend: sections["identity"][:title],
+                    description: sections["identity"][:description],
+                    disabled: !editable) do %>
+                <%= render PanelsUI::FieldGroup.new do %>
                   <%= render PanelsUI::FormField.new(form:, attribute: :booking_assignment, label: "Booking", hint: "A guest stay record remains attached to its current room.", disabled: true) do |field| %>
                     <% field.with_select_menu([[presenter.selected_entity_label, entity_booking.id]], selected: entity_booking.id) %>
                   <% end %>
-                </div>
-                <div class="sm:col-span-2">
+
                   <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Full name", required: true) do |field| %>
                     <% field.with_input(value: snapshots[:name], autocomplete: "name", placeholder: "Enter full name") %>
                   <% end %>
-                </div>
-                <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email") do |field| %>
-                  <% field.with_input(type: :email, value: snapshots[:email], autocomplete: "email", spellcheck: false, placeholder: "guest@example.com") %>
+
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email") do |field| %>
+                      <% field.with_input(type: :email, value: snapshots[:email], autocomplete: "email", spellcheck: false, placeholder: "guest@example.com") %>
+                    <% end %>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone") do |field| %>
+                      <% field.with_input(type: :tel, value: snapshots[:phone], autocomplete: "tel", placeholder: "+60 12-345 6789") %>
+                    <% end %>
+                  </div>
+
+                  <%# guest-dob reads the nationality and the ID number and writes
+                      the date in, so the field it writes sits beside the fields it
+                      reads, as it does on the guest record. %>
+                  <div class="grid gap-4 sm:grid-cols-3">
+                    <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true) do |field| %>
+                      <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", guest_identity_target: "country", tin_validation_target: "country", action: "change->guest-dob#autofill change->guest-identity#refresh" }) %>
+                    <% end %>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
+                      <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
+                    <% end %>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
+                      <% field.with_date_picker(
+                           value: snapshots[:date_of_birth]&.to_date&.iso8601,
+                           max: Date.yesterday,
+                           caption_layout: :dropdown,
+                           year_range: (Date.current.year - 120)..Date.current.year,
+                           placeholder: "Select date of birth",
+                           data: { guest_dob_target: "dateOfBirth" }) %>
+                    <% end %>
+                  </div>
                 <% end %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :phone, label: "Phone") do |field| %>
-                  <% field.with_input(type: :tel, value: snapshots[:phone], autocomplete: "tel", placeholder: "+60 12-345 6789") %>
-                <% end %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :gender, label: "Gender") do |field| %>
-                  <% field.with_select_menu([["Male", "male"], ["Female", "female"], ["Other", "other"]], selected: snapshots[:gender], prompt: "Select a gender") %>
-                <% end %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Nationality", required: true) do |field| %>
-                  <% field.with_combobox(country_choices, selected: snapshots[:country], prompt: "Search for a country", data: { guest_dob_target: "country", action: "change->guest-dob#autofill" }) %>
-                <% end %>
-                <div class="sm:col-span-2">
-                  <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Street address") do |field| %>
-                    <% field.with_text_area(value: snapshots[:home_address], rows: 2, placeholder: "Street, building, and unit") %>
-                  <% end %>
-                </div>
-                <%= render PanelsUI::FormField.new(form:, attribute: :city, label: "City") do |field| %>
-                  <% field.with_input(value: snapshots[:city], autocomplete: "address-level2") %>
-                <% end %>
-                <%= render "shared/state_code_field", form:, attribute: :state_code, value: snapshots[:state_code],
-                      country: snapshots[:address_country] %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :postal_code, label: "Postcode") do |field| %>
-                  <% field.with_input(value: snapshots[:postal_code], autocomplete: "postal-code") %>
-                <% end %>
-                <%= render PanelsUI::FormField.new(form:, attribute: :address_country, label: "Address country",
-                      data: { address_state_target: "country", action: "change->address-state#refresh input->address-state#refresh" }) do |field| %>
-                  <% field.with_combobox(country_choices, selected: snapshots[:address_country], prompt: "Search for a country") %>
-                <% end %>
-              </div>
               <% end %>
-            <% end %>
+
+              <%= render PanelsUI::FieldSet.new(
+                    legend: sections["address"][:title],
+                    description: sections["address"][:description],
+                    disabled: !editable) do %>
+                <%= render PanelsUI::FieldGroup.new do %>
+                  <div class="grid gap-4 sm:grid-cols-2" data-controller="address-state">
+                    <div class="sm:col-span-2">
+                      <%= render PanelsUI::FormField.new(form:, attribute: :home_address, label: "Street address") do |field| %>
+                        <% field.with_text_area(value: snapshots[:home_address], rows: 2, placeholder: "Street, building, and unit") %>
+                      <% end %>
+                    </div>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :city, label: "City") do |field| %>
+                      <% field.with_input(value: snapshots[:city], autocomplete: "address-level2") %>
+                    <% end %>
+                    <%= render "shared/state_code_field", form:, attribute: :state_code, value: snapshots[:state_code],
+                          country: snapshots[:address_country] %>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :postal_code, label: "Postcode") do |field| %>
+                      <% field.with_input(value: snapshots[:postal_code], autocomplete: "postal-code") %>
+                    <% end %>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :address_country, label: "Address country",
+                          data: { address_state_target: "country", action: "change->address-state#refresh input->address-state#refresh" }) do |field| %>
+                      <% field.with_combobox(country_choices, selected: snapshots[:address_country], prompt: "Search for a country") %>
+                    <% end %>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
 
             <div class="space-y-10">
               <%= render PanelsUI::FieldSet.new(
-                  legend: "Identity information",
-                  description: "Use the identification presented by the guest.",
-                  disabled: !presenter.can_manage_bookings?(current_user)) do %>
-              <%= render PanelsUI::FieldGroup.new do %>
-                <div class="grid gap-4 sm:grid-cols-2">
-                  <%= render PanelsUI::FormField.new(form:, attribute: :document_type, label: "Document type") do |field| %>
-                    <% field.with_select_menu([["IC", "ic"], ["Passport", "passport"]], selected: snapshots[:document_type], prompt: "Select a document type", data: { guest_dob_target: "documentType", action: "change->guest-dob#autofill" }) %>
-                  <% end %>
-                  <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, label: "Date of birth") do |field| %>
-                    <% field.with_date_picker(
-                         value: snapshots[:date_of_birth]&.to_date&.iso8601,
-                         max: Date.yesterday,
-                         caption_layout: :dropdown,
-                         year_range: (Date.current.year - 120)..Date.current.year,
-                         placeholder: "Select date of birth",
-                         data: { guest_dob_target: "dateOfBirth" }) %>
-                  <% end %>
-                  <div class="sm:col-span-2">
-                    <%= render PanelsUI::FormField.new(form:, attribute: :government_id, label: "IC / Passport no.") do |field| %>
-                      <% field.with_input(value: snapshots[:government_id], autocomplete: "off", spellcheck: false, placeholder: "Enter IC or passport number", data: { guest_dob_target: "governmentId", action: "input->guest-dob#autofill" }) %>
-                    <% end %>
+                    legend: sections["verification"][:title],
+                    description: sections["verification"][:description],
+                    disabled: !editable) do %>
+                <%= render PanelsUI::FieldGroup.new do %>
+                  <%# The document type, its number and the passport row come from
+                      shared/identity_document_fields, the same partial the guest
+                      record and the booking sheets use. The type is already
+                      settled by the presenter, so no country is passed here. %>
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <%= render "shared/identity_document_fields",
+                          form: form,
+                          document_type_attribute: :document_type,
+                          government_id_attribute: :government_id,
+                          passport_number_attribute: :passport_number,
+                          document_type: snapshots[:document_type],
+                          government_id: snapshots[:government_id],
+                          passport_number: snapshots[:passport_number],
+                          government_id_placeholder: "Enter document number",
+                          document_type_data: { guest_dob_target: "documentType", tin_validation_target: "documentType", action: "change->guest-dob#autofill change->guest-identity#documentChanged change->tin-validation#check" },
+                          government_id_data: { guest_dob_target: "governmentId", tin_validation_target: "idValue", action: "input->guest-dob#autofill blur->tin-validation#check" },
+                          passport_number_data: { tin_validation_target: "passportNumber", action: "blur->tin-validation#check" } %>
                   </div>
-                </div>
+                <% end %>
               <% end %>
-            <% end %>
+
+              <%# Booking#buyer_tin reads the stay's own number ahead of the
+                  profile's, and only for the primary guest, so only that guest
+                  has somewhere for a stay-level number to go. %>
+              <% if presenter.selected_booking_guest.primary? %>
+                <%= render PanelsUI::FieldSet.new(
+                      legend: sections["tax"][:title],
+                      description: sections["tax"][:description],
+                      disabled: !editable) do %>
+                  <%= render PanelsUI::FieldGroup.new do %>
+                    <%# Checked against LHDN here so a wrong digit is caught now,
+                        not when the e-invoice is rejected days later. %>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :tin, label: "Tax identification number") do |field| %>
+                      <%# An individual's LHDN TIN carries the IG prefix. A company
+                          uses C, and a company bills through a corporate account. %>
+                      <% field.with_input(
+                           value: snapshots[:tin],
+                           placeholder: "For example, IG5678901234",
+                           autocomplete: "off",
+                           spellcheck: false,
+                           data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
+                    <% end %>
+                    <p data-tin-validation-target="feedback" class="-mt-2 text-xs text-muted-foreground" hidden></p>
+                  <% end %>
+                <% end %>
+              <% end %>
 
               <% if presenter.boat_schedule.enabled? %>
                 <%= render PanelsUI::FieldSet.new(
                       legend: "Boat transfer",
                       description: "Pick the transfer slots this guest is booked on.",
-                      disabled: !presenter.can_manage_bookings?(current_user)) do %>
+                      disabled: !editable) do %>
                   <%= render PanelsUI::FieldGroup.new do %>
                     <%= fields_for :booking_guest, presenter.guest_details_booking_guest_form do |booking_guest_form| %>
                       <%= render "hotel_portal/bookings/boat_transfer_fields",

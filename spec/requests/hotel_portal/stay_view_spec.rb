@@ -291,7 +291,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
       expect(rates.size).to eq(7)
       expect(rates.first.text).to eq("145.00")
       expect(rates.first["aria-label"]).to end_with("145.00 #{master_plan.currency}")
-      expect(rates[1].text).to eq(CurrencyFormatter.format(room_type.base_price, currency: master_plan.currency, symbol: false))
+      expect(rates[1].text).to eq(CurrencyFormatter.format(room_type.base_price, currency: master_plan.currency, unit: :none))
 
       get hotel_stay_view_path(hotel, view: "rooms", date: Date.current)
 

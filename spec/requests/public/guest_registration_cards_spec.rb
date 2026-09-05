@@ -28,6 +28,14 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
       expect(response.body).to include("Sign registration card")
     end
 
+    it "shows the hotel's registration number and SST" do
+      hotel.update!(ssm_number: "SSM-12345", sst_registration_number: "SST-67890")
+
+      get guest_registration_card_path(card.public_token)
+
+      expect(response.body).to include("Reg. No: SSM-12345", "SST: SST-67890")
+    end
+
     it "hides the address when the hotel disables it" do
       hotel.update!(guest_registration_card_fields: %w[phone email])
       booking.update!(guest_home_address: "12 Hidden Street, Kuching")

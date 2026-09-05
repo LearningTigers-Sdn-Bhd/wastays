@@ -297,6 +297,7 @@ module Bookings
         guest_gender: booking.guest_gender.presence || guest.gender,
         guest_document_type: booking.guest_document_type.presence || guest.document_type,
         guest_government_id: booking.guest_government_id.presence || guest.government_id,
+        guest_passport_number: booking.guest_passport_number.presence || guest.passport_number,
         guest_date_of_birth: booking.guest_date_of_birth.presence || guest.date_of_birth,
         guest_home_address: booking.guest_home_address.presence || guest.home_address
       )
@@ -352,15 +353,16 @@ module Bookings
     def matching_identity_with_selected_guest?(booking, selected_guest)
       normalized_email(booking.guest_email).present? && normalized_email(booking.guest_email) == normalized_email(selected_guest.email) ||
         normalized_phone(booking.guest_phone).present? && normalized_phone(booking.guest_phone) == normalized_phone(selected_guest.phone) ||
-        normalized_government_id(booking.guest_government_id).present? && normalized_government_id(booking.guest_government_id) == normalized_government_id(selected_guest.government_id)
+        submitted_document_numbers(booking).any? { |number| guest_document_numbers(selected_guest).include?(number) }
     end
 
     def identity_conflict_guest(booking, exclude_guest: nil)
       candidates = []
       candidates << Guest.find_by(email: normalized_email(booking.guest_email)) if normalized_email(booking.guest_email).present?
       candidates << Guest.find_by(phone: normalized_phone(booking.guest_phone)) if normalized_phone(booking.guest_phone).present?
-      if normalized_government_id(booking.guest_government_id).present?
-        candidates << Guest.find_by(government_id: normalized_government_id(booking.guest_government_id))
+      submitted_document_numbers(booking).each do |number|
+        candidates << Guest.find_by(government_id: number)
+        candidates << Guest.find_by(passport_number: number)
       end
 
       candidates.compact.find { |guest| exclude_guest.blank? || guest.id != exclude_guest.id }
@@ -379,6 +381,7 @@ module Bookings
         gender: booking.guest_gender,
         document_type: booking.guest_document_type,
         government_id: booking.guest_government_id,
+        passport_number: booking.guest_passport_number,
         date_of_birth: booking.guest_date_of_birth,
         home_address: booking.guest_home_address,
         created_by_hotel_id: @hotel.id
@@ -409,6 +412,18 @@ module Bookings
 
       guest.update!(updates) if updates.any?
     end
+
+    def submitted_document_numbers(booking)
+      [ booking.guest_government_id, booking.guest_passport_number ].filter_map do |number|
+        normalized_government_id(number).presence
+      end
+    end
+
+    def guest_document_numbers(guest)
+      [ guest.safely_read_encrypted(:government_id), guest.safely_read_encrypted(:passport_number) ]
+        .filter_map { |number| normalized_government_id(number).presence }
+    end
+
     def normalized_email(value)
       value.to_s.downcase.strip
     end

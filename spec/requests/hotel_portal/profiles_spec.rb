@@ -56,9 +56,9 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       forms.each do |form|
         save = form.at_css("button[type='submit'][data-form-dirty-target='submit']")
         expect(save.text.squish).to eq("Save")
-        # Enabled server-side: the Stimulus controller switches it off on connect,
-        # so a page without JS is left with a Save that still works.
-        expect(save[:disabled]).to be_nil
+        # Disabled server-side: a form that has just loaded has nothing to save,
+        # and rendering Save live flashed an enabled button on every load.
+        expect(save[:disabled]).to be_present
 
         cancel = form.at_css("button[type='reset'][data-form-dirty-target='cancel']")
         expect(cancel.text.squish).to eq("Cancel")

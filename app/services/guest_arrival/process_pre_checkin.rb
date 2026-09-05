@@ -16,6 +16,7 @@ module GuestArrival
       return OpenStruct.new(success?: false, message: "Pre-check-in was already completed.") if @pre_checkin.completed?
 
       submitted_government_id = @params.delete("guest_government_id")
+      submitted_passport_number = @params.delete("guest_passport_number")
       submitted_arrival_time = @params.delete("estimated_arrival_time")
       submitted_date_of_birth = @params["guest_date_of_birth"]
       signature_data = @params.delete("signature")
@@ -26,6 +27,7 @@ module GuestArrival
           message: "Guest signature is required.",
           submitted_arrival_time: submitted_arrival_time,
           submitted_government_id: submitted_government_id,
+          submitted_passport_number: submitted_passport_number,
           submitted_date_of_birth: submitted_date_of_birth
         )
       end
@@ -37,6 +39,7 @@ module GuestArrival
           message: "Street address, city, and address country are required.",
           submitted_arrival_time: submitted_arrival_time,
           submitted_government_id: submitted_government_id,
+          submitted_passport_number: submitted_passport_number,
           submitted_date_of_birth: submitted_date_of_birth
         )
       end
@@ -48,6 +51,7 @@ module GuestArrival
             message: "State is required for a Malaysian address.",
             submitted_arrival_time: submitted_arrival_time,
             submitted_government_id: submitted_government_id,
+            submitted_passport_number: submitted_passport_number,
             submitted_date_of_birth: submitted_date_of_birth
           )
         end
@@ -77,6 +81,7 @@ module GuestArrival
           email: @booking.guest_email,
           phone: @booking.guest_phone,
           government_id: submitted_government_id,
+          passport_number: submitted_passport_number,
           city: @booking.guest_city,
           state_code: @booking.guest_state_code,
           postal_code: @booking.guest_postal_code,
@@ -100,6 +105,7 @@ module GuestArrival
           signature_status: "signed",
           metadata: (@pre_checkin.metadata || {}).merge(
             guest_government_id: submitted_government_id,
+            guest_passport_number: submitted_passport_number,
             guest_date_of_birth: @booking.guest_date_of_birth,
             estimated_arrival_time: submitted_arrival_time,
             submitted_at: Time.current.iso8601
@@ -117,6 +123,7 @@ module GuestArrival
         message: e.message,
         submitted_arrival_time: submitted_arrival_time,
         submitted_government_id: submitted_government_id,
+        submitted_passport_number: submitted_passport_number,
         submitted_date_of_birth: submitted_date_of_birth
       )
     rescue => e
@@ -125,6 +132,7 @@ module GuestArrival
         message: "Pre-check-in failed: #{e.message}",
         submitted_arrival_time: submitted_arrival_time,
         submitted_government_id: submitted_government_id,
+        submitted_passport_number: submitted_passport_number,
         submitted_date_of_birth: submitted_date_of_birth
       )
     end

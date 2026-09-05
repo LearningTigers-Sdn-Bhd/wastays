@@ -22,7 +22,12 @@ class Public::PreCheckinsController < ApplicationController
     if result.success?
       redirect_to pre_checkin_path(@pre_checkin.token), notice: "Pre-check-in completed successfully!"
     else
-      prepare_form_values(result.submitted_arrival_time, result.submitted_government_id, result.submitted_date_of_birth)
+      prepare_form_values(
+        result.submitted_arrival_time,
+        result.submitted_government_id,
+        result.respond_to?(:submitted_passport_number) ? result.submitted_passport_number : nil,
+        result.submitted_date_of_birth
+      )
       @booking.errors.add(:base, result.message)
       render :show, status: :unprocessable_content
     end
@@ -56,10 +61,11 @@ class Public::PreCheckinsController < ApplicationController
     @presenter = Public::PreCheckinPresenter.new(@pre_checkin)
   end
 
-  def prepare_form_values(arrival_time = nil, government_id = nil, date_of_birth = nil)
+  def prepare_form_values(arrival_time = nil, government_id = nil, passport_number = nil, date_of_birth = nil)
     metadata = @pre_checkin.metadata || {}
     @booking.estimated_arrival_time = arrival_time.presence || metadata["estimated_arrival_time"].presence
     @booking.guest_government_id = government_id.presence || metadata["guest_government_id"].presence || @booking.primary_guest&.government_id
+    @booking.guest_passport_number = passport_number.presence || metadata["guest_passport_number"].presence || @booking.primary_guest&.passport_number
     @booking.guest_date_of_birth = date_of_birth.presence || metadata["guest_date_of_birth"].presence || @booking.primary_guest&.date_of_birth
   end
 
@@ -76,6 +82,7 @@ class Public::PreCheckinsController < ApplicationController
       :guest_country,
       :guest_document_type,
       :guest_government_id,
+      :guest_passport_number,
       :guest_date_of_birth,
       :guest_home_address,
       :id_front,

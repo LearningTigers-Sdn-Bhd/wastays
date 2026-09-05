@@ -141,7 +141,7 @@ RSpec.describe "Hotel portal request pages", type: :request do
     scroller = results.at_css(".panel-scroll-area")
     page_scroller = page.parent
 
-    expect(page["class"].split).not_to include("panel-page--workspace")
+    expect(page["class"].split).not_to include("panel-page--full-height")
     expect(page_scroller["class"].split).to include("overscroll-none")
     expect(page_scroller["class"].split).not_to include("overscroll-contain")
     expect(results["class"]).to be_blank

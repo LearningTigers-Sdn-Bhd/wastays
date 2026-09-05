@@ -22,7 +22,8 @@ RSpec.describe ApplicationHelper, type: :helper do
   describe "#format_currency" do
     it "delegates formatting to CurrencyFormatter with thousand separators" do
       expect(helper.format_currency(10000.5, currency: "MYR")).to eq("RM 10,000.50")
-      expect(helper.format_currency(10000.5, currency: "MYR", symbol: false)).to eq("10,000.50")
+      expect(helper.format_currency(10000.5, currency: "MYR", unit: :none)).to eq("10,000.50")
+      expect(helper.format_currency(10000.5, currency: "MYR", unit: :code)).to eq("MYR 10,000.50")
     end
   end
 

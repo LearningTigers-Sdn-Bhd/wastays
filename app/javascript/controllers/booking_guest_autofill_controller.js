@@ -5,7 +5,9 @@ export default class extends Controller {
     "nameField", "emailField", "phoneField", "dateOfBirthField", "genderField", "countryField",
     "existingGuestId", "profileRow", "linkedName", "linkedDescription", "blacklistWarning", "updateSwitch",
     "addressField", "addressInput", "cityField", "stateField", "postalCodeField",
-    "addressCountryField", "addressToggle"
+    "addressCountryField", "addressToggle",
+    "identityField", "identityToggle",
+    "documentTypeField", "governmentIdField", "passportNumberField", "tinField"
   ]
 
   selectGuest(event) {
@@ -32,6 +34,17 @@ export default class extends Controller {
     if (this.hasStateFieldTarget) this.setControl(this.stateFieldTarget, guest.state_code)
     if (this.hasPostalCodeFieldTarget) this.setControl(this.postalCodeFieldTarget, guest.postal_code)
     if (guest.city || guest.state_code || guest.postal_code || guest.address_country) this.showAddress()
+
+    // The document type goes in first. guest-identity reads it to enable the
+    // passport field and to rename the number label, so the two number fields
+    // must be written after that control has settled.
+    if (this.hasDocumentTypeFieldTarget) this.setControl(this.documentTypeFieldTarget, guest.document_type)
+    if (this.hasGovernmentIdFieldTarget) this.setControl(this.governmentIdFieldTarget, guest.government_id)
+    if (this.hasPassportNumberFieldTarget) this.setControl(this.passportNumberFieldTarget, guest.passport_number)
+    if (guest.document_type || guest.government_id || guest.passport_number) this.showIdentity()
+    // Only a sheet that offers a tax number gets one. The booking sheet takes
+    // the stay's number on the billing rail, not here.
+    if (this.hasTinFieldTarget) this.setControl(this.tinFieldTarget, guest.tin)
 
     this.existingGuestIdTarget.value = result.value
     this.linkedNameTarget.textContent = guest.name || result.label || "Existing guest"
@@ -75,15 +88,32 @@ export default class extends Controller {
     this.updateSwitchTarget.dispatchEvent(new Event("change", { bubbles: true }))
   }
 
-  toggleAddress(event) {
+  toggleIdentity(event) {
     event.preventDefault()
-    this.showAddress()
+    this.showIdentity({ focus: true })
   }
 
-  showAddress() {
+  // Picking a guest opens the block as a side effect, so focus moves only when
+  // the desk pressed the button itself.
+  showIdentity({ focus = false } = {}) {
+    if (!this.hasIdentityFieldTarget) return
+    this.identityFieldTarget.hidden = false
+    if (this.hasIdentityToggleTarget) this.identityToggleTarget.hidden = true
+    if (focus) this.identityFieldTarget.querySelector("select, input")?.focus()
+  }
+
+  toggleAddress(event) {
+    event.preventDefault()
+    this.showAddress({ focus: true })
+  }
+
+  // Picking a guest opens the block as a side effect, so focus moves only when
+  // the desk pressed the button itself. A sheet that shows the address from the
+  // start has no button, and must not have the caret pulled out of the name.
+  showAddress({ focus = false } = {}) {
     if (!this.hasAddressFieldTarget) return
     this.addressFieldTarget.hidden = false
     if (this.hasAddressToggleTarget) this.addressToggleTarget.hidden = true
-    this.addressInputTarget?.focus()
+    if (focus && this.hasAddressInputTarget) this.addressInputTarget.focus()
   }
 }

@@ -56,12 +56,28 @@ RSpec.describe PanelsUI::MetricCard, type: :component do
     expect(page).to have_css(".panel-metric-card__loading .panel-skeleton", count: 3)
   end
 
-  it "falls back to compact density and a neutral detail variant" do
+  it "falls back to compact density, a neutral detail variant and a neutral tone" do
     render_inline(described_class.new(
       label: "Occupancy", value: "82%", detail: "Stable",
-      density: :dense, detail_variant: :positive
+      density: :dense, detail_variant: :positive, tone: :positive
     ))
 
-    expect(page).to have_css(".panel-metric-card[data-density='compact'] .panel-metric-card__detail[data-variant='neutral']")
+    expect(page).to have_css(".panel-metric-card[data-density='compact'][data-tone='neutral'] .panel-metric-card__detail[data-variant='neutral']")
+  end
+
+  # The tone colours the figure and the icon; the detail variant colours the
+  # line underneath. A card sets them apart, so the spec does too.
+  it "carries a tone of its own, separate from the detail variant" do
+    described_class::TONES.each do |tone|
+      render_inline(described_class.new(label: "VIP", value: "Yes", detail: "On file", tone: tone))
+
+      expect(page).to have_css(".panel-metric-card[data-tone='#{tone}']")
+    end
+
+    render_inline(described_class.new(
+      label: "VIP", value: "Yes", detail: "Since March", tone: :warning, detail_variant: :neutral
+    ))
+
+    expect(page).to have_css(".panel-metric-card[data-tone='warning'] .panel-metric-card__detail[data-variant='neutral']")
   end
 end

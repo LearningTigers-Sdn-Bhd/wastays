@@ -180,6 +180,56 @@ RSpec.describe Guest, type: :model do
         .to change { booking1.reload.vip }.from(true).to(false)
         .and change { booking2.reload.vip }.from(true).to(false)
     end
+
+    it 'propagates to the listed properties only once the flag is scoped' do
+      guest.update!(metadata: { "vip_hotel_ids" => [ booking1.hotel_id ] }, vip: true)
+
+      expect(booking1.reload.vip).to be(true)
+      expect(booking2.reload.vip).to be(false)
+    end
+
+    it 'does not propagate when only the blacklist part of the metadata moves' do
+      guest.update!(metadata: { "vip_hotel_ids" => [ booking1.hotel_id ] }, vip: true)
+      booking2.update_columns(vip: true)
+
+      guest.update!(metadata: guest.metadata.merge("blacklisted_hotel_ids" => [ booking2.hotel_id ]))
+
+      expect(booking2.reload.vip).to be(true)
+    end
+  end
+
+  describe 'vip?' do
+    let(:hotel) { create(:hotel) }
+    let(:other_hotel) { create(:hotel) }
+
+    it 'reads the flag at one property only' do
+      guest = create(:guest, metadata: { "vip_hotel_ids" => [ hotel.id ] }, vip: true)
+
+      expect(guest.vip_at?(hotel)).to be(true)
+      expect(guest.vip_at?(other_hotel)).to be(false)
+      expect(guest.vip?(hotel: hotel)).to be(true)
+      expect(guest.vip?(hotel: other_hotel)).to be(false)
+    end
+
+    it 'falls back to the column for a record with no property list' do
+      guest = create(:guest, created_by_hotel: nil, vip: true, metadata: {})
+
+      expect(guest.vip_at?(hotel)).to be(true)
+      expect(guest.vip_at?(other_hotel)).to be(true)
+    end
+
+    it 'keeps a record created by one property out of another property' do
+      guest = create(:guest, created_by_hotel: hotel, vip: true, metadata: {})
+
+      expect(guest.vip_at?(hotel)).to be(true)
+      expect(guest.vip_at?(other_hotel)).to be(false)
+    end
+
+    it 'returns the column when no property is given' do
+      guest = create(:guest, metadata: { "vip_hotel_ids" => [ hotel.id ] }, vip: true)
+
+      expect(guest.vip?).to be(true)
+    end
   end
 
   describe 'blacklisted?' do
