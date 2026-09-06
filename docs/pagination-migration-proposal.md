@@ -2,7 +2,7 @@
 
 Date: September 6, 2026
 
-Status: Phase 1 and the Pagy-only Nova redesign are implemented. Validation results and remaining acceptance work are recorded below.
+Status: Phase 1, the Pagy-only Nova redesign, and the Admin portal migration are implemented. Validation results and remaining acceptance work are recorded below.
 
 ## Recommendation
 
@@ -321,6 +321,26 @@ Desktop navigation retains First, Previous, Next, Last, page numbers, and gaps. 
 
 The System Designs preview shows multi-page and single-page states in both portal themes. Admin API Keys remains the real Pagy pilot.
 
+## Phase 2: Admin portal migration
+
+Status: Implemented. Human visual acceptance remains pending.
+
+All Admin portal pagination now uses Pagy and `PanelsUI::Pagination`. This phase includes:
+
+- Hotels, Bookings, Attractions, API Keys, and Audit Logs.
+- Observation Deck events, Margin Rules, and Setup Fee Rules.
+- Payouts, pending and paid Payout Batches, Reconciliations, and Refund Requests.
+
+The migration preserves the existing 20, 25, and 50-row limits. The Hotels page preserves its 15, 25, 50, and 100-row selector.
+
+Payouts uses Pagy array pagination. Payout Batches uses separate `pending_page` and `paid_page` keys.
+
+The Admin base controller normalizes malformed, zero, and negative page values. Pagy links preserve the current filters and other page keys.
+
+Admin relations use stable ordering where the existing order used a timestamp without an ID tie-breaker.
+
+The Hotel, Corporate, and Guest portals still use Kaminari. The shared Kaminari templates remain available for those pages.
+
 ## Performance expectations
 
 No benchmark was run during this analysis. The source review does not prove that Kaminari causes the reported slowness.
@@ -414,10 +434,15 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 - `PanelsUI::Pagination` supplies shared server-rendered navigation and portal styling.
 - Admin API Keys uses Pagy with a 25-row limit and stable `created_at DESC, id DESC` ordering.
 - The pilot normalizes invalid page parameters and returns empty results for page overflow.
-- All other pages retain Kaminari and its existing templates.
+- All remaining Admin portal pagination uses Pagy and the shared Nova component.
+- Admin Payouts uses Pagy array pagination.
+- Admin Payout Batches preserves separate `pending_page` and `paid_page` navigation.
+- Admin Hotels preserves its approved page-size selector.
+- The Hotel, Corporate, and Guest portals retain Kaminari and its existing templates.
 - Phase 1 is committed as `50e84293d`.
 - Rubyzip 3.6.0 is committed separately as `eaa530716`.
 - `PanelsUI::Pagination` uses the Pagy-only Nova design.
+- The Pagy-only Nova redesign is committed as `a827276d9`.
 - System Designs shows the Pagy component in both themes and page-count states.
 
 The Kaminari templates remain unchanged. Their appearance differs from Pagy during the staged migration by design.
@@ -433,6 +458,10 @@ The Kaminari templates remain unchanged. Their appearance differs from Pagy duri
 - Phase 1b Tailwind build: passed.
 - Phase 1b `git diff --check`: passed.
 - The Kaminari template directory has no Phase 1b diff.
+- Focused Admin request specs: 92 examples, 0 failures.
+- Serial `admin_platform` domain: 292 examples, 0 failures.
+- Scoped RuboCop for the Admin migration: 19 files, no offenses.
+- The Admin source tree has no remaining Kaminari pagination calls.
 - The post-update default `bin/ci` run cleared RuboCop, Brakeman, Bundle Audit, Importmap Audit, Tailwind, and parallel database setup.
 - Parallel RSpec ran 8,319 examples and reported three PostgreSQL deadlocks in unrelated report, invoice, and request-archive examples.
 - A serial rerun of those exact examples passed: 3 examples, 0 failures.
@@ -445,7 +474,7 @@ Full CI is not green because the parallel test run reported three database deadl
 
 - Rerun default `bin/ci` or resolve the parallel database deadlocks separately.
 - Complete human visual acceptance for desktop, mobile, keyboard behavior, and both themes.
-- Migrate the remaining controllers, presenters, and reports in later phases.
+- Migrate the Hotel, Corporate, and Guest controllers, presenters, and reports in later phases.
 - Remove Kaminari only after all consumers migrate.
 
-Phase 1 and the rubyzip update are committed. The Phase 1b redesign is not committed. No database changes or deployment were made.
+Phase 1, the rubyzip update, and the Phase 1b redesign are committed. The Admin migration is implemented. No database changes or deployment were made.

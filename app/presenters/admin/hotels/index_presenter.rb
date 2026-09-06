@@ -41,15 +41,16 @@ module Admin
       PAGE_SIZES = [ 15, 25, 50, 100 ].freeze
       DEFAULT_PAGE_SIZE = 15
 
-      attr_reader :hotels, :page_size
+      attr_reader :hotels, :pagination, :page_size
 
       def self.normalize_page_size(value)
         requested = value.to_i
         PAGE_SIZES.include?(requested) ? requested : DEFAULT_PAGE_SIZE
       end
 
-      def initialize(hotels:, summary:, status: nil, page_size: DEFAULT_PAGE_SIZE)
+      def initialize(hotels:, pagination:, summary:, status: nil, page_size: DEFAULT_PAGE_SIZE)
         @hotels = hotels
+        @pagination = pagination
         @summary = summary
         @status = status
         @page_size = page_size

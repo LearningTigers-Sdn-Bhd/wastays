@@ -141,11 +141,12 @@
         <% end %>
       <% end %>
 
-      <% if presenter.hotels.total_pages > 1 %>
-        <div class="flex justify-center sm:justify-end">
-          <%= paginate presenter.hotels, data: { turbo_action: "advance" } %>
-        </div>
-      <% end %>
+      <div class="flex justify-center sm:justify-end">
+        <%= render PanelsUI::Pagination.new(
+              pagy: presenter.pagination,
+              hide_when_single_page: true,
+              link_data: { turbo_action: "advance" }) %>
+      </div>
     </div>
   <% else %>
     <div class="rounded-lg border border-border bg-card p-6 text-center">

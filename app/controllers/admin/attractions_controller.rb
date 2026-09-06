@@ -12,10 +12,10 @@ module Admin
       @active_status = normalized_status
       @status_counts = status_counts
 
-      scope = Attraction.includes(:source_hotel, :hotels).order(created_at: :desc)
+      scope = Attraction.includes(:source_hotel, :hotels).order(created_at: :desc, id: :desc)
       scope = scope.where(status: @active_status) unless @active_status == "all"
       scope = apply_search(scope)
-      @attractions = scope.page(params[:page]).per(PAGE_SIZE)
+      @pagy, @attractions = pagy_offset(scope, limit: PAGE_SIZE)
     end
 
     def new

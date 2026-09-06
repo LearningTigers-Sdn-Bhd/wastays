@@ -95,6 +95,7 @@ RSpec.describe "Admin::ObservationDeck", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('aria-label="Event stream pagination"')
+      expect(response.body).to include("panel-pagination")
     end
 
     it "links to integrations when no AI providers are configured" do

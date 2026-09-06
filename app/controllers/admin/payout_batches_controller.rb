@@ -9,8 +9,16 @@ class Admin::PayoutBatchesController < Admin::BaseController
 
     @active_tab = params[:tab] || "pending"
 
-    @pending_batches = @base_batches.pending.page(params[:pending_page]).per(25)
-    @paid_batches = @base_batches.paid.order(payout_at: :desc).page(params[:paid_page]).per(25)
+    @pending_pagy, @pending_batches = pagy_offset(
+      @base_batches.pending.order(created_at: :desc, id: :desc),
+      limit: 25,
+      page_key: "pending_page"
+    )
+    @paid_pagy, @paid_batches = pagy_offset(
+      @base_batches.paid.order(payout_at: :desc, id: :desc),
+      limit: 25,
+      page_key: "paid_page"
+    )
   end
 
   def show

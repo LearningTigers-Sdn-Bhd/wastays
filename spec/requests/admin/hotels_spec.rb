@@ -59,6 +59,16 @@ RSpec.describe 'Admin::Hotels', type: :request do
       expect(response.body).not_to include('href="/admin/hotels/onboarding"')
     end
 
+    it 'paginates the registry with Pagy and preserves the selected page size' do
+      create_list(:hotel, 14, status: "setup")
+
+      get admin_hotels_path, params: { per_page: 15 }
+
+      navigation = Nokogiri::HTML(response.body).at_css("nav.panel-pagination")
+      expect(navigation).to be_present
+      expect(navigation.at_css('a[aria-label="Page 2"]')["href"]).to include("page=2", "per_page=15")
+    end
+
 
     it 'separates hotels waiting for the owner launch decision' do
       ready_hotel = create(

@@ -114,9 +114,9 @@ module Admin
     def load_entries
       @filter_params = normalized_filter_params
       @entries = ObservationEntry.select(:id, :entry_type, :request_id, :status, :duration, :path, :tags, :created_at)
-                                 .order(created_at: :desc)
+                                 .order(created_at: :desc, id: :desc)
       apply_filters
-      @entries = @entries.page(params[:page]).per(50)
+      @pagy, @entries = pagy_offset(@entries, limit: 50)
       @entry_presenters = ObservationDeck::EntryPresenter.for(@entries)
     end
 
