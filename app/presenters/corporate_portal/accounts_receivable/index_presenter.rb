@@ -3,6 +3,8 @@
 module CorporatePortal
   module AccountsReceivable
     class IndexPresenter
+      include Pagy::Method
+
       PER_PAGE = 25
 
       STATUS_OPTIONS = [
@@ -16,11 +18,12 @@ module CorporatePortal
       Metric = Struct.new(:label, :amounts, :description, :icon, :class_name, keyword_init: true)
       HotelOption = Struct.new(:id, :name, keyword_init: true)
 
-      attr_reader :account, :params
+      attr_reader :account, :params, :request
 
-      def initialize(account:, params:)
+      def initialize(account:, params:, request:)
         @account = account
         @params = params
+        @request = request
       end
 
       def paginated_rows
@@ -28,7 +31,7 @@ module CorporatePortal
       end
 
       def pagination
-        paginated_invoices
+        pagination_pair.first
       end
 
       def hotel_options
@@ -136,7 +139,11 @@ module CorporatePortal
       end
 
       def paginated_invoices
-        @paginated_invoices ||= filtered_invoices.page(params[:page]).per(PER_PAGE)
+        pagination_pair.last
+      end
+
+      def pagination_pair
+        @pagination_pair ||= pagy(:offset, filtered_invoices, request: request, limit: PER_PAGE)
       end
 
       def search_scope(scope)

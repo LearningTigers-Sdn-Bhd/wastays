@@ -2,7 +2,7 @@
 
 Date: September 6, 2026
 
-Status: Phase 1, the Pagy-only Nova redesign, and the Admin portal migration are implemented. Validation results and remaining acceptance work are recorded below.
+Status: The Pagy foundation and the Admin, Corporate, and Guest portal migrations are implemented. The Hotel portal remains on Kaminari.
 
 ## Recommendation
 
@@ -339,7 +339,23 @@ The Admin base controller normalizes malformed, zero, and negative page values. 
 
 Admin relations use stable ordering where the existing order used a timestamp without an ID tie-breaker.
 
-The Hotel, Corporate, and Guest portals still use Kaminari. The shared Kaminari templates remain available for those pages.
+At the end of Phase 2, the Hotel, Corporate, and Guest portals still used Kaminari. The shared templates stayed available for those pages.
+
+## Phase 3: Corporate and Guest portal migration
+
+Status: Implemented. Automated and human acceptance results are recorded below.
+
+The Guest portal uses Pagy for the Bookings and Refund Requests lists. Both lists retain their 25-row limit, filters, totals, and Turbo Frames.
+
+The Corporate portal uses Pagy for invoices, payment history, statement lists, and statement details. Statement details retain their 50-row limit.
+
+Corporate presenters now expose page rows and Pagy metadata separately. Controllers supply explicit request context for URL generation.
+
+Payment History counts lightweight source scopes and hydrates only the selected page. Its global order uses the timestamp, source type, and source ID.
+
+Statement Details calculates its running balances once. It materializes descriptions for the selected HTML page and keeps the full `ledger_rows` interface for PDFs.
+
+The migration adds no JavaScript, CSS, database tables, columns, or indexes. The Hotel portal still uses Kaminari.
 
 ## Performance expectations
 
@@ -438,7 +454,11 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 - Admin Payouts uses Pagy array pagination.
 - Admin Payout Batches preserves separate `pending_page` and `paid_page` navigation.
 - Admin Hotels preserves its approved page-size selector.
-- The Hotel, Corporate, and Guest portals retain Kaminari and its existing templates.
+- The Corporate portal uses Pagy for invoices, payment history, statement lists, and statement details.
+- The Guest portal uses Pagy for bookings and refund requests.
+- Payment History hydrates only the requested page after it merges lightweight source locators.
+- Statement Details materializes only the requested HTML rows while full PDF generation retains all ledger rows.
+- The Hotel portal retains Kaminari and its existing templates.
 - Phase 1 is committed as `50e84293d`.
 - Rubyzip 3.6.0 is committed separately as `eaa530716`.
 - `PanelsUI::Pagination` uses the Pagy-only Nova design.
@@ -462,19 +482,28 @@ The Kaminari templates remain unchanged. Their appearance differs from Pagy duri
 - Serial `admin_platform` domain: 292 examples, 0 failures.
 - Scoped RuboCop for the Admin migration: 19 files, no offenses.
 - The Admin source tree has no remaining Kaminari pagination calls.
+- Corporate and Guest focused migration suite: 94 examples, 0 failures.
+- Serial Guest domain: 245 examples, 0 failures.
+- Serial Financials domain: 877 examples, 0 failures.
+- Serial Reports domain: 545 examples, 0 failures.
+- Corporate and Guest scoped RuboCop: 17 files, no offenses.
+- The Corporate and Guest source trees have no remaining Kaminari pagination calls.
+- Corporate and Guest `git diff --check`: passed.
 - The post-update default `bin/ci` run cleared RuboCop, Brakeman, Bundle Audit, Importmap Audit, Tailwind, and parallel database setup.
 - Parallel RSpec ran 8,319 examples and reported three PostgreSQL deadlocks in unrelated report, invoice, and request-archive examples.
 - A serial rerun of those exact examples passed: 3 examples, 0 failures.
 
 An earlier broad run encountered two database deadlocks because migration checks ran concurrently against a shared test database. The clean sequential run passed.
 
-Full CI is not green because the parallel test run reported three database deadlocks. No performance benchmark or browser automation was run.
+The earlier full CI run is not green because its parallel test run reported three database deadlocks. The user will run the current full CI manually.
+
+No browser automation or human visual acceptance was run for the Corporate and Guest phase.
 
 ### Remaining work
 
-- Rerun default `bin/ci` or resolve the parallel database deadlocks separately.
+- Run the current default `bin/ci` manually.
 - Complete human visual acceptance for desktop, mobile, keyboard behavior, and both themes.
-- Migrate the Hotel, Corporate, and Guest controllers, presenters, and reports in later phases.
+- Migrate the Hotel portal controllers, presenters, queries, helpers, and reports.
 - Remove Kaminari only after all consumers migrate.
 
-Phase 1, the rubyzip update, and the Phase 1b redesign are committed. The Admin migration is implemented. No database changes or deployment were made.
+The foundation, Nova redesign, Admin migration, and Corporate and Guest migrations are implemented. No database changes or deployment were made.

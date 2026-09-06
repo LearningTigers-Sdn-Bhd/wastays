@@ -3,6 +3,8 @@
 module CorporatePortal
   module AccountsReceivable
     class PaymentHistoryPresenter
+      include Pagy::Method
+
       PER_PAGE = 25
 
       STATUS_OPTIONS = [
@@ -18,19 +20,20 @@ module CorporatePortal
       Metric = Struct.new(:label, :amounts, :description, :icon, :class_name, keyword_init: true)
       HotelOption = Struct.new(:id, :name, keyword_init: true)
 
-      attr_reader :account, :params
+      attr_reader :account, :params, :request
 
-      def initialize(account:, params:)
+      def initialize(account:, params:, request:)
         @account = account
         @params = params
+        @request = request
       end
 
       def rows
-        @rows ||= Kaminari.paginate_array(all_rows.sort_by(&:sort_time).reverse).page(params[:page]).per(PER_PAGE)
+        @rows ||= hydrate_rows(pagination_pair.last)
       end
 
       def pagination
-        rows
+        pagination_pair.first
       end
 
       def hotel_options
@@ -114,132 +117,72 @@ module CorporatePortal
 
       private
 
-      def all_rows
-        intent_rows + legacy_payment_rows + submission_rows
+      def pagination_pair
+        @pagination_pair ||= begin
+          result = payment_history_query.call(page: requested_page, limit: PER_PAGE)
+          pagy(:offset, result.locators, request: request, page: requested_page, limit: PER_PAGE, count: result.count)
+        end
       end
 
-      def intent_rows
-        scope = CorporateArPaymentIntent.where(corporate_account: account)
-          .includes(:hotel, :ar_payment)
-
-        scope = scope.where(hotel_id: selected_hotel_id) if selected_hotel_id.present?
-
-        if query.present?
-          pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-          scope = scope.joins(:hotel).where(
-            "corporate_ar_payment_intents.external_reference ILIKE :query OR corporate_ar_payment_intents.gateway_order_id ILIKE :query OR hotels.name ILIKE :query",
-            query: pattern
-          )
-        end
-
-        if received_from.present?
-          scope = scope.where("COALESCE(corporate_ar_payment_intents.captured_at, corporate_ar_payment_intents.created_at) >= ?", received_from.beginning_of_day)
-        end
-        if received_to.present?
-          scope = scope.where("COALESCE(corporate_ar_payment_intents.captured_at, corporate_ar_payment_intents.created_at) <= ?", received_to.end_of_day)
-        end
-
-        # Preload associations for memory-based allocation status checks to avoid N+1 queries
-        scope = scope.includes(ar_payment: { ar_payment_allocations: :reversal })
-
-        rows = scope.map { |intent| IntentRow.new(intent) }
-
-        if selected_status.present?
-          rows = rows.select do |row|
-            case selected_status
-            when "unapplied"
-              row.intent.captured? && row.intent.ar_payment.present? && row.intent.ar_payment.allocation_status == "unapplied"
-            when "partially_allocated"
-              row.intent.captured? && row.intent.ar_payment.present? && row.intent.ar_payment.allocation_status == "partially_allocated"
-            when "fully_allocated"
-              row.intent.captured? && row.intent.ar_payment.present? && row.intent.ar_payment.allocation_status == "fully_allocated"
-            when "failed"
-              %w[failed expired cancelled].include?(row.intent.status)
-            when "pending"
-              %w[pending checkout_initiated].include?(row.intent.status)
-            else
-              true
-            end
-          end
-        end
-
-        rows
+      def payment_history_query
+        CorporatePortal::AccountsReceivable::PaymentHistoryQuery.new(
+          account: account,
+          query: query,
+          status: selected_status,
+          hotel_id: selected_hotel_id,
+          received_from: received_from,
+          received_to: received_to
+        )
       end
 
-      def legacy_payment_rows
-        return [] if %w[pending_review rejected].include?(selected_status)
+      def requested_page
+        page = params[:page].to_i
+        page.positive? ? page : 1
+      end
 
-        scope = ArPayment.joins(:hotel_corporate_account)
+      def hydrate_rows(locators)
+        records = records_by_source(locators)
+        locators.filter_map do |locator|
+          record = records.dig(locator.source_type, locator.source_id)
+          next unless record
+
+          row_class(locator.source_type).new(record)
+        end
+      end
+
+      def records_by_source(locators)
+        ids = locators.group_by(&:source_type).transform_values { |items| items.map(&:source_id) }
+        {
+          intent: load_intents(ids.fetch(:intent, [])),
+          payment: load_payments(ids.fetch(:payment, [])),
+          submission: load_submissions(ids.fetch(:submission, []))
+        }
+      end
+
+      def load_intents(ids)
+        CorporateArPaymentIntent.where(corporate_account: account, id: ids)
+          .includes(:hotel, ar_payment: { ar_payment_allocations: :reversal })
+          .index_by(&:id)
+      end
+
+      def load_payments(ids)
+        ArPayment.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: account.id })
+          .where(id: ids)
+          .includes(:hotel, ar_payment_allocations: :reversal)
+          .index_by(&:id)
+      end
+
+      def load_submissions(ids)
+        ArPaymentSubmission.joins(:hotel_corporate_account)
+          .where(hotel_corporate_accounts: { corporate_account_id: account.id })
+          .where(id: ids)
           .includes(:hotel)
-          .where.not(id: CorporateArPaymentIntent.where.not(ar_payment_id: nil).select(:ar_payment_id))
-
-        scope = scope.where(hotel_id: selected_hotel_id) if selected_hotel_id.present?
-
-        if query.present?
-          pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-          scope = scope.joins(:hotel).where(
-            "ar_payments.reference_number ILIKE :query OR hotels.name ILIKE :query",
-            query: pattern
-          )
-        end
-
-        scope = scope.where(received_at: received_from..) if received_from.present?
-        scope = scope.where(received_at: ..received_to) if received_to.present?
-
-        # Preload associations for memory-based allocation status checks
-        scope = scope.includes(ar_payment_allocations: :reversal)
-
-        rows = scope.map { |payment| PaymentRow.new(payment) }
-
-        if selected_status.present?
-          rows = rows.select do |row|
-            case selected_status
-            when "unapplied"
-              row.payment.allocation_status == "unapplied"
-            when "partially_allocated"
-              row.payment.allocation_status == "partially_allocated"
-            when "fully_allocated"
-              row.payment.allocation_status == "fully_allocated"
-            else
-              true
-            end
-          end
-        end
-
-        rows
+          .index_by(&:id)
       end
 
-      def submission_rows
-        return [] if %w[unapplied partially_allocated fully_allocated pending failed].include?(selected_status)
-
-        # Approved submissions already have a matching ArPayment/CorporateArPaymentIntent row above.
-        scope = ArPaymentSubmission.joins(:hotel_corporate_account)
-          .where(hotel_corporate_accounts: { corporate_account_id: account.id })
-          .where.not(status: "approved")
-          .includes(:hotel, ar_payment_submission_allocations: :ar_invoice)
-
-        scope = scope.where(hotel_id: selected_hotel_id) if selected_hotel_id.present?
-
-        if query.present?
-          pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-          scope = scope.joins(:hotel).where(
-            "ar_payment_submissions.reference_number ILIKE :query OR hotels.name ILIKE :query",
-            query: pattern
-          )
-        end
-
-        scope = scope.where(received_at: received_from..) if received_from.present?
-        scope = scope.where(received_at: ..received_to) if received_to.present?
-
-        case selected_status
-        when "pending_review"
-          scope = scope.where(status: "pending")
-        when "rejected"
-          scope = scope.where(status: "rejected")
-        end
-
-        scope.map { |submission| SubmissionRow.new(submission) }
+      def row_class(source_type)
+        { intent: IntentRow, payment: PaymentRow, submission: SubmissionRow }.fetch(source_type)
       end
 
       # Metrics Calculators

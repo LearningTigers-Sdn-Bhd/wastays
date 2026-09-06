@@ -17,6 +17,43 @@ module Reports
         keyword_init: true
       )
 
+      LedgerActivity = Data.define(
+        :sort_key,
+        :effective_date,
+        :record_type,
+        :source,
+        :due_on,
+        :debit,
+        :credit,
+        :balance
+      )
+
+      class Ledger
+        def initialize(activities, row_builder)
+          @activities = activities
+          @row_builder = row_builder
+          @row_cache = {}
+        end
+
+        def count
+          @activities.size
+        end
+
+        def page(offset:, limit:)
+          (@activities[offset, limit] || []).map { |activity| materialize(activity) }
+        end
+
+        def all
+          @all ||= page(offset: 0, limit: count)
+        end
+
+        private
+
+        def materialize(activity)
+          @row_cache[activity.object_id] ||= @row_builder.call(activity)
+        end
+      end
+
       InvoiceDetail = Struct.new(
         :invoice,
         :billing_name,
@@ -66,11 +103,15 @@ module Reports
         :closing_balance,
         :unapplied_credit,
         :aging,
-        :ledger_rows,
+        :ledger,
         :invoice_details,
         :notes,
         keyword_init: true
-      )
+      ) do
+        def ledger_rows
+          ledger.all
+        end
+      end
 
       def self.call(**kwargs)
         new(**kwargs).call
@@ -105,7 +146,7 @@ module Reports
           closing_balance: closing_balance,
           unapplied_credit: unapplied_credit,
           aging: aging_totals,
-          ledger_rows: ledger_rows,
+          ledger: ledger,
           invoice_details: invoice_details,
           notes: notes
         )
@@ -245,15 +286,19 @@ module Reports
         @closing_balance ||= opening_balance + period_invoice_total - period_payment_total
       end
 
-      def ledger_rows
-        @ledger_rows ||= begin
+      def ledger
+        @ledger ||= Ledger.new(ledger_activities, method(:materialize_ledger_row))
+      end
+
+      def ledger_activities
+        @ledger_activities ||= begin
           balance = opening_balance
           activities = period_invoices.map { |invoice| invoice_activity(invoice) } +
             period_payments.map { |payment| payment_activity(payment) }
 
           activities.sort_by { |activity| activity.fetch(:sort_key) }.map do |activity|
             balance += activity.fetch(:debit) - activity.fetch(:credit)
-            LedgerRow.new(**activity.except(:sort_key), balance: balance)
+            LedgerActivity.new(**activity, balance: balance)
           end
         end
       end
@@ -262,8 +307,7 @@ module Reports
         {
           effective_date: invoice.issued_on,
           record_type: "Invoice",
-          reference: invoice.formatted_invoice_number,
-          description: invoice_description(invoice),
+          source: invoice,
           due_on: invoice.due_on,
           debit: invoice.amount.to_d,
           credit: 0.to_d,
@@ -275,13 +319,26 @@ module Reports
         {
           effective_date: payment.received_at,
           record_type: "Payment",
-          reference: payment.reference_number,
-          description: payment_description(payment),
+          source: payment,
           due_on: nil,
           debit: 0.to_d,
           credit: payment.amount.to_d,
           sort_key: [ payment.received_at, payment.created_at, 1, payment.id ]
         }
+      end
+
+      def materialize_ledger_row(activity)
+        source = activity.source
+        LedgerRow.new(
+          effective_date: activity.effective_date,
+          record_type: activity.record_type,
+          reference: source.is_a?(ArInvoice) ? source.formatted_invoice_number : source.reference_number,
+          description: source.is_a?(ArInvoice) ? invoice_description(source) : payment_description(source),
+          due_on: activity.due_on,
+          debit: activity.debit,
+          credit: activity.credit,
+          balance: activity.balance
+        )
       end
 
       def invoice_description(invoice)
