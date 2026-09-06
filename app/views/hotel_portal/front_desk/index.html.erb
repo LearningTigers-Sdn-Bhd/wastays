@@ -23,7 +23,7 @@
 
   <%= render "toolbar", state: %>
   <main id="front-desk-results">
-    <span class="sr-only">active-tab:<%= @tab %> active-view:<%= @view %> page:<%= @bookings.current_page %></span>
+    <span class="sr-only">active-tab:<%= @tab %> active-view:<%= @view %> page:<%= @pagy.page %></span>
     <%= render "results" %>
   </main>
 </div>

@@ -2,7 +2,7 @@
 
 Date: September 6, 2026
 
-Status: The Pagy foundation and the Admin, Corporate, Guest, Hotel Settings, Hotel Logs, and simple Hotel list migrations are implemented. Other Hotel areas remain on Kaminari.
+Status: The Pagy foundation and the Admin, Corporate, Guest, Hotel Settings, Hotel Logs, Hotel Operations, and simple Hotel list migrations are implemented. Hotel Financials and Reports remain on Kaminari.
 
 ## Recommendation
 
@@ -68,8 +68,8 @@ The list includes pages, tabs, and shared sections. Some sections share the same
 | Area | Affected pages or sections |
 |---|---|
 | Hotel settings (migrated) | Room Types and Nearby Attractions |
-| Hotel operations | Front Desk Bookings, Arrivals, In-house, Departures, and Checkout; guest directory and guest booking history; Folios and attention list; Conversations (migrated) |
-| Hotel finance | Corporate Accounts; invoices; payment records; statement list and statement details; e-invoice submissions (migrated) |
+| Hotel operations (migrated) | Front Desk Bookings, Arrivals, In-house, Departures, and Checkout; guest directory and guest booking history; Conversations |
+| Hotel finance | Folios and attention list; Corporate Accounts; invoices; payment records; statement list and statement details; e-invoice submissions (migrated) |
 | Hotel reports | Financial performance and breakdown; payout history; Daily Report charge register and Cashier Activity; channel settlements; journal batches; guest-report tables, including registration cards, boat transfers, and meal preparation; night-audit history (migrated) |
 | Hotel logs (migrated) | Operation Audit Logs and Notification Logs; the legacy Inventory Audit Logs route redirects to Operation Audit Logs |
 | Admin | Hotels; Bookings; Attractions; API Keys; Audit Logs; Observation Deck events; Margin Rules; Setup Fee Rules; Payouts; pending and paid Payout Batches; Reconciliations; Refund Requests |
@@ -388,6 +388,24 @@ E-Invoice Submissions and Conversations use record IDs as final ordering keys. T
 
 The shared Kaminari report partial remains unchanged because other Hotel reports still use it.
 
+## Phase 6: Hotel Operations migration
+
+Status: Implemented. Automated validation results are recorded below.
+
+Reservations uses Pagy for Bookings, Arrivals, In-house, Departures, and Checkout. Each tab retains its 25-row limit and named page key.
+
+Reservation filters, inactive tab state, full-page navigation, and full-scope metrics retain their existing behavior.
+
+Guest Records uses Pagy for the directory and booking history. Both pages retain their 25-row limit.
+
+The directory retains its filters, Turbo Frame, browser-history advancement, page-scoped bulk selection, and page-scoped statistics.
+
+Guest booking history retains full-scope stay counts and lifetime totals. Its query now returns an ordered relation, and the controller applies pagination.
+
+Bookings, In-house, Checkout, and guest-directory queries use record IDs as final ordering keys.
+
+Folios and Needs Attention belong to Hotel Financials. Housekeeping Tasks and Requests use custom pagination and remain outside this migration.
+
 ## Performance expectations
 
 No benchmark was run during this analysis. The source review does not prove that Kaminari causes the reported slowness.
@@ -491,7 +509,8 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 - Statement Details materializes only the requested HTML rows while full PDF generation retains all ledger rows.
 - Hotel Settings and Hotel Logs use Pagy and the shared Nova component.
 - E-Invoice Submissions, Night Audit History, and Conversations use Pagy and the shared Nova component.
-- The remaining Hotel areas retain Kaminari and its existing templates.
+- Hotel Operations uses Pagy for Reservations, the guest directory, and guest booking history.
+- Hotel Financials and Reports retain Kaminari and its existing templates.
 - Phase 1 is committed as `50e84293d`.
 - Rubyzip 3.6.0 is committed separately as `eaa530716`.
 - `PanelsUI::Pagination` uses the Pagy-only Nova design.
@@ -532,6 +551,11 @@ The Kaminari templates remain unchanged. Their appearance differs from Pagy duri
 - Simple Hotel list scoped RuboCop: 7 files, no offenses.
 - Simple Hotel list source paths have no remaining Kaminari pagination calls.
 - Simple Hotel list `git diff --check`: passed.
+- Hotel Operations focused request and query specs: 150 examples, 0 failures.
+- Serial Hotel Operations domain: 785 examples, 0 failures, 2 pre-existing pending examples.
+- Hotel Operations scoped RuboCop: 10 files, no offenses.
+- Hotel Operations source paths have no remaining Kaminari pagination calls.
+- Hotel Operations `git diff --check`: passed.
 - The user will run the current full `bin/ci` manually.
 - The post-update default `bin/ci` run cleared RuboCop, Brakeman, Bundle Audit, Importmap Audit, Tailwind, and parallel database setup.
 - Parallel RSpec ran 8,319 examples and reported three PostgreSQL deadlocks in unrelated report, invoice, and request-archive examples.
@@ -541,13 +565,13 @@ An earlier broad run encountered two database deadlocks because migration checks
 
 The earlier full CI run is not green because its parallel test run reported three database deadlocks. The user will run the current full CI manually.
 
-No browser automation or human visual acceptance was run for the Corporate and Guest phase.
+No browser automation or human visual acceptance was run for the Corporate, Guest, or Hotel Operations phases.
 
 ### Remaining work
 
 - Run the current default `bin/ci` manually.
 - Complete human visual acceptance for desktop, mobile, keyboard behavior, and both themes.
-- Migrate the remaining Hotel operations, finance, and report pagination.
+- Migrate the remaining Hotel finance and report pagination.
 - Remove Kaminari only after all consumers migrate.
 
-The foundation, Nova redesign, Admin migration, and Corporate and Guest migrations are implemented. No database changes or deployment were made.
+The foundation, Nova redesign, Admin, Corporate, Guest, and Hotel Operations migrations are implemented. No database changes or deployment were made.
