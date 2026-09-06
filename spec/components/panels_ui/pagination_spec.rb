@@ -37,21 +37,32 @@ RSpec.describe PanelsUI::Pagination, type: :component do
     expect(page).to have_link("Next page", href: "/records?page=3", enable_aria_label: true)
     expect(page).to have_link("Last page", href: "/records?page=3", enable_aria_label: true)
     expect(page).to have_css('[aria-current="page"]', text: "2", count: 2)
-    expect(page).to have_css('.panel-pagination__mobile', text: /2\s+of\s+3/)
+    expect(page).to have_css('[data-slot="pagination-mobile"]', text: /Page\s+2\s+of\s+3/)
     expect(page).to have_no_link("Page 2", enable_aria_label: true)
+  end
+
+  it "uses Nova pagination structure and button states" do
+    pagy, = paginate_records(params: { page: "2" })
+    render_pagination(pagy)
+
+    expect(page).to have_css('nav.panel-pagination[data-slot="pagination"]')
+    expect(page).to have_css('nav > ul[data-slot="pagination-content"]')
+    expect(page).to have_css('ul > li[data-slot="pagination-item"]', minimum: 1)
+    expect(page).to have_css('a[data-slot="pagination-link"][data-state="available"][data-variant="ghost"][data-size="icon"][data-icon-only="true"]')
+    expect(page).to have_css('span.panel-pagination__current[data-state="current"][data-variant="neutral"][data-size="icon"][data-icon-only="true"]', count: 2)
   end
 
   it "disables boundary controls without links" do
     pagy, = paginate_records
     render_pagination(pagy)
-    expect(page).to have_css('span[aria-label="First page"][aria-disabled="true"]')
-    expect(page).to have_css('span[aria-label="Previous page"][aria-disabled="true"]')
+    expect(page).to have_css('span[aria-label="First page"][aria-disabled="true"][data-state="disabled"]')
+    expect(page).to have_css('span[aria-label="Previous page"][aria-disabled="true"][data-state="disabled"]')
     expect(page).to have_no_link("First page", enable_aria_label: true)
 
     pagy, = paginate_records(params: { page: "3" })
     render_pagination(pagy)
-    expect(page).to have_css('span[aria-label="Last page"][aria-disabled="true"]')
-    expect(page).to have_css('span[aria-label="Next page"][aria-disabled="true"]')
+    expect(page).to have_css('span[aria-label="Last page"][aria-disabled="true"][data-state="disabled"]')
+    expect(page).to have_css('span[aria-label="Next page"][aria-disabled="true"][data-state="disabled"]')
     expect(page).to have_no_link("Next page", enable_aria_label: true)
   end
 
@@ -59,7 +70,7 @@ RSpec.describe PanelsUI::Pagination, type: :component do
     pagy, = paginate_records((1..1000).to_a, params: { page: "20" })
     render_pagination(pagy)
 
-    expect(page).to have_css('.panel-pagination__gap[aria-hidden="true"]', count: 2)
+    expect(page).to have_css('[data-slot="pagination-ellipsis"][aria-hidden="true"]', count: 2)
     expect(page).to have_link("Page 1", enable_aria_label: true)
     expect(page).to have_link("Page 40", enable_aria_label: true)
   end
@@ -124,5 +135,6 @@ RSpec.describe PanelsUI::Pagination, type: :component do
 
     expect(Nokogiri::HTML.fragment(html).css('nav[aria-label="Pagination"]')).not_to be_empty
     expect(html).not_to include("panel-pagination")
+    expect(html).not_to include('data-slot="pagination"')
   end
 end

@@ -1,30 +1,79 @@
-<nav class="panel-pagination" aria-label="<%= @aria_label %>" data-single-page="<%= single_page? %>">
-  <% unless single_page? %>
-    <%= control(:first, "First page", "chevrons-left", desktop_only: true) %>
-  <% end %>
-  <%= control(:previous, "Previous page", "chevron-left") %>
-
-  <% if single_page? %>
-    <span class="panel-pagination__item panel-pagination__single" aria-current="page" aria-label="Page 1">1</span>
-  <% else %>
-    <% page_series.each do |item| %>
-      <% if item == :gap %>
-        <span class="panel-pagination__item panel-pagination__desktop panel-pagination__gap" aria-hidden="true">&hellip;</span>
-      <% elsif item.is_a?(String) %>
-        <span class="panel-pagination__item panel-pagination__desktop" aria-current="page" aria-label="Page <%= item %>"><%= item %></span>
-      <% else %>
-        <%= link_to item, @pagy.page_url(item), class: "panel-pagination__item panel-pagination__desktop", aria: { label: "Page #{item}" }, data: @link_data %>
-      <% end %>
+<nav class="panel-pagination" aria-label="<%= @aria_label %>" data-slot="pagination" data-single-page="<%= single_page? %>">
+  <ul class="panel-pagination__content" data-slot="pagination-content">
+    <% unless single_page? %>
+      <li class="panel-pagination__item panel-pagination__desktop" data-slot="pagination-item">
+        <%= control(:first, "First page", "chevrons-left") %>
+      </li>
     <% end %>
-    <span class="panel-pagination__mobile">
-      <span class="panel-pagination__item" aria-current="page" aria-label="Page <%= @pagy.page %>"><%= @pagy.page %></span>
-      <span>of</span>
-      <span><%= @pagy.pages %></span>
-    </span>
-  <% end %>
 
-  <%= control(:next, "Next page", "chevron-right") %>
-  <% unless single_page? %>
-    <%= control(:last, "Last page", "chevrons-right", desktop_only: true) %>
-  <% end %>
+    <li class="panel-pagination__item" data-slot="pagination-item">
+      <%= control(:previous, "Previous page", "chevron-left") %>
+    </li>
+
+    <% if single_page? %>
+      <li class="panel-pagination__item" data-slot="pagination-item">
+        <span class="panel-button panel-pagination__current"
+              aria-current="page"
+              aria-label="Page 1"
+              data-slot="pagination-link"
+              data-state="current"
+              data-variant="neutral"
+              data-size="icon"
+              data-icon-only="true">1</span>
+      </li>
+    <% else %>
+      <% page_series.each do |item| %>
+        <li class="panel-pagination__item panel-pagination__desktop" data-slot="pagination-item">
+          <% if item == :gap %>
+            <span class="panel-pagination__ellipsis" aria-hidden="true" data-slot="pagination-ellipsis">&hellip;</span>
+          <% elsif item.is_a?(String) %>
+            <span class="panel-button panel-pagination__current"
+                  aria-current="page"
+                  aria-label="Page <%= item %>"
+                  data-slot="pagination-link"
+                  data-state="current"
+                  data-variant="neutral"
+                  data-size="icon"
+                  data-icon-only="true"><%= item %></span>
+          <% else %>
+            <%= link_to item,
+                        @pagy.page_url(item),
+                        class: "panel-button panel-pagination__page",
+                        aria: { label: "Page #{item}" },
+                        data: @link_data.merge(
+                          slot: "pagination-link",
+                          state: "available",
+                          variant: "ghost",
+                          size: "icon",
+                          icon_only: "true"
+                        ) %>
+          <% end %>
+        </li>
+      <% end %>
+
+      <li class="panel-pagination__item panel-pagination__mobile" data-slot="pagination-mobile">
+        <span>Page</span>
+        <span class="panel-button panel-pagination__current"
+              aria-current="page"
+              aria-label="Page <%= @pagy.page %>"
+              data-slot="pagination-link"
+              data-state="current"
+              data-variant="neutral"
+              data-size="icon"
+              data-icon-only="true"><%= @pagy.page %></span>
+        <span>of</span>
+        <span><%= @pagy.pages %></span>
+      </li>
+    <% end %>
+
+    <li class="panel-pagination__item" data-slot="pagination-item">
+      <%= control(:next, "Next page", "chevron-right") %>
+    </li>
+
+    <% unless single_page? %>
+      <li class="panel-pagination__item panel-pagination__desktop" data-slot="pagination-item">
+        <%= control(:last, "Last page", "chevrons-right") %>
+      </li>
+    <% end %>
+  </ul>
 </nav>

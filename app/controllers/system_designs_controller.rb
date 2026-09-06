@@ -9,6 +9,7 @@ class SystemDesignsController < ApplicationController
   def index
     @previews = SystemDesigns::Previews::ALL
     @previews = @previews.select { |preview| requested_partials.include?(preview[:partial]) } if params[:only].present?
+    set_pagination_previews if @previews.any? { |preview| preview[:partial] == "pagination_preview" }
     @reservation_request = SystemDesigns::ReservationRequest.new
   end
 
@@ -38,6 +39,17 @@ class SystemDesignsController < ApplicationController
 
   def requested_partials
     params[:only].to_s.split(",")
+  end
+
+  def set_pagination_previews
+    @pagination_preview, = pagy(
+      :offset,
+      (1..250).to_a,
+      page: params[:pagination_page].presence || 6,
+      page_key: "pagination_page",
+      limit: 25
+    )
+    @single_page_preview, = pagy(:offset, [ 1 ], page_key: "single_page", limit: 25)
   end
 
   def reservation_params

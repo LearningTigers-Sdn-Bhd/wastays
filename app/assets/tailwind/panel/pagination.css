@@ -1,66 +1,35 @@
 @layer components {
   .panel-pagination {
-    @apply flex items-center justify-center gap-x-1 sm:justify-start sm:-space-x-px sm:gap-x-0;
+    @apply flex items-center justify-center sm:justify-start;
+  }
+
+  .panel-pagination__content {
+    @apply flex list-none items-center gap-1 p-0;
   }
 
   .panel-pagination__item {
-    @apply flex min-h-9.5 min-w-9.5 items-center justify-center border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors motion-reduce:transition-none;
+    @apply flex items-center;
   }
 
-  a.panel-pagination__item {
-    @apply hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
-    --tw-ring-offset-color: var(--background);
+  .panel-pagination__control,
+  .panel-pagination__page,
+  .panel-pagination__current {
+    @apply rounded-md;
   }
 
-  .panel-pagination__item[aria-disabled="true"] {
-    @apply cursor-not-allowed text-muted-foreground;
+  .panel-pagination__current {
+    @apply border-border bg-card text-card-foreground shadow-sm;
+  }
+
+  .panel-pagination__ellipsis {
+    @apply flex size-8 items-center justify-center text-sm text-muted-foreground;
   }
 
   .panel-pagination__desktop {
     @apply hidden sm:flex;
   }
 
-  .panel-pagination__item[aria-current="page"].panel-pagination__desktop {
-    @apply z-10 border-border-interactive bg-primary font-semibold text-primary-foreground shadow-sm;
-  }
-
-  .panel-pagination__gap {
-    @apply text-muted-foreground;
-  }
-
-  .panel-pagination__first {
-    @apply rounded-s-lg;
-  }
-
-  .panel-pagination__last {
-    @apply rounded-e-lg;
-  }
-
-  .panel-pagination__previous {
-    @apply rounded-s-lg sm:rounded-none;
-  }
-
-  .panel-pagination__next {
-    @apply rounded-e-lg sm:rounded-none;
-  }
-
   .panel-pagination__mobile {
-    @apply flex items-center gap-x-1.5 px-1 text-sm text-muted-foreground sm:hidden;
-  }
-
-  .panel-pagination__mobile .panel-pagination__item {
-    @apply rounded-lg;
-  }
-
-  .panel-pagination[data-single-page="true"] .panel-pagination__previous {
-    @apply rounded-lg sm:rounded-none sm:rounded-s-lg;
-  }
-
-  .panel-pagination[data-single-page="true"] .panel-pagination__next {
-    @apply rounded-lg sm:rounded-none sm:rounded-e-lg;
-  }
-
-  .panel-pagination__single {
-    @apply z-10 rounded-lg bg-muted sm:rounded-none;
+    @apply flex items-center gap-1.5 px-1 text-sm text-muted-foreground sm:hidden;
   }
 }

@@ -2,15 +2,17 @@
 
 Date: September 6, 2026
 
-Status: Phase 1 code is implemented. Validation results and remaining acceptance work are recorded below.
+Status: Phase 1 and the Pagy-only Nova redesign are implemented. Validation results and remaining acceptance work are recorded below.
 
 ## Recommendation
 
-Migrate all Kaminari pagination to Pagy 43.6.2 while keeping the current visual design and user behavior.
+Migrate all Kaminari pagination to Pagy 43.6.2 while keeping the current user behavior.
+
+Migrated pages use the compact shadcn Nova style through `PanelsUI::Pagination`. Unmigrated Kaminari pages keep their existing design until migration.
 
 Use Pagy's `:offset` paginator for the initial migration. Evaluate other pagination methods after measuring slow pages.
 
-Estimated effort: **5–8 working days** for one developer familiar with WAStays. Difficulty: **medium**.
+Estimated effort: **5.5–8.5 working days** for one developer familiar with WAStays. Difficulty: **medium**.
 
 This estimate covers implementation, regression tests, fixes, and acceptance checks. It assumes a healthy test baseline.
 
@@ -20,7 +22,7 @@ The project currently uses Kaminari 1.2.2, Ruby 3.4.7, and Rails 8.1.3.1.
 
 This proposal targets the new Pagy 43 API, not an older Pagy version. Pagy 43.6.2 was released on August 24, 2026.
 
-Pagy 43.6.2 requires Ruby 3.3 or later. The project's Ruby version meets that requirement. Application compatibility still needs validation during implementation.
+Pagy 43.6.2 requires Ruby 3.3 or later. The project's Ruby version meets that requirement. Focused and non-browser suites support application compatibility.
 
 The proposed dependency is:
 
@@ -40,7 +42,7 @@ Replace all Kaminari-dependent pagination across the Admin, Hotel, Corporate, an
 
 Keep the following behavior:
 
-- Existing pagination appearance and responsive layout.
+- Existing responsive behavior with a new Nova appearance on migrated pages.
 - Desktop page numbers and First, Previous, Next, and Last controls.
 - Mobile page indicators.
 - Existing page sizes and the Admin hotel page-size selector.
@@ -49,11 +51,15 @@ Keep the following behavior:
 - Report totals, financial calculations, and export selection behavior.
 - Existing account and hotel access boundaries.
 
-Some pagination markup must change because it depends on Kaminari. The replacement must retain the current appearance.
+Some pagination markup must change because it depends on Kaminari. The replacement uses the portal's Nova component design.
+
+The staged migration intentionally shows two designs. Admin API Keys demonstrates Pagy with Nova styling. Admin Hotels retains the existing Kaminari styling.
 
 No database migration or data backfill is expected for the gem replacement.
 
 The initial scope excludes report query redesign, new cursor navigation, infinite scrolling, and unrelated UI changes. Custom pagination without Kaminari stays outside this migration.
+
+Do not change the seven Kaminari templates during the Pagy component redesign. They remain the visual baseline for unmigrated pages.
 
 ## Affected pages
 
@@ -103,9 +109,9 @@ Key implementation files include:
 
 ### Shared navigation
 
-Introduce one shared `PanelsUI::Pagination` component. The source review found no existing PanelsUI pagination component.
+Use one shared `PanelsUI::Pagination` component for migrated pages. The source review found no earlier PanelsUI pagination component.
 
-The component receives a Pagy object and renders the existing navigation appearance. It uses portal semantic tokens and `app_icon`.
+The component receives a Pagy object and renders compact Nova navigation. It uses portal semantic tokens, the shared button contract, and `app_icon`.
 
 Basic pagination remains server-rendered. No additional JavaScript is planned for this approach.
 
@@ -144,9 +150,9 @@ Statement balances and report group totals must not become page-only totals.
 
 ## Phase 1: Core and shared setup plan
 
-Status: Core setup and the Admin API Keys pilot are implemented. Full CI is blocked by the existing rubyzip dependency advisory.
+Status: Core setup and the Admin API Keys pilot are implemented. Rubyzip is updated, and a new full CI run is pending.
 
-Estimated effort: **1.5–2 working days**, including the pilot and focused tests. This work is part of the full 5–8 day estimate.
+Estimated effort: **1.5–2 working days**, including the pilot and focused tests. This work is part of the full 5.5–8.5 day estimate.
 
 ### 1. Add the dependency and configuration
 
@@ -228,7 +234,7 @@ The component owns:
 
 - Desktop page numbers, gaps, and boundary controls.
 - Mobile current-page and total-page display.
-- Existing colors, spacing, borders, and responsive behavior through semantic tokens.
+- Nova colors, spacing, borders, and responsive behavior through semantic tokens.
 - Accessible link names, `aria-current`, disabled controls, and visible focus.
 - Optional suppression for single-page and empty collections.
 
@@ -242,7 +248,7 @@ Component tests cover this version-specific dependency. Page URLs use the public
 
 Do not create links for unavailable previous or next pages. Use `app_icon` for icons, following `DESIGN.md`.
 
-Preserve the current appearance. Do not import Pagy's default stylesheet over the portal theme.
+Use the Nova appearance only in `PanelsUI::Pagination`. Do not import Pagy's default stylesheet over the portal theme.
 
 ### 5. Preserve URL and Turbo behavior
 
@@ -260,7 +266,7 @@ Sources: [Pagy options](https://ddnexus.github.io/pagy/toolbox/configuration/opt
 
 Use the Admin API Keys index as the first integration. It has one relation, a 25-row limit, and one navigation control.
 
-Replace its Kaminari call with Pagy and render the shared component. Preserve its current single-page navigation appearance.
+Replace its Kaminari call with Pagy and render the shared component. Use the Nova single-page state.
 
 The pilot proves controller setup, metadata, navigation rendering, and request behavior. Array and multiple-page-key behavior receive focused tests without migrating financial pages.
 
@@ -275,12 +281,13 @@ Keep all seven Kaminari templates until the remaining pages migrate. Do not over
 | `app/controllers/application_controller.rb` | Include `Pagy::Method` |
 | `app/components/panels_ui/pagination.rb` | Define the component interface and presentation methods |
 | `app/components/panels_ui/pagination/pagination.html.erb` | Render accessible navigation |
-| `app/assets/tailwind/panel/pagination.css` | Preserve existing navigation appearance with shared tokens |
+| `app/assets/tailwind/panel/pagination.css` | Apply compact Nova navigation with shared tokens |
 | `app/assets/tailwind/application.css` | Import the pagination stylesheet |
 | `app/controllers/admin/api_keys_controller.rb` | Apply Pagy to the pilot collection |
 | `app/views/admin/api_keys/index.html.erb` | Render the shared component |
 | `spec/components/panels_ui/pagination_spec.rb` | Cover navigation, states, URL parameters, and link attributes |
 | `spec/requests/admin/api_keys_spec.rb` | Add or extend pilot request coverage |
+| System Designs preview and registry | Show Pagy navigation in both themes and page-count states |
 
 ### Phase 1 completion checks
 
@@ -297,6 +304,22 @@ Keep all seven Kaminari templates until the remaining pages migrate. Do not over
 Automated component tests inspect rendered HTML without browser automation. Record visual acceptance separately if it remains pending.
 
 Phase 1 is complete when the foundation and pilot work. Removing Kaminari belongs to the final migration phase.
+
+## Phase 1b: Pagy-only Nova redesign
+
+Status: Implemented. Estimated effort: **0.5 working day**.
+
+The redesign applies only to `PanelsUI::Pagination`. The seven Kaminari templates remain unchanged for direct comparison during migration.
+
+The Pagy component uses semantic navigation, list, and item elements. Stable `data-slot` attributes identify its structural parts for component tests.
+
+Available controls and page links use the shared ghost-button treatment. The current page uses a neutral border and a restrained shadow.
+
+Controls use 32-pixel sizing and the established medium radius. Coarse-pointer devices receive the shared 40-pixel minimum target.
+
+Desktop navigation retains First, Previous, Next, Last, page numbers, and gaps. Mobile navigation shows Previous, `Page X of Y`, and Next.
+
+The System Designs preview shows multi-page and single-page states in both portal themes. Admin API Keys remains the real Pagy pilot.
 
 ## Performance expectations
 
@@ -334,10 +357,11 @@ Logs and event streams are candidates for later keyset evaluation. Operational a
 | Work | Estimated effort |
 |---|---:|
 | Pagy setup and shared pagination controls | 1–1.5 days |
+| Pagy-only Nova redesign and preview | 0.5 day |
 | Ordinary lists across the four portals | 1.5–2 days |
 | Reports, financial presenters, and independent page controls | 1.5–2.5 days |
 | Tests, fixes, and final checks | 1–2 days |
-| **Total** | **5–8 working days** |
+| **Total** | **5.5–8.5 working days** |
 
 This is a planning estimate for one developer familiar with the project. It is not a measured execution time or delivery commitment.
 
@@ -374,7 +398,7 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 
 - All Kaminari consumers use Pagy 43.6.x.
 - Kaminari and its custom templates are removed.
-- Existing pagination design and page behavior are preserved.
+- Migrated pages use the Nova pagination design, and page behavior remains unchanged.
 - Filters, independent page keys, page sizes, and Turbo navigation remain correct.
 - Report totals and exports retain their existing meaning.
 - Required tests pass, and validation limits are recorded.
@@ -382,7 +406,7 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 
 ## Current status
 
-### Implemented in Phase 1
+### Implemented
 
 - Pagy 43.6.2 is installed alongside Kaminari. Bundler added its `yaml` dependency without upgrading existing gems.
 - The initializer sets a 25-row default, disables client limit overrides, and freezes the options.
@@ -391,32 +415,37 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 - Admin API Keys uses Pagy with a 25-row limit and stable `created_at DESC, id DESC` ordering.
 - The pilot normalizes invalid page parameters and returns empty results for page overflow.
 - All other pages retain Kaminari and its existing templates.
+- Phase 1 is committed as `50e84293d`.
+- Rubyzip 3.6.0 is committed separately as `eaa530716`.
+- `PanelsUI::Pagination` uses the Pagy-only Nova design.
+- System Designs shows the Pagy component in both themes and page-count states.
 
-The previous markup used `hover:bg-muted-hover`, which is not an available utility in the current Tailwind theme. The component uses `hover:bg-muted`.
+The Kaminari templates remain unchanged. Their appearance differs from Pagy during the staged migration by design.
 
 ### Validation
 
-- Focused component and pilot request specs: 16 examples, 0 failures.
-- Scoped RuboCop: passed.
-- Default CI RuboCop and Brakeman: passed, with no Brakeman warnings.
-- Tailwind build: passed.
-- Importmap audit: passed, with no vulnerable packages found.
-- Default `bin/ci`: stopped at Bundle Audit because existing `rubyzip 3.2.2` is flagged by CVE-2026-85396.
-- Clean non-browser suite with `BULLET=true bin/test fast`: 8,319 examples, 0 failures.
-- Sequential isolated migration checks: 45 examples across 18 files, 0 failures.
-- Final diff and new-code whitespace checks: passed.
+- Phase 1 focused specs: 16 examples, 0 failures.
+- Phase 1 clean non-browser suite with `BULLET=true bin/test fast`: 8,319 examples, 0 failures.
+- Phase 1 sequential migration checks: 45 examples across 18 files, 0 failures.
+- Rubyzip 3.6.0 resolves the dependency version that blocked the earlier Bundle Audit run.
+- Phase 1b component and request specs: 24 examples, 0 failures.
+- Phase 1b scoped RuboCop: passed with no offenses.
+- Phase 1b Tailwind build: passed.
+- Phase 1b `git diff --check`: passed.
+- The Kaminari template directory has no Phase 1b diff.
+- The post-update default `bin/ci` run cleared RuboCop, Brakeman, Bundle Audit, Importmap Audit, Tailwind, and parallel database setup.
+- Parallel RSpec ran 8,319 examples and reported three PostgreSQL deadlocks in unrelated report, invoice, and request-archive examples.
+- A serial rerun of those exact examples passed: 3 examples, 0 failures.
 
 An earlier broad run encountered two database deadlocks because migration checks ran concurrently against a shared test database. The clean sequential run passed.
 
-The audit reports `rubyzip >= 3.4.0` as the fix. This dependency was not changed by the pagination work.
-
-Full CI is not green. No performance benchmark or browser automation was run.
+Full CI is not green because the parallel test run reported three database deadlocks. No performance benchmark or browser automation was run.
 
 ### Remaining work
 
-- Resolve the rubyzip dependency advisory separately, then rerun default CI.
+- Rerun default `bin/ci` or resolve the parallel database deadlocks separately.
 - Complete human visual acceptance for desktop, mobile, keyboard behavior, and both themes.
 - Migrate the remaining controllers, presenters, and reports in later phases.
 - Remove Kaminari only after all consumers migrate.
 
-No database changes, deployment, or commit were made for Phase 1.
+Phase 1 and the rubyzip update are committed. The Phase 1b redesign is not committed. No database changes or deployment were made.
