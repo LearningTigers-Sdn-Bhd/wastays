@@ -21,6 +21,17 @@
     @apply border-border bg-card text-card-foreground shadow-sm;
   }
 
+  .panel-pagination__control[data-state="available"],
+  .panel-pagination__page {
+    cursor: pointer;
+  }
+
+  .panel-pagination__control[aria-disabled="true"] {
+    border-color: transparent;
+    cursor: not-allowed;
+    pointer-events: auto;
+  }
+
   .panel-pagination__ellipsis {
     @apply flex size-8 items-center justify-center text-sm text-muted-foreground;
   }
