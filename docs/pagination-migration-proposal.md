@@ -2,7 +2,7 @@
 
 Date: September 6, 2026
 
-Status: The Pagy foundation and the Admin, Corporate, Guest, Hotel Settings, and Hotel Logs migrations are implemented. Other Hotel areas remain on Kaminari.
+Status: The Pagy foundation and the Admin, Corporate, Guest, Hotel Settings, Hotel Logs, and simple Hotel list migrations are implemented. Other Hotel areas remain on Kaminari.
 
 ## Recommendation
 
@@ -68,9 +68,9 @@ The list includes pages, tabs, and shared sections. Some sections share the same
 | Area | Affected pages or sections |
 |---|---|
 | Hotel settings (migrated) | Room Types and Nearby Attractions |
-| Hotel operations | Front Desk Bookings, Arrivals, In-house, Departures, and Checkout; guest directory and guest booking history; Folios and attention list; Conversations |
-| Hotel finance | Corporate Accounts; invoices; payment records; statement list and statement details; e-invoice submissions |
-| Hotel reports | Financial performance and breakdown; payout history; Daily Report charge register and Cashier Activity; channel settlements; journal batches; guest-report tables, including registration cards, boat transfers, and meal preparation; night-audit history |
+| Hotel operations | Front Desk Bookings, Arrivals, In-house, Departures, and Checkout; guest directory and guest booking history; Folios and attention list; Conversations (migrated) |
+| Hotel finance | Corporate Accounts; invoices; payment records; statement list and statement details; e-invoice submissions (migrated) |
+| Hotel reports | Financial performance and breakdown; payout history; Daily Report charge register and Cashier Activity; channel settlements; journal batches; guest-report tables, including registration cards, boat transfers, and meal preparation; night-audit history (migrated) |
 | Hotel logs (migrated) | Operation Audit Logs and Notification Logs; the legacy Inventory Audit Logs route redirects to Operation Audit Logs |
 | Admin | Hotels; Bookings; Attractions; API Keys; Audit Logs; Observation Deck events; Margin Rules; Setup Fee Rules; Payouts; pending and paid Payout Batches; Reconciliations; Refund Requests |
 | Corporate portal | Invoices; payment history; statement list and statement details |
@@ -374,6 +374,20 @@ The legacy Inventory Audit Logs route still redirects to Operation Audit Logs. I
 
 The shared report pagination partial remains on Kaminari for the later Reports migration.
 
+## Phase 5: Simple Hotel lists migration
+
+Status: Implemented. Focused validation passed. The user will run full CI manually.
+
+E-Invoice Submissions retains its 20-row limit. Its summary uses the complete hotel-scoped relation.
+
+Night Audit History retains its 25-row limit. Its report metrics use all reportable audits and continue to exclude preparing audits.
+
+Conversations retains its 30-row limit, filters, counts, selected-thread route, and responsive workspace behavior.
+
+E-Invoice Submissions and Conversations use record IDs as final ordering keys. This ordering keeps page boundaries stable when timestamps match.
+
+The shared Kaminari report partial remains unchanged because other Hotel reports still use it.
+
 ## Performance expectations
 
 No benchmark was run during this analysis. The source review does not prove that Kaminari causes the reported slowness.
@@ -476,6 +490,7 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 - Payment History hydrates only the requested page after it merges lightweight source locators.
 - Statement Details materializes only the requested HTML rows while full PDF generation retains all ledger rows.
 - Hotel Settings and Hotel Logs use Pagy and the shared Nova component.
+- E-Invoice Submissions, Night Audit History, and Conversations use Pagy and the shared Nova component.
 - The remaining Hotel areas retain Kaminari and its existing templates.
 - Phase 1 is committed as `50e84293d`.
 - Rubyzip 3.6.0 is committed separately as `eaa530716`.
@@ -513,6 +528,10 @@ The Kaminari templates remain unchanged. Their appearance differs from Pagy duri
 - Hotel Settings and Logs scoped RuboCop: 8 files, no offenses.
 - Hotel Settings and Logs source paths have no remaining Kaminari pagination calls.
 - Hotel Settings and Logs `git diff --check`: passed.
+- Simple Hotel list focused request, presenter, and query specs: 75 examples, 0 failures.
+- Simple Hotel list scoped RuboCop: 7 files, no offenses.
+- Simple Hotel list source paths have no remaining Kaminari pagination calls.
+- Simple Hotel list `git diff --check`: passed.
 - The user will run the current full `bin/ci` manually.
 - The post-update default `bin/ci` run cleared RuboCop, Brakeman, Bundle Audit, Importmap Audit, Tailwind, and parallel database setup.
 - Parallel RSpec ran 8,319 examples and reported three PostgreSQL deadlocks in unrelated report, invoice, and request-archive examples.

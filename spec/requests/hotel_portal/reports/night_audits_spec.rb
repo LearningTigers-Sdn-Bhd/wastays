@@ -26,6 +26,52 @@ RSpec.describe "HotelPortal::Reports::NightAudits", type: :request do
     expect(rows.join(" ")).to include(newer.business_date.strftime("%d %b %Y"), older.business_date.strftime("%d %b %Y"))
     expect(rows.join(" ")).not_to include(preparing.business_date.strftime("%d %b %Y"))
     expect(rows.first).to include(newer.business_date.strftime("%d %b %Y"))
+    expect(page).to have_no_css("nav.panel-pagination")
+  end
+
+  it "paginates reportable audits at 25 without limiting the report metrics" do
+    audits = 26.times.map do |index|
+      create(
+        :night_audit,
+        hotel: hotel,
+        business_date: Date.new(2026, 7, 1) + index.days,
+        status: "completed"
+      )
+    end
+    create(:night_audit, hotel: hotel, business_date: Date.new(2026, 8, 1), status: "preparing")
+
+    get hotel_reports_night_audits_path(hotel)
+
+    page = Capybara.string(response.body)
+    pagination = page.find('nav.panel-pagination[aria-label="Night audit report pagination"]')
+    report_records = page.all("[data-slot='report-metric']").find do |metric|
+      metric.has_css?(".panel-metric-card__label", text: "Report records")
+    end
+    expect(page).to have_css("table tbody tr", count: 25)
+    expect(report_records).to have_css(".panel-metric-card__value", text: "26")
+    expect(page).to have_text(audits.last.business_date.strftime("%d %b %Y"))
+    expect(page).to have_no_text(audits.first.business_date.strftime("%d %b %Y"))
+    expect(pagination).to have_css('a[aria-label="Page 2"]')
+
+    get hotel_reports_night_audits_path(hotel), params: { page: 2 }
+
+    page = Capybara.string(response.body)
+    pagination = page.find("nav.panel-pagination")
+    expect(page).to have_css("table tbody tr", count: 1)
+    expect(page).to have_text(audits.first.business_date.strftime("%d %b %Y"))
+    expect(pagination).to have_css('[aria-current="page"]', text: "2")
+    expect(pagination).to have_css('a[aria-label="Previous page"]')
+
+    [ "invalid", "0", "-2" ].each do |invalid_page|
+      get hotel_reports_night_audits_path(hotel), params: { page: invalid_page }
+      expect(Capybara.string(response.body)).to have_css("table tbody tr", count: 25)
+    end
+
+    get hotel_reports_night_audits_path(hotel), params: { page: 99 }
+
+    page = Capybara.string(response.body)
+    expect(page).to have_css("table tbody tr", count: 1, text: "No Night Audit reports are available yet")
+    expect(page).to have_css('nav.panel-pagination a[aria-label="Previous page"]')
   end
 
   it "allows manage-night-audit staff to read the index, detail, and PDF without view-reports permission" do

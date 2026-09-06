@@ -29,17 +29,22 @@
       </ul>
     <% end %>
 
-    <% if conversations.total_pages > 1 %>
-      <div class="shrink-0 border-t border-border p-3">
-        <%= paginate conversations %>
-      </div>
-    <% end %>
   <% else %>
     <div class="flex min-h-0 flex-1 items-center p-6">
       <%= render PanelsUI::EmptyState.new(
             icon: "inbox",
             title: "Nothing here",
             description: params[:q].present? ? "No conversation matches that search." : "New guest enquiries will appear here.") %>
+    </div>
+  <% end %>
+
+  <% if pagination.pages > 1 %>
+    <div class="shrink-0 border-t border-border p-3">
+      <%= render PanelsUI::Pagination.new(
+            pagy: pagination,
+            aria_label: "Conversation pagination",
+            hide_when_single_page: true
+          ) %>
     </div>
   <% end %>
 </div>
