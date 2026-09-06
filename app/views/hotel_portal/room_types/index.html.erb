@@ -105,11 +105,13 @@
         </div>
       <% end %>
 
-      <% if @room_types.total_pages > 1 %>
-        <div class="mt-5 flex justify-center">
-          <%= paginate @room_types, params: { q: params[:q] }, data: { turbo_action: "advance" } %>
-        </div>
-      <% end %>
+      <div class="mt-5 flex justify-center">
+        <%= render PanelsUI::Pagination.new(
+              pagy: @pagy,
+              hide_when_single_page: true,
+              link_data: { turbo_action: "advance" }
+            ) %>
+      </div>
     </turbo-frame>
   </section>
 </div>
