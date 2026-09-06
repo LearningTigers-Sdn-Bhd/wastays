@@ -59,6 +59,7 @@ gem "image_processing", "~> 2.0"
 # image_processing 2.0 no longer bundles a backend; the vips processor needs this
 gem "ruby-vips", "~> 2.0", require: false
 gem "kaminari", "~> 1.2"
+gem "pagy", "~> 43.6.2"
 gem "commonmarker", "~> 2.8"
 gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"

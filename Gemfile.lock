@@ -328,6 +328,10 @@ GEM
       racc (~> 1.4)
     openssl (4.0.2)
     ostruct (0.6.3)
+    pagy (43.6.2)
+      json
+      uri
+      yaml
     parallel (2.1.0)
     parallel_tests (5.7.0)
       parallel
@@ -590,6 +594,7 @@ GEM
     websocket-extensions (0.1.5)
     xpath (3.2.0)
       nokogiri (~> 1.8)
+    yaml (0.4.0)
     zeitwerk (2.8.3)
 
 PLATFORMS
@@ -631,6 +636,7 @@ DEPENDENCIES
   neighbor (~> 1.2)
   nokogiri (>= 1.19.3)
   openssl (~> 4.0)
+  pagy (~> 43.6.2)
   parallel_tests
   pdf-reader (~> 2.12)
   pg (~> 1.1)

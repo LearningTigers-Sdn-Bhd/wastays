@@ -1,7 +1,8 @@
 class Admin::ApiKeysController < Admin::BaseController
   def index
-    @all_api_keys = ApiKey.all.order(created_at: :desc)
-    @api_keys = @all_api_keys.page(params[:page]).per(25)
+    @all_api_keys = ApiKey.all.order(created_at: :desc, id: :desc)
+    page = Integer(params[:page], exception: false).to_i
+    @pagy, @api_keys = pagy(:offset, @all_api_keys, limit: 25, page: page.positive? ? page : 1)
     @generated_api_key_token = session.delete(:generated_api_key_token)
     @generated_api_key_name = session.delete(:generated_api_key_name)
   end
