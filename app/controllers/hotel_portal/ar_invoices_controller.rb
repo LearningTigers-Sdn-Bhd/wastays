@@ -6,7 +6,7 @@ module HotelPortal
 
     def index
       ArInvoices::RefreshOverdueStatuses.call(hotel: current_hotel)
-      @presenter = HotelPortal::AccountsReceivable::IndexPresenter.new(hotel: current_hotel, params: params)
+      @presenter = HotelPortal::AccountsReceivable::IndexPresenter.new(hotel: current_hotel, params: params, request: request)
     end
 
     def aging

@@ -48,7 +48,7 @@ RSpec.describe "Nearby attractions sheet", type: :system, js: true do
 
     expect(page).to have_content("Review Nearby Attraction")
     expect(page).to have_content("Batu Caves")
-    expect(page).to have_content("estimated straight-line distance")
+    expect(page).to have_content("straight-line distance from your hotel")
 
     within("dialog#nearby-attraction-sheet") { click_in_overlay "Create and add" }
 

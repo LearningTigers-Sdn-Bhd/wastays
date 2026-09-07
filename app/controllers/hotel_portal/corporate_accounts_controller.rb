@@ -16,7 +16,7 @@ module HotelPortal
     before_action :set_return_to, except: :index
 
     def index
-      @presenter = HotelPortal::AccountsReceivable::CorporateAccountsPresenter.new(hotel: current_hotel, params: params)
+      @presenter = HotelPortal::AccountsReceivable::CorporateAccountsPresenter.new(hotel: current_hotel, params: params, request: request)
     end
 
     def new

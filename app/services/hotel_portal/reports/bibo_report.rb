@@ -86,14 +86,14 @@ module HotelPortal
       def boat_ins
         @boat_ins ||= booking_guests_scope
           .where(boat_in_at: window)
-          .order("booking_guests.boat_in_at ASC")
+          .order("booking_guests.boat_in_at ASC, booking_guests.id ASC")
           .map { |bg| row_for(bg, bg.boat_in_at) }
       end
 
       def boat_outs
         @boat_outs ||= booking_guests_scope
           .where(boat_out_at: window)
-          .order("booking_guests.boat_out_at ASC")
+          .order("booking_guests.boat_out_at ASC, booking_guests.id ASC")
           .map { |bg| row_for(bg, bg.boat_out_at) }
       end
 

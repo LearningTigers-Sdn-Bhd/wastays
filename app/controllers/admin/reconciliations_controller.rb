@@ -1,6 +1,6 @@
 class Admin::ReconciliationsController < Admin::BaseController
   def index
-    base_scope = WebhookEvent.order(created_at: :desc)
+    base_scope = WebhookEvent.order(created_at: :desc, id: :desc)
 
     @summary_total_events = base_scope.count
     @summary_failed_events = base_scope.failed.count
@@ -12,7 +12,7 @@ class Admin::ReconciliationsController < Admin::BaseController
     @all_events = @all_events.where(status: params[:status]) if params[:status].present?
     @all_events = @all_events.where(gateway: params[:gateway]) if params[:gateway].present?
 
-    @events = @all_events.page(params[:page]).per(25)
+    @pagy, @events = pagy(:offset, @all_events, limit: 25)
   end
 
   def show

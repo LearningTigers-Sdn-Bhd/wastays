@@ -113,13 +113,29 @@ RSpec.describe "Hotel portal OTA settlement report", type: :request do
     end
 
     get channel_settlements_hotel_reports_path(hotel), params: {
-      start_date: "2026-06-01", end_date: "2026-06-30"
+      start_date: "2026-06-01", end_date: "2026-06-30", q: "ota_provider", currency: "MYR"
     }
 
     page = Capybara.string(response.body)
     detail_table = page.find("caption", text: "OTA settlement details").ancestor("table")
+    page_two = page.find('[data-slot="report-pagination"] a[aria-label="Page 2"]')
     expect(detail_table).to have_css("tbody tr", count: 25)
-    expect(page).to have_css("[data-slot='report-pagination']")
+    expect(page).to have_text("ota_provider_25-MYR")
+    expect(page).to have_no_text("ota_provider_0-MYR")
+    expect(page_two[:href]).to include("q=ota_provider", "currency=MYR", "start_date=2026-06-01", "end_date=2026-06-30")
+
+    get channel_settlements_hotel_reports_path(hotel), params: {
+      start_date: "2026-06-01", end_date: "2026-06-30", q: "ota_provider", currency: "MYR", page: 2
+    }
+
+    expect(response.body).to include("ota_provider_0-MYR")
+    expect(response.body).not_to include("ota_provider_25-MYR")
+
+    get channel_settlements_hotel_reports_path(hotel, format: :csv), params: {
+      start_date: "2026-06-01", end_date: "2026-06-30", q: "ota_provider", currency: "MYR", page: 2
+    }
+
+    expect(response.body).to include("ota_provider_0-MYR", "ota_provider_25-MYR")
   end
 
   it "requires view_reports permission" do

@@ -2,7 +2,12 @@
 
 module HotelPortal
   class NearbyAttractionsController < HotelPortal::SettingsBaseController
-    helper_method :attraction_issue_label, :attraction_issue_variant
+    # Attractions::Suggestions caps the list at 10. A full list is long enough to
+    # push the added attractions off screen, so the section starts collapsed.
+    SUGGESTIONS_LIMIT = 10
+    SUGGESTIONS_COLLAPSE_COUNT = 10
+
+    helper_method :attraction_issue_label, :attraction_issue_variant, :attraction_distance_label
 
     before_action :set_hotel
     before_action :authorize_hotel
@@ -82,8 +87,9 @@ module HotelPortal
 
     def set_nearby_attractions
       @all_nearby_attractions = @hotel.hotel_nearby_attractions.includes(:attraction).order(created_at: :desc)
-      @nearby_attractions = @all_nearby_attractions.page(params[:page]).per(25)
-      @suggestions = Attractions::Suggestions.call(hotel: @hotel, limit: 10, radius_km: 25)
+      @pagy, @nearby_attractions = pagy(:offset, @all_nearby_attractions, limit: 25)
+      @suggestions = Attractions::Suggestions.call(hotel: @hotel, limit: SUGGESTIONS_LIMIT, radius_km: 25)
+      @suggestions_open = @suggestions.size < SUGGESTIONS_COLLAPSE_COUNT
       @hotel_coordinates_available = @hotel.latitude.present? && @hotel.longitude.present?
     end
 
@@ -128,6 +134,12 @@ module HotelPortal
       when "rejected" then "Needs attention"
       when "archived" then "Unavailable"
       end
+    end
+
+    def attraction_distance_label(distance_km)
+      return if distance_km.blank?
+
+      "#{ActiveSupport::NumberHelper.number_to_rounded(distance_km, precision: 1)}km"
     end
 
     def attraction_issue_variant(attraction)

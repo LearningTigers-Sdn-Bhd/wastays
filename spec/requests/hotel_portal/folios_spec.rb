@@ -168,6 +168,23 @@ RSpec.describe "HotelPortal::Folios", type: :request, frozen_time: Time.zone.loc
       expect(response.body).not_to include("Hidden Guest")
     end
 
+    it "paginates stable filtered rows without limiting summary counts" do
+      bookings = Array.new(26) do |index|
+        create_booking_with_folio(
+          guest_name: "Paged Guest #{index}",
+          confirmation_token: "BK-PAGED-#{index}",
+          folio_number: 700 + index,
+          charges: 100
+        ).tap { |booking| booking.booking_folio.update_column(:updated_at, Time.current - index.minutes) }
+      end
+
+      get hotel_folios_path(hotel), params: { filter: "balance_due", page: 2 }
+
+      expect(results_text).to include(bookings.last.guest_name)
+      expect(results_text).not_to include(bookings.first.guest_name)
+      expect(response.body).to include("26 folios need attention")
+    end
+
     it "requires view booking permission" do
       role.permissions.delete(view_bookings)
 

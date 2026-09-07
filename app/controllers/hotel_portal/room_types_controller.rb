@@ -12,7 +12,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
       room_type_rate_plans: [ :channel_mapping, :occupancy_prices, :rate_plan ]
     )
     @all_room_types = RoomTypesQuery.new(room_types).call(params)
-    @room_types = @all_room_types.page(params[:page]).per(25)
+    @pagy, @room_types = pagy(:offset, @all_room_types, limit: 25)
 
     @filters_active = params[:q].present?
   end

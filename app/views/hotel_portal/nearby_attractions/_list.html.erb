@@ -26,7 +26,7 @@
                 <p class="line-clamp-3"><%= hotel_attraction.guest_description %></p>
               </td>
               <td class="whitespace-nowrap">
-                <p class="text-sm text-muted-foreground"><%= distance ? "#{number_with_precision(distance, precision: 1)} km estimated" : "Distance not available" %></p>
+                <p class="text-sm text-muted-foreground"><%= attraction_distance_label(distance) || "Distance not available" %></p>
                 <% if attraction_issue_label(attraction) %>
                   <div class="mt-2">
                     <%= render PanelsUI::Badge.new(
@@ -87,8 +87,8 @@
                 </div>
               <% end %>
               <div>
-                <dt class="text-xs text-muted-foreground">Estimated distance</dt>
-                <dd class="mt-1 font-medium text-foreground"><%= distance ? "#{number_with_precision(distance, precision: 1)} km" : "Not available" %></dd>
+                <dt class="text-xs text-muted-foreground">Distance</dt>
+                <dd class="mt-1 font-medium text-foreground"><%= attraction_distance_label(distance) || "Not available" %></dd>
               </div>
               <div>
                 <dt class="text-xs text-muted-foreground">Guest description</dt>
@@ -117,6 +117,6 @@
   </div>
 
   <div class="mt-5 flex justify-center">
-    <%= paginate @nearby_attractions %>
+    <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
   </div>
 </div>

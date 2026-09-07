@@ -3,6 +3,10 @@
 module HotelPortal
   module Folios
     class IndexPresenter
+    include Pagy::Method
+
+    PER_PAGE = 25
+
     FILTERS = [
       [ "all", "All" ],
       [ "open", "Open" ],
@@ -21,11 +25,12 @@ module HotelPortal
       [ "review", "Review" ]
     ].freeze
 
-    attr_reader :hotel, :params
+    attr_reader :hotel, :params, :request
 
-    def initialize(hotel:, params:, attention_only: false)
+    def initialize(hotel:, params:, request:, attention_only: false)
       @hotel = hotel
       @params = params
+      @request = request
       @attention_only = attention_only
     end
 
@@ -34,15 +39,19 @@ module HotelPortal
     end
 
     def rows
-      @rows ||= folios.map { |folio| Row.new(folio, hotel: hotel, business_date: business_date) }
+      @rows ||= pagination_pair.last.map { |folio| Row.new(folio) }
     end
 
     def paginated_rows
-      @paginated_rows ||= Kaminari.paginate_array(filtered_rows).page(params[:page]).per(25)
+      rows
+    end
+
+    def pagination
+      pagination_pair.first
     end
 
     def needs_attention_count
-      @needs_attention_count ||= rows.count(&:needs_attention?)
+      index_query.needs_attention_count
     end
 
     def active_filters
@@ -50,8 +59,9 @@ module HotelPortal
     end
 
     def filter_options
+      counts = index_query.filter_counts(active_filters)
       active_filters.map do |key, label|
-        { key: key, label: label, value: (key == "all" ? "" : key), count: count_for_filter(key) }
+        { key: key, label: label, value: (key == "all" ? "" : key), count: counts.fetch(key, 0) }
       end
     end
 
@@ -68,11 +78,12 @@ module HotelPortal
     end
 
     def summary_cards
+      counts = index_query.summary_counts
       [
-        { label: "Open Folios", value: rows.count(&:open?), icon: "book-open", class: "bg-blue-50 text-blue-700" },
-        { label: "Balance Due", value: rows.count(&:balance_due?), icon: "credit-card", class: "bg-red-50 text-red-700" },
-        { label: "Refund Due", value: rows.count(&:refund_due?), icon: "rotate-ccw", class: "bg-amber-50 text-amber-700" },
-        { label: "Closed Today", value: rows.count(&:closed_today?), icon: "circle-check", class: "bg-emerald-50 text-emerald-700" }
+        { label: "Open Folios", value: counts.fetch("open", 0), icon: "book-open", class: "bg-blue-50 text-blue-700" },
+        { label: "Balance Due", value: counts.fetch("balance_due", 0), icon: "credit-card", class: "bg-red-50 text-red-700" },
+        { label: "Refund Due", value: counts.fetch("refund_due", 0), icon: "rotate-ccw", class: "bg-amber-50 text-amber-700" },
+        { label: "Closed Today", value: counts.fetch("closed_today", 0), icon: "circle-check", class: "bg-emerald-50 text-emerald-700" }
       ]
     end
 
@@ -82,55 +93,24 @@ module HotelPortal
 
     private
 
-    def folios
-      @folios ||= hotel.booking_folios
-                       .includes(:folio_transactions, booking: [ :refund_request, { booking_rooms: :room_type } ])
-                       .order(updated_at: :desc, id: :desc)
-                       .to_a
+    def pagination_pair
+      @pagination_pair ||= pagy(:offset, index_query.collection, request: request, limit: PER_PAGE)
     end
 
-    def filtered_rows
-      @filtered_rows ||= rows.select { |row| matches_scope?(row) && matches_query?(row) && matches_filter?(row) }
-    end
-
-    def count_for_filter(key)
-      rows.count { |row| matches_scope?(row) && matches_filter?(row, key) }
-    end
-
-    def matches_scope?(row)
-      !attention_only? || row.needs_attention?
-    end
-
-    def matches_query?(row)
-      return true if query.blank?
-
-      row.search_text.include?(query.downcase)
-    end
-
-    def matches_filter?(row, filter = selected_filter)
-      case filter
-      when "open" then row.open?
-      when "balance_due" then row.balance_due?
-      when "refund_due" then row.refund_due?
-      when "due_out" then row.due_out?
-      when "closed" then row.closed?
-      when "adjusted" then row.adjusted?
-      when "review" then row.unsynced_completed_refund?
-      else true
-      end
-    end
-
-    def business_date
-      @business_date ||= hotel.current_business_date || hotel.business_date_for(Time.current)
+    def index_query
+      @index_query ||= HotelPortal::Folios::IndexQuery.new(
+        hotel: hotel,
+        query: query,
+        filter: selected_filter,
+        attention_only: attention_only?
+      )
     end
 
     class Row
-      attr_reader :folio, :hotel, :business_date
+      attr_reader :folio
 
-      def initialize(folio, hotel:, business_date:)
+      def initialize(folio)
         @folio = folio
-        @hotel = hotel
-        @business_date = business_date
       end
 
       delegate :booking, to: :folio
@@ -144,14 +124,7 @@ module HotelPortal
       end
 
       def balance
-        @balance ||= begin
-          transactions = folio.folio_transactions
-          charges = transactions.select(&:charge?).sum { |transaction| transaction.amount.to_d }
-          payments = transactions.select(&:payment?).sum { |transaction| transaction.amount.to_d }
-          adjustments = transactions.select(&:adjustment?).sum { |transaction| transaction.amount.to_d }
-
-          charges - payments + adjustments
-        end
+        @balance ||= folio.calculated_balance.to_d
       end
 
       def balance_due?
@@ -163,15 +136,15 @@ module HotelPortal
       end
 
       def due_out?
-        open? && booking.check_out.in_time_zone(hotel.hotel_time_zone).to_date == business_date
+        folio.calculated_due_out
       end
 
       def adjusted?
-        folio.folio_transactions.any?(&:adjustment?)
+        folio.calculated_adjusted
       end
 
       def closed_today?
-        closed? && hotel.business_day_window_for(business_date).cover?(folio.updated_at.in_time_zone(hotel.hotel_time_zone))
+        folio.calculated_closed_today
       end
 
       def settled?
@@ -259,27 +232,7 @@ module HotelPortal
       end
 
       def unsynced_completed_refund?
-        refund_request = booking.refund_request
-        return false unless refund_request&.completed?
-
-        expected_amount = -refund_request.refund_amount.to_d
-        folio.folio_transactions.none? do |transaction|
-          transaction.transaction_type == "payment" &&
-            (transaction.metadata || {})["refund_request_id"].to_s == refund_request.id.to_s &&
-            transaction.amount.to_d == expected_amount
-        end
-      end
-
-      def search_text
-        [
-          booking.guest_name,
-          booking.confirmation_token,
-          booking.guest_email,
-          booking.guest_phone,
-          folio.folio_number,
-          folio_reference,
-          booking.booking_rooms.map(&:room_number)
-        ].flatten.compact.join(" ").downcase
+        folio.calculated_unsynced_refund
       end
 
       private

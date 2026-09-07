@@ -1,4 +1,5 @@
 require "rails_helper"
+require "csv"
 require "pdf-reader"
 
 RSpec.describe "HotelPortal::NotificationLogs", type: :request do
@@ -66,6 +67,44 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
       expect(page).to have_css("textarea[name='resend_reason'][required]")
       expect(page).to have_button("Confirm resend")
       expect(page).to have_no_css("[onclick]")
+      expect(page).to have_no_css("nav.panel-pagination")
+    end
+
+    it "paginates HTML logs without limiting the summary or filtered CSV export" do
+      booking = create(:booking, hotel: hotel, status: "checked_in")
+      21.times do |index|
+        create(
+          :notification_delivery,
+          hotel: hotel,
+          booking: booking,
+          notification_type: "check_in_confirmation",
+          channel: "email",
+          status: "failed",
+          error_message: "Paged error #{index}"
+        )
+      end
+      filters = {
+        query: "Paged error",
+        notification_type: "check_in_confirmation",
+        channel: "email",
+        status: "failed"
+      }
+
+      get hotel_notification_logs_path(hotel), params: filters.merge(page: 2)
+
+      page = Capybara.string(response.body)
+      pagination = page.find('nav.panel-pagination[aria-label="Notification log pagination"]')
+      previous_link = pagination.find('a[aria-label="Previous page"]')
+      previous_query = Rack::Utils.parse_nested_query(URI.parse(previous_link[:href]).query)
+      metric_values = page.all("[data-slot='report-metric-strip'] .panel-metric-card__value").map(&:text)
+      expect(page).to have_css("table.panel-table tbody tr", count: 1)
+      expect(pagination).to have_css('[aria-current="page"]', text: "2")
+      expect(previous_query).to include(filters.stringify_keys)
+      expect(metric_values).to include("21")
+
+      get hotel_notification_logs_path(hotel, format: :csv), params: filters.merge(page: 2)
+
+      expect(CSV.parse(response.body).size).to eq(22)
     end
 
     it "summarizes notification delivery status for the active filters" do

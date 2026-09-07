@@ -126,7 +126,12 @@
         <% end %>
       <% end %>
 
-      <div class="flex justify-center"><%= paginate @submissions %></div>
+    <% end %>
+
+    <% if @pagy.pages > 1 %>
+      <div class="flex justify-center">
+        <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
+      </div>
     <% end %>
   </section>
 </div>

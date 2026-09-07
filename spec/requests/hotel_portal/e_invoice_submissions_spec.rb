@@ -59,6 +59,52 @@ RSpec.describe "HotelPortal::EInvoiceSubmissions", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("E-Invoice")
       expect(response.body).to include("Open E-Invoice Settings")
+      expect(response.parsed_body.at_css("nav.panel-pagination")).to be_nil
+    end
+
+    it "paginates submissions at 20 with stable ordering and complete summary counts" do
+      timestamp = Time.zone.local(2026, 9, 7, 9)
+      submissions = 21.times.map do |index|
+        create(
+          :e_invoice_submission,
+          hotel: hotel,
+          booking: create(:booking, hotel: hotel),
+          internal_id: "PAGED-#{index}",
+          status: "valid",
+          created_at: timestamp,
+          updated_at: timestamp
+        )
+      end
+
+      get hotel_e_invoice_submissions_path(hotel)
+
+      document = response.parsed_body
+      pagination = document.at_css('nav.panel-pagination[aria-label="Pagination"]')
+      expect(document.css('[data-testid="e-invoice-submissions-table"] tbody tr').size).to eq(20)
+      expect(document.at_css("#e-invoice-summary-heading").parent.text).to include("Valid", "21")
+      expect(document.text).to include(submissions.last.internal_id)
+      expect(document.text).not_to include(submissions.first.internal_id)
+      expect(pagination.at_css('a[aria-label="Page 2"]')).to be_present
+
+      get hotel_e_invoice_submissions_path(hotel), params: { page: 2 }
+
+      document = response.parsed_body
+      pagination = document.at_css("nav.panel-pagination")
+      expect(document.css('[data-testid="e-invoice-submissions-table"] tbody tr').size).to eq(1)
+      expect(document.text).to include(submissions.first.internal_id)
+      expect(pagination.at_css('[aria-current="page"]').text).to eq("2")
+      expect(pagination.at_css('a[aria-label="Previous page"]')).to be_present
+
+      [ "invalid", "0", "-2" ].each do |invalid_page|
+        get hotel_e_invoice_submissions_path(hotel), params: { page: invalid_page }
+        expect(response.parsed_body.css('[data-testid="e-invoice-submissions-table"] tbody tr').size).to eq(20)
+      end
+
+      get hotel_e_invoice_submissions_path(hotel), params: { page: 99 }
+
+      document = response.parsed_body
+      expect(document.css('[data-testid="e-invoice-submissions-table"] tbody tr')).to be_empty
+      expect(document.at_css('nav.panel-pagination a[aria-label="Previous page"]')).to be_present
     end
 
     # A fully-configured hotel doesn't need to be told so every time it opens

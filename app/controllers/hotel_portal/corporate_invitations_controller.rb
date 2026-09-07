@@ -29,7 +29,11 @@ module HotelPortal
     # Re-render the results frame in place so the operator keeps their search, tab,
     # and page instead of being bounced to an unfiltered index.
     def respond_with_results(notice: nil, alert: nil)
-      @presenter = HotelPortal::AccountsReceivable::CorporateAccountsPresenter.new(hotel: current_hotel, params: results_params)
+      @presenter = HotelPortal::AccountsReceivable::CorporateAccountsPresenter.new(
+        hotel: current_hotel,
+        params: results_params,
+        request: pagination_request
+      )
 
       respond_to do |format|
         format.turbo_stream do
@@ -43,6 +47,14 @@ module HotelPortal
 
     def results_params
       params.permit(:query, :status, :account_type, :page)
+    end
+
+    def pagination_request
+      {
+        base_url: request.base_url,
+        path: hotel_corporate_accounts_path(current_hotel),
+        params: results_params.to_h
+      }
     end
 
     def authorize_manage_corporate_accounts!

@@ -1,6 +1,9 @@
-<% if collection.respond_to?(:total_pages) && collection.total_pages > 1 %>
-  <nav class="flex justify-center border-t border-border px-3 py-2" aria-label="Report pagination" data-slot="report-pagination">
-    <%# A page can carry several paginated sections, so each may name its own param. %>
-    <%= paginate collection, **(local_assigns[:param_name].present? ? { param_name: local_assigns[:param_name] } : {}) %>
-  </nav>
+<% if pagy.pages > 1 %>
+  <div class="flex justify-center border-t border-border px-3 py-2" data-slot="report-pagination">
+    <%= render PanelsUI::Pagination.new(
+          pagy: pagy,
+          aria_label: local_assigns.fetch(:aria_label, "Report pagination"),
+          link_data: local_assigns.fetch(:link_data, {})
+        ) %>
+  </div>
 <% end %>

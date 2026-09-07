@@ -1,0 +1,26 @@
+<section aria-labelledby="pagination-preview-heading" class="border-t border-border pt-8">
+  <h2 id="pagination-preview-heading" class="text-lg font-semibold text-foreground">Pagination</h2>
+  <p class="mt-1 mb-5 text-sm text-muted-foreground">
+    Compact Pagy navigation with responsive page context, accessible boundary controls, and preserved URL parameters.
+  </p>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    <% [ [ "panel-light", "Light theme" ], [ "panel-dark", "Dark theme" ] ].each do |theme, heading| %>
+      <div class="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm" data-theme="<%= theme %>">
+        <h3 class="text-sm font-semibold"><%= heading %></h3>
+
+        <div class="mt-4 space-y-5">
+          <div class="space-y-2">
+            <p class="text-xs font-medium text-muted-foreground">Multiple pages</p>
+            <%= render PanelsUI::Pagination.new(pagy: @pagination_preview, aria_label: "#{heading} pagination preview") %>
+          </div>
+
+          <div class="space-y-2">
+            <p class="text-xs font-medium text-muted-foreground">Single page</p>
+            <%= render PanelsUI::Pagination.new(pagy: @single_page_preview, aria_label: "#{heading} single-page preview") %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</section>

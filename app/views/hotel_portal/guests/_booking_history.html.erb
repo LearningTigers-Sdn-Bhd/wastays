@@ -79,7 +79,11 @@
         <% end %>
 
         <div class="flex justify-center pt-2">
-          <%= paginate bookings %>
+          <%= render PanelsUI::Pagination.new(
+                pagy: pagination,
+                aria_label: "Guest booking history pagination",
+                hide_when_single_page: true
+              ) %>
         </div>
       <% else %>
         <%= render PanelsUI::EmptyState.new(

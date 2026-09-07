@@ -152,9 +152,9 @@
             </tbody>
           </table>
         </div>
-        <% if @presenter.paginated_rows.total_pages > 1 %>
+        <% if @presenter.pagination.pages > 1 %>
           <div class="border-t border-border px-4 py-4">
-            <%= paginate @presenter.paginated_rows, params: @presenter.pagination_params %>
+            <%= render PanelsUI::Pagination.new(pagy: @presenter.pagination, hide_when_single_page: true) %>
           </div>
         <% end %>
       </section>

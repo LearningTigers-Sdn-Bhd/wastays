@@ -82,11 +82,12 @@
       <% end %>
     </div>
 
-    <% if @attractions.total_pages > 1 %>
-      <div class="flex justify-center sm:justify-end">
-        <%= paginate @attractions, data: { turbo_action: "advance" } %>
-      </div>
-    <% end %>
+    <div class="flex justify-center sm:justify-end">
+      <%= render PanelsUI::Pagination.new(
+            pagy: @pagy,
+            hide_when_single_page: true,
+            link_data: { turbo_action: "advance" }) %>
+    </div>
   <% else %>
     <div class="rounded-lg border border-border bg-card p-6 text-center">
       <h2 class="text-base font-semibold">No attractions found</h2>

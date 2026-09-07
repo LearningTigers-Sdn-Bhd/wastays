@@ -6,7 +6,11 @@ RSpec.describe HotelPortal::AccountsReceivable::CorporateAccountsPresenter do
   let(:hotel) { create(:hotel) }
 
   def presenter(params = {})
-    described_class.new(hotel: hotel, params: ActionController::Parameters.new(params))
+    described_class.new(
+      hotel: hotel,
+      params: ActionController::Parameters.new(params),
+      request: request_context(params)
+    )
   end
 
   def named_account(name)
@@ -148,7 +152,7 @@ RSpec.describe HotelPortal::AccountsReceivable::CorporateAccountsPresenter do
       create_list(:corporate_invitation, 3, hotel: hotel, account: hotel.account)
 
       baseline = count_queries do
-        subject = described_class.new(hotel: hotel, params: ActionController::Parameters.new)
+        subject = described_class.new(hotel: hotel, params: ActionController::Parameters.new, request: request_context({}))
         subject.account_type_tabs
         subject.pinned_rows.each(&:status_label)
         subject.paginated_rows.each(&:credit_exposure)
@@ -157,7 +161,7 @@ RSpec.describe HotelPortal::AccountsReceivable::CorporateAccountsPresenter do
       create_list(:hotel_corporate_account, 12, hotel: hotel)
 
       scaled = count_queries do
-        subject = described_class.new(hotel: hotel, params: ActionController::Parameters.new)
+        subject = described_class.new(hotel: hotel, params: ActionController::Parameters.new, request: request_context({}))
         subject.account_type_tabs
         subject.pinned_rows.each(&:status_label)
         subject.paginated_rows.each(&:credit_exposure)
@@ -176,5 +180,9 @@ RSpec.describe HotelPortal::AccountsReceivable::CorporateAccountsPresenter do
     count
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber)
+  end
+
+  def request_context(params)
+    { base_url: "http://test.host", path: "/hotel/#{hotel.id}/corporate-accounts", params: params.stringify_keys }
   end
 end

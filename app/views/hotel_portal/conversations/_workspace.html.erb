@@ -46,7 +46,11 @@
     <section
       aria-label="Conversation list"
       class="h-[78dvh] <%= selected ? "hidden lg:block" : "block" %>">
-      <%= render "hotel_portal/conversations/list", conversations: conversations, query: query, selected: selected %>
+      <%= render "hotel_portal/conversations/list",
+            conversations: conversations,
+            pagination: pagination,
+            query: query,
+            selected: selected %>
     </section>
 
     <section

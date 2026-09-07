@@ -212,7 +212,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).to include("page:1")
     end
 
-    it "uses arrivals search, ordering, and 25-row pagination" do
+    it "uses arrivals search, ordering, and 24-row pagination" do
       grant_arrival_permission
       matching = booking(status: "confirmed", confirmation_token: "ARRIVAL-MATCH", check_in: hotel_today, created_at: 2.days.ago)
       excluded = booking(status: "confirmed", confirmation_token: "ARRIVAL-EXCLUDED", check_in: hotel_today)
@@ -225,6 +225,67 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       get hotel_front_desk_path(hotel), params: { tab: "arrivals", arrival_page: 2 }
       expect(response.body).not_to include(matching.confirmation_token)
       expect(response.body).to include("ARRIVAL-24")
+    end
+
+    it "paginates bookings with its page key and preserves the other tab state" do
+      grant_booking_permission
+      timestamp = Time.zone.local(2026, 7, 15, 9, 0)
+      bookings = 26.times.map do |index|
+        booking(
+          status: "confirmed",
+          confirmation_token: format("BOOKING-PAGE-%02d", index),
+          created_at: timestamp
+        )
+      end
+
+      get hotel_front_desk_path(hotel), params: {
+        tab: "bookings", view: "list", booking_page: 1,
+        in_house_page: 3, departure_page: 4
+      }
+
+      page = Capybara.string(response.body)
+      pagination = page.find('nav.panel-pagination[aria-label="Reservations pagination"]')
+      page_two_link = pagination.find('a[aria-label="Page 2"]')
+      page_two_query = Rack::Utils.parse_nested_query(URI.parse(page_two_link[:href]).query)
+      expect(table_tokens).to eq(bookings.reverse.first(24).map(&:confirmation_token))
+      expect(page_two_query).to include(
+        "booking_page" => "2", "in_house_page" => "3", "departure_page" => "4",
+        "tab" => "bookings", "view" => "list"
+      )
+      expect(pagination).to have_no_css("[data-turbo-action], [data-turbo-frame]")
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list", booking_page: 2 }
+
+      expect(table_tokens).to eq(bookings.reverse.drop(24).map(&:confirmation_token))
+      expect(response.body).to include("page:2")
+    end
+
+    it "normalizes invalid named pages and returns the Pagy overflow page" do
+      grant_arrival_permission
+      booking(status: "confirmed", confirmation_token: "INVALID-BOOKING-PAGE")
+      booking(status: "confirmed", confirmation_token: "INVALID-ARRIVAL-PAGE", check_in: hotel_today)
+      booking(status: "checked_in", confirmation_token: "INVALID-IN-HOUSE-PAGE", checked_in_at: Time.current)
+      booking(status: "checked_in", confirmation_token: "INVALID-DEPARTURE-PAGE", check_out: hotel_today)
+      booking(status: "completed", confirmation_token: "INVALID-CHECKOUT-PAGE", checked_out_at: Time.current)
+
+      {
+        "bookings" => :booking_page,
+        "arrivals" => :arrival_page,
+        "in_house" => :in_house_page,
+        "departures" => :departure_page,
+        "checkout" => :checkout_page
+      }.each do |tab, page_key|
+        [ "invalid", "0", "-2", [ "2" ] ].each do |invalid_page|
+          get hotel_front_desk_path(hotel), params: { tab:, view: "list", page_key => invalid_page }
+          expect(response.body).to include("active-tab:#{tab}", "page:1")
+        end
+      end
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list", booking_page: 99 }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_text("No bookings match these filters.")
+      expect(page).to have_no_css("nav.panel-pagination")
     end
 
     it "keeps calendar ranges independent between tabs" do
@@ -369,7 +430,7 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       end
     end
 
-    it "orders arrivals by created_at ascending with a 25-record page boundary" do
+    it "orders arrivals by created_at ascending with a 24-record page boundary" do
       grant_arrival_permission
       27.times do |index|
         booking(
@@ -383,11 +444,11 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_page: 1 }
 
       page_one = table_tokens
-      expect(page_one).to eq((0...25).map { |index| format("ARRIVAL-ORDER-%02d", index) })
+      expect(page_one).to eq((0...24).map { |index| format("ARRIVAL-ORDER-%02d", index) })
 
       get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_page: 2 }
 
-      expect(table_tokens).to eq(%w[ARRIVAL-ORDER-25 ARRIVAL-ORDER-26])
+      expect(table_tokens).to eq(%w[ARRIVAL-ORDER-24 ARRIVAL-ORDER-25 ARRIVAL-ORDER-26])
     end
 
     it "keeps equal-created arrivals on stable id-ordered pages" do
@@ -403,10 +464,10 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       end
 
       get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_page: 1 }
-      expect(table_tokens).to eq((0...25).map { |index| format("ARRIVAL-TIE-%02d", index) })
+      expect(table_tokens).to eq((0...24).map { |index| format("ARRIVAL-TIE-%02d", index) })
 
       get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "list", arrival_page: 2 }
-      expect(table_tokens).to eq(%w[ARRIVAL-TIE-25 ARRIVAL-TIE-26])
+      expect(table_tokens).to eq(%w[ARRIVAL-TIE-24 ARRIVAL-TIE-25 ARRIVAL-TIE-26])
     end
 
     it "uses in-house search, room assignment filter, ordering, and pagination" do
@@ -430,8 +491,26 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(table_tokens).to eq([ later, earlier, oldest ].map(&:confirmation_token))
     end
 
-    it "paginates in-house records at 25 per page" do
-      26.times { |index| booking(status: "checked_in", confirmation_token: "INHOUSE-PAGE-#{index}", checked_in_at: index.minutes.ago) }
+    it "keeps equal-time in-house records on stable id-ordered pages" do
+      timestamp = Time.zone.local(2026, 7, 15, 9, 0)
+      bookings = 27.times.map do |index|
+        booking(
+          status: "checked_in",
+          confirmation_token: format("INHOUSE-TIE-%02d", index),
+          checked_in_at: timestamp,
+          created_at: timestamp
+        )
+      end
+
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_page: 1 }
+      expect(table_tokens).to eq(bookings.reverse.first(24).map(&:confirmation_token))
+
+      get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_page: 2 }
+      expect(table_tokens).to eq(bookings.reverse.drop(24).map(&:confirmation_token))
+    end
+
+    it "paginates in-house records at 24 per page" do
+      25.times { |index| booking(status: "checked_in", confirmation_token: "INHOUSE-PAGE-#{index}", checked_in_at: index.minutes.ago) }
 
       get hotel_front_desk_path(hotel), params: { tab: "in_house", view: "list", in_house_page: 2 }
 
@@ -448,8 +527,26 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body.index(newer.confirmation_token)).to be < response.body.index(older.confirmation_token)
     end
 
-    it "paginates checkout records at 25 per page", frozen_time: :business_day do
-      26.times { |index| booking(status: "completed", confirmation_token: "CHECKOUT-PAGE-#{index}", checked_out_at: index.minutes.ago) }
+    it "keeps equal-time checkout records on stable id-ordered pages", frozen_time: :business_day do
+      timestamp = Time.current
+      bookings = 27.times.map do |index|
+        booking(
+          status: "completed",
+          confirmation_token: format("CHECKOUT-TIE-%02d", index),
+          checked_out_at: timestamp,
+          created_at: timestamp
+        )
+      end
+
+      get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_page: 1 }
+      expect(table_tokens).to eq(bookings.reverse.first(24).map(&:confirmation_token))
+
+      get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_page: 2 }
+      expect(table_tokens).to eq(bookings.reverse.drop(24).map(&:confirmation_token))
+    end
+
+    it "paginates checkout records at 24 per page", frozen_time: :business_day do
+      25.times { |index| booking(status: "completed", confirmation_token: "CHECKOUT-PAGE-#{index}", checked_out_at: index.minutes.ago) }
 
       get hotel_front_desk_path(hotel), params: { tab: "checkout", view: "list", checkout_page: 2 }
 
@@ -468,8 +565,8 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body.index(earlier.confirmation_token)).to be < response.body.index(later.confirmation_token)
     end
 
-    it "paginates departure records at 25 per page" do
-      26.times { |index| booking(status: "checked_in", confirmation_token: "DEPARTURE-PAGE-#{index}", check_out: hotel_today) }
+    it "paginates departure records at 24 per page" do
+      25.times { |index| booking(status: "checked_in", confirmation_token: "DEPARTURE-PAGE-#{index}", check_out: hotel_today) }
 
       get hotel_front_desk_path(hotel), params: { tab: "departures", view: "list", departure_page: 2 }
 

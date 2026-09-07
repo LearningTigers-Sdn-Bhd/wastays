@@ -30,6 +30,17 @@ RSpec.describe HotelPortal::GuestRegistrationCardsQuery do
       query = described_class.new(hotel: hotel, query: "John")
       expect(query.results).to eq([ card1 ])
     end
+
+    it "returns an unpaginated relation with a stable ID tie-breaker" do
+      booking3 = create(:booking, hotel: hotel, check_in: booking2.check_in, guest_name: "Later Card")
+      card3 = create(:guest_registration_card, booking: booking3, hotel: hotel)
+
+      result = described_class.new(hotel: hotel).results
+
+      expect(result).to be_an(ActiveRecord::Relation)
+      expect(result).not_to respond_to(:total_pages)
+      expect(result.first(2)).to eq([ card3, card2 ])
+    end
   end
 
   describe "#total_count, #signed_count, #draft_count" do

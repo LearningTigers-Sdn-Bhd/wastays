@@ -3,6 +3,6 @@
 <%= turbo_frame_tag "guest_record_page" do %>
   <div class="space-y-4">
     <%= render "record_header", guest: @guest, presenter: @presenter %>
-    <%= render "booking_history", guest: @guest, presenter: @presenter, stays_count: @stays_count, bookings: @bookings, currency_totals: @currency_totals %>
+    <%= render "booking_history", guest: @guest, presenter: @presenter, stays_count: @stays_count, bookings: @bookings, pagination: @bookings_pagy, currency_totals: @currency_totals %>
   </div>
 <% end %>

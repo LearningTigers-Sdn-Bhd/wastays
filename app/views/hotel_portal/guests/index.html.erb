@@ -170,11 +170,14 @@
           <% end %>
         <% end %>
 
-        <% if @guests.total_pages > 1 %>
-          <div class="flex shrink-0 justify-center">
-            <%= paginate @guests, data: { turbo_action: "advance" } %>
-          </div>
-        <% end %>
+        <div class="flex shrink-0 justify-center">
+          <%= render PanelsUI::Pagination.new(
+                pagy: @guests_pagy,
+                aria_label: "Guest directory pagination",
+                hide_when_single_page: true,
+                link_data: { turbo_action: "advance" }
+              ) %>
+        </div>
 
         <% if selectable %>
           <%= render "bulk_actions", can_manage: can_manage, can_delete: can_delete %>

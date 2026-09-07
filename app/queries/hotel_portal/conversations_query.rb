@@ -20,7 +20,7 @@ module HotelPortal
       relation = filter_by_status(relation)
       relation = filter_by_mode(relation)
       relation = search(relation)
-      relation.recent_first
+      relation.recent_first.order(id: :desc)
     end
 
     def status = permitted(:status, STATUSES) || "open"

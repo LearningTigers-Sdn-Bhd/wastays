@@ -33,8 +33,8 @@ class Guest::RefundRequestsController < Guest::BaseController
       scope = scope.where(refund_requests: { status: @status_filter })
     end
 
-    @all_bookings = scope.order("refund_requests.created_at DESC").distinct
-    @bookings = @all_bookings.page(params[:page]).per(25)
+    @all_bookings = scope.order("refund_requests.created_at DESC", id: :desc).distinct
+    @pagy, @bookings = pagy(:offset, @all_bookings, limit: 25)
   end
 
   def new

@@ -68,6 +68,12 @@
       <% end %>
     <% end %>
 
-    <%= render "hotel_portal/reports/table_pagination", collection: @presenter.night_audits %>
+    <div class="flex justify-center">
+      <%= render PanelsUI::Pagination.new(
+            pagy: @pagy,
+            aria_label: "Night audit report pagination",
+            hide_when_single_page: true
+          ) %>
+    </div>
   </section>
 </div>

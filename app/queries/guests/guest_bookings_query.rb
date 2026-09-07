@@ -20,10 +20,9 @@ module Guests
       base_scope.maximum(:check_out)
     end
 
-    def bookings(page: 1, per_page: 25)
+    def bookings
       all_bookings.includes(:pre_checkin)
                   .order(check_out: :desc, id: :desc)
-                  .page(page).per(per_page)
     end
 
     def currency_totals

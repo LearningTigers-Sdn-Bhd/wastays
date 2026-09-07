@@ -8,9 +8,10 @@ class Admin::HotelsController < Admin::BaseController
 
   def index
     page_size = Admin::Hotels::IndexPresenter.normalize_page_size(params[:per_page])
-    hotels = HotelsQuery.new.call(params).page(params[:page]).per(page_size)
+    pagination, hotels = pagy(:offset, HotelsQuery.new.call(params), limit: page_size)
     @presenter = Admin::Hotels::IndexPresenter.new(
       hotels: hotels,
+      pagination: pagination,
       summary: HotelsSummaryQuery.new.call,
       status: params[:status],
       page_size: page_size

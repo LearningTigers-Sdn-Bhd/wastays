@@ -10,7 +10,7 @@ class HotelPortal::AuditLogsController < HotelPortal::ReportsBaseController
     @logs = filtered_logs
 
     respond_to do |format|
-      format.html { @logs = @logs.page(params[:page]).per(20) }
+      format.html { @pagy, @logs = pagy(:offset, @logs, limit: 20) }
       format.csv do
         send_data HotelPortal::Reports::AuditLogCsvExportService.new(logs: @logs).generate,
           filename: export_filename("csv"), type: "text/csv; charset=utf-8"

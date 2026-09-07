@@ -5,6 +5,11 @@ module HotelPortal
     TABS = %w[bookings arrivals in_house departures checkout].freeze
     VIEWS = %w[list rooms].freeze
 
+    # The stay cards sit in a 1/2/4-column grid, so the page limit must be a
+    # multiple of 4. A limit of 25 left one orphan card on its own row at md
+    # and xl. 24 fills every row at every breakpoint.
+    PAGE_LIMIT = 24
+
     before_action :set_allowed_tabs
     before_action :set_tab
 
@@ -55,8 +60,7 @@ module HotelPortal
       @booking_status = query.status
       @start_date = query.start_date
       @end_date = query.end_date
-      @page_param = :booking_page
-      @bookings = query.call.page(page_param(:booking_page)).per(25)
+      paginate_bookings(query.call, :booking_page)
     end
 
     def load_arrivals
@@ -64,16 +68,14 @@ module HotelPortal
       @start_date = query.start_date
       @end_date = query.end_date
       @query = query.query
-      @page_param = :arrival_page
-      @bookings = query.call.page(page_param(:arrival_page)).per(25)
+      paginate_bookings(query.call, :arrival_page)
     end
 
     def load_in_house
       query = HotelPortal::InHouseGuestsQuery.new(hotel: current_hotel, params: in_house_params)
       @query = in_house_params[:query].to_s.strip
       @room_assignment = in_house_params[:room_assignment]
-      @page_param = :in_house_page
-      @bookings = query.call.page(page_param(:in_house_page)).per(25)
+      paginate_bookings(query.call, :in_house_page)
     end
 
     def load_departures
@@ -81,8 +83,7 @@ module HotelPortal
       @start_date = query.start_date
       @end_date = query.end_date
       @query = query.query
-      @page_param = :departure_page
-      @bookings = query.call.page(page_param(:departure_page)).per(25)
+      paginate_bookings(query.call, :departure_page)
     end
 
     def load_checkout
@@ -90,8 +91,7 @@ module HotelPortal
       @start_date = query.start_date
       @end_date = query.end_date
       @query = query.query
-      @page_param = :checkout_page
-      @bookings = query.call.page(page_param(:checkout_page)).per(25)
+      paginate_bookings(query.call, :checkout_page)
     end
 
     def in_house_params
@@ -112,9 +112,9 @@ module HotelPortal
       value if value.is_a?(String)
     end
 
-    def page_param(key)
-      value = Integer(params[key], exception: false).to_i
-      value.positive? ? value : 1
+    def paginate_bookings(scope, page_key)
+      @page_param = page_key
+      @pagy, @bookings = pagy(:offset, scope, limit: PAGE_LIMIT, page_key: page_key.to_s)
     end
 
     def front_desk_state

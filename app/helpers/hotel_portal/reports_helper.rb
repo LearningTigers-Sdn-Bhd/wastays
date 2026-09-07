@@ -149,14 +149,6 @@ module HotelPortal::ReportsHelper
     end
   end
 
-  # Sectioned report tables each page on their own param, so paging one section
-  # leaves the others where they were.
-  REPORT_SECTION_PAGE_SIZE = 15
-
-  def paginate_report_section(rows, page_param)
-    Kaminari.paginate_array(rows).page(params[page_param]).per(REPORT_SECTION_PAGE_SIZE)
-  end
-
   # Which way the guest is travelling, so the badge can lead with a direction.
   TRANSFER_BADGES = {
     "Boat-in" => { icon: "arrow-down-to-line", variant: :info },
@@ -166,8 +158,6 @@ module HotelPortal::ReportsHelper
   def transfer_badge(type)
     TRANSFER_BADGES.fetch(type.to_s, { icon: "ship", variant: :neutral })
   end
-
-  def bibo_sections(report) = report.sections
 
   BIBO_LEG_LABELS = { "all" => "All", "boat_ins" => "Boat-ins", "boat_outs" => "Boat-outs" }.freeze
 

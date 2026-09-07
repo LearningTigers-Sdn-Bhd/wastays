@@ -3,13 +3,16 @@
 module HotelPortal
   module AccountsReceivable
     class StatementsIndexPresenter
+      include Pagy::Method
+
       PER_PAGE = 25
 
-      attr_reader :hotel, :params
+      attr_reader :hotel, :params, :request
 
-      def initialize(hotel:, params:)
+      def initialize(hotel:, params:, request:)
         @hotel = hotel
         @params = params
+        @request = request
       end
 
       def rows
@@ -17,7 +20,7 @@ module HotelPortal
       end
 
       def pagination
-        paginated_relationships
+        pagination_pair.first
       end
 
       def query
@@ -51,7 +54,11 @@ module HotelPortal
       end
 
       def paginated_relationships
-        @paginated_relationships ||= relationships.page(params[:page]).per(PER_PAGE)
+        pagination_pair.last
+      end
+
+      def pagination_pair
+        @pagination_pair ||= pagy(:offset, relationships, request: request, limit: PER_PAGE)
       end
 
       class Row

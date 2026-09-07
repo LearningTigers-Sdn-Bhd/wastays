@@ -11,7 +11,7 @@ module HotelPortal
       scope = base_scope.includes(booking_rooms: :room_type, booking_folios: [ :folio_transactions, :folio_forecasted_charges ], booking_guests: { guest: :bookings })
       scope = apply_search(scope)
       scope = apply_room_assignment_filter(scope)
-      scope.order(checked_in_at: :desc, created_at: :desc)
+      scope.order(checked_in_at: :desc, created_at: :desc, id: :desc)
     end
 
     def in_house_count

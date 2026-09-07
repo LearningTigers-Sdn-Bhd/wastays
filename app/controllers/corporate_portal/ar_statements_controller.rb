@@ -7,12 +7,12 @@ module CorporatePortal
     before_action :set_relationship, only: %i[show pdf]
 
     def index
-      @presenter = CorporatePortal::AccountsReceivable::StatementsIndexPresenter.new(account: current_user.account, params: params)
+      @presenter = CorporatePortal::AccountsReceivable::StatementsIndexPresenter.new(account: current_user.account, params: params, request: request)
     end
 
     def show
       report = build_report
-      @presenter = CorporatePortal::AccountsReceivable::StatementPresenter.new(report: report, params: params)
+      @presenter = CorporatePortal::AccountsReceivable::StatementPresenter.new(report: report, params: params, request: request)
       append_breadcrumb @relationship.hotel.name, corporate_ar_statement_path(@relationship)
 
     rescue ::Reports::AccountsReceivable::GenerateStatementRecords::InvalidStatementError => e

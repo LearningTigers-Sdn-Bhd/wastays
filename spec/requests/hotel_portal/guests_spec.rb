@@ -207,6 +207,72 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(queries.size).to be <= 2
     end
 
+    it "paginates a stable directory and preserves filters and Turbo history" do
+      timestamp = Time.zone.local(2026, 7, 15, 9, 0)
+      guests = 26.times.map do |index|
+        create(
+          :guest,
+          created_by_hotel: hotel,
+          name: format("Pagy Guest %02d", index),
+          country: "Malaysia",
+          vip: true,
+          metadata: { "vip_hotel_ids" => [ hotel.id ] },
+          created_at: timestamp
+        )
+      end
+      expected_page_ids = guests.reverse.first(25).map(&:id)
+      stats_guest_ids = []
+      allow(Guests::StatsService).to receive(:new).and_wrap_original do |method, **arguments|
+        stats_guest_ids << arguments.fetch(:guest_ids)
+        method.call(**arguments)
+      end
+
+      get hotel_guests_path(hotel), params: {
+        query: "Pagy Guest", country: "Malaysia", tag: "vip", page: 1
+      }
+
+      page = Capybara.string(response.body)
+      pagination = page.find('nav.panel-pagination[aria-label="Guest directory pagination"]')
+      page_two = pagination.find('a[aria-label="Page 2"]')
+      page_two_query = Rack::Utils.parse_nested_query(URI.parse(page_two[:href]).query)
+      expect(page).to have_css("tbody tr", count: 25)
+      expect(page).to have_css("input[data-vip]", count: 25, visible: :all)
+      expect(page).to have_text(guests.last.name)
+      expect(page).to have_no_text(guests.first.name)
+      expect(stats_guest_ids.last).to eq(expected_page_ids)
+      expect(page_two_query).to include(
+        "query" => "Pagy Guest", "country" => "Malaysia", "tag" => "vip", "page" => "2"
+      )
+      expect(page_two["data-turbo-action"]).to eq("advance")
+      expect(page_two["data-turbo-frame"]).to be_nil
+
+      get hotel_guests_path(hotel), params: {
+        query: "Pagy Guest", country: "Malaysia", tag: "vip", page: 2
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("tbody tr", count: 1)
+      expect(page).to have_css("input[data-vip]", count: 1, visible: :all)
+      expect(page).to have_text(guests.first.name)
+      expect(page).to have_no_text(guests.last.name)
+      expect(stats_guest_ids.last).to eq([ guests.first.id ])
+    end
+
+    it "normalizes invalid directory pages and returns an overflow page" do
+      create(:guest, created_by_hotel: hotel, name: "Directory Page Guest")
+
+      [ "invalid", "0", "-2", [ "2" ] ].each do |invalid_page|
+        get hotel_guests_path(hotel), params: { page: invalid_page }
+        expect(Capybara.string(response.body)).to have_text("Directory Page Guest")
+      end
+
+      get hotel_guests_path(hotel), params: { page: 99 }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_text("No guest records found")
+      expect(page).to have_no_css("nav.panel-pagination")
+    end
+
     it "renders the bulk bar with the counts each action would change" do
       role = user.user_hotel_accesses.first.role
       role.permissions << (Permission.find_by(slug: "delete_guest_record") || create(:permission, slug: "delete_guest_record"))
@@ -804,6 +870,59 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(response).to have_http_status(:success)
       expect(body_text).to include(confirmed_booking.confirmation_token)
       expect(body_text).to include(cancelled_booking.confirmation_token)
+    end
+
+    it "paginates booking history without limiting lifetime totals or adding Turbo history" do
+      guest = create(:guest, created_by_hotel: hotel)
+      check_out = Bookings::ScheduledStay.at_hotel_time(
+        hotel: hotel,
+        value: Date.new(2026, 7, 15),
+        kind: :check_out
+      )
+      bookings = 26.times.map do |index|
+        booking = create(
+          :booking,
+          hotel: hotel,
+          status: "completed",
+          confirmation_token: format("GUEST-HISTORY-%02d", index),
+          check_out: check_out,
+          currency: "MYR",
+          total_amount: 10
+        )
+        create(:booking_guest, booking: booking, guest: guest, is_primary: index.zero?)
+        booking
+      end
+
+      get booking_history_hotel_guest_path(hotel, guest), params: { page: 1 }
+
+      page = Capybara.string(response.body)
+      pagination = page.find('nav.panel-pagination[aria-label="Guest booking history pagination"]')
+      expect(page).to have_css("tbody tr", count: 25)
+      expect(page).to have_text(bookings.last.confirmation_token)
+      expect(page).to have_no_text(bookings.first.confirmation_token)
+      expect(page).to have_text("MYR 260.00")
+      pagination.all("a").each do |link|
+        expect(link["data-turbo-action"]).to be_nil
+        expect(link["data-turbo-frame"]).to be_nil
+      end
+
+      get booking_history_hotel_guest_path(hotel, guest), params: { page: 2 }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_css("tbody tr", count: 1)
+      expect(page).to have_text(bookings.first.confirmation_token)
+      expect(page).to have_text("MYR 260.00")
+      expect(page).to have_no_text(bookings.last.confirmation_token)
+
+      [ "invalid", "0", "-2", [ "2" ] ].each do |invalid_page|
+        get booking_history_hotel_guest_path(hotel, guest), params: { page: invalid_page }
+        expect(Capybara.string(response.body)).to have_css("tbody tr", count: 25)
+      end
+
+      get booking_history_hotel_guest_path(hotel, guest), params: { page: 99 }
+      page = Capybara.string(response.body)
+      expect(page).to have_text("No stays yet")
+      expect(page).to have_no_css("nav.panel-pagination")
     end
   end
 

@@ -200,10 +200,30 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
 
       document = response.parsed_body
       expect(document.css("[data-room-type-id]").size).to eq(25)
-      page_two = document.css("a").find { |link| link.text.squish == "2" }
+      pagination = document.at_css("turbo-frame#room_types_results nav.panel-pagination")
+      page_two = pagination.at_css('a[aria-label="Page 2"]')
       query = Rack::Utils.parse_nested_query(URI.parse(page_two["href"]).query)
+      expect(pagination).to be_present
+      expect(page_two["data-turbo-action"]).to eq("advance")
       expect(query).to include("q" => "Searchable", "page" => "2")
       expect(query).not_to have_key("room_group_ids")
+
+      get hotel_room_types_path(hotel), params: { q: "Searchable", page: 2 }
+
+      document = response.parsed_body
+      expect(document.css("[data-room-type-id]").size).to eq(1)
+      expect(document.at_css('nav.panel-pagination [aria-current="page"]').text).to eq("2")
+
+      [ "invalid", "0", "-2" ].each do |invalid_page|
+        get hotel_room_types_path(hotel), params: { q: "Searchable", page: invalid_page }
+        expect(response.parsed_body.css("[data-room-type-id]").size).to eq(25)
+      end
+
+      get hotel_room_types_path(hotel), params: { q: "Searchable", page: 99 }
+
+      document = response.parsed_body
+      expect(document.css("[data-room-type-id]")).to be_empty
+      expect(document.at_css('nav.panel-pagination a[aria-label="Previous page"]')).to be_present
     end
   end
 

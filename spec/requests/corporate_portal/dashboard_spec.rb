@@ -48,6 +48,7 @@ RSpec.describe "CorporatePortal::Dashboard", type: :request do
     expect(response.body).to include("Profile")
     expect(response.body).to include("AR Invoices")
     expect(response.body).to include("Payments")
+    expect(response.body).to include("href=\"#{new_corporate_ar_payment_submission_path}\"")
   end
 
   it "shows outstanding balance for linked corporate invoices" do

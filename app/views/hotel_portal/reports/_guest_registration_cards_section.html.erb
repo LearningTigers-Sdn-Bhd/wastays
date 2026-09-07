@@ -109,6 +109,9 @@
       <% end %>
     <% end %>
 
-    <%= render "table_pagination", collection: @grc_cards %>
+    <%= render "table_pagination",
+          pagy: @grc_pagy,
+          aria_label: "Registration card pagination",
+          link_data: { turbo_frame: "grc_results", turbo_action: "advance" } %>
   </section>
 <% end %>
