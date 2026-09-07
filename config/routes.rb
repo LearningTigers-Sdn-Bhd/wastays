@@ -761,7 +761,9 @@ Rails.application.routes.draw do
         resource :guest_amenities, path: "amenities", controller: "amenities", only: %i[show]
         resource :amenity_selection, path: "amenities/selection", controller: "amenity_selections", only: %i[edit update]
         resources :amenity_details, path: "amenities/details", controller: "amenity_details", only: %i[edit update]
-        resources :wifi_networks, path: "wifi", except: :show
+        resources :wifi_networks, path: "wifi", except: :show do
+          patch :quick_update, on: :member
+        end
         resource :guest_arrival_departure, path: "general-info/arrival-departure",
           controller: "arrival_departures", only: %i[show update]
         get "general-info/additional-information", to: "knowledge_general_infos#additional_information",

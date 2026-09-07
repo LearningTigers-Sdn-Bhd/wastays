@@ -209,6 +209,22 @@
     cursor: not-allowed;
   }
 
+  /* Disabled switches must keep their saved on/off state visible. This rule
+     follows the general disabled rule so a checked track stays primary. */
+  .panel-switch__input:checked:disabled {
+    border-color: color-mix(in oklab, var(--primary) 82%, var(--border));
+    background-color: color-mix(in oklab, var(--primary) 82%, var(--muted));
+  }
+
+  .panel-switch__input:checked:disabled::before {
+    background-color: var(--primary-foreground);
+  }
+
+  .panel-switch[data-disabled="true"][data-variant="card"]:has(.panel-switch__input:checked) {
+    border-color: color-mix(in oklab, var(--primary) 64%, var(--border));
+    background: color-mix(in oklab, var(--primary) 10%, var(--card));
+  }
+
   .panel-switch__content {
     display: grid;
     min-width: 0;

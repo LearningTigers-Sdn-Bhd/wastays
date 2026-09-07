@@ -1,5 +1,10 @@
 <% section_actions = capture do %>
-  <%= render PanelsUI::Button.new(label: "Add network", href: new_hotel_wifi_network_path(@hotel), variant: :primary, size: :sm) %>
+  <%= render PanelsUI::Button.new(
+        label: "Add network",
+        href: new_hotel_wifi_network_path(@hotel),
+        variant: :primary,
+        size: :sm,
+        data: { turbo_frame: "settings_action_sheet" }) %>
 <% end %>
 <%= render "hotel_portal/guest_content/shared/section_header",
       title: "Wi-Fi",
@@ -12,32 +17,121 @@
   <% end %>
 <% end %>
 
-<% if @networks.any? %>
-  <div class="divide-y divide-border border-y border-border">
-    <% @networks.each do |network| %>
-      <article class="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="min-w-0">
-          <div class="flex flex-wrap items-center gap-2">
-            <h2 class="text-sm font-medium"><%= network.label %></h2>
-            <%= render PanelsUI::Badge.new(label: "Primary", variant: :primary, size: :sm) if network.primary_network? %>
-            <%= render PanelsUI::Badge.new(label: network.active? ? "Active" : "Inactive", variant: network.active? ? :success : :neutral, size: :sm) %>
-          </div>
-          <p class="mt-1 truncate text-sm text-muted-foreground"><%= network.ssid %></p>
-          <p class="mt-1 text-xs text-muted-foreground"><%= network.access_scope.humanize %> · <%= network.security_type.humanize %></p>
-        </div>
-        <div class="flex shrink-0 gap-2">
-          <%= render PanelsUI::Button.new(label: "Edit", href: edit_hotel_wifi_network_path(@hotel, network), variant: :secondary, size: :sm) %>
-          <%= button_to "Remove", hotel_wifi_network_path(@hotel, network), method: :delete,
-                class: "panel-button panel-button--sm panel-button--destructive",
-                form: { data: { turbo_confirm: "Remove this Wi-Fi network?" } } %>
-        </div>
-      </article>
-    <% end %>
-  </div>
-<% else %>
-  <%= render PanelsUI::EmptyState.new(title: "No guest Wi-Fi networks", description: "Add the network details that staff manage for hotel guests.", icon: "wifi") do |empty| %>
-    <% empty.with_action do %>
-      <%= render PanelsUI::Button.new(label: "Add network", href: new_hotel_wifi_network_path(@hotel)) %>
+<%= render PanelsUI::Table.new(
+      caption: "Guest Wi-Fi networks",
+      header_style: :sentence,
+      striped: true,
+      hoverable: true,
+      bordered: true,
+      wrapper_class: "rounded-md border border-border bg-card",
+      class: "min-w-[760px]",
+      data: { testid: "wifi-networks-table" }) do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col">Active</th>
+      <th scope="col">Network</th>
+      <th scope="col">Security</th>
+      <th scope="col">Guest access</th>
+      <th scope="col" class="text-right">Action</th>
+    </tr>
+  <% end %>
+
+  <% table.with_body do %>
+    <% if @networks.any? %>
+      <% @networks.each do |network| %>
+        <tr id="wifi-network-row-<%= network.id %>">
+          <td class="align-middle">
+            <%= form_with model: network,
+                          url: quick_update_hotel_wifi_network_path(@hotel, network),
+                          method: :patch,
+                          class: "inline-flex",
+                          data: {
+                            controller: "tax-registry-status",
+                            action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish",
+                            turbo_frame: "_top"
+                          } do %>
+              <%= submit_tag "Update active network", hidden: true, data: { tax_registry_status_target: "submit" } %>
+              <%= render PanelsUI::Switch.new(
+                    name: "hotel_wifi_network[active]",
+                    label: tag.span(network.primary_network? ? "#{network.label} is the primary network and must stay active" : "#{network.active? ? 'Deactivate' : 'Activate'} #{network.label}", class: "sr-only"),
+                    checked: network.active?,
+                    disabled: network.primary_network?,
+                    size: :sm,
+                    data: { tax_registry_status_target: "switch", action: "change->tax-registry-status#change" }) %>
+            <% end %>
+          </td>
+
+          <th scope="row" class="align-middle">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-medium text-foreground"><%= network.label %></span>
+              <%= render PanelsUI::Badge.new(label: "Primary", variant: :primary, size: :sm) if network.primary_network? %>
+            </div>
+            <p class="mt-0.5 max-w-xs truncate text-xs font-normal text-muted-foreground" translate="no"><%= network.ssid %></p>
+          </th>
+
+          <td class="w-52 align-middle">
+            <%= form_with model: network,
+                          url: quick_update_hotel_wifi_network_path(@hotel, network),
+                          method: :patch,
+                          class: "contents",
+                          data: { controller: "auto-submit", action: "change->auto-submit#submitNow", turbo_frame: "_top" } do |form| %>
+              <%= label_tag "wifi-security-#{network.id}", "Security for #{network.label}", class: "sr-only" %>
+              <%= render PanelsUI::SelectMenu.new(
+                    form: form,
+                    attribute: :security_type,
+                    id: "wifi-security-#{network.id}",
+                    size: :sm,
+                    class: "w-48",
+                    choices: [["Password protected", "protected"], ["Open network", "open"]],
+                    selected: network.security_type) %>
+            <% end %>
+          </td>
+
+          <td class="w-52 align-middle">
+            <%= form_with model: network,
+                          url: quick_update_hotel_wifi_network_path(@hotel, network),
+                          method: :patch,
+                          class: "contents",
+                          data: { controller: "auto-submit", action: "change->auto-submit#submitNow", turbo_frame: "_top" } do |form| %>
+              <%= label_tag "wifi-access-#{network.id}", "Guest access for #{network.label}", class: "sr-only" %>
+              <%= render PanelsUI::SelectMenu.new(
+                    form: form,
+                    attribute: :access_scope,
+                    id: "wifi-access-#{network.id}",
+                    size: :sm,
+                    class: "w-48",
+                    choices: [["Checked-in guests", "checked_in_guests"], ["Confirmed guests", "confirmed_guests"], ["Staff only", "staff_only"]],
+                    selected: network.access_scope) %>
+            <% end %>
+          </td>
+
+          <td class="text-right align-middle">
+            <%= render PanelsUI::Button.new(
+                  label: "Manage",
+                  href: edit_hotel_wifi_network_path(@hotel, network),
+                  variant: :secondary,
+                  size: :xs,
+                  aria_label: "Manage #{network.label}",
+                  data: { turbo_frame: "settings_action_sheet" }) %>
+          </td>
+        </tr>
+      <% end %>
+    <% else %>
+      <tr>
+        <td colspan="5" class="py-8">
+          <%= render PanelsUI::EmptyState.new(
+                title: "No guest Wi-Fi networks",
+                description: "Add the network details that staff manage for hotel guests.",
+                icon: "wifi") do |empty| %>
+            <% empty.with_action do %>
+              <%= render PanelsUI::Button.new(
+                    label: "Add network",
+                    href: new_hotel_wifi_network_path(@hotel),
+                    data: { turbo_frame: "settings_action_sheet" }) %>
+            <% end %>
+          <% end %>
+        </td>
+      </tr>
     <% end %>
   <% end %>
 <% end %>

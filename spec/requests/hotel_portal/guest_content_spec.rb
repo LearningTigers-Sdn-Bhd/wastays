@@ -5,6 +5,8 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
   let(:user) { create(:user, account: account, role: "admin") }
   let(:hotel) { create(:hotel, account: account, status: "live") }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
+  let(:sheet_headers) { { "Turbo-Frame" => "settings_action_sheet" } }
+  let(:sheet_submit_headers) { sheet_headers.merge("Accept" => Mime[:turbo_stream].to_s) }
 
   before do
     permission = Permission.find_or_create_by!(slug: "manage_hotel_profile") { |record| record.name = "Manage Hotel Profile" }
@@ -139,6 +141,93 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
+  it "renders the Wi-Fi registry as a table with quick controls" do
+    primary = create(:hotel_wifi_network, hotel: hotel, label: "Lobby", primary_network: true)
+    secondary = create(:hotel_wifi_network, hotel: hotel, label: "Pool", active: false)
+
+    get hotel_wifi_networks_path(hotel)
+
+    document = Nokogiri::HTML(response.body)
+    table = document.at_css("table[data-testid='wifi-networks-table']")
+    expect(table.css("thead th").map { |heading| heading.text.squish }).to eq([ "Active", "Network", "Security", "Guest access", "Action" ])
+    expect(table.css("tbody tr").size).to eq(2)
+    expect(table.at_css("#wifi-network-row-#{primary.id} input[role='switch'][disabled]")).to be_present
+    expect(table.at_css("#wifi-network-row-#{secondary.id} input[role='switch']:not([disabled])")).to be_present
+    expect(table.css("select[name='hotel_wifi_network[security_type]']").size).to eq(2)
+    expect(table.css("select[name='hotel_wifi_network[access_scope]']").size).to eq(2)
+    expect(table.css("a[data-turbo-frame='settings_action_sheet']").map { |link| link.text.squish }).to eq([ "Manage", "Manage" ])
+  end
+
+  it "keeps the Wi-Fi table visible in the empty state" do
+    get hotel_wifi_networks_path(hotel)
+
+    table = response.parsed_body.at_css("table[data-testid='wifi-networks-table']")
+    expect(table).to be_present
+    expect(table.css("thead th").map { |heading| heading.text.squish }).to eq([ "Active", "Network", "Security", "Guest access", "Action" ])
+
+    empty_row = table.at_css("tbody tr td[colspan='5'] .panel-empty-state")
+    expect(empty_row.text.squish).to include("No guest Wi-Fi networks", "Add network")
+    expect(empty_row.at_css("a[data-turbo-frame='settings_action_sheet']")).to be_present
+  end
+
+  it "renders new and edit Wi-Fi forms in the settings sheet" do
+    network = create(:hotel_wifi_network, hotel: hotel)
+
+    get new_hotel_wifi_network_path(hotel), headers: sheet_headers
+    new_sheet = response.parsed_body.at_css("turbo-frame#settings_action_sheet dialog#add-wifi-network-sheet")
+    expect(new_sheet).to be_present
+    password_attributes = new_sheet.at_css("input[type='password']").attribute_nodes.to_h { |attribute| [ attribute.name, attribute.value ] }
+    expect(password_attributes).to include(
+      "autocomplete" => "one-time-code",
+      "data-1p-ignore" => "true",
+      "data-lpignore" => "true",
+      "data-bwignore" => "true",
+      "data-protonpass-ignore" => "true"
+    )
+    expect(new_sheet.at_css("input[name='hotel_wifi_network[primary_network]'][role='switch']")).to be_present
+
+    get edit_hotel_wifi_network_path(hotel, network), headers: sheet_headers
+    sheet = response.parsed_body.at_css("turbo-frame#settings_action_sheet dialog#edit-wifi-network-sheet")
+    expect(sheet).to be_present
+    expect(sheet.text).not_to include("guest-secret")
+  end
+
+  it "completes the Wi-Fi sheet after a valid update" do
+    network = create(:hotel_wifi_network, hotel: hotel)
+
+    patch hotel_wifi_network_path(hotel, network), params: {
+      hotel_wifi_network: { label: "Updated network" }
+    }, headers: sheet_submit_headers
+
+    expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+    expect(response.body).to include('action="complete_sheet"', 'target="settings_action_sheet"')
+    expect(network.reload.label).to eq("Updated network")
+  end
+
+  it "quick updates the security, guest access, and active values" do
+    create(:hotel_wifi_network, hotel: hotel, primary_network: true)
+    network = create(:hotel_wifi_network, hotel: hotel, primary_network: false)
+
+    patch quick_update_hotel_wifi_network_path(hotel, network), params: { hotel_wifi_network: { security_type: "open" } }
+    expect(network.reload).to be_security_type_open
+
+    patch quick_update_hotel_wifi_network_path(hotel, network), params: { hotel_wifi_network: { access_scope: "confirmed_guests" } }
+    expect(network.reload).to be_access_scope_confirmed_guests
+
+    patch quick_update_hotel_wifi_network_path(hotel, network), params: { hotel_wifi_network: { active: "0" } }
+    expect(network.reload).not_to be_active
+  end
+
+  it "does not deactivate the primary Wi-Fi network through a quick update" do
+    network = create(:hotel_wifi_network, hotel: hotel, primary_network: true, active: true)
+
+    patch quick_update_hotel_wifi_network_path(hotel, network), params: { hotel_wifi_network: { active: "0" } }
+
+    expect(response).to redirect_to(hotel_wifi_networks_path(hotel))
+    expect(flash[:alert]).to eq("The primary Wi-Fi network must stay active.")
+    expect(network.reload).to be_active
+  end
+
   it "renders one page frame on every Guest Content page" do
     document = create(:hotel_knowledge_document, hotel: hotel, category: "policy")
     general_document = create(:hotel_knowledge_document, hotel: hotel, category: "general_info")
@@ -157,8 +246,7 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
       edit_hotel_knowledge_policy_path(hotel, document) => "Policies",
       hotel_knowledge_faqs_path(hotel) => "FAQs",
       hotel_guest_amenities_path(hotel) => "Amenities",
-      hotel_wifi_networks_path(hotel) => "Wi-Fi",
-      new_hotel_wifi_network_path(hotel) => "Wi-Fi"
+      hotel_wifi_networks_path(hotel) => "Wi-Fi"
     }.each do |path, active_label|
       get path
 
@@ -175,16 +263,15 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     end
   end
 
-  it "keeps a validation error on the Wi-Fi page inside the same frame" do
+  it "keeps a validation error inside the Wi-Fi sheet" do
     post hotel_wifi_networks_path(hotel), params: {
       hotel_wifi_network: { label: "", ssid: "", security_type: "protected", access_scope: "checked_in_guests" }
-    }
+    }, headers: sheet_submit_headers
 
     body = Nokogiri::HTML(response.body)
     expect(response).to have_http_status(:unprocessable_content)
-    expect(body.css(".panel-page-header").size).to eq(1)
-    active = body.css("[data-testid='settings-tabs'] [data-slot='tabs-trigger'][aria-current='page']")
-    expect(active.map { |tab| tab["data-tab-label"] }).to eq([ "Wi-Fi" ])
+    expect(body.at_css("turbo-frame#settings_action_sheet dialog#add-wifi-network-sheet")).to be_present
+    expect(body.at_css("[role='alert']").text.squish).to include("Wi-Fi network could not be saved")
   end
 
   it "stacks every page body section in the shared rhythm" do
@@ -199,8 +286,7 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
       new_hotel_knowledge_policy_path(hotel),
       hotel_knowledge_policy_path(hotel, document),
       hotel_guest_amenities_path(hotel),
-      hotel_wifi_networks_path(hotel),
-      new_hotel_wifi_network_path(hotel)
+      hotel_wifi_networks_path(hotel)
     ].each do |path|
       get path
 
