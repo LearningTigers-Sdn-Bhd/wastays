@@ -60,7 +60,7 @@
                 data-tab-value="pending">
           Pending Settlements
           <span class="ms-1 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
-            <%= @pending_batches.total_count %>
+            <%= @pending_pagy.count %>
           </span>
         </button>
         <button type="button"
@@ -72,7 +72,7 @@
                 data-tab-value="paid">
           Paid History
           <span class="ms-1 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
-            <%= @paid_batches.total_count %>
+            <%= @paid_pagy.count %>
           </span>
         </button>
       </nav>
@@ -118,7 +118,10 @@
             </tbody>
           </table>
           <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center sm:px-8">
-            <%= paginate @pending_batches, param_name: :pending_page, params: { tab: 'pending' } %>
+            <%= render PanelsUI::Pagination.new(
+                  pagy: @pending_pagy,
+                  aria_label: "Pending settlement pages",
+                  hide_when_single_page: true) %>
           </div>
         </div>
       </div>
@@ -162,7 +165,10 @@
             </tbody>
           </table>
           <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center sm:px-8">
-            <%= paginate @paid_batches, param_name: :paid_page, params: { tab: 'paid' } %>
+            <%= render PanelsUI::Pagination.new(
+                  pagy: @paid_pagy,
+                  aria_label: "Paid settlement pages",
+                  hide_when_single_page: true) %>
           </div>
         </div>
       </div>

@@ -76,7 +76,7 @@ module HotelPortal
       def full_result
         @full_result ||= begin
           records = (rows_for(:boat_in_at, "Boat-in") + rows_for(:boat_out_at, "Boat-out"))
-            .sort_by { |row| row[:boat_time] }
+            .sort_by { |row| [ row[:boat_time], row[:confirmation_token] ] }
 
           Result.new(
             start_date: @start_date,
@@ -101,7 +101,7 @@ module HotelPortal
       # transfer. A second guest on the same booking carrying a boat time would
       # otherwise count everyone twice.
       def one_per_booking(guests)
-        guests.sort_by { |bg| bg.primary? ? 0 : 1 }.uniq(&:booking_id)
+        guests.sort_by { |bg| [ bg.primary? ? 0 : 1, bg.id ] }.uniq(&:booking_id)
       end
 
       def booking_guests_scope

@@ -1,0 +1,46 @@
+@layer components {
+  .panel-pagination {
+    @apply flex items-center justify-center sm:justify-start;
+  }
+
+  .panel-pagination__content {
+    @apply flex list-none items-center gap-1 p-0;
+  }
+
+  .panel-pagination__item {
+    @apply flex items-center;
+  }
+
+  .panel-pagination__control,
+  .panel-pagination__page,
+  .panel-pagination__current {
+    @apply rounded-md;
+  }
+
+  .panel-pagination__current {
+    @apply border-border bg-card text-card-foreground shadow-sm;
+  }
+
+  .panel-pagination__control[data-state="available"],
+  .panel-pagination__page {
+    cursor: pointer;
+  }
+
+  .panel-pagination__control[aria-disabled="true"] {
+    border-color: transparent;
+    cursor: not-allowed;
+    pointer-events: auto;
+  }
+
+  .panel-pagination__ellipsis {
+    @apply flex size-8 items-center justify-center text-sm text-muted-foreground;
+  }
+
+  .panel-pagination__desktop {
+    @apply hidden sm:flex;
+  }
+
+  .panel-pagination__mobile {
+    @apply flex items-center gap-1.5 px-1 text-sm text-muted-foreground sm:hidden;
+  }
+}

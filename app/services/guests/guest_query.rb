@@ -29,7 +29,7 @@ module Guests
     def call
       apply_filters(base_scope)
         .group("guests.id")
-        .order(Arel.sql("COALESCE(MAX(bookings.checked_out_at), MAX(bookings.check_out::timestamp), guests.created_at) DESC NULLS LAST"))
+        .order(Arel.sql("COALESCE(MAX(bookings.checked_out_at), MAX(bookings.check_out::timestamp), guests.created_at) DESC NULLS LAST, guests.id DESC"))
     end
 
     # Every tab count in one round trip. The tag filter is left off so each tab

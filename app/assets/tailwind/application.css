@@ -47,6 +47,7 @@
 @import "./panel/button-group.css";
 @import "./panel/toast.css";
 @import "./panel/breadcrumb.css";
+@import "./panel/pagination.css";
 @import "./panel/tabs.css";
 @import "./panel/collapsible.css";
 @import "./panel/accordion.css";

@@ -99,6 +99,12 @@
       <% end %>
     <% end %>
 
-    <%= render "hotel_portal/reports/table_pagination", collection: @logs %>
+    <div class="flex justify-center border-t border-border px-3 py-2">
+      <%= render PanelsUI::Pagination.new(
+            pagy: @pagy,
+            aria_label: "Operation log pagination",
+            hide_when_single_page: true
+          ) %>
+    </div>
   </section>
 </div>

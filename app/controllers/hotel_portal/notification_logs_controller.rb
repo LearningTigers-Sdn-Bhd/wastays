@@ -9,7 +9,7 @@ class HotelPortal::NotificationLogsController < HotelPortal::ReportsBaseControll
     @notification_summary = notification_summary(@logs)
 
     respond_to do |format|
-      format.html { @logs = @logs.page(params[:page]).per(20) }
+      format.html { @pagy, @logs = pagy(:offset, @logs, limit: 20) }
       format.csv do
         send_data HotelPortal::Reports::NotificationLogCsvExportService.new(logs: @logs).generate,
           filename: export_filename("csv"), type: "text/csv; charset=utf-8"

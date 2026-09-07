@@ -1,4 +1,5 @@
 require 'rails_helper'
+require "csv"
 require "pdf-reader"
 
 RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.local(2026, 6, 10, 3) do
@@ -31,6 +32,41 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.
       expect(caption).to have_text("All records")
       expect(page).to have_css("select#room_type_id option[value='']", exact_text: "All room types", visible: :all)
       expect(page).to have_css("select#action_type option[value='']", exact_text: "All actions", visible: :all)
+      expect(page).to have_no_css("nav.panel-pagination")
+    end
+
+    it "paginates HTML logs and preserves the complete filtered CSV export" do
+      room_type = create(:room_type, hotel: hotel, name: "Paginated Room")
+      21.times do |index|
+        create(
+          :inventory_audit_log,
+          hotel: hotel,
+          room_type: room_type,
+          user: user,
+          action_type: "bulk_inventory_update",
+          created_at: Time.zone.local(2026, 4, 1, 12) + index.minutes
+        )
+      end
+      filters = {
+        room_type_id: room_type.id.to_s,
+        action_type: "bulk_inventory_update",
+        start_date: "2026-04-01",
+        end_date: "2026-04-01"
+      }
+
+      get hotel_audit_logs_path(hotel), params: filters.merge(page: 2)
+
+      page = Capybara.string(response.body)
+      pagination = page.find('nav.panel-pagination[aria-label="Operation log pagination"]')
+      previous_link = pagination.find('a[aria-label="Previous page"]')
+      previous_query = Rack::Utils.parse_nested_query(URI.parse(previous_link[:href]).query)
+      expect(page).to have_css("table.panel-table tbody tr", count: 1)
+      expect(pagination).to have_css('[aria-current="page"]', text: "2")
+      expect(previous_query).to include(filters.stringify_keys)
+
+      get hotel_audit_logs_path(hotel, format: :csv), params: filters.merge(page: 2)
+
+      expect(CSV.parse(response.body).size).to eq(22)
     end
 
     it "shows old and new values for audit changes" do
@@ -190,5 +226,13 @@ RSpec.describe "HotelPortal::AuditLogs", type: :request, frozen_time: Time.zone.
       expect(response.content_type).to eq("application/pdf")
       expect(PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")).to include(user.name)
     end
+  end
+
+  it "redirects the legacy inventory-log route with its room filter" do
+    room_type = create(:room_type, hotel: hotel)
+
+    get hotel_inventory_audit_logs_path(hotel), params: { room_type_id: room_type.id }
+
+    expect(response).to redirect_to(hotel_audit_logs_path(hotel, room_type_id: room_type.id.to_s))
   end
 end

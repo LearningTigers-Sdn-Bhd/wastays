@@ -86,7 +86,7 @@ module HotelPortal
 
     def set_conversations
       @query = ConversationsQuery.new(hotel: current_hotel, params: params)
-      @conversations = @query.call.page(params[:page]).per(30)
+      @pagy, @conversations = pagy(:offset, @query.call, limit: 30)
       @counts = @query.counts
     end
 

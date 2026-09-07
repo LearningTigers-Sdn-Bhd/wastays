@@ -33,6 +33,7 @@ module SystemDesigns
       { name: "Native select", partial: "native_select_preview" },
       { name: "Navbar", partial: "navbar_preview" },
       { name: "Page header", partial: "page_header_preview" },
+      { name: "Pagination", partial: "pagination_preview" },
       { name: "Popover", partial: "popover_preview" },
       { name: "Radio", partial: "radio_preview" },
       { name: "Scroll area", partial: "scroll_area_preview" },

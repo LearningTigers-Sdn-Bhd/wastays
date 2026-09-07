@@ -47,6 +47,25 @@ RSpec.describe "HotelPortal::NearbyAttractions", type: :request do
       expect(document.at_css("#nearby_attractions_list").text).not_to include("Pending", "Approved", "Rejected")
       expect(document.css(".panel-button").map { |button| button.text.squish }).to include("Add attraction")
       expect(document.at_css(".panel-table caption.sr-only").text.squish).to eq("Attractions added to this hotel")
+      expect(document.at_css("nav.panel-pagination")).to be_nil
+    end
+
+    it "paginates linked attractions at 25 records" do
+      create_list(:hotel_nearby_attraction, 26, hotel: hotel)
+
+      get hotel_nearby_attractions_path(hotel)
+
+      document = response.parsed_body
+      pagination = document.at_css('#nearby_attractions_list nav.panel-pagination[aria-label="Pagination"]')
+      expect(document.at_css("table.panel-table").css("tbody tr").size).to eq(25)
+      expect(pagination).to be_present
+      expect(pagination.at_css('a[aria-label="Page 2"]')).to be_present
+
+      get hotel_nearby_attractions_path(hotel), params: { page: 2 }
+
+      document = response.parsed_body
+      expect(document.at_css("table.panel-table").css("tbody tr").size).to eq(1)
+      expect(document.at_css('nav.panel-pagination [aria-current="page"]').text).to eq("2")
     end
 
     it "shows hotel coordinate guidance without hiding added attractions" do
@@ -134,6 +153,8 @@ RSpec.describe "HotelPortal::NearbyAttractions", type: :request do
     end
 
     it "refreshes both page sections and closes the sheet for Turbo" do
+      create_list(:hotel_nearby_attraction, 25, hotel: hotel)
+
       post hotel_nearby_attractions_path(hotel), as: :turbo_stream, params: {
         attraction: { google_maps_url: attraction_maps_url }
       }
@@ -144,6 +165,7 @@ RSpec.describe "HotelPortal::NearbyAttractions", type: :request do
       expect(response.body).to include('action="replace" target="nearby_attractions_list"')
       expect(response.body).to include('action="update" target="nearby_attraction_form"')
       expect(response.body).to include("Attraction added to your hotel.")
+      expect(response.body).to include("panel-pagination")
     end
   end
 

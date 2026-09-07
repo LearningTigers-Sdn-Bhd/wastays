@@ -2,7 +2,7 @@
   <header class="observation-deck__section-header">
     <div>
       <h2 id="event-stream-heading">Event stream</h2>
-      <p><%= @entries.total_count %> events</p>
+      <p><%= @pagination.count %> events</p>
     </div>
     <span class="observation-deck__loading" hidden data-observation-deck-target="loading" role="status">Updating event stream…</span>
   </header>
@@ -47,9 +47,12 @@
         </tbody>
       </table>
     </div>
-    <% if @entries.total_pages > 1 %>
-      <nav class="observation-deck__pagination" aria-label="Event stream pagination"><%= helpers.paginate(@entries) %></nav>
-    <% end %>
+    <div class="observation-deck__pagination">
+      <%= render PanelsUI::Pagination.new(
+            pagy: @pagination,
+            aria_label: "Event stream pagination",
+            hide_when_single_page: true) %>
+    </div>
   <% else %>
     <div class="observation-deck__empty-state">
       <%= helpers.app_icon "inbox", class: "size-5", aria: { hidden: true } %>

@@ -8,12 +8,12 @@ module HotelPortal
     before_action :set_relationship, only: %i[show pdf]
 
     def index
-      @presenter = HotelPortal::AccountsReceivable::StatementsIndexPresenter.new(hotel: current_hotel, params: params)
+      @presenter = HotelPortal::AccountsReceivable::StatementsIndexPresenter.new(hotel: current_hotel, params: params, request: request)
     end
 
     def show
       report = build_report
-      @presenter = HotelPortal::AccountsReceivable::StatementPresenter.new(report: report, params: params)
+      @presenter = HotelPortal::AccountsReceivable::StatementPresenter.new(report: report, params: params, request: request)
 
     rescue ::Reports::AccountsReceivable::GenerateStatementRecords::InvalidStatementError => e
       render_invalid_statement(e)

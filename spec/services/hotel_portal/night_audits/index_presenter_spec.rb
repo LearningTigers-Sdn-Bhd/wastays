@@ -27,7 +27,7 @@ RSpec.describe HotelPortal::NightAudits::IndexPresenter do
   end
   let(:blocked_details) { {} }
   let(:exceptions) { {} }
-  let(:night_audits) { NightAudit.where(hotel: hotel).recent_first.page(1).per(25) }
+  let(:night_audits) { NightAudit.where(hotel: hotel).recent_first.limit(25) }
 
   subject(:presenter) do
     described_class.new(

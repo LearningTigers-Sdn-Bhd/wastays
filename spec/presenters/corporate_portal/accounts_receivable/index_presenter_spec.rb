@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
-  subject(:presenter) { described_class.new(account: account, params: params) }
+  subject(:presenter) { described_class.new(account: account, params: params, request: request_context(params)) }
 
   let(:account) { create(:account, :corporate) }
   let(:hotel) { create(:hotel, status: "live", default_currency: "MYR") }
@@ -121,7 +121,7 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
       26.times { |i| create_invoice(relationship: relationship, confirmation_token: "BK-P-#{i}", folio_number: 3_000 + i) }
 
       expect(presenter.paginated_rows.size).to eq(25)
-      expect(presenter.pagination.total_pages).to eq(2)
+      expect(presenter.pagination.pages).to eq(2)
     end
   end
 
@@ -170,7 +170,15 @@ RSpec.describe CorporatePortal::AccountsReceivable::IndexPresenter do
   # ---------------------------------------------------------------------------
 
   def presenter_for(overrides)
-    described_class.new(account: account, params: overrides)
+    described_class.new(account: account, params: overrides, request: request_context(overrides))
+  end
+
+  def request_context(request_params)
+    {
+      base_url: "http://test.host",
+      path: "/corporate/ar/invoices",
+      params: request_params.stringify_keys
+    }
   end
 
   def create_invoice(

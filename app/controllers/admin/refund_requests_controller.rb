@@ -4,8 +4,8 @@ module Admin
     before_action :set_breadcrumbs, only: [ :show ]
 
     def index
-      @all_refund_requests = RefundRequest.includes(booking: :hotel).order(created_at: :desc)
-      @refund_requests = @all_refund_requests.page(params[:page]).per(25)
+      @all_refund_requests = RefundRequest.includes(booking: :hotel).order(created_at: :desc, id: :desc)
+      @pagy, @refund_requests = pagy(:offset, @all_refund_requests, limit: 25)
 
       @refund_status_counts = @all_refund_requests.except(:order).group(:status).count
       @pending_count   = @refund_status_counts.fetch("pending", 0)

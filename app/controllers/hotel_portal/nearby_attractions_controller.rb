@@ -82,7 +82,7 @@ module HotelPortal
 
     def set_nearby_attractions
       @all_nearby_attractions = @hotel.hotel_nearby_attractions.includes(:attraction).order(created_at: :desc)
-      @nearby_attractions = @all_nearby_attractions.page(params[:page]).per(25)
+      @pagy, @nearby_attractions = pagy(:offset, @all_nearby_attractions, limit: 25)
       @suggestions = Attractions::Suggestions.call(hotel: @hotel, limit: 10, radius_km: 25)
       @hotel_coordinates_available = @hotel.latitude.present? && @hotel.longitude.present?
     end

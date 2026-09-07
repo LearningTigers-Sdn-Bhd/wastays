@@ -99,9 +99,9 @@
     <% end %>
   </div>
 
-  <% if presenter.pagination.total_pages > 1 %>
+  <% if presenter.pagination.pages > 1 %>
     <div class="mt-6 flex justify-center">
-      <%= paginate presenter.pagination, params: presenter.pagination_params %>
+      <%= render PanelsUI::Pagination.new(pagy: presenter.pagination, hide_when_single_page: true) %>
     </div>
   <% end %>
 <% end %>

@@ -198,11 +198,9 @@
       <% end %>
       <% end %>
     <% end %>
-    <% if @cashier_transactions.total_pages > 1 %>
-      <nav class="flex justify-center px-3 py-2" aria-label="Payment activity pagination" data-slot="report-pagination">
-        <%= paginate @cashier_transactions, param_name: "cashier_page" %>
-      </nav>
-    <% end %>
+    <%= render "table_pagination",
+          pagy: @cashier_transactions_pagy,
+          aria_label: "Payment activity pagination" %>
   </section>
 <% end %>
 

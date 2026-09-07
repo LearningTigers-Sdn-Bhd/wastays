@@ -51,7 +51,11 @@
       <% end %>
     </div>
   <% end %>
-  <% if @bookings.total_pages > 1 %>
-    <div class="flex justify-center pt-3"><%= paginate @bookings, param_name: @page_param %></div>
-  <% end %>
+  <div class="flex justify-center pt-3">
+    <%= render PanelsUI::Pagination.new(
+          pagy: @pagy,
+          aria_label: "Reservations pagination",
+          hide_when_single_page: true
+        ) %>
+  </div>
 </section>

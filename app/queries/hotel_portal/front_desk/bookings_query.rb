@@ -19,7 +19,7 @@ module HotelPortal
       end
 
       def call
-        scope = @hotel.bookings.recent_first.includes(booking_rooms: :room_type, booking_folios: [ :folio_transactions, :folio_forecasted_charges ], booking_guests: { guest: :bookings })
+        scope = @hotel.bookings.recent_first.order(id: :desc).includes(booking_rooms: :room_type, booking_folios: [ :folio_transactions, :folio_forecasted_charges ], booking_guests: { guest: :bookings })
         scope = scope.search(query) if query.present?
         scope = scope.where(status:) if status.present?
         scope = scope.checking_in_between(start_date, end_date, @hotel.hotel_time_zone) if start_date

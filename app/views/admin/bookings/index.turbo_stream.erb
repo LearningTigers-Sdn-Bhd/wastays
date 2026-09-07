@@ -151,7 +151,7 @@
     </div>
 
     <div class="px-6 py-5 border-t border-border bg-muted/50 flex justify-center sm:px-8">
-      <%= paginate @bookings %>
+      <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
     </div>
   <% end %>
 <% end %>

@@ -628,7 +628,7 @@ class Hotel < ApplicationRecord
   end
 
   def payout_batches_for_reports(start_date: nil, end_date: nil)
-    payout_batches.order(period_end: :desc).period_between(start_date, end_date)
+    payout_batches.order(period_end: :desc, id: :desc).period_between(start_date, end_date)
   end
 
   def upcoming_payout_amount(cutoff_date)

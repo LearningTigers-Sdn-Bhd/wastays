@@ -15,6 +15,9 @@ module HotelPortal
     EXTRA_CHARGE_REPORT_TABS = %w[fb non_fb].freeze
     DAILY_REPORT_TABS = %w[overview revenue cashier].freeze
     CASHIER_VIEWS = %w[full activity summary].freeze
+    DEFAULT_PAGE_SIZE = 25
+    REPORT_SECTION_PAGE_SIZE = 15
+    DAILY_REPORT_PAGE_SIZE = 50
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
     OTA_SETTLEMENT_STATUS_FILTERS = {
       "all" => nil,
@@ -49,15 +52,6 @@ module HotelPortal
                                .search(params[:q])
                                .includes(booking_rooms: :room_type)
       @base_bookings = @bookings
-      @daily_data = Booking.daily_revenue_data(@bookings).to_a
-      if @date_preset == "this_year"
-        revenue_by_month = @daily_data.group_by { |date, _| date.beginning_of_month }
-        @daily_data = (1..12).map do |month|
-          month_start = Date.new(@start_date.year, month, 1)
-          [ month_start, revenue_by_month.fetch(month_start, []).sum { |_, gross| gross } ]
-        end
-      end
-      @paginated_daily_data = Kaminari.paginate_array(@daily_data).page(params[:page]).per(25)
       prepare_reports_summary
 
       respond_to do |format|
@@ -110,13 +104,15 @@ module HotelPortal
       @paid_end_date = paid_range_end || parse_date_param(params[:paid_end_date])
       @paid_end_date = @paid_start_date if @paid_start_date && @paid_end_date && @paid_end_date < @paid_start_date
 
-      @payout_history = current_hotel.payout_batches_for_reports(
+      payout_history = current_hotel.payout_batches_for_reports(
         start_date: @paid_start_date,
         end_date: @paid_end_date
-      ).page(params[:page]).per(25)
+      )
 
       respond_to do |format|
-        format.html
+        format.html do
+          @payout_history_pagy, @payout_history = pagy(:offset, payout_history, limit: DEFAULT_PAGE_SIZE)
+        end
         format.csv do
           csv = HotelPortal::Reports::PayoutsCsvExportService.new(
             hotel: current_hotel,
@@ -160,7 +156,7 @@ module HotelPortal
 
       respond_to do |format|
         format.html do
-          @paginated_bookings = @bookings.page(params[:page]).per(25)
+          @bookings_pagy, @paginated_bookings = pagy(:offset, @bookings, limit: DEFAULT_PAGE_SIZE)
           @grouped_bookings = @paginated_bookings.group_by do |booking|
             date = booking.created_at.to_date
             @date_preset == "this_year" ? date.beginning_of_month : date
@@ -392,10 +388,11 @@ module HotelPortal
         currency: params[:currency],
         statuses: OTA_SETTLEMENT_STATUS_FILTERS.fetch(@settlement_status)
       ).call
-      @settlement_rows = Kaminari.paginate_array(@report.detail_rows).page(params[:page]).per(25)
 
       respond_to do |format|
-        format.html
+        format.html do
+          @settlement_rows_pagy, @settlement_rows = pagy(:offset, @report.detail_rows, limit: DEFAULT_PAGE_SIZE)
+        end
         format.csv do
           csv = HotelPortal::Reports::ChannelSettlementCsvExportService.new(report: @report).generate
           send_data csv,
@@ -492,6 +489,7 @@ module HotelPortal
         @bibo_report = @bibo_full.for_leg(params[:leg] == BIBO_ALL ? nil : params[:leg])
         @bibo_counts = legs.index_with { |leg| @bibo_full.count_for(leg) }
           .merge(BIBO_ALL => @bibo_full.total_count)
+        @bibo_sections = paginate_report_sections(@bibo_report.sections) { |section| "#{section.fetch(:rows_key)}_page" } if request.format.html?
       end
 
       if @active_guest_report_tab == "meal_prep"
@@ -501,6 +499,7 @@ module HotelPortal
         @meal_prep_report = @meal_prep_full.for_meal(params[:meal_type] == MEAL_PREP_ALL ? nil : params[:meal_type])
         @meal_prep_counts = meals.index_with { |meal| @meal_prep_full.pax_for(meal) }
           .merge(MEAL_PREP_ALL => @meal_prep_full.total_pax)
+        @meal_prep_sections = paginate_report_sections(@meal_prep_report.sections) { |section| "#{section.fetch(:meal)}_page" } if request.format.html?
       end
 
       load_guest_registration_cards(start_date: @report_start_date, end_date: @report_end_date)
@@ -611,12 +610,12 @@ module HotelPortal
       @batches = current_hotel.journal_batches
                               .where(business_date: @report_start_date..@report_end_date)
                               .includes(:entries)
-                              .order(business_date: :desc)
+                              .order(business_date: :desc, id: :desc)
 
       respond_to do |format|
         format.html do
           @journal_summary = HotelPortal::Reports::JournalBatchExportTable.new(batches: @batches)
-          @paginated_batches = @batches.page(params[:page]).per(25)
+          @batches_pagy, @paginated_batches = pagy(:offset, @batches, limit: DEFAULT_PAGE_SIZE)
         end
         format.csv do
           csv = HotelPortal::Reports::JournalBatchCsvExportService.new(batches: @batches).generate
@@ -911,8 +910,11 @@ module HotelPortal
       @charge_register_count = @charge_register_result.rows.size
       return unless request.format.html?
 
-      @charge_register_rows = Kaminari.paginate_array(@charge_register_result.rows)
-        .page(params[:page]).per(50)
+      @charge_register_pagy, @charge_register_rows = pagy(
+        :offset,
+        @charge_register_result.rows,
+        limit: DAILY_REPORT_PAGE_SIZE
+      )
     end
 
     def filtered_charge_register_result(visible_transaction_ids)
@@ -972,8 +974,12 @@ module HotelPortal
         report: @cashier_report, group_by: @cashier_group_by
       )
       ordered_transactions = @cashier_activity_table.groups.flat_map(&:transactions)
-      @cashier_transactions = Kaminari.paginate_array(ordered_transactions)
-                                      .page(params[:cashier_page]).per(50)
+      @cashier_transactions_pagy, @cashier_transactions = pagy(
+        :offset,
+        ordered_transactions,
+        page_key: "cashier_page",
+        limit: DAILY_REPORT_PAGE_SIZE
+      )
       @cashier_rows = cashier_rows_for(@cashier_transactions)
       @cashier_group_totals = @cashier_activity_table.groups.index_by(&:key)
     end
@@ -1009,14 +1015,28 @@ module HotelPortal
         start_date: start_date,
         end_date: end_date,
         status: @status_filter,
-        query: @grc_query,
-        page: params[:page]
+        query: @grc_query
       )
 
       @grc_total_count = query_obj.total_count
       @grc_signed_count = query_obj.signed_count
       @grc_draft_count = query_obj.draft_count
-      @grc_cards = query_obj.results
+      return unless request.format.html? && @active_guest_report_tab == "registration_cards"
+
+      @grc_pagy, @grc_cards = pagy(:offset, query_obj.results, limit: DEFAULT_PAGE_SIZE)
+    end
+
+    def paginate_report_sections(sections)
+      sections.map do |section|
+        page_key = yield(section)
+        pagination, rows = pagy(
+          :offset,
+          section.fetch(:rows),
+          page_key: page_key,
+          limit: REPORT_SECTION_PAGE_SIZE
+        )
+        section.merge(rows: rows, pagination: pagination, page_key: page_key)
+      end
     end
 
     def authorize_view_reports!

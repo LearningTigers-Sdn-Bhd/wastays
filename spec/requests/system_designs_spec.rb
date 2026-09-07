@@ -31,6 +31,7 @@ RSpec.describe "System design showcase", type: :request do
     native_select_preview
     navbar_preview
     page_header_preview
+    pagination_preview
     popover_preview
     radio_preview
     scroll_area_preview
@@ -67,6 +68,12 @@ RSpec.describe "System design showcase", type: :request do
     expect(response.body).to include('data-slot="button-group-separator"')
     expect(response.body).to include("page-header-preview-heading")
     expect(response.body).to include("panel-page-header")
+    expect(response.body).to include("pagination-preview-heading")
+    expect(response.body).to include('data-slot="pagination"')
+    expect(response.body).to include('data-slot="pagination-content"')
+    expect(response.body).to include("Light theme pagination preview")
+    expect(response.body).to include("Dark theme pagination preview")
+    expect(document.at_css('#pagination-preview a[aria-label="Next page"]')["href"]).to include("pagination_page=7")
     expect(response.body).to include("badge-preview-heading")
     expect(response.body).to include("panel-badge-rounded")
     expect(response.body).to include("avatar-preview-heading")

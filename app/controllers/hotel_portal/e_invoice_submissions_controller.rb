@@ -9,10 +9,10 @@ module HotelPortal
     before_action :set_booking, only: [ :create, :update_payment_receiver ]
 
     def index
-      @submissions = current_hotel.e_invoice_submissions
-                                  .includes(:booking)
-                                  .order(created_at: :desc)
-                                  .page(params[:page]).per(20)
+      submissions = current_hotel.e_invoice_submissions
+                                 .includes(:booking)
+                                 .order(created_at: :desc, id: :desc)
+      @pagy, @submissions = pagy(:offset, submissions, limit: 20)
       @setting = current_hotel.e_invoice_setting || current_hotel.build_e_invoice_setting
       all_submissions = current_hotel.e_invoice_submissions
       @summary_counts = {

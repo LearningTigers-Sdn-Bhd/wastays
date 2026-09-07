@@ -117,6 +117,6 @@
   </div>
 
   <div class="mt-5 flex justify-center">
-    <%= paginate @nearby_attractions %>
+    <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
   </div>
 </div>

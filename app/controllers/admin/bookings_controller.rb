@@ -4,7 +4,7 @@ module Admin
     before_action :set_breadcrumbs, only: [ :show ]
 
     def index
-      @all_bookings = Booking.all.includes(:hotel, :booking_folio).order(created_at: :desc)
+      @all_bookings = Booking.all.includes(:hotel, :booking_folio).order(created_at: :desc, id: :desc)
 
       # Apply filters
       if params[:status].present? && params[:status] != "All Status"
@@ -12,7 +12,7 @@ module Admin
       end
       @all_bookings = @all_bookings.search(params[:q]) if params[:q].present?
 
-      @bookings = @all_bookings.page(params[:page]).per(25)
+      @pagy, @bookings = pagy(:offset, @all_bookings, limit: 25)
 
       respond_to do |format|
         format.html

@@ -8,11 +8,11 @@ module HotelPortal
 
       def index
         report_scope = current_hotel.night_audits.where.not(status: "preparing")
-        @night_audits = report_scope
-          .includes(:performed_by_user, :financial_summary)
-          .recent_first
-          .page(params[:page])
-          .per(25)
+        @pagy, @night_audits = pagy(
+          :offset,
+          report_scope.includes(:performed_by_user, :financial_summary).recent_first,
+          limit: 25
+        )
         @presenter = HotelPortal::Reports::NightAudits::IndexPresenter.new(
           night_audits: @night_audits,
           status_counts: report_scope.group(:status).count,
