@@ -12,7 +12,7 @@ class Admin::ReconciliationsController < Admin::BaseController
     @all_events = @all_events.where(status: params[:status]) if params[:status].present?
     @all_events = @all_events.where(gateway: params[:gateway]) if params[:gateway].present?
 
-    @pagy, @events = pagy_offset(@all_events, limit: 25)
+    @pagy, @events = pagy(:offset, @all_events, limit: 25)
   end
 
   def show

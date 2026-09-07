@@ -20,7 +20,7 @@ class Admin::AuditLogsController < Admin::BaseController
       @logs = @logs.where(created_at: params[:start_date].to_date.beginning_of_day..params[:end_date].to_date.end_of_day)
     end
 
-    @pagy, @logs = pagy_offset(@logs, limit: 20)
+    @pagy, @logs = pagy(:offset, @logs, limit: 20)
     @hotels = Hotel.all.order(:name)
   end
 end

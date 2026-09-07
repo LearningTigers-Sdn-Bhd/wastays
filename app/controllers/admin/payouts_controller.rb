@@ -10,7 +10,7 @@ class Admin::PayoutsController < Admin::BaseController
                                 .where("checked_out_at <= ?", cutoff_date)
 
     @payout_summary = Booking.payout_summary_by_hotel(@eligible_bookings)
-    @pagy, @payout_summary = pagy_offset(@payout_summary, limit: 25)
+    @pagy, @payout_summary = pagy(:offset, @payout_summary, limit: 25)
   end
 
   def export_payouts_csv

@@ -25,7 +25,7 @@ class Admin::MarginRulesController < Admin::BaseController
 
   def prepare_view_data
     @all_margin_rules = MarginRule.includes(:settable).order(created_at: :desc, id: :desc)
-    @pagy, @margin_rules = pagy_offset(@all_margin_rules, limit: 25)
+    @pagy, @margin_rules = pagy(:offset, @all_margin_rules, limit: 25)
     @new_rule ||= MarginRule.new
     @hotels = Hotel.order(:name)
     @room_types = RoomType.includes(:hotel).order(:name)

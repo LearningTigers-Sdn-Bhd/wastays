@@ -116,7 +116,7 @@ module Admin
       @entries = ObservationEntry.select(:id, :entry_type, :request_id, :status, :duration, :path, :tags, :created_at)
                                  .order(created_at: :desc, id: :desc)
       apply_filters
-      @pagy, @entries = pagy_offset(@entries, limit: 50)
+      @pagy, @entries = pagy(:offset, @entries, limit: 50)
       @entry_presenters = ObservationDeck::EntryPresenter.for(@entries)
     end
 

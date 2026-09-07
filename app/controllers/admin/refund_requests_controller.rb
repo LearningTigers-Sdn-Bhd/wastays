@@ -5,7 +5,7 @@ module Admin
 
     def index
       @all_refund_requests = RefundRequest.includes(booking: :hotel).order(created_at: :desc, id: :desc)
-      @pagy, @refund_requests = pagy_offset(@all_refund_requests, limit: 25)
+      @pagy, @refund_requests = pagy(:offset, @all_refund_requests, limit: 25)
 
       @refund_status_counts = @all_refund_requests.except(:order).group(:status).count
       @pending_count   = @refund_status_counts.fetch("pending", 0)

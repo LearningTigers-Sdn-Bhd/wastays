@@ -19,6 +19,18 @@ class ApplicationController < ActionController::Base
 
   private
 
+  # Pagy reads a page like "2junk" as page 2. Every portal rejects trailing text
+  # instead, so a malformed link lands on the first page.
+  def pagy(paginator = :offset, collection, **options)
+    options[:page] ||= normalized_page(options[:page_key] || Pagy::DEFAULT[:page_key])
+    super
+  end
+
+  def normalized_page(page_key)
+    page = Integer(params[page_key], exception: false).to_i
+    page.positive? ? page : 1
+  end
+
   def current_agent_account
     @current_agent_account ||= HotelCorporateAccount.find_by(id: session[:hotel_corporate_account_id]) if session[:hotel_corporate_account_id]
   end

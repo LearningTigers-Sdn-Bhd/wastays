@@ -15,7 +15,7 @@ module Admin
       scope = Attraction.includes(:source_hotel, :hotels).order(created_at: :desc, id: :desc)
       scope = scope.where(status: @active_status) unless @active_status == "all"
       scope = apply_search(scope)
-      @pagy, @attractions = pagy_offset(scope, limit: PAGE_SIZE)
+      @pagy, @attractions = pagy(:offset, scope, limit: PAGE_SIZE)
     end
 
     def new

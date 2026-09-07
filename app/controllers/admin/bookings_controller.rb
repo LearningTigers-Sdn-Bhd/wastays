@@ -12,7 +12,7 @@ module Admin
       end
       @all_bookings = @all_bookings.search(params[:q]) if params[:q].present?
 
-      @pagy, @bookings = pagy_offset(@all_bookings, limit: 25)
+      @pagy, @bookings = pagy(:offset, @all_bookings, limit: 25)
 
       respond_to do |format|
         format.html
