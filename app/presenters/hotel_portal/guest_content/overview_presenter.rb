@@ -26,7 +26,8 @@ module HotelPortal
           section(:policy, "Policies", "shield-check", knowledge_state("policy"), knowledge_detail("policy")),
           section(:faq, "FAQs", "message-circle-question-mark", knowledge_state("faq"), knowledge_detail("faq")),
           section(:amenity, "Amenities", "concierge-bell", amenities_state, amenities_detail),
-          section(:wifi, "Wi-Fi", "wifi", wifi_state, wifi_detail)
+          section(:wifi, "Wi-Fi", "wifi", wifi_state, wifi_detail),
+          section(:contact, "Contact & Escalation", "phone", contact_state, contact_detail)
         ]
       end
 
@@ -105,6 +106,30 @@ module HotelPortal
 
       def contact_present?
         [ hotel.contact_email, hotel.contact_phone, hotel.whatsapp_number ].any?(&:present?)
+      end
+
+      # A guest the concierge cannot help needs a number that rings and a number
+      # for an emergency. Both, or the section is not ready.
+      def contact_state
+        front_desk_phone.present? && emergency_number.present? ? state(READY, :success) : state(NEEDS_ATTENTION, :warning)
+      end
+
+      def contact_detail
+        missing = []
+        missing << "a front desk phone" if front_desk_phone.blank?
+        missing << "an emergency number" if emergency_number.blank?
+
+        missing.any? ? "Add #{missing.to_sentence}." : "Guests can reach a person and an emergency line."
+      end
+
+      def guest_contact = hotel.guest_contact
+
+      def front_desk_phone
+        guest_contact&.front_desk_phone.presence || hotel.contact_phone.presence
+      end
+
+      def emergency_number
+        guest_contact&.emergency_phone.presence || guest_contact&.emergency_services_number.presence
       end
 
       def knowledge_state(category)

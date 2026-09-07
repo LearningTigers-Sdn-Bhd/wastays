@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_07_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_07_204139) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1560,6 +1560,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_110000) do
     t.datetime "updated_at", null: false
     t.index ["hotel_id", "transaction_category"], name: "idx_hotel_gl_maps_on_hotel_and_category", unique: true
     t.index ["hotel_id"], name: "index_hotel_general_ledger_maps_on_hotel_id"
+  end
+
+  create_table "hotel_guest_contacts", force: :cascade do |t|
+    t.text "after_hours_message"
+    t.datetime "created_at", null: false
+    t.string "duty_manager_phone"
+    t.text "emergency_instructions"
+    t.string "emergency_phone"
+    t.string "emergency_services_number"
+    t.integer "escalation_attempts", default: 2, null: false
+    t.jsonb "escalation_triggers", default: [], null: false
+    t.time "front_desk_closes_at"
+    t.string "front_desk_email"
+    t.string "front_desk_extension"
+    t.boolean "front_desk_open_24h", default: true, null: false
+    t.time "front_desk_opens_at"
+    t.string "front_desk_phone"
+    t.string "front_desk_whatsapp"
+    t.bigint "hotel_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_guest_contacts_on_hotel_id", unique: true
   end
 
   create_table "hotel_guest_instructions", force: :cascade do |t|
@@ -3183,6 +3204,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_110000) do
   add_foreign_key "hotel_extra_charges", "hotels"
   add_foreign_key "hotel_extra_charges", "transaction_codes"
   add_foreign_key "hotel_general_ledger_maps", "hotels"
+  add_foreign_key "hotel_guest_contacts", "hotels"
   add_foreign_key "hotel_guest_instructions", "hotels"
   add_foreign_key "hotel_knowledge_chunks", "hotel_knowledge_documents"
   add_foreign_key "hotel_knowledge_diagnostics", "hotels"

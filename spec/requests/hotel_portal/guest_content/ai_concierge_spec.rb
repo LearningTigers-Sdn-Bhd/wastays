@@ -36,7 +36,7 @@ RSpec.describe "HotelPortal::GuestContent::AiConcierge", type: :request do
       summary = body.at_css("[aria-label='Guest content summary']")
       expect(summary.css(".panel-metric-card__label").map { |label| label.text.squish })
         .to eq([ "Content readiness", "Knowledge documents", "Questions needing answers", "AI Concierge" ])
-      expect(summary.at_css(".panel-metric-card__value").text.squish).to eq("0 of 5")
+      expect(summary.at_css(".panel-metric-card__value").text.squish).to eq("0 of 6")
 
       # The readiness metric card names the left column, so only the right
       # column carries a heading of its own.

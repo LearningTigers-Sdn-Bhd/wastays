@@ -54,7 +54,8 @@
          policy: hotel_knowledge_policies_path(@hotel),
          faq: hotel_knowledge_faqs_path(@hotel),
          amenity: hotel_guest_amenities_path(@hotel),
-         wifi: hotel_wifi_networks_path(@hotel)
+         wifi: hotel_wifi_networks_path(@hotel),
+         contact: hotel_guest_contact_path(@hotel)
        } %>
     <div class="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
       <% @presenter.sections.each do |section| %>

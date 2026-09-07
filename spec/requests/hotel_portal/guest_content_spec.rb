@@ -16,12 +16,12 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     sign_in_as(user)
   end
 
-  it "shows the six content tabs in order without the gated AI tab" do
+  it "shows the seven content tabs in order without the gated AI tab" do
     get hotel_guest_content_path(hotel)
 
     expect(response).to have_http_status(:ok)
     tabs = Nokogiri::HTML(response.body).css("[data-testid='settings-tabs'] a").map { |link| link.text.squish }
-    expect(tabs).to eq([ "Overview", "Hotel Info", "Policies", "FAQs", "Amenities", "Wi-Fi" ])
+    expect(tabs).to eq([ "Overview", "Hotel Info", "Policies", "FAQs", "Amenities", "Wi-Fi", "Contact & Escalation" ])
     expect(response.body).to include("tabs-list tabs-list--line")
     expect(Nokogiri::HTML(response.body).css("[data-testid='settings-tabs'] [data-slot='tabs-list']").size).to eq(1)
   end

@@ -768,6 +768,9 @@ Rails.application.routes.draw do
           controller: "arrival_departures", only: %i[show update]
         get "general-info/additional-information", to: "knowledge_general_infos#additional_information",
           as: :knowledge_additional_information
+        # Who a guest reaches when the concierge cannot answer, and when.
+        resource :guest_contact, path: "contact-and-escalation",
+          controller: "contacts", only: %i[show update]
         get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
         patch "ai-concierge", to: "ai_concierge#update"
         resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :update ]

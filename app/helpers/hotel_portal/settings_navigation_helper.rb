@@ -207,6 +207,7 @@ module HotelPortal
           { key: "faqs", label: "FAQs", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: guest_content_page?("knowledge_faqs") },
           { key: "amenities", label: "Amenities", path: hotel_guest_amenities_path(current_hotel), icon: "sparkles", active: guest_content_page?("amenities") },
           { key: "wifi", label: "Wi-Fi", path: hotel_wifi_networks_path(current_hotel), icon: "wifi", active: guest_content_page?("wifi_networks") },
+          { key: "contact", label: "Contact & Escalation", path: hotel_guest_contact_path(current_hotel), icon: "phone", active: guest_content_page?("contacts") },
           feature_enabled_for_hotel?("ai_concierge_page", current_hotel) ? { key: "ai-concierge", label: "AI Concierge", path: hotel_ai_concierge_settings_path(current_hotel), icon: "bot", active: ai_concierge_page? } : nil
         ].compact
       when :team
