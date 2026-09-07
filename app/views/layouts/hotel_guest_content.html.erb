@@ -1,0 +1,30 @@
+<%#
+  One frame for every Guest Content page, in one flat stack so the gap between
+  any two blocks is always the same:
+
+    Guest Content Settings header -> group tabs
+      -> the AI Concierge section heading and its sub-tabs, on the AI pages only
+      -> the page body
+
+  Page bodies render their sections straight into this stack. A page that wraps
+  its sections in one element collapses the gaps, so pages must not add a
+  wrapper of their own. Each page opens with its own section heading.
+%>
+<% content_for :content do %>
+  <div class="space-y-4" data-testid="guest-content-body">
+    <%= render PanelsUI::PageHeader.new(
+          title: "Guest Content Settings",
+          description: "Manage the information your hotel shares with guests, and the content the AI Concierge uses to answer them.") %>
+    <%= render "hotel_portal/settings/group_tabs" %>
+
+    <% if guest_content_subtabs.any? %>
+      <%= render "hotel_portal/guest_content/shared/section_header",
+            title: "AI Concierge Settings",
+            description: "Set up how the concierge answers guests, and review the questions it could not answer." %>
+      <%= render "hotel_portal/guest_content/shared/subtabs" %>
+    <% end %>
+
+    <%= yield %>
+  </div>
+<% end %>
+<%= render template: "layouts/hotel_settings" %>

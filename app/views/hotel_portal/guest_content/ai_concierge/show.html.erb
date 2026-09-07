@@ -1,0 +1,77 @@
+<%= form_with model: @hotel,
+              url: hotel_ai_concierge_settings_path(@hotel),
+              method: :patch,
+              local: true,
+              class: "grid grid-cols-1 gap-4 lg:grid-cols-2" do |f| %>
+  <% if @hotel.errors.any? %>
+    <div class="lg:col-span-2">
+      <%= render PanelsUI::Alert.new(
+            tone: :destructive,
+            title: pluralize(@hotel.errors.count, "error") + " prevented these AI settings from being saved",
+            role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @hotel.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <section aria-label="AI Concierge configuration" class="space-y-4">
+    <div class="space-y-4">
+      <%= render PanelsUI::Switch.new(
+            form: f,
+            attribute: :guest_chat_enabled,
+            label: "Guest Chat",
+            description: "Let guests open a chat from the concierge page. Off hides only the chat tile, the Conversations inbox, and its sidebar tab — the rest of the concierge page stays up.",
+            variant: :card) %>
+
+      <%= render PanelsUI::Switch.new(
+            form: f,
+            attribute: :ai_provider_enabled,
+            label: "Automatic Replies",
+            description: "Answer guest chats automatically with the configured provider. Off leaves the chat open for staff to answer by hand.",
+            variant: :card) %>
+
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :ai_concierge_tone,
+            label: "Tone") do |field| %>
+        <% field.with_select_menu(
+             Hotel.ai_concierge_tones.keys.map { |tone| [ tone.humanize, tone ] },
+             selected: @hotel.ai_concierge_tone) %>
+      <% end %>
+
+      <details class="rounded-md border border-border bg-muted/30">
+        <summary class="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-foreground">Advanced</summary>
+        <div class="space-y-4 border-t border-border p-4">
+        <% provider_labels = { "openai" => "OpenAI", "claude" => "Claude", "gemini" => "Gemini" } %>
+        <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :ai_provider_name,
+            label: "AI Provider") do |field| %>
+        <% field.with_select_menu(
+             Hotel.ai_provider_names.keys.map { |provider| [ provider_labels[provider] || provider.humanize, provider ] },
+             prompt: "Select Provider",
+             selected: @hotel.ai_provider_name) %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :ai_provider_key,
+            label: "API Key",
+            hint: @hotel.ai_provider_key.present? ? "API key saved. Enter a new value only to replace it." : "The API key is encrypted before it is saved.") do |field| %>
+          <% field.with_input(type: :password, value: nil, placeholder: "Enter a new API key", autocomplete: "new-password") %>
+        <% end %>
+        </div>
+      </details>
+    </div>
+
+    <div class="flex justify-end">
+      <%= render PanelsUI::Button.new(label: "Save AI Concierge Configuration", as: :button, type: :submit, size: :sm) %>
+    </div>
+  </section>
+<% end %>

@@ -1,0 +1,62 @@
+<% content_for :head do %>
+  <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+<% end %>
+
+<% documents.each { |document| concat(turbo_stream_from(document)) } %>
+
+<div>
+  <% if documents.any? %>
+    <div class="divide-y divide-border rounded-md border border-border bg-card shadow-sm">
+      <% documents.each do |document| %>
+        <% state = case document.embedding_status
+          when "indexed" then [ "Ready", "success" ]
+          when "failed" then [ "Needs attention", :destructive ]
+          else [ "Updating", :warning ]
+        end %>
+        <article class="space-y-3 p-5 sm:p-6">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-base font-semibold text-foreground"><%= document.title %></h2>
+                <%= render PanelsUI::Badge.new(label: state.first, variant: state.last) %>
+              </div>
+              <% if document.category == "faq" && document.metadata&.dig("qa_pairs").present? %>
+                <% pairs = document.metadata["qa_pairs"] %>
+                <p class="mt-1 text-sm text-muted-foreground"><%= pluralize(pairs.respond_to?(:values) ? pairs.values.size : Array(pairs).size, "question") %></p>
+              <% elsif document.content.present? %>
+                <p class="mt-1 line-clamp-2 whitespace-pre-line text-sm text-muted-foreground"><%= truncate(document.content, length: 220) %></p>
+              <% elsif document.file.attached? %>
+                <p class="mt-1 text-sm text-muted-foreground"><%= document.file.filename %></p>
+              <% end %>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <%= render PanelsUI::Button.new(label: "Edit", as: :a, href: kb_edit_path(document), variant: :secondary, size: :sm) %>
+              <% if document.hotel.ai_concierge_enabled? && %w[pending failed].include?(document.embedding_status) %>
+                <%= form_with url: kb_reindex_path(document), method: :post do %>
+                  <%= render PanelsUI::Button.new(label: document.embedding_status == "failed" ? "Try again" : "Prepare content", type: "submit", variant: :secondary, size: :sm) %>
+                <% end %>
+              <% end %>
+              <%= render PanelsUI::Button.new(label: "Remove", as: :a, href: kb_show_path(document), variant: :ghost, size: :sm, data: { turbo_method: :delete, turbo_confirm: "Remove this item? This cannot be undone." }) %>
+            </div>
+          </div>
+
+          <details class="group rounded-md border border-border bg-muted/40">
+            <summary class="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground">Advanced details</summary>
+            <dl class="grid gap-3 border-t border-border px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <div><dt class="text-muted-foreground">Source</dt><dd class="capitalize text-foreground"><%= document.source_type %></dd></div>
+              <div><dt class="text-muted-foreground">Language</dt><dd class="uppercase text-foreground"><%= document.language %></dd></div>
+              <div><dt class="text-muted-foreground">Effective date</dt><dd class="text-foreground"><%= document.effective_date&.to_fs(:long) || "No end date" %></dd></div>
+              <div><dt class="text-muted-foreground">Tags</dt><dd class="text-foreground"><%= document.tags.presence&.to_sentence || "None" %></dd></div>
+            </dl>
+          </details>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <%= render PanelsUI::EmptyState.new(title: empty_title, description: empty_description) do |empty| %>
+      <% empty.with_action do %>
+        <%= render PanelsUI::Button.new(label: add_button_text, as: :a, href: kb_new_path, variant: :primary, size: :sm) %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

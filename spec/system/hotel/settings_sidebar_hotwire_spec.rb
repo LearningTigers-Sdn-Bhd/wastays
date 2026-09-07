@@ -95,7 +95,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       expect(page).to have_link("General", href: hotel_general_settings_path(hotel))
       expect(page).to have_link("Property", href: edit_hotel_profile_path(hotel))
       expect(page).to have_link("Finance", href: hotel_banking_details_settings_path(hotel))
-      expect(page).to have_link("Guest Content", href: hotel_ai_concierge_settings_path(hotel))
+      expect(page).to have_link("Guest Content", href: hotel_guest_content_path(hotel))
       expect(page).to have_link("Team", href: hotel_users_path(hotel))
 
       expect(page).to have_no_link("Room Inventory")

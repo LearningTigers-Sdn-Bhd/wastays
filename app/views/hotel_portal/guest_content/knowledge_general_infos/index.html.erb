@@ -1,0 +1,44 @@
+<section class="rounded-md border border-border bg-card p-5 shadow-sm sm:p-6" aria-labelledby="property-summary-heading">
+  <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h2 id="property-summary-heading" class="text-base font-semibold text-foreground">Property summary</h2>
+      <p class="mt-1 text-sm text-muted-foreground">These details come from Property Settings, which remains the source of truth.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <%= render PanelsUI::Badge.new(label: @hotel.name.present? && @hotel.address.present? ? "Ready" : "Needs attention", variant: @hotel.name.present? && @hotel.address.present? ? :success : :destructive, size: :sm) %>
+      <%= render PanelsUI::Button.new(label: "Property Settings", href: hotel_general_settings_path(@hotel), variant: :secondary, size: :sm) %>
+    </div>
+  </div>
+
+  <dl class="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+    <% [
+      ["Name", @hotel.name],
+      ["Description", @hotel.description],
+      ["Location", [@hotel.address, @hotel.city, @hotel.country].compact_blank.join(", ")],
+      ["Email", @hotel.contact_email],
+      ["Phone", @hotel.contact_phone.presence || @hotel.fixed_line_number],
+      ["Rating", @hotel.star_rating.present? ? "#{@hotel.star_rating}-star" : nil]
+    ].each do |label, value| %>
+      <div><dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground"><%= label %></dt><dd class="mt-1 whitespace-pre-line text-sm text-foreground"><%= value.presence || "Not provided" %></dd></div>
+    <% end %>
+    <div>
+      <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Map</dt>
+      <dd class="mt-1 text-sm"><%= @hotel.google_map_link.present? ? link_to("Open map", @hotel.google_map_link, target: "_blank", rel: "noopener", class: "font-medium text-primary hover:underline") : content_tag(:span, "Not provided", class: "text-foreground") %></dd>
+    </div>
+  </dl>
+</section>
+
+<section class="space-y-3" aria-label="Additional Information">
+  <% section_actions = capture do %>
+    <%= render PanelsUI::Button.new(label: "Add Information", href: kb_new_path, variant: :primary, size: :sm) %>
+  <% end %>
+  <%= render "hotel_portal/guest_content/shared/section_header",
+        title: "Additional Information",
+        description: "Keep the existing documents used for extra hotel details, languages, dates, tags, and PDFs.",
+        actions: section_actions %>
+  <%= render "hotel_portal/guest_content/documents/documents_table",
+    documents: @documents,
+    add_button_text: "Add Information",
+    empty_title: "No additional information yet",
+    empty_description: "Add details that do not belong in Property Settings." %>
+</section>

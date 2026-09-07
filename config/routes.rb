@@ -752,9 +752,15 @@ Rails.application.routes.draw do
         end
       end
 
-      scope "guest-content" do
-        get "ai-concierge", to: "settings#index", as: :ai_concierge_settings, defaults: { settings_page: "ai" }
-        patch "ai-concierge", to: "settings#update", defaults: { settings_page: "ai" }
+      # Every Guest Content page lives in one controller namespace. The URLs and
+      # the route helper names stay as they were.
+      scope "guest-content", module: "guest_content" do
+        get "", to: "overview#index", as: :guest_content
+        resource :guest_amenities, path: "amenities", controller: "amenities", only: %i[show update]
+        resources :wifi_networks, path: "wifi", except: :show
+        get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
+        patch "ai-concierge", to: "ai_concierge#update"
+        resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :update ]
         resources :knowledge_policies, path: "policies" do
           member { post :reindex }
         end
@@ -764,7 +770,6 @@ Rails.application.routes.draw do
         resources :knowledge_general_infos, path: "general-info" do
           member { post :reindex }
         end
-        resources :knowledge_diagnostics, path: "knowledge-diagnostics", only: [ :index, :update ]
       end
 
       scope "team" do
@@ -812,7 +817,8 @@ Rails.application.routes.draw do
     get "knowledge_general_infos/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/new")
     get "knowledge_general_infos/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/%{id}")
     get "knowledge_general_infos/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/%{id}/edit")
-    get "knowledge_diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/knowledge-diagnostics")
+    get "knowledge_diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/ai-concierge/healthcheck")
+    get "settings/guest-content/knowledge-diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/ai-concierge/healthcheck")
     get "staff", to: redirect("/hotel/%{hotel_id}/settings/team/staff")
     # Invite is a Sheet over the list now, so the old deep link lands on the list.
     get "staff/new", to: redirect("/hotel/%{hotel_id}/settings/team/staff")

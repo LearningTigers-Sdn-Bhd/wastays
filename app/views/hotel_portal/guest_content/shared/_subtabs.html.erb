@@ -1,0 +1,15 @@
+<% subtabs = guest_content_subtabs %>
+<% if subtabs.any? %>
+  <div data-testid="guest-content-subtabs">
+    <%= render PanelsUI::Tabs.new(
+          id: "guest-content-subtabs",
+          variant: :pill,
+          active: subtabs.find { |tab| tab[:active] }&.fetch(:key),
+          aria_label: "AI Concierge sections"
+        ) do |tabs| %>
+      <% subtabs.each do |tab| %>
+        <% tabs.with_tab(name: tab[:key], label: tab[:label], icon: tab[:icon], href: tab[:path]) %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

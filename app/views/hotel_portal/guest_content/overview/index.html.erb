@@ -1,0 +1,74 @@
+<section class="grid gap-4 lg:grid-cols-2" aria-label="Guest content status">
+  <%= render PanelsUI::Card.new(width: :full, variant: :outlined, density: :compact) do |card| %>
+    <% ready_count = @presenter.sections.count { |section| section[:status].label == "Ready" } %>
+    <% card.with_header(title: "Content readiness", description: "#{ready_count} of #{@presenter.sections.size} sections are ready", title_as: :h2) %>
+  <% end %>
+
+  <% if feature_enabled_for_hotel?("ai_concierge_page", @hotel) %>
+    <%= render PanelsUI::Card.new(width: :full, variant: :outlined, density: :compact) do |card| %>
+      <% card.with_header(title: "AI Concierge", description: "Guest chat and automatic answers", title_as: :h2) do |header| %>
+        <% header.with_badges do %>
+          <%= render PanelsUI::Badge.new(label: @presenter.ai_state.label, variant: @presenter.ai_state.tone, size: :sm, indicator: true) %>
+        <% end %>
+        <% header.with_actions do %>
+          <%= render PanelsUI::Button.new(label: "AI settings", href: hotel_ai_concierge_settings_path(@hotel), variant: :secondary, size: :sm) %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>
+
+<section class="space-y-3" aria-labelledby="content-sections-heading">
+  <h2 id="content-sections-heading" class="text-base font-semibold">Content</h2>
+  <div class="divide-y divide-border border-y border-border">
+    <% section_paths = {
+         general_info: hotel_knowledge_general_infos_path(@hotel),
+         policy: hotel_knowledge_policies_path(@hotel),
+         faq: hotel_knowledge_faqs_path(@hotel),
+         amenity: hotel_guest_amenities_path(@hotel),
+         wifi: hotel_wifi_networks_path(@hotel)
+       } %>
+    <% @presenter.sections.each do |section| %>
+      <% path = section_paths.fetch(section[:key]) %>
+      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-medium"><%= section[:name] %></h3>
+            <%= render PanelsUI::Badge.new(label: section[:status].label, variant: section[:status].tone, size: :sm) %>
+          </div>
+          <p class="mt-1 text-sm text-muted-foreground"><%= section[:detail] %></p>
+        </div>
+        <%= render PanelsUI::Button.new(label: "Open", href: path, variant: :secondary, size: :sm, class: "shrink-0") %>
+      </div>
+    <% end %>
+  </div>
+</section>
+
+<% if feature_enabled_for_hotel?("ai_concierge_page", @hotel) %>
+  <section class="space-y-3" aria-labelledby="questions-heading">
+    <div class="flex items-center justify-between gap-3">
+      <h2 id="questions-heading" class="text-base font-semibold">Questions needing answers</h2>
+      <%= link_to "View all", hotel_ai_healthchecks_path(@hotel), class: "text-sm font-medium text-primary hover:underline" %>
+    </div>
+    <% if @presenter.recent_questions.any? %>
+      <div class="divide-y divide-border border-y border-border">
+        <% @presenter.recent_questions.each do |diagnostic| %>
+          <% path = case diagnostic.suggested_category
+             when "policy" then hotel_knowledge_policies_path(@hotel)
+             when "faq" then hotel_knowledge_faqs_path(@hotel)
+             else hotel_knowledge_general_infos_path(@hotel)
+             end %>
+          <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+              <p class="text-sm font-medium"><%= diagnostic.question %></p>
+              <p class="mt-1 text-xs text-muted-foreground">Suggested section: <%= diagnostic.suggested_category.to_s.humanize.presence || "Hotel Info" %></p>
+            </div>
+            <%= render PanelsUI::Button.new(label: "Add information", href: path, variant: :secondary, size: :sm) %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <%= render PanelsUI::EmptyState.new(title: "No questions need attention", description: "Weak or unanswered guest questions will appear here.", icon: "circle-check") %>
+    <% end %>
+  </section>
+<% end %>

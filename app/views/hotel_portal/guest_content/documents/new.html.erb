@@ -1,0 +1,11 @@
+<% section_actions = capture do %>
+  <%= render PanelsUI::Button.new(label: "Back", href: kb_index_path, variant: :secondary, size: :sm) %>
+<% end %>
+<%= render "hotel_portal/guest_content/shared/section_header",
+      title: "Add #{kb_label}",
+      description: "Add clear information for staff and guests.",
+      actions: section_actions %>
+
+<div class="rounded-md border border-border bg-card p-5 shadow-sm sm:p-6">
+  <%= render "hotel_portal/guest_content/documents/form", document: @document %>
+</div>

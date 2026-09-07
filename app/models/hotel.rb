@@ -49,6 +49,8 @@ class Hotel < ApplicationRecord
   has_many :rate_plans, dependent: :destroy
   has_many :knowledge_documents, class_name: "HotelKnowledgeDocument", dependent: :destroy
   has_many :knowledge_diagnostics, class_name: "HotelKnowledgeDiagnostic", dependent: :destroy
+  has_many :hotel_amenity_details, dependent: :destroy
+  has_many :hotel_wifi_networks, dependent: :destroy
   has_many :hotel_nearby_attractions, dependent: :destroy
   has_many :nearby_attractions, through: :hotel_nearby_attractions, source: :attraction
   has_many :pricing_rules, class_name: "HotelPricingRule", dependent: :destroy

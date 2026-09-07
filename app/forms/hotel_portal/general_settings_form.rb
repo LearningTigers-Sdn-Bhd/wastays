@@ -12,28 +12,19 @@ module HotelPortal
     end
 
     def save
-      if ai_configuration_form?
-        SaveAiSettings.call(hotel, hotel_params)
-      else
-        SaveGeneralSettings.call(
-          hotel,
-          hotel_params,
-          property_policy_params,
-          should_update_property_policy?
-        )
-      end
+      SaveGeneralSettings.call(
+        hotel,
+        hotel_params,
+        property_policy_params,
+        should_update_property_policy?
+      )
     end
 
     private
 
-    def ai_configuration_form?
-      params[:form_id].to_s == "ai_configuration"
-    end
-
     def hotel_params
       permitted = params.require(:hotel).permit(
         :default_currency, :time_zone, :geolocation_enabled, :auto_assign_rooms_enabled,
-        :guest_chat_enabled, :ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key,
         :business_starts_at, :business_ends_at, :arrival_grace_period_hours,
         :guest_registration_card_terms,
         guest_registration_card_fields: [],

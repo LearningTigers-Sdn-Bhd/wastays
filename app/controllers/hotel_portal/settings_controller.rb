@@ -2,7 +2,7 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::SettingsBaseController
-    SETTINGS_PAGES = %w[general boat ai notifications banking e_invoice].freeze
+    SETTINGS_PAGES = %w[general boat notifications banking e_invoice].freeze
 
     before_action :set_account
     before_action :set_hotel
@@ -147,7 +147,6 @@ module HotelPortal
       case params[:form_id].to_s
       when "hotel_settings" then "general"
       when "boat_settings" then "boat"
-      when "ai_configuration" then "ai"
       when "notification_settings" then "notifications"
       when "e_invoice_settings" then "e_invoice"
       else "general"
@@ -157,6 +156,8 @@ module HotelPortal
     def settings_page_path(page)
       case page
       when "boat" then hotel_boat_settings_path(@hotel)
+      # AI Concierge lives under Guest Content now. Old ?tab=ai links still land
+      # on it.
       when "ai" then hotel_ai_concierge_settings_path(@hotel)
       when "notifications" then hotel_notification_settings_path(@hotel)
       when "banking" then hotel_banking_details_settings_path(@hotel)

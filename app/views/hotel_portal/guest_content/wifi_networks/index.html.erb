@@ -1,0 +1,43 @@
+<% section_actions = capture do %>
+  <%= render PanelsUI::Button.new(label: "Add network", href: new_hotel_wifi_network_path(@hotel), variant: :primary, size: :sm) %>
+<% end %>
+<%= render "hotel_portal/guest_content/shared/section_header",
+      title: "Wi-Fi",
+      description: "Manage the networks that hotel guests can use.",
+      actions: section_actions %>
+
+<%= render PanelsUI::Alert.new(tone: :info, title: "Guest credentials stay protected") do |alert| %>
+  <% alert.with_description do %>
+    Anonymous chat can say that Wi-Fi is available. It never receives the network name, password, or connection instructions.
+  <% end %>
+<% end %>
+
+<% if @networks.any? %>
+  <div class="divide-y divide-border border-y border-border">
+    <% @networks.each do |network| %>
+      <article class="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-sm font-medium"><%= network.label %></h2>
+            <%= render PanelsUI::Badge.new(label: "Primary", variant: :primary, size: :sm) if network.primary_network? %>
+            <%= render PanelsUI::Badge.new(label: network.active? ? "Active" : "Inactive", variant: network.active? ? :success : :neutral, size: :sm) %>
+          </div>
+          <p class="mt-1 truncate text-sm text-muted-foreground"><%= network.ssid %></p>
+          <p class="mt-1 text-xs text-muted-foreground"><%= network.access_scope.humanize %> · <%= network.security_type.humanize %></p>
+        </div>
+        <div class="flex shrink-0 gap-2">
+          <%= render PanelsUI::Button.new(label: "Edit", href: edit_hotel_wifi_network_path(@hotel, network), variant: :secondary, size: :sm) %>
+          <%= button_to "Remove", hotel_wifi_network_path(@hotel, network), method: :delete,
+                class: "panel-button panel-button--sm panel-button--destructive",
+                form: { data: { turbo_confirm: "Remove this Wi-Fi network?" } } %>
+        </div>
+      </article>
+    <% end %>
+  </div>
+<% else %>
+  <%= render PanelsUI::EmptyState.new(title: "No guest Wi-Fi networks", description: "Add the network details that staff manage for hotel guests.", icon: "wifi") do |empty| %>
+    <% empty.with_action do %>
+      <%= render PanelsUI::Button.new(label: "Add network", href: new_hotel_wifi_network_path(@hotel)) %>
+    <% end %>
+  <% end %>
+<% end %>

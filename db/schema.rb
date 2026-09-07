@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_07_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1365,6 +1365,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
     t.index ["passport_number"], name: "index_guests_on_passport_number"
   end
 
+  create_table "hotel_amenity_details", force: :cascade do |t|
+    t.bigint "amenity_id", null: false
+    t.datetime "created_at", null: false
+    t.text "fee_information"
+    t.text "guest_notes"
+    t.bigint "hotel_id", null: false
+    t.string "location"
+    t.text "opening_hours"
+    t.text "reservation_instructions"
+    t.boolean "reservation_required", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.index ["amenity_id"], name: "index_hotel_amenity_details_on_amenity_id"
+    t.index ["hotel_id", "amenity_id"], name: "index_hotel_amenity_details_on_hotel_id_and_amenity_id", unique: true
+    t.index ["hotel_id"], name: "index_hotel_amenity_details_on_hotel_id"
+  end
+
   create_table "hotel_boat_schedules", force: :cascade do |t|
     t.datetime "archived_at"
     t.datetime "created_at", null: false
@@ -1772,6 +1788,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
     t.string "room_revenue_tax_rule_application", default: "new_bookings_only", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_hotel_transaction_configurations_on_hotel_id", unique: true
+  end
+
+  create_table "hotel_wifi_networks", force: :cascade do |t|
+    t.string "access_scope", default: "checked_in_guests", null: false
+    t.boolean "active", default: true, null: false
+    t.text "connection_instructions"
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.string "label", null: false
+    t.text "password"
+    t.integer "position", default: 0, null: false
+    t.boolean "primary_network", default: false, null: false
+    t.string "security_type", default: "protected", null: false
+    t.string "ssid", null: false
+    t.datetime "updated_at", null: false
+    t.index "hotel_id, lower((ssid)::text)", name: "index_hotel_wifi_networks_on_hotel_and_lower_ssid", unique: true
+    t.index ["hotel_id", "position"], name: "index_hotel_wifi_networks_on_hotel_id_and_position"
+    t.index ["hotel_id"], name: "index_hotel_wifi_networks_on_hotel_id"
+    t.index ["hotel_id"], name: "index_hotel_wifi_networks_on_primary_hotel", unique: true, where: "primary_network"
   end
 
   create_table "hotels", force: :cascade do |t|
@@ -3122,6 +3157,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
   add_foreign_key "guest_registration_cards", "bookings"
   add_foreign_key "guest_registration_cards", "hotels"
   add_foreign_key "guest_registration_note_templates", "hotels"
+  add_foreign_key "hotel_amenity_details", "amenities"
+  add_foreign_key "hotel_amenity_details", "hotels"
   add_foreign_key "hotel_boat_schedules", "hotels"
   add_foreign_key "hotel_boat_settings", "hotels"
   add_foreign_key "hotel_business_dates", "hotels"
@@ -3157,6 +3194,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
   add_foreign_key "hotel_taxes", "transaction_codes"
   add_foreign_key "hotel_team_configs", "hotels"
   add_foreign_key "hotel_transaction_configurations", "hotels"
+  add_foreign_key "hotel_wifi_networks", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "plans"
   add_foreign_key "hotels", "users", column: "salesperson_id"
