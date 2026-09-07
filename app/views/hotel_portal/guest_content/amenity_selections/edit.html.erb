@@ -70,27 +70,11 @@
               <% end %>
 
               <div class="max-h-96 space-y-4 overflow-y-auto rounded-md border border-border bg-muted/20 p-2" data-testid="amenity-selection-list">
-                <% @rows.group_by(&:category).sort_by { |category, _rows| category.to_s }.each do |category, rows| %>
+                <% @groups.each do |heading, rows| %>
                   <div class="space-y-2" data-amenity-selection-target="group">
-                    <h4 class="px-1 pt-1 text-xs font-medium text-muted-foreground"><%= category %></h4>
+                    <h4 class="px-1 pt-1 text-xs font-medium text-muted-foreground"><%= heading %></h4>
                     <% rows.each do |row| %>
-                      <div data-amenity-selection-target="row"
-                           data-amenity-selection-search-value="<%= row.search_value %>"
-                           data-amenity-selection-category-value="<%= row.category %>">
-                        <%= render PanelsUI::Checkbox.new(
-                              name: "hotel[amenities][]",
-                              id: "amenity-#{row.id}",
-                              value: row.slug,
-                              checked: @selected_slugs.include?(row.slug),
-                              include_hidden: false,
-                              label: row.name,
-                              description: row.selection_description,
-                              variant: :card,
-                              data: {
-                                amenity_selection_target: "checkbox",
-                                action: "change->amenity-selection#updateCount"
-                              }) %>
-                      </div>
+                      <%= render "amenity_option", row: row, checked: @selected_slugs.include?(row.slug) %>
                     <% end %>
                   </div>
                 <% end %>

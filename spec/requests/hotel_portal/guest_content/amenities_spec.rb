@@ -39,6 +39,30 @@ RSpec.describe "Hotel Portal Guest Content amenities", type: :request do
     expect(checkboxes.select { |box| box["checked"] }.map { |box| box["value"] }).to eq([ pool.slug ])
   end
 
+  it "puts the saved amenities in a Selected group above the catalog" do
+    hotel.update!(amenities: [ gym.slug, pool.slug ])
+
+    get edit_hotel_amenity_selection_path(hotel)
+
+    list = Nokogiri::HTML(response.body).at_css("[data-testid='amenity-selection-list']")
+    expect(list.css("h4").map { |heading| heading.text.squish }.first).to eq("Selected")
+    first_group = list.at_css("[data-amenity-selection-target='group']")
+    expect(first_group.css("input[type='checkbox']").map { |box| box["value"] }).to contain_exactly(pool.slug, gym.slug)
+    expect(first_group.css("input[type='checkbox']").all? { |box| box["checked"] }).to be true
+    # No amenity appears twice: the catalog groups hold only what is unselected.
+    values = list.css("input[type='checkbox']").map { |box| box["value"] }
+    expect(values.uniq.size).to eq(values.size)
+  end
+
+  it "shows no Selected group when the property offers no amenities" do
+    hotel.update!(amenities: [])
+
+    get edit_hotel_amenity_selection_path(hotel)
+
+    list = Nokogiri::HTML(response.body).at_css("[data-testid='amenity-selection-list']")
+    expect(list.css("h4").map { |heading| heading.text.squish }).not_to include("Selected")
+  end
+
   it "replaces the property amenities from the sheet" do
     patch hotel_amenity_selection_path(hotel), params: { hotel: { amenities: [ "", gym.slug ] } }
 

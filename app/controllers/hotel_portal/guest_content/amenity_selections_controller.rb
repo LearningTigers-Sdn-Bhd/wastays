@@ -40,6 +40,19 @@ module HotelPortal
         @rows = HotelPortal::GuestContent::AmenityRow.build(hotel: @hotel, amenities: Amenity.hotel.ordered)
         @categories = @rows.map(&:category).compact_blank.uniq.sort
         @selected_slugs = Array(selected).compact_blank.map(&:to_s)
+        @groups = grouped_rows
+      end
+
+      # What the property already offers comes first, under its own heading, so
+      # an operator reopening the sheet reads the current selection before the
+      # catalog. The rest keep their category headings. Grouping is fixed at
+      # load: a row that jumped between groups on every click would move under
+      # the pointer.
+      def grouped_rows
+        selected, remaining = @rows.partition { |row| @selected_slugs.include?(row.slug) }
+        groups = []
+        groups << [ "Selected", selected ] if selected.any?
+        groups.concat(remaining.group_by(&:category).sort_by { |category, _rows| category.to_s })
       end
 
       def sheet_frame
