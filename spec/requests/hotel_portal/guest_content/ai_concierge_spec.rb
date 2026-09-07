@@ -68,24 +68,43 @@ RSpec.describe "HotelPortal::GuestContent::AiConcierge", type: :request do
       expect(subtabs.css("[data-slot='tabs-trigger']").map { |tab| tab["data-tab-label"] }).to eq([ "Configuration", "Healthcheck" ])
     end
 
-    it "renders AI Concierge as a left-column field stack with Panels UI controls" do
+    it "splits the configuration into three sections that each save on their own" do
       get hotel_ai_concierge_settings_path(hotel)
 
       document = response.parsed_body
-      form = document.at_css("form[action='#{hotel_ai_concierge_settings_path(hotel)}']")
-      section = form.at_css("section")
+      forms = document.css("form[action='#{hotel_ai_concierge_settings_path(hotel)}']")
+      expect(forms.size).to eq(3)
+      expect(forms.map { |form| form.at_css("input[name='section']")["value"] })
+        .to eq([ "settings", "tone", "advanced" ])
+      expect(forms.map { |form| form["class"] }.uniq).to eq([ "md:w-4/5" ])
+      expect(forms.map { |form| form["data-controller"] }.uniq).to eq([ "form-dirty" ])
 
-      expect(form["class"]).to include("gap-4", "lg:grid-cols-2")
-      expect(section["class"].to_s).not_to include("lg:col-span-2")
-      expect(section.at_css(".space-y-4")).to be_present
-      switches = section.css(".panel-switch")
-      expect(switches.map { |node| node["data-variant"] }).to eq([ "card", "card" ])
+      # Every section starts with nothing to save, so Save is rendered disabled
+      # and Cancel hidden.
+      forms.each do |form|
+        expect(form.at_css("button[type='submit'][data-form-dirty-target='submit']")["disabled"]).to be_present
+        expect(form.at_css("button[type='reset'][data-form-dirty-target='cancel']")["hidden"]).to be_present
+      end
+
+      expect(document.css("[data-testid='guest-content-body'] section h3").map { |heading| heading.text.squish })
+        .to eq([ "Settings", "AI Tone", "Advanced Settings" ])
+
+      settings = document.at_css("section#settings")
+      switches = settings.css(".panel-switch")
+      expect(switches.map { |node| node["data-variant"] }).to eq([ "default", "default" ])
       expect(switches[0].at_css("input[name='hotel[guest_chat_enabled]']")).to be_present
       expect(switches[1].at_css("input[name='hotel[ai_provider_enabled]']")).to be_present
-      expect(section.css(".panel-form-field").size).to eq(3)
-      expect(section.css(".panel-select-menu").size).to eq(2)
-      expect(section.at_css(".panel-input[name='hotel[ai_provider_key]']")).to be_present
-      expect(section.at_css("button[type='submit']").text.squish).to eq("Save AI Concierge Configuration")
+
+      tone = document.at_css("section#tone")
+      group = tone.at_css(".panel-radio-group")
+      expect(group["data-variant"]).to eq("card")
+      expect(group.css("input[name='hotel[ai_concierge_tone]']").map { |radio| radio["value"] })
+        .to eq([ "basic", "business", "cheerful" ])
+      expect(tone.at_css(".panel-select-menu")).to be_nil
+
+      advanced = document.at_css("section#advanced")
+      expect(advanced.css(".panel-select-menu").size).to eq(1)
+      expect(advanced.at_css(".panel-input[name='hotel[ai_provider_key]']")).to be_present
     end
 
     it "keeps the AI Concierge tab out of the navigation when the plan excludes it" do
@@ -152,8 +171,24 @@ RSpec.describe "HotelPortal::GuestContent::AiConcierge", type: :request do
       expect(hotel.reload.ai_provider_key).to eq("saved-key")
     end
 
+    it "saves one section without blanking the rest" do
+      hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "saved-key", ai_concierge_tone: "basic")
+
+      patch hotel_ai_concierge_settings_path(hotel), params: {
+        section: "tone",
+        hotel: { ai_concierge_tone: "business" }
+      }
+
+      hotel.reload
+      expect(hotel.ai_concierge_tone).to eq("business")
+      expect(hotel.ai_provider_enabled).to be(true)
+      expect(hotel.ai_provider_name).to eq("openai")
+      expect(hotel.ai_provider_key).to eq("saved-key")
+    end
+
     it "shows the errors and keeps the page frame when the provider is missing" do
       patch hotel_ai_concierge_settings_path(hotel), params: {
+        section: "settings",
         hotel: {
           ai_provider_enabled: "1",
           ai_concierge_tone: "basic",
@@ -169,6 +204,11 @@ RSpec.describe "HotelPortal::GuestContent::AiConcierge", type: :request do
       expect(body.css("> div h2").map { |heading| heading.text.squish }).to eq([ "AI Concierge Settings" ])
       expect(document.css("[data-testid='settings-tabs']").size).to eq(1)
       expect(document.at_css("[data-testid='guest-content-subtabs']")).to be_present
+
+      # The alert belongs to the section that was submitted, and only that one.
+      alerts = document.css(".panel-alert")
+      expect(alerts.size).to eq(1)
+      expect(document.at_css("section#settings .panel-alert")).to be_present
       expect(response.body).to include("can&#39;t be blank")
     end
 

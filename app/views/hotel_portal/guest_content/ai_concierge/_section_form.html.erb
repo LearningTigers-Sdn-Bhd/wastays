@@ -1,0 +1,70 @@
+<%# The three blocks on this page save on their own, so the form plumbing, the
+    heading and the Save row are the same three times over and live here.
+    `section` names the block, doubles as its element id, and tells the view
+    which section came back with an error.
+
+    The whole block stops short of its column on desktop, so the heading, the
+    fields and the Save row all end on the same edge. %>
+<%= form_with model: hotel,
+              url: hotel_ai_concierge_settings_path(hotel),
+              method: :patch,
+              local: true,
+              data: {
+                controller: "form-dirty",
+                action: "input->form-dirty#refresh change->form-dirty#refresh reset->form-dirty#restore"
+              },
+              class: "md:w-4/5" do |form| %>
+  <%= hidden_field_tag :section, section %>
+
+  <section id="<%= section %>" class="scroll-mt-6" aria-labelledby="<%= section %>-heading">
+    <div>
+      <h3 id="<%= section %>-heading" class="text-base font-semibold text-foreground"><%= title %></h3>
+      <p class="mt-2 text-sm text-muted-foreground"><%= description %></p>
+    </div>
+
+    <% if hotel.errors.any? && params[:section] == section %>
+      <div class="mt-4">
+        <%= render PanelsUI::Alert.new(
+              tone: :destructive,
+              title: pluralize(hotel.errors.count, "error") + " prevented these settings from being saved",
+              role: :alert) do |alert| %>
+          <% alert.with_description do %>
+            <ul class="list-disc space-y-1 ps-5">
+              <% hotel.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="mt-5 space-y-4">
+      <%= yield form %>
+    </div>
+
+    <footer class="mt-5 flex justify-end gap-3">
+      <%# Cancel only exists while there is something to discard, so it starts
+          hidden and the controller reveals it alongside enabling Save. %>
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :reset,
+            variant: :secondary,
+            size: :md,
+            hidden: true,
+            data: { form_dirty_target: "cancel" }) do %>
+        Cancel
+      <% end %>
+
+      <%# Rendered disabled, because there is nothing to save yet. %>
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :submit,
+            size: :md,
+            disabled: true,
+            data: { form_dirty_target: "submit" }) do %>
+        Save
+      <% end %>
+    </footer>
+  </section>
+<% end %>
