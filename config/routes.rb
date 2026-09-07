@@ -773,7 +773,7 @@ Rails.application.routes.draw do
           controller: "contacts", only: %i[show update]
         get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
         patch "ai-concierge", to: "ai_concierge#update"
-        resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :update ]
+        resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :show, :update ]
         resources :knowledge_policies, path: "policies" do
           member { post :reindex }
         end

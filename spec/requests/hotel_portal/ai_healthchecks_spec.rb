@@ -64,6 +64,40 @@ RSpec.describe "HotelPortal::GuestContent::AiHealthchecks", type: :request, froz
       expect(response.body).to include("Hotel Info")
     end
 
+    it "renders the reusable table, metric cards, and badges" do
+      get hotel_ai_healthchecks_path(hotel)
+
+      expect(response.body).to include("panel-table")
+      expect(response.body).to include("panel-metric-card")
+      expect(response.body).to include("panel-badge")
+      expect(response.body).not_to include("Filter\"")
+    end
+
+    it "puts a single-select filter in each filtered column header" do
+      get hotel_ai_healthchecks_path(hotel)
+
+      expect(response.body).to include("status-column-filter")
+      expect(response.body).to include("answer-mode-column-filter")
+      expect(response.body).to include("suggested-category-column-filter")
+    end
+
+    it "shows the reports time period filter and defaults to all time" do
+      get hotel_ai_healthchecks_path(hotel)
+
+      expect(response.body).to include("Time period")
+      expect(response.body).to include("Do you have airport pickup?")
+    end
+
+    it "narrows the list with the time period preset" do
+      old_diagnostic = create(:hotel_knowledge_diagnostic, hotel: hotel, question: "Old question")
+      old_diagnostic.update_column(:created_at, 2.years.ago)
+
+      get hotel_ai_healthchecks_path(hotel), params: { date_preset: "this_year" }
+
+      expect(response.body).to include("Do you have airport pickup?")
+      expect(response.body).not_to include("Old question")
+    end
+
     it "filters by status, answer mode, suggested category, and date range" do
       get hotel_ai_healthchecks_path(hotel),
         params: {
@@ -109,6 +143,36 @@ RSpec.describe "HotelPortal::GuestContent::AiHealthchecks", type: :request, froz
     end
   end
 
+  describe "GET /hotel/:hotel_id/settings/guest-content/ai-concierge/healthcheck/:id" do
+    let!(:diagnostic) do
+      create(:hotel_knowledge_diagnostic,
+        hotel: hotel,
+        question: "Is there a shuttle?",
+        answer: "The hotel runs a shuttle at 08:00.",
+        knowledge_matches: [ { "document_title" => "Shuttle", "content" => "Shuttle times." } ])
+    end
+
+    it "renders the detail action sheet" do
+      get hotel_ai_healthcheck_path(hotel, diagnostic)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("healthcheck-detail-sheet")
+      expect(response.body).to include("healthcheck-status-form")
+      expect(response.body).to include("Is there a shuttle?")
+      expect(response.body).to include("The hotel runs a shuttle at 08:00.")
+      expect(response.body).to include("Shuttle")
+    end
+
+    it "does not expose another hotel's diagnostic" do
+      other_hotel = create(:hotel, account: account, status: "live")
+      other_diagnostic = create(:hotel_knowledge_diagnostic, hotel: other_hotel)
+
+      get hotel_ai_healthcheck_path(hotel, other_diagnostic)
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe "PATCH /hotel/:hotel_id/settings/guest-content/ai-concierge/healthcheck/:id" do
     let!(:diagnostic) { create(:hotel_knowledge_diagnostic, hotel: hotel, diagnostic_status: "open") }
 
@@ -120,11 +184,22 @@ RSpec.describe "HotelPortal::GuestContent::AiHealthchecks", type: :request, froz
       expect(diagnostic.reload.diagnostic_status).to eq("reviewed")
     end
 
-    it "rejects invalid statuses" do
+    it "closes the sheet when the request comes from a turbo frame" do
+      patch hotel_ai_healthcheck_path(hotel, diagnostic),
+        params: { hotel_knowledge_diagnostic: { diagnostic_status: "resolved" } },
+        headers: { "Turbo-Frame" => "settings_action_sheet", "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("complete_sheet")
+      expect(diagnostic.reload.diagnostic_status).to eq("resolved")
+    end
+
+    it "rejects invalid statuses and keeps the sheet open" do
       patch hotel_ai_healthcheck_path(hotel, diagnostic),
         params: { hotel_knowledge_diagnostic: { diagnostic_status: "invalid" } }
 
-      expect(response).to redirect_to(hotel_ai_healthchecks_path(hotel))
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("The status was not saved")
       expect(diagnostic.reload.diagnostic_status).to eq("open")
     end
   end

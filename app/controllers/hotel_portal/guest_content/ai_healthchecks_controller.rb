@@ -5,26 +5,38 @@ module HotelPortal
     # The Healthcheck sub-tab of AI Concierge. It lists the guest questions that
     # the concierge answered badly, or could not answer at all.
     class AiHealthchecksController < HotelPortal::GuestContent::BaseController
+      include ReportDateFiltering
+      include SheetActionCompletion
+
+      DATE_PARAM_KEYS = %i[date_preset date_range start_date end_date].freeze
+
       before_action -> { require_feature!("ai_concierge_page") }
-      before_action :set_diagnostic, only: :update
+      before_action :set_diagnostic, only: %i[show update]
 
       def index
         @status = permitted_filter(:status, HotelKnowledgeDiagnostic::STATUSES)
         @answer_mode = params[:answer_mode].to_s.presence
         @suggested_category = permitted_filter(:suggested_category, HotelKnowledgeDiagnostic::SUGGESTED_CATEGORIES)
-        @start_date = parse_date(params[:start_date])
-        @end_date = parse_date(params[:end_date])
+        @start_date, @end_date = parse_healthcheck_date_range
 
         @diagnostics = filtered_diagnostics
         @summary_counts = summary_counts
       end
 
+      def show
+        render layout: false
+      end
+
       def update
         status = permitted_diagnostic_status
+
         if status.present? && @diagnostic.update(diagnostic_status: status)
-          redirect_back fallback_location: hotel_ai_healthchecks_path(@hotel), notice: "Diagnostic marked as #{status.humanize.downcase}."
+          finish_sheet("Diagnostic marked as #{status.humanize.downcase}.")
         else
-          redirect_back fallback_location: hotel_ai_healthchecks_path(@hotel), alert: "Unable to update diagnostic."
+          # Only a tampered request gets here, because the sheet offers the four
+          # valid statuses and nothing else. Keep the sheet open and say so.
+          @error = "Choose one of the four review statuses."
+          render :show, layout: false, status: :unprocessable_content
         end
       end
 
@@ -54,6 +66,21 @@ module HotelPortal
         }
       end
 
+      # The reports time filter defaults to today. A healthcheck list that starts
+      # empty every morning helps nobody, so this page starts on all time.
+      def parse_healthcheck_date_range
+        parser = HotelPortal::Reports::DateRangeParser.new(healthcheck_date_params, current_hotel)
+        range = parser.parse_range
+        @date_preset = parser.date_preset
+        range
+      end
+
+      def healthcheck_date_params
+        return params if DATE_PARAM_KEYS.any? { |key| params[key].present? }
+
+        params.merge(date_preset: "all_time")
+      end
+
       def permitted_filter(key, allowed)
         value = params[key].to_s
         allowed.include?(value) ? value : nil
@@ -64,10 +91,16 @@ module HotelPortal
         HotelKnowledgeDiagnostic::STATUSES.include?(value.to_s) ? value.to_s : nil
       end
 
-      def parse_date(value)
-        Date.iso8601(value.to_s) if value.present?
-      rescue Date::Error
-        nil
+      def finish_sheet(notice)
+        complete_sheet_action(
+          destination: hotel_ai_healthchecks_path(@hotel),
+          notice: notice,
+          frame: sheet_frame
+        )
+      end
+
+      def sheet_frame
+        turbo_frame_request_id.presence || "settings_action_sheet"
       end
     end
   end
