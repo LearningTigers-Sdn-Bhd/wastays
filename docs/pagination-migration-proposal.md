@@ -2,7 +2,7 @@
 
 Date: September 6, 2026
 
-Status: The Pagy foundation and the Admin, Corporate, Guest, Hotel Settings, Hotel Logs, Hotel Operations, and simple Hotel list migrations are implemented. Hotel Financials and Reports remain on Kaminari.
+Status: The Pagy foundation and every portal migration except Hotel Reports are implemented. Hotel Reports remains on Kaminari.
 
 ## Recommendation
 
@@ -510,7 +510,11 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 - Hotel Settings and Hotel Logs use Pagy and the shared Nova component.
 - E-Invoice Submissions, Night Audit History, and Conversations use Pagy and the shared Nova component.
 - Hotel Operations uses Pagy for Reservations, the guest directory, and guest booking history.
-- Hotel Financials and Reports retain Kaminari and its existing templates.
+- Hotel Financials uses Pagy for Folios, External Accounts, Invoices, Payment Record, Statement List, and Statement Detail.
+- Folios calculates filter counts and financial signals in the database, then loads only the selected page.
+- Payment Record merges lightweight payment and submission locators, then loads only the selected page.
+- Hotel Statement Detail materializes only the selected HTML ledger rows while PDF generation retains the full ledger.
+- Hotel Reports retains Kaminari and its existing templates.
 - Phase 1 is committed as `50e84293d`.
 - Rubyzip 3.6.0 is committed separately as `eaa530716`.
 - `PanelsUI::Pagination` uses the Pagy-only Nova design.
@@ -556,6 +560,11 @@ The Kaminari templates remain unchanged. Their appearance differs from Pagy duri
 - Hotel Operations scoped RuboCop: 10 files, no offenses.
 - Hotel Operations source paths have no remaining Kaminari pagination calls.
 - Hotel Operations `git diff --check`: passed.
+- Hotel Financials focused query, presenter, and request specs: 136 examples, 0 failures.
+- Serial Financials domain after the Hotel migration: 878 examples, 0 failures.
+- Serial Reports domain after the Hotel migration: 545 examples, 0 failures.
+- Hotel Financials scoped RuboCop: 26 files, no offenses.
+- Hotel Financials source paths have no remaining Kaminari pagination calls.
 - The user will run the current full `bin/ci` manually.
 - The post-update default `bin/ci` run cleared RuboCop, Brakeman, Bundle Audit, Importmap Audit, Tailwind, and parallel database setup.
 - Parallel RSpec ran 8,319 examples and reported three PostgreSQL deadlocks in unrelated report, invoice, and request-archive examples.
@@ -565,13 +574,13 @@ An earlier broad run encountered two database deadlocks because migration checks
 
 The earlier full CI run is not green because its parallel test run reported three database deadlocks. The user will run the current full CI manually.
 
-No browser automation or human visual acceptance was run for the Corporate, Guest, or Hotel Operations phases.
+No browser automation or human visual acceptance was run for the Corporate, Guest, Hotel Operations, or Hotel Financials phases.
 
 ### Remaining work
 
 - Run the current default `bin/ci` manually.
 - Complete human visual acceptance for desktop, mobile, keyboard behavior, and both themes.
-- Migrate the remaining Hotel finance and report pagination.
+- Migrate the remaining Hotel report pagination.
 - Remove Kaminari only after all consumers migrate.
 
-The foundation, Nova redesign, Admin, Corporate, Guest, and Hotel Operations migrations are implemented. No database changes or deployment were made.
+The foundation, Nova redesign, Admin, Corporate, Guest, Hotel Operations, and Hotel Financials migrations are implemented. Hotel Financials adds three pagination indexes.

@@ -3,6 +3,8 @@
 module HotelPortal
   module AccountsReceivable
     class PaymentRecordPresenter
+      include Pagy::Method
+
       PER_PAGE = 25
       STATUS_OPTIONS = [
         [ "Pending Review", "pending" ],
@@ -12,19 +14,24 @@ module HotelPortal
       Metric = Struct.new(:label, :amounts, :description, :icon, :class_name, keyword_init: true)
       CorporateAccountOption = Struct.new(:id, :name, keyword_init: true)
 
-      attr_reader :hotel, :params
+      attr_reader :hotel, :params, :request
 
-      def initialize(hotel:, params:)
+      def initialize(hotel:, params:, request:)
         @hotel = hotel
         @params = params
+        @request = request
       end
 
       def paginated_rows
-        @paginated_rows ||= Kaminari.paginate_array(all_rows.sort_by(&:sort_time).reverse).page(params[:page]).per(PER_PAGE)
+        rows
       end
 
       def pagination
-        paginated_rows
+        pagination_pair.first
+      end
+
+      def rows
+        @rows ||= hydrate_rows(pagination_pair.last)
       end
 
       def summary_metrics
@@ -74,46 +81,51 @@ module HotelPortal
 
       private
 
-      def all_rows
-        payment_rows + submission_rows
-      end
-
-      def payment_scope
-        hotel.ar_payments.includes(hotel_corporate_account: :corporate_account)
-      end
-
-      def payment_rows
-        return [] if %w[pending rejected].include?(selected_status)
-
-        scope = payment_scope
-        if query.present?
-          pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-          scope = scope.joins(hotel_corporate_account: :corporate_account)
-            .where("ar_payments.reference_number ILIKE :query OR accounts.name ILIKE :query", query: pattern)
+      def pagination_pair
+        @pagination_pair ||= begin
+          result = payment_record_query.call(page: requested_page, limit: PER_PAGE)
+          pagy(:offset, result.locators, request: request, page: requested_page, limit: PER_PAGE, count: result.count)
         end
-        scope = scope.where(hotel_corporate_account_id: selected_corporate_account_id) if selected_corporate_account_id.present?
-        scope = scope.where(received_at: received_from..) if received_from.present?
-        scope = scope.where(received_at: ..received_to) if received_to.present?
-
-        scope.map { |payment| PaymentRow.new(payment) }
       end
 
-      def submission_rows
-        scope = hotel.ar_payment_submissions
-          .where.not(status: "approved")
-          .includes(hotel_corporate_account: :corporate_account)
+      def payment_record_query
+        HotelPortal::AccountsReceivable::PaymentRecordQuery.new(
+          hotel: hotel,
+          query: query,
+          status: selected_status,
+          hotel_corporate_account_id: selected_corporate_account_id,
+          received_from: received_from,
+          received_to: received_to
+        )
+      end
 
-        if query.present?
-          pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-          scope = scope.joins(hotel_corporate_account: :corporate_account)
-            .where("ar_payment_submissions.reference_number ILIKE :query OR accounts.name ILIKE :query", query: pattern)
+      def requested_page
+        page = params[:page].to_i
+        page.positive? ? page : 1
+      end
+
+      def hydrate_rows(locators)
+        records = records_by_source(locators)
+        locators.filter_map do |locator|
+          record = records.dig(locator.source_type, locator.source_id)
+          next unless record
+
+          locator.source_type == :payment ? PaymentRow.new(record) : SubmissionRow.new(hotel, record)
         end
-        scope = scope.where(hotel_corporate_account_id: selected_corporate_account_id) if selected_corporate_account_id.present?
-        scope = scope.where(received_at: received_from..) if received_from.present?
-        scope = scope.where(received_at: ..received_to) if received_to.present?
-        scope = scope.where(status: selected_status) if selected_status.in?(%w[pending rejected])
+      end
 
-        scope.map { |submission| SubmissionRow.new(hotel, submission) }
+      def records_by_source(locators)
+        ids = locators.group_by(&:source_type).transform_values { |items| items.map(&:source_id) }
+        {
+          payment: hotel.ar_payments
+            .where(id: ids.fetch(:payment, []))
+            .includes(hotel_corporate_account: :corporate_account)
+            .index_by(&:id),
+          submission: hotel.ar_payment_submissions
+            .where(id: ids.fetch(:submission, []))
+            .includes(hotel_corporate_account: :corporate_account)
+            .index_by(&:id)
+        }
       end
 
       def business_month_scope

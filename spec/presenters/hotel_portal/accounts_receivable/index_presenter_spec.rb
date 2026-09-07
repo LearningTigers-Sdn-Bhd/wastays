@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
-  subject(:presenter) { described_class.new(hotel: hotel, params: params) }
+  subject(:presenter) { described_class.new(hotel: hotel, params: params, request: request_context(params)) }
 
   let(:hotel) { create(:hotel, status: "live", default_currency: "MYR") }
   let(:params) { {} }
@@ -93,7 +93,7 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
       end
 
       expect(presenter.paginated_rows.size).to eq(25)
-      expect(presenter.pagination.total_pages).to eq(2)
+      expect(presenter.pagination.pages).to eq(2)
     end
   end
 
@@ -156,7 +156,11 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
   end
 
   def presenter_for(overrides)
-    described_class.new(hotel: hotel, params: overrides)
+    described_class.new(hotel: hotel, params: overrides, request: request_context(overrides))
+  end
+
+  def request_context(params)
+    { base_url: "http://test.host", path: "/hotel/#{hotel.id}/ar-invoices", params: params.stringify_keys }
   end
 
   def create_invoice(

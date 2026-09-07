@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_094000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -179,6 +179,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_094000) do
     t.datetime "updated_at", null: false
     t.index ["ar_payment_id"], name: "index_ar_payment_submissions_on_ar_payment_id"
     t.index ["hotel_corporate_account_id"], name: "index_ar_payment_submissions_on_hotel_corporate_account_id"
+    t.index ["hotel_id", "created_at", "id"], name: "idx_ar_payment_submissions_hotel_created", order: { created_at: :desc, id: :desc }
     t.index ["hotel_id"], name: "index_ar_payment_submissions_on_hotel_id"
     t.index ["reviewed_by_id"], name: "index_ar_payment_submissions_on_reviewed_by_id"
     t.index ["submitted_by_id"], name: "index_ar_payment_submissions_on_submitted_by_id"
@@ -200,6 +201,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_094000) do
     t.datetime "updated_at", null: false
     t.index ["hotel_corporate_account_id", "received_at"], name: "idx_ar_payments_on_account_received_at"
     t.index ["hotel_corporate_account_id"], name: "index_ar_payments_on_hotel_corporate_account_id"
+    t.index ["hotel_id", "received_at", "id"], name: "idx_ar_payments_hotel_received", order: { received_at: :desc, id: :desc }
     t.index ["hotel_id", "received_at"], name: "index_ar_payments_on_hotel_id_and_received_at"
     t.index ["hotel_id", "reference_number"], name: "index_ar_payments_on_hotel_id_and_reference_number"
     t.index ["hotel_id"], name: "index_ar_payments_on_hotel_id"
@@ -387,6 +389,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_094000) do
     t.index ["hotel_id", "invoice_reference"], name: "index_booking_folios_on_hotel_id_and_invoice_reference", unique: true, where: "(invoice_reference IS NOT NULL)"
     t.index ["hotel_id", "invoice_year", "invoice_number"], name: "idx_booking_folios_invoice_year_number", unique: true, where: "(invoice_number IS NOT NULL)"
     t.index ["hotel_id", "status"], name: "index_booking_folios_on_hotel_id_and_status"
+    t.index ["hotel_id", "updated_at", "id"], name: "idx_booking_folios_hotel_updated", order: { updated_at: :desc, id: :desc }
     t.index ["hotel_id"], name: "index_booking_folios_on_hotel_id"
     t.check_constraint "(invoice_number IS NULL) = (invoice_year IS NULL)", name: "booking_folios_invoice_year_pair"
     t.check_constraint "folio_type::text <> 'guest'::text OR payer_type::text = 'guest'::text", name: "booking_folios_guest_type_is_guest_payer"

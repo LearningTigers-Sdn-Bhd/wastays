@@ -30,6 +30,22 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response.body).not_to include(hidden.corporate_account.name)
   end
 
+  it "paginates relationships while keeping invitations pinned" do
+    relationships = Array.new(26) do |index|
+      create(:hotel_corporate_account, hotel: hotel).tap do |relationship|
+        relationship.update_column(:created_at, Time.current - index.minutes)
+      end
+    end
+    invitation = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user)
+
+    get hotel_corporate_accounts_path(hotel), params: { page: 2 }
+    document = Nokogiri::HTML(response.body)
+
+    expect(document.at_css("[data-testid='external-account-row-#{relationships.last.id}']")).to be_present
+    expect(document.at_css("[data-testid='external-account-row-#{relationships.first.id}']")).to be_nil
+    expect(document.at_css("[data-testid='external-invitation-row-#{invitation.id}']")).to be_present
+  end
+
   it "renders invitations as pinned rows in the same table" do
     live = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, expires_at: 3.days.from_now)
     lapsed = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, expires_at: 2.days.ago)
@@ -245,17 +261,23 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
   end
 
   it "re-renders the results frame with the active filters after revoking" do
-    kept = create(:hotel_corporate_account, hotel: hotel, account_type: "government")
+    kept = Array.new(26) do |index|
+      create(:hotel_corporate_account, hotel: hotel, account_type: "government").tap do |relationship|
+        relationship.update_column(:created_at, Time.current - index.minutes)
+      end
+    end
     filtered_out = create(:hotel_corporate_account, hotel: hotel, account_type: "company")
     invitation = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user)
 
-    delete hotel_corporate_invitation_path(hotel, invitation, account_type: "government"),
+    delete hotel_corporate_invitation_path(hotel, invitation, account_type: "government", page: 2),
       headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include('target="corporate_accounts_results"')
-    expect(response.body).to include("external-account-row-#{kept.id}")
+    expect(response.body).to include("external-account-row-#{kept.last.id}")
     expect(response.body).not_to include("external-account-row-#{filtered_out.id}")
+    expect(response.body).to include(hotel_corporate_accounts_path(hotel))
+    expect(response.body).not_to include("corporate-invitations/#{invitation.id}")
   end
 
   it "does not expose the legacy corporate accounts path" do
