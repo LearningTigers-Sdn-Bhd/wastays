@@ -4,7 +4,7 @@ module CorporatePortal
   class ArPaymentsController < CorporatePortal::BaseController
     def index
       refresh_overdue_statuses!
-      @presenter = CorporatePortal::AccountsReceivable::PaymentHistoryPresenter.new(account: current_user.account, params: params)
+      @presenter = CorporatePortal::AccountsReceivable::PaymentHistoryPresenter.new(account: current_user.account, params: params, request: request)
     end
 
     def show

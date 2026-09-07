@@ -45,6 +45,18 @@ RSpec.describe "Admin::Attractions", type: :request do
       expect(response.body).to include("Waterfront Market")
       expect(response.body).not_to include("Mountain Garden")
     end
+
+    it "paginates filtered results with Pagy and preserves the filters" do
+      create_list(:attraction, 26, name: "Shared Park", status: :approved)
+
+      get admin_attractions_path, params: { status: "approved", q: "Shared Park" }
+
+      navigation = Nokogiri::HTML(response.body).at_css("nav.panel-pagination")
+      second_page = navigation.at_css('a[aria-label="Page 2"]')
+
+      expect(second_page["href"]).to include("page=2", "q=Shared+Park", "status=approved")
+      expect(second_page["data-turbo-action"]).to eq("advance")
+    end
   end
 
   describe "the Google Maps URL flow" do

@@ -21,8 +21,8 @@ class Guest::BookingsController < Guest::BaseController
       scope = @status_filter == "confirmed" ? scope.where(status: %w[confirmed no_show_detected]) : scope.where(status: @status_filter)
     end
 
-    @all_bookings = scope.order(check_in: :desc)
-    @bookings = @all_bookings.page(params[:page]).per(25)
+    @all_bookings = scope.order(check_in: :desc, id: :desc)
+    @pagy, @bookings = pagy(:offset, @all_bookings, limit: 25)
   end
 
   def show

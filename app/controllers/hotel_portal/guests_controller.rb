@@ -19,7 +19,7 @@ module HotelPortal
 
     def index
       unless current_hotel
-        @guests = Guest.none.page(params[:page]).per(25)
+        @guests_pagy, @guests = pagy(:offset, Guest.none, limit: 25)
         @country_options = []
         @tag_counts = Hash.new(0)
         @repeat_ids = Set.new
@@ -30,7 +30,7 @@ module HotelPortal
 
       query = Guests::GuestQuery.new(hotel: current_hotel, params: params)
 
-      @guests = query.call.page(params[:page]).per(25)
+      @guests_pagy, @guests = pagy(:offset, query.call, limit: 25)
       @country_options = query.country_options
       @tag_counts = query.tag_counts
 
@@ -101,7 +101,7 @@ module HotelPortal
       @presenter = Guests::GuestPresenter.new(@guest)
       query = bookings_query
       @stays_count = query.stays_count
-      @bookings = query.bookings(page: params[:page])
+      @bookings_pagy, @bookings = pagy(:offset, query.bookings, limit: 25)
       @currency_totals = query.currency_totals
     end
 

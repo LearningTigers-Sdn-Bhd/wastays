@@ -54,6 +54,38 @@ RSpec.describe Reports::AccountsReceivable::GenerateStatementRecords do
     expect(report.ledger_rows.map(&:balance)).to eq([ 75.to_d, 50.to_d ])
   end
 
+  it "materializes only the requested ledger window and keeps the full-row interface" do
+    3.times do |index|
+      create_invoice(
+        amount: 50,
+        issued_on: start_date + index.days,
+        due_on: end_date,
+        token: "WINDOW-#{index}"
+      )
+    end
+    service = described_class.new(
+      hotel: hotel,
+      hotel_corporate_account: relationship,
+      start_date: start_date,
+      end_date: end_date,
+      currency: "MYR"
+    )
+    allow(service).to receive(:invoice_description).and_call_original
+
+    report = service.call
+
+    expect(report.ledger.count).to eq(3)
+    expect(service).not_to have_received(:invoice_description)
+
+    page = report.ledger.page(offset: 1, limit: 1)
+    expect(page.one?).to be(true)
+    expect(page.first.balance).to eq(100.to_d)
+    expect(service).to have_received(:invoice_description).once
+
+    expect(report.ledger_rows.size).to eq(3)
+    expect(service).to have_received(:invoice_description).exactly(3).times
+  end
+
   it "reconstructs allocations and reversals as of the statement end date" do
     invoice = create_invoice(amount: 100, issued_on: Date.new(2026, 6, 1), due_on: Date.new(2026, 6, 15), token: "ALLOC")
     payment = create_payment(amount: 100, received_at: Date.new(2026, 6, 10), reference: "PAY-ALLOC")

@@ -11,7 +11,8 @@ module HotelPortal
     def index
       @folio_index = HotelPortal::Folios::IndexPresenter.new(
         hotel: current_hotel,
-        params: params
+        params: params,
+        request: request
       )
       render "hotel_portal/folios/index/index"
     end
@@ -21,6 +22,7 @@ module HotelPortal
       @folio_index = HotelPortal::Folios::IndexPresenter.new(
         hotel: current_hotel,
         params: params,
+        request: request,
         attention_only: true
       )
       render "hotel_portal/folios/index/needs_attention"

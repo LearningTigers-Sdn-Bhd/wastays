@@ -39,6 +39,54 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Aisyah Rahman")
       expect(response.body).not_to include("Someone Elses Guest")
+      expect(response.parsed_body.at_css("nav.panel-pagination")).to be_nil
+    end
+
+    it "paginates filtered conversations at 30 with stable ordering and complete counts" do
+      timestamp = Time.zone.local(2026, 9, 7, 9)
+      conversations = 31.times.map do |index|
+        conversation_for(
+          hotel,
+          name: "Paged Guest #{index}",
+          mode: "human",
+          last_message_at: timestamp,
+          created_at: timestamp,
+          updated_at: timestamp
+        )
+      end
+      params = { filter: "awaiting_staff", q: "Paged Guest" }
+
+      get hotel_conversations_path(hotel), params: params
+
+      page = Capybara.string(response.body)
+      pagination = page.find('nav.panel-pagination[aria-label="Conversation pagination"]')
+      page_two = pagination.find('a[aria-label="Page 2"]')
+      page_two_query = Rack::Utils.parse_nested_query(URI.parse(page_two[:href]).query)
+      expect(page).to have_css("#conversation-rows > li", count: 30)
+      expect(page).to have_css("#conversation-count-open", text: "31")
+      expect(page).to have_text(conversations.last.prospect.name)
+      expect(page).to have_no_text(conversations.first.prospect.name)
+      expect(page_two_query).to include(params.stringify_keys.merge("page" => "2"))
+
+      get hotel_conversations_path(hotel), params: params.merge(page: 2)
+
+      page = Capybara.string(response.body)
+      pagination = page.find("nav.panel-pagination")
+      expect(page).to have_css("#conversation-rows > li", count: 1)
+      expect(page).to have_text(conversations.first.prospect.name)
+      expect(pagination).to have_css('[aria-current="page"]', text: "2")
+      expect(pagination).to have_css('a[aria-label="Previous page"]')
+
+      [ "invalid", "0", "-2" ].each do |invalid_page|
+        get hotel_conversations_path(hotel), params: params.merge(page: invalid_page)
+        expect(Capybara.string(response.body)).to have_css("#conversation-rows > li", count: 30)
+      end
+
+      get hotel_conversations_path(hotel), params: params.merge(page: 99)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_no_css("#conversation-rows > li")
+      expect(page).to have_css('nav.panel-pagination a[aria-label="Previous page"]')
     end
 
     it "shows open threads by default and hides closed ones" do
@@ -102,6 +150,26 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
       expect(response.body).to include("Do you have a sea view room?")
       expect(response.body).to include("Yes, we have two available.")
       expect(response.body).to include("Assistant")
+    end
+
+    it "keeps the selected thread and filters in pagination links" do
+      selected = conversation_for(hotel, name: "Selected Guest", mode: "human")
+      30.times do |index|
+        conversation_for(hotel, name: "Filtered Guest #{index}", mode: "human")
+      end
+      params = { filter: "awaiting_staff", q: "Guest", page: 2 }
+
+      get hotel_conversation_path(hotel, selected), params: params
+
+      page = Capybara.string(response.body)
+      previous_link = page.find('nav.panel-pagination a[aria-label="Previous page"]')
+      uri = URI.parse(previous_link[:href])
+      expect(uri.path).to eq(hotel_conversation_path(hotel, selected))
+      expect(Rack::Utils.parse_nested_query(uri.query)).to include(
+        "filter" => "awaiting_staff",
+        "q" => "Guest",
+        "page" => "1"
+      )
     end
 
     it "marks the guest's messages read once staff have opened the thread" do

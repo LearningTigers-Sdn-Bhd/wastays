@@ -2,15 +2,14 @@
 
 module HotelPortal
   class GuestRegistrationCardsQuery
-    attr_reader :hotel, :start_date, :end_date, :status, :query, :page
+    attr_reader :hotel, :start_date, :end_date, :status, :query
 
-    def initialize(hotel:, start_date: nil, end_date: nil, status: nil, query: nil, page: nil)
+    def initialize(hotel:, start_date: nil, end_date: nil, status: nil, query: nil)
       @hotel = hotel
       @start_date = start_date
       @end_date = end_date
       @status = status.to_s
       @query = query&.to_s&.strip
-      @page = page
     end
 
     def base_scope
@@ -36,7 +35,7 @@ module HotelPortal
     end
 
     def results
-      scope = base_scope.order("bookings.check_in DESC")
+      scope = base_scope.order(Arel.sql("bookings.check_in DESC, guest_registration_cards.id DESC"))
       scope = scope.where(status: status) if %w[draft signed].include?(status)
 
       if query.present?
@@ -51,7 +50,7 @@ module HotelPortal
         )
       end
 
-      page.present? ? scope.page(page).per(25) : scope
+      scope
     end
   end
 end

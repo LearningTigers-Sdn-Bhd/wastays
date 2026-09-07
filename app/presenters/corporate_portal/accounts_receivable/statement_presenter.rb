@@ -3,13 +3,16 @@
 module CorporatePortal
   module AccountsReceivable
     class StatementPresenter
+      include Pagy::Method
+
       PER_PAGE = 50
 
-      attr_reader :report, :params
+      attr_reader :report, :params, :request
 
-      def initialize(report:, params:)
+      def initialize(report:, params:, request:)
         @report = report
         @params = params
+        @request = request
       end
 
       delegate :corporate_account, :contact_email, :start_date, :end_date, :currency,
@@ -21,7 +24,11 @@ module CorporatePortal
       end
 
       def paginated_rows
-        @paginated_rows ||= Kaminari.paginate_array(report.ledger_rows).page(params[:page]).per(PER_PAGE)
+        pagination_pair.last
+      end
+
+      def pagination
+        pagination_pair.first
       end
 
       def pagination_params
@@ -38,6 +45,37 @@ module CorporatePortal
 
       def money(amount)
         "#{currency} #{format('%.2f', amount.to_d)}"
+      end
+
+      private
+
+      def pagination_pair
+        @pagination_pair ||= pagy(:offset, LedgerCollection.new(report.ledger), request: request, limit: PER_PAGE)
+      end
+
+      class LedgerCollection
+        def initialize(ledger)
+          @ledger = ledger
+        end
+
+        def count
+          @ledger.count
+        end
+
+        def offset(value)
+          Window.new(@ledger, value)
+        end
+
+        class Window
+          def initialize(ledger, offset)
+            @ledger = ledger
+            @offset = offset
+          end
+
+          def limit(value)
+            @ledger.page(offset: @offset, limit: value)
+          end
+        end
       end
     end
   end

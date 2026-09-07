@@ -6,6 +6,8 @@ module HotelPortal
     # linked corporate relationships (paginated) and outstanding invitations
     # (pinned above the paginated body, never paginated).
     class CorporateAccountsPresenter
+      include Pagy::Method
+
       PER_PAGE = 25
 
       ALL_TAB = "all"
@@ -22,11 +24,12 @@ module HotelPortal
       RELATIONSHIP_STATUSES = %w[active suspended].freeze
       INVITATION_STATUSES = %w[pending expired].freeze
 
-      attr_reader :hotel, :params
+      attr_reader :hotel, :params, :request
 
-      def initialize(hotel:, params:)
+      def initialize(hotel:, params:, request:)
         @hotel = hotel
         @params = params
+        @request = request
       end
 
       # Invitation rows, rendered above the paginated body and outside pagination.
@@ -43,7 +46,7 @@ module HotelPortal
       end
 
       def pagination
-        paginated_relationships
+        pagination_pair.first
       end
 
       def query
@@ -133,7 +136,11 @@ module HotelPortal
       end
 
       def paginated_relationships
-        @paginated_relationships ||= scoped_relationships.page(params[:page]).per(PER_PAGE)
+        pagination_pair.last
+      end
+
+      def pagination_pair
+        @pagination_pair ||= pagy(:offset, scoped_relationships, request: request, limit: PER_PAGE)
       end
 
       def search_scope(scope)

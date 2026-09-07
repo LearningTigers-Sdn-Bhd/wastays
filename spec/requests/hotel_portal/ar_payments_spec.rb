@@ -62,6 +62,24 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(response.body).not_to include("HIDE-ME")
   end
 
+  it "paginates the merged payment record and hydrates the selected page" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    payments = Array.new(26) do |index|
+      create(
+        :ar_payment,
+        hotel: hotel,
+        hotel_corporate_account: relationship,
+        reference_number: "PAY-PAGE-#{index}",
+        received_at: Date.current - index.days
+      )
+    end
+
+    get hotel_ar_payments_path(hotel), params: { page: 2 }
+
+    expect(response.body).to include(payments.last.reference_number)
+    expect(response.body).not_to include(payments.first.reference_number)
+  end
+
   it "shows payment details, active and reversed history, and eligible invoices" do
     payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 500, notes: "Bank receipt")
     invoice = create_invoice(relationship: payment.hotel_corporate_account, amount: 500)

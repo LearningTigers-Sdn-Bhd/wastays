@@ -304,6 +304,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       page = Capybara.string(response.body)
       boat_ins = page.find("section[aria-labelledby='boat-ins-heading']")
       expect(boat_ins.all("table tbody tr").size).to eq(15)
+      expect(boat_ins).to have_text("Guest 0")
+      expect(boat_ins).to have_no_text("Guest 17")
       expect(boat_ins.find("[data-slot='report-pagination'] a", text: "2", match: :first)[:href]).to include("boat_ins_page=2")
 
       # Paging one leg leaves the other on page one, same as meal prep.
@@ -313,7 +315,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       page = Capybara.string(response.body)
       expect(page.find("section[aria-labelledby='boat-ins-heading']").all("table tbody tr").size).to eq(3)
+      expect(page.find("section[aria-labelledby='boat-ins-heading']")).to have_text("Guest 17")
+      expect(page.find("section[aria-labelledby='boat-ins-heading']")).to have_no_text("Guest 0")
       expect(page.find("section[aria-labelledby='boat-outs-heading']").all("table tbody tr").size).to eq(15)
+
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "bibo", leg: "boat_ins", boat_ins_page: 2
+      }
+
+      expect(response.body).to include("Guest 0", "Guest 17")
     end
 
     it "shows each boat leg on screen with the same columns its export carries" do
@@ -444,15 +454,18 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       # Meals come off the slot a guest is booked on, so the timetable comes first.
       create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00",
                                    has_breakfast: true, has_lunch: true, has_dinner: true)
-      18.times do |index|
+      meal_guests = 18.times.map do |index|
+        padded_index = index.to_s.rjust(2, "0")
         booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date, adults: 1, children: 0)
         create(:booking_room, booking: booking, room_number: "10#{index}")
         create(
           :booking_guest,
-          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          booking: booking, guest: create(:guest, name: "Guest #{padded_index}"), is_primary: true,
           boat_in_at: start_date.beginning_of_day + 7.hours
         )
+        [ booking.confirmation_token, "Guest #{padded_index}" ]
       end
+      expected_names = meal_guests.sort_by(&:first).map(&:last)
 
       get guest_reports_hotel_reports_path(hotel), params: {
         start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep"
@@ -464,6 +477,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       breakfast = page.find("section[aria-labelledby='meal-prep-breakfast-heading']")
       expect(breakfast.all("table tbody tr").size).to eq(15)
+      expect(breakfast).to have_text(expected_names.first)
+      expect(breakfast).to have_no_text(expected_names.last)
       expect(breakfast.find("[data-slot='report-pagination'] a", text: "2", match: :first)[:href]).to include("breakfast_page=2")
       # Each section pages on its own param, so one section moving leaves the others put.
       expect(breakfast).to have_text("Total pax 18")
@@ -478,15 +493,18 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       # Meals come off the slot a guest is booked on, so the timetable comes first.
       create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00",
                                    has_breakfast: true, has_lunch: true, has_dinner: true)
-      18.times do |index|
+      meal_guests = 18.times.map do |index|
+        padded_index = index.to_s.rjust(2, "0")
         booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date, adults: 1, children: 0)
         create(:booking_room, booking: booking, room_number: "10#{index}")
         create(
           :booking_guest,
-          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          booking: booking, guest: create(:guest, name: "Guest #{padded_index}"), is_primary: true,
           boat_in_at: start_date.beginning_of_day + 7.hours
         )
+        [ booking.confirmation_token, "Guest #{padded_index}" ]
       end
+      expected_names = meal_guests.sort_by(&:first).map(&:last)
 
       get guest_reports_hotel_reports_path(hotel), params: {
         start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep", breakfast_page: 2
@@ -494,7 +512,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       page = Capybara.string(response.body)
       expect(page.find("section[aria-labelledby='meal-prep-breakfast-heading']").all("table tbody tr").size).to eq(3)
+      expect(page.find("section[aria-labelledby='meal-prep-breakfast-heading']")).to have_text(expected_names.last)
+      expect(page.find("section[aria-labelledby='meal-prep-breakfast-heading']")).to have_no_text(expected_names.first)
       expect(page.find("section[aria-labelledby='meal-prep-lunch-heading']").all("table tbody tr").size).to eq(15)
+
+      get guest_reports_hotel_reports_path(hotel, format: :csv), params: {
+        start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep", meal_type: "breakfast", breakfast_page: 2
+      }
+
+      expect(response.body).to include("Guest 00", "Guest 17")
     end
 
     it "builds the meal prep report once per page load, not once per badge" do

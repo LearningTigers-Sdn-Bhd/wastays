@@ -37,6 +37,24 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response.body).not_to include(hidden.formatted_invoice_number)
     end
 
+    it "paginates invoices at 25 and preserves the active filter" do
+      invoices = Array.new(26) do |index|
+        create_ar_invoice_for(
+          hotel: hotel,
+          confirmation_token: "BK-PAGE-#{index}",
+          folio_number: 1_500 + index,
+          amount: 100,
+          due_on: Date.current + index.days
+        )
+      end
+
+      get hotel_ar_invoices_path(hotel), params: { balance: "outstanding", page: 2 }
+
+      expect(response.body).to include(invoices.last.formatted_invoice_number)
+      expect(response.body).not_to include(invoices.first.formatted_invoice_number)
+      expect(response.body).to include("balance=outstanding")
+    end
+
     it "renders the redesigned header, metrics, single-line columns, and row actions" do
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-ACTIONS", folio_number: 511, amount: 320)
 

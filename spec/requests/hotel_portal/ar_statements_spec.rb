@@ -50,6 +50,22 @@ RSpec.describe "HotelPortal::ArStatements", type: :request do
     expect(response.body).not_to include("Empty Corp")
   end
 
+  it "paginates statement accounts at 25 and preserves search links" do
+    relationships = Array.new(26) do |index|
+      create(
+        :hotel_corporate_account,
+        hotel: hotel,
+        corporate_account: create(:account, :corporate, name: format("Statement %02d", index))
+      )
+    end
+
+    get hotel_ar_statements_path(hotel), params: { query: "Statement", page: 2 }
+
+    expect(response.body).to include(relationships.last.corporate_account.name)
+    expect(response.body).not_to include(relationships.first.corporate_account.name)
+    expect(response.body).to include("query=Statement")
+  end
+
   it "renders the default month-to-business-date statement and custom currency period" do
     create(:user, :corporate, account: relationship.corporate_account, email: "billing@atlas.test")
     create_invoice(relationship: relationship, amount: 250, issued_on: Date.new(2026, 6, 5), currency: "MYR")

@@ -3,7 +3,7 @@
     <div data-testid="payout-tabs">
     <%= render PanelsUI::Tabs.new(id: "payout-tabs", active: @active_tab, variant: :pill, url: { param: "tab" }, class: "space-y-8", aria_label: "Payout sections") do |tabs| %>
       <% tabs.with_tab(name: "upcoming", label: "Upcoming & Processing", icon: "clock-3", panel_id: "upcoming-panel") %>
-      <% tabs.with_tab(name: "paid", label: "Paid History", icon: "history", count: @payout_history.total_count, panel_id: "paid-panel") %>
+      <% tabs.with_tab(name: "paid", label: "Paid History", icon: "history", count: @payout_history_pagy.count, panel_id: "paid-panel") %>
       <% tabs.with_panel(name: "upcoming", id: "upcoming-panel", class: "space-y-8", data: { testid: "payouts-upcoming-panel" }) do %>
         <%= render "upcoming_payouts_section" %>
       <% end %>

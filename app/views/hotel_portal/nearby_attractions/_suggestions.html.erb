@@ -1,25 +1,52 @@
-<div id="nearby_attractions_suggestions">
-  <div>
-    <h3 class="text-sm font-semibold text-foreground">Suggested near your hotel</h3>
-    <p class="mt-1 text-sm text-muted-foreground">Nearby attractions you can add, ordered by estimated straight-line distance.</p>
-  </div>
+<% suggestions_heading = capture do %>
+  <h3 class="text-sm font-semibold text-foreground">Suggested near your hotel</h3>
+  <p class="mt-1 text-sm text-muted-foreground">Nearby attractions you can add, closest first.</p>
+<% end %>
 
+<div id="nearby_attractions_suggestions">
   <% if !@hotel_coordinates_available %>
+    <div><%= suggestions_heading %></div>
     <div class="mt-4 rounded-lg border border-border bg-muted/30 p-4">
       <p class="text-sm font-medium text-foreground">Hotel coordinates are not available.</p>
       <p class="mt-1 text-sm text-muted-foreground">Add a valid Google Maps link to your hotel details to see nearby suggestions.</p>
     </div>
-  <% elsif @suggestions.any? %>
-    <div class="mt-4 grid gap-3 lg:grid-cols-2">
-      <% @suggestions.each do |suggestion| %>
-        <% attraction = suggestion.attraction %>
-        <%= render PanelsUI::Card.new(width: :full, density: :compact, variant: :outlined, as: :article) do |card| %>
-          <% card.with_card_content do %>
-            <div class="flex h-full items-start justify-between gap-4">
+  <% else %>
+    <% empty = @suggestions.empty? %>
+    <%= render PanelsUI::Collapsible.new(
+          id: "nearby_attraction_suggestions",
+          open: !empty && @suggestions_open,
+          disabled: empty,
+          region: true,
+          header_class: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+          trigger_class: "group order-2 w-auto shrink-0 gap-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground") do |collapsible| %>
+      <% collapsible.with_header_content do %>
+        <div class="order-1 min-w-0"><%= suggestions_heading %></div>
+      <% end %>
+      <% collapsible.with_trigger do %>
+        <% if empty %>
+          <%= app_icon "eye-off", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+          <span>No more suggestions</span>
+        <% else %>
+          <%= app_icon "eye", class: "size-4 shrink-0 group-data-[state=open]:hidden", aria: { hidden: "true" } %>
+          <%= app_icon "eye-off", class: "hidden size-4 shrink-0 group-data-[state=open]:block", aria: { hidden: "true" } %>
+          <span class="group-data-[state=open]:hidden">Show list (<%= @suggestions.size %>)</span>
+          <span class="hidden group-data-[state=open]:inline">Hide list (<%= @suggestions.size %>)</span>
+        <% end %>
+      <% end %>
+      <% collapsible.with_body do %>
+        <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <% @suggestions.each do |suggestion| %>
+            <% attraction = suggestion.attraction %>
+            <div class="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2">
               <div class="min-w-0">
-                <p class="font-semibold text-foreground"><%= attraction.name %></p>
-                <p class="mt-1 line-clamp-2 text-sm text-muted-foreground"><%= attraction.display_description %></p>
-                <p class="mt-2 text-xs font-medium text-muted-foreground"><%= number_with_precision(suggestion.distance_km, precision: 1) %> km estimated distance</p>
+                <%= render PanelsUI::Tooltip.new(text: attraction.name, placement: :top_start, root_class: "w-full min-w-0") do %>
+                  <button type="button"
+                          class="w-full min-w-0 cursor-help rounded-sm text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          aria-label="<%= attraction.name %>">
+                    <span class="block truncate text-sm font-semibold text-foreground"><%= attraction.name %></span>
+                  </button>
+                <% end %>
+                <p class="mt-0.5 text-xs text-muted-foreground"><%= attraction_distance_label(suggestion.distance_km) %></p>
               </div>
               <%= form_with url: hotel_nearby_attractions_path(@hotel), scope: :attraction, class: "shrink-0" do |form| %>
                 <%= form.hidden_field :google_maps_url, value: attraction.google_maps_url %>
@@ -29,12 +56,8 @@
               <% end %>
             </div>
           <% end %>
-        <% end %>
+        </div>
       <% end %>
-    </div>
-  <% else %>
-    <div class="mt-4 rounded-lg border border-border bg-muted/30 p-4">
-      <p class="text-sm text-muted-foreground">No more nearby attractions are available to add within 25 km.</p>
-    </div>
+    <% end %>
   <% end %>
 </div>
