@@ -45,11 +45,17 @@ class SystemDesignsController < ApplicationController
     @pagination_preview, = pagy(
       :offset,
       (1..250).to_a,
-      page: params[:pagination_page].presence || 6,
+      page: preview_page(params[:pagination_page], default: 6),
       page_key: "pagination_page",
       limit: 25
     )
     @single_page_preview, = pagy(:offset, [ 1 ], page_key: "single_page", limit: 25)
+  end
+
+  # The preview accepts a page from the URL, so a zero or a word must not raise.
+  def preview_page(value, default:)
+    page = value.to_i
+    page.positive? ? page : default
   end
 
   def reservation_params
