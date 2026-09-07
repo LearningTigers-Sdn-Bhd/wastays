@@ -1,9 +1,10 @@
 <div class="w-full space-y-4">
-  <%= render PanelsUI::PageHeader.new(
-        title: "Transaction Code Reference",
-        description: "Every posting code on this property, with the ledger account it books to. Read-only — each code is edited in the registry that owns it.") %>
-
-  <%= render "hotel_portal/settings/group_tabs" %>
+  <div class="space-y-4">
+    <%= render PanelsUI::PageHeader.new(
+          title: "Transaction Code Reference",
+          description: "Every posting code on this property, with the ledger account it books to. Read-only — each code is edited in the registry that owns it.") %>
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
 
   <section aria-labelledby="transaction-code-reference-heading" class="space-y-3">
     <h2 id="transaction-code-reference-heading" class="text-base font-semibold text-foreground">All transaction codes</h2>

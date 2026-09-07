@@ -3,11 +3,12 @@
      data-ota-financial-settings-expected-amount-value="<%= @presenter.preview[:expected_amount] %>"
      data-ota-financial-settings-room-nights-value="<%= @presenter.preview[:room_nights] %>"
      data-ota-financial-settings-currency-value="<%= @presenter.preview[:currency] %>">
-  <%= render PanelsUI::PageHeader.new(
-        title: "OTA Financials",
-        description: "Review how channel financial components post and when rate differences need attention.") %>
-
-  <%= render "hotel_portal/settings/group_tabs" %>
+  <div class="space-y-4">
+    <%= render PanelsUI::PageHeader.new(
+          title: "OTA Financials",
+          description: "Review how channel financial components post and when rate differences need attention.") %>
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
 
   <% if @form.errors.any? %>
     <%= render PanelsUI::Alert.new(tone: :destructive, title: "We could not save these settings", role: :alert) do |alert| %>
