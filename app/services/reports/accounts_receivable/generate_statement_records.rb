@@ -49,8 +49,9 @@ module Reports
 
         private
 
+        # LedgerActivity is a Data object, so it compares and hashes by value.
         def materialize(activity)
-          @row_cache[activity.object_id] ||= @row_builder.call(activity)
+          @row_cache[activity] ||= @row_builder.call(activity)
         end
       end
 
