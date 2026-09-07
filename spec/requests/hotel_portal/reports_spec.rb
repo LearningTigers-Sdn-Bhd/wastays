@@ -455,14 +455,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00",
                                    has_breakfast: true, has_lunch: true, has_dinner: true)
       meal_guests = 18.times.map do |index|
+        padded_index = index.to_s.rjust(2, "0")
         booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date, adults: 1, children: 0)
         create(:booking_room, booking: booking, room_number: "10#{index}")
         create(
           :booking_guest,
-          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          booking: booking, guest: create(:guest, name: "Guest #{padded_index}"), is_primary: true,
           boat_in_at: start_date.beginning_of_day + 7.hours
         )
-        [ booking.confirmation_token, "Guest #{index}" ]
+        [ booking.confirmation_token, "Guest #{padded_index}" ]
       end
       expected_names = meal_guests.sort_by(&:first).map(&:last)
 
@@ -493,14 +494,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "07:00",
                                    has_breakfast: true, has_lunch: true, has_dinner: true)
       meal_guests = 18.times.map do |index|
+        padded_index = index.to_s.rjust(2, "0")
         booking = create(:booking, hotel: hotel, check_in: start_date, check_out: end_date, adults: 1, children: 0)
         create(:booking_room, booking: booking, room_number: "10#{index}")
         create(
           :booking_guest,
-          booking: booking, guest: create(:guest, name: "Guest #{index}"), is_primary: true,
+          booking: booking, guest: create(:guest, name: "Guest #{padded_index}"), is_primary: true,
           boat_in_at: start_date.beginning_of_day + 7.hours
         )
-        [ booking.confirmation_token, "Guest #{index}" ]
+        [ booking.confirmation_token, "Guest #{padded_index}" ]
       end
       expected_names = meal_guests.sort_by(&:first).map(&:last)
 
@@ -518,7 +520,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         start_date: start_date.to_s, end_date: end_date.to_s, tab: "meal_prep", meal_type: "breakfast", breakfast_page: 2
       }
 
-      expect(response.body).to include("Guest 0", "Guest 17")
+      expect(response.body).to include("Guest 00", "Guest 17")
     end
 
     it "builds the meal prep report once per page load, not once per badge" do
