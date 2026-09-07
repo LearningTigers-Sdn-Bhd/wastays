@@ -64,8 +64,35 @@ module HotelPortal
       guest_content_page?("ai_concierge") || guest_content_page?("ai_healthchecks")
     end
 
-    # AI Concierge is the only Guest Content tab with a second level.
+    def hotel_information_page?
+      guest_content_page?("knowledge_general_infos") || guest_content_page?("arrival_departures")
+    end
+
+    def guest_content_subtab_section
+      if hotel_information_page?
+        {
+          title: "Hotel Information",
+          description: "Manage the property summary, stay instructions, and additional information shared with guests.",
+          aria_label: "Hotel information sections"
+        }
+      elsif ai_concierge_page?
+        {
+          title: "AI Concierge Settings",
+          description: "Set up how the concierge answers guests, and review the questions it could not answer.",
+          aria_label: "AI Concierge sections"
+        }
+      end
+    end
+
     def guest_content_subtabs
+      if hotel_information_page?
+        return [
+          { key: "property-summary", label: "Property Summary", icon: "building-2", path: hotel_knowledge_general_infos_path(current_hotel), active: guest_content_page?("knowledge_general_infos") && action_name == "index" },
+          { key: "arrival-departure", label: "Arrival & Departure", icon: "arrow-right-left", path: hotel_guest_arrival_departure_path(current_hotel), active: guest_content_page?("arrival_departures") },
+          { key: "additional-information", label: "Additional Information", icon: "file-text", path: hotel_knowledge_additional_information_path(current_hotel), active: guest_content_page?("knowledge_general_infos") && action_name != "index" }
+        ]
+      end
+
       return [] unless ai_concierge_page?
 
       [
@@ -175,7 +202,7 @@ module HotelPortal
       when :guest_content
         [
           { key: "overview", label: "Overview", path: hotel_guest_content_path(current_hotel), icon: "layout-dashboard", active: guest_content_page?("overview") },
-          { key: "hotel-info", label: "Hotel Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: guest_content_page?("knowledge_general_infos") },
+          { key: "hotel-info", label: "Hotel Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: hotel_information_page? },
           { key: "policies", label: "Policies", path: hotel_knowledge_policies_path(current_hotel), icon: "file-text", active: guest_content_page?("knowledge_policies") },
           { key: "faqs", label: "FAQs", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: guest_content_page?("knowledge_faqs") },
           { key: "amenities", label: "Amenities", path: hotel_guest_amenities_path(current_hotel), icon: "sparkles", active: guest_content_page?("amenities") },

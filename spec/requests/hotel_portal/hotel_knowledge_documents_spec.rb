@@ -22,9 +22,10 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
     sign_in_as(user)
   end
 
-  shared_examples "a knowledge resource" do |category:, route_prefix:, index_title:, form_title:, create_params: {}|
+  shared_examples "a knowledge resource" do |category:, route_prefix:, index_title:, form_title:, create_params: {}, listing_route: nil|
     let!(:doc) { create(:hotel_knowledge_document, hotel: hotel, category: category, title: "Test Doc") }
     let(:index_path) { public_send("#{route_prefix.pluralize}_path", hotel) }
+    let(:listing_path) { listing_route ? public_send("#{listing_route}_path", hotel) : index_path }
     let(:new_path) { public_send("new_#{route_prefix}_path", hotel) }
     let(:show_path) { public_send("#{route_prefix}_path", hotel, doc) }
     let(:edit_path) { public_send("edit_#{route_prefix}_path", hotel, doc) }
@@ -32,7 +33,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
     describe "GET index" do
       it "renders the index page" do
-        get index_path
+        get listing_path
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(index_title)
@@ -40,7 +41,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
       end
 
       it "lists existing documents scoped to #{category}" do
-        get index_path
+        get listing_path
 
         expect(response.body).to include("Test Doc")
       end
@@ -48,7 +49,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
       it "remains available when AI concierge is excluded from the plan" do
         hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
 
-        get index_path
+        get listing_path
 
         expect(response).to have_http_status(:ok)
         expect(response.body).not_to include(hotel_ai_concierge_settings_path(hotel))
@@ -76,7 +77,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           }
         }.to change(HotelKnowledgeDocument, :count).by(1)
 
-        expect(response).to redirect_to(index_path)
+        expect(response).to redirect_to(listing_path)
         new_doc = HotelKnowledgeDocument.last
         expect(new_doc.title).to eq("New #{category}")
         expect(new_doc.category).to eq(category)
@@ -166,7 +167,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           hotel_knowledge_document: { title: "Updated Title" }
         }
 
-        expect(response).to redirect_to(index_path)
+        expect(response).to redirect_to(listing_path)
         expect(doc.reload.title).to eq("Updated Title")
       end
     end
@@ -177,7 +178,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           delete show_path
         }.to change(HotelKnowledgeDocument, :count).by(-1)
 
-        expect(response).to redirect_to(index_path)
+        expect(response).to redirect_to(listing_path)
       end
 
       it "deletes associated chunks" do
@@ -208,6 +209,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
   it_behaves_like "a knowledge resource",
     category: "general_info",
     route_prefix: "hotel_knowledge_general_info",
-    index_title: "Hotel Info",
-    form_title: "Information"
+    index_title: "Additional Information",
+    form_title: "Information",
+    listing_route: "hotel_knowledge_additional_information"
 end

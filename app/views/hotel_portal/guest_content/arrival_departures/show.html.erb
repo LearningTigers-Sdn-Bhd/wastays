@@ -1,0 +1,67 @@
+<%= form_with model: @guest_instruction,
+              url: hotel_guest_arrival_departure_path(@hotel),
+              method: :patch,
+              local: true,
+              class: "space-y-4" do |form| %>
+  <% if @guest_instruction.errors.any? %>
+    <%= render PanelsUI::Alert.new(
+          tone: :destructive,
+          title: pluralize(@guest_instruction.errors.count, "error") + " prevented these instructions from being saved",
+          role: :alert) do |alert| %>
+      <% alert.with_description do %>
+        <ul class="list-disc space-y-1 ps-5">
+          <% @guest_instruction.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <section class="space-y-4 rounded-md border border-border bg-card p-5 shadow-sm sm:p-6" aria-labelledby="arrival-heading">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h2 id="arrival-heading" class="text-base font-semibold text-foreground">Arrival</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Tell guests what to do when they arrive at the property.</p>
+      </div>
+      <%= render PanelsUI::Button.new(label: "General Settings", href: hotel_general_settings_path(@hotel), variant: :secondary, size: :sm) %>
+    </div>
+
+    <dl>
+      <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Standard check-in time</dt>
+      <dd class="mt-1 text-sm font-medium text-foreground"><%= @property_policy&.check_in_time.present? ? Time.zone.parse(@property_policy.check_in_time.to_s).strftime("%-I:%M %p") : "Not provided" %></dd>
+    </dl>
+
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: :arrival_instructions,
+          label: "Arrival instructions",
+          hint: "Include only the steps guests need when they arrive.") do |field| %>
+      <% field.with_text_area(rows: 5, placeholder: "For example, collect your room key from reception after 3:00 PM.") %>
+    <% end %>
+  </section>
+
+  <section class="space-y-4 rounded-md border border-border bg-card p-5 shadow-sm sm:p-6" aria-labelledby="departure-heading">
+    <div>
+      <h2 id="departure-heading" class="text-base font-semibold text-foreground">Departure</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Tell guests what to do before they leave the property.</p>
+    </div>
+
+    <dl>
+      <dt class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Standard check-out time</dt>
+      <dd class="mt-1 text-sm font-medium text-foreground"><%= @property_policy&.check_out_time.present? ? Time.zone.parse(@property_policy.check_out_time.to_s).strftime("%-I:%M %p") : "Not provided" %></dd>
+    </dl>
+
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: :departure_instructions,
+          label: "Departure instructions",
+          hint: "Include only the steps guests need before they leave.") do |field| %>
+      <% field.with_text_area(rows: 5, placeholder: "For example, return your room key to reception before noon.") %>
+    <% end %>
+  </section>
+
+  <div class="flex justify-end">
+    <%= render PanelsUI::Button.new(label: "Save arrival and departure", as: :button, type: :submit, size: :sm) %>
+  </div>
+<% end %>

@@ -762,6 +762,10 @@ Rails.application.routes.draw do
         resource :amenity_selection, path: "amenities/selection", controller: "amenity_selections", only: %i[edit update]
         resources :amenity_details, path: "amenities/details", controller: "amenity_details", only: %i[edit update]
         resources :wifi_networks, path: "wifi", except: :show
+        resource :guest_arrival_departure, path: "general-info/arrival-departure",
+          controller: "arrival_departures", only: %i[show update]
+        get "general-info/additional-information", to: "knowledge_general_infos#additional_information",
+          as: :knowledge_additional_information
         get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
         patch "ai-concierge", to: "ai_concierge#update"
         resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :update ]

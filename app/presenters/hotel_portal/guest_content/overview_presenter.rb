@@ -77,12 +77,30 @@ module HotelPortal
       end
 
       def hotel_information_state
-        required = [ hotel.name, hotel.description, hotel.city, hotel.country ]
-        required.all?(&:present?) && contact_present? ? state(READY, :success) : state(NEEDS_ATTENTION, :warning)
+        ready = property_summary_ready? && arrival_instructions.present? && departure_instructions.present?
+        ready ? state(READY, :success) : state(NEEDS_ATTENTION, :warning)
       end
 
       def hotel_information_detail
-        [ hotel.city, hotel.country ].compact_blank.join(", ").presence || "Add the property location and guest contact details."
+        missing = []
+        missing << "property summary" unless property_summary_ready?
+        missing << "arrival instructions" if arrival_instructions.blank?
+        missing << "departure instructions" if departure_instructions.blank?
+
+        missing.any? ? "Add #{missing.to_sentence}." : "Property summary and stay instructions are ready."
+      end
+
+      def property_summary_ready?
+        required = [ hotel.name, hotel.description, hotel.city, hotel.country ]
+        required.all?(&:present?) && contact_present?
+      end
+
+      def arrival_instructions
+        hotel.guest_instruction&.arrival_instructions
+      end
+
+      def departure_instructions
+        hotel.guest_instruction&.departure_instructions
       end
 
       def contact_present?

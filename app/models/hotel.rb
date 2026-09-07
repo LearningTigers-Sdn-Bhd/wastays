@@ -42,6 +42,7 @@ class Hotel < ApplicationRecord
   belongs_to :training_completed_by, class_name: "User", optional: true
   belongs_to :plan, optional: true
   has_one :property_policy, dependent: :destroy
+  has_one :guest_instruction, class_name: "HotelGuestInstruction", dependent: :destroy
   accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
   has_many :room_groups, dependent: :destroy

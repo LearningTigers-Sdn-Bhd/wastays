@@ -24,6 +24,97 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     expect(Nokogiri::HTML(response.body).css("[data-testid='settings-tabs'] [data-slot='tabs-list']").size).to eq(1)
   end
 
+  it "shows the Hotel Information heading and three subtabs" do
+    get hotel_knowledge_general_infos_path(hotel)
+
+    document = response.parsed_body
+    expect(response).to have_http_status(:ok)
+    expect(document.at_css("[data-testid='guest-content-body'] > div h2").text.squish).to eq("Hotel Information")
+    expect(document.text.squish).to include("Manage the property summary, stay instructions, and additional information shared with guests.")
+
+    subtabs = document.at_css("[data-testid='guest-content-subtabs']")
+    expect(subtabs.css("[data-slot='tabs-trigger']").map { |tab| tab["data-tab-label"] })
+      .to eq([ "Property Summary", "Arrival & Departure", "Additional Information" ])
+    expect(subtabs.at_css("[data-tab-label='Property Summary'][aria-current='page']")).to be_present
+  end
+
+  it "keeps property contact and location on Property Summary only" do
+    hotel.update!(description: "A quiet harbour hotel", contact_email: "private-property@example.test", city: "Semporna")
+    create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "11:00")
+
+    get hotel_knowledge_general_infos_path(hotel)
+    expect(response.body).to include("private-property@example.test", "Semporna")
+
+    get hotel_guest_arrival_departure_path(hotel)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include("private-property@example.test", hotel.address)
+    expect(response.body).to include("3:00 PM", "11:00 AM")
+
+    document = response.parsed_body
+    expect(document.at_css("[data-testid='settings-tabs'] [data-tab-label='Hotel Info'][aria-current='page']")).to be_present
+    expect(document.at_css("[data-testid='guest-content-subtabs'] [data-tab-label='Arrival & Departure'][aria-current='page']")).to be_present
+    expect(document.at_css("a[href='#{hotel_general_settings_path(hotel)}']")).to be_present
+  end
+
+  it "saves both arrival and departure instructions in one hotel-scoped record" do
+    expect {
+      patch hotel_guest_arrival_departure_path(hotel), params: {
+        hotel_guest_instruction: {
+          arrival_instructions: "Use the lobby entrance.",
+          departure_instructions: "Leave keys at reception."
+        }
+      }
+    }.to change(HotelGuestInstruction, :count).by(1)
+
+    expect(response).to redirect_to(hotel_guest_arrival_departure_path(hotel))
+    instruction = hotel.reload.guest_instruction
+    expect(instruction.arrival_instructions).to eq("Use the lobby entrance.")
+    expect(instruction.departure_instructions).to eq("Leave keys at reception.")
+
+    expect {
+      patch hotel_guest_arrival_departure_path(hotel), params: {
+        hotel_guest_instruction: {
+          arrival_instructions: "Use the side entrance.",
+          departure_instructions: "Leave keys in the box."
+        }
+      }
+    }.not_to change(HotelGuestInstruction, :count)
+
+    expect(instruction.reload.attributes.values_at("arrival_instructions", "departure_instructions"))
+      .to eq([ "Use the side entrance.", "Leave keys in the box." ])
+  end
+
+  it "cannot update another hotel's guest instructions" do
+    other_hotel = create(:hotel)
+    other_instruction = create(:hotel_guest_instruction, hotel: other_hotel)
+
+    patch hotel_guest_arrival_departure_path(hotel), params: {
+      hotel_guest_instruction: {
+        arrival_instructions: "Instructions for this hotel.",
+        departure_instructions: "Departure for this hotel."
+      }
+    }
+
+    expect(hotel.reload.guest_instruction.arrival_instructions).to eq("Instructions for this hotel.")
+    expect(other_instruction.reload.arrival_instructions).not_to eq("Instructions for this hotel.")
+  end
+
+  it "requires both stay instructions for Hotel Info readiness" do
+    hotel.update!(description: "A complete property summary", contact_email: "hotel@example.test")
+
+    get hotel_guest_content_path(hotel)
+    expect(response.body).to include("Add arrival instructions and departure instructions.")
+
+    instruction = create(:hotel_guest_instruction, hotel: hotel, arrival_instructions: "Check in at reception.", departure_instructions: "")
+    get hotel_guest_content_path(hotel)
+    expect(response.body).to include("Add departure instructions.")
+
+    instruction.update!(departure_instructions: "Return the key at reception.")
+    get hotel_guest_content_path(hotel)
+    hotel_info_row = response.parsed_body.css("[aria-label='Content readiness'] h3").find { |heading| heading.text.squish == "Hotel Info" }.parent.parent
+    expect(hotel_info_row.text.squish).to include("Hotel Info Ready Property summary and stay instructions are ready.")
+  end
+
   it "creates a hotel-scoped Wi-Fi network without rendering its saved password" do
     post hotel_wifi_networks_path(hotel), params: {
       hotel_wifi_network: {
@@ -50,10 +141,16 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
 
   it "renders one page frame on every Guest Content page" do
     document = create(:hotel_knowledge_document, hotel: hotel, category: "policy")
+    general_document = create(:hotel_knowledge_document, hotel: hotel, category: "general_info")
 
     {
       hotel_guest_content_path(hotel) => "Overview",
       hotel_knowledge_general_infos_path(hotel) => "Hotel Info",
+      hotel_guest_arrival_departure_path(hotel) => "Hotel Info",
+      hotel_knowledge_additional_information_path(hotel) => "Hotel Info",
+      new_hotel_knowledge_general_info_path(hotel) => "Hotel Info",
+      hotel_knowledge_general_info_path(hotel, general_document) => "Hotel Info",
+      edit_hotel_knowledge_general_info_path(hotel, general_document) => "Hotel Info",
       hotel_knowledge_policies_path(hotel) => "Policies",
       new_hotel_knowledge_policy_path(hotel) => "Policies",
       hotel_knowledge_policy_path(hotel, document) => "Policies",
@@ -96,6 +193,8 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     [
       hotel_guest_content_path(hotel),
       hotel_knowledge_general_infos_path(hotel),
+      hotel_guest_arrival_departure_path(hotel),
+      hotel_knowledge_additional_information_path(hotel),
       hotel_knowledge_policies_path(hotel),
       new_hotel_knowledge_policy_path(hotel),
       hotel_knowledge_policy_path(hotel, document),
@@ -143,7 +242,7 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     end
   end
 
-  it "puts the Hotel Info actions on the card and the section, not in a page header" do
+  it "keeps Property Summary and Additional Information on separate subtabs" do
     get hotel_knowledge_general_infos_path(hotel)
 
     body = Nokogiri::HTML(response.body).at_css("[data-testid='guest-content-body']")
@@ -151,10 +250,15 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
 
     summary = body.at_css("[aria-labelledby='property-summary-heading']")
     expect(summary.css(".panel-button").map { |button| button.text.squish }).to eq([ "Property Settings" ])
+    expect(body.at_css("[aria-label='Additional Information']")).to be_nil
+
+    get hotel_knowledge_additional_information_path(hotel)
+    body = response.parsed_body.at_css("[data-testid='guest-content-body']")
 
     additional = body.at_css("[aria-label='Additional Information']")
     expect(additional.css("h2").first.text.squish).to eq("Additional Information")
     section_header = additional.element_children.first
     expect(section_header.css(".panel-button").map { |button| button.text.squish }).to eq([ "Add Information" ])
+    expect(body.at_css("[data-testid='guest-content-subtabs'] [data-tab-label='Additional Information'][aria-current='page']")).to be_present
   end
 end
