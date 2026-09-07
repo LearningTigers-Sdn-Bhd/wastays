@@ -111,7 +111,11 @@ module HotelPortal
 
       respond_to do |format|
         format.html do
-          @payout_history_pagy, @payout_history = pagy(:offset, payout_history, limit: DEFAULT_PAGE_SIZE)
+          # Every row on the page draws its own receipt link, so the blobs come
+          # with the page. The export path does not read them and keeps the
+          # plain scope.
+          @payout_history_pagy, @payout_history =
+            pagy(:offset, payout_history.with_attached_receipt, limit: DEFAULT_PAGE_SIZE)
         end
         format.csv do
           csv = HotelPortal::Reports::PayoutsCsvExportService.new(
