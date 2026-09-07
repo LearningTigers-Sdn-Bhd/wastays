@@ -469,17 +469,6 @@ class Booking < ApplicationRecord
       end
   end
 
-  def self.daily_revenue_data(bookings)
-    # Reconcile to ledger
-    bookings.group_by { |b| b.created_at.to_date }
-            .transform_values do |bs|
-              FolioTransaction.joins(booking_folio: :booking)
-                              .where(bookings: { id: bs.map(&:id) })
-                              .where(transaction_type: %w[charge adjustment])
-                              .sum(:amount)
-            end
-            .sort.to_h
-  end
   def self.last_friday
     date = Date.current
     date -= 1 while !date.friday?
