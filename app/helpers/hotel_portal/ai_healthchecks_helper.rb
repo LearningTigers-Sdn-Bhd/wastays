@@ -63,5 +63,25 @@ module HotelPortal
     def healthcheck_category_options
       HotelKnowledgeDiagnostic::SUGGESTED_CATEGORIES.map { |category| [ category.humanize, category ] }
     end
+
+    # The diagnostic keeps the question and the answer as plain text, not as the
+    # two message rows the inbox reads. These unsaved messages carry the same
+    # text into HotelPortal::Inbox::Message, so the healthcheck draws the turn
+    # with the inbox renderer instead of a second set of bubbles of its own.
+    # They are never saved, so no callback and no write runs.
+    def healthcheck_transcript(diagnostic)
+      [
+        ProspectMessage.new(
+          sender_role: "guest",
+          body: diagnostic.question,
+          sent_at: diagnostic.created_at
+        ),
+        ProspectMessage.new(
+          sender_role: "bot",
+          body: diagnostic.answer.presence || "The concierge gave no answer.",
+          sent_at: diagnostic.created_at
+        )
+      ]
+    end
   end
 end

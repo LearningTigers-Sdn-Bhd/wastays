@@ -163,6 +163,33 @@ RSpec.describe "HotelPortal::GuestContent::AiHealthchecks", type: :request, froz
       expect(response.body).to include("Shuttle")
     end
 
+    it "keeps the sheet header static so a one-word question cannot title it" do
+      terse = create(:hotel_knowledge_diagnostic, hotel: hotel, question: "yes")
+
+      get hotel_ai_healthcheck_path(hotel, terse)
+
+      expect(response.body).to include("Question detail")
+      expect(response.body).to include("What the guest asked, what the concierge answered")
+    end
+
+    it "draws the turn with the inbox message bubbles" do
+      get hotel_ai_healthcheck_path(hotel, diagnostic)
+
+      expect(response.body).to include("healthcheck-turn-0")
+      expect(response.body).to include("healthcheck-turn-1")
+      expect(response.body).to include("data-side=\"guest\"")
+      expect(response.body).to include("data-side=\"bot\"")
+      expect(response.body).to include("Assistant")
+    end
+
+    it "says so when the concierge gave no answer" do
+      silent = create(:hotel_knowledge_diagnostic, hotel: hotel, question: "Any parking?", answer: nil)
+
+      get hotel_ai_healthcheck_path(hotel, silent)
+
+      expect(response.body).to include("The concierge gave no answer.")
+    end
+
     it "does not expose another hotel's diagnostic" do
       other_hotel = create(:hotel, account: account, status: "live")
       other_diagnostic = create(:hotel_knowledge_diagnostic, hotel: other_hotel)
