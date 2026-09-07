@@ -30,7 +30,7 @@
 
             <% if estimated_distance_km %>
               <p class="mt-3 text-xs font-medium text-muted-foreground">
-                <%= number_with_precision(estimated_distance_km, precision: 1) %> km estimated straight-line distance
+                <%= attraction_distance_label(estimated_distance_km) %> straight-line distance from your hotel
               </p>
             <% end %>
 

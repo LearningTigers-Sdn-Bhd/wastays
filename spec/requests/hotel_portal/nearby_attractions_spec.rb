@@ -50,6 +50,40 @@ RSpec.describe "HotelPortal::NearbyAttractions", type: :request do
       expect(document.at_css("nav.panel-pagination")).to be_nil
     end
 
+    it "opens the suggestions section and counts the list on the toggle" do
+      create_list(:attraction, 3, latitude: 5.981, longitude: 116.071)
+
+      get hotel_nearby_attractions_path(hotel)
+
+      document = response.parsed_body
+      section = document.at_css("#nearby_attraction_suggestions")
+      expect(section["data-state"]).to eq("open")
+      expect(section.at_css(".panel-collapsible__trigger").text.squish).to include("Show list (3)", "Hide list (3)")
+      expect(section.at_css(".panel-collapsible__content")["hidden"]).to be_nil
+    end
+
+    it "collapses the suggestions section when the list is full" do
+      create_list(:attraction, 10, latitude: 5.981, longitude: 116.071)
+
+      get hotel_nearby_attractions_path(hotel)
+
+      section = response.parsed_body.at_css("#nearby_attraction_suggestions")
+      expect(section["data-state"]).to eq("closed")
+      expect(section.at_css(".panel-collapsible__trigger").text.squish).to include("Show list (10)")
+      expect(section.at_css(".panel-collapsible__content")["hidden"]).to be_present
+    end
+
+    it "disables the suggestions toggle when nothing is left to suggest" do
+      get hotel_nearby_attractions_path(hotel)
+
+      section = response.parsed_body.at_css("#nearby_attraction_suggestions")
+      trigger = section.at_css(".panel-collapsible__trigger")
+      expect(section["data-state"]).to eq("closed")
+      expect(trigger["disabled"]).to be_present
+      expect(trigger.text.squish).to eq("No more suggestions")
+      expect(section.at_css(".panel-collapsible__content")["hidden"]).to be_present
+    end
+
     it "paginates linked attractions at 25 records" do
       create_list(:hotel_nearby_attraction, 26, hotel: hotel)
 
