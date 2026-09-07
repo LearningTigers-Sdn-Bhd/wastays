@@ -5,6 +5,9 @@ module HotelPortal
     class OverviewPresenter
       State = Data.define(:label, :tone)
 
+      READY = "Ready"
+      NEEDS_ATTENTION = "Needs attention"
+
       def initialize(hotel:)
         @hotel = hotel
       end
@@ -19,12 +22,32 @@ module HotelPortal
       # pairing sections with a separate list of paths by position.
       def sections
         @sections ||= [
-          section(:general_info, "Hotel Info", hotel_information_state, hotel_information_detail),
-          section(:policy, "Policies", knowledge_state("policy"), knowledge_detail("policy")),
-          section(:faq, "FAQs", knowledge_state("faq"), knowledge_detail("faq")),
-          section(:amenity, "Amenities", amenities_state, amenities_detail),
-          section(:wifi, "Wi-Fi", wifi_state, wifi_detail)
+          section(:general_info, "Hotel Info", "info", hotel_information_state, hotel_information_detail),
+          section(:policy, "Policies", "shield-check", knowledge_state("policy"), knowledge_detail("policy")),
+          section(:faq, "FAQs", "message-circle-question-mark", knowledge_state("faq"), knowledge_detail("faq")),
+          section(:amenity, "Amenities", "concierge-bell", amenities_state, amenities_detail),
+          section(:wifi, "Wi-Fi", "wifi", wifi_state, wifi_detail)
         ]
+      end
+
+      def ready_sections_count
+        sections.count { |section| section[:status].label == READY }
+      end
+
+      def sections_count
+        sections.size
+      end
+
+      def all_sections_ready?
+        ready_sections_count == sections_count
+      end
+
+      def knowledge_documents_count
+        @knowledge_documents_count ||= knowledge_documents.count
+      end
+
+      def open_questions_count
+        @open_questions_count ||= hotel.knowledge_diagnostics.open.count
       end
 
       def ai_state
@@ -41,21 +64,21 @@ module HotelPortal
 
       attr_reader :hotel
 
-      def section(key, name, status, detail)
-        { key: key, name: name, status: status, detail: detail }
+      def section(key, name, icon, status, detail)
+        { key: key, name: name, icon: icon, status: status, detail: detail }
       end
 
       def compute_ai_state
-        return state("Needs attention", :warning) unless hotel.ai_concierge_ready?
-        return state("Needs attention", :warning) if knowledge_documents.failed.exists?
+        return state(NEEDS_ATTENTION, :warning) unless hotel.ai_concierge_ready?
+        return state(NEEDS_ATTENTION, :warning) if knowledge_documents.failed.exists?
         return state("Updating", :neutral) if knowledge_documents.where(embedding_status: %w[pending indexing]).exists?
 
-        state("Ready", :success)
+        state(READY, :success)
       end
 
       def hotel_information_state
         required = [ hotel.name, hotel.description, hotel.city, hotel.country ]
-        required.all?(&:present?) && contact_present? ? state("Ready", :success) : state("Needs attention", :warning)
+        required.all?(&:present?) && contact_present? ? state(READY, :success) : state(NEEDS_ATTENTION, :warning)
       end
 
       def hotel_information_detail
@@ -68,19 +91,19 @@ module HotelPortal
 
       def knowledge_state(category)
         documents = knowledge_documents.where(category: category)
-        return state("Needs attention", :warning) if documents.none? || documents.failed.exists?
+        return state(NEEDS_ATTENTION, :warning) if documents.none? || documents.failed.exists?
         return state("Updating", :neutral) if documents.where(embedding_status: %w[pending indexing]).exists?
 
-        state("Ready", :success)
+        state(READY, :success)
       end
 
       def knowledge_detail(category)
         count = knowledge_documents.where(category: category).count
-        "#{count} #{category == 'faq' ? 'FAQ collection' : 'policy'}#{'s' unless count == 1}"
+        ActionController::Base.helpers.pluralize(count, category == "faq" ? "FAQ collection" : "policy")
       end
 
       def amenities_state
-        hotel.amenities.any? ? state("Ready", :success) : state("Needs attention", :warning)
+        hotel.amenities.any? ? state(READY, :success) : state(NEEDS_ATTENTION, :warning)
       end
 
       def amenities_detail
@@ -90,7 +113,7 @@ module HotelPortal
       end
 
       def wifi_state
-        hotel.hotel_wifi_networks.active.exists? ? state("Ready", :success) : state("Needs attention", :warning)
+        hotel.hotel_wifi_networks.active.exists? ? state(READY, :success) : state(NEEDS_ATTENTION, :warning)
       end
 
       def wifi_detail

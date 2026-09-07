@@ -23,6 +23,35 @@ RSpec.describe "HotelPortal::GuestContent::AiConcierge", type: :request do
     sign_in_as(user)
   end
 
+  describe "GET the overview" do
+    it "opens with a metric row and pairs the readiness list with a questions table" do
+      create(:hotel_knowledge_diagnostic, hotel: hotel, question: "Do you allow late check-out?", suggested_category: "policy")
+
+      get hotel_guest_content_path(hotel)
+
+      document = response.parsed_body
+      body = document.at_css("[data-testid='guest-content-body']")
+      expect(response).to have_http_status(:ok)
+
+      summary = body.at_css("[aria-label='Guest content summary']")
+      expect(summary.css(".panel-metric-card__label").map { |label| label.text.squish })
+        .to eq([ "Content readiness", "Knowledge documents", "Questions needing answers", "AI Concierge" ])
+      expect(summary.at_css(".panel-metric-card__value").text.squish).to eq("0 of 5")
+
+      # The readiness metric card names the left column, so only the right
+      # column carries a heading of its own.
+      status = body.at_css("[aria-label='Guest content status']")
+      expect(status.css("h2").map { |heading| heading.text.squish })
+        .to eq([ "Questions needing answers" ])
+      expect(status.at_css("[aria-label='Content readiness'] h2")).to be_nil
+
+      table = status.at_css("[data-testid='questions-needing-answers']")
+      expect(table.css("thead th").map { |cell| cell.text.squish })
+        .to eq([ "Question", "Suggested section", "Asked", "Action" ])
+      expect(table.css("tbody tr td").first.text.squish).to eq("Do you allow late check-out?")
+    end
+  end
+
   describe "GET the configuration sub-tab" do
     it "renders one page header, the Guest Content tabs, and the AI sub-tabs" do
       get hotel_ai_concierge_settings_path(hotel)

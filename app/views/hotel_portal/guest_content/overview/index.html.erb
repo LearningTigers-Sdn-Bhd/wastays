@@ -1,26 +1,54 @@
-<section class="grid gap-4 lg:grid-cols-2" aria-label="Guest content status">
-  <%= render PanelsUI::Card.new(width: :full, variant: :outlined, density: :compact) do |card| %>
-    <% ready_count = @presenter.sections.count { |section| section[:status].label == "Ready" } %>
-    <% card.with_header(title: "Content readiness", description: "#{ready_count} of #{@presenter.sections.size} sections are ready", title_as: :h2) %>
-  <% end %>
+<% ai_enabled = feature_enabled_for_hotel?("ai_concierge_page", @hotel) %>
 
-  <% if feature_enabled_for_hotel?("ai_concierge_page", @hotel) %>
-    <%= render PanelsUI::Card.new(width: :full, variant: :outlined, density: :compact) do |card| %>
-      <% card.with_header(title: "AI Concierge", description: "Guest chat and automatic answers", title_as: :h2) do |header| %>
-        <% header.with_badges do %>
-          <%= render PanelsUI::Badge.new(label: @presenter.ai_state.label, variant: @presenter.ai_state.tone, size: :sm, indicator: true) %>
-        <% end %>
-        <% header.with_actions do %>
-          <%= render PanelsUI::Button.new(label: "AI settings", href: hotel_ai_concierge_settings_path(@hotel), variant: :secondary, size: :sm) %>
-        <% end %>
-      <% end %>
-    <% end %>
+<%# Row 1 reports the page in numbers and sends staff straight to the work.
+    Row 2 pairs the checklist with the questions that drive it. %>
+<section class="grid gap-4 sm:grid-cols-2 <%= "lg:grid-cols-4" if ai_enabled %>" aria-label="Guest content summary">
+  <%= render PanelsUI::MetricCard.new(
+        label: "Content readiness",
+        value: "#{@presenter.ready_sections_count} of #{@presenter.sections_count}",
+        detail: @presenter.all_sections_ready? ? "Every section is ready" : "Sections ready for guests",
+        detail_variant: @presenter.all_sections_ready? ? :success : :warning,
+        tone: @presenter.all_sections_ready? ? :success : :warning,
+        icon: "circle-check",
+        density: :compact) %>
+
+  <%= render PanelsUI::MetricCard.new(
+        label: "Knowledge documents",
+        value: @presenter.knowledge_documents_count,
+        detail: "Policies, FAQs and hotel info",
+        icon: "file-text",
+        href: hotel_knowledge_policies_path(@hotel),
+        density: :compact) %>
+
+  <% if ai_enabled %>
+    <%= render PanelsUI::MetricCard.new(
+          label: "Questions needing answers",
+          value: @presenter.open_questions_count,
+          detail: @presenter.open_questions_count.zero? ? "Nothing to answer" : "Asked in guest chats",
+          detail_variant: @presenter.open_questions_count.zero? ? :success : :warning,
+          tone: @presenter.open_questions_count.zero? ? :neutral : :warning,
+          icon: "message-circle-question-mark",
+          href: hotel_ai_healthchecks_path(@hotel),
+          density: :compact) %>
+
+    <%= render PanelsUI::MetricCard.new(
+          label: "AI Concierge",
+          value: @presenter.ai_state.label,
+          detail: "Guest chat and automatic answers",
+          detail_variant: @presenter.ai_state.tone,
+          tone: @presenter.ai_state.tone,
+          icon: "sparkles",
+          href: hotel_ai_concierge_settings_path(@hotel),
+          density: :compact) %>
   <% end %>
 </section>
 
-<section class="space-y-3" aria-labelledby="content-sections-heading">
-  <h2 id="content-sections-heading" class="text-base font-semibold">Content</h2>
-  <div class="divide-y divide-border border-y border-border">
+<%# The readiness list stays narrow: short labels and one action each. The
+    questions carry full sentences, so they take the wider column. %>
+<section class="grid gap-6 <%= "lg:grid-cols-3" if ai_enabled %>" aria-label="Guest content status">
+  <%# The metric card above already names this list, so the column carries no
+      heading of its own. The name stays for assistive technology. %>
+  <div class="<%= "lg:col-span-1" if ai_enabled %>" role="region" aria-label="Content readiness">
     <% section_paths = {
          general_info: hotel_knowledge_general_infos_path(@hotel),
          policy: hotel_knowledge_policies_path(@hotel),
@@ -28,47 +56,69 @@
          amenity: hotel_guest_amenities_path(@hotel),
          wifi: hotel_wifi_networks_path(@hotel)
        } %>
-    <% @presenter.sections.each do |section| %>
-      <% path = section_paths.fetch(section[:key]) %>
-      <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <h3 class="text-sm font-medium"><%= section[:name] %></h3>
-            <%= render PanelsUI::Badge.new(label: section[:status].label, variant: section[:status].tone, size: :sm) %>
-          </div>
-          <p class="mt-1 text-sm text-muted-foreground"><%= section[:detail] %></p>
-        </div>
-        <%= render PanelsUI::Button.new(label: "Open", href: path, variant: :secondary, size: :sm, class: "shrink-0") %>
-      </div>
-    <% end %>
-  </div>
-</section>
-
-<% if feature_enabled_for_hotel?("ai_concierge_page", @hotel) %>
-  <section class="space-y-3" aria-labelledby="questions-heading">
-    <div class="flex items-center justify-between gap-3">
-      <h2 id="questions-heading" class="text-base font-semibold">Questions needing answers</h2>
-      <%= link_to "View all", hotel_ai_healthchecks_path(@hotel), class: "text-sm font-medium text-primary hover:underline" %>
-    </div>
-    <% if @presenter.recent_questions.any? %>
-      <div class="divide-y divide-border border-y border-border">
-        <% @presenter.recent_questions.each do |diagnostic| %>
-          <% path = case diagnostic.suggested_category
-             when "policy" then hotel_knowledge_policies_path(@hotel)
-             when "faq" then hotel_knowledge_faqs_path(@hotel)
-             else hotel_knowledge_general_infos_path(@hotel)
-             end %>
-          <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div class="min-w-0">
-              <p class="text-sm font-medium"><%= diagnostic.question %></p>
-              <p class="mt-1 text-xs text-muted-foreground">Suggested section: <%= diagnostic.suggested_category.to_s.humanize.presence || "Hotel Info" %></p>
+    <div class="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
+      <% @presenter.sections.each do |section| %>
+        <div class="flex items-center gap-3 px-4 py-3">
+          <%= app_icon(section[:icon], class: "size-5 shrink-0 text-muted-foreground", aria: { hidden: "true" }) %>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-sm font-medium"><%= section[:name] %></h3>
+              <%= render PanelsUI::Badge.new(label: section[:status].label, variant: section[:status].tone, size: :sm) %>
             </div>
-            <%= render PanelsUI::Button.new(label: "Add information", href: path, variant: :secondary, size: :sm) %>
+            <p class="mt-0.5 truncate text-sm text-muted-foreground"><%= section[:detail] %></p>
           </div>
+          <%= render PanelsUI::Button.new(label: "Open", href: section_paths.fetch(section[:key]), variant: :secondary, size: :sm, class: "shrink-0") %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <% if ai_enabled %>
+    <div class="space-y-3 lg:col-span-2" role="region" aria-label="Questions needing answers">
+      <%= render "hotel_portal/guest_content/shared/section_header",
+            title: "Questions needing answers",
+            description: "Guests asked these and the AI Concierge had no answer. Add the information so it can answer next time.",
+            actions: link_to("View all", hotel_ai_healthchecks_path(@hotel), class: "text-sm font-medium text-primary hover:underline") %>
+      <% if @presenter.recent_questions.any? %>
+        <%= render PanelsUI::Table.new(caption: "Guest questions the AI Concierge could not answer",
+              header_style: :sentence, hoverable: true, bordered: true,
+              wrapper_class: "rounded-md border border-border bg-card",
+              data: { testid: "questions-needing-answers" }) do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col">Question</th>
+              <th scope="col">Suggested section</th>
+              <th scope="col" class="hidden xl:table-cell">Asked</th>
+              <th scope="col" class="text-right">Action</th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% @presenter.recent_questions.each do |diagnostic| %>
+              <% path = case diagnostic.suggested_category
+                 when "policy" then hotel_knowledge_policies_path(@hotel)
+                 when "faq" then hotel_knowledge_faqs_path(@hotel)
+                 else hotel_knowledge_general_infos_path(@hotel)
+                 end %>
+              <tr>
+                <td class="align-middle">
+                  <p class="max-w-md text-sm font-medium text-foreground"><%= diagnostic.question %></p>
+                </td>
+                <td class="align-middle">
+                  <%= render PanelsUI::Badge.new(label: diagnostic.suggested_category.to_s.humanize.presence || "Hotel Info", variant: :neutral, size: :sm) %>
+                </td>
+                <td class="hidden align-middle text-sm text-muted-foreground xl:table-cell">
+                  <%= time_ago_in_words(diagnostic.created_at) %> ago
+                </td>
+                <td class="text-right align-middle">
+                  <%= render PanelsUI::Button.new(label: "Add information", href: path, variant: :secondary, size: :xs, class: "shrink-0") %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
         <% end %>
-      </div>
-    <% else %>
-      <%= render PanelsUI::EmptyState.new(title: "No questions need attention", description: "Weak or unanswered guest questions will appear here.", icon: "circle-check") %>
-    <% end %>
-  </section>
-<% end %>
+      <% else %>
+        <%= render PanelsUI::EmptyState.new(title: "No questions need attention", description: "Weak or unanswered guest questions will appear here.", icon: "circle-check") %>
+      <% end %>
+    </div>
+  <% end %>
+</section>
