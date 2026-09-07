@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  class EInvoiceSubmissionsController < HotelPortal::BaseController
+  class EInvoiceSubmissionsController < HotelPortal::ReportsBaseController
     before_action :set_hotel
     before_action :authorize_view_e_invoices!
     before_action :authorize_manage_e_invoices!, except: [ :index, :show, :pdf ]
