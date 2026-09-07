@@ -27,12 +27,15 @@ module GuestContent
 
     attr_reader :hotel, :params
 
+    # Each section of the page saves on its own, so a save carries the fields
+    # of one section only. Rewrite a value only when its own section sent it,
+    # or a Front desk save would blank the escalation rules.
     def attributes
       attrs = params.to_h.symbolize_keys
-      attrs[:escalation_triggers] = normalized_triggers
+      attrs[:escalation_triggers] = normalized_triggers if attrs.key?(:escalation_triggers)
       # A 24-hour desk keeps no clock. Clearing both stops a stale pair of
       # times from coming back if the switch is turned off again later.
-      if ActiveModel::Type::Boolean.new.cast(attrs[:front_desk_open_24h])
+      if attrs.key?(:front_desk_open_24h) && ActiveModel::Type::Boolean.new.cast(attrs[:front_desk_open_24h])
         attrs[:front_desk_opens_at] = nil
         attrs[:front_desk_closes_at] = nil
       end
