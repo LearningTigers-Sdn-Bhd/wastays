@@ -70,8 +70,8 @@ RSpec.describe HotelPortal::FrontDesk::ArrivalsQuery, frozen_time: Date.new(2026
       query = described_class.new(hotel:, params: { arrival_date: "2026-07-15" })
 
       expect(query.call.to_sql).to match(/ORDER BY "bookings"\."created_at" ASC, "bookings"\."id" ASC/)
-      expect(query.call.page(1).per(25).pluck(:id)).to eq(bookings.first(25).map(&:id))
-      expect(query.call.page(2).per(25).pluck(:id)).to eq(bookings.last(2).map(&:id))
+      expect(query.call.limit(25).pluck(:id)).to eq(bookings.first(25).map(&:id))
+      expect(query.call.offset(25).limit(25).pluck(:id)).to eq(bookings.last(2).map(&:id))
     end
   end
 

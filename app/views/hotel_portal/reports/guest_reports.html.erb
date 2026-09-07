@@ -124,7 +124,7 @@
       </div>
 
       <%= render partial: "hotel_portal/reports/bibo_section", locals: {
-        report: @bibo_report
+        sections: @bibo_sections
       } %>
     </div>
   <% elsif @active_guest_report_tab == "meal_prep" %>
@@ -148,7 +148,7 @@
       </div>
 
       <%= render partial: "hotel_portal/reports/meal_prep_section", locals: {
-        report: @meal_prep_report,
+        sections: @meal_prep_sections,
         date_preset: @date_preset
       } %>
     </div>

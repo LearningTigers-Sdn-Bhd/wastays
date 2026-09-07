@@ -109,7 +109,7 @@
         </section>
       <% end %>
 
-      <%= render "table_pagination", collection: @paginated_batches %>
+      <%= render "table_pagination", pagy: @batches_pagy %>
     <% else %>
       <%= render PanelsUI::Table.new(
             caption: "Journal batches",

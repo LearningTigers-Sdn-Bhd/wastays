@@ -78,7 +78,8 @@
     </table>
   </div>
 
-  <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-4 sm:px-8">
-    <%= paginate @payout_history, params: { tab: "paid", paid_start_date: @paid_start_date, paid_end_date: @paid_end_date } %>
-  </div>
+  <%= render "table_pagination",
+        pagy: @payout_history_pagy,
+        aria_label: "Paid payout history pagination",
+        link_data: { turbo_frame: "payouts_content", turbo_action: "advance" } %>
 </div>

@@ -502,7 +502,7 @@ class Booking < ApplicationRecord
          .includes(booking_folio: :folio_transactions)
          .created_between(start_date, end_date)
          .search(query)
-         .order(created_at: :desc)
+         .order(created_at: :desc, id: :desc)
   end
 
   def checked_in?

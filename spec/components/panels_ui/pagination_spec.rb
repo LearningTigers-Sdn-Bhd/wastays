@@ -128,13 +128,4 @@ RSpec.describe PanelsUI::Pagination, type: :component do
       expect(Rack::Utils.parse_nested_query(URI.parse(link[:href]).query)["query"]).to eq(query)
     end
   end
-
-  it "leaves the Kaminari navigation helper available" do
-    collection = Kaminari.paginate_array((1..55).to_a).page(2).per(25)
-    html = vc_test_controller.view_context.paginate(collection, params: { controller: "admin/api_keys", action: "index" })
-
-    expect(Nokogiri::HTML.fragment(html).css('nav[aria-label="Pagination"]')).not_to be_empty
-    expect(html).not_to include("panel-pagination")
-    expect(html).not_to include('data-slot="pagination"')
-  end
 end

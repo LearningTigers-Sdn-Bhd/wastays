@@ -2,13 +2,13 @@
 
 Date: September 6, 2026
 
-Status: The Pagy foundation and every portal migration except Hotel Reports are implemented. Hotel Reports remains on Kaminari.
+Status: The Pagy migration is implemented across all portals. Kaminari and its custom templates are removed.
 
 ## Recommendation
 
-Migrate all Kaminari pagination to Pagy 43.6.2 while keeping the current user behavior.
+Use Pagy 43.6.2 for all portal pagination while keeping the established user behavior.
 
-Migrated pages use the compact shadcn Nova style through `PanelsUI::Pagination`. Unmigrated Kaminari pages keep their existing design until migration.
+All migrated pages use the compact shadcn Nova style through `PanelsUI::Pagination`.
 
 Use Pagy's `:offset` paginator for the initial migration. Evaluate other pagination methods after measuring slow pages.
 
@@ -18,7 +18,7 @@ This estimate covers implementation, regression tests, fixes, and acceptance che
 
 ## Version and compatibility
 
-The project currently uses Kaminari 1.2.2, Ruby 3.4.7, and Rails 8.1.3.1.
+The project currently uses Pagy 43.6.2, Ruby 3.4.7, and Rails 8.1.3.1.
 
 This proposal targets the new Pagy 43 API, not an older Pagy version. Pagy 43.6.2 was released on August 24, 2026.
 
@@ -493,7 +493,7 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 
 ### Implemented
 
-- Pagy 43.6.2 is installed alongside Kaminari. Bundler added its `yaml` dependency without upgrading existing gems.
+- Pagy 43.6.2 is the only portal pagination dependency.
 - The initializer sets a 25-row default, disables client limit overrides, and freezes the options.
 - `ApplicationController` includes `Pagy::Method`.
 - `PanelsUI::Pagination` supplies shared server-rendered navigation and portal styling.
@@ -514,14 +514,16 @@ Human acceptance checks cover desktop and mobile appearance, keyboard behavior, 
 - Folios calculates filter counts and financial signals in the database, then loads only the selected page.
 - Payment Record merges lightweight payment and submission locators, then loads only the selected page.
 - Hotel Statement Detail materializes only the selected HTML ledger rows while PDF generation retains the full ledger.
-- Hotel Reports retains Kaminari and its existing templates.
+- Hotel Reports uses Pagy for ordinary tables, in-memory report rows, and independent section pages.
+- Report totals and exports retain their complete result sets.
+- Financial Performance no longer prepares the obsolete on-screen daily table.
 - Phase 1 is committed as `50e84293d`.
 - Rubyzip 3.6.0 is committed separately as `eaa530716`.
 - `PanelsUI::Pagination` uses the Pagy-only Nova design.
 - The Pagy-only Nova redesign is committed as `a827276d9`.
 - System Designs shows the Pagy component in both themes and page-count states.
 
-The Kaminari templates remain unchanged. Their appearance differs from Pagy during the staged migration by design.
+The Kaminari dependency and its seven custom templates are removed.
 
 ### Validation
 
@@ -565,6 +567,11 @@ The Kaminari templates remain unchanged. Their appearance differs from Pagy duri
 - Serial Reports domain after the Hotel migration: 545 examples, 0 failures.
 - Hotel Financials scoped RuboCop: 26 files, no offenses.
 - Hotel Financials source paths have no remaining Kaminari pagination calls.
+- Hotel Reports migration regression suite: 6 examples, 0 failures.
+- Hotel Reports request suite: 142 examples, 0 failures.
+- OTA settlement request suite: 5 examples, 0 failures.
+- Supporting pagination, query, and presenter specs: 43 examples, 0 failures.
+- Serial Reports domain after the final migration: 545 examples, 0 failures.
 - The user will run the current full `bin/ci` manually.
 - The post-update default `bin/ci` run cleared RuboCop, Brakeman, Bundle Audit, Importmap Audit, Tailwind, and parallel database setup.
 - Parallel RSpec ran 8,319 examples and reported three PostgreSQL deadlocks in unrelated report, invoice, and request-archive examples.
@@ -574,13 +581,11 @@ An earlier broad run encountered two database deadlocks because migration checks
 
 The earlier full CI run is not green because its parallel test run reported three database deadlocks. The user will run the current full CI manually.
 
-No browser automation or human visual acceptance was run for the Corporate, Guest, Hotel Operations, or Hotel Financials phases.
+No browser automation or human visual acceptance was run for the portal migration phases.
 
 ### Remaining work
 
 - Run the current default `bin/ci` manually.
 - Complete human visual acceptance for desktop, mobile, keyboard behavior, and both themes.
-- Migrate the remaining Hotel report pagination.
-- Remove Kaminari only after all consumers migrate.
 
-The foundation, Nova redesign, Admin, Corporate, Guest, Hotel Operations, and Hotel Financials migrations are implemented. Hotel Financials adds three pagination indexes.
+The foundation, Nova redesign, and all portal migrations are implemented. Hotel Financials adds three pagination indexes.
