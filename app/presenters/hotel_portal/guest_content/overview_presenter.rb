@@ -106,10 +106,12 @@ module HotelPortal
         hotel.amenities.any? ? state(READY, :success) : state(NEEDS_ATTENTION, :warning)
       end
 
+      # Counts rows that carry content, not rows that exist. A saved row with
+      # every field blank tells a guest nothing, and the Amenities table calls
+      # it Not started.
       def amenities_detail
-        selected = hotel.amenities.size
-        detailed = hotel.hotel_amenity_details.joins(:amenity).where(amenities: { slug: hotel.amenities }).count
-        "#{selected} available, #{detailed} with guest details"
+        rows = AmenityRow.build(hotel: hotel, amenities: Amenity.hotel.where(slug: hotel.amenities))
+        "#{rows.size} available, #{rows.count(&:started?)} with guest details"
       end
 
       def wifi_state

@@ -24,18 +24,6 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     expect(Nokogiri::HTML(response.body).css("[data-testid='settings-tabs'] [data-slot='tabs-list']").size).to eq(1)
   end
 
-  it "updates selected amenity details in one form" do
-    amenity = Amenity.hotel.find_by!(slug: "swimming_pool")
-    hotel.update!(amenities: [ amenity.slug ])
-
-    patch hotel_guest_amenities_path(hotel), params: {
-      amenity_details: { amenity.id.to_s => { location: "Rooftop", opening_hours: "8 AM to 8 PM" } }
-    }
-
-    expect(response).to redirect_to(hotel_guest_amenities_path(hotel))
-    expect(hotel.hotel_amenity_details.find_by!(amenity: amenity).location).to eq("Rooftop")
-  end
-
   it "creates a hotel-scoped Wi-Fi network without rendering its saved password" do
     post hotel_wifi_networks_path(hotel), params: {
       hotel_wifi_network: {
@@ -141,7 +129,7 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     {
       hotel_knowledge_policies_path(hotel) => [ "Add Policy" ],
       hotel_knowledge_faqs_path(hotel) => [ "Add FAQ" ],
-      hotel_guest_amenities_path(hotel) => [ "Property Settings" ],
+      hotel_guest_amenities_path(hotel) => [ "Manage amenities" ],
       hotel_wifi_networks_path(hotel) => [ "Add network" ],
       new_hotel_knowledge_policy_path(hotel) => [ "Back" ],
       edit_hotel_knowledge_policy_path(hotel, document) => [ "Back" ],

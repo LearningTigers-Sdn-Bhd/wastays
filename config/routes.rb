@@ -756,7 +756,11 @@ Rails.application.routes.draw do
       # the route helper names stay as they were.
       scope "guest-content", module: "guest_content" do
         get "", to: "overview#index", as: :guest_content
-        resource :guest_amenities, path: "amenities", controller: "amenities", only: %i[show update]
+        # Amenities is a table with two sheets over it: one picks the amenities
+        # the property offers, one writes the guest details for a single amenity.
+        resource :guest_amenities, path: "amenities", controller: "amenities", only: %i[show]
+        resource :amenity_selection, path: "amenities/selection", controller: "amenity_selections", only: %i[edit update]
+        resources :amenity_details, path: "amenities/details", controller: "amenity_details", only: %i[edit update]
         resources :wifi_networks, path: "wifi", except: :show
         get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
         patch "ai-concierge", to: "ai_concierge#update"

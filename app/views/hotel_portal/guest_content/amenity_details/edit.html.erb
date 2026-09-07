@@ -1,0 +1,68 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = "amenity-detail-#{@amenity.id}-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "amenity-detail-sheet",
+          side: :right,
+          size: :lg,
+          title: @amenity.name,
+          description: "Answer the questions guests ask about this amenity.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @detail,
+                      url: hotel_amenity_detail_path(@hotel, @amenity),
+                      method: :patch,
+                      id: form_id,
+                      class: "space-y-4 py-2" do |form| %>
+          <% if @detail.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Details could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { @detail.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :location, label: "Location") do |field| %>
+            <% field.with_input(placeholder: "For example, Level 2", autocomplete: "off") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :opening_hours, label: "Opening hours") do |field| %>
+            <% field.with_input(placeholder: "For example, 7:00 AM to 10:00 PM", autocomplete: "off") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :fee_information, label: "Fee information") do |field| %>
+            <% field.with_input(placeholder: "For example, Free for hotel guests", autocomplete: "off") %>
+          <% end %>
+
+          <%= render PanelsUI::Checkbox.new(
+                form: form,
+                attribute: :reservation_required,
+                label: "Reservation required",
+                description: "Guests must book this amenity before they use it.") %>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :reservation_instructions, label: "Reservation instructions") do |field| %>
+            <% field.with_text_area(rows: 2, placeholder: "Tell the guest how to book this amenity.") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :guest_notes,
+                label: "Guest notes",
+                hint: "Anything else the concierge can tell a guest about this amenity.") do |field| %>
+            <% field.with_text_area(rows: 3) %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>
+          Save details
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
