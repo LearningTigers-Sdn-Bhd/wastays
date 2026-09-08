@@ -1,0 +1,12 @@
+<% form_id = "edit-guest-content-document-#{@document.id}-form" %>
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "edit-guest-content-document-sheet",
+             title: "Edit #{kb_label}",
+             description: "Keep this clear and current. Guests see the words you write here.",
+             form_id: form_id,
+             submit_label: "Save changes",
+             size: @document.category == "faq" ? :xl : :lg
+           } do %>
+  <%= render "hotel_portal/guest_content/documents/form", document: @document, form_id: form_id %>
+<% end %>

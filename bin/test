@@ -156,6 +156,8 @@ domain_paths() {
         spec/requests/hotel_portal/room_types_spec.rb \
         spec/requests/hotel_portal/rate_plan_attachments_spec.rb \
         spec/requests/hotel_portal/hotel_knowledge_documents_spec.rb \
+        spec/requests/hotel_portal/guest_content/policies_spec.rb \
+        spec/services/guest_content \
         spec/requests/hotel_portal/knowledge_diagnostics_spec.rb \
         spec/requests/hotel_portal/users_spec.rb \
         spec/requests/hotel_portal/staff_invitations_spec.rb \

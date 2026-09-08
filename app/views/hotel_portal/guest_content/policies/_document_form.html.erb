@@ -1,0 +1,93 @@
+<%#
+  One fixed policy card: a heading, a text area, and a save.
+
+  The card owns its title, so the hotel writes the text only. Locals: document,
+  url, section, title, description, hint, placeholder, and covers (a list of
+  points the text should answer).
+%>
+<%= form_with model: document,
+              url: url,
+              method: :patch,
+              local: true,
+              scope: :hotel_knowledge_document,
+              data: {
+                controller: "form-dirty",
+                action: "input->form-dirty#refresh change->form-dirty#refresh reset->form-dirty#restore"
+              },
+              class: "lg:w-[85%]" do |form| %>
+  <section id="<%= section %>" aria-labelledby="<%= section %>-heading">
+    <div class="flex flex-wrap items-start justify-between gap-2">
+      <div>
+        <h2 id="<%= section %>-heading" class="text-base font-semibold text-foreground"><%= title %></h2>
+        <p class="mt-2 text-sm text-muted-foreground"><%= description %></p>
+      </div>
+      <% if document.persisted? %>
+        <% state = case document.embedding_status
+             when "indexed" then [ "Ready", :success ]
+             when "failed" then [ "Needs attention", :destructive ]
+             else [ "Updating", :warning ]
+           end %>
+        <%= render PanelsUI::Badge.new(label: state.first, variant: state.last) %>
+      <% end %>
+    </div>
+
+    <% if document.errors.any? %>
+      <div class="mt-4">
+        <%= render PanelsUI::Alert.new(
+              tone: :destructive,
+              title: pluralize(document.errors.count, "error") + " prevented this policy from being saved",
+              role: :alert) do |alert| %>
+          <% alert.with_description do %>
+            <ul class="list-disc space-y-1 ps-5">
+              <% document.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="mt-5">
+      <%= render PanelsUI::FormField.new(
+            form: form,
+            attribute: :content,
+            label: title,
+            hint: hint) do |field| %>
+        <% field.with_text_area(rows: 10, placeholder: placeholder) %>
+      <% end %>
+    </div>
+
+    <% if local_assigns[:covers].present? %>
+      <div class="mt-4 rounded-md border border-border bg-muted/40 px-4 py-3">
+        <p class="text-sm font-medium text-foreground">What this policy should answer</p>
+        <ul class="mt-2 list-disc space-y-1 ps-5 text-sm text-muted-foreground">
+          <% covers.each do |point| %>
+            <li><%= point %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <footer class="mt-5 flex justify-end gap-3">
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :reset,
+            variant: :secondary,
+            size: :md,
+            hidden: true,
+            data: { form_dirty_target: "cancel" }) do %>
+        Cancel
+      <% end %>
+
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :submit,
+            size: :md,
+            disabled: true,
+            data: { form_dirty_target: "submit" }) do %>
+        Save
+      <% end %>
+    </footer>
+  </section>
+<% end %>

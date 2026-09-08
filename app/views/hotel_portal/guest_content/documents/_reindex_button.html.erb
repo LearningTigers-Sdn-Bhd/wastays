@@ -1,0 +1,6 @@
+<%# Reindex is a plain POST that ends in a redirect, so it breaks out of the
+    sheet frame. The sheet closes with the navigation and the flash lands on
+    the list. Locals: document, label. %>
+<%= form_with url: kb_reindex_path(document), method: :post, class: "inline-flex", data: { turbo_frame: "_top" } do %>
+  <%= render PanelsUI::Button.new(label: label, type: "submit", variant: :secondary, size: :sm) %>
+<% end %>

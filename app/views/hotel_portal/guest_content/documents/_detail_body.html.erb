@@ -1,0 +1,48 @@
+<%# What the record actually holds: question and answer pairs, prose, or a file.
+    Exactly one of the three. Local: document. %>
+<% if document.category == "faq" && document.qa_pairs.any? %>
+  <section class="space-y-2">
+    <h4 class="text-sm font-medium text-foreground">Questions and answers</h4>
+    <div class="divide-y divide-border rounded-md border border-border bg-card">
+      <% document.qa_pairs.each do |pair| %>
+        <div class="px-4 py-3">
+          <p class="text-sm font-medium text-foreground"><%= pair["question"] %></p>
+          <p class="mt-1 whitespace-pre-wrap text-sm text-muted-foreground"><%= pair["answer"] %></p>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+<% elsif document.file.attached? %>
+  <%# The browser's own viewer has the whole window. A PDF squeezed into a
+      768px sheet shows a third of a page, which nobody can read. %>
+  <section class="space-y-2">
+    <h4 class="text-sm font-medium text-foreground">File</h4>
+    <div class="flex flex-wrap items-center gap-4 rounded-md border border-border bg-card px-4 py-3">
+      <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
+        <%= app_icon "file-text", class: "size-5", aria: { hidden: true } %>
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-medium text-foreground"><%= document.file.filename %></p>
+        <p class="mt-0.5 text-xs text-muted-foreground">
+          PDF · <%= number_to_human_size(document.file.byte_size) %>
+        </p>
+      </div>
+      <div class="flex shrink-0 gap-2">
+        <%= render PanelsUI::Button.new(label: "Open", as: :a, href: url_for(document.file),
+              variant: :secondary, size: :sm, target: "_blank", rel: "noopener",
+              data: { turbo: false }) %>
+        <%= render PanelsUI::Button.new(label: "Download", as: :a, href: rails_blob_path(document.file, disposition: "attachment"),
+              variant: :ghost, size: :sm, data: { turbo: false }) %>
+      </div>
+    </div>
+  </section>
+
+<% elsif document.content.present? %>
+  <section class="space-y-2">
+    <h4 class="text-sm font-medium text-foreground">Content</h4>
+    <div class="rounded-md border border-border bg-card px-4 py-3">
+      <p class="whitespace-pre-wrap text-sm text-foreground"><%= document.content %></p>
+    </div>
+  </section>
+<% end %>

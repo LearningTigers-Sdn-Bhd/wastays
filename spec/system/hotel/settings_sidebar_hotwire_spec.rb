@@ -95,7 +95,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       expect(page).to have_link("General", href: hotel_general_settings_path(hotel))
       expect(page).to have_link("Property", href: edit_hotel_profile_path(hotel))
       expect(page).to have_link("Finance", href: hotel_banking_details_settings_path(hotel))
-      expect(page).to have_link("Guest Content", href: hotel_ai_concierge_settings_path(hotel))
+      expect(page).to have_link("Guest Content", href: hotel_guest_content_path(hotel))
       expect(page).to have_link("Team", href: hotel_users_path(hotel))
 
       expect(page).to have_no_link("Room Inventory")
@@ -150,7 +150,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
       [ hotel_general_settings_path(hotel), "Notifications", hotel_notification_settings_path(hotel), "General" ],
       [ edit_hotel_profile_path(hotel), "Room Inventory", hotel_room_types_path(hotel), "Property" ],
       [ hotel_transaction_code_references_path(hotel), "General Ledger Mappings", hotel_general_ledger_maps_path(hotel), "Finance" ],
-      [ hotel_ai_concierge_settings_path(hotel), "Policies", hotel_knowledge_policies_path(hotel), "Guest Content" ],
+      [ hotel_ai_concierge_settings_path(hotel), "Policies", hotel_policy_reservations_path(hotel), "Guest Content" ],
       [ hotel_users_path(hotel), "Roles & Permissions", hotel_roles_path(hotel), "Team" ]
     ].each do |first_tab_path, secondary_tab_label, secondary_tab_path, sidebar_label|
       visit first_tab_path

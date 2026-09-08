@@ -1,0 +1,32 @@
+<%#
+  A single-select filter that lives in a table column header, like the
+  housekeeping room board. The radios sit inside the surrounding GET form, so a
+  selection submits that form and reloads the results frame.
+
+  Locals:
+    param_name — query parameter name, for example "status"
+    title      — column heading, for example "Status"
+    options    — array of [label, value] pairs
+    selected   — the current value, or nil for all
+%>
+<% menu_id = "#{param_name.to_s.dasherize}-column-filter" %>
+<% selected_label = selected.presence&.to_s&.humanize %>
+<%= render PanelsUI::DropdownMenu.new(id: menu_id, placement: :bottom_start, class: "w-56") do |menu| %>
+  <% menu.with_trigger(
+       variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
+       aria_label: "Filter #{title.downcase}, #{selected_label || 'all'} selected") do %>
+    <%= title %>
+    <%= render PanelsUI::Badge.new(
+          label: selected_label || "All",
+          variant: selected_label ? :primary : :neutral,
+          size: :xs,
+          shape: :rounded) %>
+    <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+  <% end %>
+  <% menu.with_radio_group(name: param_name, label: title) do |group| %>
+    <% group.with_option(value: "", checked: selected.blank?) { "All #{title.downcase}" } %>
+    <% options.each do |label, value| %>
+      <% group.with_option(value: value, checked: selected.to_s == value.to_s) { label } %>
+    <% end %>
+  <% end %>
+<% end %>

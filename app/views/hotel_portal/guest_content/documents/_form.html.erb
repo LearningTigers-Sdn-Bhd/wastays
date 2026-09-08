@@ -1,0 +1,108 @@
+<%# The body of the create and edit sheets. The submit button lives in the
+    sheet footer and reaches this form by id, so nothing here renders one.
+
+    Locals: document, form_id.
+%>
+<%= form_with model: document,
+              url: document.new_record? ? kb_create_path : kb_show_path(document),
+              method: document.new_record? ? :post : :patch,
+              id: form_id,
+              class: "space-y-5",
+              data: {
+                controller: "knowledge-document",
+                knowledge_document_source_type_value: document.source_type.presence || "text"
+              } do |f| %>
+  <% if document.errors.any? %>
+    <%= render PanelsUI::Alert.new(tone: :destructive, title: "This #{kb_label.downcase} could not be saved", role: :alert) do |alert| %>
+      <% alert.with_description do %>
+        <ul class="list-disc space-y-1 ps-5">
+          <% document.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(
+        form: f,
+        attribute: :title,
+        label: "Title",
+        hint: "What a guest would call this. It is the name staff see in the list.",
+        required: true) do |field| %>
+    <% field.with_input(placeholder: "Parking and valet", autocomplete: "off", required: true) %>
+  <% end %>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :source_type,
+          label: "Source",
+          hint: "Type the text, or upload a PDF the hotel already has.") do |field| %>
+      <% field.with_select_menu(
+           [ { label: "Text", value: "text" }, { label: "PDF upload", value: "pdf" } ],
+           selected: document.source_type.presence || "text",
+           data: { action: "change->knowledge-document#sourceTypeChanged" }) %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :language,
+          label: "Language") do |field| %>
+      <% field.with_select_menu(
+           [
+             { label: "English", value: "en" },
+             { label: "Malay", value: "ms" },
+             { label: "Chinese", value: "zh" },
+             { label: "Hindi", value: "hi" }
+           ],
+           selected: document.persisted? ? document.language : "en") %>
+    <% end %>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :effective_date,
+          label: "Effective date",
+          hint: "Leave it empty when the information always applies.") do |field| %>
+      <% field.with_date_picker(value: document.effective_date&.iso8601, placeholder: "Select a date") %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :tags,
+          label: "Tags",
+          hint: "Separate tags with commas.") do |field| %>
+      <% field.with_input(value: document.tags.join(", "), placeholder: "parking, valet", autocomplete: "off") %>
+    <% end %>
+  </div>
+
+  <div data-knowledge-document-target="pdfUpload" class="hidden">
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :file,
+          label: "PDF file") do |field| %>
+      <% field.with_dropzone(accept: "application/pdf", description: "PDF only") %>
+    <% end %>
+    <% if document.file.attached? %>
+      <p class="mt-2 text-sm text-muted-foreground">
+        On file: <%= link_to document.file.filename, url_for(document.file), target: "_blank", rel: "noopener", class: "font-medium text-primary hover:underline" %>
+      </p>
+    <% end %>
+  </div>
+
+  <div data-knowledge-document-target="textContent">
+    <% if document.category == "faq" %>
+      <%= render "hotel_portal/guest_content/documents/faq_pairs", document: document %>
+    <% else %>
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :content,
+            label: "Content",
+            hint: "Write it for a guest to read. The AI Concierge answers from this text.") do |field| %>
+        <% field.with_text_area(rows: 10, placeholder: "Overnight parking is free for in-house guests…") %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

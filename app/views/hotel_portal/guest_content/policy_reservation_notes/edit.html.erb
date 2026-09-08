@@ -1,0 +1,51 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = "policy-note-#{@policy.id}-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "policy-note-sheet",
+          side: :right,
+          size: :lg,
+          title: "#{@policy.policy_type_label} note",
+          description: "Explain this policy to guests. The charge itself stays in Room Revenue.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @policy,
+                      url: hotel_policy_reservation_note_path(@hotel, @policy),
+                      method: :patch,
+                      id: form_id,
+                      class: "space-y-4 py-2" do |form| %>
+          <% if @policy.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Note could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { @policy.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <div class="rounded-md border border-border bg-muted/40 px-4 py-3">
+            <p class="text-sm font-medium text-foreground">What the hotel charges</p>
+            <p class="mt-1 text-sm text-muted-foreground"><%= @policy.pricing_label %></p>
+          </div>
+
+          <%= render PanelsUI::FormField.new(
+                form: form,
+                attribute: :description,
+                label: "Note for guests",
+                hint: "For exceptions and context: when the hotel waives the charge, and who to contact. Do not restate the amount above. It is published from the policy itself and would drift.") do |field| %>
+            <% field.with_text_area(rows: 5, placeholder: "For example, waived for medical emergencies with documentation.") %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>
+          Save note
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,59 @@
+<%# The transfer switch stays above its own price and lead time. A hotel that
+    does not offer a transfer still fills the public transport fields below. %>
+<%= render PanelsUI::Switch.new(
+      form: form,
+      attribute: :airport_transfer_offered,
+      variant: :card,
+      label: "The hotel offers an airport transfer",
+      description: "Turn this on to publish the price and the notice you need.") %>
+
+<div class="grid gap-4 sm:grid-cols-2">
+  <%= render PanelsUI::FormField.new(
+        form: form,
+        attribute: :airport_transfer_price,
+        label: "Transfer price (#{@hotel.default_currency})",
+        hint: "One way, for one car. Enter 0 when the transfer is free.") do |field| %>
+    <% field.with_input(type: :number, min: 0, step: "0.01", placeholder: "120.00") %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(
+        form: form,
+        attribute: :airport_transfer_lead_hours,
+        label: "Notice needed (hours)",
+        hint: "How far ahead a guest must book.") do |field| %>
+    <% field.with_input(type: :number, min: 0, step: 1, placeholder: "24") %>
+  <% end %>
+</div>
+
+<%= render PanelsUI::FormField.new(
+      form: form,
+      attribute: :shuttle_schedule,
+      label: "Shuttle times",
+      hint: "Leave empty if the hotel runs no shuttle.") do |field| %>
+  <% field.with_input(placeholder: "Hourly, 07:00 to 22:00") %>
+<% end %>
+
+<div class="grid gap-4 sm:grid-cols-2">
+  <%= render PanelsUI::FormField.new(
+        form: form,
+        attribute: :nearest_transit_stop,
+        label: "Nearest public transport stop") do |field| %>
+    <% field.with_input(placeholder: "KL Sentral, 400 m") %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(
+        form: form,
+        attribute: :pickup_point,
+        label: "Pickup point",
+        hint: "Where a taxi or a ride-hailing car waits.") do |field| %>
+    <% field.with_input(placeholder: "Main lobby, ground floor") %>
+  <% end %>
+</div>
+
+<%= render PanelsUI::FormField.new(
+      form: form,
+      attribute: :transport_notes,
+      label: "Guest notes",
+      hint: "Anything the fields above do not cover. Do not restate the price.") do |field| %>
+  <% field.with_text_area(rows: 4, placeholder: "For example, book the transfer at reception, or by WhatsApp before you fly.") %>
+<% end %>

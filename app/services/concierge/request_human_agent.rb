@@ -76,13 +76,20 @@ module Concierge
       ).call(:booking_support_requested)
     end
 
+    # "Someone will join shortly" is only true while somebody is on the desk.
+    # After hours the guest gets the duty manager and the opening time instead,
+    # so the promise matches who is actually there.
     def record_generic_message
       conversation.messages.create!(
         prospect: conversation.prospect,
         direction: "system",
         sender_role: "system",
-        body: "You asked to speak to a team member. Someone will join shortly."
+        body: front_desk_status.handover_message
       )
+    end
+
+    def front_desk_status
+      @front_desk_status ||= FrontDeskStatusPresenter.new(hotel: conversation.hotel)
     end
   end
 end

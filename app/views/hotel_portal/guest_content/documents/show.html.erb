@@ -1,0 +1,88 @@
+<%# Read-only detail for one knowledge document, in the settings sheet.
+
+    The header is chrome and never changes. The record names itself at the top
+    of the body, so the operator reads the header once and the record once.
+%>
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% state = case @document.embedding_status
+   when "indexed" then [ "Ready", :success ]
+   when "failed" then [ "Needs attention", :destructive ]
+   else [ "Updating", :warning ]
+   end %>
+<% can_reindex = current_hotel.ai_concierge_enabled? && %w[pending failed].include?(@document.embedding_status) %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= turbo_stream_from @document %>
+
+    <%= render PanelsUI::Sheet.new(
+          id: "guest-content-document-sheet",
+          side: :right,
+          size: :xl,
+          dismissible: true,
+          title: "#{kb_label} details",
+          description: "Read what a guest sees. Edit it to change the words.") do |sheet| %>
+      <% sheet.with_body do %>
+        <div class="space-y-5 py-2">
+          <div>
+            <h3 class="text-base font-semibold text-foreground"><%= @document.title %></h3>
+            <p class="mt-0.5 text-xs text-muted-foreground">
+              <%= [ @document.source_type == "pdf" ? "PDF" : "Text", @document.language.upcase, "v#{@document.version}" ].join(" · ") %>
+            </p>
+          </div>
+
+          <% if @document.embedding_status == "failed" %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "This #{kb_label.downcase} is not ready", role: :alert) do |alert| %>
+              <% alert.with_description do %>
+                <%= @document.metadata&.dig("last_error").presence || "The content could not be prepared for the AI Concierge." %>
+              <% end %>
+              <% if can_reindex %>
+                <% alert.with_actions do %>
+                  <%= render "hotel_portal/guest_content/documents/reindex_button",
+                        document: @document, label: "Try again" %>
+                <% end %>
+              <% end %>
+            <% end %>
+          <% end %>
+
+          <dl class="divide-y divide-border rounded-md border border-border bg-muted/30 text-sm">
+            <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+              <dt class="text-muted-foreground">Status</dt>
+              <dd><%= render PanelsUI::Badge.new(label: state.first, variant: state.last, size: :sm) %></dd>
+            </div>
+            <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+              <dt class="text-muted-foreground">Effective date</dt>
+              <dd class="text-foreground"><%= @document.effective_date&.to_fs(:long) || "Always applies" %></dd>
+            </div>
+            <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+              <dt class="text-muted-foreground">Tags</dt>
+              <dd class="text-right text-foreground"><%= @document.tags.presence&.to_sentence || "None" %></dd>
+            </div>
+            <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+              <dt class="text-muted-foreground">Updated</dt>
+              <dd class="text-foreground"><%= @document.updated_at.to_fs(:short) %></dd>
+            </div>
+          </dl>
+
+          <%= render "hotel_portal/guest_content/documents/detail_body", document: @document %>
+
+          <%= render "hotel_portal/guest_content/documents/prepared_sections",
+                document: @document, chunks: @chunks %>
+        </div>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Close
+        <% end %>
+        <% if can_reindex && @document.embedding_status != "failed" %>
+          <%= render "hotel_portal/guest_content/documents/reindex_button",
+                document: @document, label: "Prepare content" %>
+        <% end %>
+        <%= render PanelsUI::Button.new(label: "Edit", as: :a, href: kb_edit_path(@document), size: :sm,
+              data: { turbo_frame: frame_id }) %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

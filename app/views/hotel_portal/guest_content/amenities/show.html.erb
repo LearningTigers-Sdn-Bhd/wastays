@@ -1,0 +1,76 @@
+<% section_actions = capture do %>
+  <%= render PanelsUI::Button.new(
+        href: edit_hotel_amenity_selection_path(@hotel),
+        variant: :secondary,
+        size: :sm,
+        data: { turbo_frame: "settings_action_sheet" }) do %>
+    <%= app_icon "settings-2", class: "size-4", aria: { hidden: true } %>
+    Manage amenities
+  <% end %>
+<% end %>
+<%= render "hotel_portal/guest_content/shared/section_header",
+      title: "Amenities",
+      description: "Add the details that guests commonly ask about: where the amenity is, when it opens, and what it costs.",
+      actions: section_actions %>
+
+<% if @rows.any? %>
+  <%= render PanelsUI::Table.new(
+        caption: "Amenities and their guest details",
+        header_style: :sentence,
+        striped: true,
+        hoverable: true,
+        bordered: true,
+        wrapper_class: "rounded-md border border-border bg-card",
+        class: "min-w-[860px]",
+        data: { testid: "amenities-table" }) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Amenity</th>
+        <th scope="col">Location</th>
+        <th scope="col">Opening hours</th>
+        <th scope="col">Fee</th>
+        <th scope="col">Status</th>
+        <th scope="col" class="text-right">Actions</th>
+      </tr>
+    <% end %>
+
+    <% table.with_body do %>
+      <% @rows.each do |row| %>
+        <tr id="amenity-row-<%= row.id %>">
+          <th scope="row" class="font-medium text-foreground">
+            <%= row.name %>
+            <p class="mt-1 text-xs font-normal text-muted-foreground"><%= row.category %></p>
+          </th>
+          <td class="text-muted-foreground"><%= row.location || "—" %></td>
+          <td class="text-muted-foreground"><%= row.opening_hours || "—" %></td>
+          <td class="text-muted-foreground"><%= row.fee_information || "—" %></td>
+          <td>
+            <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, size: :sm) %>
+          </td>
+          <td class="text-right">
+            <%= render PanelsUI::Button.new(
+                  href: edit_hotel_amenity_detail_path(@hotel, row.amenity),
+                  variant: :secondary,
+                  size: :xs,
+                  aria_label: "Edit guest details for #{row.name}",
+                  data: { turbo_frame: "settings_action_sheet" }) do %>
+              Edit details
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  <% end %>
+<% else %>
+  <%= render PanelsUI::EmptyState.new(
+        title: "No amenities selected",
+        description: "Select the amenities that this property provides. Then add the details that guests ask about.",
+        icon: "sparkles") do |empty| %>
+    <% empty.with_action do %>
+      <%= render PanelsUI::Button.new(
+            label: "Manage amenities",
+            href: edit_hotel_amenity_selection_path(@hotel),
+            data: { turbo_frame: "settings_action_sheet" }) %>
+    <% end %>
+  <% end %>
+<% end %>

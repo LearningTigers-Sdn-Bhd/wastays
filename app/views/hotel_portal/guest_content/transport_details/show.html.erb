@@ -1,0 +1,55 @@
+<%# Three independent sections, one record. A guest reads them in this order:
+    how to reach the property, how to move after arrival, where to leave the
+    car. Each section is a read view and opens its own sheet, because the
+    columns differ a lot in height and a shared form would save columns the
+    operator never opened. %>
+<div class="grid grid-cols-1 items-start gap-x-8 gap-y-10 lg:grid-cols-3" data-testid="getting-around-layout">
+  <%= render "section",
+        hotel: @hotel,
+        section: "directions",
+        title: "Directions",
+        description: "How guests reach the property.",
+        filled: @transport_detail.directions_present?,
+        rows: [
+          [ "Airport", travel_summary(@transport_detail.airport_distance_km, @transport_detail.airport_travel_minutes) ],
+          [ "Train station", travel_summary(@transport_detail.station_distance_km, @transport_detail.station_travel_minutes) ],
+          [ "City centre", travel_summary(@transport_detail.city_centre_distance_km, @transport_detail.city_centre_travel_minutes) ]
+        ],
+        notes_label: "Written directions",
+        notes: @transport_detail.directions %>
+
+  <%= render "section",
+        hotel: @hotel,
+        section: "transportation",
+        title: "Transportation",
+        description: "Transfers, shuttles, and public transport.",
+        filled: @transport_detail.transportation_present?,
+        rows: [
+          [ "Airport transfer", @transport_detail.airport_transfer_offered? ? "Offered" : "Not offered" ],
+          [ "Transfer price", transfer_price_summary(@transport_detail, @hotel) ],
+          [ "Book before", lead_time_summary(@transport_detail.airport_transfer_lead_hours) ],
+          [ "Shuttle", @transport_detail.shuttle_schedule ],
+          [ "Nearest stop", @transport_detail.nearest_transit_stop ],
+          [ "Pickup point", @transport_detail.pickup_point ]
+        ],
+        notes_label: "Guest notes",
+        notes: @transport_detail.transport_notes %>
+
+  <%= render "section",
+        hotel: @hotel,
+        section: "parking",
+        title: "Parking",
+        description: "Where guests park, and what it costs.",
+        filled: @transport_detail.parking?,
+        rows: [
+          [ "Availability", @transport_detail.parking_label ],
+          [ "Type", @transport_detail.parking_type_label ],
+          [ "Price", parking_price_summary(@transport_detail, @hotel) ],
+          [ "Spaces", @transport_detail.parking_spaces ],
+          [ "Height limit", height_limit_summary(@transport_detail.parking_height_limit_m) ],
+          [ "EV charging", yes_no(@transport_detail.parking_ev_charging?) ],
+          [ "Booking required", yes_no(@transport_detail.parking_booking_required?) ]
+        ],
+        notes_label: "Guest notes",
+        notes: @transport_detail.parking_notes %>
+</div>

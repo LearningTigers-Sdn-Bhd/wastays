@@ -35,6 +35,15 @@
             <% end %>
           <% end %>
 
+          <%# A closed desk still has somebody on call. The number goes in the
+              menu so the guest can dial it without reading back up the thread. %>
+          <% front_desk_status = Concierge::FrontDeskStatusPresenter.new(hotel: hotel) %>
+          <% if !front_desk_status.open? && front_desk_status.duty_manager_phone.present? %>
+            <% menu.with_item(href: "tel:#{front_desk_status.duty_manager_phone.gsub(/\s/, '')}") do %>
+              Call the duty manager
+            <% end %>
+          <% end %>
+
           <% menu.with_item(href: concierge_clear_chat_path(hotel),
                             method: :delete,
                             danger: true,

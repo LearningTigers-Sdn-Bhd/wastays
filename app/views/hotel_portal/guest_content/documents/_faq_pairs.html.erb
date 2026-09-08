@@ -1,0 +1,28 @@
+<%# The question and answer repeater for an FAQ document.
+    The pairs are posted as indexed metadata, not as model attributes, so the
+    fields are named by hand rather than through the form builder.
+%>
+<div data-controller="knowledge-faq-form">
+  <p class="text-sm font-medium text-foreground">Questions and answers</p>
+  <p class="mt-1 text-xs text-muted-foreground">The AI Concierge answers from these pairs.</p>
+
+  <% pairs = document.qa_pairs.presence || [ { "question" => "", "answer" => "" } ] %>
+  <div data-knowledge-faq-form-target="container" class="mt-3 space-y-3">
+    <% pairs.each_with_index do |pair, index| %>
+      <%= render "hotel_portal/guest_content/documents/faq_pair",
+            index: index, question: pair["question"], answer: pair["answer"] %>
+    <% end %>
+  </div>
+
+  <template data-knowledge-faq-form-target="template">
+    <%= render "hotel_portal/guest_content/documents/faq_pair",
+          index: "__INDEX__", question: nil, answer: nil %>
+  </template>
+
+  <%= render PanelsUI::Button.new(
+        as: :button, type: :button, variant: :secondary, size: :sm, class: "mt-3",
+        data: { action: "knowledge-faq-form#add" }) do %>
+    <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+    Add a pair
+  <% end %>
+</div>

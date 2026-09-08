@@ -1,0 +1,113 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% persisted = @network.persisted? %>
+<% form_id = persisted ? "edit-wifi-network-#{@network.id}-form" : "add-wifi-network-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: persisted ? "edit-wifi-network-sheet" : "add-wifi-network-sheet",
+          side: :right,
+          size: :lg,
+          title: persisted ? "Manage Wi-Fi network" : "Add Wi-Fi network",
+          description: persisted ? "Update the network details and guest access rule." : "Store a guest network for hotel operations.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @network,
+                      url: persisted ? hotel_wifi_network_path(@hotel, @network) : hotel_wifi_networks_path(@hotel),
+                      method: persisted ? :patch : :post,
+                      id: form_id,
+                      class: "space-y-6 py-2" do |form| %>
+          <% if @network.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Wi-Fi network could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { @network.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <section class="grid gap-4 sm:grid-cols-2" aria-labelledby="network-details-heading">
+            <h3 id="network-details-heading" class="text-base font-semibold sm:col-span-2">Network details</h3>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :label, label: "Display name", required: true) do |field| %>
+              <% field.with_input(placeholder: "For example, Guest Wi-Fi", autocomplete: "off") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :ssid, label: "Network name", required: true) do |field| %>
+              <% field.with_input(placeholder: "For example, MiloHotel-Guest", autocomplete: "off") %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :security_type, label: "Security") do |field| %>
+              <% field.with_select_menu([["Password protected", "protected"], ["Open network", "open"]], selected: @network.security_type) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(
+                  form: form,
+                  attribute: :password,
+                  label: "Password",
+                  hint: persisted && @network.password.present? ? "A password is saved. Leave this field blank to keep it." : "Required for a protected network.") do |field| %>
+              <% field.with_input(
+                   type: :password,
+                   value: nil,
+                   autocomplete: "one-time-code",
+                   data: {
+                     "1p-ignore": "true",
+                     lpignore: "true",
+                     bwignore: "true",
+                     protonpass_ignore: "true"
+                   }) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :access_scope, label: "Guest access") do |field| %>
+              <% field.with_select_menu(
+                   [["Checked-in guests", "checked_in_guests"], ["Confirmed guests", "confirmed_guests"], ["Staff only", "staff_only"]],
+                   selected: @network.access_scope) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :position, label: "Display order") do |field| %>
+              <% field.with_input(type: :number, min: 0, step: 1) %>
+            <% end %>
+
+            <%= render PanelsUI::FormField.new(form: form, attribute: :connection_instructions, label: "Connection instructions", class: "sm:col-span-2") do |field| %>
+              <% field.with_text_area(rows: 4, placeholder: "Explain how an eligible guest connects.") %>
+            <% end %>
+
+            <div class="space-y-3 sm:col-span-2">
+              <%= render PanelsUI::Switch.new(
+                    form: form,
+                    attribute: :active,
+                    label: "Active network",
+                    description: "Keep this network available for hotel operations.",
+                    disabled: persisted && @network.primary_network?) %>
+              <% if persisted && @network.primary_network? %>
+                <p class="text-xs text-muted-foreground">The primary network must stay active.</p>
+              <% end %>
+              <%= render PanelsUI::Switch.new(form: form, attribute: :primary_network, label: "Primary guest network", description: "Use this network as the main guest Wi-Fi network.") %>
+            </div>
+          </section>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <% if persisted %>
+          <%= button_to "Remove network",
+                hotel_wifi_network_path(@hotel, @network),
+                method: :delete,
+                class: "panel-button panel-button--sm panel-button--destructive me-auto",
+                form: {
+                  data: {
+                    turbo_confirm: "Remove this Wi-Fi network?",
+                    turbo_confirm_title: "Remove #{@network.label}?",
+                    turbo_confirm_text: "Guests and staff will no longer have access to this saved network.",
+                    turbo_confirm_tone: "destructive"
+                  }
+                } %>
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>
+          <%= persisted ? "Save changes" : "Add network" %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

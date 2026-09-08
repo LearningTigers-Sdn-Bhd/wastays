@@ -176,7 +176,7 @@ RSpec.describe "Hotel sidebar navigation states", type: :system do
       expect(page).to have_css("button.panel-sidebar__group-trigger[aria-label='Commercial']", visible: :all)
       expect(page).to have_link("Taxes & Fees", href: hotel_taxes_fees_path(hotel), visible: :all)
       expect(page).to have_link("Finance", href: hotel_banking_details_settings_path(hotel))
-      expect(page).to have_link("Guest Content", href: hotel_ai_concierge_settings_path(hotel))
+      expect(page).to have_link("Guest Content", href: hotel_guest_content_path(hotel))
       expect(page).to have_link("Team", href: hotel_users_path(hotel))
       expect(page).to have_css("a.panel-sidebar__link[aria-current='page']", text: "General")
       expect(page).to have_no_link("Dashboard", href: hotel_dashboard_path(hotel))

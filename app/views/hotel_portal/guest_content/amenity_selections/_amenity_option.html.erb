@@ -1,0 +1,19 @@
+<%# One selectable amenity. The category travels on the wrapper, not on the
+    group, because the Selected group holds rows from every category. %>
+<div data-amenity-selection-target="row"
+     data-amenity-selection-search-value="<%= row.search_value %>"
+     data-amenity-selection-category-value="<%= row.category %>">
+  <%= render PanelsUI::Checkbox.new(
+        name: "hotel[amenities][]",
+        id: "amenity-#{row.id}",
+        value: row.slug,
+        checked: checked,
+        include_hidden: false,
+        label: row.name,
+        description: row.selection_description,
+        variant: :card,
+        data: {
+          amenity_selection_target: "checkbox",
+          action: "change->amenity-selection#updateCount"
+        }) %>
+</div>

@@ -30,6 +30,8 @@ module AiConcierge
             "country" => hotel.country,
             "star_rating" => hotel.star_rating,
             "amenities" => amenity_names,
+            "amenity_details" => amenity_details,
+            "wifi_available" => guest_wifi_available?,
             "summary_text" => summary_text
           )
         end
@@ -56,6 +58,27 @@ module AiConcierge
           end
         end
 
+        def amenity_details
+          hotel.hotel_amenity_details.includes(:amenity).filter_map do |detail|
+            next unless detail.available?
+
+            {
+              "slug" => detail.amenity.slug,
+              "name" => detail.amenity.name,
+              "location" => detail.location,
+              "opening_hours" => detail.opening_hours,
+              "fee_information" => detail.fee_information,
+              "reservation_required" => detail.reservation_required,
+              "reservation_instructions" => detail.reservation_instructions,
+              "guest_notes" => detail.guest_notes
+            }.compact_blank
+          end
+        end
+
+        def guest_wifi_available?
+          hotel.hotel_wifi_networks.active.where(access_scope: %w[checked_in_guests confirmed_guests]).exists?
+        end
+
         def structured_facts
           {
             "name" => hotel.name,
@@ -64,6 +87,8 @@ module AiConcierge
             "country" => hotel.country,
             "star_rating" => hotel.star_rating,
             "amenities" => amenity_names,
+            "amenity_details" => amenity_details,
+            "wifi_available" => guest_wifi_available?,
             "summary_text" => summary_text
           }
         end

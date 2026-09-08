@@ -1,0 +1,13 @@
+<% section_actions = capture do %>
+  <%= render PanelsUI::Button.new(label: "Add FAQ", href: kb_new_path, variant: :primary, size: :sm, data: { turbo_frame: "settings_action_sheet" }) %>
+<% end %>
+<%= render "hotel_portal/guest_content/shared/section_header",
+      title: "FAQs",
+      description: "Keep clear answers to the questions guests ask most often.",
+      actions: section_actions %>
+
+<%= render "hotel_portal/guest_content/documents/documents_table",
+  documents: @documents,
+  add_button_text: "Add FAQ",
+  empty_title: "No FAQs yet",
+  empty_description: "Add a common guest question and its answer." %>

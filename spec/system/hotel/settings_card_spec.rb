@@ -93,8 +93,11 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   it 'shows the AI concierge fields and saves the selected tone' do
     visit hotel_ai_concierge_settings_path(hotel)
 
-    within('section', text: 'AI Concierge Configuration') do
+    within('form', text: 'Guest Chat') do
       expect(page).to have_select('Tone', selected: 'Basic')
+
+      find('summary', text: 'Advanced').click
+
       expect(page).to have_select('AI Provider')
       expect(page).to have_field('API Key')
 

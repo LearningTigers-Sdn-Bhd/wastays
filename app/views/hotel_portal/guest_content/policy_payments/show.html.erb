@@ -1,0 +1,15 @@
+<%= render "hotel_portal/guest_content/policies/document_form",
+      document: policy_document,
+      url: hotel_policy_payments_path(@hotel),
+      section: "payment-and-deposits",
+      title: "Payment and Deposits",
+      description: "Explain when a guest pays, what the hotel holds, and how the hold comes back.",
+      hint: "Words only. An amount the system charges belongs in Payment Methods, not here.",
+      placeholder: "For example, payment is due in full at check-in. We hold a refundable deposit of RM200 and release it within three days of check-out.",
+      covers: [
+        "When payment is due.",
+        "Whether a deposit applies, and how much.",
+        "When the deposit is released.",
+        "Which payment methods the hotel accepts.",
+        "Whether incidental charges need an authorisation."
+      ] %>

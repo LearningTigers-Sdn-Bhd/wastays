@@ -752,10 +752,50 @@ Rails.application.routes.draw do
         end
       end
 
-      scope "guest-content" do
-        get "ai-concierge", to: "settings#index", as: :ai_concierge_settings, defaults: { settings_page: "ai" }
-        patch "ai-concierge", to: "settings#update", defaults: { settings_page: "ai" }
-        resources :knowledge_policies, path: "policies" do
+      # Every Guest Content page lives in one controller namespace. The URLs and
+      # the route helper names stay as they were.
+      scope "guest-content", module: "guest_content" do
+        get "", to: "overview#index", as: :guest_content
+        # Amenities is a table with two sheets over it: one picks the amenities
+        # the property offers, one writes the guest details for a single amenity.
+        resource :guest_amenities, path: "amenities", controller: "amenities", only: %i[show]
+        resource :amenity_selection, path: "amenities/selection", controller: "amenity_selections", only: %i[edit update]
+        resources :amenity_details, path: "amenities/details", controller: "amenity_details", only: %i[edit update]
+        resources :wifi_networks, path: "wifi", except: :show do
+          patch :quick_update, on: :member
+        end
+        resource :guest_arrival_departure, path: "general-info/arrival-departure",
+          controller: "arrival_departures", only: %i[show update]
+        # How a guest reaches the property, and where the guest leaves the car.
+        # One record, three sheets. Each sheet patches its own section so a save
+        # never clears a column the sheet did not show.
+        get "general-info/getting-around", to: "transport_details#show", as: :guest_transport_details
+        get "general-info/getting-around/:section/edit", to: "transport_details#edit",
+          as: :edit_guest_transport_detail, constraints: { section: /directions|transportation|parking/ }
+        patch "general-info/getting-around/:section", to: "transport_details#update",
+          as: :guest_transport_detail, constraints: { section: /directions|transportation|parking/ }
+        get "general-info/additional-information", to: "knowledge_general_infos#additional_information",
+          as: :knowledge_additional_information
+        # Who a guest reaches when the concierge cannot answer, and when.
+        resource :guest_contact, path: "contact-and-escalation",
+          controller: "contacts", only: %i[show update]
+        get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
+        patch "ai-concierge", to: "ai_concierge#update"
+        resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :show, :update ]
+        # Policies is five sub-tabs. Two read the records that already own the
+        # rule, two are single documents on a fixed card, and the last is the
+        # free list for everything a hotel names itself.
+        get "policies", to: "policy_reservations#show", as: :policy_reservations
+        # Room Revenue owns the charge. The sheet here writes the guest note only.
+        resources :policy_reservation_notes, path: "policies/reservation-notes",
+          controller: "policy_reservation_notes", only: %i[edit update]
+        get "policies/rooms", to: "policy_rooms#show", as: :policy_rooms
+        patch "policies/rooms", to: "policy_rooms#update"
+        get "policies/payment-and-deposits", to: "policy_payments#show", as: :policy_payments
+        patch "policies/payment-and-deposits", to: "policy_payments#update"
+        get "policies/house-rules", to: "policy_house_rules#show", as: :policy_house_rules
+        patch "policies/house-rules", to: "policy_house_rules#update"
+        resources :knowledge_policies, path: "policies/other" do
           member { post :reindex }
         end
         resources :knowledge_faqs, path: "faqs" do
@@ -764,7 +804,6 @@ Rails.application.routes.draw do
         resources :knowledge_general_infos, path: "general-info" do
           member { post :reindex }
         end
-        resources :knowledge_diagnostics, path: "knowledge-diagnostics", only: [ :index, :update ]
       end
 
       scope "team" do
@@ -800,10 +839,15 @@ Rails.application.routes.draw do
     get "transaction-codes/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/commercial/room-revenue")
     get "general-ledger-mappings", to: redirect("/hotel/%{hotel_id}/settings/finance/general-ledger-mappings")
     get "general-ledger-mappings/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/finance/general-ledger-mappings/%{id}/edit")
-    get "knowledge_policies", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies")
-    get "knowledge_policies/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/new")
-    get "knowledge_policies/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/%{id}")
-    get "knowledge_policies/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/%{id}/edit")
+    get "knowledge_policies", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other")
+    get "knowledge_policies/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/new")
+    get "knowledge_policies/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/%{id}")
+    get "knowledge_policies/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/%{id}/edit")
+    # The policy list moved down one level when Policies gained sub-tabs. These
+    # run after the sub-tab routes, so they catch only the old document links.
+    get "settings/guest-content/policies/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/new")
+    get "settings/guest-content/policies/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/%{id}"), constraints: { id: /\d+/ }
+    get "settings/guest-content/policies/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/%{id}/edit"), constraints: { id: /\d+/ }
     get "knowledge_faqs", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs")
     get "knowledge_faqs/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs/new")
     get "knowledge_faqs/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs/%{id}")
@@ -812,7 +856,8 @@ Rails.application.routes.draw do
     get "knowledge_general_infos/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/new")
     get "knowledge_general_infos/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/%{id}")
     get "knowledge_general_infos/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/general-info/%{id}/edit")
-    get "knowledge_diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/knowledge-diagnostics")
+    get "knowledge_diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/ai-concierge/healthcheck")
+    get "settings/guest-content/knowledge-diagnostics", to: redirect("/hotel/%{hotel_id}/settings/guest-content/ai-concierge/healthcheck")
     get "staff", to: redirect("/hotel/%{hotel_id}/settings/team/staff")
     # Invite is a Sheet over the list now, so the old deep link lands on the list.
     get "staff/new", to: redirect("/hotel/%{hotel_id}/settings/team/staff")

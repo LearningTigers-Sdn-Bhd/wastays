@@ -1,7 +1,8 @@
 <div class="w-full space-y-4">
-  <%= render PanelsUI::PageHeader.new(title: "Taxes & Fees", description: "Configure booking taxes, service fees, and property tax settings.") %>
-
-  <%= render "hotel_portal/settings/group_tabs" %>
+  <div class="space-y-4">
+    <%= render PanelsUI::PageHeader.new(title: "Taxes & Fees", description: "Configure booking taxes, service fees, and property tax settings.") %>
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
 
   <div data-testid="taxes-fees-content">
     <%= render PanelsUI::Tabs.new(
