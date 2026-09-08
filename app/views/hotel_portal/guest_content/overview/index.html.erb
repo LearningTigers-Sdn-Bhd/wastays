@@ -17,7 +17,7 @@
         value: @presenter.knowledge_documents_count,
         detail: "Policies, FAQs and hotel info",
         icon: "file-text",
-        href: hotel_knowledge_policies_path(@hotel),
+        href: hotel_policy_reservations_path(@hotel),
         density: :compact) %>
 
   <% if ai_enabled %>
@@ -51,7 +51,7 @@
   <div class="<%= "lg:col-span-1" if ai_enabled %>" role="region" aria-label="Content readiness">
     <% section_paths = {
          general_info: hotel_knowledge_general_infos_path(@hotel),
-         policy: hotel_knowledge_policies_path(@hotel),
+         policy: hotel_policy_reservations_path(@hotel),
          faq: hotel_knowledge_faqs_path(@hotel),
          amenity: hotel_guest_amenities_path(@hotel),
          wifi: hotel_wifi_networks_path(@hotel),
@@ -96,7 +96,7 @@
           <% table.with_body do %>
             <% @presenter.recent_questions.each do |diagnostic| %>
               <% path = case diagnostic.suggested_category
-                 when "policy" then hotel_knowledge_policies_path(@hotel)
+                 when "policy" then hotel_policy_reservations_path(@hotel)
                  when "faq" then hotel_knowledge_faqs_path(@hotel)
                  else hotel_knowledge_general_infos_path(@hotel)
                  end %>

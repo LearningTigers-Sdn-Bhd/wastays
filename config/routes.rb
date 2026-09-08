@@ -774,7 +774,17 @@ Rails.application.routes.draw do
         get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
         patch "ai-concierge", to: "ai_concierge#update"
         resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :show, :update ]
-        resources :knowledge_policies, path: "policies" do
+        # Policies is five sub-tabs. Two read the records that already own the
+        # rule, two are single documents on a fixed card, and the last is the
+        # free list for everything a hotel names itself.
+        get "policies", to: "policy_reservations#show", as: :policy_reservations
+        get "policies/rooms", to: "policy_rooms#show", as: :policy_rooms
+        patch "policies/rooms", to: "policy_rooms#update"
+        get "policies/payment-and-deposits", to: "policy_payments#show", as: :policy_payments
+        patch "policies/payment-and-deposits", to: "policy_payments#update"
+        get "policies/house-rules", to: "policy_house_rules#show", as: :policy_house_rules
+        patch "policies/house-rules", to: "policy_house_rules#update"
+        resources :knowledge_policies, path: "policies/other" do
           member { post :reindex }
         end
         resources :knowledge_faqs, path: "faqs" do
@@ -818,10 +828,15 @@ Rails.application.routes.draw do
     get "transaction-codes/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/commercial/room-revenue")
     get "general-ledger-mappings", to: redirect("/hotel/%{hotel_id}/settings/finance/general-ledger-mappings")
     get "general-ledger-mappings/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/finance/general-ledger-mappings/%{id}/edit")
-    get "knowledge_policies", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies")
-    get "knowledge_policies/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/new")
-    get "knowledge_policies/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/%{id}")
-    get "knowledge_policies/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/%{id}/edit")
+    get "knowledge_policies", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other")
+    get "knowledge_policies/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/new")
+    get "knowledge_policies/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/%{id}")
+    get "knowledge_policies/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/%{id}/edit")
+    # The policy list moved down one level when Policies gained sub-tabs. These
+    # run after the sub-tab routes, so they catch only the old document links.
+    get "settings/guest-content/policies/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/new")
+    get "settings/guest-content/policies/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/%{id}"), constraints: { id: /\d+/ }
+    get "settings/guest-content/policies/:id/edit", to: redirect("/hotel/%{hotel_id}/settings/guest-content/policies/other/%{id}/edit"), constraints: { id: /\d+/ }
     get "knowledge_faqs", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs")
     get "knowledge_faqs/new", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs/new")
     get "knowledge_faqs/:id", to: redirect("/hotel/%{hotel_id}/settings/guest-content/faqs/%{id}")

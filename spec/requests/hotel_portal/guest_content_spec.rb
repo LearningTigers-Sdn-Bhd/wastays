@@ -367,7 +367,11 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
       get path
 
       body = Nokogiri::HTML(response.body).at_css("[data-testid='guest-content-body']")
-      first_section = body.css("> div").find { |node| node.at_css("h2") && !node["class"].to_s.include?("panel-page-header") }
+      first_section = body.css("> div").find do |node|
+        node.at_css("h2") &&
+          !node["class"].to_s.include?("panel-page-header") &&
+          node["data-testid"] != "guest-content-subtab-header"
+      end
       expect(first_section.css(".panel-button").map { |button| button.text.squish }).to eq(labels), "#{path} section actions are wrong"
     end
   end

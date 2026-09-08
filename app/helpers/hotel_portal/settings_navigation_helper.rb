@@ -68,12 +68,24 @@ module HotelPortal
       guest_content_page?("knowledge_general_infos") || guest_content_page?("arrival_departures")
     end
 
+    def policies_page?
+      guest_content_page?("policy_reservations") || guest_content_page?("policy_rooms") ||
+        guest_content_page?("policy_payments") || guest_content_page?("policy_house_rules") ||
+        guest_content_page?("knowledge_policies")
+    end
+
     def guest_content_subtab_section
       if hotel_information_page?
         {
           title: "Hotel Information",
           description: "Manage the property summary, stay instructions, and additional information shared with guests.",
           aria_label: "Hotel information sections"
+        }
+      elsif policies_page?
+        {
+          title: "Policies",
+          description: "Keep hotel policies and house rules clear for staff and guests. A policy explains a rule. It never restates a number set elsewhere.",
+          aria_label: "Policy sections"
         }
       elsif ai_concierge_page?
         {
@@ -90,6 +102,16 @@ module HotelPortal
           { key: "property-summary", label: "Property Summary", icon: "building-2", path: hotel_knowledge_general_infos_path(current_hotel), active: guest_content_page?("knowledge_general_infos") && action_name == "index" },
           { key: "arrival-departure", label: "Arrival & Departure", icon: "arrow-right-left", path: hotel_guest_arrival_departure_path(current_hotel), active: guest_content_page?("arrival_departures") },
           { key: "additional-information", label: "Additional Information", icon: "file-text", path: hotel_knowledge_additional_information_path(current_hotel), active: guest_content_page?("knowledge_general_infos") && action_name != "index" }
+        ]
+      end
+
+      if policies_page?
+        return [
+          { key: "reservation", label: "Reservation", icon: "calendar-x", path: hotel_policy_reservations_path(current_hotel), active: guest_content_page?("policy_reservations") },
+          { key: "room", label: "Room", icon: "bed-double", path: hotel_policy_rooms_path(current_hotel), active: guest_content_page?("policy_rooms") },
+          { key: "payment", label: "Payment & Deposits", icon: "credit-card", path: hotel_policy_payments_path(current_hotel), active: guest_content_page?("policy_payments") },
+          { key: "house-rules", label: "House Rules", icon: "scroll-text", path: hotel_policy_house_rules_path(current_hotel), active: guest_content_page?("policy_house_rules") },
+          { key: "other", label: "Other Policies", icon: "files", path: hotel_knowledge_policies_path(current_hotel), active: guest_content_page?("knowledge_policies") }
         ]
       end
 
@@ -203,7 +225,7 @@ module HotelPortal
         [
           { key: "overview", label: "Overview", path: hotel_guest_content_path(current_hotel), icon: "layout-dashboard", active: guest_content_page?("overview") },
           { key: "hotel-info", label: "Hotel Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: hotel_information_page? },
-          { key: "policies", label: "Policies", path: hotel_knowledge_policies_path(current_hotel), icon: "file-text", active: guest_content_page?("knowledge_policies") },
+          { key: "policies", label: "Policies", path: hotel_policy_reservations_path(current_hotel), icon: "file-text", active: policies_page? },
           { key: "faqs", label: "FAQs", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: guest_content_page?("knowledge_faqs") },
           { key: "amenities", label: "Amenities", path: hotel_guest_amenities_path(current_hotel), icon: "sparkles", active: guest_content_page?("amenities") },
           { key: "wifi", label: "Wi-Fi", path: hotel_wifi_networks_path(current_hotel), icon: "wifi", active: guest_content_page?("wifi_networks") },

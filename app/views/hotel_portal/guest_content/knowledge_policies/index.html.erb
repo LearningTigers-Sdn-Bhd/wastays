@@ -2,12 +2,12 @@
   <%= render PanelsUI::Button.new(label: "Add Policy", href: kb_new_path, variant: :primary, size: :sm) %>
 <% end %>
 <%= render "hotel_portal/guest_content/shared/section_header",
-      title: "Policies",
-      description: "Keep hotel policies and house rules clear for staff and guests.",
+      title: "Other Policies",
+      description: "Anything the four sections above do not cover. Group and event terms, accessibility, parking, laundry, and any policy you name yourself.",
       actions: section_actions %>
 
 <%= render "hotel_portal/guest_content/documents/documents_table",
   documents: @documents,
   add_button_text: "Add Policy",
-  empty_title: "No policies yet",
-  empty_description: "Add the policies guests most often need to know." %>
+  empty_title: "No other policies yet",
+  empty_description: "Add a policy that the four sections above do not cover." %>
