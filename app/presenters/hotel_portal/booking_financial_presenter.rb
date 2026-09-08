@@ -4,6 +4,20 @@ module HotelPortal
   class BookingFinancialPresenter
     include ActionView::Helpers::NumberHelper
 
+    STATUS_PRESENTATION = {
+      "pending" => { label: "Pending", variant: :neutral },
+      "confirmed" => { label: "Confirmed", variant: :info },
+      "no_show_detected" => { label: "No-show detected", variant: :warning },
+      "checked_in" => { label: "In house", variant: :success },
+      "due_out_detected" => { label: "Due-out detected", variant: :warning },
+      "checkout_required" => { label: "Checkout due", variant: :warning },
+      "cancelled" => { label: "Cancelled", variant: :destructive },
+      "completed" => { label: "Checked out", variant: :neutral },
+      "overbooked" => { label: "Overbooked", variant: :destructive },
+      "no_show" => { label: "No-show", variant: :destructive },
+      "voided" => { label: "Voided", variant: :destructive }
+    }.freeze
+
     attr_reader :booking
 
     def initialize(booking)
@@ -24,6 +38,14 @@ module HotelPortal
 
     def status
       @booking.status
+    end
+
+    def status_label
+      status_presentation.fetch(:label)
+    end
+
+    def status_badge_variant
+      status_presentation.fetch(:variant)
     end
 
     def total_amount
@@ -47,6 +69,10 @@ module HotelPortal
     end
 
     private
+
+    def status_presentation
+      STATUS_PRESENTATION.fetch(status) { { label: status.to_s.humanize, variant: :neutral } }
+    end
 
     def format_currency(amount)
       "#{@booking.currency} #{format_money(amount)}"

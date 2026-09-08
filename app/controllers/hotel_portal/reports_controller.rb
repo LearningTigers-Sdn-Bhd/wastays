@@ -19,6 +19,7 @@ module HotelPortal
     REPORT_SECTION_PAGE_SIZE = 15
     DAILY_REPORT_PAGE_SIZE = 50
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
+    FINANCIAL_BREAKDOWN_COLLECTORS = %w[wastays hotel].freeze
     OTA_SETTLEMENT_STATUS_FILTERS = {
       "all" => nil,
       "outstanding" => %w[awaiting_ota_settlement virtual_card_not_ready ready_to_charge partially_received underpaid unknown],
@@ -157,6 +158,8 @@ module HotelPortal
         @end_date,
         params[:q]
       )
+      @fund_collector = params[:fund_collector].presence_in(FINANCIAL_BREAKDOWN_COLLECTORS)
+      @bookings = @bookings.where(fund_collector: @fund_collector) if @fund_collector
 
       respond_to do |format|
         format.html do

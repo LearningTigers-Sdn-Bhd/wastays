@@ -23,11 +23,11 @@
           export_menu_id: "financial-breakdown-export",
           export_items: [],
           show_export: false,
-          hidden_params: { q: params[:q] },
+          hidden_params: { q: params[:q], fund_collector: @fund_collector },
           class_name: "flex w-full flex-col gap-2 sm:flex-row sm:items-end lg:w-auto" %>
 
         <%= form_with url: breakdown_hotel_reports_path(current_hotel), method: :get,
-              class: "w-full lg:min-w-64 lg:flex-1",
+              class: "grid w-full gap-3 sm:grid-cols-[minmax(0,1fr)_14rem] lg:min-w-96 lg:flex-1",
               data: { controller: "auto-submit", turbo_frame: "breakdown_results" } do |form| %>
           <%= hidden_field_tag :date_preset, @date_preset %>
           <%= hidden_field_tag :start_date, @start_date %>
@@ -39,34 +39,44 @@
                  placeholder: "Guest, email, booking number, or confirmation code…",
                  data: { action: "input->auto-submit#submit" }) %>
           <% end %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :fund_collector, label: "Payment collected by") do |field| %>
+            <% field.with_select_menu(
+                 [
+                   { label: "All bookings", value: "" },
+                   { label: "WAStays", value: "wastays" },
+                   { label: "Hotel", value: "hotel" }
+                 ],
+                 selected: @fund_collector,
+                 data: { action: "change->auto-submit#submitNow" }) %>
+          <% end %>
         <% end %>
 
         <% if feature_enabled_for_hotel?("excel_pdf_export") %>
           <%= render "export_dropdown", menu_id: "financial-breakdown-export", items: [
-            ["Export PDF", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :pdf)],
-            ["Export Excel", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :xlsx)],
-            ["Export CSV", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], date_preset: @date_preset, format: :csv)]
+            ["Export PDF", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], fund_collector: @fund_collector, date_preset: @date_preset, format: :pdf)],
+            ["Export Excel", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], fund_collector: @fund_collector, date_preset: @date_preset, format: :xlsx)],
+            ["Export CSV", breakdown_hotel_reports_path(current_hotel, start_date: @start_date, end_date: @end_date, q: params[:q], fund_collector: @fund_collector, date_preset: @date_preset, format: :csv)]
           ] %>
         <% end %>
       </div>
     </section>
 
-    <% @financial_breakdown_report.currency_totals.each do |totals| %>
-      <% currency = totals.fetch(:currency) %>
-      <% format_amount = ->(amount) { number_to_currency(amount, unit: "#{currency} ", format: "%u%n") } %>
-      <section class="space-y-3" aria-labelledby="financial-breakdown-<%= currency.parameterize %>-summary">
-        <h2 id="financial-breakdown-<%= currency.parameterize %>-summary" class="text-base font-semibold text-foreground">
-          <%= currency %> summary
-        </h2>
-        <%= render HotelPortal::Reports::MetricStrip.new(
-              aria_label: "#{currency} financial summary",
-              metrics: [
-                { label: "Gross price", value: format_amount.call(totals.fetch(:gross)), detail: pluralize(totals.fetch(:booking_count), "booking") },
-                { label: "Taxes", value: format_amount.call(totals.fetch(:taxes)), detail: "Included in gross price" },
-                { label: "Commission", value: format_amount.call(totals.fetch(:margin)), detail: "WAStays commission" },
-                { label: "Net payout", value: format_amount.call(totals.fetch(:net)), detail: "Gross price less commission" }
-              ]
-            ) %>
+    <% if @financial_breakdown_report.currency_totals.any? %>
+      <section class="space-y-3" aria-labelledby="financial-summary-heading">
+        <h2 id="financial-summary-heading" class="text-base font-semibold text-foreground">Financial summary</h2>
+        <% @financial_breakdown_report.currency_totals.each do |totals| %>
+          <% currency = totals.fetch(:currency) %>
+          <% format_amount = ->(amount) { number_to_currency(amount, unit: "#{currency} ", format: "%u%n") } %>
+          <%= render HotelPortal::Reports::MetricStrip.new(
+                aria_label: "#{currency} financial summary",
+                metrics: [
+                  { label: "Gross price", value: format_amount.call(totals.fetch(:gross)), detail: pluralize(totals.fetch(:booking_count), "booking") },
+                  { label: "Taxes", value: format_amount.call(totals.fetch(:taxes)), detail: "Included in gross price" },
+                  { label: "Commission", value: format_amount.call(totals.fetch(:margin)), detail: "WAStays commission" },
+                  { label: "Net payout", value: format_amount.call(totals.fetch(:net)), detail: "Gross price less commission" }
+                ]
+              ) %>
+        <% end %>
       </section>
     <% end %>
 
@@ -93,15 +103,6 @@
         <% end %>
         <% table.with_body do %>
           <% if @grouped_bookings.any? %>
-            <% status_variants = {
-              "confirmed" => :success,
-              "no_show_detected" => :warning,
-              "checked_in" => :info,
-              "completed" => :success,
-              "cancelled" => :destructive,
-              "no_show" => :warning,
-              "pending" => :warning
-            } %>
             <% @grouped_bookings.each do |date, bookings| %>
               <tr class="bg-muted/55" data-slot="<%= @date_preset == 'this_year' ? 'report-month-group' : 'report-date-group' %>">
                 <th scope="rowgroup" colspan="7" class="text-xs font-semibold text-muted-foreground">
@@ -122,10 +123,9 @@
                   <td class="font-medium text-foreground"><%= presenter.guest_name %></td>
                   <td class="whitespace-nowrap">
                     <%= render PanelsUI::Badge.new(
-                          label: presenter.status,
-                          variant: status_variants.fetch(presenter.status, :neutral),
-                          size: :lg,
-                          shape: :rounded
+                          label: presenter.status_label,
+                          variant: presenter.status_badge_variant,
+                          size: :sm
                         ) %>
                   </td>
                   <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground"><%= presenter.total_amount %></td>

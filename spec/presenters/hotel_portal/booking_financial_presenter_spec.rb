@@ -32,6 +32,13 @@ RSpec.describe HotelPortal::BookingFinancialPresenter do
     end
   end
 
+  describe "status presentation" do
+    it "provides the shared badge label and variant" do
+      expect(presenter.status_label).to eq("Confirmed")
+      expect(presenter.status_badge_variant).to eq(:info)
+    end
+  end
+
   describe "#total_amount" do
     it "formats the total amount" do
       expect(presenter.total_amount).to eq("MYR 100.50")

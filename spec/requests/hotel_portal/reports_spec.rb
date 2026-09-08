@@ -2223,6 +2223,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response.body).to include("20.00")
       expect(page).to have_css("[data-slot='report-page'][data-report='financial-breakdown']")
       expect(page).to have_css(".panel-form-field[data-size='md'] input[type='search']")
+      expect(page).to have_select("fund_collector", options: [ "All bookings", "WAStays", "Hotel" ])
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("[data-slot='report-date-group']", text: "06 May 2026")
       expect(page).to have_link(
@@ -2253,6 +2254,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       caption = page.find(".panel-page-header__caption")
       expect(caption).to have_text(hotel.name)
       expect(caption).to have_text("01 May 2026 - 31 May 2026")
+      expect(page).to have_css("h2", exact_text: "Financial summary", count: 0)
       expect(page.all("table.panel-table thead th").map(&:text)).to eq(
         [ "Booking", "Guest name", "Status", "Gross price", "Taxes", "Commission", "Net payout" ]
       )
@@ -2283,6 +2285,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get breakdown_hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
 
       page = Capybara.string(response.body)
+      expect(page).to have_css("h2", exact_text: "Financial summary", count: 1)
+      expect(page).to have_no_css("h2", text: "MYR summary")
+      expect(page).to have_no_css("h2", text: "USD summary")
       summaries = page.all("[data-slot='report-metric-strip']")
       expect(summaries.map { |summary| summary["aria-label"] }).to eq([ "MYR financial summary", "USD financial summary" ])
       [ "MYR 216.00", "MYR 16.00", "MYR 20.00", "MYR 196.00" ].each do |amount|
@@ -2291,6 +2296,46 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       [ "USD 108.00", "USD 8.00", "USD 10.00", "USD 98.00" ].each do |amount|
         expect(summaries.last).to have_text(amount)
       end
+    end
+
+    it "filters bookings by who collected the payment" do
+      wastays_booking = create(
+        :booking,
+        hotel: hotel,
+        guest_name: "Public Booking Guest",
+        fund_collector: "wastays",
+        total_amount: 108,
+        margin_amount: 10,
+        net_amount: 98,
+        created_at: Time.zone.local(2026, 5, 6, 12, 0)
+      )
+      hotel_booking = create(
+        :booking,
+        hotel: hotel,
+        guest_name: "PMS Booking Guest",
+        fund_collector: "hotel",
+        total_amount: 100,
+        margin_amount: nil,
+        net_amount: nil,
+        created_at: Time.zone.local(2026, 5, 6, 13, 0)
+      )
+      filters = {
+        date_preset: "custom",
+        start_date: "2026-05-01",
+        end_date: "2026-05-31",
+        fund_collector: "wastays"
+      }
+
+      get breakdown_hotel_reports_path(hotel), params: filters
+
+      page = Capybara.string(response.body)
+      expect(page).to have_text(wastays_booking.guest_name)
+      expect(page).to have_no_text(hotel_booking.guest_name)
+      expect(page).to have_select("fund_collector", selected: "WAStays")
+      expect(page).to have_link(
+        "Export CSV",
+        href: breakdown_hotel_reports_path(hotel, **filters, format: :csv)
+      )
     end
 
     it "calculates summary metrics from all filtered rows beyond the displayed page" do
@@ -2316,13 +2361,13 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("tbody tr:not([data-slot='report-date-group'])", count: 25)
     end
 
-    it "renders essential booking status at a readable badge size" do
+    it "renders the booking status with the shared badge presentation" do
       create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 320, margin_amount: 30, net_amount: 290)
 
       get breakdown_hotel_reports_path(hotel)
 
       page = Capybara.string(response.body)
-      expect(page).to have_css(".panel-badge-rounded[data-size='lg']", text: "confirmed")
+      expect(page).to have_css(".panel-badge[data-size='sm'][data-variant='info']", text: "Confirmed")
     end
 
     it "exports xlsx and pdf" do
