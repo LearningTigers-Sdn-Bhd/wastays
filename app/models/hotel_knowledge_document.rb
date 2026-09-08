@@ -44,6 +44,17 @@ class HotelKnowledgeDocument < ApplicationRecord
     update_embedding_state!("indexing")
   end
 
+  # An FAQ posts its pairs from indexed form fields, which Rails hands back as a
+  # Hash keyed by position. Records saved before that shape was flattened still
+  # hold the Hash, so every reader comes through here instead of testing the
+  # shape again in each view.
+  def qa_pairs
+    raw = metadata&.dig("qa_pairs")
+    raw = raw.values if raw.is_a?(Hash)
+
+    Array(raw).grep(Hash)
+  end
+
   private
 
   def update_embedding_state!(status)

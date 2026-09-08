@@ -1,5 +1,5 @@
 <% section_actions = capture do %>
-  <%= render PanelsUI::Button.new(label: "Add Policy", href: kb_new_path, variant: :primary, size: :sm) %>
+  <%= render PanelsUI::Button.new(label: "Add Policy", href: kb_new_path, variant: :primary, size: :sm, data: { turbo_frame: "settings_action_sheet" }) %>
 <% end %>
 <%= render "hotel_portal/guest_content/shared/section_header",
       title: "Other Policies",

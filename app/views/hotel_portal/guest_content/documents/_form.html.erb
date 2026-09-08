@@ -1,120 +1,108 @@
+<%# The body of the create and edit sheets. The submit button lives in the
+    sheet footer and reaches this form by id, so nothing here renders one.
+
+    Locals: document, form_id.
+%>
 <%= form_with model: document,
-            url: document.new_record? ? kb_index_path : kb_show_path(document),
-            method: document.new_record? ? :post : :patch,
-            local: true,
-            data: { controller: "knowledge-document" } do |f| %>
-  <div class="grid gap-y-6">
-    <div>
-      <%= f.label :title, "Document Title", class: "block text-sm mb-2 font-medium text-foreground" %>
-      <%= f.text_field :title, class: "py-3 px-4 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm", required: true, placeholder: "e.g. Cancellation Policy, Check-in FAQ" %>
-    </div>
-
-    <details class="rounded-md border border-border bg-muted/30">
-      <summary class="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-foreground">Advanced</summary>
-      <div class="space-y-5 border-t border-border p-4">
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div>
-        <%= f.label :source_type, "Source Type", class: "block text-sm mb-2 font-medium text-foreground" %>
-        <%= f.select :source_type, options_for_select([["Text", "text"], ["PDF Upload", "pdf"]], document.source_type || "text"), { include_blank: false },
-              class: "py-3 px-4 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm",
-              data: { action: "change->knowledge-document#toggleSourceType", knowledge_document_target: "sourceType" } %>
-      </div>
-
-      <div>
-        <%= f.label :language, class: "block text-sm mb-2 font-medium text-foreground" %>
-        <%= f.select :language, options_for_select([["English", "en"], ["Malay", "ms"], ["Chinese", "zh"], ["Hindi", "hi"]], document.persisted? ? document.language : "en"), { include_blank: false },
-              class: "py-3 px-4 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm" %>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div>
-        <%= f.label :effective_date, "Effective Date (optional)", class: "block text-sm mb-2 font-medium text-foreground" %>
-        <%= f.date_field :effective_date, class: "py-3 px-4 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm" %>
-        <p class="mt-1 text-xs text-muted-foreground">Leave blank if the information is always relevant.</p>
-      </div>
-
-      <div>
-        <%= f.label :tags, class: "block text-sm mb-2 font-medium text-foreground" %>
-        <%= f.text_field :tags, value: document.tags.join(", "), class: "py-3 px-4 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm", placeholder: "comma, separated, tags" %>
-        <p class="mt-1 text-xs text-muted-foreground">Separate tags with commas.</p>
-      </div>
-    </div>
-
-    <div data-knowledge-document-target="pdfUpload" class="hidden">
-      <%= f.label :file, "Upload PDF", class: "block text-sm mb-2 font-medium text-foreground" %>
-      <%= f.file_field :file, accept: "application/pdf", class: "py-3 px-4 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm" %>
-      <% if document.file.attached? %>
-        <p class="mt-2 text-sm text-muted-foreground font-medium">Current file: <%= link_to document.file.filename, url_for(document.file), target: "_blank", rel: "noopener", class: "text-primary hover:underline" %></p>
+              url: document.new_record? ? kb_index_path : kb_show_path(document),
+              method: document.new_record? ? :post : :patch,
+              id: form_id,
+              class: "space-y-5",
+              data: {
+                controller: "knowledge-document",
+                knowledge_document_source_type_value: document.source_type.presence || "text"
+              } do |f| %>
+  <% if document.errors.any? %>
+    <%= render PanelsUI::Alert.new(tone: :destructive, title: "This #{kb_label.downcase} could not be saved", role: :alert) do |alert| %>
+      <% alert.with_description do %>
+        <ul class="list-disc space-y-1 ps-5">
+          <% document.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
       <% end %>
-    </div>
-      </div>
-    </details>
+    <% end %>
+  <% end %>
 
-    <div data-knowledge-document-target="textContent">
-      <% if document.category == "faq" %>
-        <div data-controller="knowledge-faq-form">
-          <label class="block text-sm mb-2 font-medium text-foreground">Question & Answer Pairs</label>
-          <p class="mb-3 text-xs text-muted-foreground">Add question and answer pairs for the AI concierge.</p>
+  <%= render PanelsUI::FormField.new(
+        form: f,
+        attribute: :title,
+        label: "Title",
+        hint: "What a guest would call this. It is the name staff see in the list.",
+        required: true) do |field| %>
+    <% field.with_input(placeholder: "Parking and valet", autocomplete: "off", required: true) %>
+  <% end %>
 
-          <div data-knowledge-faq-form-target="container" class="space-y-4">
-            <% existing_pairs = document.metadata&.dig("qa_pairs") %>
-            <% if existing_pairs.present? %>
-              <% existing_pairs.each_with_index do |pair, idx| %>
-                <div class="rounded-md border border-border bg-muted/50 p-4" data-qa-pair>
-                  <div class="mb-3">
-                    <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Question</label>
-                    <textarea name="hotel_knowledge_document[metadata][qa_pairs][<%= idx %>][question]" rows="2" class="py-2 px-3 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm" placeholder="e.g. What time is check-in?"><%= pair["question"] %></textarea>
-                  </div>
-                  <div class="mb-3">
-                    <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Answer</label>
-                    <textarea name="hotel_knowledge_document[metadata][qa_pairs][<%= idx %>][answer]" rows="3" class="py-2 px-3 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm font-mono" placeholder="e.g. Check-in starts at 3:00 PM."><%= pair["answer"] %></textarea>
-                  </div>
-                  <button type="button" data-action="knowledge-faq-form#remove" class="text-xs font-bold text-red-600 hover:text-red-800">Remove pair</button>
-                </div>
-              <% end %>
-            <% else %>
-              <div class="rounded-md border border-border bg-muted/50 p-4" data-qa-pair>
-                <div class="mb-3">
-                  <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Question</label>
-                  <textarea name="hotel_knowledge_document[metadata][qa_pairs][0][question]" rows="2" class="py-2 px-3 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm" placeholder="e.g. What time is check-in?"></textarea>
-                </div>
-                <div class="mb-3">
-                  <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Answer</label>
-                  <textarea name="hotel_knowledge_document[metadata][qa_pairs][0][answer]" rows="3" class="py-2 px-3 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm font-mono" placeholder="e.g. Check-in starts at 3:00 PM."></textarea>
-                </div>
-                <button type="button" data-action="knowledge-faq-form#remove" class="text-xs font-bold text-red-600 hover:text-red-800">Remove pair</button>
-              </div>
-            <% end %>
-          </div>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :source_type,
+          label: "Source",
+          hint: "Type the text, or upload a PDF the hotel already has.") do |field| %>
+      <% field.with_select_menu(
+           [ { label: "Text", value: "text" }, { label: "PDF upload", value: "pdf" } ],
+           selected: document.source_type.presence || "text",
+           data: { action: "change->knowledge-document#sourceTypeChanged" }) %>
+    <% end %>
 
-          <template data-knowledge-faq-form-target="template">
-            <div class="rounded-md border border-border bg-muted/50 p-4" data-qa-pair>
-              <div class="mb-3">
-                <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Question</label>
-                <textarea name="hotel_knowledge_document[metadata][qa_pairs][__INDEX__][question]" rows="2" class="py-2 px-3 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm" placeholder="e.g. What time is check-in?"></textarea>
-              </div>
-              <div class="mb-3">
-                <label class="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Answer</label>
-                <textarea name="hotel_knowledge_document[metadata][qa_pairs][__INDEX__][answer]" rows="3" class="py-2 px-3 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm font-mono" placeholder="e.g. Check-in starts at 3:00 PM."></textarea>
-              </div>
-              <button type="button" data-action="knowledge-faq-form#remove" class="text-xs font-bold text-red-600 hover:text-red-800">Remove pair</button>
-            </div>
-          </template>
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :language,
+          label: "Language") do |field| %>
+      <% field.with_select_menu(
+           [
+             { label: "English", value: "en" },
+             { label: "Malay", value: "ms" },
+             { label: "Chinese", value: "zh" },
+             { label: "Hindi", value: "hi" }
+           ],
+           selected: document.persisted? ? document.language : "en") %>
+    <% end %>
+  </div>
 
-          <button type="button" data-action="knowledge-faq-form#add" class="mt-3 inline-flex items-center gap-x-1.5 text-sm font-bold text-blue-600 hover:text-blue-800">
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-            Add Q&A Pair
-          </button>
-        </div>
-      <% else %>
-        <%= f.label :content, class: "block text-sm mb-2 font-medium text-foreground" %>
-        <%= f.text_area :content, rows: 12, class: "py-3 px-4 block w-full border border-border rounded-md text-sm focus:border-border-interactive focus:ring-0 shadow-sm font-mono", placeholder: "Enter the knowledge content here..." %>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :effective_date,
+          label: "Effective date",
+          hint: "Leave it empty when the information always applies.") do |field| %>
+      <% field.with_date_picker(value: document.effective_date&.iso8601, placeholder: "Select a date") %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :tags,
+          label: "Tags",
+          hint: "Separate tags with commas.") do |field| %>
+      <% field.with_input(value: document.tags.join(", "), placeholder: "parking, valet", autocomplete: "off") %>
+    <% end %>
+  </div>
+
+  <div data-knowledge-document-target="pdfUpload" class="hidden">
+    <%= render PanelsUI::FormField.new(
+          form: f,
+          attribute: :file,
+          label: "PDF file") do |field| %>
+      <% field.with_dropzone(accept: "application/pdf", description: "PDF only") %>
+    <% end %>
+    <% if document.file.attached? %>
+      <p class="mt-2 text-sm text-muted-foreground">
+        On file: <%= link_to document.file.filename, url_for(document.file), target: "_blank", rel: "noopener", class: "font-medium text-primary hover:underline" %>
+      </p>
+    <% end %>
+  </div>
+
+  <div data-knowledge-document-target="textContent">
+    <% if document.category == "faq" %>
+      <%= render "hotel_portal/guest_content/documents/faq_pairs", document: document %>
+    <% else %>
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :content,
+            label: "Content",
+            hint: "Write it for a guest to read. The AI Concierge answers from this text.") do |field| %>
+        <% field.with_text_area(rows: 10, placeholder: "Overnight parking is free for in-house guests…") %>
       <% end %>
-    </div>
-
-    <div class="mt-5">
-      <%= f.submit (document.new_record? ? "Add content" : "Save changes"), class: "w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-bold rounded-md border border-transparent bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm transition-all disabled:opacity-50 disabled:pointer-events-none" %>
-    </div>
+    <% end %>
   </div>
 <% end %>

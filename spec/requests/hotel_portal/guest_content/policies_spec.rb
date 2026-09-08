@@ -8,6 +8,8 @@ RSpec.describe "HotelPortal::GuestContent::Policies", type: :request do
   let(:plan) { create(:plan) }
   let(:hotel) { create(:hotel, account: account, status: "live", plan: plan) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
+  let(:sheet_headers) { { "Turbo-Frame" => "settings_action_sheet" } }
+  let(:sheet_submit_headers) { sheet_headers.merge("Accept" => Mime[:turbo_stream].to_s) }
 
   before do
     permission = Permission.find_or_create_by!(slug: "manage_hotel_profile") do |record|
@@ -186,6 +188,136 @@ RSpec.describe "HotelPortal::GuestContent::Policies", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Parking")
+    end
+
+    # The row carries one trigger, not a row of buttons. The assertion names the
+    # menu items because a dropdown that opens on nothing is the failure to catch.
+    it "puts the row actions in a dropdown menu" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Parking")
+
+      get hotel_knowledge_policies_path(hotel)
+
+      expect(response.body).to include("guest-content-documents-table")
+      expect(response.body).to include("Actions for Parking")
+      expect(response.body).to include(edit_hotel_knowledge_policy_path(hotel, document))
+      expect(response.body).to include("Remove")
+    end
+
+    # The columns say what the page will hold. Hiding them until the first save
+    # makes the page change shape under the operator.
+    it "keeps the table columns when there is nothing in the list yet" do
+      get hotel_knowledge_policies_path(hotel)
+
+      body = Nokogiri::HTML(response.body)
+      table = body.at_css("[data-testid='guest-content-documents-table']")
+      expect(table).to be_present
+      expect(table.css("thead th").map { |cell| cell.text.squish }).to eq([ "Policy", "Status", "Source", "Effective date", "Action" ])
+      expect(table.at_css("tbody .panel-empty-state")).to be_present
+      expect(body.text).to include("No other policies yet")
+    end
+
+    it "opens the add form in the settings sheet" do
+      get new_hotel_knowledge_policy_path(hotel), headers: sheet_headers
+
+      body = Nokogiri::HTML(response.body)
+      expect(response).to have_http_status(:ok)
+      expect(body.at_css("turbo-frame#settings_action_sheet dialog#new-guest-content-document-sheet")).to be_present
+      # The sheet footer submits the form by id, so the form must carry that id.
+      expect(body.at_css("form#new-guest-content-document-form")).to be_present
+    end
+
+    it "opens the edit form in the settings sheet" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "Parking")
+
+      get edit_hotel_knowledge_policy_path(hotel, document), headers: sheet_headers
+
+      body = Nokogiri::HTML(response.body)
+      expect(body.at_css("turbo-frame#settings_action_sheet dialog#edit-guest-content-document-sheet")).to be_present
+      expect(body.at_css("form#edit-guest-content-document-#{document.id}-form")).to be_present
+    end
+
+    it "closes the sheet and returns to the list after a save" do
+      post hotel_knowledge_policies_path(hotel), params: {
+        hotel_knowledge_document: { title: "Parking", content: "Valet parking is free." }
+      }, headers: sheet_submit_headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("complete_sheet")
+      expect(response.body).to include(hotel_knowledge_policies_path(hotel))
+      expect(hotel.knowledge_documents.where(category: "policy").sole.title).to eq("Parking")
+    end
+
+    it "keeps a validation error inside the sheet" do
+      post hotel_knowledge_policies_path(hotel), params: {
+        hotel_knowledge_document: { title: "", content: "" }
+      }, headers: sheet_submit_headers
+
+      body = Nokogiri::HTML(response.body)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(body.at_css("turbo-frame#settings_action_sheet dialog#new-guest-content-document-sheet")).to be_present
+      expect(body.at_css("[role='alert']").text.squish).to include("could not be saved")
+    end
+
+    it "shows one policy in the detail sheet" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "policy",
+        title: "Parking", content: "Valet runs 07:00 to 23:00.", embedding_status: "indexed")
+      create(:hotel_knowledge_chunk, document: document, content: "Valet runs 07:00 to 23:00.")
+
+      get hotel_knowledge_policy_path(hotel, document), headers: sheet_headers
+
+      body = Nokogiri::HTML(response.body)
+      sheet = body.at_css("turbo-frame#settings_action_sheet dialog#guest-content-document-sheet")
+      expect(sheet).to be_present
+      # The header is chrome and never names the record. The body does.
+      expect(sheet.at_css("#guest-content-document-sheet-title").text.squish).to eq("Policy details")
+      expect(sheet.at_css("h3").text.squish).to eq("Parking")
+      expect(sheet.text).to include("Valet runs 07:00 to 23:00.")
+      expect(sheet.text).to include("Prepared sections (1)")
+    end
+
+    it "offers the file instead of the text when a PDF is attached" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "policy",
+        title: "Group terms", source_type: "pdf")
+      document.file.attach(io: StringIO.new("%PDF-1.4"), filename: "group-terms.pdf", content_type: "application/pdf")
+
+      get hotel_knowledge_policy_path(hotel, document), headers: sheet_headers
+
+      sheet = Nokogiri::HTML(response.body).at_css("dialog#guest-content-document-sheet")
+      expect(sheet.text).to include("group-terms.pdf")
+      expect(sheet.css("a.panel-button").map { |link| link.text.squish }).to include("Open", "Download")
+      # Nothing has been chunked yet, so the section says so rather than sitting empty.
+      expect(sheet.text).to include("Still reading the file.")
+    end
+
+    it "puts the recovery action in the sheet when preparation failed" do
+      hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test")
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "policy",
+        title: "Parking", content: "Valet.")
+      # A content change resets the status, so the failure is written after the save.
+      document.update_columns(embedding_status: "failed", metadata: { "last_error" => "Timed out after 30s." })
+
+      get hotel_knowledge_policy_path(hotel, document), headers: sheet_headers
+
+      sheet = Nokogiri::HTML(response.body).at_css("dialog#guest-content-document-sheet")
+      alert = sheet.at_css("[role='alert']")
+      expect(alert.text.squish).to include("This policy is not ready")
+      expect(alert.text.squish).to include("Timed out after 30s.")
+      expect(alert.css(".panel-button").map { |button| button.text.squish }).to eq([ "Try again" ])
+    end
+
+    # An FAQ saved from indexed form fields stores its pairs as a Hash keyed by
+    # position. The repeater used to walk that Hash and raise on the first pair.
+    it "opens the FAQ edit sheet when the pairs are stored keyed by position" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "Check-in")
+      document.update_columns(metadata: {
+        "qa_pairs" => { "0" => { "question" => "What time is check-in?", "answer" => "3 PM." } }
+      })
+
+      get edit_hotel_knowledge_faq_path(hotel, document), headers: sheet_headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("What time is check-in?")
+      expect(response.body).to include("3 PM.")
     end
 
     # A fixed card is edited on its own sub-tab. Listing it here as well would

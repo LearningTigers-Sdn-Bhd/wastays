@@ -13,7 +13,6 @@ export default class extends Controller {
 
     content.querySelectorAll("input, textarea").forEach((el) => {
       el.name = el.name.replace("__INDEX__", index)
-      el.id = el.id.replace("__INDEX__", index)
     })
 
     this.containerTarget.appendChild(content)
@@ -33,7 +32,6 @@ export default class extends Controller {
     rows.forEach((row, i) => {
       row.querySelectorAll("input, textarea").forEach((el) => {
         el.name = el.name.replace(/\[\d+\]/, `[${i}]`)
-        el.id = el.id.replace(/_\d+_/, `_${i}_`)
       })
     })
     this.counter = rows.length

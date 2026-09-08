@@ -273,21 +273,12 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
   end
 
   it "renders one page frame on every Guest Content page" do
-    document = create(:hotel_knowledge_document, hotel: hotel, category: "policy")
-    general_document = create(:hotel_knowledge_document, hotel: hotel, category: "general_info")
-
     {
       hotel_guest_content_path(hotel) => "Overview",
       hotel_knowledge_general_infos_path(hotel) => "Hotel Info",
       hotel_guest_arrival_departure_path(hotel) => "Hotel Info",
       hotel_knowledge_additional_information_path(hotel) => "Hotel Info",
-      new_hotel_knowledge_general_info_path(hotel) => "Hotel Info",
-      hotel_knowledge_general_info_path(hotel, general_document) => "Hotel Info",
-      edit_hotel_knowledge_general_info_path(hotel, general_document) => "Hotel Info",
       hotel_knowledge_policies_path(hotel) => "Policies",
-      new_hotel_knowledge_policy_path(hotel) => "Policies",
-      hotel_knowledge_policy_path(hotel, document) => "Policies",
-      edit_hotel_knowledge_policy_path(hotel, document) => "Policies",
       hotel_knowledge_faqs_path(hotel) => "FAQs",
       hotel_guest_amenities_path(hotel) => "Amenities",
       hotel_wifi_networks_path(hotel) => "Wi-Fi"
@@ -327,8 +318,6 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
       hotel_guest_arrival_departure_path(hotel),
       hotel_knowledge_additional_information_path(hotel),
       hotel_knowledge_policies_path(hotel),
-      new_hotel_knowledge_policy_path(hotel),
-      hotel_knowledge_policy_path(hotel, document),
       hotel_guest_amenities_path(hotel),
       hotel_wifi_networks_path(hotel)
     ].each do |path|
@@ -353,16 +342,11 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
   # A Button built with a block loses its text inside a capture, which renders
   # an empty square. Every section action must carry a label.
   it "labels every section action" do
-    document = create(:hotel_knowledge_document, hotel: hotel, category: "policy")
-
     {
       hotel_knowledge_policies_path(hotel) => [ "Add Policy" ],
       hotel_knowledge_faqs_path(hotel) => [ "Add FAQ" ],
       hotel_guest_amenities_path(hotel) => [ "Manage amenities" ],
-      hotel_wifi_networks_path(hotel) => [ "Add network" ],
-      new_hotel_knowledge_policy_path(hotel) => [ "Back" ],
-      edit_hotel_knowledge_policy_path(hotel, document) => [ "Back" ],
-      hotel_knowledge_policy_path(hotel, document) => [ "Back", "Edit" ]
+      hotel_wifi_networks_path(hotel) => [ "Add network" ]
     }.each do |path, labels|
       get path
 

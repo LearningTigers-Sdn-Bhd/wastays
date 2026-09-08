@@ -1,11 +1,12 @@
-<% section_actions = capture do %>
-  <%= render PanelsUI::Button.new(label: "Back", href: kb_index_path, variant: :secondary, size: :sm) %>
+<% form_id = "edit-guest-content-document-#{@document.id}-form" %>
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "edit-guest-content-document-sheet",
+             title: "Edit #{kb_label}",
+             description: "Keep this clear and current. Guests see the words you write here.",
+             form_id: form_id,
+             submit_label: "Save changes",
+             size: @document.category == "faq" ? :xl : :lg
+           } do %>
+  <%= render "hotel_portal/guest_content/documents/form", document: @document, form_id: form_id %>
 <% end %>
-<%= render "hotel_portal/guest_content/shared/section_header",
-      title: "Edit #{kb_label}",
-      description: "Keep this information clear and up to date.",
-      actions: section_actions %>
-
-<div class="rounded-md border border-border bg-card p-5 shadow-sm sm:p-6">
-  <%= render "hotel_portal/guest_content/documents/form", document: @document %>
-</div>

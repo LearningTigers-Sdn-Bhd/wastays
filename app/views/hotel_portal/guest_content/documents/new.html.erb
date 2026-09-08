@@ -1,11 +1,12 @@
-<% section_actions = capture do %>
-  <%= render PanelsUI::Button.new(label: "Back", href: kb_index_path, variant: :secondary, size: :sm) %>
+<% form_id = "new-guest-content-document-form" %>
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "new-guest-content-document-sheet",
+             title: "Add #{kb_label}",
+             description: "Write it once. Staff read it here and the AI Concierge answers from it.",
+             form_id: form_id,
+             submit_label: "Add #{kb_label}",
+             size: @document.category == "faq" ? :xl : :lg
+           } do %>
+  <%= render "hotel_portal/guest_content/documents/form", document: @document, form_id: form_id %>
 <% end %>
-<%= render "hotel_portal/guest_content/shared/section_header",
-      title: "Add #{kb_label}",
-      description: "Add clear information for staff and guests.",
-      actions: section_actions %>
-
-<div class="rounded-md border border-border bg-card p-5 shadow-sm sm:p-6">
-  <%= render "hotel_portal/guest_content/documents/form", document: @document %>
-</div>

@@ -1,0 +1,25 @@
+<%# Locals: index, question, answer.
+
+    The labels wrap their controls instead of pointing at an id. A pair is
+    cloned from a template and renumbered in place, so an id here would have to
+    be renumbered with it, and a stale `for` would break the label silently.
+%>
+<div class="space-y-3 rounded-md border border-border bg-muted/40 p-4" data-qa-pair>
+  <label class="block">
+    <span class="mb-1.5 block text-xs font-medium text-muted-foreground">Question</span>
+    <%= text_area_tag "hotel_knowledge_document[metadata][qa_pairs][#{index}][question]", question,
+          id: nil, rows: 2, class: "panel-text-area", data: { size: :md, resize: :vertical },
+          placeholder: "What time is check-in?" %>
+  </label>
+  <label class="block">
+    <span class="mb-1.5 block text-xs font-medium text-muted-foreground">Answer</span>
+    <%= text_area_tag "hotel_knowledge_document[metadata][qa_pairs][#{index}][answer]", answer,
+          id: nil, rows: 3, class: "panel-text-area", data: { size: :md, resize: :vertical },
+          placeholder: "Check-in starts at 3:00 PM." %>
+  </label>
+  <%= render PanelsUI::Button.new(
+        as: :button, type: :button, variant: :ghost, size: :xs,
+        data: { action: "knowledge-faq-form#remove" }) do %>
+    Remove pair
+  <% end %>
+</div>

@@ -1,62 +1,110 @@
+<%# Registry table for a knowledge document category. Policies, FAQs, and Hotel
+    Info are the same records under three categories, so one table serves all
+    three. The column that names the record takes its heading from the
+    controller's label.
+
+    The table renders even when the category holds nothing. An operator who
+    sees the columns knows what the page will hold once it is filled, and the
+    page does not change shape on the first save.
+
+    Locals: documents, add_button_text, empty_title, empty_description.
+%>
 <% content_for :head do %>
   <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
 <% end %>
 
 <% documents.each { |document| concat(turbo_stream_from(document)) } %>
 
-<div>
-  <% if documents.any? %>
-    <div class="divide-y divide-border rounded-md border border-border bg-card shadow-sm">
-      <% documents.each do |document| %>
-        <% state = case document.embedding_status
-          when "indexed" then [ "Ready", "success" ]
-          when "failed" then [ "Needs attention", :destructive ]
-          else [ "Updating", :warning ]
-        end %>
-        <article class="space-y-3 p-5 sm:p-6">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <h2 class="text-base font-semibold text-foreground"><%= document.title %></h2>
-                <%= render PanelsUI::Badge.new(label: state.first, variant: state.last) %>
-              </div>
-              <% if document.category == "faq" && document.metadata&.dig("qa_pairs").present? %>
-                <% pairs = document.metadata["qa_pairs"] %>
-                <p class="mt-1 text-sm text-muted-foreground"><%= pluralize(pairs.respond_to?(:values) ? pairs.values.size : Array(pairs).size, "question") %></p>
-              <% elsif document.content.present? %>
-                <p class="mt-1 line-clamp-2 whitespace-pre-line text-sm text-muted-foreground"><%= truncate(document.content, length: 220) %></p>
-              <% elsif document.file.attached? %>
-                <p class="mt-1 text-sm text-muted-foreground"><%= document.file.filename %></p>
-              <% end %>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <%= render PanelsUI::Button.new(label: "Edit", as: :a, href: kb_edit_path(document), variant: :secondary, size: :sm) %>
-              <% if document.hotel.ai_concierge_enabled? && %w[pending failed].include?(document.embedding_status) %>
-                <%= form_with url: kb_reindex_path(document), method: :post do %>
-                  <%= render PanelsUI::Button.new(label: document.embedding_status == "failed" ? "Try again" : "Prepare content", type: "submit", variant: :secondary, size: :sm) %>
-                <% end %>
-              <% end %>
-              <%= render PanelsUI::Button.new(label: "Remove", as: :a, href: kb_show_path(document), variant: :ghost, size: :sm, data: { turbo_method: :delete, turbo_confirm: "Remove this item? This cannot be undone." }) %>
-            </div>
-          </div>
+<%= render PanelsUI::Table.new(
+      caption: "#{kb_label} registry",
+      header_style: :sentence,
+      striped: true,
+      hoverable: true,
+      bordered: true,
+      wrapper_class: "rounded-md border border-border bg-card",
+      class: "min-w-[820px]",
+      data: { testid: "guest-content-documents-table" }) do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col"><%= kb_label %></th>
+      <th scope="col">Status</th>
+      <th scope="col">Source</th>
+      <th scope="col">Effective date</th>
+      <th scope="col" class="text-right">Action</th>
+    </tr>
+  <% end %>
 
-          <details class="group rounded-md border border-border bg-muted/40">
-            <summary class="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground">Advanced details</summary>
-            <dl class="grid gap-3 border-t border-border px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <div><dt class="text-muted-foreground">Source</dt><dd class="capitalize text-foreground"><%= document.source_type %></dd></div>
-              <div><dt class="text-muted-foreground">Language</dt><dd class="uppercase text-foreground"><%= document.language %></dd></div>
-              <div><dt class="text-muted-foreground">Effective date</dt><dd class="text-foreground"><%= document.effective_date&.to_fs(:long) || "No end date" %></dd></div>
-              <div><dt class="text-muted-foreground">Tags</dt><dd class="text-foreground"><%= document.tags.presence&.to_sentence || "None" %></dd></div>
-            </dl>
-          </details>
-        </article>
-      <% end %>
-    </div>
-  <% else %>
-    <%= render PanelsUI::EmptyState.new(title: empty_title, description: empty_description) do |empty| %>
-      <% empty.with_action do %>
-        <%= render PanelsUI::Button.new(label: add_button_text, as: :a, href: kb_new_path, variant: :primary, size: :sm) %>
-      <% end %>
+  <% table.with_body do %>
+    <% if documents.empty? %>
+      <tr>
+        <td colspan="5" class="py-10 text-center">
+          <%= render PanelsUI::EmptyState.new(title: empty_title, description: empty_description) do |empty| %>
+            <% empty.with_action do %>
+              <%= render PanelsUI::Button.new(label: add_button_text, as: :a, href: kb_new_path, variant: :primary, size: :sm, data: { turbo_frame: "settings_action_sheet" }) %>
+            <% end %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+
+    <% documents.each do |document| %>
+      <% state = case document.embedding_status
+        when "indexed" then [ "Ready", "success" ]
+        when "failed" then [ "Needs attention", :destructive ]
+        else [ "Updating", :warning ]
+      end %>
+      <tr id="<%= dom_id(document, :row) %>">
+        <td class="align-middle">
+          <p class="font-medium text-foreground"><%= document.title %></p>
+          <% if document.category == "faq" && document.qa_pairs.any? %>
+            <p class="mt-0.5 text-xs text-muted-foreground"><%= pluralize(document.qa_pairs.size, "question") %></p>
+          <% elsif document.content.present? %>
+            <p class="mt-0.5 line-clamp-1 text-xs text-muted-foreground"><%= truncate(document.content.squish, length: 120) %></p>
+          <% elsif document.file.attached? %>
+            <p class="mt-0.5 text-xs text-muted-foreground"><%= document.file.filename %></p>
+          <% end %>
+        </td>
+        <td class="align-middle">
+          <%= render PanelsUI::Badge.new(label: state.first, variant: state.last) %>
+        </td>
+        <td class="align-middle text-muted-foreground">
+          <%= document.source_type == "pdf" ? "PDF" : "Text" %>
+        </td>
+        <%# Spelled out rather than dashed: a dash reads as nothing to a screen
+            reader, and most of these records genuinely never expire. %>
+        <td class="align-middle">
+          <% if document.effective_date.present? %>
+            <span class="tabular-nums text-foreground"><%= document.effective_date.to_fs(:long) %></span>
+          <% else %>
+            <span class="text-xs text-muted-foreground">Always applies</span>
+          <% end %>
+        </td>
+        <td class="text-right align-middle">
+          <%= render PanelsUI::DropdownMenu.new(id: "guest-content-document-actions-#{document.id}", placement: :bottom_end) do |menu| %>
+            <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "Actions for #{document.title}") do %>
+              <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+            <% end %>
+
+            <% menu.with_item(href: kb_show_path(document), data: { turbo_frame: "settings_action_sheet" }) do %>
+              <%= app_icon "eye", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+              View details
+            <% end %>
+
+            <% menu.with_item(href: kb_edit_path(document), data: { turbo_frame: "settings_action_sheet" }) do %>
+              <%= app_icon "pencil", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+              Edit
+            <% end %>
+
+            <% menu.with_separator %>
+
+            <% menu.with_item(href: kb_show_path(document), method: :delete, variant: :danger,
+                              data: { turbo_confirm: "Remove this item? This cannot be undone." }) do %>
+              <%= app_icon "trash-2", class: "size-4", aria: { hidden: true } %>
+              Remove
+            <% end %>
+          <% end %>
+        </td>
+      </tr>
     <% end %>
   <% end %>
-</div>
+<% end %>
