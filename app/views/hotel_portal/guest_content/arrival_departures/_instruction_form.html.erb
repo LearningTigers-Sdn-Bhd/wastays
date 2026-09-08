@@ -1,0 +1,66 @@
+<%= form_with model: guest_instruction,
+              url: hotel_guest_arrival_departure_path(hotel),
+              method: :patch,
+              local: true,
+              data: {
+                controller: "form-dirty",
+                action: "input->form-dirty#refresh change->form-dirty#refresh reset->form-dirty#restore"
+              },
+              class: "lg:w-[85%]" do |form| %>
+  <%= hidden_field_tag :section, section %>
+
+  <section id="<%= section %>" aria-labelledby="<%= section %>-heading">
+    <div>
+      <h2 id="<%= section %>-heading" class="text-base font-semibold text-foreground"><%= title %></h2>
+      <p class="mt-2 text-sm text-muted-foreground"><%= description %></p>
+    </div>
+
+    <% if guest_instruction.errors.any? && params[:section] == section %>
+      <div class="mt-4">
+        <%= render PanelsUI::Alert.new(
+              tone: :destructive,
+              title: pluralize(guest_instruction.errors.count, "error") + " prevented these instructions from being saved",
+              role: :alert) do |alert| %>
+          <% alert.with_description do %>
+            <ul class="list-disc space-y-1 ps-5">
+              <% guest_instruction.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="mt-5">
+      <%= render PanelsUI::FormField.new(
+            form: form,
+            attribute: attribute,
+            label: title,
+            hint: hint) do |field| %>
+        <% field.with_text_area(rows: 5, placeholder: placeholder) %>
+      <% end %>
+    </div>
+
+    <footer class="mt-5 flex justify-end gap-3">
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :reset,
+            variant: :secondary,
+            size: :md,
+            hidden: true,
+            data: { form_dirty_target: "cancel" }) do %>
+        Cancel
+      <% end %>
+
+      <%= render PanelsUI::Button.new(
+            as: :button,
+            type: :submit,
+            size: :md,
+            disabled: true,
+            data: { form_dirty_target: "submit" }) do %>
+        Save
+      <% end %>
+    </footer>
+  </section>
+<% end %>

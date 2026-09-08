@@ -58,32 +58,76 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     expect(document.at_css("a[href='#{hotel_general_settings_path(hotel)}']")).to be_present
   end
 
-  it "saves both arrival and departure instructions in one hotel-scoped record" do
+  it "renders three flat columns and gives each instruction its own dirty-state form" do
+    get hotel_guest_arrival_departure_path(hotel)
+
+    document = response.parsed_body
+    layout = document.at_css("[data-testid='arrival-departure-layout']")
+    expect(layout["class"]).to include("grid-cols-1", "lg:grid-cols-3")
+    expect(layout.css("h2").map { |heading| heading.text.squish }).to eq(
+      [ "Standard Check-in & Check-out Time", "Arrival Instructions", "Departure Instructions" ]
+    )
+    expect(layout.text.squish).to include(
+      "These times come from General Settings, which remains the source of truth.",
+      "Tell guests what to do when they arrive at the property.",
+      "Tell guests what to do before they leave the property."
+    )
+    expect(layout.css(".rounded-md, .bg-card, .shadow-sm")).to be_empty
+
+    forms = layout.css("form[action='#{hotel_guest_arrival_departure_path(hotel)}']")
+    expect(forms.map { |form| form.at_css("input[name='section']")[:value] })
+      .to eq(%w[arrival-instructions departure-instructions])
+    forms.each do |form|
+      expect(form["class"]).to include("lg:w-[85%]")
+      expect(form["data-controller"]).to eq("form-dirty")
+      expect(form.css("textarea").count).to eq(1)
+      expect(form.at_css("button[type='submit'][data-form-dirty-target='submit']")[:disabled]).to be_present
+      expect(form.at_css("button[type='reset'][data-form-dirty-target='cancel']")[:hidden]).to be_present
+    end
+    standard_times = layout.at_css("#standard-times")
+    expect(standard_times["class"]).to include("lg:w-[85%]")
+    expect(standard_times.at_css("form")).to be_nil
+    expect(standard_times.at_css("footer.flex.justify-end a")["href"]).to eq(hotel_general_settings_path(hotel))
+  end
+
+  it "saves each instruction independently in one hotel-scoped record" do
+    instruction = create(
+      :hotel_guest_instruction,
+      hotel: hotel,
+      arrival_instructions: "Use the lobby entrance.",
+      departure_instructions: "Leave keys at reception."
+    )
+
     expect {
       patch hotel_guest_arrival_departure_path(hotel), params: {
-        hotel_guest_instruction: {
-          arrival_instructions: "Use the lobby entrance.",
-          departure_instructions: "Leave keys at reception."
-        }
-      }
-    }.to change(HotelGuestInstruction, :count).by(1)
-
-    expect(response).to redirect_to(hotel_guest_arrival_departure_path(hotel))
-    instruction = hotel.reload.guest_instruction
-    expect(instruction.arrival_instructions).to eq("Use the lobby entrance.")
-    expect(instruction.departure_instructions).to eq("Leave keys at reception.")
-
-    expect {
-      patch hotel_guest_arrival_departure_path(hotel), params: {
-        hotel_guest_instruction: {
-          arrival_instructions: "Use the side entrance.",
-          departure_instructions: "Leave keys in the box."
-        }
+        section: "arrival-instructions",
+        hotel_guest_instruction: { arrival_instructions: "Use the side entrance." }
       }
     }.not_to change(HotelGuestInstruction, :count)
 
-    expect(instruction.reload.attributes.values_at("arrival_instructions", "departure_instructions"))
-      .to eq([ "Use the side entrance.", "Leave keys in the box." ])
+    expect(response).to redirect_to(hotel_guest_arrival_departure_path(hotel))
+    expect(instruction.reload.arrival_instructions).to eq("Use the side entrance.")
+    expect(instruction.departure_instructions).to eq("Leave keys at reception.")
+
+    patch hotel_guest_arrival_departure_path(hotel), params: {
+      section: "departure-instructions",
+      hotel_guest_instruction: { departure_instructions: "Leave keys in the box." }
+    }
+
+    expect(instruction.reload.arrival_instructions).to eq("Use the side entrance.")
+    expect(instruction.departure_instructions).to eq("Leave keys in the box.")
+  end
+
+  it "creates the hotel-scoped instruction record from one section" do
+    expect {
+      patch hotel_guest_arrival_departure_path(hotel), params: {
+        section: "arrival-instructions",
+        hotel_guest_instruction: { arrival_instructions: "Use the lobby entrance." }
+      }
+    }.to change(HotelGuestInstruction, :count).by(1)
+
+    expect(hotel.reload.guest_instruction.arrival_instructions).to eq("Use the lobby entrance.")
+    expect(hotel.guest_instruction.departure_instructions).to be_nil
   end
 
   it "cannot update another hotel's guest instructions" do
