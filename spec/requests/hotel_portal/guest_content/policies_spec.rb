@@ -152,6 +152,30 @@ RSpec.describe "HotelPortal::GuestContent::Policies", type: :request do
       expect(response.body).to include("Quiet hours run from 10 PM.")
       expect(response.body).to include(hotel_guest_contact_path(hotel))
     end
+
+    # The rules and the numbers a guest calls sit side by side, so a hotel
+    # writing the rules can see what it must not repeat.
+    it "shows the emergency contacts beside the rules, read-only" do
+      hotel.create_guest_contact!(emergency_phone: "+60 3 1234 5600", emergency_services_number: "999")
+
+      get hotel_policy_house_rules_path(hotel)
+
+      body = response.parsed_body
+      expect(body.at_css("[data-testid='house-rules-layout']")["class"]).to include("lg:grid-cols-2")
+      expect(body.css("[data-testid='house-rules-layout'] > *").size).to eq(2)
+
+      phone = body.at_css("input[name='hotel_guest_contact[emergency_phone]']")
+      expect(phone[:value]).to eq("+60 3 1234 5600")
+      expect(phone[:readonly]).to be_present
+      expect(body.at_css("textarea[name='hotel_guest_contact[emergency_instructions]']")[:readonly]).to be_present
+    end
+
+    it "renders without a contact record on file" do
+      get hotel_policy_house_rules_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Not on file")
+    end
   end
 
   describe "Other Policies" do
