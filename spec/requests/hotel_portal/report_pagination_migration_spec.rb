@@ -66,7 +66,7 @@ RSpec.describe "Hotel report pagination migration", type: :request do
     get breakdown_hotel_reports_path(hotel), params: params
 
     page = Capybara.string(response.body)
-    pagination = page.find('nav.panel-pagination[aria-label="Report pagination"]')
+    pagination = page.find('nav.panel-pagination[aria-label="Booking performance pagination"]')
     page_two = pagination.find('a[aria-label="Page 2"]')
     expect(page).to have_text(bookings.last.confirmation_token)
     expect(page).to have_no_text(bookings.first.confirmation_token)
