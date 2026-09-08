@@ -8,8 +8,10 @@ RSpec.describe 'Hotel Settings Card', type: :system do
   end
   let(:role) { create(:role, account: account, slug: 'hotel_owner', name: 'Hotel Owner') }
 
-  before do
-    driven_by(:rack_test)
+  before do |example|
+    # The AI concierge sections keep Save disabled until a field changes, and a
+    # Stimulus controller does that, so those examples need a real browser.
+    driven_by(example.metadata[:js] ? :cuprite : :rack_test)
 
     Permission.find_or_create_by!(slug: 'manage_account') { |permission| permission.name = 'Manage Account' }
     Permission.find_or_create_by!(slug: 'manage_hotel_profile') { |permission| permission.name = 'Manage Hotel Profile' }
@@ -90,28 +92,37 @@ RSpec.describe 'Hotel Settings Card', type: :system do
     expect(page).to have_no_content('Settings updated successfully.')
   end
 
-  it 'shows the AI concierge fields and saves the selected tone' do
+  it 'saves the reply tone from its own section', :js do
     visit hotel_ai_concierge_settings_path(hotel)
 
-    within('form', text: 'Guest Chat') do
-      expect(page).to have_select('Tone', selected: 'Basic')
+    within('#tone') do
+      expect(page).to have_checked_field('Basic', visible: :all)
 
-      find('summary', text: 'Advanced').click
+      choose 'Cheerful', allow_label_click: true
+      click_button 'Save'
+    end
 
-      expect(page).to have_select('AI Provider')
+    expect(page).to have_content('Settings updated successfully.')
+    expect(hotel.reload.ai_concierge_tone).to eq('cheerful')
+  end
+
+  it 'saves the provider and the API key from the advanced section', :js do
+    visit hotel_ai_concierge_settings_path(hotel)
+
+    within('#advanced') do
+      expect(page).to have_select('AI Provider', visible: :all)
       expect(page).to have_field('API Key')
 
-      select 'Cheerful', from: 'Tone'
-      select 'OpenAI', from: 'AI Provider'
+      find('.panel-select-menu__trigger').click
+      find('[role="option"]', text: 'OpenAI').click
       fill_in 'API Key', with: 'test-api-key'
-
-      click_button 'Save AI Concierge Configuration'
+      click_button 'Save'
     end
 
     expect(page).to have_content('Settings updated successfully.')
     hotel.reload
-    expect(hotel.ai_concierge_tone).to eq('cheerful')
     expect(hotel.ai_provider_name).to eq('openai')
+    expect(hotel.ai_provider_key).to eq('test-api-key')
   end
 
   it 'keeps the selected hotel in the path after a superadmin saves settings' do
