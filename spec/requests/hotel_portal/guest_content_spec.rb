@@ -360,6 +360,19 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     end
   end
 
+  # Hotel Info lists its documents on a sub-tab whose path answers GET only, so
+  # the form has to post to the collection route rather than to that list.
+  it "creates a Hotel Info document from the sheet" do
+    post hotel_knowledge_general_infos_path(hotel), params: {
+      hotel_knowledge_document: { title: "Luggage storage", content: "Behind the front desk." }
+    }, headers: sheet_submit_headers
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("complete_sheet")
+    expect(response.body).to include(hotel_knowledge_additional_information_path(hotel))
+    expect(hotel.knowledge_documents.where(category: "general_info").sole.title).to eq("Luggage storage")
+  end
+
   it "keeps Property Summary and Additional Information on separate subtabs" do
     get hotel_knowledge_general_infos_path(hotel)
 

@@ -4,7 +4,7 @@
     Locals: document, form_id.
 %>
 <%= form_with model: document,
-              url: document.new_record? ? kb_index_path : kb_show_path(document),
+              url: document.new_record? ? kb_create_path : kb_show_path(document),
               method: document.new_record? ? :post : :patch,
               id: form_id,
               class: "space-y-5",

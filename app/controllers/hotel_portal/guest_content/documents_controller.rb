@@ -12,7 +12,8 @@ module HotelPortal
 
       before_action :set_document, only: %i[show edit update destroy reindex]
 
-      helper_method :kb_index_path, :kb_show_path, :kb_edit_path, :kb_new_path, :kb_reindex_path, :kb_label
+      helper_method :kb_index_path, :kb_create_path, :kb_show_path, :kb_edit_path, :kb_new_path,
+                    :kb_reindex_path, :kb_label
 
       def index
         @documents = category_scope.order(created_at: :desc)
@@ -92,6 +93,13 @@ module HotelPortal
       end
 
       def kb_index_path
+        public_send("hotel_#{plural_route}_path", @hotel)
+      end
+
+      # Where the form posts. It is the collection route, which is not always
+      # the page the operator came from: Hotel Info lists its documents on a
+      # sub-tab of its own, and that path answers GET only.
+      def kb_create_path
         public_send("hotel_#{plural_route}_path", @hotel)
       end
 
