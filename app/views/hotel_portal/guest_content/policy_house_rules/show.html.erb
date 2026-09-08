@@ -1,0 +1,54 @@
+<%# The rules and the numbers a guest calls sit side by side, so a hotel writing
+    the rules can see the contacts it must not repeat. Each column stops short of
+    its own edge, the same way the other Guest Content pages do. %>
+<div class="grid grid-cols-1 items-start gap-x-8 gap-y-10 lg:grid-cols-2" data-testid="house-rules-layout">
+  <%= render "hotel_portal/guest_content/policies/document_form",
+        document: policy_document,
+        url: hotel_policy_house_rules_path(@hotel),
+        section: "house-rules",
+        title: "House Rules",
+        description: "Explain how guests behave in the property, and what happens when they do not.",
+        hint: "Do not repeat the emergency numbers beside this. Guests already see those.",
+        placeholder: "For example, quiet hours run from 10:00 PM to 7:00 AM. Visitors must sign in at reception and leave before 11:00 PM.",
+        covers: [
+          "Visitors, parties, and quiet hours.",
+          "Damage reporting, and lost key or access card charges.",
+          "Prohibited activities, and use of furniture and equipment.",
+          "General safety: fire, balcony, pool, cooking, hazardous items.",
+          "What guests do in an evacuation."
+        ] %>
+
+  <section id="emergency-contacts" class="lg:w-[85%]" aria-labelledby="emergency-contacts-heading">
+    <div>
+      <h2 id="emergency-contacts-heading" class="text-base font-semibold text-foreground">Emergency</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Always shown to the guest. Contact and Escalation owns these, so do not copy them into the rules.</p>
+    </div>
+
+    <%= fields :hotel_guest_contact, model: @guest_contact do |form| %>
+      <%# The two numbers share a row, and the instructions run the full width
+          under them, the same as the Emergency section on Contact and
+          Escalation. %>
+      <div class="mt-5 grid items-start gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :emergency_phone, label: "Emergency number",
+              hint: "Your security or duty desk.", readonly: true) do |field| %>
+          <% field.with_input(placeholder: "Not on file") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: form, attribute: :emergency_services_number, label: "Local emergency services",
+              hint: "Police, fire, and ambulance.", readonly: true) do |field| %>
+          <% field.with_input(placeholder: "Not on file") %>
+        <% end %>
+
+        <div class="sm:col-span-2">
+          <%= render PanelsUI::FormField.new(form: form, attribute: :emergency_instructions, label: "Medical and fire instructions", readonly: true) do |field| %>
+            <% field.with_text_area(rows: 3, placeholder: "Not on file") %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <footer class="mt-5 flex justify-end">
+      <%= render PanelsUI::Button.new(label: "Contact & Escalation", as: :a, href: hotel_guest_contact_path(@hotel), variant: :secondary, size: :md) %>
+    </footer>
+  </section>
+</div>

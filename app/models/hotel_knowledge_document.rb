@@ -15,10 +15,19 @@ class HotelKnowledgeDocument < ApplicationRecord
     end
   end
 
+  # A policy document is either one of the fixed cards on the Policies page or
+  # a free one the hotel wrote itself. The card it belongs to is the only thing
+  # that separates them, so it lives in metadata and needs no column.
+  POLICY_KEYS = %w[room_terms payment_and_deposits house_rules].freeze
+
   validates :title, :source_type, :category, presence: true
   validates :source_type, inclusion: { in: %w[text pdf] }
   validates :category, inclusion: { in: %w[policy faq general_info] }
   validates :embedding_status, inclusion: { in: %w[pending indexing indexed failed] }
+
+  scope :failed, -> { where(embedding_status: "failed") }
+  scope :with_policy_key, ->(key) { where("metadata->>'policy_key' = ?", key.to_s) }
+  scope :without_policy_key, -> { where("metadata->>'policy_key' IS NULL") }
 
   after_commit :enqueue_embedding_generation, on: [ :create, :update ]
   after_update_commit :broadcast_embedding_state, if: :embedding_state_changed?
@@ -33,6 +42,17 @@ class HotelKnowledgeDocument < ApplicationRecord
 
   def mark_embedding_indexing!
     update_embedding_state!("indexing")
+  end
+
+  # An FAQ posts its pairs from indexed form fields, which Rails hands back as a
+  # Hash keyed by position. Records saved before that shape was flattened still
+  # hold the Hash, so every reader comes through here instead of testing the
+  # shape again in each view.
+  def qa_pairs
+    raw = metadata&.dig("qa_pairs")
+    raw = raw.values if raw.is_a?(Hash)
+
+    Array(raw).grep(Hash)
   end
 
   private

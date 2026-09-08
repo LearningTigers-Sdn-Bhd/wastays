@@ -1,0 +1,109 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% filters = Struct.new(:query, :category).new("", "") %>
+<% form_id = "amenity-selection-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="panels-ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "amenity-selection-sheet",
+          side: :right,
+          size: :xl,
+          title: "Manage amenities",
+          description: "Select the amenities that this property provides.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @hotel,
+                      url: hotel_amenity_selection_path(@hotel),
+                      method: :patch,
+                      id: form_id,
+                      class: "space-y-6 py-2",
+                      data: { controller: "amenity-selection" } do |form| %>
+          <% if @hotel.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Amenities could not be saved", role: :alert) do |alert| %>
+              <% alert.with_description { @hotel.errors.full_messages.to_sentence } %>
+            <% end %>
+          <% end %>
+
+          <section aria-labelledby="amenity-selection-heading" class="space-y-4">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 id="amenity-selection-heading" class="text-base font-semibold text-foreground">Property amenities</h3>
+                <p class="mt-1 text-sm text-muted-foreground">Clear an amenity to remove it from the guest content. Its saved details stay, so you do not write them again if you add it back.</p>
+              </div>
+              <p class="shrink-0 text-sm font-medium text-foreground" aria-live="polite" data-amenity-selection-target="count"><%= pluralize(@selected_slugs.size, "amenity", plural: "amenities") %> selected</p>
+            </div>
+
+            <% if @rows.any? %>
+              <%= hidden_field_tag "hotel[amenities][]", "" %>
+
+              <%= fields_for "amenity_filters", filters do |filter_form| %>
+                <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,.55fr)]">
+                  <%= render PanelsUI::FormField.new(
+                        form: filter_form,
+                        attribute: :query,
+                        label: "Search amenities",
+                        label_hidden: true) do |field| %>
+                    <% field.with_input(
+                         type: :search,
+                         placeholder: "Search amenity or category",
+                         autocomplete: "off",
+                         data: {
+                           amenity_selection_target: "search",
+                           action: "input->amenity-selection#filter"
+                         }) %>
+                  <% end %>
+
+                  <%= render PanelsUI::FormField.new(
+                        form: filter_form,
+                        attribute: :category,
+                        label: "Filter by category",
+                        label_hidden: true) do |field| %>
+                    <% field.with_select_menu(
+                         @categories.map { |category| { label: category, value: category } },
+                         include_blank: "All categories",
+                         selected: "",
+                         data: {
+                           amenity_selection_target: "category",
+                           action: "change->amenity-selection#filter"
+                         }) %>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <div class="max-h-96 space-y-4 overflow-y-auto rounded-md border border-border bg-muted/20 p-2" data-testid="amenity-selection-list">
+                <% @groups.each do |heading, rows| %>
+                  <div class="space-y-2" data-amenity-selection-target="group">
+                    <h4 class="px-1 pt-1 text-xs font-medium text-muted-foreground"><%= heading %></h4>
+                    <% rows.each do |row| %>
+                      <%= render "amenity_option", row: row, checked: @selected_slugs.include?(row.slug) %>
+                    <% end %>
+                  </div>
+                <% end %>
+
+                <div class="hidden px-4 py-8 text-center" data-amenity-selection-target="empty">
+                  <p class="text-sm font-medium text-foreground">No amenities match these filters.</p>
+                  <p class="mt-1 text-sm text-muted-foreground">Change the search or the category.</p>
+                </div>
+              </div>
+            <% else %>
+              <div class="rounded-md border border-dashed border-border px-4 py-8 text-center">
+                <p class="text-sm font-medium text-foreground">No amenities are available.</p>
+                <p class="mt-1 text-sm text-muted-foreground">The amenity catalog is empty. Contact WAStays support.</p>
+              </div>
+            <% end %>
+          </section>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->panels-ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: "Saving…" }) do %>
+          Save amenities
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

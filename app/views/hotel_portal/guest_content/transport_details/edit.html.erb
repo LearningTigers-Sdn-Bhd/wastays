@@ -1,0 +1,47 @@
+<%# One sheet per section. The shared settings sheet supplies the chrome and
+    submits the form by id, so the buttons can live in the sheet footer. %>
+<% form_id = "transport-#{@section}-form" %>
+<% titles = {
+     "directions" => [ "Directions", "Tell guests how far the property is, and how to reach it." ],
+     "transportation" => [ "Transportation", "Tell guests how to move after they arrive." ],
+     "parking" => [ "Parking", "Tell guests where to park, and what it costs." ]
+   } %>
+<% title, description = titles.fetch(@section) %>
+
+<%= render layout: "hotel_portal/settings/action_sheet", locals: {
+      id: "transport-#{@section}-sheet",
+      title: title,
+      description: description,
+      form_id: form_id,
+      submit_label: "Save",
+      size: :lg
+    } do %>
+  <%= form_with model: @transport_detail,
+                url: hotel_guest_transport_detail_path(@hotel, @section),
+                method: :patch,
+                id: form_id,
+                class: "space-y-4" do |form| %>
+    <% if @transport_detail.errors.any? %>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "#{title} could not be saved", role: :alert) do |alert| %>
+        <% alert.with_description do %>
+          <ul class="list-disc space-y-1 ps-5">
+            <% @transport_detail.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%# Each branch names its partial in full. A partial name built from the
+        section would put a request parameter on the render path. %>
+    <% case @section %>
+    <% when "directions" %>
+      <%= render "directions_fields", form: form %>
+    <% when "transportation" %>
+      <%= render "transportation_fields", form: form %>
+    <% when "parking" %>
+      <%= render "parking_fields", form: form %>
+    <% end %>
+  <% end %>
+<% end %>

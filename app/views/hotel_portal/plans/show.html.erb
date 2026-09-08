@@ -1,9 +1,10 @@
 <div class="space-y-5">
-  <%= render PanelsUI::PageHeader.new(
-        title: "General Settings",
-        description: "Manage core hotel operations, guest communication, rates, and plan access.") %>
-
-  <%= render "hotel_portal/settings/group_tabs" %>
+  <div class="space-y-4">
+    <%= render PanelsUI::PageHeader.new(
+          title: "General Settings",
+          description: "Manage core hotel operations, guest communication, rates, and plan access.") %>
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
 
   <% locked_count = @total_count - @included_count %>
   <div class="grid items-start gap-5 lg:grid-cols-3" data-testid="plan-billing-layout">

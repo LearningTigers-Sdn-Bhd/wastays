@@ -214,12 +214,19 @@ module AiConcierge
         def direct_general_fact
           return unless topic == "general_hotel_info"
 
+          if wifi_question? && structured_facts["wifi_available"]
+            return fact(topic: "Wi-Fi", text: "Guest Wi-Fi is available. Connection details become available after check-in.")
+          end
+
           amenities = Array(structured_facts["amenities"]).compact_blank
           if amenities.any? && amenities_question?
             matching = amenities.select { |amenity| query.downcase.include?(amenity.downcase) }
             return if matching.empty? && service_question?
             matching = amenities if matching.empty?
-            return fact(topic: "amenities", text: "Available amenities include #{matching.to_sentence}.")
+            detail_text = matching.filter_map { |name| amenity_detail_text(name) }.join(" ")
+            text = "Available amenities include #{matching.to_sentence}."
+            text = "#{text} #{detail_text}" if detail_text.present?
+            return fact(topic: "amenities", text: text)
           end
 
           location = structured_location
@@ -422,6 +429,27 @@ module AiConcierge
 
         def amenities_question?
           service_question? || query.downcase.match?(/\b(?:amenit|facilit)/)
+        end
+
+        def wifi_question?
+          query.downcase.match?(/\bwi-?fi\b/)
+        end
+
+        def amenity_detail_text(name)
+          details = Array(structured_facts["amenity_details"])
+          detail = details.find { |item| item["name"].to_s.casecmp?(name.to_s) }
+          return unless detail
+
+          parts = []
+          parts << "Location: #{detail['location']}." if detail["location"].present?
+          parts << "Hours: #{detail['opening_hours']}." if detail["opening_hours"].present?
+          parts << "Fees: #{detail['fee_information']}." if detail["fee_information"].present?
+          if detail["reservation_required"]
+            reservation = detail["reservation_instructions"].presence || "Ask hotel staff to reserve it."
+            parts << "Reservation required: #{reservation}"
+          end
+          parts << detail["guest_notes"].to_s if detail["guest_notes"].present?
+          parts.join(" ").presence
         end
 
         def location_question?

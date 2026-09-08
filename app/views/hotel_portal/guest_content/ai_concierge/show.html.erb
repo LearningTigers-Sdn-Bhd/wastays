@@ -1,0 +1,79 @@
+<%# Two independent columns rather than a three-cell grid: the sections differ
+    in height, so row-aligned cells leave a gap under the short ones. Each
+    section is its own form and saves on its own. %>
+<div class="grid grid-cols-1 items-start gap-x-8 gap-y-10 md:grid-cols-2">
+  <div class="space-y-10">
+    <%= render layout: "section_form", locals: {
+          hotel: @hotel,
+          section: "settings",
+          title: "Settings",
+          description: "Choose what the guest sees, and who answers the chat."
+        } do |form| %>
+      <%# Flat switches, not cards. The section already gives them a container,
+          and a card inside a card reads as two boxes. %>
+      <%= render PanelsUI::Switch.new(
+            form: form,
+            attribute: :guest_chat_enabled,
+            label: "Guest Chat",
+            description: "Let guests open a chat from the concierge page. Off hides only the chat tile, the Conversations inbox, and its sidebar tab. The rest of the concierge page stays up.") %>
+
+      <%= render PanelsUI::Switch.new(
+            form: form,
+            attribute: :ai_provider_enabled,
+            label: "Automatic Replies",
+            description: "Answer guest chats automatically with the configured provider. Off leaves the chat open for staff to answer by hand.") %>
+    <% end %>
+
+    <%= render layout: "section_form", locals: {
+          hotel: @hotel,
+          section: "tone",
+          title: "AI Tone",
+          description: "How the concierge speaks to your guests. Pick the one that fits your property."
+        } do |form| %>
+      <%# Cards, not a select: the tone is a choice of three and each one needs a
+          line of explanation the guest-facing copy depends on. %>
+      <%= render PanelsUI::RadioGroup.new(
+            form: form,
+            attribute: :ai_concierge_tone,
+            label: "Reply tone",
+            variant: :card,
+            selected: @hotel.ai_concierge_tone,
+            options: [
+              { label: "Basic", value: "basic",
+                description: "Plain and short. Answers the question and stops." },
+              { label: "Business", value: "business",
+                description: "Formal and precise. Fits city and corporate properties." },
+              { label: "Cheerful", value: "cheerful",
+                description: "Warm and friendly. Fits resorts and leisure stays." }
+            ]) %>
+    <% end %>
+  </div>
+
+  <div class="space-y-10">
+    <%= render layout: "section_form", locals: {
+          hotel: @hotel,
+          section: "advanced",
+          title: "Advanced Settings",
+          description: "The model that writes the replies. Automatic Replies needs both of these."
+        } do |form| %>
+      <% provider_labels = { "openai" => "OpenAI", "claude" => "Claude", "gemini" => "Gemini" } %>
+      <%= render PanelsUI::FormField.new(
+            form: form,
+            attribute: :ai_provider_name,
+            label: "AI Provider") do |field| %>
+        <% field.with_select_menu(
+             Hotel.ai_provider_names.keys.map { |provider| [ provider_labels[provider] || provider.humanize, provider ] },
+             prompt: "Select Provider",
+             selected: @hotel.ai_provider_name) %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(
+            form: form,
+            attribute: :ai_provider_key,
+            label: "API Key",
+            hint: @hotel.ai_provider_key.present? ? "API key saved. Enter a new value only to replace it." : "The API key is encrypted before it is saved.") do |field| %>
+        <% field.with_input(type: :password, value: nil, placeholder: "Enter a new API key", autocomplete: "new-password") %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

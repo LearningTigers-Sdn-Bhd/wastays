@@ -31,7 +31,6 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(description).to be_present
       expect(description[:placeholder]).to eq("Describe the property’s atmosphere, highlights, and guest experience.")
       expect(document.css(".panel-form-field .panel-select-menu")).not_to be_empty
-      expect(document.css(".panel-form-field .panel-multi-select")).not_to be_empty
     end
 
     it 'lists the sections in column order with the read-only billing reference under hotel information' do
@@ -39,7 +38,7 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
 
       document = response.parsed_body
       expect(document.css("#hotel-profile-section h2").map { |heading| heading.text.squish }).to eq(
-        [ "Hotel Information", "Billing Reference", "Hotel Location", "Property Contact", "Business Registration" ]
+        [ "Hotel Information", "Property Amenities", "Billing Reference", "Hotel Location", "Property Contact", "Business Registration" ]
       )
       billing_reference = document.at_css("[data-testid='billing-reference'].panel-metric-card")
       expect(billing_reference.text.squish).to include("Billing Reference", "Effective setup fee")

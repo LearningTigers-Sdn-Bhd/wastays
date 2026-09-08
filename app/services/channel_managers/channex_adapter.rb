@@ -2,13 +2,6 @@
 
 module ChannelManagers
   class ChannexAdapter < BaseAdapter
-    SETTLEMENT_SOURCE_ALIASES = {
-      "bookingcom" => "booking_com",
-      "booking_dot_com" => "booking_com",
-      "agoda_com" => "agoda",
-      "expediacom" => "expedia",
-      "traveloka_com" => "traveloka"
-    }.freeze
     COLLECTION_BY_MAP = {
       "property" => "property",
       "hotel" => "property",
@@ -530,9 +523,7 @@ module ChannelManagers
     def booking_source_for(source_value)
       return nil if source_value.blank?
 
-      normalized = BookingSource.normalize(source_value)
-      canonical_key = SETTLEMENT_SOURCE_ALIASES.fetch(normalized, normalized)
-      BookingSource.find_by(key: canonical_key) || BookingSource.find_by_source(source_value)
+      BookingSource.find_by_source(source_value)
     end
 
     def source_resolution_for(source, source_value)

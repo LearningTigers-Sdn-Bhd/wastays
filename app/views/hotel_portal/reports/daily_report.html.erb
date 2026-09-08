@@ -6,9 +6,25 @@
    end %>
 <% cashier_tab = @daily_report_tab == "cashier" %>
 <% page_data = cashier_tab ? {
-     controller: "cashier-report-table",
-     action: "change->cashier-report-table#changed",
-     cashier_report_table_preference_url_value: hotel_cashier_activity_view_preference_path(current_hotel)
+     controller: "report-table",
+     action: "change->report-table#changed",
+     report_table_preference_url_value: hotel_cashier_activity_view_preference_path(current_hotel),
+     report_table_id_param_value: "selected_transaction_ids",
+     report_table_group_param_value: "selected_cashier_groups",
+     report_table_excluded_param_value: "excluded_transaction_ids",
+     report_table_selection_group_param_value: "cashier_selection_group_by",
+     report_table_grouping_param_value: "cashier_group_by",
+     report_table_page_param_value: "cashier_page",
+     report_table_default_grouping_value: HotelPortal::Reports::CashierActivityTable::DEFAULT_GROUPING,
+     report_table_filter_params_value: %w[cashier_handling cashier_payment_modes cashier_stages cashier_received_by cashier_currencies].to_json,
+     report_table_export_link_ids_value: %w[cashier-export-pdf-link cashier-export-excel-link cashier-export-csv-link].to_json,
+     report_table_column_filters_value: {
+       handling: "cashier_handling[]", payment_mode: "cashier_payment_modes[]", stage: "cashier_stages[]",
+       received_by: "cashier_received_by[]", currency: "cashier_currencies[]"
+     }.to_json,
+     report_table_column_groupings_value: {
+       handling: "handling", payment_mode: "payment_mode", stage: "stage", received_by: "received_by"
+     }.to_json
    } : {} %>
 <%= tag.div class: "w-full space-y-4", data: { slot: "report-page", report: "daily-report", **page_data } do %>
   <% cashier_export_params = cashier_tab ? {

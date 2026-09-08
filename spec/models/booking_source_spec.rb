@@ -73,6 +73,15 @@ RSpec.describe BookingSource do
       expect(described_class.find_by_source("CUSTOM_OTA")).to eq(source)
     end
 
+    it "matches the spelling that a channel writes" do
+      source = described_class.find_by(key: "booking_com") ||
+        create(:booking_source, key: "booking_com", label: "Booking.com", kind: "ota")
+      described_class.reset_registry_cache!
+
+      expect(described_class.find_by_source("bookingcom")).to eq(source)
+      expect(described_class.find_by_source("Booking.com")).to eq(source)
+    end
+
     it "returns nil for an unrecognized source" do
       expect(described_class.find_by_source("totally_unknown")).to be_nil
     end

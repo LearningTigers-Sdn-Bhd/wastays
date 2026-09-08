@@ -15,7 +15,7 @@
           aria_label: "Cashier activity view") do |group| %>
       <% [["full", "Full report", "file-text"], ["activity", "Activity", "list"], ["summary", "Summary", "chart-bar"]].each do |value, label, icon| %>
         <% group.with_item(value:, data: {
-             action: "click->cashier-report-table#openView",
+             action: "click->report-table#openView",
              href: daily_report_hotel_reports_path(current_hotel, cashier_state.merge(cashier_view: value))
            }) do %>
           <%= app_icon icon, class: "size-3.5", aria: { hidden: true } %>
@@ -43,7 +43,7 @@
           <% end %>
         <% end %>
         <% menu.with_separator %>
-        <% menu.with_item(data: { action: "click->cashier-report-table#resetColumns" }) { "Restore defaults" } %>
+        <% menu.with_item(data: { action: "click->report-table#resetColumns" }) { "Restore defaults" } %>
       <% end %>
     <% end %>
 
@@ -57,7 +57,7 @@
   </div>
 </div>
 
-<p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-cashier-preference-status></p>
+<p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-report-table-status></p>
 
 <% if @cashier_view == "full" %>
   <section class="space-y-5" aria-label="Cashier activity totals">
@@ -71,8 +71,8 @@
       <div>
         <h2 id="cashier-activity-heading" class="text-base font-semibold text-foreground">Payment activity</h2>
         <p class="text-sm text-muted-foreground" aria-live="polite" aria-atomic="true">
-          <span data-cashier-filtered-summary><%= pluralize(@cashier_report.all_totals[:movement_count], "movement") %> matching the current filters</span>
-          <span hidden data-cashier-selection-summary><span data-cashier-selection-count>0</span> transactions selected for export</span>
+          <span data-report-table-filtered-summary><%= pluralize(@cashier_report.all_totals[:movement_count], "movement") %> matching the current filters</span>
+          <span hidden data-report-table-selection-summary><span data-report-table-selection-count>0</span> transactions selected for export</span>
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -107,7 +107,7 @@
             <%= render PanelsUI::Checkbox.new(
                   name: "select_page_cashier_transactions", id: "select-page-cashier-transactions",
                   label: "Select all transactions on this page", label_hidden: true, include_hidden: false,
-                  data: { cashier_select_page: true }) %>
+                  data: { select_page: "" }) %>
           </th>
           <% HotelPortal::Reports::CashierActivityColumns.selected(@cashier_visible_columns).each do |column| %>
             <% filter_config = {
@@ -119,7 +119,7 @@
                }[column.key] %>
             <th scope="col" class="<%= column.key == 'amount' ? 'text-right' : 'text-left' %>" data-column-key="<%= column.key %>">
               <% if filter_config %>
-                <%= render "cashier_activity_filter", title: filter_config[0], param_name: filter_config[1], options: filter_config[2] %>
+                <%= render "report_column_filter", title: filter_config[0], param_name: filter_config[1], options: filter_config[2] %>
               <% else %>
                 <%= column.label %>
               <% end %>
@@ -139,13 +139,13 @@
               <% current_group = group_key %>
               <% current_month = nil %>
               <% group = @cashier_group_totals.fetch(group_key) %>
-              <tr data-table-group-row data-cashier-group-row data-cashier-group="<%= group_key %>" data-cashier-group-count="<%= group.count %>">
+              <tr data-table-group-row data-report-table-group-row data-record-group="<%= group_key %>" data-group-count="<%= group.count %>">
                 <td class="w-10 text-center">
                   <%= render PanelsUI::Checkbox.new(
                         name: "select_cashier_group_#{group_key}", id: "select-cashier-group-#{group_key.parameterize}",
                         label: "Select all #{pluralize(group.count, 'transaction')} in #{group.label}",
                         label_hidden: true, include_hidden: false,
-                        data: { cashier_group_selection: group_key }) %>
+                        data: { group_selection: group_key }) %>
                 </td>
                 <th scope="rowgroup" colspan="<%= @cashier_visible_columns.size %>" class="text-start text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <span><%= group.label %></span>
@@ -163,13 +163,13 @@
                 </th>
               </tr>
             <% end %>
-            <tr data-testid="cashier-row" data-cashier-transaction-row data-cashier-group="<%= group_key %>">
+            <tr data-testid="cashier-row" data-report-table-record-row data-record-group="<%= group_key %>">
               <td class="text-center">
                 <%= render PanelsUI::Checkbox.new(
                       name: "selected_transaction_ids[]", id: "select-cashier-transaction-#{row.transaction.id}",
                       value: row.transaction.id, label: "Select transaction #{row.transaction.id}",
                       label_hidden: true, include_hidden: false,
-                      data: { cashier_transaction_selection: true }) %>
+                      data: { record_selection: "" }) %>
               </td>
               <% @cashier_visible_columns.each do |key| %>
                 <% case key %>

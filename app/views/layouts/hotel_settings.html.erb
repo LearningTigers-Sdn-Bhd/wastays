@@ -6,5 +6,5 @@
       breadcrumb_parts: hotel_settings_breadcrumb_parts,
       breadcrumb_markup: render_hotel_settings_breadcrumbs
     } do %>
-  <%= yield %>
+  <%= content_for?(:content) ? yield(:content) : yield %>
 <% end %>

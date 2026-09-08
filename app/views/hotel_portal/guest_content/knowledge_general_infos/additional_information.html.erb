@@ -1,0 +1,14 @@
+<section class="space-y-3" aria-label="Additional Information">
+  <% section_actions = capture do %>
+    <%= render PanelsUI::Button.new(label: "Add Information", href: kb_new_path, variant: :primary, size: :sm, data: { turbo_frame: "settings_action_sheet" }) %>
+  <% end %>
+  <%= render "hotel_portal/guest_content/shared/section_header",
+        title: "Additional Information",
+        description: "Add other hotel details that can help guests during their stay.",
+        actions: section_actions %>
+  <%= render "hotel_portal/guest_content/documents/documents_table",
+    documents: @documents,
+    add_button_text: "Add Information",
+    empty_title: "No additional information yet",
+    empty_description: "Add details that do not belong in Property Settings." %>
+</section>

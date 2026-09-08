@@ -1,0 +1,38 @@
+<%# What the AI Concierge actually reads. It is machine output, so it stays
+    closed until an operator has a reason to open it: a file that was chunked,
+    or an answer that came back wrong. Locals: document, chunks. %>
+<% count = chunks.size %>
+<% label = count.positive? ? "Prepared sections (#{count})" : "Prepared sections" %>
+
+<%= render PanelsUI::Collapsible.new(
+      id: "document-#{document.id}-chunks",
+      open: document.source_type == "pdf" && count.positive? && count <= 5,
+      region: true,
+      heading_level: 4,
+      class: "overflow-hidden rounded-md border border-border bg-card",
+      trigger_class: "group items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-muted/50",
+      content_class: "border-t border-border") do |item| %>
+  <% item.with_trigger do %>
+    <span class="text-sm font-medium text-foreground"><%= label %></span>
+  <% end %>
+
+  <% item.with_body do %>
+    <% if count.positive? %>
+      <div class="divide-y divide-border">
+        <% chunks.each do |chunk| %>
+          <div class="px-4 py-3">
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-xs font-medium text-muted-foreground">Chunk <%= chunk.chunk_index %></span>
+              <span class="text-xs tabular-nums text-muted-foreground"><%= chunk.token_count %> tokens</span>
+            </div>
+            <p class="mt-1 whitespace-pre-wrap text-sm text-foreground"><%= chunk.content %></p>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="px-4 py-3 text-sm text-muted-foreground">
+        <%= document.source_type == "pdf" ? "Still reading the file. This takes about a minute." : "Nothing prepared yet." %>
+      </p>
+    <% end %>
+  <% end %>
+<% end %>

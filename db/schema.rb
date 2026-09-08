@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1365,6 +1365,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
     t.index ["passport_number"], name: "index_guests_on_passport_number"
   end
 
+  create_table "hotel_amenity_details", force: :cascade do |t|
+    t.bigint "amenity_id", null: false
+    t.datetime "created_at", null: false
+    t.text "fee_information"
+    t.text "guest_notes"
+    t.bigint "hotel_id", null: false
+    t.string "location"
+    t.text "opening_hours"
+    t.text "reservation_instructions"
+    t.boolean "reservation_required", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.index ["amenity_id"], name: "index_hotel_amenity_details_on_amenity_id"
+    t.index ["hotel_id", "amenity_id"], name: "index_hotel_amenity_details_on_hotel_id_and_amenity_id", unique: true
+    t.index ["hotel_id"], name: "index_hotel_amenity_details_on_hotel_id"
+  end
+
   create_table "hotel_boat_schedules", force: :cascade do |t|
     t.datetime "archived_at"
     t.datetime "created_at", null: false
@@ -1544,6 +1560,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
     t.datetime "updated_at", null: false
     t.index ["hotel_id", "transaction_category"], name: "idx_hotel_gl_maps_on_hotel_and_category", unique: true
     t.index ["hotel_id"], name: "index_hotel_general_ledger_maps_on_hotel_id"
+  end
+
+  create_table "hotel_guest_contacts", force: :cascade do |t|
+    t.text "after_hours_message"
+    t.datetime "created_at", null: false
+    t.string "duty_manager_phone"
+    t.text "emergency_instructions"
+    t.string "emergency_phone"
+    t.string "emergency_services_number"
+    t.integer "escalation_attempts", default: 2, null: false
+    t.jsonb "escalation_triggers", default: [], null: false
+    t.time "front_desk_closes_at"
+    t.string "front_desk_email"
+    t.string "front_desk_extension"
+    t.boolean "front_desk_open_24h", default: true, null: false
+    t.time "front_desk_opens_at"
+    t.string "front_desk_phone"
+    t.string "front_desk_whatsapp"
+    t.bigint "hotel_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_guest_contacts_on_hotel_id", unique: true
+  end
+
+  create_table "hotel_guest_instructions", force: :cascade do |t|
+    t.text "arrival_instructions"
+    t.datetime "created_at", null: false
+    t.text "departure_instructions"
+    t.bigint "hotel_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_guest_instructions_on_hotel_id", unique: true
   end
 
   create_table "hotel_knowledge_chunks", force: :cascade do |t|
@@ -1772,6 +1818,55 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
     t.string "room_revenue_tax_rule_application", default: "new_bookings_only", null: false
     t.datetime "updated_at", null: false
     t.index ["hotel_id"], name: "index_hotel_transaction_configurations_on_hotel_id", unique: true
+  end
+
+  create_table "hotel_transport_details", force: :cascade do |t|
+    t.integer "airport_distance_km"
+    t.integer "airport_transfer_lead_hours"
+    t.boolean "airport_transfer_offered", default: false, null: false
+    t.decimal "airport_transfer_price", precision: 10, scale: 2
+    t.integer "airport_travel_minutes"
+    t.integer "city_centre_distance_km"
+    t.integer "city_centre_travel_minutes"
+    t.datetime "created_at", null: false
+    t.text "directions"
+    t.bigint "hotel_id", null: false
+    t.string "nearest_transit_stop"
+    t.string "parking_availability", default: "none", null: false
+    t.boolean "parking_booking_required", default: false, null: false
+    t.boolean "parking_ev_charging", default: false, null: false
+    t.decimal "parking_height_limit_m", precision: 4, scale: 2
+    t.text "parking_notes"
+    t.decimal "parking_price", precision: 10, scale: 2
+    t.string "parking_price_unit"
+    t.integer "parking_spaces"
+    t.string "parking_type"
+    t.string "pickup_point"
+    t.string "shuttle_schedule"
+    t.integer "station_distance_km"
+    t.integer "station_travel_minutes"
+    t.text "transport_notes"
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_transport_details_on_hotel_id", unique: true
+  end
+
+  create_table "hotel_wifi_networks", force: :cascade do |t|
+    t.string "access_scope", default: "checked_in_guests", null: false
+    t.boolean "active", default: true, null: false
+    t.text "connection_instructions"
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.string "label", null: false
+    t.text "password"
+    t.integer "position", default: 0, null: false
+    t.boolean "primary_network", default: false, null: false
+    t.string "security_type", default: "protected", null: false
+    t.string "ssid", null: false
+    t.datetime "updated_at", null: false
+    t.index "hotel_id, lower((ssid)::text)", name: "index_hotel_wifi_networks_on_hotel_and_lower_ssid", unique: true
+    t.index ["hotel_id", "position"], name: "index_hotel_wifi_networks_on_hotel_id_and_position"
+    t.index ["hotel_id"], name: "index_hotel_wifi_networks_on_hotel_id"
+    t.index ["hotel_id"], name: "index_hotel_wifi_networks_on_primary_hotel", unique: true, where: "primary_network"
   end
 
   create_table "hotels", force: :cascade do |t|
@@ -3122,6 +3217,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
   add_foreign_key "guest_registration_cards", "bookings"
   add_foreign_key "guest_registration_cards", "hotels"
   add_foreign_key "guest_registration_note_templates", "hotels"
+  add_foreign_key "hotel_amenity_details", "amenities"
+  add_foreign_key "hotel_amenity_details", "hotels"
   add_foreign_key "hotel_boat_schedules", "hotels"
   add_foreign_key "hotel_boat_settings", "hotels"
   add_foreign_key "hotel_business_dates", "hotels"
@@ -3137,6 +3234,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
   add_foreign_key "hotel_extra_charges", "hotels"
   add_foreign_key "hotel_extra_charges", "transaction_codes"
   add_foreign_key "hotel_general_ledger_maps", "hotels"
+  add_foreign_key "hotel_guest_contacts", "hotels"
+  add_foreign_key "hotel_guest_instructions", "hotels"
   add_foreign_key "hotel_knowledge_chunks", "hotel_knowledge_documents"
   add_foreign_key "hotel_knowledge_diagnostics", "hotels"
   add_foreign_key "hotel_knowledge_diagnostics", "prospect_messages"
@@ -3157,6 +3256,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_090000) do
   add_foreign_key "hotel_taxes", "transaction_codes"
   add_foreign_key "hotel_team_configs", "hotels"
   add_foreign_key "hotel_transaction_configurations", "hotels"
+  add_foreign_key "hotel_transport_details", "hotels"
+  add_foreign_key "hotel_wifi_networks", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "plans"
   add_foreign_key "hotels", "users", column: "salesperson_id"

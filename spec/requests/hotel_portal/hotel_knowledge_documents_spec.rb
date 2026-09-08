@@ -22,9 +22,10 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
     sign_in_as(user)
   end
 
-  shared_examples "a knowledge resource" do |category:, route_prefix:, index_title:, create_params: {}|
+  shared_examples "a knowledge resource" do |category:, route_prefix:, index_title:, form_title:, create_params: {}, listing_route: nil|
     let!(:doc) { create(:hotel_knowledge_document, hotel: hotel, category: category, title: "Test Doc") }
     let(:index_path) { public_send("#{route_prefix.pluralize}_path", hotel) }
+    let(:listing_path) { listing_route ? public_send("#{listing_route}_path", hotel) : index_path }
     let(:new_path) { public_send("new_#{route_prefix}_path", hotel) }
     let(:show_path) { public_send("#{route_prefix}_path", hotel, doc) }
     let(:edit_path) { public_send("edit_#{route_prefix}_path", hotel, doc) }
@@ -32,7 +33,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
     describe "GET index" do
       it "renders the index page" do
-        get index_path
+        get listing_path
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include(index_title)
@@ -40,18 +41,18 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
       end
 
       it "lists existing documents scoped to #{category}" do
-        get index_path
+        get listing_path
 
         expect(response.body).to include("Test Doc")
       end
 
-      it "redirects when AI concierge page is excluded from plan" do
+      it "remains available when AI concierge is excluded from the plan" do
         hotel.plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
 
-        get index_path
+        get listing_path
 
-        expect(response).to redirect_to(root_path)
-        expect(flash[:alert]).to eq("This feature isn't included in your plan. Upgrade to access it.")
+        expect(response).to have_http_status(:ok)
+        expect(response.body).not_to include(hotel_ai_concierge_settings_path(hotel))
       end
     end
 
@@ -60,7 +61,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
         get new_path
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("Add Document")
+        expect(response.body).to include("Add #{form_title}")
       end
     end
 
@@ -76,7 +77,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           }
         }.to change(HotelKnowledgeDocument, :count).by(1)
 
-        expect(response).to redirect_to(index_path)
+        expect(response).to redirect_to(listing_path)
         new_doc = HotelKnowledgeDocument.last
         expect(new_doc.title).to eq("New #{category}")
         expect(new_doc.category).to eq(category)
@@ -89,7 +90,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
         }
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(response.body).to include("Add Document")
+        expect(response.body).to include("Add #{form_title}")
       end
     end
 
@@ -105,9 +106,8 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
       it "does not show manual embedding controls when AI Concierge is disabled" do
         get show_path
 
-        expect(response.body).not_to include("Generate Embeddings")
-        expect(response.body).not_to include("Retry Embeddings")
-        expect(response.body).not_to include("Generating embeddings")
+        expect(response.body).not_to include("Prepare content")
+        expect(response.body).not_to include("Try again")
       end
 
       it "shows the generate button while pending" do
@@ -115,19 +115,17 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
         get show_path
 
-        expect(response.body).to include("Generate Embeddings")
-        expect(response.body).not_to include("Generating embeddings")
+        expect(response.body).to include("Prepare content")
       end
 
-      it "shows an indexing spinner instead of a generate button while indexing" do
+      it "shows an updating status instead of a generate button while indexing" do
         hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test-key")
         doc.update_column(:embedding_status, "indexing")
 
         get show_path
 
-        expect(response.body).to include("Generating embeddings")
-        expect(response.body).to include("animate-spin")
-        expect(response.body).not_to include("Generate Embeddings")
+        expect(response.body).to include("Updating")
+        expect(response.body).not_to include("Prepare content")
       end
 
       it "shows the retry button after embedding generation fails" do
@@ -136,8 +134,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
 
         get show_path
 
-        expect(response.body).to include("Retry Embeddings")
-        expect(response.body).not_to include("Generating embeddings")
+        expect(response.body).to include("Try again")
       end
     end
 
@@ -147,7 +144,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           post reindex_path
         }.not_to have_enqueued_job(HotelKnowledges::GenerateEmbeddingsJob)
 
-        expect(response).to redirect_to(show_path)
+        expect(response).to redirect_to(listing_path)
       end
 
       it "enqueues embedding generation when AI Concierge is enabled" do
@@ -158,7 +155,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           post reindex_path
         }.to have_enqueued_job(HotelKnowledges::GenerateEmbeddingsJob).with(doc.id)
 
-        expect(response).to redirect_to(show_path)
+        expect(response).to redirect_to(listing_path)
         expect(doc.reload.embedding_status).to eq("indexing")
       end
     end
@@ -169,7 +166,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           hotel_knowledge_document: { title: "Updated Title" }
         }
 
-        expect(response).to redirect_to(index_path)
+        expect(response).to redirect_to(listing_path)
         expect(doc.reload.title).to eq("Updated Title")
       end
     end
@@ -180,7 +177,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           delete show_path
         }.to change(HotelKnowledgeDocument, :count).by(-1)
 
-        expect(response).to redirect_to(index_path)
+        expect(response).to redirect_to(listing_path)
       end
 
       it "deletes associated chunks" do
@@ -196,12 +193,14 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
   it_behaves_like "a knowledge resource",
     category: "policy",
     route_prefix: "hotel_knowledge_policy",
-    index_title: "Policy Management"
+    index_title: "Policies",
+    form_title: "Policy"
 
   it_behaves_like "a knowledge resource",
     category: "faq",
     route_prefix: "hotel_knowledge_faq",
-    index_title: "FAQs Management",
+    index_title: "FAQs",
+    form_title: "FAQ",
     create_params: {
       metadata: { qa_pairs: [ { question: "What time is check-in?", answer: "3:00 PM" } ] }
     }
@@ -209,5 +208,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
   it_behaves_like "a knowledge resource",
     category: "general_info",
     route_prefix: "hotel_knowledge_general_info",
-    index_title: "General Info Management"
+    index_title: "Additional Information",
+    form_title: "Information",
+    listing_route: "hotel_knowledge_additional_information"
 end

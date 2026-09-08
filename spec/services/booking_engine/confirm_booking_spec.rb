@@ -91,6 +91,34 @@ RSpec.describe BookingEngine::ConfirmBooking do
       expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: booking)
     end
 
+    it "calculates commission from the room subtotal before SST and other taxes" do
+      hotel.update!(sst_enabled: true)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+      service_charge = create(
+        :hotel_tax,
+        hotel: hotel,
+        name: "Service Charge",
+        code: "SC",
+        rate_type: "percentage",
+        amount: 10
+      )
+      room_code.transaction_code_taxes.create!(hotel_tax: service_charge)
+      create(:margin_rule, settable: hotel, rate: 10)
+
+      result = described_class.new(quote_token: quote.token, payment_details: payment_details).call
+
+      expect(result).to be_success
+      expect(result.booking).to have_attributes(
+        total_amount: 236.to_d,
+        margin_rate: 10.to_d,
+        margin_amount: 20.to_d,
+        net_amount: 216.to_d,
+        tourism_tax_amount: 10.to_d
+      )
+      expect(result.booking.tax_total).to eq(46.to_d)
+    end
+
     it 'copies occupancy_snapshot (including age-band data) verbatim from the quote item to the booking room' do
       quote_item.update!(
         occupancy_snapshot: {

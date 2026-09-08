@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Amenity < ApplicationRecord
+  has_many :hotel_amenity_details, dependent: :restrict_with_error
+
   validates :name, :slug, :amenity_type, :category, presence: true
   validates :slug, uniqueness: { scope: :amenity_type }
 

@@ -1,0 +1,12 @@
+<% form_id = "new-guest-content-document-form" %>
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "new-guest-content-document-sheet",
+             title: "Add #{kb_label}",
+             description: "Write it once. Staff read it here and the AI Concierge answers from it.",
+             form_id: form_id,
+             submit_label: "Add #{kb_label}",
+             size: @document.category == "faq" ? :xl : :lg
+           } do %>
+  <%= render "hotel_portal/guest_content/documents/form", document: @document, form_id: form_id %>
+<% end %>

@@ -1,16 +1,16 @@
 <div class="space-y-5">
-  <%= render PanelsUI::PageHeader.new(title: @presenter.page_title, description: @presenter.page_description) %>
+  <div class="space-y-4">
+    <%= render PanelsUI::PageHeader.new(title: @presenter.page_title, description: @presenter.page_description) %>
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
 
   <% if @presenter %>
-    <%= render "hotel_portal/settings/group_tabs" %>
 
     <% case @presenter.active_page %>
     <% when "general" %>
       <%= render "hotel_portal/settings/general_section" %>
     <% when "boat" %>
       <%= render "hotel_portal/settings/boat_section" %>
-    <% when "ai" %>
-      <%= render "hotel_portal/settings/ai_concierge_section" %>
     <% when "notifications" %>
       <%= render "hotel_portal/settings/notifications_section" %>
     <% when "banking" %>

@@ -1,0 +1,43 @@
+<div class="grid grid-cols-1 items-start gap-x-8 gap-y-10 lg:grid-cols-3" data-testid="arrival-departure-layout">
+  <section id="standard-times" class="lg:w-[85%]" aria-labelledby="standard-times-heading">
+    <div>
+      <h2 id="standard-times-heading" class="text-base font-semibold text-foreground">Standard Check-in &amp; Check-out Time</h2>
+      <p class="mt-2 text-sm text-muted-foreground">These times come from General Settings, which remains the source of truth.</p>
+    </div>
+
+    <dl class="mt-5 space-y-4">
+      <div>
+        <dt class="text-sm font-medium text-foreground">Standard check-in time</dt>
+        <dd class="mt-1 text-sm text-muted-foreground"><%= @property_policy&.check_in_time.present? ? Time.zone.parse(@property_policy.check_in_time.to_s).strftime("%-I:%M %p") : "Not provided" %></dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-foreground">Standard check-out time</dt>
+        <dd class="mt-1 text-sm text-muted-foreground"><%= @property_policy&.check_out_time.present? ? Time.zone.parse(@property_policy.check_out_time.to_s).strftime("%-I:%M %p") : "Not provided" %></dd>
+      </div>
+    </dl>
+
+    <footer class="mt-5 flex justify-end">
+      <%= render PanelsUI::Button.new(label: "General Settings", href: hotel_general_settings_path(@hotel), variant: :secondary, size: :md) %>
+    </footer>
+  </section>
+
+  <%= render "instruction_form",
+        hotel: @hotel,
+        guest_instruction: @guest_instruction,
+        section: "arrival-instructions",
+        title: "Arrival Instructions",
+        description: "Tell guests what to do when they arrive at the property.",
+        attribute: :arrival_instructions,
+        hint: "Include only the steps guests need when they arrive.",
+        placeholder: "For example, collect your room key from reception after 3:00 PM." %>
+
+  <%= render "instruction_form",
+        hotel: @hotel,
+        guest_instruction: @guest_instruction,
+        section: "departure-instructions",
+        title: "Departure Instructions",
+        description: "Tell guests what to do before they leave the property.",
+        attribute: :departure_instructions,
+        hint: "Include only the steps guests need before they leave.",
+        placeholder: "For example, return your room key to reception before noon." %>
+</div>

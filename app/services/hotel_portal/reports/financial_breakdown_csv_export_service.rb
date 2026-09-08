@@ -3,33 +3,46 @@
 module HotelPortal
   module Reports
     class FinancialBreakdownCsvExportService
-      HEADERS = [ "Booking Reference", "Guest Name", "Status", "Check In", "Check Out", "Gross", "Taxes", "Margin", "Net", "Currency" ].freeze
-
-      def initialize(hotel:, report:)
+      def initialize(hotel:, report:, visible_columns: BookingPerformanceColumns::DEFAULT_KEYS)
         @hotel = hotel
         @report = report
+        @visible_columns = visible_columns
         @csv = Exports::CsvReportSupport.new
       end
 
       def generate
         @csv.generate do |csv|
-          csv << HEADERS
-          @report.rows.each { |row| csv << csv_row(row) }
-          csv << [ "TOTAL", nil, nil, nil, nil, *@report.totals.values_at(:gross, :taxes, :margin, :net).map { |value| @csv.money(value) }, currency ]
+          csv << table_for([]).headers
+          @report.totals_by_currency.each do |totals|
+            table = table_for(rows_for(totals.fetch(:currency)))
+            table.rows.each { |row| csv << csv_row(row, table.column_types) }
+            csv << csv_row(table.total_row(totals), table.column_types, total: true)
+          end
         end
       end
 
       private
 
-      def csv_row(row)
-        [
-          @csv.text(row[:booking_reference]), @csv.text(row[:guest_name]), @csv.text(row[:status].to_s.titleize),
-          @csv.date(row[:check_in]), @csv.date(row[:check_out]), @csv.money(row[:gross]), @csv.money(row[:taxes]),
-          @csv.money(row[:margin]), @csv.money(row[:net]), @csv.text(row[:currency].presence || currency)
-        ]
+      def csv_row(row, types, total: false)
+        row.each_with_index.map do |value, index|
+          next if value.nil?
+          next @csv.text(value) if total && index.zero?
+
+          case types.fetch(index)
+          when :date then @csv.date(value)
+          when :money then @csv.money(value)
+          else @csv.text(value)
+          end
+        end
       end
 
-      def currency = @hotel.default_currency.presence || "MYR"
+      def rows_for(currency_code)
+        @report.ordered_rows.select { |row| row.currency == currency_code }
+      end
+
+      def table_for(rows)
+        BookingPerformanceExportTable.new(rows:, visible_columns: @visible_columns)
+      end
     end
   end
 end

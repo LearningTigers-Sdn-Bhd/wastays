@@ -1,7 +1,8 @@
 <div class="w-full space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "General Ledger Mappings", description: "Configure how transaction categories map to your accounting system.") %>
-
-  <%= render "hotel_portal/settings/group_tabs" %>
+  <div class="space-y-4">
+    <%= render PanelsUI::PageHeader.new(title: "General Ledger Mappings", description: "Configure how transaction categories map to your accounting system.") %>
+    <%= render "hotel_portal/settings/group_tabs" %>
+  </div>
 
   <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
     <div class="overflow-x-auto">

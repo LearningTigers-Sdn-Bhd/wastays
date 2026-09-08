@@ -1,0 +1,142 @@
+<%# Two independent columns rather than a four-cell grid: the sections differ a
+    lot in height, so row-aligned cells left a tall gap under the short ones.
+    Each section is its own form and saves on its own. %>
+<div class="grid grid-cols-1 items-start gap-x-8 gap-y-10 md:grid-cols-2">
+  <div class="space-y-10">
+    <%= render layout: "section_form", locals: {
+          hotel: @hotel,
+          guest_contact: @guest_contact,
+          section: "front-desk",
+          title: "Front desk",
+          description: "The first contact for most guest questions."
+        } do |form| %>
+      <%# The four numbers pair off two to a row. The switch and the hours it
+          opens run the full width under them. %>
+      <div class="grid items-start gap-4 lg:grid-cols-2" data-controller="front-desk-hours">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :front_desk_phone, label: "Phone number",
+              hint: "Guests can call this number.") do |field| %>
+          <% field.with_input(placeholder: "+60 3 1234 5678") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: form, attribute: :front_desk_whatsapp, label: "WhatsApp number",
+              hint: "Leave empty if you do not use WhatsApp.") do |field| %>
+          <% field.with_input(placeholder: "+60 12 345 6789") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: form, attribute: :front_desk_email, label: "Email address") do |field| %>
+          <% field.with_input(type: :email, placeholder: "frontdesk@yourhotel.com") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: form, attribute: :front_desk_extension, label: "In-room phone extension",
+              hint: "The number a guest dials from the room.") do |field| %>
+          <% field.with_input(placeholder: "0") %>
+        <% end %>
+
+        <div class="lg:col-span-2">
+          <%= render PanelsUI::Switch.new(
+                form: form,
+                attribute: :front_desk_open_24h,
+                variant: :card,
+                label: "Front desk is open 24 hours",
+                description: "Turn this off to set the hours a person is on the desk.",
+                data: {
+                  front_desk_hours_target: "switch",
+                  action: "change->front-desk-hours#sync"
+                }) %>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:col-span-2" data-front-desk-hours-target="hours">
+          <%= render PanelsUI::FormField.new(form: form, attribute: :front_desk_opens_at, label: "Opens at") do |field| %>
+            <% field.with_time_picker(value: @guest_contact.front_desk_opens_at&.strftime("%H:%M"), minute_step: 15) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :front_desk_closes_at, label: "Closes at",
+                hint: "May fall after midnight.") do |field| %>
+            <% field.with_time_picker(value: @guest_contact.front_desk_closes_at&.strftime("%H:%M"), minute_step: 15) %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <%= render layout: "section_form", locals: {
+          hotel: @hotel,
+          guest_contact: @guest_contact,
+          section: "after-hours",
+          title: "After hours",
+          description: "Used when the front desk is closed."
+        } do |form| %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :duty_manager_phone, label: "Duty manager phone",
+            hint: "The person a guest can reach at night.") do |field| %>
+        <% field.with_input(placeholder: "+60 12 987 6543") %>
+      <% end %>
+
+      <%= render PanelsUI::FormField.new(form: form, attribute: :after_hours_message, label: "Message to show after hours",
+            hint: "Write it as you want the guest to read it. Leave empty to use the standard message.") do |field| %>
+        <% field.with_text_area(rows: 4, placeholder: "For example, the front desk is closed. Call the duty manager for urgent help.") %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="space-y-10">
+    <%= render layout: "section_form", locals: {
+          hotel: @hotel,
+          guest_contact: @guest_contact,
+          section: "emergency",
+          title: "Emergency",
+          description: "Always shown to the guest. The concierge does not try to answer first."
+        } do |form| %>
+      <%# The two numbers share a row. The instructions run the full width under
+          them, because a text area reads badly in half a column. %>
+      <div class="grid items-start gap-4 lg:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :emergency_phone, label: "Emergency number",
+              hint: "Your security or duty desk.") do |field| %>
+          <% field.with_input(placeholder: "+60 3 1234 5600") %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: form, attribute: :emergency_services_number, label: "Local emergency services",
+              hint: "Police, fire, and ambulance.") do |field| %>
+          <% field.with_input(placeholder: "999") %>
+        <% end %>
+
+        <div class="lg:col-span-2">
+          <%= render PanelsUI::FormField.new(form: form, attribute: :emergency_instructions, label: "Medical and fire instructions") do |field| %>
+            <% field.with_text_area(rows: 3, placeholder: "For example, call 999 first. Then call the front desk on extension 0.") %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <%= render layout: "section_form", locals: {
+          hotel: @hotel,
+          guest_contact: @guest_contact,
+          section: "escalation",
+          title: "Escalation rules",
+          description: "Tell the concierge when to stop and pass the guest to a person."
+        } do |form| %>
+      <%= hidden_field_tag "hotel_guest_contact[escalation_triggers][]", "" %>
+      <%# Five cards, two to a row, and the odd one keeps the left column. The
+          cards stretch so a two-line description does not leave the card beside
+          it short. %>
+      <div class="grid gap-3 lg:grid-cols-2">
+        <% HotelGuestContact::ESCALATION_TRIGGER_OPTIONS.each do |trigger| %>
+          <%= render PanelsUI::Checkbox.new(
+                name: "hotel_guest_contact[escalation_triggers][]",
+                value: trigger[:value],
+                checked: @guest_contact.escalates_on?(trigger[:value]),
+                unchecked_value: nil,
+                variant: :card,
+                label: trigger[:label],
+                description: trigger[:description]) %>
+        <% end %>
+      </div>
+
+      <%= render PanelsUI::FormField.new(form: form, attribute: :escalation_attempts,
+            label: "Try this many times before hand over",
+            hint: "How many replies the concierge may attempt before it fetches a person.") do |field| %>
+        <% field.with_select_menu(
+             HotelGuestContact::ESCALATION_ATTEMPTS_RANGE.map { |count| [ pluralize(count, "try"), count ] },
+             required: true) %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

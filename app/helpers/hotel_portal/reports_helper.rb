@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 module HotelPortal::ReportsHelper
+  # Shows an amount with its own currency in front of it.
+  def report_money(amount, currency)
+    number_to_currency(amount, unit: "#{currency} ", format: "%u%n")
+  end
+
   def report_rows_grouped_by_month(rows, date_preset:, &date_for)
     return { nil => rows } unless date_preset == "this_year"
 
