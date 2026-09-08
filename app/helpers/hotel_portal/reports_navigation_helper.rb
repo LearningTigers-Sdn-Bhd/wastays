@@ -18,7 +18,7 @@ module HotelPortal
       financial_nav_items = [
         NavItem.new(label: "Summary", path: hotel_reports_path(current_hotel), icon: "file-spreadsheet", active: reports_action?("index"), permission: "view_reports"),
         NavItem.new(label: "Daily Report", path: daily_report_hotel_reports_path(current_hotel), icon: "coins", active: reports_action?("daily_report"), permission: "view_reports", plan_feature: "revenue_allocation_per_night"),
-        NavItem.new(label: "Daily Performance Breakdown", path: breakdown_hotel_reports_path(current_hotel), search_text: "Daily Performance Breakdown Detailed Financial Breakdown Reports", icon: "chart-line", active: reports_action?("breakdown"), permission: "view_reports"),
+        NavItem.new(label: "Booking Performance", path: breakdown_hotel_reports_path(current_hotel), search_text: "Booking Performance Booking Sales Financial Breakdown Reports", icon: "chart-line", active: reports_action?("breakdown"), permission: "view_reports"),
         NavItem.new(label: "Refund Report", path: refund_report_hotel_reports_path(current_hotel), icon: "credit-card", active: reports_action?("refund_report"), permission: "view_reports"),
         NavItem.new(label: "Extra Charge", path: extra_charge_hotel_reports_path(current_hotel), icon: "receipt", active: reports_action?("extra_charge"), permission: "view_reports"),
         NavItem.new(label: "Daily Occupancy", path: daily_occupancy_hotel_reports_path(current_hotel), icon: "percent", active: reports_action?("daily_occupancy"), permission: "view_reports", plan_feature: "daily_occupancy_revenue"),

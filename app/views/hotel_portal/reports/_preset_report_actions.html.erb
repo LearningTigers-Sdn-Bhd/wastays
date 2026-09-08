@@ -1,7 +1,7 @@
 <%= form_with url: form_url, method: :get, local: true,
       class: local_assigns.fetch(:class_name, "flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end lg:w-auto"),
       id: local_assigns[:form_id],
-      data: { controller: "date-preset", slot: "report-toolbar" } do |form| %>
+      data: { controller: "date-preset", slot: "report-toolbar" }.merge(local_assigns.fetch(:form_data, {})) do |form| %>
   <% local_assigns.fetch(:hidden_params, {}).each do |name, value| %>
     <%= hidden_field_tag name, value %>
   <% end %>

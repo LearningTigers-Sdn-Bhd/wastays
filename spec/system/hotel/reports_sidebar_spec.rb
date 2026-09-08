@@ -70,7 +70,7 @@ RSpec.describe "Hotel reports layer sidebar", type: :system do
 
     within("#hotel-reports-sidebar") do
       expect(page).to have_link("Payouts", href: payouts_hotel_reports_path(hotel), visible: :all)
-      expect(page).to have_link("Daily Performance Breakdown", href: breakdown_hotel_reports_path(hotel), visible: :all)
+      expect(page).to have_link("Booking Performance", href: breakdown_hotel_reports_path(hotel), visible: :all)
       expect(page).to have_link("Inventory Audit Logs", href: hotel_inventory_audit_logs_path(hotel), visible: :all)
     end
   end
@@ -82,7 +82,7 @@ RSpec.describe "Hotel reports layer sidebar", type: :system do
 
     within("#hotel-reports-sidebar") do
       expect(page).to have_no_link("Payouts", href: payouts_hotel_reports_path(hotel), visible: :all)
-      expect(page).to have_link("Daily Performance Breakdown", href: breakdown_hotel_reports_path(hotel), visible: :all)
+      expect(page).to have_link("Booking Performance", href: breakdown_hotel_reports_path(hotel), visible: :all)
     end
   end
 

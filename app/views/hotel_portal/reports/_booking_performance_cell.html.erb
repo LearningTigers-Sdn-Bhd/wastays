@@ -1,0 +1,48 @@
+<% case key %>
+<% when "booked_on" %>
+  <td class="whitespace-nowrap text-muted-foreground"><%= row.booked_on.strftime("%d %b %Y") %></td>
+<% when "booking" %>
+  <th scope="row" class="min-w-44">
+    <%= link_to row.booking_number,
+          hotel_booking_workspace_path(current_hotel, row.booking_id, tab: "booking_details"),
+          class: "block break-words font-mono text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
+          data: { turbo: false } %>
+    <span class="mt-1 block break-all font-mono text-xs font-normal text-muted-foreground" translate="no">
+      Code: <%= row.confirmation_code %>
+    </span>
+  </th>
+<% when "confirmation_code" %>
+  <td class="whitespace-nowrap font-mono"><%= row.confirmation_code %></td>
+<% when "guest" %>
+  <td class="font-medium text-foreground"><%= row.guest_name %></td>
+<% when "stay" %>
+  <td class="whitespace-nowrap">
+    <%= row.check_in.strftime("%d %b %Y") %>
+    <span class="block text-xs text-muted-foreground">to <%= row.check_out.strftime("%d %b %Y") %></span>
+  </td>
+<% when "check_in" %>
+  <td class="whitespace-nowrap text-muted-foreground"><%= row.check_in.strftime("%d %b %Y") %></td>
+<% when "check_out" %>
+  <td class="whitespace-nowrap text-muted-foreground"><%= row.check_out.strftime("%d %b %Y") %></td>
+<% when "source" %>
+  <td class="whitespace-nowrap"><%= row.source_label %></td>
+<% when "fund_collector" %>
+  <td class="whitespace-nowrap"><%= row.fund_collector_label %></td>
+<% when "status" %>
+  <% presentation = HotelPortal::BookingFinancialPresenter::STATUS_PRESENTATION.fetch(row.status, { variant: :neutral }) %>
+  <td class="whitespace-nowrap">
+    <%= render PanelsUI::Badge.new(label: row.status_label, variant: presentation.fetch(:variant, :neutral), size: :sm) %>
+  </td>
+<% when "payment_status" %>
+  <td class="whitespace-nowrap"><%= row.payment_status_label %></td>
+<% when "gross" %>
+  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground"><%= report_money(row.gross, row.currency) %></td>
+<% when "taxes" %>
+  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground"><%= report_money(row.taxes, row.currency) %></td>
+<% when "commission" %>
+  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground"><%= report_money(row.commission, row.currency) %></td>
+<% when "net" %>
+  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground"><%= report_money(row.net, row.currency) %></td>
+<% when "currency" %>
+  <td class="whitespace-nowrap"><%= row.currency %></td>
+<% end %>

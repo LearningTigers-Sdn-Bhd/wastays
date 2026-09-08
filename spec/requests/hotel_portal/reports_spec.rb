@@ -145,6 +145,33 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_no_css("table.panel-table")
     end
 
+    it "keeps the time period on the table controls after a frame reload" do
+      get breakdown_hotel_reports_path(hotel), params: {
+        date_preset: "all_time", group_by: "source", q: "Aina"
+      }
+
+      page = Capybara.string(response.body)
+      table = page.find("turbo-frame#breakdown_results [data-controller='report-table']")
+      state = Rack::Utils.parse_nested_query(URI.parse(table["data-report-table-url"]).query)
+
+      expect(table["data-report-table-grouping-param-value"]).to eq("group_by")
+      expect(state).to include("date_preset" => "all_time", "group_by" => "source", "q" => "Aina")
+      expect(state).to include("start_date", "end_date")
+      expect(page).to have_css("turbo-frame#breakdown_results form[data-turbo-action='advance']", count: 1)
+      expect(page).to have_no_css("turbo-frame#breakdown_results input[type='search']")
+    end
+
+    it "keeps a match-nothing filter on the table controls" do
+      get breakdown_hotel_reports_path(hotel), params: {
+        date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31", statuses: %w[__none__]
+      }
+
+      table = Capybara.string(response.body).find("[data-controller='report-table']")
+      state = Rack::Utils.parse_nested_query(URI.parse(table["data-report-table-url"]).query)
+
+      expect(state["statuses"]).to eq(%w[__none__])
+    end
+
     it "uses sentence-case report copy" do
       get hotel_reports_path(hotel), params: {
         date_preset: "custom",
@@ -1795,7 +1822,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(page).to have_css("#cashier-activity-grouping button svg", count: 4)
         expect(action_group.text.squish).to include("Columns", "Export full report")
         expect(action_group.element_children.last["data-slot"]).to eq("report-export")
-        expect(document.at_css("[data-cashier-selection-summary]").parent["aria-live"]).to eq("polite")
+        expect(document.at_css("[data-report-table-selection-summary]").parent["aria-live"]).to eq("polite")
 
         get daily_report_hotel_reports_path(hotel, tab: "cashier", cashier_start_time: "08:00",
           start_date: start_date.to_s, end_date: start_date.to_s)
@@ -1950,7 +1977,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(document.text).to include("Not handled at the desk")
         expect(document.at_css('[aria-label="Not handled at the desk summary"]').text.squish)
           .to include("Movements 1", "Amount in MYR 700.00")
-        expect(document.css('[data-cashier-group-row]').map { |row| row.at_css("th").text.squish }).to include(a_string_starting_with("Gateway"))
+        expect(document.css('[data-report-table-group-row]').map { |row| row.at_css("th").text.squish }).to include(a_string_starting_with("Gateway"))
         expect(document.css('[data-testid="cashier-row"]').size).to eq(1)
       end
 
@@ -2221,17 +2248,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Taxes")
       expect(response.body).to include("20.00")
-      expect(page).to have_css("[data-slot='report-page'][data-report='financial-breakdown']")
-      expect(page).to have_css(".panel-form-field[data-size='md'] input[type='search']")
-      expect(page).to have_select("fund_collector", options: [ "All bookings", "WAStays", "Hotel" ])
+      expect(page).to have_css("[data-slot='report-page'][data-report='booking-performance']")
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
-      expect(page).to have_css("[data-slot='report-date-group']", text: "06 May 2026")
+      expect(page).to have_css("[data-report-table-group-row]", text: "06 May 2026")
       expect(page).to have_link(
         booking.formatted_reservation_number,
         href: hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
       )
       expect(page).to have_text("Code: #{booking.confirmation_token}")
-      summary = page.find("section[aria-label='MYR financial summary']")
+      summary = page.find("section[aria-label='MYR booking performance summary']")
       expect(summary).to have_text("Gross price")
       expect(summary).to have_text("MYR 320.00")
       expect(summary).to have_text("Taxes")
@@ -2248,15 +2273,15 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       page = Capybara.string(response.body)
-      expect(page).to have_css("h1", exact_text: "Financial breakdown")
-      expect(page).to have_text("Review booking revenue, taxes, commission, and net payout for the selected period.")
+      expect(page).to have_css("h1", exact_text: "Booking performance")
+      expect(page).to have_text("Review bookings created during the selected period, including source, taxes, commission, and net payout.")
       expect(page).to have_css("turbo-frame#breakdown_results .panel-page-header__caption")
       caption = page.find(".panel-page-header__caption")
       expect(caption).to have_text(hotel.name)
       expect(caption).to have_text("01 May 2026 - 31 May 2026")
       expect(page).to have_css("h2", exact_text: "Financial summary", count: 0)
-      expect(page.all("table.panel-table thead th").map(&:text)).to eq(
-        [ "Booking", "Guest name", "Status", "Gross price", "Taxes", "Commission", "Net payout" ]
+      expect(page.all("table.panel-table thead th[data-column-key]").map { |header| header["data-column-key"] }).to eq(
+        HotelPortal::Reports::BookingPerformanceColumns::DEFAULT_KEYS
       )
     end
 
@@ -2289,7 +2314,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_no_css("h2", text: "MYR summary")
       expect(page).to have_no_css("h2", text: "USD summary")
       summaries = page.all("[data-slot='report-metric-strip']")
-      expect(summaries.map { |summary| summary["aria-label"] }).to eq([ "MYR financial summary", "USD financial summary" ])
+      expect(summaries.map { |summary| summary["aria-label"] }).to eq([ "MYR booking performance summary", "USD booking performance summary" ])
       [ "MYR 216.00", "MYR 16.00", "MYR 20.00", "MYR 196.00" ].each do |amount|
         expect(summaries.first).to have_text(amount)
       end
@@ -2331,11 +2356,79 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       page = Capybara.string(response.body)
       expect(page).to have_text(wastays_booking.guest_name)
       expect(page).to have_no_text(hotel_booking.guest_name)
-      expect(page).to have_select("fund_collector", selected: "WAStays")
-      expect(page).to have_link(
-        "Export CSV",
-        href: breakdown_hotel_reports_path(hotel, **filters, format: :csv)
+      expect(page).to have_button("Filter collected by, 1 selected", enable_aria_label: true)
+      export_link = page.find_link("Export CSV")
+      expect(URI.decode_www_form(URI.parse(export_link[:href]).query).to_h).to include("fund_collectors[]" => "wastays")
+    end
+
+    it "applies multi-value header filters without removing other available filter options" do
+      kept = create(
+        :booking, hotel:, guest_name: "Kept booking", source: "direct", fund_collector: "wastays",
+        status: "confirmed", payment_status: "captured", currency: "MYR",
+        created_at: Time.zone.local(2026, 5, 6, 12, 0)
       )
+      create(
+        :booking, hotel:, guest_name: "Other booking", source: "walk_in", fund_collector: "hotel",
+        status: "completed", payment_status: "pending", currency: "USD",
+        created_at: Time.zone.local(2026, 5, 6, 13, 0)
+      )
+
+      ReportViewPreference.create!(
+        hotel:, user:, report_key: "booking_performance",
+        visible_columns: HotelPortal::Reports::BookingPerformanceColumns::DEFAULT_KEYS + %w[currency]
+      )
+
+      get breakdown_hotel_reports_path(hotel), params: {
+        date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31",
+        booking_sources: %w[direct], fund_collectors: %w[wastays], statuses: %w[confirmed],
+        payment_statuses: %w[captured], currencies: %w[MYR]
+      }
+
+      page = Capybara.string(response.body)
+      expect(page).to have_text(kept.guest_name)
+      expect(page).to have_no_text("Other booking")
+      expect(page).to have_field("booking_sources[]", with: "walk_in", visible: :all)
+      expect(page).to have_field("fund_collectors[]", with: "hotel", visible: :all)
+      expect(page).to have_field("statuses[]", with: "completed", visible: :all)
+      expect(page).to have_field("payment_statuses[]", with: "pending", visible: :all)
+      expect(page).to have_field("currencies[]", with: "USD", visible: :all)
+    end
+
+    it "groups the complete filtered scope and keeps mixed-currency totals separate" do
+      create_list(
+        :booking, 26, hotel:, source: "direct", currency: "MYR", total_amount: 100,
+        tax_lines: [ { "amount" => "8.00" } ], margin_amount: 10, net_amount: 90,
+        created_at: Time.zone.local(2026, 5, 6, 12, 0)
+      )
+      create(
+        :booking, hotel:, source: "direct", currency: "USD", total_amount: 50,
+        tax_lines: [ { "amount" => "4.00" } ], margin_amount: 5, net_amount: 45,
+        created_at: Time.zone.local(2026, 5, 6, 13, 0)
+      )
+
+      get breakdown_hotel_reports_path(hotel), params: {
+        date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31", group_by: "source"
+      }
+
+      group = Capybara.string(response.body).find("[data-report-table-group-row]", text: "Direct")
+      expect(group).to have_text("27 bookings")
+      expect(group).to have_text("MYR · Gross 2,600.00 · Taxes 208.00 · Commission 260.00 · Net 2,340.00")
+      expect(group).to have_text("USD · Gross 50.00 · Taxes 4.00 · Commission 5.00 · Net 45.00")
+    end
+
+    it "exports a selected group with exclusions and ignores stale or cross-hotel IDs" do
+      kept = create(:booking, hotel:, source: "direct", guest_name: "Selected guest", created_at: Time.zone.local(2026, 5, 6, 12, 0))
+      excluded = create(:booking, hotel:, source: "direct", guest_name: "Excluded guest", created_at: Time.zone.local(2026, 5, 6, 13, 0))
+      other_hotel_booking = create(:booking, guest_name: "Other hotel guest", created_at: Time.zone.local(2026, 5, 6, 14, 0))
+
+      get breakdown_hotel_reports_path(hotel, format: :csv), params: {
+        date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31",
+        group_by: "source", selection_group_by: "source", selected_booking_groups: %w[direct],
+        excluded_booking_ids: [ excluded.id ], selected_booking_ids: [ other_hotel_booking.id, 999_999 ]
+      }
+
+      expect(response.body).to include(kept.guest_name)
+      expect(response.body).not_to include(excluded.guest_name, other_hotel_booking.guest_name)
     end
 
     it "calculates summary metrics from all filtered rows beyond the displayed page" do
@@ -2353,12 +2446,12 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get breakdown_hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
 
       page = Capybara.string(response.body)
-      summary = page.find("section[aria-label='MYR financial summary']")
+      summary = page.find("section[aria-label='MYR booking performance summary']")
       expect(summary).to have_text("MYR 2,600.00")
       expect(summary).to have_text("MYR 208.00")
       expect(summary).to have_text("MYR 260.00")
       expect(summary).to have_text("MYR 2,340.00")
-      expect(page).to have_css("tbody tr:not([data-slot='report-date-group'])", count: 25)
+      expect(page).to have_css("[data-testid='booking-performance-row']", count: 25)
     end
 
     it "renders the booking status with the shared badge presentation" do
@@ -2382,6 +2475,47 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.content_type).to eq("application/pdf")
       expect(extracted_pdf_text(response.body)).to include(user.name)
+    end
+
+    it "uses booking-performance filenames and visible columns for selected CSV exports" do
+      selected = create(:booking, hotel:, guest_name: "Selected only", created_at: Time.zone.local(2026, 5, 6, 12, 0))
+      create(:booking, hotel:, guest_name: "Not selected", created_at: Time.zone.local(2026, 5, 6, 13, 0))
+      ReportViewPreference.create!(hotel:, user:, report_key: "booking_performance", visible_columns: %w[booking guest taxes])
+
+      get breakdown_hotel_reports_path(hotel, format: :csv), params: {
+        date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31",
+        selected_booking_ids: [ selected.id ]
+      }
+
+      expect(response.headers.fetch("Content-Disposition")).to include("booking-performance-2026-05-01-2026-05-31.csv")
+      expect(CSV.parse(response.body.delete_prefix("\uFEFF")).first).to eq([ "Booking Number", "Confirmation Code", "Guest Name", "Taxes" ])
+      expect(response.body).to include("Selected only")
+      expect(response.body).not_to include("Not selected")
+    end
+  end
+
+  describe "booking performance column preference" do
+    it "saves normalized columns, applies them, and restores defaults" do
+      patch hotel_booking_performance_view_preference_path(hotel),
+        params: { visible_columns: %w[taxes stale booking] }, as: :json
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.fetch("visible_columns")).to eq(%w[booking taxes])
+
+      get breakdown_hotel_reports_path(hotel)
+      expect(Nokogiri::HTML(response.body).css("th[data-column-key]").map { |header| header["data-column-key"] }).to eq(%w[booking taxes])
+
+      delete hotel_booking_performance_view_preference_path(hotel), as: :json
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.fetch("visible_columns")).to eq(HotelPortal::Reports::BookingPerformanceColumns::DEFAULT_KEYS)
+    end
+
+    it "rejects empty columns and requires report permission" do
+      patch hotel_booking_performance_view_preference_path(hotel), params: { visible_columns: [] }, as: :json
+      expect(response).to have_http_status(:unprocessable_content)
+
+      role.permissions.delete(Permission.find_by!(slug: "view_reports"))
+      patch hotel_booking_performance_view_preference_path(hotel), params: { visible_columns: [ "taxes" ] }, as: :json
+      expect(response).to redirect_to(root_path)
     end
   end
 

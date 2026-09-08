@@ -19,7 +19,6 @@ module HotelPortal
     REPORT_SECTION_PAGE_SIZE = 15
     DAILY_REPORT_PAGE_SIZE = 50
     TAX_COMPLIANCE_TABS = %w[tourism_tax sst non_national].freeze
-    FINANCIAL_BREAKDOWN_COLLECTORS = %w[wastays hotel].freeze
     OTA_SETTLEMENT_STATUS_FILTERS = {
       "all" => nil,
       "outstanding" => %w[awaiting_ota_settlement virtual_card_not_ready ready_to_charge partially_received underpaid unknown],
@@ -152,44 +151,52 @@ module HotelPortal
     end
 
     def breakdown
-      @bookings = Booking.for_financial_breakdown(
-        current_hotel,
-        @start_date,
-        @end_date,
-        params[:q]
+      @booking_request = HotelPortal::Reports::BookingPerformanceRequest.new(
+        hotel: current_hotel, user: current_user, params:,
+        start_date: @start_date, end_date: @end_date, date_preset: @date_preset
       )
-      @fund_collector = params[:fund_collector].presence_in(FINANCIAL_BREAKDOWN_COLLECTORS)
-      @bookings = @bookings.where(fund_collector: @fund_collector) if @fund_collector
+      @booking_visible_columns = @booking_request.visible_columns
+      @booking_group_by = @booking_request.group_by
+      @booking_filters = @booking_request.filters
+      @booking_performance_report = @booking_request.report
+      @booking_selection = @booking_request.selection
 
       respond_to do |format|
         format.html do
-          @financial_breakdown_report = financial_breakdown_export_result
-          @bookings_pagy, @paginated_bookings = pagy(:offset, @bookings, limit: DEFAULT_PAGE_SIZE)
-          @grouped_bookings = @paginated_bookings.group_by do |booking|
-            date = booking.created_at.to_date
-            @date_preset == "this_year" ? date.beginning_of_month : date
-          end.transform_values do |bookings|
-            bookings.map { |b| HotelPortal::BookingFinancialPresenter.new(b) }
-          end
+          @bookings_pagy, @booking_rows = pagy(
+            :offset, @booking_performance_report.ordered_rows, limit: DEFAULT_PAGE_SIZE
+          )
+          @booking_group_totals = @booking_performance_report.groups.index_by(&:key)
         end
         format.csv do
-          send_data HotelPortal::Reports::FinancialBreakdownCsvExportService.new(hotel: current_hotel, report: financial_breakdown_export_result).generate,
-            filename: "financial-breakdown-#{@start_date}-#{@end_date}.csv",
+          send_data HotelPortal::Reports::FinancialBreakdownCsvExportService.new(
+            hotel: current_hotel,
+            report: @booking_request.export_report,
+            visible_columns: @booking_visible_columns
+          ).generate,
+            filename: "booking-performance-#{@start_date}-#{@end_date}.csv",
             type: "text/csv; charset=utf-8"
         end
         format.xlsx do
-          workbook = HotelPortal::Reports::FinancialBreakdownExcelExportService.new(hotel: current_hotel, report: financial_breakdown_export_result).generate
+          workbook = HotelPortal::Reports::FinancialBreakdownExcelExportService.new(
+            hotel: current_hotel,
+            report: @booking_request.export_report,
+            visible_columns: @booking_visible_columns
+          ).generate
           send_data workbook,
-            filename: "financial-breakdown-#{@start_date}-#{@end_date}.xlsx",
+            filename: "booking-performance-#{@start_date}-#{@end_date}.xlsx",
             type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             disposition: "attachment"
         end
         format.pdf do
           pdf = HotelPortal::Reports::FinancialBreakdownPdfExportService.new(
-            hotel: current_hotel, report: financial_breakdown_export_result, prepared_by: current_user.name
+            hotel: current_hotel,
+            report: @booking_request.export_report,
+            prepared_by: current_user.name,
+            visible_columns: @booking_visible_columns
           ).generate
           send_data pdf,
-            filename: "financial-breakdown-#{@start_date}-#{@end_date}.pdf",
+            filename: "booking-performance-#{@start_date}-#{@end_date}.pdf",
             type: "application/pdf",
             disposition: "attachment"
         end
@@ -1073,28 +1080,6 @@ module HotelPortal
             gross: row.fetch(:revenue),
             margin: row.fetch(:margin),
             net: row.fetch(:net)
-          }
-        end
-      )
-    end
-
-    def financial_breakdown_export_result
-      @financial_breakdown_export_result ||= HotelPortal::Reports::FinancialBreakdownExportResult.new(
-        start_date: @start_date,
-        end_date: @end_date,
-        rows: @bookings.map do |booking|
-          {
-            booking_number: booking.formatted_reservation_number,
-            confirmation_code: booking.confirmation_token,
-            guest_name: booking.guest_name,
-            status: booking.status,
-            check_in: booking.check_in,
-            check_out: booking.check_out,
-            gross: booking.total_amount,
-            taxes: booking.tax_total,
-            margin: booking.margin_amount,
-            net: booking.net_amount,
-            currency: booking.currency.presence || current_hotel.default_currency
           }
         end
       )
