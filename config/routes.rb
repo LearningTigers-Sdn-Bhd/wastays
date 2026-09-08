@@ -778,6 +778,9 @@ Rails.application.routes.draw do
         # rule, two are single documents on a fixed card, and the last is the
         # free list for everything a hotel names itself.
         get "policies", to: "policy_reservations#show", as: :policy_reservations
+        # Room Revenue owns the charge. The sheet here writes the guest note only.
+        resources :policy_reservation_notes, path: "policies/reservation-notes",
+          controller: "policy_reservation_notes", only: %i[edit update]
         get "policies/rooms", to: "policy_rooms#show", as: :policy_rooms
         patch "policies/rooms", to: "policy_rooms#update"
         get "policies/payment-and-deposits", to: "policy_payments#show", as: :policy_payments

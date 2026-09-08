@@ -50,6 +50,61 @@ RSpec.describe "HotelPortal::GuestContent::Policies", type: :request do
 
       expect(response.body).to include("4 policies not set yet")
     end
+
+    it "shows the guest note beside the charge it explains" do
+      create(:hotel_reservation_policy, hotel: hotel, description: "Waived for a delayed flight.")
+
+      get hotel_policy_reservations_path(hotel)
+
+      expect(response.body).to include("Waived for a delayed flight.")
+      expect(response.body).to include("Edit note")
+    end
+  end
+
+  describe "the guest note sheet" do
+    let(:policy) { create(:hotel_reservation_policy, hotel: hotel) }
+
+    it "opens on an active policy and shows the charge it explains" do
+      get edit_hotel_policy_reservation_note_path(hotel, policy)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Late checkout note")
+      expect(response.body).to include("Staff enters amount")
+    end
+
+    it "saves the note" do
+      patch hotel_policy_reservation_note_path(hotel, policy), params: {
+        hotel_reservation_policy: { description: "Waived for a delayed flight." }
+      }
+
+      expect(response).to redirect_to(hotel_policy_reservations_path(hotel))
+      expect(policy.reload.description).to eq("Waived for a delayed flight.")
+    end
+
+    # Room Revenue owns the charge. A note save must not touch it, or the two
+    # pages stop meaning different things.
+    it "leaves the charge alone" do
+      policy.update!(pricing_type: "fixed", rate_value: 50, active: true)
+
+      patch hotel_policy_reservation_note_path(hotel, policy), params: {
+        hotel_reservation_policy: { description: "Ask the front desk.", pricing_type: "manual", rate_value: "999", active: "0" }
+      }
+
+      policy.reload
+      expect(policy.pricing_type).to eq("fixed")
+      expect(policy.rate_value).to eq(50)
+      expect(policy).to be_active
+    end
+
+    # An off policy posts nothing, so a note on it would explain a charge that
+    # never happens.
+    it "refuses a policy the hotel switched off" do
+      policy.update!(active: false)
+
+      get edit_hotel_policy_reservation_note_path(hotel, policy)
+
+      expect(response).to have_http_status(:not_found)
+    end
   end
 
   describe "Room" do

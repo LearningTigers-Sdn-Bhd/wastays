@@ -1,7 +1,7 @@
 <section id="reservation-policies" class="lg:w-[85%]" aria-labelledby="reservation-policies-heading">
   <div>
     <h2 id="reservation-policies-heading" class="text-base font-semibold text-foreground">Reservation Policies</h2>
-    <p class="mt-2 text-sm text-muted-foreground">Room Revenue owns these four policies, and the booking engine charges from them. They are shown here so you can check what a guest is told.</p>
+    <p class="mt-2 text-sm text-muted-foreground">Room Revenue owns the charge, and the booking engine bills from it. Write the note that explains the charge to guests here.</p>
   </div>
 
   <% if @reservation_policies.missing_count.positive? %>
@@ -26,6 +26,8 @@
         <tr>
           <th scope="col">Policy</th>
           <th scope="col">What the hotel charges</th>
+          <th scope="col">Note for guests</th>
+          <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
         </tr>
       <% end %>
 
@@ -36,11 +38,31 @@
             <td>
               <% if row.set? %>
                 <span class="block text-foreground"><%= row.charge %></span>
-                <% if row.note.present? %>
-                  <span class="mt-0.5 block text-xs text-muted-foreground"><%= row.note %></span>
+                <% if row.schedule.present? %>
+                  <span class="mt-0.5 block text-xs text-muted-foreground"><%= row.schedule %></span>
                 <% end %>
               <% else %>
                 <%= blank_value("Not set") %>
+              <% end %>
+            </td>
+            <td class="max-w-xs">
+              <% if row.note.present? %>
+                <span class="block whitespace-pre-line text-muted-foreground"><%= row.note %></span>
+              <% elsif row.editable? %>
+                <%= blank_value("No note yet") %>
+              <% else %>
+                <span class="text-muted-foreground">&mdash;</span>
+              <% end %>
+            </td>
+            <td class="text-right">
+              <% if row.editable? %>
+                <%= render PanelsUI::Button.new(
+                      label: row.note.present? ? "Edit note" : "Add note",
+                      as: :a,
+                      href: edit_hotel_policy_reservation_note_path(@hotel, row.id),
+                      variant: :secondary,
+                      size: :sm,
+                      data: { turbo_frame: "settings_action_sheet" }) %>
               <% end %>
             </td>
           </tr>
@@ -49,23 +71,35 @@
     <% end %>
   </div>
 
-  <dl class="mt-5 divide-y divide-border rounded-md border border-border bg-card md:hidden">
+  <div class="mt-5 divide-y divide-border rounded-md border border-border bg-card md:hidden">
     <% @reservation_policies.rows.each do |row| %>
-      <div class="px-4 py-3">
-        <dt class="text-sm font-medium text-foreground"><%= row.label %></dt>
-        <dd class="mt-1 text-sm text-muted-foreground">
+      <div class="space-y-2 px-4 py-3">
+        <p class="text-sm font-medium text-foreground"><%= row.label %></p>
+        <p class="text-sm text-muted-foreground">
           <% if row.set? %>
             <%= row.charge %>
-            <% if row.note.present? %>
-              <span class="mt-0.5 block text-xs"><%= row.note %></span>
+            <% if row.schedule.present? %>
+              <span class="mt-0.5 block text-xs"><%= row.schedule %></span>
             <% end %>
           <% else %>
             <%= blank_value("Not set") %>
           <% end %>
-        </dd>
+        </p>
+        <% if row.note.present? %>
+          <p class="whitespace-pre-line text-sm text-muted-foreground"><%= row.note %></p>
+        <% end %>
+        <% if row.editable? %>
+          <%= render PanelsUI::Button.new(
+                label: row.note.present? ? "Edit note" : "Add note",
+                as: :a,
+                href: edit_hotel_policy_reservation_note_path(@hotel, row.id),
+                variant: :secondary,
+                size: :sm,
+                data: { turbo_frame: "settings_action_sheet" }) %>
+        <% end %>
       </div>
     <% end %>
-  </dl>
+  </div>
 
   <footer class="mt-5 flex justify-end">
     <%= render PanelsUI::Button.new(label: "Room Revenue", as: :a, href: hotel_room_revenue_path(@hotel), variant: :secondary, size: :md) %>

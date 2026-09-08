@@ -4,12 +4,16 @@ module HotelPortal
   module GuestContent
     # The Reservation card on the Policies page.
     #
-    # Room Revenue owns these four policies and the engine charges from them.
-    # The card only shows what is set, so the page never restates a number that
-    # can drift away from the row it came from.
+    # Room Revenue owns the charge and the engine bills from it, so the charge is
+    # read-only here. The guest note beside it is prose about the same rule, and
+    # that is guest content, so it is written here.
     class ReservationPolicyPresenter
-      Row = Data.define(:policy_type, :label, :charge, :note, :set) do
+      Row = Data.define(:id, :policy_type, :label, :charge, :schedule, :note, :set, :active) do
         def set? = set
+        def active? = active
+        # Only a policy that posts a charge can carry a note worth reading. An
+        # off policy explains nothing, because nothing happens.
+        def editable? = set? && active?
       end
 
       LABELS = {
@@ -24,14 +28,14 @@ module HotelPortal
       end
 
       def rows
-        @rows ||= HotelReservationPolicy::POLICY_TYPES.sort_by { |type| LABELS.keys.index(type) }.map do |type|
-          row_for(type)
-        end
+        @rows ||= LABELS.keys.map { |type| row_for(type) }
       end
 
       def missing_count = rows.count { |row| !row.set? }
 
       def complete? = missing_count.zero?
+
+      def notes_count = rows.count { |row| row.note.present? }
 
       private
 
@@ -45,11 +49,14 @@ module HotelPortal
         policy = policies[type]
 
         Row.new(
+          id: policy&.id,
           policy_type: type,
           label: LABELS.fetch(type),
           charge: policy ? policy.pricing_label : "Not set",
-          note: type == "cancellation" ? cancellation_line : nil,
-          set: policy.present?
+          schedule: type == "cancellation" ? cancellation_line : nil,
+          note: policy&.description.presence,
+          set: policy.present?,
+          active: policy&.active? || false
         )
       end
 
