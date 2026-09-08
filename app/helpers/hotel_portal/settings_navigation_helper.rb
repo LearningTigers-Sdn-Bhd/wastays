@@ -7,9 +7,9 @@ module HotelPortal
     SETTINGS_GROUPS = {
       general: { label: "General", icon: "settings", permission: "manage_hotel_profile" },
       property: { label: "Property", icon: "building-2", permission: "manage_hotel_profile" },
+      guest_content: { label: "Guest Content", icon: "message-square", permission: "manage_hotel_profile" },
       commercial: { label: "Commercial", icon: "badge-dollar-sign", permission: "manage_hotel_profile", sidebar_menu: true },
       finance: { label: "Finance", icon: "landmark", permission: [ "manage_account", "manage_hotel_profile" ] },
-      guest_content: { label: "Guest Content", icon: "message-square", permission: "manage_hotel_profile" },
       team: { label: "Team", icon: "users", permission: "manage_users" }
     }.freeze
 

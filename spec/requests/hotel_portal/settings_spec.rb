@@ -214,7 +214,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(sidebar["data-sidebar-mode"]).to be_nil
       items = sidebar.css(".panel-sidebar__section-items > .panel-sidebar__item")
       expect(items.map { |item| item.at_css("[data-sidebar-presentation='expanded'] .panel-sidebar__label").text.squish }).to eq(
-        [ "General", "Property", "Commercial", "Finance", "Guest Content", "Team" ]
+        [ "General", "Property", "Guest Content", "Commercial", "Finance", "Team" ]
       )
       expect(sidebar.text).not_to include("Back to previous page")
 
