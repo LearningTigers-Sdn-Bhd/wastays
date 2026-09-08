@@ -118,14 +118,13 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
         expect(response.body).to include("Prepare content")
       end
 
-      it "shows an indexing spinner instead of a generate button while indexing" do
+      it "shows an updating status instead of a generate button while indexing" do
         hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "sk-test-key")
         doc.update_column(:embedding_status, "indexing")
 
         get show_path
 
         expect(response.body).to include("Updating")
-        expect(response.body).to include("animate-spin")
         expect(response.body).not_to include("Prepare content")
       end
 
@@ -145,7 +144,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           post reindex_path
         }.not_to have_enqueued_job(HotelKnowledges::GenerateEmbeddingsJob)
 
-        expect(response).to redirect_to(show_path)
+        expect(response).to redirect_to(listing_path)
       end
 
       it "enqueues embedding generation when AI Concierge is enabled" do
@@ -156,7 +155,7 @@ RSpec.describe "HotelPortal::KnowledgeDocuments", type: :request do
           post reindex_path
         }.to have_enqueued_job(HotelKnowledges::GenerateEmbeddingsJob).with(doc.id)
 
-        expect(response).to redirect_to(show_path)
+        expect(response).to redirect_to(listing_path)
         expect(doc.reload.embedding_status).to eq("indexing")
       end
     end
