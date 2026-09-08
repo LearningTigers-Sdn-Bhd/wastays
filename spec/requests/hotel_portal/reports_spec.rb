@@ -2212,7 +2212,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
   end
 
   describe "GET /breakdown" do
-    it "renders the financial breakdown table with taxes" do
+    it "renders both booking identifiers, currencies, summaries, and taxes" do
       booking = create(:booking, hotel: hotel, status: "confirmed", payment_status: "captured", total_amount: 320, tax_lines: [ { "name" => "SST", "amount" => "20.00" } ], margin_amount: 30, net_amount: 290, created_at: Time.zone.local(2026, 5, 6, 12, 0))
 
       get breakdown_hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
@@ -2226,9 +2226,17 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("[data-slot='report-date-group']", text: "06 May 2026")
       expect(page).to have_link(
-        "##{booking.confirmation_token}",
+        booking.formatted_reservation_number,
         href: hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
       )
+      expect(page).to have_text("Code: #{booking.confirmation_token}")
+      summary = page.find("section[aria-label='MYR financial summary']")
+      expect(summary).to have_text("Gross price")
+      expect(summary).to have_text("MYR 320.00")
+      expect(summary).to have_text("Taxes")
+      expect(summary).to have_text("MYR 20.00")
+      row = page.find("a", exact_text: booking.formatted_reservation_number).find(:xpath, "ancestor::tr")
+      expect(row.text.scan(/\bMYR\b/).size).to eq(4)
     end
 
     it "uses sentence-case report copy" do
@@ -2240,13 +2248,72 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       page = Capybara.string(response.body)
       expect(page).to have_css("h1", exact_text: "Financial breakdown")
+      expect(page).to have_text("Review booking revenue, taxes, commission, and net payout for the selected period.")
       expect(page).to have_css("turbo-frame#breakdown_results .panel-page-header__caption")
       caption = page.find(".panel-page-header__caption")
       expect(caption).to have_text(hotel.name)
       expect(caption).to have_text("01 May 2026 - 31 May 2026")
       expect(page.all("table.panel-table thead th").map(&:text)).to eq(
-        [ "Booking reference", "Guest name", "Status", "Gross price", "Taxes", "Margin", "Net payout" ]
+        [ "Booking", "Guest name", "Status", "Gross price", "Taxes", "Commission", "Net payout" ]
       )
+    end
+
+    it "searches by booking number and confirmation code" do
+      matching = create(:booking, hotel: hotel, guest_name: "Matching Guest", created_at: Time.zone.local(2026, 5, 6, 12, 0))
+      other = create(:booking, hotel: hotel, guest_name: "Other Guest", created_at: Time.zone.local(2026, 5, 6, 13, 0))
+      params = { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
+
+      get breakdown_hotel_reports_path(hotel), params: params.merge(q: matching.formatted_reservation_number)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_text("Matching Guest")
+      expect(page).to have_no_text("Other Guest")
+
+      get breakdown_hotel_reports_path(hotel), params: params.merge(q: matching.confirmation_token)
+
+      page = Capybara.string(response.body)
+      expect(page).to have_text("Matching Guest")
+      expect(page).to have_no_text(other.guest_name)
+    end
+
+    it "shows separate currency summaries in currency-code order" do
+      create(:booking, hotel: hotel, currency: "USD", total_amount: 108, tax_lines: [ { "amount" => "8.00" } ], margin_amount: 10, net_amount: 98, created_at: Time.zone.local(2026, 5, 6, 12, 0))
+      create(:booking, hotel: hotel, currency: "MYR", total_amount: 216, tax_lines: [ { "amount" => "16.00" } ], margin_amount: 20, net_amount: 196, created_at: Time.zone.local(2026, 5, 6, 13, 0))
+
+      get breakdown_hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
+
+      page = Capybara.string(response.body)
+      summaries = page.all("[data-slot='report-metric-strip']")
+      expect(summaries.map { |summary| summary["aria-label"] }).to eq([ "MYR financial summary", "USD financial summary" ])
+      [ "MYR 216.00", "MYR 16.00", "MYR 20.00", "MYR 196.00" ].each do |amount|
+        expect(summaries.first).to have_text(amount)
+      end
+      [ "USD 108.00", "USD 8.00", "USD 10.00", "USD 98.00" ].each do |amount|
+        expect(summaries.last).to have_text(amount)
+      end
+    end
+
+    it "calculates summary metrics from all filtered rows beyond the displayed page" do
+      create_list(
+        :booking,
+        26,
+        hotel: hotel,
+        total_amount: 100,
+        tax_lines: [ { "amount" => "8.00" } ],
+        margin_amount: 10,
+        net_amount: 90,
+        created_at: Time.zone.local(2026, 5, 6, 12, 0)
+      )
+
+      get breakdown_hotel_reports_path(hotel), params: { date_preset: "custom", start_date: "2026-05-01", end_date: "2026-05-31" }
+
+      page = Capybara.string(response.body)
+      summary = page.find("section[aria-label='MYR financial summary']")
+      expect(summary).to have_text("MYR 2,600.00")
+      expect(summary).to have_text("MYR 208.00")
+      expect(summary).to have_text("MYR 260.00")
+      expect(summary).to have_text("MYR 2,340.00")
+      expect(page).to have_css("tbody tr:not([data-slot='report-date-group'])", count: 25)
     end
 
     it "renders essential booking status at a readable badge size" do

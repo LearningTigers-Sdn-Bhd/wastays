@@ -1,6 +1,6 @@
 <div class="w-full space-y-4" data-slot="report-page" data-report="financial-breakdown">
   <%= turbo_frame_tag "breakdown_results", class: "block space-y-4" do %>
-    <%= render PanelsUI::PageHeader.new(title: "Financial breakdown", description: "Detailed transaction log for your records.") do |header| %>
+    <%= render PanelsUI::PageHeader.new(title: "Financial breakdown", description: "Review booking revenue, taxes, commission, and net payout for the selected period.") do |header| %>
       <% header.with_caption do %>
         <p class="text-sm font-medium text-muted-foreground">
           <%= current_hotel.name %> ·
@@ -36,7 +36,7 @@
             <% field.with_input(
                  type: :search,
                  value: params[:q],
-                 placeholder: "Guest, email, or reference token…",
+                 placeholder: "Guest, email, booking number, or confirmation code…",
                  data: { action: "input->auto-submit#submit" }) %>
           <% end %>
         <% end %>
@@ -51,6 +51,25 @@
       </div>
     </section>
 
+    <% @financial_breakdown_report.currency_totals.each do |totals| %>
+      <% currency = totals.fetch(:currency) %>
+      <% format_amount = ->(amount) { number_to_currency(amount, unit: "#{currency} ", format: "%u%n") } %>
+      <section class="space-y-3" aria-labelledby="financial-breakdown-<%= currency.parameterize %>-summary">
+        <h2 id="financial-breakdown-<%= currency.parameterize %>-summary" class="text-base font-semibold text-foreground">
+          <%= currency %> summary
+        </h2>
+        <%= render HotelPortal::Reports::MetricStrip.new(
+              aria_label: "#{currency} financial summary",
+              metrics: [
+                { label: "Gross price", value: format_amount.call(totals.fetch(:gross)), detail: pluralize(totals.fetch(:booking_count), "booking") },
+                { label: "Taxes", value: format_amount.call(totals.fetch(:taxes)), detail: "Included in gross price" },
+                { label: "Commission", value: format_amount.call(totals.fetch(:margin)), detail: "WAStays commission" },
+                { label: "Net payout", value: format_amount.call(totals.fetch(:net)), detail: "Gross price less commission" }
+              ]
+            ) %>
+      </section>
+    <% end %>
+
     <section class="space-y-3" aria-labelledby="financial-breakdown-heading">
       <h2 id="financial-breakdown-heading" class="text-base font-semibold text-foreground">Booking records</h2>
 
@@ -63,12 +82,12 @@
           ) do |table| %>
         <% table.with_header do %>
           <tr>
-            <th scope="col">Booking reference</th>
+            <th scope="col">Booking</th>
             <th scope="col">Guest name</th>
             <th scope="col">Status</th>
             <th scope="col" class="text-right">Gross price</th>
             <th scope="col" class="text-right">Taxes</th>
-            <th scope="col" class="text-right">Margin</th>
+            <th scope="col" class="text-right">Commission</th>
             <th scope="col" class="text-right">Net payout</th>
           </tr>
         <% end %>
@@ -91,11 +110,14 @@
               </tr>
               <% bookings.each do |presenter| %>
                 <tr class="align-top">
-                  <th scope="row" class="whitespace-nowrap">
-                    <%= link_to "##{presenter.confirmation_token}",
+                  <th scope="row" class="min-w-44">
+                    <%= link_to presenter.booking_number,
                           hotel_booking_workspace_path(current_hotel, presenter.booking, tab: "booking_details"),
-                          class: "font-mono text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
+                          class: "block break-words font-mono text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-interactive",
                           data: { turbo: false } %>
+                    <span class="mt-1 block break-all font-mono text-xs font-normal text-muted-foreground" translate="no">
+                      Code: <%= presenter.confirmation_token %>
+                    </span>
                   </th>
                   <td class="font-medium text-foreground"><%= presenter.guest_name %></td>
                   <td class="whitespace-nowrap">
@@ -106,10 +128,10 @@
                           shape: :rounded
                         ) %>
                   </td>
-                  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground">RM <%= presenter.total_amount %></td>
+                  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground"><%= presenter.total_amount %></td>
                   <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground"><%= presenter.tax_total %></td>
-                  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground">- <%= presenter.margin_amount %></td>
-                  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground">RM <%= presenter.net_amount %></td>
+                  <td class="whitespace-nowrap text-right tabular-nums text-muted-foreground"><%= presenter.margin_amount %></td>
+                  <td class="whitespace-nowrap text-right font-semibold tabular-nums text-foreground"><%= presenter.net_amount %></td>
                 </tr>
               <% end %>
             <% end %>

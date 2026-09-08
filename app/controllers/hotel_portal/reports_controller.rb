@@ -160,6 +160,7 @@ module HotelPortal
 
       respond_to do |format|
         format.html do
+          @financial_breakdown_report = financial_breakdown_export_result
           @bookings_pagy, @paginated_bookings = pagy(:offset, @bookings, limit: DEFAULT_PAGE_SIZE)
           @grouped_bookings = @paginated_bookings.group_by do |booking|
             date = booking.created_at.to_date
@@ -1080,7 +1081,8 @@ module HotelPortal
         end_date: @end_date,
         rows: @bookings.map do |booking|
           {
-            booking_reference: booking.confirmation_token,
+            booking_number: booking.formatted_reservation_number,
+            confirmation_code: booking.confirmation_token,
             guest_name: booking.guest_name,
             status: booking.status,
             check_in: booking.check_in,

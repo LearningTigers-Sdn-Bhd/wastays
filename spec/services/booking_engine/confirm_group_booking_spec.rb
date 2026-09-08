@@ -49,6 +49,29 @@ RSpec.describe BookingEngine::ConfirmGroupBooking do
     expect(result.bookings.map { |booking| booking.booking_rooms.sole.room_type }).to all(eq(room_type))
   end
 
+  it "calculates each child's commission from its room subtotal before SST" do
+    hotel.update!(sst_enabled: true)
+    room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+    room_code.update!(is_taxable: true)
+    room_code.transaction_code_taxes.create!(primary_tax_key: "sst_tax")
+    create(:margin_rule, settable: hotel, rate: 10)
+    quote.update!(total_amount: 200)
+    quote_item.update!(
+      subtotal: 200,
+      nightly_rate_snapshot: { quote.check_in.to_date.iso8601 => 100 }
+    )
+
+    result = described_class.call(quote: quote, payment_details: payment_details)
+
+    expect(result).to be_success
+    expect(result.bookings.size).to eq(2)
+    expect(result.bookings.map(&:total_amount)).to all(eq(108.to_d))
+    expect(result.bookings.map(&:margin_amount)).to all(eq(10.to_d))
+    expect(result.bookings.map(&:net_amount)).to all(eq(98.to_d))
+    expect(result.bookings.map(&:tax_total)).to all(eq(8.to_d))
+    expect(result.group_booking.deposits.sole.amount).to eq(216.to_d)
+  end
+
   it "copies the quote's cancellation terms onto every child booking" do
     result = described_class.call(quote: quote, payment_details: payment_details)
 
