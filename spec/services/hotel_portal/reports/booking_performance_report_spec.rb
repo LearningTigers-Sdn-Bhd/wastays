@@ -59,6 +59,45 @@ RSpec.describe HotelPortal::Reports::BookingPerformanceReport do
     expect(build(filters: { currencies: [] }).rows).to be_empty
   end
 
+  describe "a booking that an online travel agency took" do
+    before do
+      BookingSource.seed_defaults!
+      BookingSource.reset_registry_cache!
+      create(
+        :booking, hotel:, source: "bookingcom", fund_collector: "unknown",
+        created_at: Time.zone.local(2026, 5, 7, 12, 0)
+      )
+    end
+
+    it "names the agency as the collector instead of Unknown" do
+      row = build.rows.find { |candidate| candidate.source == "bookingcom" }
+
+      expect(row.fund_collector).to eq("ota:booking_com")
+      expect(row.fund_collector_label).to eq("Booking.com")
+      expect(row.source_label).to eq("Booking.com")
+    end
+
+    it "gives the agency its own group, after WAStays and the hotel" do
+      groups = build(group_by: "fund_collector").groups
+
+      expect(groups.map(&:label)).to eq([ "WAStays", "Hotel", "Booking.com" ])
+    end
+
+    it "offers the agency as a collector filter and filters on it" do
+      report = build(group_by: "fund_collector")
+
+      expect(report.filter_options[:fund_collectors]).to include([ "Booking.com", "ota:booking_com" ])
+      expect(build(filters: { fund_collectors: %w[ota:booking_com] }).rows.map(&:source)).to eq(%w[bookingcom])
+    end
+
+    it "hands the booking back to the hotel once the hotel collects" do
+      Booking.where(source: "bookingcom").update_all(fund_collector: "hotel")
+
+      expect(build.rows.map(&:fund_collector_label)).to include("Hotel")
+      expect(build.rows.map(&:fund_collector_label)).not_to include("Booking.com")
+    end
+  end
+
   it "keeps only the wanted rows in a subset" do
     report = build
     wanted = report.rows.first.booking_id

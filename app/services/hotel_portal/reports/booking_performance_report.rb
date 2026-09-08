@@ -14,7 +14,9 @@ module HotelPortal
         "status" => [ "Status", "list-checks" ],
         "currency" => [ "Currency", "coins" ]
       }.freeze
-      COLLECTOR_ORDER = %w[wastays hotel unknown].freeze
+      COLLECTOR_ORDER = %w[wastays hotel].freeze
+      OTA_COLLECTOR_PREFIX = "ota:"
+      UNKNOWN_COLLECTOR_RANK = 99
 
       Row = Data.define(
         :booking_id, :booked_on, :booking_number, :confirmation_code, :guest_name,
@@ -35,7 +37,9 @@ module HotelPortal
         @start_date = start_date&.to_date
         @end_date = end_date&.to_date
         @filter_options = bookings ? build_filter_options(bookings) : empty_filter_options
-        @rows = rows || build_rows(apply_filters(bookings, filters))
+        @rows = rows || select_collectors(
+          build_rows(apply_filters(bookings, filters)), filters[:fund_collectors]
+        )
       end
 
       def groups
@@ -78,7 +82,6 @@ module HotelPortal
         scope = bookings
         {
           source: filters[:booking_sources],
-          fund_collector: filters[:fund_collectors],
           status: filters[:statuses],
           payment_status: filters[:payment_statuses],
           currency: filters[:currencies]
@@ -90,10 +93,19 @@ module HotelPortal
         scope
       end
 
+      # The collector key can name an online travel agency, and no column holds
+      # that key, so the report filters this one column on the built rows.
+      def select_collectors(built, selected)
+        return built if selected.nil?
+        return [] if selected.empty?
+
+        built.select { |row| selected.include?(row.fund_collector) }
+      end
+
       def build_filter_options(bookings)
         {
           booking_sources: options_for(bookings, :source, &method(:source_label)),
-          fund_collectors: options_for(bookings, :fund_collector, &method(:collector_label)),
+          fund_collectors: collector_options(bookings),
           statuses: options_for(bookings, :status, &method(:status_label)),
           payment_statuses: options_for(bookings, :payment_status) { |value| value.to_s.humanize },
           currencies: options_for(bookings, :currency) { |value| value.to_s.upcase }
@@ -106,6 +118,14 @@ module HotelPortal
           .sort_by { |label, _value| label.downcase }
       end
 
+      def collector_options(bookings)
+        bookings.reorder(nil).distinct.pluck(:fund_collector, :source)
+          .map { |collector, source| collector_key(collector, source) }
+          .uniq
+          .map { |key| [ collector_label(key), key ] }
+          .sort_by { |label, _key| label.downcase }
+      end
+
       def empty_filter_options
         { booking_sources: [], fund_collectors: [], statuses: [], payment_statuses: [], currencies: [] }
       end
@@ -113,7 +133,7 @@ module HotelPortal
       def build_rows(bookings)
         bookings.map do |booking|
           source = booking.source.to_s.presence || "unknown"
-          collector = booking.fund_collector.to_s.presence || "unknown"
+          collector = collector_key(booking.fund_collector, source)
           currency = booking.currency.to_s.presence || @hotel.default_currency.presence || "MYR"
           Row.new(
             booking_id: booking.id,
@@ -163,9 +183,14 @@ module HotelPortal
       def group_rank(group)
         case group_by
         when "booking_date" then [ -Date.iso8601(group.key).jd ]
-        when "fund_collector" then [ COLLECTOR_ORDER.index(group.key) || COLLECTOR_ORDER.size, group.label.downcase ]
+        when "fund_collector" then [ collector_rank(group.key), group.label.downcase ]
         else [ group.label.downcase ]
         end
+      end
+
+      # WAStays first, then the hotel, then every agency, and the unknown last.
+      def collector_rank(key)
+        COLLECTOR_ORDER.index(key) || (key == "unknown" ? UNKNOWN_COLLECTOR_RANK : COLLECTOR_ORDER.size)
       end
 
       def booking_period(date) = monthly? ? date.beginning_of_month : date
@@ -184,13 +209,31 @@ module HotelPortal
         end.freeze
       end
 
+      # An online travel agency takes the money itself, so a channel booking that
+      # names no collector is collected by that agency. A direct payment at the
+      # hotel still sets the collector, and that answer wins.
+      def collector_key(stored, source)
+        collector = stored.to_s.presence || "unknown"
+        return collector unless collector == "unknown"
+
+        record = BookingSource.find_by_source(source)
+        return collector unless record&.kind == "ota"
+
+        "#{OTA_COLLECTOR_PREFIX}#{record.key}"
+      end
+
       def source_label(value)
-        DailyRevenueReport::SOURCE_LABELS[value.to_s] || value.to_s.humanize.presence || "Unknown"
+        BookingSource.find_by_source(value)&.label ||
+          DailyRevenueReport::SOURCE_LABELS[value.to_s] ||
+          value.to_s.humanize.presence || "Unknown"
       end
 
       def collector_label(value)
-        { "wastays" => "WAStays", "hotel" => "Hotel", "unknown" => "Unknown" }.fetch(value.to_s) do
-          value.to_s.humanize.presence || "Unknown"
+        key = value.to_s
+        return source_label(key.delete_prefix(OTA_COLLECTOR_PREFIX)) if key.start_with?(OTA_COLLECTOR_PREFIX)
+
+        { "wastays" => "WAStays", "hotel" => "Hotel", "unknown" => "Unknown" }.fetch(key) do
+          key.humanize.presence || "Unknown"
         end
       end
 

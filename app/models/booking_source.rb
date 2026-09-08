@@ -10,6 +10,17 @@ class BookingSource < ApplicationRecord
   }.freeze
   ALLOWED_LOGO_TYPES = %w[image/png image/jpeg image/webp image/svg+xml].freeze
   CACHE_KEY = "booking_sources/registry/v1"
+  # A channel writes its own spelling of a source. Each alias points at the key
+  # that this registry holds, so every screen shows one name for one agency.
+  SOURCE_ALIASES = {
+    "bookingcom" => "booking_com",
+    "booking_dot_com" => "booking_com",
+    "bookings_com" => "booking_com",
+    "agoda_com" => "agoda",
+    "expediacom" => "expedia",
+    "traveloka_com" => "traveloka",
+    "air_bnb" => "airbnb"
+  }.freeze
   ICONS_PATH = Rails.root.join("app/assets/svg/icons/lucide/outline")
 
   DEFAULT_SOURCES = [
@@ -75,7 +86,8 @@ class BookingSource < ApplicationRecord
   end
 
   def self.find_by_source(source)
-    registry[normalize(source)]
+    key = normalize(source)
+    registry[key] || registry[SOURCE_ALIASES[key]]
   end
 
   def self.options_for(kind)
