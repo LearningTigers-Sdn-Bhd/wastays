@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_07_204139) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1820,6 +1820,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_204139) do
     t.index ["hotel_id"], name: "index_hotel_transaction_configurations_on_hotel_id", unique: true
   end
 
+  create_table "hotel_transport_details", force: :cascade do |t|
+    t.integer "airport_distance_km"
+    t.integer "airport_transfer_lead_hours"
+    t.boolean "airport_transfer_offered", default: false, null: false
+    t.decimal "airport_transfer_price", precision: 10, scale: 2
+    t.integer "airport_travel_minutes"
+    t.integer "city_centre_distance_km"
+    t.integer "city_centre_travel_minutes"
+    t.datetime "created_at", null: false
+    t.text "directions"
+    t.bigint "hotel_id", null: false
+    t.string "nearest_transit_stop"
+    t.string "parking_availability", default: "none", null: false
+    t.boolean "parking_booking_required", default: false, null: false
+    t.boolean "parking_ev_charging", default: false, null: false
+    t.decimal "parking_height_limit_m", precision: 4, scale: 2
+    t.text "parking_notes"
+    t.decimal "parking_price", precision: 10, scale: 2
+    t.string "parking_price_unit"
+    t.integer "parking_spaces"
+    t.string "parking_type"
+    t.string "pickup_point"
+    t.string "shuttle_schedule"
+    t.integer "station_distance_km"
+    t.integer "station_travel_minutes"
+    t.text "transport_notes"
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id"], name: "index_hotel_transport_details_on_hotel_id", unique: true
+  end
+
   create_table "hotel_wifi_networks", force: :cascade do |t|
     t.string "access_scope", default: "checked_in_guests", null: false
     t.boolean "active", default: true, null: false
@@ -3226,6 +3256,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_204139) do
   add_foreign_key "hotel_taxes", "transaction_codes"
   add_foreign_key "hotel_team_configs", "hotels"
   add_foreign_key "hotel_transaction_configurations", "hotels"
+  add_foreign_key "hotel_transport_details", "hotels"
   add_foreign_key "hotel_wifi_networks", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "plans"

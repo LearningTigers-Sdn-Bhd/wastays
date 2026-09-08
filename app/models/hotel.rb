@@ -44,6 +44,7 @@ class Hotel < ApplicationRecord
   has_one :property_policy, dependent: :destroy
   has_one :guest_instruction, class_name: "HotelGuestInstruction", dependent: :destroy
   has_one :guest_contact, class_name: "HotelGuestContact", dependent: :destroy
+  has_one :transport_detail, class_name: "HotelTransportDetail", dependent: :destroy
   accepts_nested_attributes_for :property_policy
   has_many :room_types, dependent: :destroy
   has_many :room_groups, dependent: :destroy

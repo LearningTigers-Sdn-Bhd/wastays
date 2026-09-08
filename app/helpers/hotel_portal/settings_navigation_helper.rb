@@ -65,7 +65,8 @@ module HotelPortal
     end
 
     def hotel_information_page?
-      guest_content_page?("knowledge_general_infos") || guest_content_page?("arrival_departures")
+      guest_content_page?("knowledge_general_infos") || guest_content_page?("arrival_departures") ||
+        guest_content_page?("transport_details")
     end
 
     def policies_page?
@@ -78,7 +79,7 @@ module HotelPortal
       if hotel_information_page?
         {
           title: "Hotel Information",
-          description: "Manage the property summary, stay instructions, and additional information shared with guests.",
+          description: "Manage the property summary, stay instructions, travel details, and additional information shared with guests.",
           aria_label: "Hotel information sections"
         }
       elsif policies_page?
@@ -101,6 +102,7 @@ module HotelPortal
         return [
           { key: "property-summary", label: "Property Summary", icon: "building-2", path: hotel_knowledge_general_infos_path(current_hotel), active: guest_content_page?("knowledge_general_infos") && action_name == "index" },
           { key: "arrival-departure", label: "Arrival & Departure", icon: "arrow-right-left", path: hotel_guest_arrival_departure_path(current_hotel), active: guest_content_page?("arrival_departures") },
+          { key: "getting-around", label: "Getting Around", icon: "car-front", path: hotel_guest_transport_details_path(current_hotel), active: guest_content_page?("transport_details") },
           { key: "additional-information", label: "Additional Information", icon: "file-text", path: hotel_knowledge_additional_information_path(current_hotel), active: guest_content_page?("knowledge_general_infos") && action_name != "index" }
         ]
       end

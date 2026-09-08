@@ -26,17 +26,17 @@ RSpec.describe "HotelPortal::GuestContent", type: :request do
     expect(Nokogiri::HTML(response.body).css("[data-testid='settings-tabs'] [data-slot='tabs-list']").size).to eq(1)
   end
 
-  it "shows the Hotel Information heading and three subtabs" do
+  it "shows the Hotel Information heading and four subtabs" do
     get hotel_knowledge_general_infos_path(hotel)
 
     document = response.parsed_body
     expect(response).to have_http_status(:ok)
     expect(document.at_css("[data-testid='guest-content-body'] > div h2").text.squish).to eq("Hotel Information")
-    expect(document.text.squish).to include("Manage the property summary, stay instructions, and additional information shared with guests.")
+    expect(document.text.squish).to include("Manage the property summary, stay instructions, travel details, and additional information shared with guests.")
 
     subtabs = document.at_css("[data-testid='guest-content-subtabs']")
     expect(subtabs.css("[data-slot='tabs-trigger']").map { |tab| tab["data-tab-label"] })
-      .to eq([ "Property Summary", "Arrival & Departure", "Additional Information" ])
+      .to eq([ "Property Summary", "Arrival & Departure", "Getting Around", "Additional Information" ])
     expect(subtabs.at_css("[data-tab-label='Property Summary'][aria-current='page']")).to be_present
   end
 

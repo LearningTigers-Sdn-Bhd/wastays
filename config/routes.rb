@@ -766,6 +766,14 @@ Rails.application.routes.draw do
         end
         resource :guest_arrival_departure, path: "general-info/arrival-departure",
           controller: "arrival_departures", only: %i[show update]
+        # How a guest reaches the property, and where the guest leaves the car.
+        # One record, three sheets. Each sheet patches its own section so a save
+        # never clears a column the sheet did not show.
+        get "general-info/getting-around", to: "transport_details#show", as: :guest_transport_details
+        get "general-info/getting-around/:section/edit", to: "transport_details#edit",
+          as: :edit_guest_transport_detail, constraints: { section: /directions|transportation|parking/ }
+        patch "general-info/getting-around/:section", to: "transport_details#update",
+          as: :guest_transport_detail, constraints: { section: /directions|transportation|parking/ }
         get "general-info/additional-information", to: "knowledge_general_infos#additional_information",
           as: :knowledge_additional_information
         # Who a guest reaches when the concierge cannot answer, and when.
