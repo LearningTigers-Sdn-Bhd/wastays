@@ -1,0 +1,63 @@
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h2 id="booking-performance-records-heading" class="text-base font-semibold text-foreground">Booking records</h2>
+    <p class="text-sm text-muted-foreground" aria-live="polite" aria-atomic="true">
+      <span data-report-table-filtered-summary <%= "hidden" if selection.selected_count.positive? %>>
+        <%= pluralize(report.rows.size, "booking") %> matching the current filters
+      </span>
+      <span data-report-table-selection-summary <%= "hidden" if selection.selected_count.zero? %>>
+        <span data-report-table-selection-count><%= selection.selected_count %></span> bookings selected
+      </span>
+    </p>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <%= render PanelsUI::DropdownMenu.new(id: "booking-performance-columns-menu", placement: :bottom_end, class: "w-56") do |menu| %>
+      <% menu.with_trigger(variant: :neutral, size: :md) do %>
+        <%= cached_icon "columns-3", class: "size-4", aria: { hidden: true } %>
+        Columns
+        <%= app_icon "chevron-down", class: "size-3.5", aria: { hidden: true } %>
+      <% end %>
+      <% menu.with_group(label: "Visible columns") do |group| %>
+        <% HotelPortal::Reports::BookingPerformanceColumns::ALL.each do |column| %>
+          <% group.with_checkbox(
+               name: "visible_columns[]", value: column.key,
+               checked: visible_columns.include?(column.key),
+               disabled: visible_columns.one? && visible_columns.include?(column.key)
+             ) { column.label } %>
+        <% end %>
+      <% end %>
+      <% menu.with_separator %>
+      <% menu.with_item(data: { action: "click->report-table#resetColumns" }) { "Restore defaults" } %>
+    <% end %>
+
+    <% if feature_enabled_for_hotel?("excel_pdf_export") %>
+      <%= render "export_dropdown",
+            menu_id: "booking-performance-export",
+            label: selection.selected_count.positive? ? "Export #{selection.selected_count} selected" : "Export",
+            disabled: report.rows.empty?,
+            items: [
+              ["Export PDF", breakdown_hotel_reports_path(current_hotel, export_state.merge(format: :pdf)), { id: "booking-export-pdf-link" }],
+              ["Export Excel", breakdown_hotel_reports_path(current_hotel, export_state.merge(format: :xlsx)), { id: "booking-export-excel-link" }],
+              ["Export CSV", breakdown_hotel_reports_path(current_hotel, export_state.merge(format: :csv)), { id: "booking-export-csv-link" }]
+            ] %>
+    <% end %>
+  </div>
+</div>
+
+<div class="flex flex-wrap items-center gap-2">
+  <span class="text-sm font-medium text-foreground">Group by</span>
+  <%= render PanelsUI::ToggleGroup.new(
+        id: "booking-performance-grouping", type: :single, value: group_by,
+        variant: :outline, size: :sm, spacing: 0, required: true,
+        name: "group_by", aria_label: "Booking performance grouping") do |group| %>
+    <% HotelPortal::Reports::BookingPerformanceRequest::GROUPING_COLUMNS.each do |value, column_key| %>
+      <% next unless column_key.nil? || visible_columns.include?(column_key) %>
+      <% label, icon = HotelPortal::Reports::BookingPerformanceReport::GROUPING_LABELS.fetch(value) %>
+      <% group.with_item(value:) do %>
+        <%= app_icon icon, class: "size-3.5", aria: { hidden: true } %>
+        <span><%= label %></span>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

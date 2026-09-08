@@ -86,8 +86,10 @@ module BookingEngine
       snapshot = financial_snapshot_for(item)
       tourism_tax = snapshot.tax_lines.find { |tax| tax["type"].to_s == "tourism_tax" }
       total = snapshot.room_total + Booking.non_tourism_tax_total_for(snapshot.tax_lines)
-      margin_rate = @quote.hotel.effective_margin_rate
-      margin_amount = (total * (margin_rate / 100.0)).round(2)
+      platform_margin = Bookings::CalculatePlatformMargin.call(
+        hotel: @quote.hotel,
+        room_total: snapshot.room_total
+      )
 
       booking = @quote.hotel.bookings.create!(
         booking_quote: @quote,
@@ -109,9 +111,9 @@ module BookingEngine
         status: "confirmed",
         payment_status: payment_received? ? "captured" : "pending",
         source: "direct",
-        margin_rate: margin_rate,
-        margin_amount: margin_amount,
-        net_amount: total - margin_amount,
+        margin_rate: platform_margin.rate,
+        margin_amount: platform_margin.amount,
+        net_amount: total - platform_margin.amount,
         guest_gender: normalized_gender,
         guest_country: normalized_country,
         guest_document_type: normalized_document_type,

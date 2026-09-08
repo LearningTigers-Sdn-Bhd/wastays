@@ -393,7 +393,7 @@ class Booking < ApplicationRecord
     return all if query.blank?
     q = "%#{ActiveRecord::Base.sanitize_sql_like(query.to_s.downcase)}%"
     joins(:hotel).where(
-      "hotels.name ILIKE :q OR guest_name ILIKE :q OR confirmation_token ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q",
+      "hotels.name ILIKE :q OR guest_name ILIKE :q OR confirmation_token ILIKE :q OR reservation_reference ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q",
       q: q
     )
   }

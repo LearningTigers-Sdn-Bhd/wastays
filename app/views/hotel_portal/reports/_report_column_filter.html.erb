@@ -1,4 +1,6 @@
 <% selected = Array(params[param_name]).map(&:to_s) %>
+<% fallback = local_assigns[:fallback_param] %>
+<% selected = Array(params[fallback]).map(&:to_s) if selected.empty? && fallback.present? %>
 <%= render PanelsUI::DropdownMenu.new(id: "#{param_name.dasherize}-filter", placement: :bottom_start, class: "w-64") do |menu| %>
   <% menu.with_trigger(
        variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",

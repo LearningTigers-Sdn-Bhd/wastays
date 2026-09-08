@@ -1,0 +1,12 @@
+<tr class="align-top" data-testid="booking-performance-row" data-report-table-record-row data-record-group="<%= group_key %>">
+  <td class="w-10 text-center">
+    <%= render PanelsUI::Checkbox.new(
+          name: "selected_booking_ids[]", id: "select-booking-#{row.booking_id}", value: row.booking_id,
+          label: "Select booking #{row.booking_number}", label_hidden: true, include_hidden: false,
+          checked: selection.record_selected?(row.booking_id),
+          data: { record_selection: "" }) %>
+  </td>
+  <% visible_columns.each do |key| %>
+    <%= render "booking_performance_cell", row:, key: %>
+  <% end %>
+</tr>

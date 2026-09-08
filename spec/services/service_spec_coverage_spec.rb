@@ -45,6 +45,11 @@ RSpec.describe "Service spec coverage" do
     "ai_concierge/orchestration/core/domain_response" => "ai_concierge/orchestration/booking/orchestrator_spec.rb",
     "ai_concierge/orchestration/booking/responses" => "ai_concierge/orchestration/booking/orchestrator_spec.rb",
     "ai_concierge/orchestration/core/intents" => "ai_concierge/orchestration/booking/revision_policy_spec.rb",
+    # The booking performance report declares its columns and builds its
+    # selection through the shared classes. A spec for either wrapper apart
+    # from the class it calls would assert the literal it was given.
+    "hotel_portal/reports/booking_performance_columns" => "hotel_portal/reports/report_columns_spec.rb",
+    "hotel_portal/reports/booking_performance_selection" => "hotel_portal/reports/record_selection_spec.rb",
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",
