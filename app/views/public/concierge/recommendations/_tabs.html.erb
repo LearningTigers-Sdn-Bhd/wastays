@@ -1,35 +1,76 @@
-<%# Below lg the categories are a native select. The list is superadmin-managed
-    and free to grow, and a horizontally scrolling pill row hides whatever does
-    not fit behind a gesture guests have no reason to know is there. The OS
-    picker shows every category in one tap. Above lg the pills wrap onto a
-    second line rather than scrolling, so nothing is hidden there either. %>
-<div class="mb-6">
-  <%= form_with url: concierge_recommendations_path(@hotel), method: :get,
-        data: { controller: "auto-submit", turbo_action: "advance" },
-        class: "lg:hidden" do |form| %>
-    <%= form.label :category, "Category", class: "sr-only" %>
-
-    <div class="relative">
-      <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-primary">
+<%# Below lg the categories open in a bottom sheet. The list is superadmin-managed
+    and free to grow, so a pill row either scrolls -- hiding every category past
+    the second behind a gesture guests have no reason to know is there -- or wraps
+    into a wall of pills above the content. The sheet shows all of them, with room
+    for the tagline that explains what each one actually contains. Above lg the
+    pills wrap onto a second line rather than scrolling, so nothing is hidden. %>
+<div class="mb-6" data-controller="concierge-category-picker">
+  <div class="lg:hidden">
+    <button type="button"
+            data-action="concierge-category-picker#open"
+            aria-haspopup="dialog"
+            class="flex w-full items-center gap-3 rounded-xl border border-border bg-white px-4 py-3.5 text-left transition-all active:scale-[0.99]">
+      <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/5 text-primary">
         <%= cached_icon category.icon, class: "h-4 w-4" %>
       </span>
-
-      <%= form.select :category,
-            options_for_select(categories.map { |tab| [ tab.name, tab.slug ] }, category.slug),
-            {},
-            data: { action: "change->auto-submit#submitNow" },
-            class: "w-full appearance-none rounded-xl border border-border bg-white py-4 pl-11 pr-11 text-[12px] font-black uppercase tracking-wider text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" %>
-
-      <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-muted-foreground">
-        <%= cached_icon "chevron-down", stroke_width: 2.5, class: "h-4 w-4" %>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Browsing</span>
+        <span class="block truncate text-[12px] font-black uppercase tracking-wider text-foreground"><%= category.name %></span>
       </span>
-    </div>
+      <%= cached_icon "chevron-down", stroke_width: 2.5, class: "h-4 w-4 flex-shrink-0 text-muted-foreground" %>
+    </button>
 
-    <%# The select cannot submit itself without Stimulus, so give it a button. %>
+    <%# Without JS the button cannot open anything, so the categories are listed
+        outright rather than left unreachable. %>
     <noscript>
-      <%= form.submit "Show", class: "mt-2 w-full rounded-xl bg-primary px-4 py-3 text-[11px] font-black uppercase tracking-widest text-primary-foreground" %>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <% categories.each do |tab| %>
+          <%= link_to tab.name, concierge_recommendations_path(@hotel, category: tab.slug),
+                class: "rounded-full border border-border/60 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground" %>
+        <% end %>
+      </div>
     </noscript>
-  <% end %>
+
+    <dialog data-concierge-category-picker-target="dialog"
+            data-action="click->concierge-category-picker#backdropClose close->concierge-category-picker#onClose"
+            aria-label="Choose a category"
+            class="fixed inset-x-0 bottom-0 top-auto m-0 hidden max-h-[85dvh] w-full max-w-none translate-y-full flex-col overflow-hidden rounded-t-3xl border-0 bg-background p-0 shadow-2xl transition-transform duration-300 ease-out open:flex data-open:translate-y-0 backdrop:bg-black/50 motion-reduce:transition-none">
+      <header class="flex items-center justify-between gap-3 border-b border-border/60 px-5 pb-3 pt-4">
+        <%# Native dialog focuses the first focusable descendant, which would put
+            a focus ring on the close button. Take it here instead, so the sheet
+            announces itself and nothing looks pre-pressed. %>
+        <h2 tabindex="-1" autofocus
+            class="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground focus:outline-none">Categories</h2>
+        <button type="button"
+                data-action="concierge-category-picker#close"
+                aria-label="Close"
+                class="-mr-1 inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground active:bg-muted">
+          <%= cached_icon "x", stroke_width: 2.5, class: "h-4 w-4" %>
+        </button>
+      </header>
+
+      <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+        <% categories.each do |tab| %>
+          <% active = tab.slug == category.slug %>
+          <%= link_to concierge_recommendations_path(@hotel, category: tab.slug),
+                data: { turbo_action: "advance" },
+                "aria-current": (active ? "page" : nil),
+                class: "flex items-center gap-3 rounded-xl px-2 py-3 transition-colors active:bg-muted #{active ? 'bg-primary/5' : ''}" do %>
+            <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl <%= active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground' %>">
+              <%= cached_icon tab.icon, class: "h-4 w-4" %>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-[12px] font-black uppercase tracking-wider <%= active ? 'text-primary' : 'text-foreground' %>"><%= tab.name %></span>
+              <span class="mt-0.5 block truncate text-[11px] font-medium text-muted-foreground"><%= tab.tagline %></span>
+            </span>
+            <% if active %>
+              <%= cached_icon "check", stroke_width: 3, class: "h-4 w-4 flex-shrink-0 text-primary" %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </dialog>
+  </div>
 
   <div class="hidden lg:flex lg:flex-wrap lg:gap-2">
     <% categories.each do |tab| %>
