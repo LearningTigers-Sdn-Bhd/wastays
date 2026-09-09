@@ -43,63 +43,61 @@
 
   <div class="mx-auto w-full max-w-5xl space-y-4 px-6 pb-12 md:px-10 md:pb-20">
 
-    <%= link_to concierge_check_in_path(@hotel),
-          class: "group relative flex min-h-[120px] items-center justify-between overflow-hidden rounded-[2rem] border border-white/5 bg-primary p-6 shadow-xl shadow-primary/20 transition-all duration-300 active:scale-[0.98] md:min-h-[150px] md:p-8" do %>
-      <div class="relative z-10 flex items-center gap-x-5">
-        <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 md:h-16 md:w-16">
-          <%= cached_icon "log-in", class: "h-7 w-7 text-accent" %>
+    <%# Check In and Check Out are the two ends of one stay, so they share a row
+        rather than one standing alone above a grid the other sits inside. Check
+        In keeps the solid primary treatment as the more likely first tap; Check
+        Out mirrors its shape and size in an outlined form so the pair reads as
+        equals, not as a hero and an afterthought. %>
+    <%# Every tile below is icon plus label only now -- no caption line -- so
+        heights come down across the board to match the lighter content. %>
+    <div class="grid grid-cols-2 gap-4">
+      <%= link_to concierge_check_in_path(@hotel),
+            class: "group relative flex min-h-[92px] flex-col justify-between overflow-hidden rounded-[2rem] border border-white/5 bg-primary p-5 shadow-xl shadow-primary/20 transition-all duration-300 active:scale-[0.98] md:min-h-[112px] md:p-8" do %>
+        <div class="relative z-10 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 md:h-14 md:w-14">
+          <%= cached_icon "log-in", class: "h-5 w-5 text-accent md:h-6 md:w-6" %>
         </div>
-        <div>
-          <p class="text-sm font-black uppercase tracking-[0.15em] text-white md:text-base">Check In</p>
-          <p class="mt-1 text-[12px] font-medium leading-tight text-white/60 md:text-xs">Register your arrival now</p>
-        </div>
-      </div>
-      <div class="relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 transition-colors group-hover:bg-accent">
-        <%= cached_icon "chevron-right", stroke_width: 2.5, class: "h-4 w-4 text-white/40 transition-colors group-hover:text-primary" %>
-      </div>
-    <% end %>
+        <p class="relative z-10 text-[13px] font-black uppercase tracking-[0.15em] text-white md:text-base">Check In</p>
+      <% end %>
 
+      <%= link_to concierge_check_out_path(@hotel),
+            class: "group relative flex min-h-[92px] flex-col justify-between overflow-hidden rounded-[2rem] border border-primary/15 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-[0.98] md:min-h-[112px] md:p-8" do %>
+        <div class="relative z-10 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white md:h-14 md:w-14">
+          <%= cached_icon "log-out", class: "h-5 w-5 md:h-6 md:w-6" %>
+        </div>
+        <p class="relative z-10 text-[13px] font-black uppercase tracking-[0.15em] text-foreground md:text-base">Check Out</p>
+      <% end %>
+    </div>
+
+    <%# Grid order is row order: Recommendations sits immediately before Contact
+        Us so the pair lands in the same row at every width -- two columns on a
+        phone puts them together as row two, four columns on desktop puts all
+        four in the one row. %>
     <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
       <% [
-        { path: concierge_check_out_path(@hotel), label: "Check Out", description: "Notify desk", icon: "log-out" },
-        { path: concierge_book_path(@hotel), label: "Book a Room", description: "View rooms", icon: "calendar-days" },
-        { path: concierge_new_request_path(@hotel), label: "Request", description: "Housekeeping", icon: "message-square-more" },
-        { path: concierge_contact_path(@hotel), label: "Contact Us", description: "Get help", icon: "phone" }
+        { path: concierge_book_path(@hotel), label: "Book a Room", icon: "calendar-days" },
+        { path: concierge_new_request_path(@hotel), label: "Request", icon: "message-square-more" },
+        { path: concierge_recommendations_path(@hotel), label: "Recommendations", icon: "sparkles" },
+        { path: concierge_contact_path(@hotel), label: "Contact Us", icon: "phone" }
       ].each do |tile| %>
         <%= link_to tile[:path],
-              class: "group flex min-h-[140px] flex-col rounded-[2rem] border border-border/60 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-95" do %>
-          <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
+              class: "group flex min-h-[104px] flex-col justify-between rounded-[2rem] border border-border/60 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-95" do %>
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
             <%= cached_icon tile[:icon], class: "h-5 w-5" %>
           </div>
           <p class="text-[13px] font-black uppercase leading-tight tracking-wider text-foreground"><%= tile[:label] %></p>
-          <p class="mt-1.5 text-[11px] font-medium leading-relaxed text-muted-foreground"><%= tile[:description] %></p>
         <% end %>
       <% end %>
     </div>
 
-    <%# The two tiles that open something rather than filing something: they get
-        the full width on a phone and a column each once there is room. %>
-    <% wide_tiles = [
-      { path: concierge_recommendations_path(@hotel), label: "Recommendations", icon: "sparkles",
-        description: "Partner food, bars, spas & more — with guest vouchers" },
-      ({ path: concierge_chat_path(@hotel), label: "Chat With Us", icon: "message-circle",
-         description: "Ask about rooms, rates or anything else" } if @hotel.concierge_chat_available?)
-    ].compact %>
-
-    <div class="grid gap-4 <%= "md:grid-cols-2" if wide_tiles.size > 1 %>">
-      <% wide_tiles.each do |tile| %>
-        <%= link_to tile[:path],
-              class: "group flex items-center gap-5 rounded-[2rem] border border-border/60 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-[0.98]" do %>
-          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
-            <%= cached_icon tile[:icon], class: "h-6 w-6" %>
-          </div>
-          <div class="min-w-0">
-            <p class="text-[13px] font-black uppercase leading-tight tracking-wider text-foreground"><%= tile[:label] %></p>
-            <p class="mt-1.5 text-[11px] font-medium leading-relaxed text-muted-foreground"><%= tile[:description] %></p>
-          </div>
-        <% end %>
+    <% if @hotel.concierge_chat_available? %>
+      <%= link_to concierge_chat_path(@hotel),
+            class: "group flex items-center gap-4 rounded-[2rem] border border-border/60 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-[0.98]" do %>
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
+          <%= cached_icon "message-circle", class: "h-6 w-6" %>
+        </div>
+        <p class="text-[13px] font-black uppercase leading-tight tracking-wider text-foreground">Chat With Us</p>
       <% end %>
-    </div>
+    <% end %>
   </div>
 
   <div class="mt-auto px-4 pb-10 text-center">
