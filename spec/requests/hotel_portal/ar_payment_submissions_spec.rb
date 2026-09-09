@@ -28,6 +28,17 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include("View transaction slip")
   end
 
+  it "names the account and the payment form apart from the payment record list" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-TITLE", amount: 300)
+    account_name = relationship.corporate_account.name
+
+    get hotel_ar_payment_submission_path(hotel, submission)
+    expect(response.parsed_body.css("title").text).to eq("#{account_name} | #{hotel.name}")
+
+    get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id)
+    expect(response.parsed_body.css("title").text).to eq("Record Corporate Payment | #{hotel.name}")
+  end
+
   it "prefills the AR payment form from a pending submission" do
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-PREFILL", amount: 275, payment_method: "bank_transfer")
 

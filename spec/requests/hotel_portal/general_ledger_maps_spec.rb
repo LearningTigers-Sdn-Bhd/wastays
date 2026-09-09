@@ -40,6 +40,12 @@ RSpec.describe "HotelPortal::GeneralLedgerMaps", type: :request do
       get edit_hotel_general_ledger_map_path(hotel, gl_map)
       expect(response).to have_http_status(:success)
     end
+
+    it "names the edit page apart from the list it was opened from" do
+      get edit_hotel_general_ledger_map_path(hotel, gl_map)
+
+      expect(response.parsed_body.css("title").text).to eq("Edit Mapping | #{hotel.name}")
+    end
   end
 
   describe "PATCH /update" do

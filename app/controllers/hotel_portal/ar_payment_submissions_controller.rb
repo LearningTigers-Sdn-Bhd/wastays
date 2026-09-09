@@ -4,6 +4,7 @@ module HotelPortal
   class ArPaymentSubmissionsController < FinancialsBaseController
     before_action :authorize_manage_ar_payments!
     before_action :set_submission, only: %i[show reject]
+    before_action :append_page_breadcrumb, only: :show
 
     def show; end
 
@@ -16,6 +17,12 @@ module HotelPortal
     end
 
     private
+
+    # Without this the submission shares the "Payment Record" crumb with the
+    # index it was opened from, and the tab cannot tell the two apart.
+    def append_page_breadcrumb
+      append_breadcrumb @submission.hotel_corporate_account.corporate_account.name
+    end
 
     def set_submission
       @submission = current_hotel.ar_payment_submissions
