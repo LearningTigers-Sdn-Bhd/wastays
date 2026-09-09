@@ -45,6 +45,8 @@ module Public
       # The gate. Reached only when a guest asks to claim without a live booking
       # in the session.
       def new
+        @dev_sample_booking = dev_sample_booking
+        @dev_sample_code = @dev_sample_booking&.booking_confirmation_token&.token
       end
 
       def lookup
@@ -66,6 +68,27 @@ module Public
       private
 
       def load_return_to = @return_to = safe_return_to
+
+      # A one-click way to reach the claim + QR screens locally without a real
+      # confirmation code in hand. Never rendered outside development -- the
+      # view guards on this being present, and this only looks a booking up
+      # when Rails.env.local? is true, so there is nothing to gate twice.
+      #
+      # The code a guest types is booking_confirmation_token#token, not
+      # bookings.confirmation_token -- Booking::with_confirmation_token joins
+      # on the former, deliberately a separate, opaque value from the
+      # human-readable reference printed on the booking itself. Only a
+      # booking with that association loaded is worth offering here.
+      def dev_sample_booking
+        return unless Rails.env.local?
+
+        candidates = @hotel.bookings.where(status: "checked_in")
+                            .or(@hotel.bookings.where(status: "confirmed")
+                                       .where("check_in <= ? AND check_out >= ?", Time.zone.today, Time.zone.today))
+                            .includes(:booking_confirmation_token)
+
+        candidates.find { |booking| booking.booking_confirmation_token.present? }
+      end
 
       def load_categories
         @categories = VendorDirectory.visible_categories
