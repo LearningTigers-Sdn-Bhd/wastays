@@ -135,10 +135,10 @@ RSpec.describe HotelPortal::NavigationHelper, type: :helper do
       expect(helper.hotel_page_title([ { label: "Property Setup" } ])).to eq("Property Setup | WAStays")
     end
 
-    it "lets a view override the trail" do
+    it "lets a view name the page in place of the trail" do
       helper.content_for(:title, "Guest Registration Card 42")
 
-      expect(helper.hotel_page_title([ { label: "Reservations" } ])).to eq("Guest Registration Card 42")
+      expect(helper.hotel_page_title([ { label: "Reservations" } ])).to eq("Guest Registration Card 42 | Descendant Inn")
     end
   end
 end

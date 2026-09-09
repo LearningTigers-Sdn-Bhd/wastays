@@ -1,5 +1,5 @@
 <% page_title = @presenter.review? ? @review_presenter.title : @presenter.title %>
-<% content_for :title, "#{page_title} | Property setup" %>
+<% content_for :title, page_title %>
 
 <% content_for :navbar_secondary do %>
   <%= render HotelPortal::Setup::PhaseNav.new(presenter: @presenter) %>

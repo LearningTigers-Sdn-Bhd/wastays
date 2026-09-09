@@ -190,12 +190,11 @@ module HotelPortal
     # the reader. So the title reads the trail rather than repeat it. A page
     # that gains a crumb gains a title with it, and no view carries the format.
     #
-    # A view can still set :title. That is for the pages where the tab wants
-    # more than the crumb bar shows -- a booking reference, a guest name.
+    # A view sets :title to give the page name the trail cannot -- a booking
+    # reference, or a page the sidebar does not know about. It gives the name
+    # only. The property name and the separator stay here.
     def hotel_page_title(parts = nil)
-      return content_for(:title) if content_for?(:title)
-
-      label = hotel_page_title_label(parts || hotel_breadcrumb_parts)
+      label = content_for(:title).presence || hotel_page_title_label(parts || hotel_breadcrumb_parts)
       return TITLE_FALLBACK if label.blank?
 
       "#{label} | #{current_hotel&.name.presence || 'WAStays'}"
