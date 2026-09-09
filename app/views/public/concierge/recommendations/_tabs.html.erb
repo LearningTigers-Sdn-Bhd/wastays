@@ -1,8 +1,37 @@
-<%# Categories scroll horizontally rather than wrapping: a wrapped pill grid
-    pushes the first vendor below the fold on a phone, and the tabs are chrome,
-    not content. %>
-<div class="-mx-4 mb-6 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-  <div class="flex w-max gap-2">
+<%# Below lg the categories are a native select. The list is superadmin-managed
+    and free to grow, and a horizontally scrolling pill row hides whatever does
+    not fit behind a gesture guests have no reason to know is there. The OS
+    picker shows every category in one tap. Above lg the pills wrap onto a
+    second line rather than scrolling, so nothing is hidden there either. %>
+<div class="mb-6">
+  <%= form_with url: concierge_recommendations_path(@hotel), method: :get,
+        data: { controller: "auto-submit", turbo_action: "advance" },
+        class: "lg:hidden" do |form| %>
+    <%= form.label :category, "Category", class: "sr-only" %>
+
+    <div class="relative">
+      <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-primary">
+        <%= cached_icon category.icon, class: "h-4 w-4" %>
+      </span>
+
+      <%= form.select :category,
+            options_for_select(categories.map { |tab| [ tab.name, tab.slug ] }, category.slug),
+            {},
+            data: { action: "change->auto-submit#submitNow" },
+            class: "w-full appearance-none rounded-xl border border-border bg-white py-4 pl-11 pr-11 text-[12px] font-black uppercase tracking-wider text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" %>
+
+      <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-muted-foreground">
+        <%= cached_icon "chevron-down", stroke_width: 2.5, class: "h-4 w-4" %>
+      </span>
+    </div>
+
+    <%# The select cannot submit itself without Stimulus, so give it a button. %>
+    <noscript>
+      <%= form.submit "Show", class: "mt-2 w-full rounded-xl bg-primary px-4 py-3 text-[11px] font-black uppercase tracking-widest text-primary-foreground" %>
+    </noscript>
+  <% end %>
+
+  <div class="hidden lg:flex lg:flex-wrap lg:gap-2">
     <% categories.each do |tab| %>
       <% active = tab.slug == category.slug %>
       <%= link_to concierge_recommendations_path(@hotel, category: tab.slug),
