@@ -119,6 +119,32 @@ RSpec.describe HotelPortal::NavigationHelper, type: :helper do
       expect(helper.hotel_page_title(parts)).to eq("Payouts | Descendant Inn")
     end
 
+    it "keeps the page in front of a tab that cannot be placed on its own" do
+      parts = [ { type: :menu, label: "Room Revenue" }, { label: "Tax rules", tab_label: true } ]
+
+      expect(helper.hotel_page_title(parts)).to eq("Room Revenue · Tax rules | Descendant Inn")
+    end
+
+    it "lets a subtab take the tab's place rather than stack behind it" do
+      parts = [
+        { type: :menu, label: "Rates & Inventory" },
+        { label: "Advanced Pricing", tab_label: true },
+        { label: "Pricing Rules", subtab_label: true }
+      ]
+
+      expect(helper.hotel_page_title(parts)).to eq("Rates & Inventory · Pricing Rules | Descendant Inn")
+    end
+
+    it "ignores a crumb the page keeps hidden" do
+      parts = [
+        { type: :menu, label: "Rates & Inventory" },
+        { label: "Rates & Availability", tab_label: true },
+        { label: "Pricing Rules", subtab_label: true, hidden: true }
+      ]
+
+      expect(helper.hotel_page_title(parts)).to eq("Rates & Inventory · Rates & Availability | Descendant Inn")
+    end
+
     it "reads the trail itself when the caller passes nothing" do
       allow(helper).to receive(:hotel_breadcrumb_parts).and_return([ { label: "Guest Records" } ])
 

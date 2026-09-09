@@ -10,6 +10,9 @@ module HotelPortal
     # page the sidebar does not know about.
     TITLE_FALLBACK = "Hotel Admin | WAStays"
 
+    # Crumbs that name the open tab rather than the page.
+    TAB_CRUMB_KEYS = %i[tab_label subtab_label].freeze
+
     def hotel_sidebar_sections
       return @_hotel_sidebar_sections if defined?(@_hotel_sidebar_sections)
 
@@ -231,13 +234,29 @@ module HotelPortal
       items.reject { |item| item.children.present? }
     end
 
-    # The last crumb names the page. A tab crumb repeats the page name whenever
-    # the tab set opens on its own page, so drop the repeat rather than print
-    # "Payouts | Payouts".
+    # The last crumb names the page. A hidden crumb names nothing the reader can
+    # see, so the tab must not read it either -- the inventory page carries a
+    # subtab crumb on every tab and only shows it on two of them.
+    #
+    # A tab name on its own says too little. "Tax rules" and "Paid History"
+    # belong to pages the reader cannot name from the tab alone, so the page
+    # goes in front of it. One page and one tab is the whole title: a subtab
+    # takes the tab's place rather than stack behind it.
     def hotel_page_title_label(parts)
-      labels = Array(parts).filter_map { |part| part[:label].presence if part.is_a?(Hash) }
-      labels.pop if labels.size > 1 && labels[-1] == labels[-2]
-      labels.last
+      visible = Array(parts).select { |part| part.is_a?(Hash) && part[:label].present? && !part[:hidden] }
+      return if visible.empty?
+
+      leaf = visible.last[:label]
+      return leaf unless tab_crumb?(visible.last)
+
+      page = visible.reverse.find { |part| !tab_crumb?(part) }
+      return leaf if page.nil? || page[:label] == leaf
+
+      "#{page[:label]} · #{leaf}"
+    end
+
+    def tab_crumb?(part)
+      TAB_CRUMB_KEYS.any? { |key| part[key] }
     end
 
     def hotel_default_breadcrumb_parts
