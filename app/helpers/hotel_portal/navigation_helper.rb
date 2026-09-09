@@ -5,6 +5,11 @@ module HotelPortal
     NavSection = PanelsUI::Navigation::Section
     NavItem = PanelsUI::Navigation::Item
 
+    # What the tab says when a page has no trail to read. Only the shell-less
+    # corners of the portal reach it -- a hotel the reader cannot see yet, or a
+    # page the sidebar does not know about.
+    TITLE_FALLBACK = "Hotel Admin | WAStays"
+
     def hotel_sidebar_sections
       return @_hotel_sidebar_sections if defined?(@_hotel_sidebar_sections)
 
@@ -181,6 +186,21 @@ module HotelPortal
       nav_item_active?(item)
     end
 
+    # The tab title and the breadcrumb bar answer the same question: where is
+    # the reader. So the title reads the trail rather than repeat it. A page
+    # that gains a crumb gains a title with it, and no view carries the format.
+    #
+    # A view can still set :title. That is for the pages where the tab wants
+    # more than the crumb bar shows -- a booking reference, a guest name.
+    def hotel_page_title(parts = nil)
+      return content_for(:title) if content_for?(:title)
+
+      label = hotel_page_title_label(parts || hotel_breadcrumb_parts)
+      return TITLE_FALLBACK if label.blank?
+
+      "#{label} | #{current_hotel&.name.presence || 'WAStays'}"
+    end
+
     private
 
     def nav_item_active?(item)
@@ -210,6 +230,15 @@ module HotelPortal
 
     def sibling_links(items)
       items.reject { |item| item.children.present? }
+    end
+
+    # The last crumb names the page. A tab crumb repeats the page name whenever
+    # the tab set opens on its own page, so drop the repeat rather than print
+    # "Payouts | Payouts".
+    def hotel_page_title_label(parts)
+      labels = Array(parts).filter_map { |part| part[:label].presence if part.is_a?(Hash) }
+      labels.pop if labels.size > 1 && labels[-1] == labels[-2]
+      labels.last
     end
 
     def hotel_default_breadcrumb_parts

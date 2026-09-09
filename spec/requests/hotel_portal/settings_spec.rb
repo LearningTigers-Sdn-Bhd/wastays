@@ -83,6 +83,14 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       end
     end
 
+    it "names the page and the property in the browser tab" do
+      get hotel_general_settings_path(hotel)
+
+      # The tab title reads the breadcrumb trail, so a page that the sidebar
+      # knows about needs nothing of its own to be named correctly.
+      expect(response.parsed_body.css("title").text).to eq("General | #{hotel.name}")
+    end
+
     it "shows concierge QR entry when AI concierge page is enabled" do
       get hotel_general_settings_path(hotel)
 

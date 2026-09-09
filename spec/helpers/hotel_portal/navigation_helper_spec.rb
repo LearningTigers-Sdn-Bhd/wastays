@@ -99,4 +99,46 @@ RSpec.describe HotelPortal::NavigationHelper, type: :helper do
       expect(projected.first.items.first.children.map(&:label)).to eq([ "Enabled" ])
     end
   end
+
+  describe "#hotel_page_title" do
+    # current_hotel reaches views as a controller helper_method, so the bare
+    # view context in a helper spec does not answer to it.
+    before do
+      without_partial_double_verification { allow(helper).to receive(:current_hotel).and_return(hotel) }
+    end
+
+    it "names the page from the last crumb and the property" do
+      parts = [ { type: :section, label: "Cashiering" }, { type: :menu, label: "Invoices" } ]
+
+      expect(helper.hotel_page_title(parts)).to eq("Invoices | Descendant Inn")
+    end
+
+    it "drops a tab crumb that repeats the page name" do
+      parts = [ { type: :menu, label: "Payouts" }, { label: "Payouts", tab_label: true } ]
+
+      expect(helper.hotel_page_title(parts)).to eq("Payouts | Descendant Inn")
+    end
+
+    it "reads the trail itself when the caller passes nothing" do
+      allow(helper).to receive(:hotel_breadcrumb_parts).and_return([ { label: "Guest Records" } ])
+
+      expect(helper.hotel_page_title).to eq("Guest Records | Descendant Inn")
+    end
+
+    it "falls back when the page has no trail" do
+      expect(helper.hotel_page_title([])).to eq("Hotel Admin | WAStays")
+    end
+
+    it "names the product when no property is in scope" do
+      without_partial_double_verification { allow(helper).to receive(:current_hotel).and_return(nil) }
+
+      expect(helper.hotel_page_title([ { label: "Property Setup" } ])).to eq("Property Setup | WAStays")
+    end
+
+    it "lets a view override the trail" do
+      helper.content_for(:title, "Guest Registration Card 42")
+
+      expect(helper.hotel_page_title([ { label: "Reservations" } ])).to eq("Guest Registration Card 42")
+    end
+  end
 end
