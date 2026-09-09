@@ -59,6 +59,14 @@ RSpec.describe "Hotel portal setup lock", type: :request do
         expect(response).to redirect_to(hotel_setup_lock_path(hotel))
       end
 
+      it "names the explainer in the browser tab" do
+        get hotel_setup_lock_path(hotel)
+
+        # The lock page has no sidebar and no breadcrumb bar, so the trail is
+        # empty. The view names itself rather than draw a crumb bar to do it.
+        expect(response.parsed_body.css("title").text).to eq("Property Setup | #{hotel.name}")
+      end
+
       it "opens the pending-review dashboard for staff" do
         hotel.update!(status: "pending_review")
 

@@ -6,6 +6,7 @@ module HotelPortal
 
     before_action :authorize_view_reports!
     before_action :set_relationship, only: %i[show pdf]
+    before_action :append_page_breadcrumb, only: :show
 
     def index
       @presenter = HotelPortal::AccountsReceivable::StatementsIndexPresenter.new(hotel: current_hotel, params: params, request: request)
@@ -35,6 +36,10 @@ module HotelPortal
     end
 
     private
+
+    def append_page_breadcrumb
+      append_breadcrumb @hotel_corporate_account.corporate_account.name
+    end
 
     def set_relationship
       @hotel_corporate_account = current_hotel.hotel_corporate_accounts

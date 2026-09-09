@@ -5,6 +5,14 @@ module HotelPortal
     NavSection = PanelsUI::Navigation::Section
     NavItem = PanelsUI::Navigation::Item
 
+    # What the tab says when a page has no trail to read. Only the shell-less
+    # corners of the portal reach it -- a hotel the reader cannot see yet, or a
+    # page the sidebar does not know about.
+    TITLE_FALLBACK = "Hotel Admin | WAStays"
+
+    # Crumbs that name the open tab rather than the page.
+    TAB_CRUMB_KEYS = %i[tab_label subtab_label].freeze
+
     def hotel_sidebar_sections
       return @_hotel_sidebar_sections if defined?(@_hotel_sidebar_sections)
 
@@ -181,6 +189,20 @@ module HotelPortal
       nav_item_active?(item)
     end
 
+    # The tab title and the breadcrumb bar answer the same question: where is
+    # the reader. So the title reads the trail rather than repeat it. A page
+    # that gains a crumb gains a title with it, and no view carries the format.
+    #
+    # A view sets :title to give the page name the trail cannot -- a booking
+    # reference, or a page the sidebar does not know about. It gives the name
+    # only. The property name and the separator stay here.
+    def hotel_page_title(parts = nil)
+      label = content_for(:title).presence || hotel_page_title_label(parts || hotel_breadcrumb_parts)
+      return TITLE_FALLBACK if label.blank?
+
+      "#{label} | #{current_hotel&.name.presence || 'WAStays'}"
+    end
+
     private
 
     def nav_item_active?(item)
@@ -210,6 +232,31 @@ module HotelPortal
 
     def sibling_links(items)
       items.reject { |item| item.children.present? }
+    end
+
+    # The last crumb names the page. A hidden crumb names nothing the reader can
+    # see, so the tab must not read it either -- the inventory page carries a
+    # subtab crumb on every tab and only shows it on two of them.
+    #
+    # A tab name on its own says too little. "Tax rules" and "Paid History"
+    # belong to pages the reader cannot name from the tab alone, so the page
+    # goes in front of it. One page and one tab is the whole title: a subtab
+    # takes the tab's place rather than stack behind it.
+    def hotel_page_title_label(parts)
+      visible = Array(parts).select { |part| part.is_a?(Hash) && part[:label].present? && !part[:hidden] }
+      return if visible.empty?
+
+      leaf = visible.last[:label]
+      return leaf unless tab_crumb?(visible.last)
+
+      page = visible.reverse.find { |part| !tab_crumb?(part) }
+      return leaf if page.nil? || page[:label] == leaf
+
+      "#{page[:label]} · #{leaf}"
+    end
+
+    def tab_crumb?(part)
+      TAB_CRUMB_KEYS.any? { |key| part[key] }
     end
 
     def hotel_default_breadcrumb_parts
