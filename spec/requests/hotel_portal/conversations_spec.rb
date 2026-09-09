@@ -137,6 +137,14 @@ RSpec.describe "HotelPortal::Conversations", type: :request do
   end
 
   describe "GET show" do
+    it "names the guest in the browser tab, not just the inbox" do
+      conversation = conversation_for(hotel, name: "Aisyah Rahman")
+
+      get hotel_conversation_path(hotel, conversation)
+
+      expect(response.parsed_body.css("title").text).to eq("Aisyah Rahman | #{hotel.name}")
+    end
+
     it "renders the thread with both sides of the exchange" do
       conversation = conversation_for(hotel, name: "Aisyah Rahman")
       create(:prospect_message, prospect: conversation.prospect, conversation: conversation,

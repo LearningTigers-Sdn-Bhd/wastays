@@ -3,6 +3,7 @@
 class HotelPortal::GeneralLedgerMapsController < HotelPortal::SettingsBaseController
   before_action :authorize_manage_gl_maps!
   before_action :set_gl_map, only: %i[edit update]
+  before_action :append_page_breadcrumb, only: :edit
 
   def index
     Financials::EnsureDefaultGlMaps.call(current_hotel)
@@ -21,6 +22,10 @@ class HotelPortal::GeneralLedgerMapsController < HotelPortal::SettingsBaseContro
   end
 
   private
+
+  def append_page_breadcrumb
+    append_breadcrumb "Edit Mapping"
+  end
 
   def authorize_manage_gl_maps!
     raise Pundit::NotAuthorizedError unless current_user.has_permission?("manage_general_ledger_maps", hotel: current_hotel)

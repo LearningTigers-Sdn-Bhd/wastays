@@ -55,6 +55,15 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response.body).to include("balance=outstanding")
     end
 
+    it "names the open invoice apart from the ledger it was opened from" do
+      invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-TITLE", folio_number: 777, amount: 120)
+
+      get hotel_ar_invoice_path(hotel, invoice)
+
+      expect(response.parsed_body.css("title").text)
+        .to eq("#{invoice.formatted_invoice_number} | #{hotel.name}")
+    end
+
     it "renders the redesigned header, metrics, single-line columns, and row actions" do
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-ACTIONS", folio_number: 511, amount: 320)
 
