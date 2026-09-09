@@ -1,38 +1,12 @@
 <% content_for :title, "#{@hotel.name} | Concierge" %>
 
-<%# One template for every width. The phone layout was the better one -- the
-    property's own photograph is what tells a guest they are in the right place,
-    and a logo in a green column never did that -- so the hero now runs on
-    desktop too and simply gets taller and wider. %>
+<%# One template for every width. The photo hero is shared with every other
+    concierge page now (public/concierge/shared/hero) -- this was where it
+    started, so home is the one page that composes its own shell around it
+    instead of going through page_shell. %>
 <div class="flex min-h-screen flex-col overflow-x-hidden bg-background font-sans">
 
-  <%# Roughly half the original phone hero: the badge and the "Welcome to" line
-      are gone at every width now, not only from md up, so what is left is the
-      photograph plus the name and location that actually identify the property.
-      Desktop keeps its own 20dvh cap below. %>
-  <div class="relative h-[160px] w-full overflow-hidden rounded-b-[2rem] bg-primary shadow-2xl shadow-primary/20 md:h-[20dvh]">
-    <% if @hotel.featured_photo_attachment.present? %>
-      <%= image_tag @hotel.featured_photo_attachment, class: "absolute inset-0 h-full w-full object-cover opacity-80" %>
-    <% else %>
-      <%= image_tag "landing/bg-1.webp", class: "absolute inset-0 h-full w-full object-cover opacity-90" %>
-    <% end %>
-
-    <%# Two layers, not one: the flat wash guarantees the floor contrast and the
-        gradient keeps the photograph from looking merely dimmed. %>
-    <div class="absolute inset-0 z-[1] bg-black/50"></div>
-    <div class="absolute inset-0 z-[2] bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
-
-    <div class="relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-6 pb-4 md:px-10 md:pb-5">
-      <div class="space-y-0.5">
-        <h1 class="font-serif text-[29px] leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.8)] md:text-4xl">
-          <%= @hotel.name %>
-        </h1>
-        <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-accent opacity-90 md:text-[12px]">
-          <%= concierge_location_label(@hotel) %>
-        </p>
-      </div>
-    </div>
-  </div>
+  <%= render "public/concierge/shared/hero" %>
 
   <div class="mx-auto w-full max-w-5xl px-6 pb-6 pt-8 md:px-10 md:pt-12">
     <h2 class="font-serif text-2xl text-foreground md:text-3xl">

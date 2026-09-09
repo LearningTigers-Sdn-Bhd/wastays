@@ -1,9 +1,9 @@
 <%# Pages scroll as documents by default. The chat overrides the root instead:
     it fills the viewport exactly and hands its own thread the only scrollbar,
-    and suppresses the bar because its own header already names the hotel. %>
+    and suppresses the hero because its own header already names the hotel. %>
 <div class="<%= local_assigns.fetch(:root_class, 'bg-background min-h-screen flex flex-col') %>">
   <% if local_assigns.fetch(:top_bar, true) %>
-    <%= render "public/concierge/shared/top_bar" %>
+    <%= render "public/concierge/shared/hero" %>
   <% end %>
 
   <%# A landmark, so anyone navigating by them can get straight to the content. %>
