@@ -1,8 +1,12 @@
-<%= render "public/concierge/shared/back_button",
-           back_path: back_path,
-           back_label: back_label,
-           back_label_short: local_assigns.fetch(:back_label_short, "Back"),
-           wrapper_class: local_assigns[:back_wrapper_class] %>
+<%# A top-level page has nowhere to go back to that the bar above it does not
+    already offer, so it can pass back: false and skip this. %>
+<% if local_assigns.fetch(:back, true) %>
+  <%= render "public/concierge/shared/back_button",
+             back_path: back_path,
+             back_label: back_label,
+             back_label_short: local_assigns.fetch(:back_label_short, "Back"),
+             wrapper_class: local_assigns[:back_wrapper_class] %>
+<% end %>
 
 <%# The eyebrow rule is desktop chrome: on a phone it costs a line of height and
     repeats what the heading already says. %>

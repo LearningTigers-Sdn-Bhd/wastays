@@ -7,20 +7,20 @@
 
   <div class="min-w-0 flex-1">
     <div class="flex flex-wrap items-center gap-2">
-      <span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider <%= vendor_accent(vendor, :badge) %>"><%= offer.value_label %></span>
+      <span class="rounded-full px-2 py-0.5 text-[11px] font-black uppercase tracking-wider <%= vendor_accent(vendor, :badge) %>"><%= offer.value_label %></span>
       <% if claimed %>
-        <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-primary">
+        <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-primary">
           <%= cached_icon "check", stroke_width: 3, class: "h-3 w-3" %> Claimed
         </span>
       <% elsif offer.scarce? %>
-        <span class="text-[10px] font-black uppercase tracking-wider text-amber-600">Only <%= offer.remaining %> left</span>
+        <span class="text-[11px] font-black uppercase tracking-wider text-amber-600">Only <%= offer.remaining %> left</span>
       <% end %>
     </div>
 
     <p class="mt-2 text-sm font-black leading-tight text-foreground"><%= offer.title %></p>
-    <p class="mt-1 text-[11px] font-medium leading-snug text-muted-foreground"><%= offer.subtitle %></p>
+    <p class="mt-1 text-[12px] font-medium leading-snug text-muted-foreground"><%= offer.subtitle %></p>
     <% if offer_expiry_label(offer).present? %>
-      <p class="mt-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= offer_expiry_label(offer) %></p>
+      <p class="mt-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground"><%= offer_expiry_label(offer) %></p>
     <% end %>
   </div>
 

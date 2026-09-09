@@ -22,8 +22,8 @@
           </div>
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-black leading-tight text-foreground"><%= entry.offer.title %></p>
-            <p class="mt-1 truncate text-[11px] font-medium text-muted-foreground"><%= vendor.name %></p>
-            <p class="mt-1.5 font-mono text-[11px] font-bold tracking-wider text-primary"><%= entry.code %></p>
+            <p class="mt-1 truncate text-[12px] font-medium text-muted-foreground"><%= vendor.name %></p>
+            <p class="mt-1.5 font-mono text-[12px] font-bold tracking-wider text-primary"><%= entry.code %></p>
           </div>
           <%= cached_icon "chevron-right", stroke_width: 2.5, class: "h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" %>
         <% end %>
@@ -35,11 +35,11 @@
         <%= cached_icon "ticket", class: "h-6 w-6" %>
       </div>
       <p class="text-sm font-bold text-foreground">No vouchers yet</p>
-      <p class="mx-auto mt-1.5 max-w-xs text-[12px] font-medium leading-relaxed text-muted-foreground">
+      <p class="mx-auto mt-1.5 max-w-xs text-[13px] font-medium leading-relaxed text-muted-foreground">
         Browse the partners around the hotel and claim anything that takes your fancy.
       </p>
       <%= link_to concierge_recommendations_path(@hotel),
-            class: "mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-[11px] font-black uppercase tracking-widest text-primary-foreground shadow-sm transition-all active:scale-95" do %>
+            class: "mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-sm transition-all active:scale-95" do %>
         <%= cached_icon "store", class: "h-4 w-4" %> Browse recommendations
       <% end %>
     </div>

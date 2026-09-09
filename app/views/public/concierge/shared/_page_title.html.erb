@@ -1,7 +1,7 @@
 <%# One title for both templates: the phone's tight sans headline below sm, the
     concierge's serif headline above it. Callers own the wording and the tag —
-    the mobile templates are the page's h1, while the desktop shell already
-    spends its h1 on the hotel name in the left panel. %>
+    it defaults to h2 because the shell's top bar already spends the page's h1
+    on the hotel name. %>
 <div class="<%= local_assigns.fetch(:wrapper_class, "mb-6 sm:mb-8") %>">
   <%= content_tag local_assigns.fetch(:tag, "h2"),
         class: "mb-2 text-2xl font-black leading-tight text-foreground sm:font-serif sm:text-3xl sm:font-normal" do %>

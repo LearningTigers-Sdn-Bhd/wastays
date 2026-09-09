@@ -14,8 +14,8 @@
         <%= cached_icon category.icon, class: "h-4 w-4" %>
       </span>
       <span class="min-w-0 flex-1">
-        <span class="block text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Browsing</span>
-        <span class="block truncate text-[12px] font-black uppercase tracking-wider text-foreground"><%= category.name %></span>
+        <span class="block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Browsing</span>
+        <span class="block truncate text-[13px] font-black uppercase tracking-wider text-foreground"><%= category.name %></span>
       </span>
       <%= cached_icon "chevron-down", stroke_width: 2.5, class: "h-4 w-4 flex-shrink-0 text-muted-foreground" %>
     </button>
@@ -26,7 +26,7 @@
       <div class="mt-2 flex flex-wrap gap-2">
         <% categories.each do |tab| %>
           <%= link_to tab.name, concierge_recommendations_path(@hotel, category: tab.slug),
-                class: "rounded-full border border-border/60 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground" %>
+                class: "rounded-full border border-border/60 bg-white px-3 py-2 text-[12px] font-black uppercase tracking-wider text-muted-foreground" %>
         <% end %>
       </div>
     </noscript>
@@ -40,7 +40,7 @@
             a focus ring on the close button. Take it here instead, so the sheet
             announces itself and nothing looks pre-pressed. %>
         <h2 tabindex="-1" autofocus
-            class="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground focus:outline-none">Categories</h2>
+            class="text-[12px] font-black uppercase tracking-[0.2em] text-muted-foreground focus:outline-none">Categories</h2>
         <button type="button"
                 data-action="concierge-category-picker#close"
                 aria-label="Close"
@@ -60,8 +60,8 @@
               <%= cached_icon tab.icon, class: "h-4 w-4" %>
             </span>
             <span class="min-w-0 flex-1">
-              <span class="block text-[12px] font-black uppercase tracking-wider <%= active ? 'text-primary' : 'text-foreground' %>"><%= tab.name %></span>
-              <span class="mt-0.5 block truncate text-[11px] font-medium text-muted-foreground"><%= tab.tagline %></span>
+              <span class="block text-[13px] font-black uppercase tracking-wider <%= active ? 'text-primary' : 'text-foreground' %>"><%= tab.name %></span>
+              <span class="mt-0.5 block truncate text-[12px] font-medium text-muted-foreground"><%= tab.tagline %></span>
             </span>
             <% if active %>
               <%= cached_icon "check", stroke_width: 3, class: "h-4 w-4 flex-shrink-0 text-primary" %>
@@ -78,7 +78,7 @@
       <%= link_to concierge_recommendations_path(@hotel, category: tab.slug),
             data: { turbo_action: "advance" },
             "aria-current": (active ? "page" : nil),
-            class: "group inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 #{active ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border/60 bg-white text-muted-foreground hover:border-primary/40 hover:text-primary'}" do %>
+            class: "group inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-[12px] font-black uppercase tracking-wider transition-all active:scale-95 #{active ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border/60 bg-white text-muted-foreground hover:border-primary/40 hover:text-primary'}" do %>
         <%= cached_icon tab.icon, class: "h-4 w-4" %>
         <%= tab.name %>
       <% end %>

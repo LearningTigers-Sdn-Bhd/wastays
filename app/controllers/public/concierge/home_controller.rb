@@ -1,8 +1,9 @@
 module Public
   module Concierge
     class HomeController < BaseController
+      # One responsive template, so the tiles a guest sees do not depend on how
+      # their user agent string is read.
       def show
-        render "show_mobile" if mobile_request?
       end
 
       def book

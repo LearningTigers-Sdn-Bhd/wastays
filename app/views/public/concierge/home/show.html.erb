@@ -1,102 +1,109 @@
 <% content_for :title, "#{@hotel.name} | Concierge" %>
 
-<%= render layout: "public/concierge/shared/page_shell",
-           locals: {
-             content_class: "flex-1 bg-background flex items-start justify-center px-4 pt-20 pb-20 sm:px-6 md:pt-28 md:items-center",
-             container_class: "w-full max-w-3xl"
-           } do %>
+<%# One template for every width. The phone layout was the better one -- the
+    property's own photograph is what tells a guest they are in the right place,
+    and a logo in a green column never did that -- so the hero now runs on
+    desktop too and simply gets taller and wider. %>
+<div class="flex min-h-screen flex-col overflow-x-hidden bg-background font-sans">
 
-  <div class="md:hidden text-center mb-8 pt-4">
-    <%= link_to root_path do %>
-      <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "h-9 w-auto mx-auto mb-6" %>
+  <%# Roughly half the original phone hero: the badge and the "Welcome to" line
+      are gone at every width now, not only from md up, so what is left is the
+      photograph plus the name and location that actually identify the property.
+      Desktop keeps its own 20dvh cap below. %>
+  <div class="relative h-[160px] w-full overflow-hidden rounded-b-[2rem] bg-primary shadow-2xl shadow-primary/20 md:h-[20dvh]">
+    <% if @hotel.featured_photo_attachment.present? %>
+      <%= image_tag @hotel.featured_photo_attachment, class: "absolute inset-0 h-full w-full object-cover opacity-80" %>
+    <% else %>
+      <%= image_tag "landing/bg-1.webp", class: "absolute inset-0 h-full w-full object-cover opacity-90" %>
     <% end %>
-    <div class="inline-flex items-center gap-x-3 mb-3">
-      <span class="w-6 h-px bg-primary/30"></span>
-      <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Digital Concierge</span>
-      <span class="w-6 h-px bg-primary/30"></span>
+
+    <%# Two layers, not one: the flat wash guarantees the floor contrast and the
+        gradient keeps the photograph from looking merely dimmed. %>
+    <div class="absolute inset-0 z-[1] bg-black/50"></div>
+    <div class="absolute inset-0 z-[2] bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
+
+    <div class="relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-6 pb-4 md:px-10 md:pb-5">
+      <div class="space-y-0.5">
+        <h1 class="font-serif text-[29px] leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.8)] md:text-4xl">
+          <%= @hotel.name %>
+        </h1>
+        <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-accent opacity-90 md:text-[12px]">
+          <%= concierge_location_label(@hotel) %>
+        </p>
+      </div>
     </div>
-    <h1 class="text-2xl font-serif text-foreground"><%= @hotel.name %></h1>
-    <p class="text-sm text-muted-foreground mt-1"><%= concierge_location_label(@hotel) %></p>
   </div>
 
-  <div class="hidden md:block mb-10">
-    <div class="flex items-center gap-x-3 mb-5">
-      <span class="w-6 h-px bg-primary/30"></span>
-      <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">How can we help?</span>
-      <span class="flex-1 h-px bg-border/60"></span>
-    </div>
-    <h2 class="text-3xl font-serif text-foreground leading-tight">
-      What would you like<br><span class="italic text-primary">to do today?</span>
+  <div class="mx-auto w-full max-w-5xl px-6 pb-6 pt-8 md:px-10 md:pt-12">
+    <h2 class="font-serif text-2xl text-foreground md:text-3xl">
+      Hello, <span class="italic text-primary">Guest</span>
     </h2>
+    <p class="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground md:text-sm">How can we assist you today?</p>
   </div>
 
-  <div class="space-y-4">
-    <div class="animate-hero-badge" style="animation-delay: 0.1s;">
-      <%= link_to concierge_check_in_path(@hotel.unique_id, @hotel.public_id), class: "group relative flex flex-col justify-end min-h-[140px] bg-secondary rounded-3xl p-6 shadow-xl shadow-secondary/20 hover:bg-primary transition-all duration-500 overflow-hidden" do %>
-        <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-accent/5 rounded-full blur-2xl group-hover:bg-accent/10 transition-colors"></div>
+  <div class="mx-auto w-full max-w-5xl space-y-4 px-6 pb-12 md:px-10 md:pb-20">
 
-        <div class="relative z-10 flex items-center justify-between">
-          <div>
-            <div class="w-12 h-12 rounded-2xl bg-accent/15 border border-accent/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
-              <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-            </div>
-            <h3 class="font-black text-sm uppercase tracking-[0.2em] text-white">Check In</h3>
-            <p class="text-xs text-white/60 mt-1 max-w-[200px]">Register your arrival or complete pre-check-in</p>
-          </div>
-          <div class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-accent group-hover:border-accent transition-all duration-500">
-            <svg class="w-5 h-5 text-white/40 group-hover:text-secondary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-          </div>
+    <%= link_to concierge_check_in_path(@hotel),
+          class: "group relative flex min-h-[120px] items-center justify-between overflow-hidden rounded-[2rem] border border-white/5 bg-primary p-6 shadow-xl shadow-primary/20 transition-all duration-300 active:scale-[0.98] md:min-h-[150px] md:p-8" do %>
+      <div class="relative z-10 flex items-center gap-x-5">
+        <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 md:h-16 md:w-16">
+          <%= cached_icon "log-in", class: "h-7 w-7 text-accent" %>
         </div>
-      <% end %>
-    </div>
+        <div>
+          <p class="text-sm font-black uppercase tracking-[0.15em] text-white md:text-base">Check In</p>
+          <p class="mt-1 text-[12px] font-medium leading-tight text-white/60 md:text-xs">Register your arrival now</p>
+        </div>
+      </div>
+      <div class="relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 transition-colors group-hover:bg-accent">
+        <%= cached_icon "chevron-right", stroke_width: 2.5, class: "h-4 w-4 text-white/40 transition-colors group-hover:text-primary" %>
+      </div>
+    <% end %>
 
-    <div class="grid grid-cols-2 gap-5">
+    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
       <% [
-        { path: concierge_check_out_path(@hotel.unique_id, @hotel.public_id), label: "Check Out", description: "Notify front desk", delay: "0.2s", icon: "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" },
-        { path: concierge_book_path(@hotel.unique_id, @hotel.public_id), label: "Book a Room", description: "View availability", delay: "0.3s", icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" },
-        { path: concierge_new_request_path(@hotel.unique_id, @hotel.public_id), label: "Request", description: "Housekeeping, etc", delay: "0.4s", icon: "M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" },
-        { path: concierge_contact_path(@hotel.unique_id, @hotel.public_id), label: "Contact Us", description: "Help & Info", delay: "0.5s", icon: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" }
+        { path: concierge_check_out_path(@hotel), label: "Check Out", description: "Notify desk", icon: "log-out" },
+        { path: concierge_book_path(@hotel), label: "Book a Room", description: "View rooms", icon: "calendar-days" },
+        { path: concierge_new_request_path(@hotel), label: "Request", description: "Housekeeping", icon: "message-square-more" },
+        { path: concierge_contact_path(@hotel), label: "Contact Us", description: "Get help", icon: "phone" }
       ].each do |tile| %>
-        <div class="animate-hero-badge" style="animation-delay: <%= tile[:delay] %>;">
-          <%= link_to tile[:path], class: "group flex flex-col h-full bg-white rounded-3xl p-5 border border-border shadow-sm hover:border-primary/30 hover:shadow-md transition-all duration-300" do %>
-            <div class="w-10 h-10 rounded-2xl bg-muted border border-border flex items-center justify-center mb-4 group-hover:bg-primary group-hover:border-primary transition-colors duration-300">
-              <svg class="w-5 h-5 text-muted-foreground group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<%= tile[:icon] %>"/></svg>
-            </div>
-            <p class="font-black text-xs uppercase tracking-widest text-foreground"><%= tile[:label] %></p>
-            <p class="text-[10px] text-muted-foreground mt-1 leading-tight"><%= tile[:description] %></p>
-          <% end %>
-        </div>
+        <%= link_to tile[:path],
+              class: "group flex min-h-[140px] flex-col rounded-[2rem] border border-border/60 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-95" do %>
+          <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
+            <%= cached_icon tile[:icon], class: "h-5 w-5" %>
+          </div>
+          <p class="text-[13px] font-black uppercase leading-tight tracking-wider text-foreground"><%= tile[:label] %></p>
+          <p class="mt-1.5 text-[11px] font-medium leading-relaxed text-muted-foreground"><%= tile[:description] %></p>
+        <% end %>
       <% end %>
     </div>
 
-    <%# Full width: the offers behind it are the only thing on this page a guest
-        can take away with them, so it does not compete in the 2x2 grid. %>
-    <div class="animate-hero-badge" style="animation-delay: 0.55s;">
-      <%= link_to concierge_recommendations_path(@hotel), class: "group flex items-center gap-4 bg-white rounded-3xl p-5 border border-border shadow-sm hover:border-primary/30 hover:shadow-md transition-all duration-300" do %>
-        <div class="w-10 h-10 shrink-0 rounded-2xl bg-muted border border-border flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-colors duration-300">
-          <%= cached_icon "sparkles", class: "w-5 h-5 text-muted-foreground group-hover:text-white transition-colors" %>
-        </div>
-        <div class="min-w-0">
-          <p class="font-black text-xs uppercase tracking-widest text-foreground">Recommendations</p>
-          <p class="text-[10px] text-muted-foreground mt-1 leading-tight">Partner food, bars, spas &amp; more — with guest vouchers</p>
-        </div>
-      <% end %>
-    </div>
+    <%# The two tiles that open something rather than filing something: they get
+        the full width on a phone and a column each once there is room. %>
+    <% wide_tiles = [
+      { path: concierge_recommendations_path(@hotel), label: "Recommendations", icon: "sparkles",
+        description: "Partner food, bars, spas & more — with guest vouchers" },
+      ({ path: concierge_chat_path(@hotel), label: "Chat With Us", icon: "message-circle",
+         description: "Ask about rooms, rates or anything else" } if @hotel.concierge_chat_available?)
+    ].compact %>
 
-    <%# The one tile that answers rather than routes: full width because it is
-        the thing a guest with a question should reach for first. %>
-    <div class="animate-hero-badge" style="animation-delay: 0.6s;">
-      <% if @hotel.concierge_chat_available? %>
-      <%= link_to concierge_chat_path(@hotel.unique_id, @hotel.public_id), class: "group flex items-center gap-4 bg-white rounded-3xl p-5 border border-border shadow-sm hover:border-primary/30 hover:shadow-md transition-all duration-300" do %>
-        <div class="w-10 h-10 shrink-0 rounded-2xl bg-muted border border-border flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-colors duration-300">
-          <svg class="w-5 h-5 text-muted-foreground group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 21l1.9-3.8A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-        </div>
-        <div class="min-w-0">
-          <p class="font-black text-xs uppercase tracking-widest text-foreground">Chat With Us</p>
-          <p class="text-[10px] text-muted-foreground mt-1 leading-tight">Ask about rooms, rates or anything else</p>
-        </div>
-      <% end %>
+    <div class="grid gap-4 <%= "md:grid-cols-2" if wide_tiles.size > 1 %>">
+      <% wide_tiles.each do |tile| %>
+        <%= link_to tile[:path],
+              class: "group flex items-center gap-5 rounded-[2rem] border border-border/60 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-[0.98]" do %>
+          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
+            <%= cached_icon tile[:icon], class: "h-6 w-6" %>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[13px] font-black uppercase leading-tight tracking-wider text-foreground"><%= tile[:label] %></p>
+            <p class="mt-1.5 text-[11px] font-medium leading-relaxed text-muted-foreground"><%= tile[:description] %></p>
+          </div>
+        <% end %>
       <% end %>
     </div>
   </div>
-<% end %>
+
+  <div class="mt-auto px-4 pb-10 text-center">
+    <div class="mx-auto mb-6 h-px w-12 bg-border"></div>
+    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground opacity-60">Powered by WAStays</p>
+  </div>
+</div>

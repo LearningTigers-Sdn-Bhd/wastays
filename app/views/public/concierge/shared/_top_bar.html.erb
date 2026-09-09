@@ -1,0 +1,31 @@
+<%# Replaces the old left panel, which spent 45% of every desktop screen on a
+    logo and the hotel name and left the actual page squeezed into the rest.
+    This says the same three things in one row and gives the width back.
+
+    It carries the page's h1: the templates below it are all sections of one
+    property's concierge, so their own headings stay h2. %>
+<header class="sticky top-0 z-20 border-b border-border/60 bg-background/85 backdrop-blur-sm">
+  <%# Two sizes. On a desktop the 32px chip sets the height, landing at 49px --
+      under a tenth of the viewport even on a 600px-tall window. On a phone the
+      vertical budget is the scarcest of all, so the bar drops to a bare label:
+      no icon chip, no location line, tight leading -- about 12px, half of the
+      already-reduced 25px. The guest is standing in the hotel; the name alone
+      is enough to confirm whose concierge this is. %>
+  <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-3 py-[2px] sm:px-6 sm:py-2">
+    <%= link_to concierge_home_path(@hotel), class: "group flex min-w-0 items-center gap-0 sm:gap-3" do %>
+      <span class="hidden shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-active:scale-95 sm:flex sm:h-8 sm:w-8">
+        <%= cached_icon "concierge-bell", class: "h-3.5 w-3.5" %>
+      </span>
+      <span class="min-w-0">
+        <h1 class="truncate text-[9px] font-black leading-none text-foreground sm:text-[12px] sm:leading-tight"><%= @hotel.name %></h1>
+        <p class="hidden truncate text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground sm:block">
+          <%= concierge_location_label(@hotel) %>
+        </p>
+      </span>
+    <% end %>
+
+    <span class="hidden shrink-0 text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground/70 sm:block">
+      Digital Concierge
+    </span>
+  </div>
+</header>

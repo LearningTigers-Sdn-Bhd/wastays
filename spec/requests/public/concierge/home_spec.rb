@@ -84,41 +84,34 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       end
     end
 
-    context "when request is from a mobile browser" do
-      let(:mobile_ua) { "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" }
-
-      it "renders the mobile template" do
-        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => mobile_ua }
-        expect(response).to have_http_status(:ok)
-        expect(response.body).to include("data-mobile-view")
+    # One responsive template now serves both, so the tiles a guest is offered
+    # no longer depend on how their user agent string is read.
+    it "serves the same page to phones and desktops" do
+      bodies = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].map do |user_agent|
+        get concierge_home_path(hotel), headers: { "HTTP_USER_AGENT" => user_agent }
+        response.body
       end
 
-      it "renders all five action tiles" do
-        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => mobile_ua }
-        expect(response.body).to include("Check In")
-        expect(response.body).to include("Check Out")
-        expect(response.body).to include("Booking")
-        expect(response.body).to include("Request")
-        expect(response.body).to include("Contact Us")
-      end
-
-      it "links to correct concierge paths" do
-        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => mobile_ua }
-        expect(response.body).to include(concierge_check_in_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include(concierge_check_out_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include(concierge_new_request_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include(concierge_contact_path(hotel.unique_id, hotel.public_id))
-      end
+      expect(bodies.first).to eq(bodies.last)
     end
 
-    context "when request is from a desktop browser" do
-      let(:desktop_ua) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" }
+    it "links every tile to its concierge path" do
+      get concierge_home_path(hotel)
 
-      it "renders the desktop template" do
-        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => desktop_ua }
-        expect(response).to have_http_status(:ok)
-        expect(response.body).not_to include("data-mobile-view")
-      end
+      expect(response.body).to include(concierge_check_in_path(hotel))
+      expect(response.body).to include(concierge_check_out_path(hotel))
+      expect(response.body).to include(concierge_new_request_path(hotel))
+      expect(response.body).to include(concierge_contact_path(hotel))
+      expect(response.body).to include(concierge_recommendations_path(hotel))
+    end
+
+    it "leads with the hotel's own photograph rather than a stock background" do
+      get concierge_home_path(hotel)
+
+      expect(response.body).to include("landing/bg-1")
     end
   end
 
