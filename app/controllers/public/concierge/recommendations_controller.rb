@@ -22,6 +22,7 @@ module Public
       def index
         @vendors = VendorDirectory.vendors_in(@category.slug)
         @featured = VendorDirectory.featured_in(@category.slug)
+        @all_offers = VendorDirectory.offers_in(@category.slug)
       end
 
       def vendor

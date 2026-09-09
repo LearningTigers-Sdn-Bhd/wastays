@@ -76,6 +76,17 @@ vendors:
         valid_until: "2026-11-30"
         per_guest_limit: 1
         remaining: 118
+      - id: yee-fung-noodles
+        title: RM5 off any noodle bowl
+        subtitle: Dine-in, any time
+        kind: fixed
+        value_label: RM5 off
+        terms:
+          - One voucher per guest per visit.
+          - Not valid with the kaya toast offer.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 200
 
   - id: welcome-seafood
     category: food-drink
@@ -154,6 +165,17 @@ vendors:
         valid_until: "2026-12-15"
         per_guest_limit: 1
         remaining: 77
+      - id: el-centro-pitcher
+        title: Free pitcher of iced tea
+        subtitle: With any two mains
+        kind: free_item
+        value_label: Free
+        terms:
+          - Applies when ordering two or more main courses.
+          - Dine-in only, one per table.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 90
 
   - id: chilli-vanilla
     category: food-drink
@@ -175,7 +197,29 @@ vendors:
     google_maps_url: https://maps.google.com/?q=Chilli+Vanilla+Kota+Kinabalu
     latitude: 5.9819
     longitude: 116.0768
-    offers: []
+    offers:
+      - id: chilli-vanilla-tasting
+        title: 15% off the tasting menu
+        subtitle: Tuesday to Thursday
+        kind: percentage
+        value_label: 15% off
+        terms:
+          - Tuesday to Thursday only, dinner service.
+          - Whole table must order the tasting menu.
+        valid_until: "2026-12-15"
+        per_guest_limit: 1
+        remaining: 18
+      - id: chilli-vanilla-wine
+        title: Free glass of house wine
+        subtitle: With any main course
+        kind: free_item
+        value_label: Free
+        terms:
+          - One glass per guest, per visit.
+          - Dine-in only.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 40
 
   # ------------------------------------------------------------------------ Bars
   - id: nook-rooftop
@@ -222,6 +266,17 @@ vendors:
         valid_until: "2026-11-30"
         per_guest_limit: 1
         remaining: 34
+      - id: nook-canapes
+        title: Free canapé plate
+        subtitle: With any bottle of wine
+        kind: free_item
+        value_label: Free
+        terms:
+          - One plate per bottle ordered.
+          - Dine-in only.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 22
 
   - id: shamrock
     category: bars
@@ -254,6 +309,17 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 2
         remaining: 55
+      - id: shamrock-happy-hour
+        title: 20% off during happy hour
+        subtitle: Daily, 15:00 – 18:00
+        kind: percentage
+        value_label: 20% off
+        terms:
+          - Valid 15:00 – 18:00 daily.
+          - Draught beer and house spirits only.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 75
 
   # -------------------------------------------------------------------- Wellness
   - id: borneo-spa
@@ -329,6 +395,17 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 2
         remaining: 130
+      - id: kenzo-couple
+        title: 2-for-1 couple reflexology
+        subtitle: 90-minute session, book ahead
+        kind: free_item
+        value_label: 2-for-1
+        terms:
+          - Subject to availability; call ahead to reserve.
+          - Both guests must be present.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 15
 
   # ------------------------------------------------------------ Health & Pharmacy
   - id: guardian-suria
@@ -363,6 +440,17 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 2
         remaining: 200
+      - id: guardian-firstaid
+        title: RM8 off travel first-aid kits
+        subtitle: While stocks last
+        kind: fixed
+        value_label: RM8 off
+        terms:
+          - One voucher per guest per visit.
+          - Excludes prescription medication.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 60
 
   - id: klinik-kota
     category: health
@@ -397,6 +485,17 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 1
         remaining: 40
+      - id: klinik-travel-panel
+        title: 15% off travel health panel
+        subtitle: Blood work and vaccination advice
+        kind: percentage
+        value_label: 15% off
+        terms:
+          - Covers the standard travel health panel only.
+          - Book ahead; walk-ins subject to availability.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 25
 
   # -------------------------------------------------------------------- Shopping
   - id: handicraft-market
@@ -431,6 +530,28 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 1
         remaining: 65
+      - id: handicraft-batik
+        title: Free tote bag with batik purchase
+        subtitle: Any batik piece over RM50
+        kind: free_item
+        value_label: Free
+        terms:
+          - Valid only at stalls displaying the partner decal.
+          - One tote per guest, while stocks last.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 30
+      - id: handicraft-carving
+        title: 10% off wood carvings
+        subtitle: Participating stalls only
+        kind: percentage
+        value_label: 10% off
+        terms:
+          - Valid only at stalls displaying the partner decal.
+          - Cash payment.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 50
 
   - id: imago-mall
     category: shopping

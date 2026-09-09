@@ -14,73 +14,85 @@ module Public::ConciergeRecommendationsHelper
       wash: "from-amber-500 to-amber-700",
       chip: "bg-amber-50 text-amber-700",
       badge: "bg-amber-600 text-white",
-      soft: "border-amber-200 bg-amber-100 text-amber-900"
+      soft: "border-amber-200 bg-amber-100 text-amber-900",
+      border: "border-amber-300"
     },
     "rose" => {
       wash: "from-rose-500 to-rose-700",
       chip: "bg-rose-50 text-rose-700",
       badge: "bg-rose-600 text-white",
-      soft: "border-rose-200 bg-rose-100 text-rose-900"
+      soft: "border-rose-200 bg-rose-100 text-rose-900",
+      border: "border-rose-300"
     },
     "orange" => {
       wash: "from-orange-500 to-orange-700",
       chip: "bg-orange-50 text-orange-700",
       badge: "bg-orange-600 text-white",
-      soft: "border-orange-200 bg-orange-100 text-orange-900"
+      soft: "border-orange-200 bg-orange-100 text-orange-900",
+      border: "border-orange-300"
     },
     "emerald" => {
       wash: "from-emerald-500 to-emerald-700",
       chip: "bg-emerald-50 text-emerald-700",
       badge: "bg-emerald-600 text-white",
-      soft: "border-emerald-200 bg-emerald-100 text-emerald-900"
+      soft: "border-emerald-200 bg-emerald-100 text-emerald-900",
+      border: "border-emerald-300"
     },
     "violet" => {
       wash: "from-violet-500 to-violet-700",
       chip: "bg-violet-50 text-violet-700",
       badge: "bg-violet-600 text-white",
-      soft: "border-violet-200 bg-violet-100 text-violet-900"
+      soft: "border-violet-200 bg-violet-100 text-violet-900",
+      border: "border-violet-300"
     },
     "teal" => {
       wash: "from-teal-500 to-teal-700",
       chip: "bg-teal-50 text-teal-700",
       badge: "bg-teal-600 text-white",
-      soft: "border-teal-200 bg-teal-100 text-teal-900"
+      soft: "border-teal-200 bg-teal-100 text-teal-900",
+      border: "border-teal-300"
     },
     "green" => {
       wash: "from-green-500 to-green-700",
       chip: "bg-green-50 text-green-700",
       badge: "bg-green-600 text-white",
-      soft: "border-green-200 bg-green-100 text-green-900"
+      soft: "border-green-200 bg-green-100 text-green-900",
+      border: "border-green-300"
     },
     "lime" => {
       wash: "from-lime-500 to-lime-700",
       chip: "bg-lime-50 text-lime-700",
       badge: "bg-lime-600 text-white",
-      soft: "border-lime-200 bg-lime-100 text-lime-900"
+      soft: "border-lime-200 bg-lime-100 text-lime-900",
+      border: "border-lime-300"
     },
     "sky" => {
       wash: "from-sky-500 to-sky-700",
       chip: "bg-sky-50 text-sky-700",
       badge: "bg-sky-600 text-white",
-      soft: "border-sky-200 bg-sky-100 text-sky-900"
+      soft: "border-sky-200 bg-sky-100 text-sky-900",
+      border: "border-sky-300"
     },
     "cyan" => {
       wash: "from-cyan-500 to-cyan-700",
       chip: "bg-cyan-50 text-cyan-700",
       badge: "bg-cyan-600 text-white",
-      soft: "border-cyan-200 bg-cyan-100 text-cyan-900"
+      soft: "border-cyan-200 bg-cyan-100 text-cyan-900",
+      border: "border-cyan-300"
     },
     "fuchsia" => {
       wash: "from-fuchsia-500 to-fuchsia-700",
       chip: "bg-fuchsia-50 text-fuchsia-700",
       badge: "bg-fuchsia-600 text-white",
-      soft: "border-fuchsia-200 bg-fuchsia-100 text-fuchsia-900"
+      soft: "border-fuchsia-200 bg-fuchsia-100 text-fuchsia-900",
+      border: "border-fuchsia-300"
     },
     "indigo" => {
       wash: "from-indigo-500 to-indigo-700",
       chip: "bg-indigo-50 text-indigo-700",
       badge: "bg-indigo-600 text-white",
-      soft: "border-indigo-200 bg-indigo-100 text-indigo-900"
+      soft: "border-indigo-200 bg-indigo-100 text-indigo-900",
+      border: "border-indigo-300"
     }
   }.freeze
 

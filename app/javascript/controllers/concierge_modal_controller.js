@@ -2,7 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 
 const EXIT_DURATION_MS = 250
 
-// Bottom sheet for the concierge recommendation categories.
+// Generic bottom sheet / modal for the concierge pages -- the category picker
+// and the "view all vouchers" list both use this.
 //
 // Deliberately not PanelsUI::Sheet: that component is opened with the native
 // command/commandfor invoker, which is Safari 18.4 and newer, and the concierge

@@ -1,0 +1,40 @@
+<%# The complete list behind "View all" -- every offer in the category, not
+    only the three curated ones above. Reuses concierge-modal, the same
+    bottom-sheet controller the category picker uses, so this section owns its
+    own controller instance rather than sharing the tabs' dialog. %>
+<dialog data-concierge-modal-target="dialog"
+        data-action="click->concierge-modal#backdropClose close->concierge-modal#onClose"
+        aria-label="All vouchers in <%= @category.name %>"
+        class="fixed inset-x-0 bottom-0 top-auto m-0 hidden max-h-[85dvh] w-full max-w-none translate-y-full flex-col overflow-hidden rounded-t-3xl border-0 bg-background p-0 shadow-2xl transition-transform duration-300 ease-out open:flex data-open:translate-y-0 backdrop:bg-black/50 motion-reduce:transition-none sm:inset-x-auto sm:bottom-4 sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:rounded-3xl">
+  <header class="flex items-center justify-between gap-3 border-b border-border/60 px-5 pb-3 pt-4">
+    <div>
+      <h2 tabindex="-1" autofocus class="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground focus:outline-none">
+        All Vouchers
+      </h2>
+      <p class="mt-0.5 text-[13px] font-black text-foreground"><%= @category.name %></p>
+    </div>
+    <button type="button"
+            data-action="concierge-modal#close"
+            aria-label="Close"
+            class="-mr-1 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground active:bg-muted">
+      <%= cached_icon "x", stroke_width: 2.5, class: "h-4 w-4" %>
+    </button>
+  </header>
+
+  <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+    <% offers.each do |offer| %>
+      <% vendor = VendorDirectory.vendor(offer.vendor_id) %>
+      <%= link_to concierge_recommendation_offer_path(@hotel, vendor, offer),
+            class: "group flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors active:bg-muted" do %>
+        <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border-2 bg-white <%= vendor_accent(vendor, :border) %>">
+          <%= cached_icon category_icon_for(vendor.category_slug), class: "h-4 w-4 text-foreground/50" %>
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-[12px] font-black leading-tight text-foreground"><%= offer.title %></span>
+          <span class="mt-0.5 block truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= vendor.name %></span>
+        </span>
+        <span class="flex-shrink-0 font-serif text-sm italic text-accent-foreground"><%= offer.value_label %></span>
+      <% end %>
+    <% end %>
+  </div>
+</dialog>

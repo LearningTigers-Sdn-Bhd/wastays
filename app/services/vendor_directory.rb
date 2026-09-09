@@ -38,18 +38,24 @@ module VendorDirectory
       vendor(vendor_id).offer(offer_id) or raise OfferNotFound, offer_id
     end
 
+    # Every offer in a category, most noteworthy first. Unlike featured_in this
+    # does not dedupe by vendor -- it is the source for "View all", where the
+    # point is completeness, not curated variety.
+    def offers_in(category_slug)
+      vendors_in(category_slug)
+        .flat_map(&:offers)
+        .sort_by { |offer| [ offer.scarce? ? 0 : 1, offer.expiring_soon? ? 0 : 1, offer.remaining.to_i ] }
+    end
+
     # The strip at the top of each tab: the deals worth interrupting a scroll
     # for. Scarcity first, then the ones about to expire.
     #
     # One offer per vendor -- a rail showing the same restaurant three times
     # reads as a short list rather than a wide choice, and the vendor's other
-    # offers are one tap away on its own page anyway.
-    def featured_in(category_slug, limit: 4)
-      vendors_in(category_slug)
-        .flat_map(&:offers)
-        .sort_by { |offer| [ offer.scarce? ? 0 : 1, offer.expiring_soon? ? 0 : 1, offer.remaining.to_i ] }
-        .uniq(&:vendor_id)
-        .first(limit)
+    # offers, along with everything else in the category, are one tap away
+    # through "View all".
+    def featured_in(category_slug, limit: 3)
+      offers_in(category_slug).uniq(&:vendor_id).first(limit)
     end
   end
 end
