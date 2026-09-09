@@ -88,6 +88,19 @@
       <% end %>
     </div>
 
+    <%# Full width: the offers behind it are the only thing on this page a guest
+        can take away with them, so it does not compete in the 2x2 grid. %>
+    <%= link_to concierge_recommendations_path(@hotel),
+          class: "group flex items-center gap-5 bg-white rounded-[2rem] p-5 border border-border/60 shadow-sm active:scale-[0.98] transition-all duration-300" do %>
+      <div class="w-12 h-12 shrink-0 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center group-active:bg-primary group-active:text-white transition-colors duration-200">
+        <%= cached_icon "sparkles", class: "w-6 h-6 text-primary transition-colors" %>
+      </div>
+      <div class="min-w-0">
+        <p class="font-black text-[12px] uppercase tracking-wider text-foreground leading-tight">Recommendations</p>
+        <p class="text-[10px] text-muted-foreground mt-1.5 leading-relaxed font-medium">Partner food, bars, spas &amp; more — with guest vouchers</p>
+      </div>
+    <% end %>
+
     <%# The one tile that answers rather than routes: full width because it is
         the thing a guest with a question should reach for first. %>
     <% if @hotel.concierge_chat_available? %>

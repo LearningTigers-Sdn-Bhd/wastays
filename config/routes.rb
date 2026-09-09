@@ -117,6 +117,16 @@ Rails.application.routes.draw do
     post   "chat/booking",         to: "booking_links#create", as: :chat_booking
     delete "chat",                 to: "chats#destroy",        as: :clear_chat
     post   "chat/agent",           to: "chats#request_agent",  as: :chat_agent
+
+    # Static segments first: "wallet" and "unlock" must not be swallowed by the
+    # :vendor_id wildcard below.
+    get  "recommendations",                       to: "recommendations#index",  as: :recommendations
+    get  "recommendations/unlock",                to: "recommendations#new",    as: :recommendations_unlock
+    post "recommendations/unlock",                to: "recommendations#lookup", as: :recommendations_lookup
+    get  "recommendations/wallet",                to: "recommendations#wallet", as: :recommendations_wallet
+    get  "recommendations/:vendor_id",            to: "recommendations#vendor", as: :recommendation_vendor
+    get  "recommendations/:vendor_id/:offer_id",  to: "recommendations#offer",  as: :recommendation_offer
+    post "recommendations/:vendor_id/:offer_id/claim", to: "recommendations#claim", as: :claim_recommendation_offer
   end
 
   scope "/concierge/:legacy_hotel_identifier", as: :legacy_concierge do

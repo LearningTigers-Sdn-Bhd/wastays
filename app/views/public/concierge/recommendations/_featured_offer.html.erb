@@ -1,0 +1,20 @@
+<% vendor = offer.vendor_id == local_assigns[:vendor]&.id ? local_assigns[:vendor] : VendorDirectory.vendor(offer.vendor_id) %>
+<%# Deliberately about half the footprint of a vendor tile: this rail is a
+    glance on the way to the list below it, not a second list to work through.
+    The subtitle is dropped rather than shrunk -- the title and the vendor name
+    are what make a guest stop, and the rest is one tap away. %>
+<%= link_to concierge_recommendation_offer_path(@hotel, vendor, offer),
+      class: "group flex w-40 flex-shrink-0 flex-col rounded-xl border p-3 transition-all hover:shadow-sm active:scale-[0.97] sm:w-44 #{vendor_accent(vendor, :soft)}" do %>
+  <div class="flex items-center justify-between gap-1.5">
+    <span class="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
+      <%= offer.value_label %>
+    </span>
+    <% if offer.scarce? %>
+      <span class="whitespace-nowrap text-[9px] font-black uppercase tracking-wider opacity-70"><%= offer.remaining %> left</span>
+    <% end %>
+  </div>
+
+  <p class="mt-2 line-clamp-2 text-[11px] font-black leading-tight"><%= offer.title %></p>
+
+  <p class="mt-auto truncate pt-2 text-[9px] font-bold uppercase tracking-wider opacity-60"><%= vendor.name %></p>
+<% end %>

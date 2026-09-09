@@ -1,0 +1,58 @@
+<% content_for :title, "Recommendations | #{@hotel.name}" %>
+<%# A directory earns a wider column and a shorter run-up than a single-purpose
+    form does: the grid is the page, so the shell's default centred prose width
+    and deep top padding both get overridden here. %>
+<%= render layout: "public/concierge/shared/page_shell",
+           locals: { content_class: "flex-1 px-4 pt-8 pb-16 sm:px-6 md:pt-12",
+                     container_class: "w-full max-w-6xl" } do %>
+  <%= render "public/concierge/shared/page_header",
+             back_path: concierge_home_path(@hotel),
+             back_label: "Back to Concierge",
+             back_wrapper_class: desktop_only_back_class,
+             eyebrow: "Recommendations",
+             title_prefix: "Around the",
+             title_accent: "Corner",
+             subtitle: "Partner restaurants, bars, spas and shops near #{@hotel.name} — with vouchers you can claim as our guest." %>
+
+  <%= render "public/concierge/recommendations/wallet_bar" %>
+
+  <%= render "public/concierge/recommendations/tabs", categories: @categories, category: @category %>
+
+  <% if @featured.any? %>
+    <section class="mb-8">
+      <div class="mb-3 flex items-center gap-2">
+        <%= cached_icon "sparkles", class: "h-4 w-4 text-primary" %>
+        <h3 class="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Worth grabbing</h3>
+      </div>
+
+      <div class="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div class="flex w-max gap-2.5">
+          <% @featured.each do |offer| %>
+            <%= render "public/concierge/recommendations/featured_offer", offer: offer %>
+          <% end %>
+        </div>
+      </div>
+    </section>
+  <% end %>
+
+  <section>
+    <div class="mb-1 flex items-baseline justify-between gap-3">
+      <h3 class="text-[11px] font-black uppercase tracking-[0.2em] text-foreground"><%= @category.name %></h3>
+      <p class="text-[11px] font-medium text-muted-foreground"><%= pluralize(@vendors.size, "place") %></p>
+    </div>
+    <p class="mb-4 text-[12px] font-medium leading-relaxed text-muted-foreground"><%= @category.tagline %></p>
+
+    <div class="grid grid-cols-3 gap-2.5 sm:gap-4">
+      <% @vendors.each do |vendor| %>
+        <%= render "public/concierge/recommendations/vendor_card", vendor: vendor %>
+      <% end %>
+    </div>
+
+    <% if @vendors.empty? %>
+      <div class="rounded-2xl border border-dashed border-border bg-white/60 p-8 text-center">
+        <p class="text-sm font-bold text-foreground">Nothing here yet</p>
+        <p class="mt-1.5 text-[12px] font-medium text-muted-foreground">We are still signing up partners in this category.</p>
+      </div>
+    <% end %>
+  </section>
+<% end %>

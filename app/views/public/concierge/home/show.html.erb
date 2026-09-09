@@ -69,6 +69,20 @@
       <% end %>
     </div>
 
+    <%# Full width: the offers behind it are the only thing on this page a guest
+        can take away with them, so it does not compete in the 2x2 grid. %>
+    <div class="animate-hero-badge" style="animation-delay: 0.55s;">
+      <%= link_to concierge_recommendations_path(@hotel), class: "group flex items-center gap-4 bg-white rounded-3xl p-5 border border-border shadow-sm hover:border-primary/30 hover:shadow-md transition-all duration-300" do %>
+        <div class="w-10 h-10 shrink-0 rounded-2xl bg-muted border border-border flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-colors duration-300">
+          <%= cached_icon "sparkles", class: "w-5 h-5 text-muted-foreground group-hover:text-white transition-colors" %>
+        </div>
+        <div class="min-w-0">
+          <p class="font-black text-xs uppercase tracking-widest text-foreground">Recommendations</p>
+          <p class="text-[10px] text-muted-foreground mt-1 leading-tight">Partner food, bars, spas &amp; more — with guest vouchers</p>
+        </div>
+      <% end %>
+    </div>
+
     <%# The one tile that answers rather than routes: full width because it is
         the thing a guest with a question should reach for first. %>
     <div class="animate-hero-badge" style="animation-delay: 0.6s;">

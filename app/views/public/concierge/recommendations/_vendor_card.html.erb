@@ -1,0 +1,31 @@
+<%# Three to a row at every width. That is tight on a small phone, so the tile
+    is vertical and sheds the tagline below sm -- the mark, the name and the
+    offer count are what a guest picks from, and the rest lives one tap in. %>
+<%= link_to concierge_recommendation_vendor_path(@hotel, vendor),
+      class: "group flex flex-col rounded-2xl border border-border/60 bg-white p-2.5 shadow-sm transition-all hover:shadow-md active:scale-[0.97] sm:p-4" do %>
+  <div class="mb-2.5 flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-inner sm:mb-3 <%= vendor_accent(vendor, :wash) %>">
+    <%= cached_icon category_icon_for(vendor.category_slug), class: "h-6 w-6 sm:h-8 sm:w-8" %>
+  </div>
+
+  <p class="line-clamp-2 text-[11px] font-black leading-tight text-foreground sm:text-[13px]"><%= vendor.name %></p>
+
+  <p class="mt-1 hidden line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground sm:block">
+    <%= vendor.tagline %>
+  </p>
+
+  <div class="mt-auto pt-2.5 sm:pt-3">
+    <% if vendor.distance_label.present? %>
+      <%# Three-up on a phone leaves no room for the walk time, and a truncated
+          "400 m - 5 mi..." is worse than the distance alone. %>
+      <p class="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+        <%= cached_icon "map-pin", class: "h-3 w-3 flex-shrink-0" %>
+        <span class="truncate sm:hidden"><%= vendor.distance_label %></span>
+        <span class="hidden truncate sm:inline"><%= vendor_distance_summary(vendor) %></span>
+      </p>
+    <% end %>
+
+    <span class="mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider sm:text-[10px] <%= vendor.offers? ? vendor_accent(vendor, :chip) : 'bg-muted text-muted-foreground' %>">
+      <%= vendor.offers? ? vendor.offer_count_label : "No offers" %>
+    </span>
+  </div>
+<% end %>
