@@ -36,10 +36,10 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
     end
 
     it "caps the featured rail at three and offers a View all for the rest" do
-      get path # food-drink: 9 offers across 4 vendors
+      get path # food-drink: 19 offers across 4 vendors
 
       expect(response.body.scan(%r{data-concierge-modal-target="dialog"}).size).to eq(2) # tabs sheet + voucher sheet
-      expect(response.body).to include("View all (9)")
+      expect(response.body).to include("View all (19)")
       # The vendor whose offer did not make the curated three still appears in
       # the full "View all" list -- capping the rail must not drop data.
       expect(response.body).to include("Chilli Vanilla")

@@ -87,6 +87,39 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 1
         remaining: 200
+      - id: yee-fung-teh-tarik
+        title: Free teh tarik with breakfast
+        subtitle: Before 9am, any breakfast set
+        kind: free_item
+        value_label: Free
+        terms:
+          - Valid 06:30 – 09:00 only.
+          - One drink per guest, per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 85
+      - id: yee-fung-family
+        title: 10% off for tables of four or more
+        subtitle: Any time, dine-in
+        kind: percentage
+        value_label: 10% off
+        terms:
+          - Applies to the full bill for parties of four or more.
+          - Dine-in only, one voucher per table.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 60
+      - id: yee-fung-dessert
+        title: Free bowl of cendol with any main
+        subtitle: While stocks last
+        kind: free_item
+        value_label: Free
+        terms:
+          - One bowl per guest, per visit.
+          - Subject to availability.
+        valid_until: "2026-11-30"
+        per_guest_limit: 1
+        remaining: 30
 
   - id: welcome-seafood
     category: food-drink
@@ -132,6 +165,39 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 1
         remaining: 60
+      - id: welcome-seafood-crab
+        title: RM20 off chilli crab
+        subtitle: Any size, dine-in
+        kind: fixed
+        value_label: RM20 off
+        terms:
+          - One voucher per table, per visit.
+          - Subject to daily catch and availability.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 45
+      - id: welcome-seafood-lunch
+        title: 15% off weekday lunch sets
+        subtitle: Mon – Fri, 11:30 – 14:30
+        kind: percentage
+        value_label: 15% off
+        terms:
+          - Monday to Friday, 11:30 – 14:30 only.
+          - Applies to the set lunch menu.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 70
+      - id: welcome-seafood-soup
+        title: Free soup of the day
+        subtitle: With any two mains, dine-in
+        kind: free_item
+        value_label: Free
+        terms:
+          - Applies when ordering two or more mains.
+          - Dine-in only, one bowl per table.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 55
 
   - id: el-centro
     category: food-drink
@@ -176,6 +242,27 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 1
         remaining: 90
+      - id: el-centro-quiz
+        title: 2-for-1 burgers on quiz night
+        subtitle: Wednesdays, dine-in
+        kind: free_item
+        value_label: 2-for-1
+        terms:
+          - Wednesdays only, dine-in.
+          - One redemption per guest, per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 24
+      - id: el-centro-nachos
+        title: RM8 off loaded nachos
+        subtitle: Any time, dine-in or takeaway
+        kind: fixed
+        value_label: RM8 off
+        terms:
+          - One voucher per guest, per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 65
 
   - id: chilli-vanilla
     category: food-drink
@@ -220,6 +307,28 @@ vendors:
         valid_until: "2026-12-31"
         per_guest_limit: 1
         remaining: 40
+      - id: chilli-vanilla-dessert
+        title: Free dessert of the day
+        subtitle: With any two-course order
+        kind: free_item
+        value_label: Free
+        terms:
+          - Applies when ordering a starter and a main.
+          - One dessert per guest, per visit.
+        valid_until: "2026-11-30"
+        per_guest_limit: 1
+        remaining: 20
+      - id: chilli-vanilla-lunch
+        title: 20% off weekday set lunch
+        subtitle: Tue – Fri, 11:30 – 14:00
+        kind: percentage
+        value_label: 20% off
+        terms:
+          - Tuesday to Friday, 11:30 – 14:00 only.
+          - Applies to the set lunch menu.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 35
 
   # ------------------------------------------------------------------------ Bars
   - id: nook-rooftop
