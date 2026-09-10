@@ -1,28 +1,42 @@
-<%# Card mode: two to a row, basic information only -- the photo, the name,
-    the distance and whether there is anything to claim. Everything else
-    (tagline, description, tags) lives in list mode or one tap in. %>
+<%# Card mode: two to a row, denser than list mode but not just a name and a
+    distance -- the tagline and price band earn their place since both read
+    in a glance, without pulling in the full description or tags list. %>
 <%= link_to concierge_recommendation_vendor_path(@hotel, vendor),
       data: { turbo_frame: "_top" },
       class: "group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm transition-all hover:shadow-md active:scale-[0.97]" do %>
   <div class="relative h-28 w-full flex-shrink-0 overflow-hidden bg-muted sm:h-36">
     <%# Temporary stock photography -- see VendorDirectory::MockAdapter -- with
-        the vendor's own accent as a wash so the placeholder still reads as
-        "this vendor" rather than a generic stock shot. %>
+        the WAStays wash so the placeholder still reads as branded rather
+        than a bare stock shot. %>
     <%= image_tag vendor.photo_url, alt: "", loading: "lazy",
           class: "absolute inset-0 h-full w-full object-cover" %>
     <div class="absolute inset-0 bg-gradient-to-br opacity-35 mix-blend-multiply <%= vendor_accent(vendor, :wash) %>"></div>
+
+    <%# Card mode has no room for the full dietary row -- just the one label
+        that matters most for a quick scan, halal status over the rest. %>
+    <% if vendor.dietary_tags? %>
+      <span class="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm backdrop-blur-sm <%= dietary_tag_text_class(vendor.dietary_tags.first) %>">
+        <%= cached_icon dietary_tag_icon(vendor.dietary_tags.first), class: "h-2.5 w-2.5" %><%= vendor.dietary_tags.first %>
+      </span>
+    <% end %>
   </div>
 
   <div class="flex flex-1 flex-col p-2.5 sm:p-3.5">
     <p class="line-clamp-2 text-[12px] font-black leading-tight text-foreground sm:text-[14px]"><%= vendor.name %></p>
+    <p class="mt-0.5 truncate text-[11px] font-medium leading-snug text-muted-foreground"><%= vendor.tagline %></p>
 
-    <div class="mt-auto pt-2.5 sm:pt-3">
-      <% if vendor.distance_label.present? %>
-        <p class="flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
-          <%= cached_icon "map-pin", class: "h-3 w-3 flex-shrink-0" %>
-          <span class="truncate"><%= vendor.distance_label %></span>
-        </p>
-      <% end %>
+    <div class="mt-auto pt-2 sm:pt-2.5">
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <% if vendor.distance_label.present? %>
+          <p class="flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
+            <%= cached_icon "map-pin", class: "h-3 w-3 flex-shrink-0" %>
+            <span class="truncate"><%= vendor.distance_label %></span>
+          </p>
+        <% end %>
+        <% if vendor.price_range.present? %>
+          <span class="text-[11px] font-bold text-muted-foreground"><%= vendor.price_range %></span>
+        <% end %>
+      </div>
 
       <span class="mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider sm:text-[11px] <%= vendor.offers? ? vendor_accent(vendor, :chip) : 'bg-muted text-muted-foreground' %>">
         <%= vendor.offers? ? vendor.offer_count_label : "No offers" %>

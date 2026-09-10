@@ -7,8 +7,8 @@
       class: "group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm transition-all hover:shadow-md active:scale-[0.99] sm:flex-row" do %>
   <div class="relative h-36 w-full flex-shrink-0 overflow-hidden bg-muted sm:h-auto sm:w-56">
     <%# Temporary stock photography -- see VendorDirectory::MockAdapter -- with
-        the vendor's own accent as a wash so the placeholder still reads as
-        "this vendor" rather than a generic stock shot. %>
+        the WAStays wash so the placeholder still reads as branded rather
+        than a bare stock shot. %>
     <%= image_tag vendor.photo_url, alt: "", loading: "lazy",
           class: "absolute inset-0 h-full w-full object-cover" %>
     <div class="absolute inset-0 bg-gradient-to-br opacity-35 mix-blend-multiply <%= vendor_accent(vendor, :wash) %>"></div>
@@ -22,7 +22,13 @@
       </span>
     </div>
 
-    <p class="mt-1 text-[12px] font-medium leading-snug text-muted-foreground"><%= vendor.tagline %></p>
+    <% if vendor.dietary_tags? %>
+      <div class="mt-1.5">
+        <%= render "public/concierge/recommendations/dietary_tags", vendor: vendor %>
+      </div>
+    <% end %>
+
+    <p class="mt-1.5 text-[12px] font-medium leading-snug text-muted-foreground"><%= vendor.tagline %></p>
 
     <p class="mt-2 line-clamp-2 text-[12.5px] font-medium leading-relaxed text-muted-foreground/90">
       <%= vendor.summary %>

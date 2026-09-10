@@ -19,11 +19,14 @@ module VendorDirectory
     :latitude,
     :longitude,
     :offers,
-    :photo_url
+    :photo_url,
+    :dietary_tags
   ) do
     def to_param = id
 
     def offers? = offers.any?
+
+    def dietary_tags? = dietary_tags.any?
 
     def offer(id) = offers.find { |offer| offer.id == id }
 

@@ -50,8 +50,14 @@
     <p class="mt-3.5 text-[13px] font-medium leading-relaxed text-muted-foreground"><%= @vendor.summary %></p>
   <% end %>
 
-  <% if @vendor.tags.any? %>
-    <div class="mt-2.5 flex flex-wrap gap-1.5">
+  <%# Dietary status leads the row -- it is a stop/go decision for a lot of
+      Malaysian guests, not trivia on the same footing as "Rooftop" or
+      "Cocktails" -- then the generic tags fill in alongside it. Sharing one
+      row keeps the compact page compact; the colour and icon are what make
+      it read as more important, not a row of its own. %>
+  <% if @vendor.dietary_tags? || @vendor.tags.any? %>
+    <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+      <%= render "public/concierge/recommendations/dietary_tags", vendor: @vendor %>
       <% @vendor.tags.each do |tag| %>
         <span class="rounded-full border border-border/60 bg-white px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground"><%= tag %></span>
       <% end %>

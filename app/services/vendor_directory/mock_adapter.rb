@@ -38,7 +38,8 @@ module VendorDirectory
         latitude: attributes[:latitude],
         longitude: attributes[:longitude],
         offers: build_offers(attributes),
-        photo_url: attributes[:photo_url].presence || placeholder_photo_url(attributes[:id])
+        photo_url: attributes[:photo_url].presence || placeholder_photo_url(attributes[:id]),
+        dietary_tags: Array(attributes[:dietary_tags])
       )
     end
 

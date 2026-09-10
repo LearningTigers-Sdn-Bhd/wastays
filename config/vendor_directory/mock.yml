@@ -38,7 +38,8 @@ vendors:
     tagline: Gaya Street institution, famous for its laksa
     accent: amber
     price_range: "$"
-    tags: [Local, Breakfast, Halal-friendly]
+    tags: [Local, Breakfast]
+    dietary_tags: [Halal]
     summary: >-
       A coffee shop that has been on Gaya Street long enough to have outlived
       most of its neighbours. The laksa and the beef noodles are the reason for
@@ -128,6 +129,7 @@ vendors:
     accent: rose
     price_range: "$$$"
     tags: [Seafood, Dinner, Groups]
+    dietary_tags: [Non-Halal]
     summary: >-
       Pick your fish out of the tank at the front and argue about the sauce
       afterwards. Loud, bright and consistently excellent — book ahead on
@@ -205,7 +207,8 @@ vendors:
     tagline: Western comfort food and a proper burger
     accent: orange
     price_range: "$$"
-    tags: [Western, Late night, Vegetarian options]
+    tags: [Western, Late night]
+    dietary_tags: [Non-Halal, Vegetarian options]
     summary: >-
       Backpacker-adjacent but grown-up about it. Burgers, quesadillas and a
       long bar, with a quiz night that takes itself only half seriously.
@@ -271,6 +274,7 @@ vendors:
     accent: emerald
     price_range: "$$"
     tags: [Mediterranean, Dinner, Small plates]
+    dietary_tags: [Non-Halal, Vegetarian options]
     summary: >-
       Nine tables and a chef who will come out to explain the special. Book —
       walking in on a Friday is optimistic.
@@ -338,6 +342,7 @@ vendors:
     accent: violet
     price_range: "$$$"
     tags: [Rooftop, Sunset, Cocktails]
+    dietary_tags: [Non-Halal]
     summary: >-
       Eleven floors up and pointed straight at the South China Sea. Get there
       by 17:45 if you want a rail seat for the sunset; the cocktails are better
@@ -394,6 +399,7 @@ vendors:
     accent: teal
     price_range: "$$"
     tags: [Sports, Beer, Waterfront]
+    dietary_tags: [Non-Halal]
     summary: >-
       A reliable pint and a screen showing whatever is on at 3am UK time. The
       waterfront terrace is the good bit.
