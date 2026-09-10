@@ -18,7 +18,8 @@ module VendorDirectory
     :google_maps_url,
     :latitude,
     :longitude,
-    :offers
+    :offers,
+    :photo_url
   ) do
     def to_param = id
 

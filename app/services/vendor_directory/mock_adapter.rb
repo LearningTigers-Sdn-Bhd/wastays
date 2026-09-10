@@ -37,8 +37,17 @@ module VendorDirectory
         google_maps_url: attributes[:google_maps_url],
         latitude: attributes[:latitude],
         longitude: attributes[:longitude],
-        offers: build_offers(attributes)
+        offers: build_offers(attributes),
+        photo_url: attributes[:photo_url].presence || placeholder_photo_url(attributes[:id])
       )
+    end
+
+    # Temporary: real vendor photography comes from Dinerzflow once that side
+    # exists. Picsum Photos serves real, royalty-free stock photographs and
+    # returns the same image for the same seed every time, so a vendor's
+    # placeholder stays stable across requests without us hosting anything.
+    def placeholder_photo_url(seed)
+      "https://picsum.photos/seed/#{seed}/800/600"
     end
 
     def build_offers(vendor_attributes)
