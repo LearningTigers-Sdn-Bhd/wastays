@@ -2,7 +2,11 @@
     concierge's serif headline above it. Callers own the wording and the tag —
     it defaults to h2 because the shell's top bar already spends the page's h1
     on the hotel name. %>
-<div class="<%= local_assigns.fetch(:wrapper_class, "mb-6 sm:mb-8") %>">
+<%# .presence rather than fetch's key-presence check: page_header always
+    forwards a wrapper_class key now (nil when the caller didn't ask for one),
+    and fetch would take that nil as "the caller wants no margin at all"
+    instead of falling back to the default. %>
+<div class="<%= local_assigns[:wrapper_class].presence || "mb-6 sm:mb-8" %>">
   <%= content_tag local_assigns.fetch(:tag, "h2"),
         class: "mb-2 text-2xl font-black leading-tight text-foreground sm:font-serif sm:text-3xl sm:font-normal" do %>
     <%= title_prefix %><% if local_assigns[:title_accent].present? %> <span class="text-primary sm:italic"><%= title_accent %></span><% end %>

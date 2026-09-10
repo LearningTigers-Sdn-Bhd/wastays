@@ -3,21 +3,24 @@
     form does: the grid is the page, so the shell's default centred prose width
     and deep top padding both get overridden here. %>
 <%= render layout: "public/concierge/shared/page_shell",
-           locals: { content_class: "flex-1 px-4 pt-8 pb-16 sm:px-6 md:pt-12",
+           locals: { content_class: "flex-1 px-4 pt-[26px] pb-16 sm:px-6 md:pt-[38px]",
                      container_class: "w-full max-w-6xl" } do %>
   <%# No back link: this is the top of its own section, and the bar above it
       already returns to the concierge home. %>
   <%# !mt-0 tightens the gap under the heading for this page specifically --
       the shared partial's own mt-3/mt-2 still apply everywhere else, and
       margin-collapse with the heading's mb-2 keeps a real gap here too, just
-      a shorter one. %>
+      a shorter one. title_wrapper_class and the page's own pt- above are both
+      the shared defaults (mb-6 sm:mb-8 / pt-8 md:pt-12) cut 20%, scoped to
+      this page only -- every other page keeps the shared spacing. %>
   <%= render "public/concierge/shared/page_header",
              back: false,
              eyebrow: "Recommendations",
              title_prefix: "Around the",
              title_accent: "Corner",
              subtitle: "Partner restaurants, bars, spas and shops nearby.",
-             subtitle_class: "!mt-0" %>
+             subtitle_class: "!mt-0",
+             title_wrapper_class: "mb-[19px] sm:mb-[26px]" %>
 
   <%= render "public/concierge/recommendations/wallet_bar" %>
 
