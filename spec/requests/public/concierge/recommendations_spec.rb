@@ -126,6 +126,26 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
       end
     end
 
+    context "arriving at the gate mid-claim, with no session booking yet" do
+      let!(:booking) do
+        create(:booking, hotel: hotel, status: "checked_in",
+                         check_in: 1.day.ago, check_out: 2.days.from_now)
+      end
+
+      it "finishes the claim and lands straight on the QR, not on the (POST-only) claim path itself" do
+        post claim_path
+        gate_path = response.headers["Location"].sub(%r{https?://[^/]+}, "")
+
+        post gate_path, params: { confirmation_token: booking.confirmation_token }
+        follow_redirect!
+
+        expect(response).to have_http_status(:success)
+        expect(request.path).to eq(path("/nook-rooftop/nook-house-pour"))
+        expect(response.body).to include("Claimed &amp; ready")
+        expect(response.body).to match(/WS-NOOK-[A-Z0-9]{6}/)
+      end
+    end
+
     context "when the stay is not live" do
       let!(:booking) do
         create(:booking, hotel: hotel, status: "confirmed",

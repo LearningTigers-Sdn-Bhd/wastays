@@ -62,12 +62,42 @@ module Public
           return render :new, status: :unprocessable_content
         end
 
-        redirect_to @return_to
+        redirect_to resolved_return_target
       end
 
       private
 
       def load_return_to = @return_to = safe_return_to
+
+      # request.fullpath on the claim action -- what require_booking! sends
+      # here as return_to -- names a POST-only route. redirect_to always sends
+      # the browser back with a GET, and there is no GET route at that path,
+      # so bouncing straight there 404s. Recognise that specific case, finish
+      # the claim now that a booking is on hand, and land on the offer page
+      # instead -- the same page the claim action itself redirects to, so nothing
+      # about the outcome changes, only how the guest arrives at it. Anything
+      # else return_to might name (the index, a vendor page) is a normal GET
+      # and passes through untouched.
+      def resolved_return_target
+        match = recognized_claim_route(@return_to)
+        return @return_to unless match
+
+        vendor = VendorDirectory.vendor(match[:vendor_id])
+        offer = VendorDirectory.offer(vendor.id, match[:offer_id])
+        voucher_wallet.claim!(offer)
+        concierge_recommendation_offer_path(@hotel, vendor, offer)
+      rescue VendorDirectory::VendorNotFound, VendorDirectory::OfferNotFound
+        @return_to
+      end
+
+      def recognized_claim_route(path)
+        match = Rails.application.routes.recognize_path(path, method: :post)
+        return unless match[:controller] == "public/concierge/recommendations" && match[:action] == "claim"
+
+        match
+      rescue ActionController::RoutingError
+        nil
+      end
 
       # A one-click way to reach the claim + QR screens locally without a real
       # confirmation code in hand. Never rendered outside development -- the
