@@ -98,8 +98,12 @@
 
       <%# Only where it means something -- Wellness, Health and Shopping vendors
           carry no dietary_tags at all, so the row simply doesn't render there
-          rather than offering three buttons that would filter nothing. %>
-      <% if @vendors.any?(&:dietary_tags?) %>
+          rather than offering three buttons that would filter nothing. Bars
+          is excluded on purpose even though its vendors do carry a dietary
+          label: every bar here is Non-Halal by definition of serving alcohol,
+          so filtering by it would only ever leave the list exactly as it was
+          or empty it out entirely -- neither is a useful filter. %>
+      <% if @category.slug != "bars" && @vendors.any?(&:dietary_tags?) %>
         <div class="-mx-4 mb-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div class="flex w-max gap-1.5">
             <% [ [ "", "All" ], [ "Halal", "Halal" ], [ "Non-Halal", "Non-Halal" ], [ "Vegetarian Options", "Vegetarian" ] ].each do |value, label| %>
