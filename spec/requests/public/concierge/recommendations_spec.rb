@@ -47,12 +47,14 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
   end
 
   describe "GET vendor" do
-    it "shows directions, hours and the vendor's offers" do
+    it "shows call, directions, share, hours and the vendor's offers" do
       get path("/nook-rooftop")
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Nook Rooftop Bar")
-      expect(response.body).to include("Get directions")
+      expect(response.body).to include("Call")
+      expect(response.body).to include("Direction")
+      expect(response.body).to include("Share")
       expect(response.body).to include("Opening hours")
       expect(response.body).to include("1-for-1 house pours")
     end
