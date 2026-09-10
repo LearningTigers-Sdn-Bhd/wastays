@@ -7,13 +7,21 @@
              back_label: "Back to #{VendorDirectory.category(@vendor.category_slug)&.name || 'Recommendations'}",
              wrapper_class: desktop_only_back_class %>
 
-  <%# Hero. No vendor photography exists yet, so the accent wash plus the
-      category mark carries the identity instead of a grey placeholder box. %>
-  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br p-6 text-white shadow-lg <%= vendor_accent(@vendor, :wash) %>">
+  <%# Hero. The photo -- temporary stock photography, see VendorDirectory::
+      MockAdapter -- sits behind a plain dark wash, the same two-layer
+      treatment the hotel's own hero uses: a flat tint for guaranteed
+      contrast plus a gradient so the photo still reads as a photo rather
+      than a flat colour block. No vendor accent here -- one neutral
+      treatment for every vendor's photo keeps it about the photo. %>
+  <div class="relative overflow-hidden rounded-2xl text-white shadow-lg">
+    <%= image_tag @vendor.photo_url, alt: "", loading: "lazy",
+          class: "absolute inset-0 h-full w-full object-cover" %>
+    <div class="absolute inset-0 bg-black/45"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20"></div>
     <%= cached_icon category_icon_for(@vendor.category_slug),
           class: "pointer-events-none absolute -right-6 -top-6 h-40 w-40 opacity-10" %>
 
-    <div class="relative">
+    <div class="relative p-6">
       <span class="inline-flex items-center rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider backdrop-blur-sm">
         <%= VendorDirectory.category(@vendor.category_slug)&.name %>
       </span>
