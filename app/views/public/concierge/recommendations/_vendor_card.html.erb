@@ -2,7 +2,7 @@
     distance -- the tagline and price band earn their place since both read
     in a glance, without pulling in the full description or tags list. %>
 <%= link_to concierge_recommendation_vendor_path(@hotel, vendor),
-      data: { turbo_frame: "_top" },
+      data: { turbo_frame: "_top", concierge_dietary_filter_target: "item", dietary: vendor.dietary_tags.first.to_s },
       class: "group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm transition-all hover:shadow-md active:scale-[0.97]" do %>
   <div class="relative h-28 w-full flex-shrink-0 overflow-hidden bg-muted sm:h-36">
     <%# Temporary stock photography -- see VendorDirectory::MockAdapter -- with

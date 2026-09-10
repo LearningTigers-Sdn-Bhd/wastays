@@ -73,7 +73,7 @@
         knows what they want and is scanning for the name and the distance.
         Both render up front; the controller only ever toggles which is
         hidden, so switching is instant and needs no request. %>
-    <section data-controller="concierge-view-mode">
+    <section data-controller="concierge-view-mode concierge-dietary-filter">
       <div class="mb-1 flex items-baseline justify-between gap-3">
         <h3 class="text-[12px] font-black uppercase tracking-[0.2em] text-foreground"><%= @category.name %></h3>
         <div class="flex items-center gap-3">
@@ -94,7 +94,27 @@
           </div>
         </div>
       </div>
-      <p class="mb-4 text-[13px] font-medium leading-relaxed text-muted-foreground"><%= @category.tagline %></p>
+      <p class="mb-3 text-[13px] font-medium leading-relaxed text-muted-foreground"><%= @category.tagline %></p>
+
+      <%# Only where it means something -- Wellness, Health and Shopping vendors
+          carry no dietary_tags at all, so the row simply doesn't render there
+          rather than offering three buttons that would filter nothing. %>
+      <% if @vendors.any?(&:dietary_tags?) %>
+        <div class="-mx-4 mb-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div class="flex w-max gap-1.5">
+            <% [ [ "", "All" ], [ "Halal", "Halal" ], [ "Non-Halal", "Non-Halal" ], [ "Vegetarian Options", "Vegetarian" ] ].each do |value, label| %>
+              <button type="button"
+                      data-action="concierge-dietary-filter#filter"
+                      data-value="<%= value %>"
+                      data-concierge-dietary-filter-target="button"
+                      aria-pressed="<%= value == "" %>"
+                      class="flex-shrink-0 whitespace-nowrap rounded-full border border-border/60 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-muted-foreground transition-colors aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground">
+                <%= label %>
+              </button>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
 
       <div data-concierge-view-mode-target="panel" data-mode="list" class="space-y-3">
         <% @vendors.each do |vendor| %>
@@ -114,6 +134,14 @@
           <p class="mt-1.5 text-[13px] font-medium text-muted-foreground">We are still signing up partners in this category.</p>
         </div>
       <% end %>
+
+      <%# Shown by the filter controller itself when a dietary filter matches
+          nothing in this category -- distinct from the empty-category message
+          above, which is a server-rendered state and never both at once. %>
+      <div data-concierge-dietary-filter-target="empty" hidden class="rounded-2xl border border-dashed border-border bg-white/60 p-8 text-center">
+        <p class="text-sm font-bold text-foreground">No matches here</p>
+        <p class="mt-1.5 text-[13px] font-medium text-muted-foreground">Try a different filter, or browse all of <%= @category.name %>.</p>
+      </div>
     </section>
   <% end %>
 <% end %>

@@ -208,7 +208,7 @@ vendors:
     accent: orange
     price_range: "$$"
     tags: [Western, Late night]
-    dietary_tags: [Non-Halal, Vegetarian options]
+    dietary_tags: [Vegetarian Options]
     summary: >-
       Backpacker-adjacent but grown-up about it. Burgers, quesadillas and a
       long bar, with a quiz night that takes itself only half seriously.
@@ -274,7 +274,7 @@ vendors:
     accent: emerald
     price_range: "$$"
     tags: [Mediterranean, Dinner, Small plates]
-    dietary_tags: [Non-Halal, Vegetarian options]
+    dietary_tags: [Pork-Free]
     summary: >-
       Nine tables and a chef who will come out to explain the special. Book —
       walking in on a Friday is optimistic.

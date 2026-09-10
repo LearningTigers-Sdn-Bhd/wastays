@@ -37,15 +37,15 @@ module Public::ConciergeRecommendationsHelper
   DIETARY_TAG_ICONS = {
     "Halal" => "moon-star",
     "Non-Halal" => "info",
-    "Vegetarian options" => "leaf",
-    "Pork-free" => "ban"
+    "Pork-Free" => "ban",
+    "Vegetarian Options" => "leaf"
   }.freeze
 
   DIETARY_TAG_CLASSES = {
     "Halal" => "bg-success/10 text-success",
     "Non-Halal" => "bg-muted text-muted-foreground",
-    "Vegetarian options" => "bg-success/10 text-success",
-    "Pork-free" => "bg-success/10 text-success"
+    "Pork-Free" => "bg-success/10 text-success",
+    "Vegetarian Options" => "bg-success/10 text-success"
   }.freeze
 
   # Text-only pairing for the one place (the card-mode photo badge) that
@@ -53,8 +53,8 @@ module Public::ConciergeRecommendationsHelper
   DIETARY_TAG_TEXT_CLASSES = {
     "Halal" => "text-success",
     "Non-Halal" => "text-muted-foreground",
-    "Vegetarian options" => "text-success",
-    "Pork-free" => "text-success"
+    "Pork-Free" => "text-success",
+    "Vegetarian Options" => "text-success"
   }.freeze
 
   def dietary_tag_icon(label) = DIETARY_TAG_ICONS.fetch(label, "info")

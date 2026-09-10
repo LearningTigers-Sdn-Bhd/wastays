@@ -1,9 +1,9 @@
-<%# List mode: one to a row, the default -- room for the photo, the tagline,
-    a line of the description, distance, price and tags, not only the name.
-    Horizontal from sm up so the photo doesn't eat the row's height budget on
-    a wider screen; stacked on a phone, where width is the scarce dimension. %>
+<%# List mode: one to a row, the default -- room for the photo, dietary status,
+    the tagline, a line of the description, distance and price, not only the
+    name. Horizontal from sm up so the photo doesn't eat the row's height
+    budget on a wider screen; stacked on a phone, where width is scarce. %>
 <%= link_to concierge_recommendation_vendor_path(@hotel, vendor),
-      data: { turbo_frame: "_top" },
+      data: { turbo_frame: "_top", concierge_dietary_filter_target: "item", dietary: vendor.dietary_tags.first.to_s },
       class: "group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm transition-all hover:shadow-md active:scale-[0.99] sm:flex-row" do %>
   <div class="relative h-36 w-full flex-shrink-0 overflow-hidden bg-muted sm:h-auto sm:w-56">
     <%# Temporary stock photography -- see VendorDirectory::MockAdapter -- with
@@ -49,13 +49,5 @@
         <span class="text-[11px] font-bold text-muted-foreground"><%= vendor.price_range %></span>
       <% end %>
     </div>
-
-    <% if vendor.tags.any? %>
-      <div class="mt-3 flex flex-wrap gap-1.5">
-        <% vendor.tags.first(3).each do |tag| %>
-          <span class="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= tag %></span>
-        <% end %>
-      </div>
-    <% end %>
   </div>
 <% end %>
