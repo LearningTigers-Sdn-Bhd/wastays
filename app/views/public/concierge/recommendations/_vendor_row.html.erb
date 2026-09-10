@@ -17,9 +17,13 @@
   <div class="flex flex-1 flex-col p-4 sm:p-5">
     <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
       <p class="text-[15px] font-black leading-tight text-foreground sm:text-base"><%= vendor.name %></p>
-      <span class="flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider <%= vendor.offers? ? vendor_accent(vendor, :chip) : 'bg-muted text-muted-foreground' %>">
-        <%= vendor.offers? ? vendor.offer_count_label : "No offers" %>
-      </span>
+      <%# Having nothing to claim isn't worth a badge of its own -- only say
+          something here when there is actually an offer to mention. %>
+      <% if vendor.offers? %>
+        <span class="flex-shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider <%= vendor_accent(vendor, :chip) %>">
+          <%= vendor.offer_count_label %>
+        </span>
+      <% end %>
     </div>
 
     <% if vendor.dietary_tags? %>

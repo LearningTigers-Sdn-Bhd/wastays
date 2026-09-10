@@ -14,4 +14,10 @@
   <p class="mt-1.5 line-clamp-2 text-[11px] font-black leading-tight text-foreground"><%= offer.title %></p>
 
   <p class="mt-1.5 truncate text-[9px] font-bold uppercase tracking-wider text-muted-foreground"><%= vendor.name %></p>
+
+  <% if vendor.distance_label.present? %>
+    <p class="mt-0.5 flex items-center gap-0.5 truncate text-[9px] font-bold text-muted-foreground/80">
+      <%= cached_icon "map-pin", class: "h-2.5 w-2.5 flex-shrink-0" %><%= vendor.distance_label %>
+    </p>
+  <% end %>
 <% end %>

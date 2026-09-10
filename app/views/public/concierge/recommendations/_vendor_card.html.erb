@@ -38,9 +38,13 @@
         <% end %>
       </div>
 
-      <span class="mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider sm:text-[11px] <%= vendor.offers? ? vendor_accent(vendor, :chip) : 'bg-muted text-muted-foreground' %>">
-        <%= vendor.offers? ? vendor.offer_count_label : "No offers" %>
-      </span>
+      <%# Having nothing to claim isn't worth a badge of its own -- only say
+          something here when there is actually an offer to mention. %>
+      <% if vendor.offers? %>
+        <span class="mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider sm:text-[11px] <%= vendor_accent(vendor, :chip) %>">
+          <%= vendor.offer_count_label %>
+        </span>
+      <% end %>
     </div>
   </div>
 <% end %>

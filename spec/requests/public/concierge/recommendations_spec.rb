@@ -28,11 +28,11 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
       expect(response.body).not_to include("Kedai Kopi Yee Fung")
     end
 
-    it "lists vendors that have no offers rather than hiding them" do
+    it "lists vendors that have no offers rather than hiding them, without an empty badge" do
       get path("?category=shopping")
 
       expect(response.body).to include("Imago Shopping Mall")
-      expect(response.body).to include("No offers")
+      expect(response.body).not_to include("No offers")
     end
 
     it "caps the featured rail at four and offers a View all for the rest" do
