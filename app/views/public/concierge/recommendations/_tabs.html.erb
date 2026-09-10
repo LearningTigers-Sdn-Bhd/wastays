@@ -72,11 +72,17 @@
     </dialog>
   </div>
 
+  <%# Scoped to the category_content frame this partial itself renders inside
+      of: clicking a pill swaps that frame in place -- new vendors, new active
+      pill -- rather than doing a full Turbo Drive visit that replaces the
+      entire page (hero photo included) for what is, underneath, one query
+      param changing. data-turbo-action="advance" on the frame still keeps the
+      URL and back button working normally. %>
   <div class="hidden lg:flex lg:flex-wrap lg:gap-2">
     <% categories.each do |tab| %>
       <% active = tab.slug == category.slug %>
       <%= link_to concierge_recommendations_path(@hotel, category: tab.slug),
-            data: { turbo_action: "advance" },
+            data: { turbo_frame: "category_content" },
             "aria-current": (active ? "page" : nil),
             class: "group inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-[12px] font-black uppercase tracking-wider transition-all active:scale-95 #{active ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border/60 bg-white text-muted-foreground hover:border-primary/40 hover:text-primary'}" do %>
         <%= cached_icon tab.icon, class: "h-4 w-4" %>

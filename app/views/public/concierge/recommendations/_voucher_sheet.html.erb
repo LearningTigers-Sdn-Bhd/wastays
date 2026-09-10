@@ -25,6 +25,7 @@
     <% offers.each do |offer| %>
       <% vendor = VendorDirectory.vendor(offer.vendor_id) %>
       <%= link_to concierge_recommendation_offer_path(@hotel, vendor, offer),
+            data: { turbo_frame: "_top" },
             class: "group flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors active:bg-muted" do %>
         <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border-2 bg-white <%= vendor_accent(vendor, :border) %>">
           <%= cached_icon category_icon_for(vendor.category_slug), class: "h-4 w-4 text-foreground/50" %>

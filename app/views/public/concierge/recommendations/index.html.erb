@@ -16,58 +16,66 @@
 
   <%= render "public/concierge/recommendations/wallet_bar" %>
 
-  <%= render "public/concierge/recommendations/tabs", categories: @categories, category: @category %>
+  <%# Everything that depends on @category lives inside this frame, tabs
+      included -- the active pill has to repaint along with the list under it,
+      or a desktop click would swap the vendors while leaving the old tab
+      looking selected. data-turbo-action="advance" promotes frame navigations
+      to real page visits: the URL and browser history still update, only the
+      request and the swap are scoped to this frame instead of the whole page. %>
+  <%= turbo_frame_tag "category_content", class: "contents", data: { turbo_action: "advance" } do %>
+    <%= render "public/concierge/recommendations/tabs", categories: @categories, category: @category %>
 
-  <% if @featured.any? %>
-    <section class="mb-8" data-controller="concierge-modal">
-      <div class="mb-3 flex items-center justify-between gap-2">
-        <div class="flex items-center gap-2">
-          <%= cached_icon "sparkles", class: "h-4 w-4 text-accent-foreground" %>
-          <h3 class="text-[12px] font-black uppercase tracking-[0.2em] text-foreground">Worth grabbing</h3>
+    <% if @featured.any? %>
+      <section class="mb-8" data-controller="concierge-modal">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <%= cached_icon "sparkles", class: "h-4 w-4 text-accent-foreground" %>
+            <h3 class="text-[12px] font-black uppercase tracking-[0.2em] text-foreground">Worth grabbing</h3>
+          </div>
+
+          <% if @all_offers.size > @featured.size %>
+            <button type="button"
+                    data-action="concierge-modal#open"
+                    class="text-[10px] font-black uppercase tracking-wider text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground">
+              View all (<%= @all_offers.size %>)
+            </button>
+          <% end %>
         </div>
 
-        <% if @all_offers.size > @featured.size %>
-          <button type="button"
-                  data-action="concierge-modal#open"
-                  class="text-[10px] font-black uppercase tracking-wider text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground">
-            View all (<%= @all_offers.size %>)
-          </button>
+        <%# Three cards, never more -- capped in VendorDirectory.featured_in --
+            laid out as a still row rather than a horizontally scrolling rail, so
+            there is nothing to swipe past and nothing hidden off-screen. Anything
+            beyond these three lives in the "View all" sheet, not further along
+            an edge a guest has no reason to know is there. %>
+        <div class="grid grid-cols-3 gap-2 sm:gap-3">
+          <% @featured.each do |offer| %>
+            <%= render "public/concierge/recommendations/featured_offer", offer: offer %>
+          <% end %>
+        </div>
+
+        <%= render "public/concierge/recommendations/voucher_sheet", offers: @all_offers %>
+      </section>
+    <% end %>
+
+    <section>
+      <div class="mb-1 flex items-baseline justify-between gap-3">
+        <h3 class="text-[12px] font-black uppercase tracking-[0.2em] text-foreground"><%= @category.name %></h3>
+        <p class="text-[12px] font-medium text-muted-foreground"><%= pluralize(@vendors.size, "place") %></p>
+      </div>
+      <p class="mb-4 text-[13px] font-medium leading-relaxed text-muted-foreground"><%= @category.tagline %></p>
+
+      <div class="grid grid-cols-3 gap-2.5 sm:gap-4">
+        <% @vendors.each do |vendor| %>
+          <%= render "public/concierge/recommendations/vendor_card", vendor: vendor %>
         <% end %>
       </div>
 
-      <%# Three cards, never more -- capped in VendorDirectory.featured_in --
-          laid out as a still row rather than a horizontally scrolling rail, so
-          there is nothing to swipe past and nothing hidden off-screen. Anything
-          beyond these three lives in the "View all" sheet, not further along
-          an edge a guest has no reason to know is there. %>
-      <div class="grid grid-cols-3 gap-2 sm:gap-3">
-        <% @featured.each do |offer| %>
-          <%= render "public/concierge/recommendations/featured_offer", offer: offer %>
-        <% end %>
-      </div>
-
-      <%= render "public/concierge/recommendations/voucher_sheet", offers: @all_offers %>
+      <% if @vendors.empty? %>
+        <div class="rounded-2xl border border-dashed border-border bg-white/60 p-8 text-center">
+          <p class="text-sm font-bold text-foreground">Nothing here yet</p>
+          <p class="mt-1.5 text-[13px] font-medium text-muted-foreground">We are still signing up partners in this category.</p>
+        </div>
+      <% end %>
     </section>
   <% end %>
-
-  <section>
-    <div class="mb-1 flex items-baseline justify-between gap-3">
-      <h3 class="text-[12px] font-black uppercase tracking-[0.2em] text-foreground"><%= @category.name %></h3>
-      <p class="text-[12px] font-medium text-muted-foreground"><%= pluralize(@vendors.size, "place") %></p>
-    </div>
-    <p class="mb-4 text-[13px] font-medium leading-relaxed text-muted-foreground"><%= @category.tagline %></p>
-
-    <div class="grid grid-cols-3 gap-2.5 sm:gap-4">
-      <% @vendors.each do |vendor| %>
-        <%= render "public/concierge/recommendations/vendor_card", vendor: vendor %>
-      <% end %>
-    </div>
-
-    <% if @vendors.empty? %>
-      <div class="rounded-2xl border border-dashed border-border bg-white/60 p-8 text-center">
-        <p class="text-sm font-bold text-foreground">Nothing here yet</p>
-        <p class="mt-1.5 text-[13px] font-medium text-muted-foreground">We are still signing up partners in this category.</p>
-      </div>
-    <% end %>
-  </section>
 <% end %>
