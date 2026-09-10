@@ -122,6 +122,17 @@ module Public::ConciergeRecommendationsHelper
     "Valid until #{l(offer.expires_on, format: :long)}"
   end
 
+  # A remaining-count badge tells a guest exactly how replaceable they are;
+  # "Ending soon" creates the same urgency without putting a number on it.
+  # Expiry takes priority over stock -- a guest can still claim a scarce
+  # offer next week, but not one that has already lapsed.
+  def offer_urgency_label(offer)
+    return "Ending soon" if offer.expiring_soon?
+    return "Going fast" if offer.scarce?
+
+    nil
+  end
+
   # Encodes the URL a vendor's staff will land on when they scan, not the bare
   # code -- any phone camera then works and no vendor app is needed.
   def voucher_qr_data_url(entry)

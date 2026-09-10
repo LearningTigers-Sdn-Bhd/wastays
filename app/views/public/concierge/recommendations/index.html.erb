@@ -7,12 +7,17 @@
                      container_class: "w-full max-w-6xl" } do %>
   <%# No back link: this is the top of its own section, and the bar above it
       already returns to the concierge home. %>
+  <%# !mt-0 tightens the gap under the heading for this page specifically --
+      the shared partial's own mt-3/mt-2 still apply everywhere else, and
+      margin-collapse with the heading's mb-2 keeps a real gap here too, just
+      a shorter one. %>
   <%= render "public/concierge/shared/page_header",
              back: false,
              eyebrow: "Recommendations",
              title_prefix: "Around the",
              title_accent: "Corner",
-             subtitle: "Partner restaurants, bars, spas and shops nearby." %>
+             subtitle: "Partner restaurants, bars, spas and shops nearby.",
+             subtitle_class: "!mt-0" %>
 
   <%= render "public/concierge/recommendations/wallet_bar" %>
 
