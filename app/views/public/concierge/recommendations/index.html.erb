@@ -47,14 +47,19 @@
           <% end %>
         </div>
 
-        <%# Three cards, never more -- capped in VendorDirectory.featured_in --
-            laid out as a still row rather than a horizontally scrolling rail, so
-            there is nothing to swipe past and nothing hidden off-screen. Anything
-            beyond these three lives in the "View all" sheet, not further along
-            an edge a guest has no reason to know is there. %>
-        <div class="grid grid-cols-3 gap-2 sm:gap-3">
-          <% @featured.each do |offer| %>
-            <%= render "public/concierge/recommendations/featured_offer", offer: offer %>
+        <%# Never a scrolling rail -- there is nothing to swipe past and nothing
+            hidden off-screen. The shape differs by width on purpose: a phone
+            has the vertical room to spare but not the horizontal, so it gets
+            two rows of two (four cards, less to scan per row, lower cognitive
+            load than three squeezed across); a wider screen has the opposite
+            trade, so it gets one row of three and the fourth fetched card
+            (VendorDirectory.featured_in fetches up to four for exactly this)
+            stays unrendered there. Anything beyond what's shown lives in the
+            "View all" sheet. %>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+          <% @featured.each_with_index do |offer, index| %>
+            <%= render "public/concierge/recommendations/featured_offer", offer: offer,
+                  wrapper_class: ("sm:hidden" if index >= 3) %>
           <% end %>
         </div>
 

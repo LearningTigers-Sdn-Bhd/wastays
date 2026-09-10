@@ -53,8 +53,10 @@ module VendorDirectory
     # One offer per vendor -- a rail showing the same restaurant three times
     # reads as a short list rather than a wide choice, and the vendor's other
     # offers, along with everything else in the category, are one tap away
-    # through "View all".
-    def featured_in(category_slug, limit: 3)
+    # through "View all". The default of 4 is sized for the view, not this
+    # method: mobile shows all four as two rows of two, desktop shows only
+    # the first three as a single row and leaves the fourth unrendered.
+    def featured_in(category_slug, limit: 4)
       offers_in(category_slug).uniq(&:vendor_id).first(limit)
     end
   end

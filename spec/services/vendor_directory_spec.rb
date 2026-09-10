@@ -4,11 +4,11 @@ require "rails_helper"
 
 RSpec.describe VendorDirectory do
   describe ".featured_in" do
-    it "caps the rail at three offers, one per vendor" do
+    it "caps the rail at four offers, one per vendor" do
       featured = described_class.featured_in("food-drink")
 
-      expect(featured.size).to eq(3)
-      expect(featured.map(&:vendor_id).uniq.size).to eq(3)
+      expect(featured.size).to eq(4)
+      expect(featured.map(&:vendor_id).uniq.size).to eq(4)
     end
 
     it "never exceeds the number of vendors that have an offer" do
