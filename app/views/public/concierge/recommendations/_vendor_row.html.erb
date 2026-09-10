@@ -45,8 +45,10 @@
           <%= vendor_distance_summary(vendor) %>
         </p>
       <% end %>
-      <% if vendor.price_range.present? %>
-        <span class="text-[11px] font-bold text-muted-foreground"><%= vendor.price_range %></span>
+      <% if vendor_open_now_label(vendor).present? %>
+        <span class="flex items-center gap-1 text-[11px] font-bold <%= vendor_open_now_class(vendor) %>">
+          <span class="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current"></span><%= vendor_open_now_label(vendor) %>
+        </span>
       <% end %>
     </div>
   </div>

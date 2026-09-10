@@ -43,5 +43,12 @@ module VendorDirectory
       else "#{offers.size} offers"
       end
     end
+
+    # Every vendor here is in Kota Kinabalu; hours are checked against that
+    # zone regardless of the browser's own, since "open now" means open now
+    # at the vendor's address, not wherever the guest's phone thinks it is.
+    def open_now?(time: Time.current.in_time_zone("Asia/Kuala_Lumpur"))
+      hours.any? { |slot| slot.open_at?(time) }
+    end
   end
 end

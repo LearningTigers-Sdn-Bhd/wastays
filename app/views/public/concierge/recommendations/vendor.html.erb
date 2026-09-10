@@ -37,11 +37,6 @@
             <%= cached_icon "map-pin", class: "h-3.5 w-3.5 text-white/70" %><%= vendor_distance_summary(@vendor) %>
           </span>
         <% end %>
-        <% if @vendor.price_range.present? %>
-          <span class="inline-flex items-center gap-1.5">
-            <%= cached_icon "wallet", class: "h-3.5 w-3.5 text-white/70" %><%= @vendor.price_range %>
-          </span>
-        <% end %>
       </div>
     </div>
   </div>
@@ -106,9 +101,18 @@
 
   <% if @vendor.hours.any? %>
     <div class="mt-2 rounded-xl border border-border/60 bg-white p-3 shadow-sm">
-      <p class="mb-1.5 flex items-center gap-1.5 border-b border-border/40 pb-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-        <%= cached_icon "clock", class: "h-3 w-3" %> Opening hours
-      </p>
+      <div class="mb-1.5 flex items-center justify-between gap-2 border-b border-border/40 pb-1.5">
+        <p class="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+          <%= cached_icon "clock", class: "h-3 w-3" %> Opening hours
+        </p>
+        <%# Checked against the vendor's own address, not the guest's phone --
+            see VendorDirectory::Vendor#open_now?. %>
+        <% if vendor_open_now_label(@vendor).present? %>
+          <span class="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider <%= vendor_open_now_class(@vendor) %>">
+            <span class="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current"></span><%= vendor_open_now_label(@vendor) %>
+          </span>
+        <% end %>
+      </div>
       <dl class="space-y-1">
         <% @vendor.hours.each do |slot| %>
           <div class="flex items-baseline justify-between gap-3">
@@ -117,6 +121,9 @@
           </div>
         <% end %>
       </dl>
+      <p class="mt-2 border-t border-border/40 pt-2 text-[11px] font-medium leading-snug text-muted-foreground">
+        Hours may change on public holidays. Call ahead to confirm before you head over.
+      </p>
     </div>
   <% end %>
 

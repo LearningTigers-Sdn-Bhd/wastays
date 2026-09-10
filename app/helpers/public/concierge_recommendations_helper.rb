@@ -63,6 +63,16 @@ module Public::ConciergeRecommendationsHelper
 
   def dietary_tag_text_class(label) = DIETARY_TAG_TEXT_CLASSES.fetch(label, "text-muted-foreground")
 
+  def vendor_open_now_label(vendor)
+    return if vendor.hours.empty?
+
+    vendor.open_now? ? "Open now" : "Closed now"
+  end
+
+  def vendor_open_now_class(vendor)
+    vendor.open_now? ? "text-success" : "text-muted-foreground"
+  end
+
   def vendor_distance_summary(vendor)
     [ vendor.distance_label, ("#{vendor.walking_minutes} min walk" if vendor.walking_minutes.present?) ]
       .compact_blank.join(" · ")
