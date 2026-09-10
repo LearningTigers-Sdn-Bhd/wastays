@@ -63,14 +63,42 @@ module Public::ConciergeRecommendationsHelper
 
   def dietary_tag_text_class(label) = DIETARY_TAG_TEXT_CLASSES.fetch(label, "text-muted-foreground")
 
+  # Same idea as an offer's own "Ending soon": open but about to close reads
+  # as its own state, not a quieter version of "Open now" -- a guest walking
+  # over needs to know the door is about to shut, not just that it currently
+  # isn't. Checked before the plain open/closed cases so it wins whenever it
+  # applies.
   def vendor_open_now_label(vendor)
     return if vendor.hours.empty?
+    return "Closing soon" if vendor.closing_soon?
 
     vendor.open_now? ? "Open now" : "Closed now"
   end
 
   def vendor_open_now_class(vendor)
+    return "text-warning" if vendor.closing_soon?
+
     vendor.open_now? ? "text-success" : "text-muted-foreground"
+  end
+
+  # "Closed now" on its own leaves a guest guessing whether that means five
+  # minutes or five hours -- this is the answer. Today/Tomorrow read faster
+  # than a weekday name at a glance; anything further out gets the name,
+  # since "in 4 days" is harder to act on than "Thursday".
+  def vendor_next_open_label(vendor)
+    return if vendor.open_now?
+
+    next_open = vendor.next_open_at
+    return if next_open.blank?
+
+    today = Time.current.in_time_zone(VendorDirectory::ZONE).to_date
+    day_word = case next_open.to_date
+    when today then "today"
+    when today + 1 then "tomorrow"
+    else next_open.strftime("%A")
+    end
+
+    "Opens #{day_word} #{next_open.strftime('%-l:%M %p')}"
   end
 
   def vendor_distance_summary(vendor)

@@ -42,6 +42,33 @@ RSpec.describe VendorDirectory::OpeningHours do
     end
   end
 
+  describe "#next_open_after" do
+    it "finds later today when the window hasn't opened yet" do
+      slot = described_class.new(days: "Mon – Sun", opens: "16:00", closes: "23:00")
+
+      expect(slot.next_open_after(zone.parse("2026-09-10 10:00"))).to eq(zone.parse("2026-09-10 16:00"))
+    end
+
+    it "rolls to the next occurrence once today's window has already passed" do
+      slot = described_class.new(days: "Mon – Sun", opens: "16:00", closes: "23:00")
+
+      expect(slot.next_open_after(zone.parse("2026-09-10 23:30"))).to eq(zone.parse("2026-09-11 16:00"))
+    end
+
+    it "skips to the named weekday when today isn't covered" do
+      slot = described_class.new(days: "Tue – Sat", opens: "11:00", closes: "22:00")
+
+      # 2026-09-14 is a Monday; the slot's next occurrence is Tuesday the 15th.
+      expect(slot.next_open_after(zone.parse("2026-09-14 09:00"))).to eq(zone.parse("2026-09-15 11:00"))
+    end
+
+    it "is nil for a slot that is always closed" do
+      slot = described_class.new(days: "Sun – Mon", opens: "Closed", closes: "")
+
+      expect(slot.next_open_after(zone.parse("2026-09-14 09:00"))).to be_nil
+    end
+  end
+
   describe "#label" do
     it "renders the hours, or Closed" do
       expect(described_class.new(days: "Mon", opens: "09:00", closes: "17:00").label).to eq("09:00 – 17:00")

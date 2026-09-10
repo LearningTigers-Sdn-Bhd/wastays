@@ -7,6 +7,12 @@ module VendorDirectory
   class VendorNotFound < StandardError; end
   class OfferNotFound < StandardError; end
 
+  # Every vendor in this directory is in Kota Kinabalu; "open now" and "opens
+  # at" are checked against this zone regardless of the guest's own, since
+  # what matters is whether the vendor's own door is open right now, not
+  # what time it is on the guest's phone.
+  ZONE = "Asia/Kuala_Lumpur"
+
   class << self
     def adapter = @adapter ||= MockAdapter.new
 

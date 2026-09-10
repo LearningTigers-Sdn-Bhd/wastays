@@ -44,11 +44,28 @@ module VendorDirectory
       end
     end
 
-    # Every vendor here is in Kota Kinabalu; hours are checked against that
-    # zone regardless of the browser's own, since "open now" means open now
-    # at the vendor's address, not wherever the guest's phone thinks it is.
-    def open_now?(time: Time.current.in_time_zone("Asia/Kuala_Lumpur"))
+    def open_now?(time: Time.current.in_time_zone(VendorDirectory::ZONE))
       hours.any? { |slot| slot.open_at?(time) }
+    end
+
+    # The soonest moment any hours slot opens after `time`, across every day
+    # of the week the vendor keeps -- nil only when there are no hours at all,
+    # or every one of them is marked permanently closed.
+    def next_open_at(time: Time.current.in_time_zone(VendorDirectory::ZONE))
+      hours.filter_map { |slot| slot.next_open_after(time) }.min
+    end
+
+    # When the *current* window closes -- nil while the vendor is closed,
+    # since there is nothing counting down.
+    def closes_at(time: Time.current.in_time_zone(VendorDirectory::ZONE))
+      hours.filter_map { |slot| slot.closes_at_for(time) }.min
+    end
+
+    # Same idea as an offer's own "Ending soon": a guest walking over needs
+    # to know the door is about to shut, not just that it currently isn't.
+    def closing_soon?(time: Time.current.in_time_zone(VendorDirectory::ZONE), within: 45.minutes)
+      at = closes_at(time: time)
+      at.present? && at <= time + within
     end
   end
 end

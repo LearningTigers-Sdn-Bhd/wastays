@@ -113,6 +113,11 @@
           </span>
         <% end %>
       </div>
+
+      <% if vendor_next_open_label(@vendor).present? %>
+        <p class="mb-1.5 text-[12px] font-bold text-foreground"><%= vendor_next_open_label(@vendor) %></p>
+      <% end %>
+
       <dl class="space-y-1">
         <% @vendor.hours.each do |slot| %>
           <div class="flex items-baseline justify-between gap-3">
