@@ -38,7 +38,7 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
     it "caps the featured rail at four and offers a View all for the rest" do
       get path # food-drink: 19 offers across 4 vendors, all 4 fit the rail's cap
 
-      expect(response.body.scan(%r{data-concierge-modal-target="dialog"}).size).to eq(2) # tabs sheet + voucher sheet
+      expect(response.body.scan(%r{data-concierge-modal-target="dialog"}).size).to eq(1) # voucher sheet only -- categories are plain links now
       expect(response.body).to include("View all (19)")
       # 19 offers exist but only 4 are curated into the rail -- the other 15
       # still have to be reachable through the full "View all" list.
