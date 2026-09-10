@@ -8,14 +8,14 @@
 
   <%= render "public/concierge/shared/hero" %>
 
-  <div class="mx-auto w-full max-w-5xl px-6 pb-6 pt-8 md:px-10 md:pt-12">
+  <div class="mx-auto w-full max-w-5xl px-6 pb-6 pt-5 md:px-10 md:pt-12">
     <h2 class="font-serif text-2xl text-foreground md:text-3xl">
       Hello, <span class="italic text-primary">Guest</span>
     </h2>
     <p class="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground md:text-sm">How can we assist you today?</p>
   </div>
 
-  <div class="mx-auto w-full max-w-5xl space-y-4 px-6 pb-12 md:px-10 md:pb-20">
+  <div class="mx-auto w-full max-w-5xl space-y-3.5 px-6 pb-12 md:space-y-4 md:px-10 md:pb-20">
 
     <%# Check In and Check Out are the two ends of one stay, so they share a row
         rather than one standing alone above a grid the other sits inside. Check
@@ -24,13 +24,13 @@
         equals, not as a hero and an afterthought. %>
     <%# Every tile below is icon plus label only now -- no caption line -- so
         heights come down across the board to match the lighter content. %>
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-2 gap-3.5 md:gap-4">
       <%= link_to concierge_check_in_path(@hotel),
             class: "group relative flex min-h-[92px] flex-col justify-between overflow-hidden rounded-[2rem] border border-white/5 bg-primary p-5 shadow-xl shadow-primary/20 transition-all duration-300 active:scale-[0.98] md:min-h-[112px] md:p-8" do %>
         <div class="relative z-10 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 md:h-14 md:w-14">
           <%= cached_icon "log-in", class: "h-5 w-5 text-accent md:h-6 md:w-6" %>
         </div>
-        <p class="relative z-10 text-[13px] font-black uppercase tracking-[0.15em] text-white md:text-base">Check In</p>
+        <p class="relative z-10 text-[12px] font-black uppercase tracking-[0.15em] text-white md:text-base">Check In</p>
       <% end %>
 
       <%= link_to concierge_check_out_path(@hotel),
@@ -38,7 +38,7 @@
         <div class="relative z-10 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white md:h-14 md:w-14">
           <%= cached_icon "log-out", class: "h-5 w-5 md:h-6 md:w-6" %>
         </div>
-        <p class="relative z-10 text-[13px] font-black uppercase tracking-[0.15em] text-foreground md:text-base">Check Out</p>
+        <p class="relative z-10 text-[12px] font-black uppercase tracking-[0.15em] text-foreground md:text-base">Check Out</p>
       <% end %>
     </div>
 
@@ -46,7 +46,7 @@
         Us so the pair lands in the same row at every width -- two columns on a
         phone puts them together as row two, four columns on desktop puts all
         four in the one row. %>
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div class="grid grid-cols-2 gap-3.5 md:grid-cols-4 md:gap-4">
       <% [
         { path: concierge_book_path(@hotel), label: "Book a Room", icon: "calendar-days" },
         { path: concierge_new_request_path(@hotel), label: "Request", icon: "message-square-more" },
@@ -58,7 +58,7 @@
           <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
             <%= cached_icon tile[:icon], class: "h-5 w-5" %>
           </div>
-          <p class="text-[13px] font-black uppercase leading-tight tracking-wider text-foreground"><%= tile[:label] %></p>
+          <p class="text-[12px] font-black uppercase leading-tight tracking-wider text-foreground md:text-[13px]"><%= tile[:label] %></p>
         <% end %>
       <% end %>
     </div>
@@ -69,7 +69,7 @@
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
           <%= cached_icon "message-circle", class: "h-6 w-6" %>
         </div>
-        <p class="text-[13px] font-black uppercase leading-tight tracking-wider text-foreground">Chat With Us</p>
+        <p class="text-[12px] font-black uppercase leading-tight tracking-wider text-foreground md:text-[13px]">Chat With Us</p>
       <% end %>
     <% end %>
   </div>
