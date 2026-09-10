@@ -70,7 +70,7 @@ module Public::ConciergeRecommendationsHelper
   # applies.
   def vendor_open_now_label(vendor)
     return if vendor.hours.empty?
-    return "Closing soon" if vendor.closing_soon?
+    return "Closing soon at #{vendor.closes_at.strftime('%-l:%M %p')}" if vendor.closing_soon?
 
     vendor.open_now? ? "Open now" : "Closed now"
   end
@@ -78,7 +78,7 @@ module Public::ConciergeRecommendationsHelper
   def vendor_open_now_class(vendor)
     return "text-warning" if vendor.closing_soon?
 
-    vendor.open_now? ? "text-success" : "text-muted-foreground"
+    vendor.open_now? ? "text-success" : "text-destructive"
   end
 
   # "Closed now" on its own leaves a guest guessing whether that means five

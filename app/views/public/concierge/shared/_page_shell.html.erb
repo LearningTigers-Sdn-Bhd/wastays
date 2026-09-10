@@ -3,7 +3,7 @@
     and suppresses the hero because its own header already names the hotel. %>
 <div class="<%= local_assigns.fetch(:root_class, 'bg-background min-h-screen flex flex-col') %>">
   <% if local_assigns.fetch(:top_bar, true) %>
-    <%= render "public/concierge/shared/hero" %>
+    <%= render "public/concierge/shared/hero", confirm_home_link: local_assigns[:confirm_home_link] %>
   <% end %>
 
   <%# A landmark, so anyone navigating by them can get straight to the content. %>

@@ -6,12 +6,51 @@
 
     It carries the page's h1: the templates below it are all sections of one
     property's concierge, so their own headings stay h2. %>
-<div class="relative h-[160px] w-full flex-shrink-0 overflow-hidden rounded-b-[2rem] bg-primary shadow-2xl shadow-primary/20 md:h-[20dvh]">
-  <%= link_to concierge_home_path(@hotel), class: "absolute inset-0 z-0", "aria-label": "#{@hotel.name} concierge home" do %>
-    <% if @hotel.featured_photo_attachment.present? %>
-      <%= image_tag @hotel.featured_photo_attachment, class: "absolute inset-0 h-full w-full object-cover opacity-80" %>
-    <% else %>
-      <%= image_tag "landing/bg-1.webp", class: "absolute inset-0 h-full w-full object-cover opacity-90" %>
+<%
+  confirm_home_link = local_assigns[:confirm_home_link]
+  hero_photo = if @hotel.featured_photo_attachment.present?
+    image_tag(@hotel.featured_photo_attachment, class: "absolute inset-0 h-full w-full object-cover opacity-80")
+  else
+    image_tag("landing/bg-1.webp", class: "absolute inset-0 h-full w-full object-cover opacity-90")
+  end
+%>
+<div class="relative h-[160px] w-full flex-shrink-0 overflow-hidden rounded-b-[2rem] bg-primary shadow-2xl shadow-primary/20 md:h-[20dvh]"
+     <%= "data-controller=concierge-modal".html_safe if confirm_home_link %>>
+  <% if confirm_home_link %>
+    <%# This bar sits right where a thumb rests while scrolling a long list
+        (Recommendations), so the whole photo being one tap straight back to
+        the concierge home invites exactly the accidental tap scrolling
+        produces. Confirm first, rather than the plain link every other page
+        uses -- those are short enough that there is little to scroll past it
+        with, and a confirmation there would just be friction with nothing
+        behind it. %>
+    <button type="button" data-action="concierge-modal#open" aria-haspopup="dialog"
+            aria-label="<%= @hotel.name %> concierge home" class="absolute inset-0 z-0">
+      <%= hero_photo %>
+    </button>
+
+    <dialog data-concierge-modal-target="dialog"
+            data-action="click->concierge-modal#backdropClose close->concierge-modal#onClose"
+            aria-label="Leave Recommendations?"
+            class="fixed inset-x-4 bottom-4 top-auto m-0 hidden w-auto max-w-none translate-y-full flex-col overflow-hidden rounded-2xl border-0 bg-background p-0 shadow-2xl transition-transform duration-300 ease-out open:flex data-open:translate-y-0 backdrop:bg-black/50 motion-reduce:transition-none sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2 sm:rounded-3xl">
+      <div class="p-5">
+        <h2 tabindex="-1" autofocus class="text-base font-black text-foreground focus:outline-none">Leave Recommendations?</h2>
+        <p class="mt-1.5 text-[13px] font-medium leading-relaxed text-muted-foreground">
+          You'll return to the concierge home. Anything you've claimed stays in your wallet.
+        </p>
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <button type="button" data-action="concierge-modal#close"
+                  class="rounded-xl border border-border/60 bg-white px-4 py-3 text-[12px] font-black uppercase tracking-wider text-foreground transition-colors active:bg-muted">
+            Stay here
+          </button>
+          <%= link_to "Go home", concierge_home_path(@hotel),
+                class: "rounded-xl bg-primary px-4 py-3 text-center text-[12px] font-black uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-hover" %>
+        </div>
+      </div>
+    </dialog>
+  <% else %>
+    <%= link_to concierge_home_path(@hotel), class: "absolute inset-0 z-0", "aria-label": "#{@hotel.name} concierge home" do %>
+      <%= hero_photo %>
     <% end %>
   <% end %>
 
