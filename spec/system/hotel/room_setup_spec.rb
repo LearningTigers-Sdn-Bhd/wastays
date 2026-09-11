@@ -83,4 +83,92 @@ RSpec.describe 'Room Setup', type: :system do
     expect(room_type.reload.photos.map { |photo| photo.filename.to_s })
       .to match_array(%w[dropped_room.jpg icon.png])
   end
+
+  it 'features and reorders the album without disturbing the open category form' do
+    room_type = create(:room_type, hotel: hotel, name: 'Twin Room')
+    %w[first.jpg second.jpg third.jpg].each do |filename|
+      room_type.photos.attach(io: StringIO.new("room-#{filename}"), filename: filename, content_type: 'image/jpeg')
+    end
+    first_photo, second_photo, third_photo = room_type.photos.attachments.order(:id).to_a
+    room_type.update!(featured_photo_attachment_id: first_photo.id)
+
+    visit hotel_room_types_path(hotel)
+    find("button[aria-label='Actions for Twin Room']").click
+    click_link 'Edit details'
+
+    expect(page).to have_css('dialog#edit-room-category-sheet[open]')
+    # Scoped to the grid: the sheet footer carries its own Cancel for the
+    # category form, and the album's Cancel only exists once a drag has
+    # something to discard.
+    within('#room-type-photos-manager') do
+      expect(page).to have_button('Save Order', disabled: true)
+      expect(page).to have_no_button('Cancel')
+    end
+
+    # Typed but unsaved. Featuring and reordering replace only the photo grid,
+    # so this must still be here at the end.
+    fill_in 'Room Category Name', with: 'Twin Room Deluxe'
+
+    # Typing scrolled the sheet, and the driver reads the click coordinates
+    # before the scroll settles — a press and a release on different pixels
+    # never become a click. A real pointer does not move the page under itself.
+    menu_trigger = find("button[aria-label='Actions for second.jpg']")
+    page.scroll_to(menu_trigger)
+    sleep 0.5
+    menu_trigger.click
+
+    click_button 'Set as featured'
+
+    expect(page).to have_css('.toast', text: 'Featured photo updated successfully.')
+    expect(room_type.reload.featured_photo_attachment_id).to eq(second_photo.id)
+    expect(category_photo_ids).to eq([ second_photo.id, first_photo.id, third_photo.id ])
+
+    drag_category_photo(third_photo.id, onto: first_photo.id, before: true)
+
+    expect(category_photo_ids).to eq([ second_photo.id, third_photo.id, first_photo.id ])
+    within('#room-type-photos-manager') do
+      expect(page).to have_button('Save Order', disabled: false)
+      expect(page).to have_button('Cancel')
+    end
+
+    click_button 'Save Order'
+
+    expect(page).to have_css('.toast', text: 'Photo order saved successfully.')
+    expect(room_type.reload.photo_order).to eq([ third_photo.id, first_photo.id ])
+    expect(category_photo_ids).to eq([ second_photo.id, third_photo.id, first_photo.id ])
+    expect(page).to have_button('Save Order', disabled: true)
+
+    expect(page).to have_field('Room Category Name', with: 'Twin Room Deluxe')
+    expect(page).to have_css('dialog#edit-room-category-sheet[open]')
+  end
+
+  # HTML5 drag events carry no coordinates a driver can synthesise, so the drag
+  # is played out event by event. `before` picks the half of the target tile the
+  # pointer lands on, which is what decides the insert side.
+  def drag_category_photo(photo_id, onto:, before:)
+    page.execute_script(<<~JS, photo_id.to_s, onto.to_s, before)
+      const grid = document.querySelector("[data-photo-reorder-target='grid']")
+      const dragged = grid.querySelector(`[data-photo-id="${arguments[0]}"]`)
+      const target = grid.querySelector(`[data-photo-id="${arguments[1]}"]`)
+      const rect = target.getBoundingClientRect()
+      const clientX = arguments[2] ? rect.left + rect.width * 0.25 : rect.left + rect.width * 0.75
+
+      const transfer = new DataTransfer()
+      const fire = (name, element, extra = {}) => {
+        const event = new Event(name, { bubbles: true, cancelable: true })
+        Object.defineProperty(event, "dataTransfer", { value: transfer })
+        Object.entries(extra).forEach(([key, value]) => Object.defineProperty(event, key, { value }))
+        element.dispatchEvent(event)
+      }
+
+      fire("dragstart", dragged)
+      fire("dragover", target, { clientX, clientY: rect.top + rect.height / 2 })
+      fire("drop", target)
+    JS
+  end
+
+  def category_photo_ids
+    page.all("[data-photo-reorder-target='grid'] [data-photo-id]", visible: :all)
+        .map { |tile| tile['data-photo-id'].to_i }
+  end
 end

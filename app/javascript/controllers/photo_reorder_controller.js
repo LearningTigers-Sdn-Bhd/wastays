@@ -1,26 +1,25 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Drag-and-drop ordering for the Hotel Album grid. The order is staged in the
-// browser and written to a hidden field, so the album's own Save and Cancel
-// buttons decide whether it reaches the database. Nothing persists on drop.
+// Drag-and-drop ordering for a photo album grid — the Hotel Album page and the
+// room category sheet both use it. The order is staged in the browser and
+// written to a hidden field, so Save Order and Cancel decide whether it reaches
+// the database. Nothing persists on drop.
+//
+// The controller owns Save and Cancel itself rather than leaving them to
+// form-dirty. In the room category sheet the save form sits outside the grid —
+// a form inside the category form would end it early — and a controller on that
+// form could not reach buttons drawn beside the tiles.
 //
 // The featured photo is pinned to the front. It carries no drag handle, and no
 // other tile can move ahead of it — a refused move says so with a toast rather
 // than snapping the tile back without a word.
 export default class extends Controller {
-  static targets = ["grid", "input", "pinned"]
+  static targets = ["grid", "input", "pinned", "submit", "cancel"]
 
   connect() {
     this.snapshot = this.orderedIds()
     this.dragged = null
-    // The reset comes from the footer form, which is a sibling of the grid: a
-    // photo's Remove action is a button_to, and a form inside a form ends the
-    // outer one early.
-    this.element.addEventListener("reset", this.boundReset = () => this.reset())
-  }
-
-  disconnect() {
-    this.element.removeEventListener("reset", this.boundReset)
+    this.refresh()
   }
 
   dragStart(event) {
@@ -71,29 +70,27 @@ export default class extends Controller {
   }
 
   commitOrder() {
-    const ordered = this.orderedIds()
-    if (ordered === this.inputTarget.value) return
-
-    this.inputTarget.value = ordered
-    // The album's dirty check reads the form, so the hidden field has to
-    // announce itself the way a typed field would.
-    this.inputTarget.dispatchEvent(new Event("input", { bubbles: true }))
+    this.inputTarget.value = this.orderedIds()
+    this.refresh()
   }
 
-  // Cancel resets the form, which restores the hidden field but leaves the
-  // tiles where the drag put them. Put them back in their saved order.
+  // Cancel puts the tiles back in their saved order. Save and Cancel both start
+  // switched off, because a grid that has just loaded has nothing to save and
+  // nothing to discard.
   reset() {
-    requestAnimationFrame(() => {
-      this.snapshot.split(",").filter(Boolean).forEach((id) => {
-        const tile = this.gridTarget.querySelector(`[data-photo-id="${id}"]`)
-        if (tile) this.gridTarget.appendChild(tile)
-      })
-
-      this.inputTarget.value = this.snapshot
-      // The dirty check reads the form a frame after the reset too. Announcing
-      // the restored value keeps the footer honest whichever frame wins.
-      this.inputTarget.dispatchEvent(new Event("input", { bubbles: true }))
+    this.snapshot.split(",").filter(Boolean).forEach((id) => {
+      const tile = this.gridTarget.querySelector(`[data-photo-id="${id}"]`)
+      if (tile) this.gridTarget.appendChild(tile)
     })
+
+    this.commitOrder()
+  }
+
+  refresh() {
+    const changed = this.orderedIds() !== this.snapshot
+
+    this.submitTargets.forEach((button) => { button.disabled = !changed })
+    this.cancelTargets.forEach((button) => { button.hidden = !changed })
   }
 
   orderedIds() {

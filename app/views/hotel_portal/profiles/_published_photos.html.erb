@@ -15,7 +15,7 @@
         The grid deliberately sits outside the form. Each photo's Remove action
         is a button_to, and a form inside a form ends the outer one early —
         which left Save and Cancel orphaned from the controller driving them. %>
-    <%= tag.div(data: { controller: ("hotel-photo-reorder" if reorderable) }.compact) do %>
+    <%= tag.div(data: { controller: ("photo-reorder" if reorderable) }.compact) do %>
       <% if reorderable %>
         <p class="mb-3 text-xs text-muted-foreground">
           Drag a photo to reorder the album. The featured photo always stays first.
@@ -29,30 +29,27 @@
                  reorderable: reorderable %>
 
       <% if reorderable %>
-        <%= form_with url: hotel_reorder_profile_photos_path(hotel),
-                      method: :patch,
-                      data: {
-                        controller: "form-dirty",
-                        action: "input->form-dirty#refresh change->form-dirty#refresh " \
-                                "reset->form-dirty#restore"
-                      } do %>
+        <%= form_with url: hotel_reorder_profile_photos_path(hotel), method: :patch do %>
           <%= hidden_field_tag :return_to, return_to %>
           <%# Carries every tile, the featured one included, so the field and the
               grid always read the same. The model drops the featured id. %>
           <%= hidden_field_tag :ordered_ids,
                                photos.map(&:id).join(","),
-                               data: { hotel_photo_reorder_target: "input" } %>
+                               data: { photo_reorder_target: "input" } %>
 
           <footer class="mt-5 flex justify-end gap-3">
             <%# Cancel only exists while there is something to discard, and Save
-                starts disabled, the same way each property settings section does. %>
+                starts disabled, the same way each property settings section does.
+                The reorder controller drives both, because the room category
+                sheet keeps them outside their form and form-dirty cannot reach
+                across that. %>
             <%= render PanelsUI::Button.new(
                   as: :button,
-                  type: :reset,
+                  type: :button,
                   variant: :secondary,
                   size: :sm,
                   hidden: true,
-                  data: { form_dirty_target: "cancel" }) do %>
+                  data: { photo_reorder_target: "cancel", action: "photo-reorder#reset" }) do %>
               Cancel
             <% end %>
             <%= render PanelsUI::Button.new(
@@ -60,7 +57,7 @@
                   type: :submit,
                   size: :sm,
                   disabled: true,
-                  data: { form_dirty_target: "submit" }) do %>
+                  data: { photo_reorder_target: "submit" }) do %>
               Save Order
             <% end %>
           </footer>

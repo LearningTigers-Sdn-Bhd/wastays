@@ -712,6 +712,8 @@ Rails.application.routes.draw do
           member do
             delete :destroy_photo
             delete :bulk_destroy_photos
+            patch "photos/feature", action: :set_featured_photo, as: :photo_feature
+            patch "photos/reorder", action: :reorder_photos, as: :reorder_photos
           end
         end
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do

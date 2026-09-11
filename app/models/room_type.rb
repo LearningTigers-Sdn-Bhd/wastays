@@ -2,6 +2,7 @@
 
 class RoomType < ApplicationRecord
   include HotelScopable
+  include PhotoAlbum
 
   has_many :room_rates, dependent: :destroy
   has_many :channel_room_rates, dependent: :destroy
@@ -127,6 +128,7 @@ class RoomType < ApplicationRecord
     photos_to_attach = photo_files.first(remaining_slots)
 
     photos.attach(photos_to_attach) if photos_to_attach.any?
+    feature_first_photo
 
     # Return summary for parity with Hotel model if needed
     {

@@ -228,7 +228,7 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       # The featured tile is the pin: no drag handle, and it is the drop target
       # the controller refuses a move in front of.
       expect(tiles.first[:draggable]).to be_nil
-      expect(tiles.first[:"data-hotel-photo-reorder-target"]).to eq('pinned')
+      expect(tiles.first[:"data-photo-reorder-target"]).to eq('pinned')
       expect(tiles.last[:draggable]).to eq('true')
     end
 
@@ -236,8 +236,8 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       get hotel_album_path(hotel)
 
       document = response.parsed_body
-      expect(document.at_css("#hotel-published-photos button[data-form-dirty-target='submit']")[:disabled]).to be_present
-      expect(document.at_css("#hotel-published-photos button[data-form-dirty-target='cancel']")[:hidden]).to be_present
+      expect(document.at_css("#hotel-published-photos button[data-photo-reorder-target='submit']")[:disabled]).to be_present
+      expect(document.at_css("#hotel-published-photos button[data-photo-reorder-target='cancel']")[:hidden]).to be_present
       expect(document.at_css("#hotel-published-photos input[name='ordered_ids']")[:value])
         .to eq([ first_photo.id, second_photo.id, third_photo.id ].join(','))
     end

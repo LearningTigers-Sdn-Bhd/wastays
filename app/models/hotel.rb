@@ -1,5 +1,6 @@
 class Hotel < ApplicationRecord
   include AccountScopable
+  include PhotoAlbum
   extend FriendlyId
   friendly_id :name, use: :slugged
 
@@ -150,7 +151,6 @@ class Hotel < ApplicationRecord
   validates :sell_mode, inclusion: { in: ->(_) { RatePlan.sell_modes } }, allow_blank: true
   validate :icon_is_supported
   validate :photos_limit_not_exceeded
-  validate :featured_photo_attachment_belongs_to_hotel
   validate :amenities_must_be_from_list
   validate :account_must_be_hotel_kind
   validate :sell_mode_is_immutable, on: :update, if: :will_save_change_to_sell_mode?
@@ -592,42 +592,6 @@ class Hotel < ApplicationRecord
     hotel_transaction_configuration || build_hotel_transaction_configuration
   end
 
-  def featured_photo_attachment
-    return nil if featured_photo_attachment_id.blank?
-
-    photos.attachments.find_by(id: featured_photo_attachment_id)
-  end
-
-  # The album order the property chose. The featured photo is pinned to the
-  # front and never appears in photo_order, so changing the featured photo
-  # cannot disturb the saved sequence. Photos uploaded after the last save have
-  # no saved position, so they follow the ordered ones by upload order.
-  def ordered_photo_attachments
-    attachments = photos.attachments.to_a
-    featured = featured_photo_attachment
-    rest = attachments.reject { |attachment| attachment.id == featured&.id }
-
-    positions = photo_order.each_with_index.to_h
-    rest = rest.sort_by { |attachment| [ positions[attachment.id] || Float::INFINITY, attachment.id ] }
-
-    featured.present? ? [ featured ] + rest : rest
-  end
-
-  # Stores the sequence of the photos behind the featured one. Unknown ids and
-  # the featured id are dropped, so a stale form cannot write a broken order.
-  def reorder_photos!(attachment_ids)
-    known_ids = photos.attachments.pluck(:id)
-    ordered = Array(attachment_ids).map(&:to_i)
-                                   .uniq
-                                   .select { |id| known_ids.include?(id) }
-                                   .reject { |id| id == featured_photo_attachment_id.to_i }
-
-    # Written straight to the column, the way the featured photo is. The album
-    # order is not something the property fills in, so an unrelated stale field
-    # must not be able to block it.
-    update_column(:photo_order, ordered)
-  end
-
   def attach_photos_with_limit(photo_files)
     photo_files = Array(photo_files).reject(&:blank?)
     remaining_slots = [ MAX_PHOTOS - photos.count, 0 ].max
@@ -640,19 +604,6 @@ class Hotel < ApplicationRecord
       attached_count: photos_to_attach.size,
       trimmed_count: photo_files.size - photos_to_attach.size
     )
-  end
-
-  # A property with photos always has a featured one. Nobody has to think about
-  # choosing the first one, and the setup step can ask for a photo rather than
-  # for a photo plus a separate decision about it. Picking a different featured
-  # photo later still works — this only fills a gap, it never overrides a choice.
-  def feature_first_photo
-    return if featured_photo_attachment_id.present?
-
-    first_photo = photos.attachments.order(:id).first
-    return if first_photo.blank?
-
-    update_column(:featured_photo_attachment_id, first_photo.id)
   end
 
   def payout_batches_for_reports(start_date: nil, end_date: nil)
@@ -878,13 +829,6 @@ class Hotel < ApplicationRecord
 
     errors.add(:icon, "must be a PNG, JPG, or WebP image") unless icon.blob.content_type.in?(ICON_CONTENT_TYPES)
     errors.add(:icon, "must be 2 MB or smaller") if icon.blob.byte_size > ICON_MAX_SIZE
-  end
-
-  def featured_photo_attachment_belongs_to_hotel
-    return if featured_photo_attachment_id.blank?
-    return if photos.attachments.any? { |a| a.id == featured_photo_attachment_id }
-
-    errors.add(:featured_photo_attachment_id, "must belong to this hotel")
   end
 
   def onboarding_period_record

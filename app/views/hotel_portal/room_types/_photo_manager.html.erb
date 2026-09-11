@@ -1,11 +1,19 @@
-<%# Replaced on its own by the photo destroy actions, so a delete never re-renders
-    the surrounding form and never discards files staged in the dropzone. %>
+<%# Replaced on its own by the photo actions, so featuring, reordering, or
+    deleting a photo never re-renders the surrounding form and never discards
+    files staged in the dropzone. %>
 <div id="room-type-photos-manager">
-  <% if room_type.photos.attached? %>
-    <div class="rounded-md border border-border bg-card p-4">
+  <%
+    photos = room_type.ordered_photo_attachments
+    featured_id = room_type.featured_photo_attachment_id.to_i
+    # One photo has no order to change.
+    reorderable = photos.many?
+  %>
+  <% if photos.any? %>
+    <div class="rounded-md border border-border bg-card p-4"
+         data-controller="<%= "photo-reorder" if reorderable %>">
       <div class="mb-4 flex items-center justify-between gap-3">
         <h3 class="text-sm font-semibold text-foreground">
-          Current photos (<%= room_type.photos.count %>)
+          Current photos (<%= photos.size %>)
         </h3>
         <%= render PanelsUI::Button.new(
               as: :button,
@@ -19,20 +27,120 @@
         <% end %>
       </div>
 
-      <%= render PanelsUI::AttachmentGroup.new(layout: :grid, aria: { label: "Current room category photos" }) do %>
-        <% room_type.photos.each do |photo| %>
-          <div class="relative aspect-square" role="listitem">
-            <%= image_tag photo, class: "size-full rounded-md border border-border object-cover" %>
-            <div class="absolute right-2 top-2">
+      <p class="mb-3 text-xs text-muted-foreground">
+        <% if reorderable %>
+          Drag a photo to reorder the album. The featured photo always stays first.
+        <% else %>
+          The featured photo leads this category everywhere guests see it.
+        <% end %>
+      </p>
+
+      <%= render PanelsUI::AttachmentGroup.new(
+            layout: :grid,
+            size: :lg,
+            data: { photo_reorder_target: ("grid" if reorderable) }.compact,
+            aria: { label: "Current room category photos" }) do %>
+        <% photos.each do |photo| %>
+          <% featured = photo.id == featured_id %>
+          <% draggable = reorderable && !featured %>
+          <%# The featured tile is the pin the others sort behind: no drag handle,
+              and it stays a drop target so the controller can refuse a move in
+              front of it and say why. %>
+          <%= render PanelsUI::Attachment.new(
+                title: photo.filename.to_s,
+                description: featured ? "Featured photo" : "Category photo",
+                state: :uploaded,
+                orientation: :vertical,
+                role: "listitem",
+                draggable: ("true" if draggable),
+                class: ("cursor-grab data-dragging:opacity-50" if draggable),
+                data: {
+                  photo_id: (photo.id if reorderable),
+                  photo_reorder_target: ("pinned" if reorderable && featured),
+                  action: ("dragstart->photo-reorder#dragStart " \
+                           "dragend->photo-reorder#dragEnd " \
+                           "dragover->photo-reorder#dragOver " \
+                           "drop->photo-reorder#drop" if draggable || (reorderable && featured))
+                }.compact) do |attachment| %>
+            <% attachment.with_media(variant: :image) do %>
+              <%= image_tag photo, alt: "Room category photo #{photo.filename}" %>
+            <% end %>
+            <% attachment.with_actions do %>
+              <% if featured %>
+                <%= render PanelsUI::Badge.new(label: "Featured", variant: :primary, size: :sm) %>
+              <% end %>
+              <%# The checkbox owns deletion, and it posts to the hidden bulk
+                  delete form outside this grid. The menu owns everything else,
+                  so a photo never has two ways to be removed.
+
+                  Written as a plain input because PanelsUI::Checkbox reads
+                  form: as a form builder, and this box belongs to a form it
+                  does not sit inside. %>
               <input type="checkbox"
+                     id="room-type-photo-<%= photo.id %>-select"
                      name="photo_ids[]"
                      value="<%= photo.id %>"
                      form="bulk-delete-photos-form"
                      class="panel-checkbox__input"
                      aria-label="Select <%= photo.filename %> for deletion">
-            </div>
-          </div>
+              <% unless featured %>
+                <%= render PanelsUI::DropdownMenu.new(
+                      id: "room-type-photo-#{photo.id}-actions",
+                      placement: :bottom_end,
+                      class: "w-44") do |menu| %>
+                  <% menu.with_trigger(
+                       variant: :ghost,
+                       size: :icon_sm,
+                       aria_label: "Actions for #{photo.filename}") do %>
+                    <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+                  <% end %>
+                  <%# A button_to here would nest a form inside the category
+                      form and end it early. The item submits the feature form
+                      outside the grid and names its photo as the submitter. %>
+                  <% menu.with_item(
+                       form_id: "feature-photo-form",
+                       type: "submit",
+                       name: "photo_id",
+                       value: photo.id) do %>
+                    <%= app_icon "star", class: "size-4", aria: { hidden: "true" } %>
+                    <span>Set as featured</span>
+                  <% end %>
+                <% end %>
+              <% end %>
+            <% end %>
+          <% end %>
         <% end %>
+      <% end %>
+
+      <% if reorderable %>
+        <%# The field and the buttons belong to the reorder form outside this
+            grid. A form inside the category form would end it early, the way
+            the bulk delete form already has to sit outside. %>
+        <%= hidden_field_tag :ordered_ids,
+                             photos.map(&:id).join(","),
+                             form: "reorder-photos-form",
+                             data: { photo_reorder_target: "input" } %>
+
+        <footer class="mt-5 flex justify-end gap-3">
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :button,
+                variant: :secondary,
+                size: :sm,
+                hidden: true,
+                data: { photo_reorder_target: "cancel", action: "photo-reorder#reset" }) do %>
+            Cancel
+          <% end %>
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                form: "reorder-photos-form",
+                size: :sm,
+                disabled: true,
+                data: { photo_reorder_target: "submit" }) do %>
+            Save Order
+          <% end %>
+        </footer>
       <% end %>
     </div>
   <% end %>
