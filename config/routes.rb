@@ -640,6 +640,7 @@ Rails.application.routes.draw do
       post :force_close
     end
     resources :night_audits, only: [ :index, :show ]
+    resources :staff_notifications, only: [ :update ]
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         get :occupancy_details
@@ -696,6 +697,7 @@ Rails.application.routes.draw do
         delete "hotel-details/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
         delete "hotel-details/photos", to: "profiles#destroy_photos", as: :profile_photos
         patch "hotel-details/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
+        patch "hotel-details/photos/reorder", to: "profiles#reorder_photos", as: :reorder_profile_photos
         post "hotel-details/photo-queue", to: "profiles#enqueue_photo", as: :profile_photo_queue
         delete "hotel-details/photo-queue", to: "profiles#clear_photo_queue", as: :clear_profile_photo_queue
         delete "hotel-details/photo-queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
@@ -710,6 +712,8 @@ Rails.application.routes.draw do
           member do
             delete :destroy_photo
             delete :bulk_destroy_photos
+            patch "photos/feature", action: :set_featured_photo, as: :photo_feature
+            patch "photos/reorder", action: :reorder_photos, as: :reorder_photos
           end
         end
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do

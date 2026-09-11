@@ -5,7 +5,7 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
 
   before_action :set_hotel
   before_action :authorize_hotel
-  before_action :set_room_type, only: [ :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos ]
+  before_action :set_room_type, only: [ :edit, :update, :destroy, :destroy_photo, :bulk_destroy_photos, :set_featured_photo, :reorder_photos ]
 
   def index
     room_types = @hotel.room_types.includes(
@@ -86,6 +86,31 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     respond_to_photo_removal(result)
   end
 
+  # The featured photo is the cover guests see on the room row and the room card,
+  # so it changes from inside the open form sheet like a deletion does: only the
+  # photo grid is re-rendered, and nothing typed but unsaved is thrown away.
+  def set_featured_photo
+    photo = @room_type.photos.attachments.find_by(id: params[:photo_id])
+
+    if photo.blank?
+      return render_photo_manager("Photo not found.", success: false, status: :not_found)
+    end
+
+    if @room_type.update(featured_photo_attachment_id: photo.id)
+      render_photo_manager("Featured photo updated successfully.", success: true)
+    else
+      render_photo_manager(@room_type.errors.full_messages.to_sentence, success: false)
+    end
+  end
+
+  # The grid stages its new order in the browser and saves it in one request, so
+  # a drag never writes to the database on its own.
+  def reorder_photos
+    @room_type.reorder_photos!(params[:ordered_ids].to_s.split(","))
+
+    render_photo_manager("Photo order saved successfully.", success: true)
+  end
+
   private
 
   def set_hotel
@@ -106,17 +131,23 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
   def respond_to_photo_removal(result)
     @room_type.photos.reload
 
+    render_photo_manager(result.message, success: result.success?)
+  end
+
+  def render_photo_manager(message, success:, status: nil)
+    status ||= success ? :ok : :unprocessable_content
+
     respond_to do |format|
       format.turbo_stream do
         render turbo_stream: [
           turbo_stream.replace("room-type-photos-manager", partial: "hotel_portal/room_types/photo_manager", locals: { room_type: @room_type }),
-          toast_stream(result.message, type: result.success? ? :success : :error)
-        ], status: (result.success? ? :ok : :unprocessable_content)
+          toast_stream(message, type: success ? :success : :error)
+        ], status: status
       end
       format.html do
         redirect_to hotel_room_types_path(@hotel),
-                    notice: (result.message if result.success?),
-                    alert: (result.message unless result.success?)
+                    notice: (message if success),
+                    alert: (message unless success)
       end
     end
   end

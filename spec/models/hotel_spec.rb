@@ -452,4 +452,53 @@ RSpec.describe Hotel, type: :model do
       expect { Hotel.locate!('90909') }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
+
+  describe 'photo ordering' do
+    let(:hotel) { create(:hotel) }
+
+    def attach_photo(filename)
+      hotel.photos.attach(io: StringIO.new("photo-#{filename}"), filename: filename, content_type: 'image/jpeg')
+      hotel.photos.attachments.order(:id).last
+    end
+
+    before do
+      @first = attach_photo('a.jpg')
+      @second = attach_photo('b.jpg')
+      @third = attach_photo('c.jpg')
+      hotel.update!(featured_photo_attachment_id: @first.id)
+    end
+
+    it 'falls back to upload order when nothing was reordered' do
+      expect(hotel.ordered_photo_attachments.map(&:id)).to eq([ @first.id, @second.id, @third.id ])
+    end
+
+    it 'keeps the featured photo first and sorts the rest by the saved order' do
+      hotel.reorder_photos!([ @third.id, @second.id ])
+
+      expect(hotel.reload.ordered_photo_attachments.map(&:id)).to eq([ @first.id, @third.id, @second.id ])
+    end
+
+    it 'never stores the featured photo, so featuring another photo keeps the order' do
+      hotel.reorder_photos!([ @first.id, @third.id, @second.id ])
+      expect(hotel.photo_order).to eq([ @third.id, @second.id ])
+
+      hotel.update!(featured_photo_attachment_id: @third.id)
+
+      expect(hotel.reload.ordered_photo_attachments.map(&:id)).to eq([ @third.id, @second.id, @first.id ])
+    end
+
+    it 'drops ids that do not belong to the hotel' do
+      hotel.reorder_photos!([ @third.id, 999_999, @second.id ])
+
+      expect(hotel.reload.photo_order).to eq([ @third.id, @second.id ])
+    end
+
+    it 'puts photos uploaded after the last save at the end' do
+      hotel.reorder_photos!([ @third.id, @second.id ])
+      fourth = attach_photo('d.jpg')
+
+      expect(hotel.reload.ordered_photo_attachments.map(&:id))
+        .to eq([ @first.id, @third.id, @second.id, fourth.id ])
+    end
+  end
 end

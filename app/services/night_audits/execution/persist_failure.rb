@@ -25,6 +25,7 @@ module NightAudits
         record_log!(failed_audit)
         failed_audit.update_column(:summary, summary_with_run_results(failed_audit))
         record_failure_events(failed_audit)
+        NightAudits::PublishStaffNotification.call(night_audit: failed_audit)
         failed_audit
       end
 

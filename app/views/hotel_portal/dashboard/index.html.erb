@@ -1,6 +1,22 @@
 <% content_for :title, "Dashboard" %>
 
 <div class="w-full space-y-3.5">
+  <% if (night_audit_alert = @dashboard_presenter.night_audit_alert(@night_audit_alert)) %>
+    <%= render PanelsUI::Alert.new(tone: night_audit_alert[:tone], title: night_audit_alert[:title], role: :alert) do |alert| %>
+      <% alert.with_description { night_audit_alert[:message] } %>
+      <% if current_user.has_permission?("manage_night_audit", hotel: @current_hotel) %>
+        <% alert.with_actions do %>
+          <%= render PanelsUI::Button.new(
+                as: :a,
+                href: hotel_night_audit_run_path(@current_hotel, return_to: hotel_dashboard_path(@current_hotel)),
+                variant: :secondary,
+                size: :sm,
+                data: { turbo_frame: "booking_action_sheet" }) do %>Review Night Audit<% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
   <%# ─── ONBOARDING WIZARD ─── %>
   <% if @current_hotel.onboarding? %>
     <%= render "onboarding_wizard" %>

@@ -132,8 +132,8 @@
                       <%= image_tag hotel.featured_photo_attachment, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
                     <% elsif hotel.photos.attached? %>
                       <%= image_tag hotel.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
-                    <% elsif hotel.room_types.first&.photos&.attached? %>
-                      <%= image_tag hotel.room_types.first.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
+                    <% elsif (room_cover = hotel.room_types.first&.ordered_photo_attachments&.first).present? %>
+                      <%= image_tag room_cover, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" %>
                     <% else %>
                       <div class="absolute inset-0 bg-muted flex items-center justify-center">
                         <svg class="w-12 h-12 text-border" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m10 13 2 2 4-4"/></svg>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_131500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1904,6 +1904,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
     t.string "name"
     t.date "onboarding_end_date"
     t.date "onboarding_start_date"
+    t.bigint "photo_order", default: [], null: false, array: true
     t.bigint "plan_id"
     t.string "pre_suspension_status"
     t.string "preferred_channel_manager"
@@ -2929,15 +2930,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
     t.decimal "base_price"
     t.datetime "created_at", null: false
     t.text "description"
+    t.bigint "featured_photo_attachment_id"
     t.bigint "hotel_id", null: false
     t.integer "max_adults"
     t.integer "max_children"
     t.string "name"
     t.boolean "pets_allowed", default: false, null: false
+    t.bigint "photo_order", default: [], null: false, array: true
     t.integer "quantity"
     t.string "room_number_mode", default: "range", null: false
     t.boolean "smoking_allowed", default: false, null: false
     t.datetime "updated_at", null: false
+    t.index ["featured_photo_attachment_id"], name: "index_room_types_on_featured_photo_attachment_id"
     t.index ["hotel_id"], name: "index_room_types_on_hotel_id"
   end
 
@@ -2970,6 +2974,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
     t.index ["settable_type", "settable_id"], name: "index_setup_fee_rules_on_active_hotel_overrides", unique: true, where: "(((status)::text = 'active'::text) AND ((settable_type)::text = 'Hotel'::text))"
     t.index ["settable_type", "settable_id"], name: "index_setup_fee_rules_on_settable"
     t.index ["status"], name: "index_setup_fee_rules_on_active_global_default", unique: true, where: "(((status)::text = 'active'::text) AND (settable_type IS NULL) AND (settable_id IS NULL))"
+  end
+
+  create_table "staff_notifications", force: :cascade do |t|
+    t.string "action_path"
+    t.datetime "created_at", null: false
+    t.string "deduplication_key", null: false
+    t.bigint "hotel_id", null: false
+    t.text "message", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.string "notification_type", null: false
+    t.datetime "read_at"
+    t.bigint "recipient_id", null: false
+    t.datetime "resolved_at"
+    t.string "severity", null: false
+    t.bigint "subject_id", null: false
+    t.string "subject_type", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deduplication_key"], name: "index_staff_notifications_on_deduplication_key", unique: true
+    t.index ["hotel_id", "recipient_id", "created_at"], name: "index_active_staff_notifications_for_recipient", where: "(resolved_at IS NULL)"
+    t.index ["hotel_id"], name: "index_staff_notifications_on_hotel_id"
+    t.index ["recipient_id"], name: "index_staff_notifications_on_recipient_id"
+    t.index ["subject_type", "subject_id"], name: "index_staff_notifications_on_subject"
   end
 
   create_table "transaction_code_taxes", force: :cascade do |t|
@@ -3379,6 +3406,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
   add_foreign_key "rooms", "hotels"
   add_foreign_key "rooms", "room_groups"
   add_foreign_key "rooms", "room_types"
+  add_foreign_key "staff_notifications", "hotels"
+  add_foreign_key "staff_notifications", "users", column: "recipient_id"
   add_foreign_key "transaction_code_taxes", "hotel_taxes"
   add_foreign_key "transaction_code_taxes", "transaction_codes"
   add_foreign_key "transaction_codes", "hotels"

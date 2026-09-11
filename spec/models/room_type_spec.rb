@@ -166,4 +166,113 @@ RSpec.describe RoomType, type: :model do
       end
     end
   end
+
+  describe "featured photo" do
+    let(:room_type) { create(:room_type) }
+
+    def build_blob(filename)
+      ActiveStorage::Blob.create_and_upload!(
+        io: StringIO.new("photo-#{filename}"),
+        filename: filename,
+        content_type: "image/jpeg"
+      )
+    end
+
+    def attach(*filenames)
+      room_type.attach_photos_with_limit(filenames.map { |filename| build_blob(filename) })
+      room_type.photos.reload
+    end
+
+    it "features the first photo, so a category with photos always has a cover" do
+      attach("a.jpg", "b.jpg")
+
+      expect(room_type.featured_photo_attachment.filename.to_s).to eq("a.jpg")
+    end
+
+    it "keeps the chosen featured photo when more photos arrive" do
+      attach("a.jpg")
+      room_type.update!(featured_photo_attachment_id: room_type.photos.attachments.first.id)
+
+      attach("b.jpg")
+
+      expect(room_type.reload.featured_photo_attachment.filename.to_s).to eq("a.jpg")
+    end
+
+    it "reads the album with the featured photo first and the rest in upload order" do
+      attach("a.jpg", "b.jpg", "c.jpg")
+      third = room_type.photos.attachments.order(:id).last
+      room_type.update!(featured_photo_attachment_id: third.id)
+
+      expect(room_type.reload.ordered_photo_attachments.map { |photo| photo.filename.to_s })
+        .to eq([ "c.jpg", "a.jpg", "b.jpg" ])
+    end
+
+    it "refuses a photo that belongs to another category" do
+      attach("a.jpg")
+      other = create(:room_type, hotel: room_type.hotel)
+      other.attach_photos_with_limit([ build_blob("other.jpg") ])
+
+      room_type.featured_photo_attachment_id = other.photos.attachments.first.id
+
+      expect(room_type).not_to be_valid
+      expect(room_type.errors[:featured_photo_attachment_id]).to include("must belong to this room type")
+    end
+
+    it "hands the featured slot to a remaining photo before the featured one goes" do
+      attach("a.jpg", "b.jpg")
+      featured = room_type.photos.attachments.order(:id).first
+
+      room_type.promote_featured_photo_before_removing([ featured.id ])
+
+      expect(room_type.reload.featured_photo_attachment.filename.to_s).to eq("b.jpg")
+    end
+
+    it "keeps the featured photo first and sorts the rest by the saved order" do
+      attach("a.jpg", "b.jpg", "c.jpg")
+      first, second, third = room_type.photos.attachments.order(:id).to_a
+
+      room_type.reorder_photos!([ third.id, second.id ])
+
+      expect(room_type.reload.ordered_photo_attachments.map(&:id))
+        .to eq([ first.id, third.id, second.id ])
+    end
+
+    it "never stores the featured photo, so featuring another one keeps the order" do
+      attach("a.jpg", "b.jpg", "c.jpg")
+      first, second, third = room_type.photos.attachments.order(:id).to_a
+
+      room_type.reorder_photos!([ first.id, third.id, second.id ])
+
+      expect(room_type.photo_order).to eq([ third.id, second.id ])
+    end
+
+    it "drops ids that do not belong to the category" do
+      attach("a.jpg", "b.jpg", "c.jpg")
+      _first, second, third = room_type.photos.attachments.order(:id).to_a
+
+      room_type.reorder_photos!([ third.id, 999_999, second.id ])
+
+      expect(room_type.reload.photo_order).to eq([ third.id, second.id ])
+    end
+
+    it "puts photos uploaded after the last save at the end" do
+      attach("a.jpg", "b.jpg", "c.jpg")
+      first, second, third = room_type.photos.attachments.order(:id).to_a
+      room_type.reorder_photos!([ third.id, second.id ])
+
+      attach("d.jpg")
+      fourth = room_type.photos.attachments.order(:id).last
+
+      expect(room_type.reload.ordered_photo_attachments.map(&:id))
+        .to eq([ first.id, third.id, second.id, fourth.id ])
+    end
+
+    it "clears the featured photo when every photo goes" do
+      attach("a.jpg", "b.jpg")
+
+      room_type.promote_featured_photo_before_removing(room_type.photos.attachments.map(&:id))
+
+      expect(room_type.reload.featured_photo_attachment_id).to be_nil
+    end
+  end
 end

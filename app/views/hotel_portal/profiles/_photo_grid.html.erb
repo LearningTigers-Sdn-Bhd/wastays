@@ -1,0 +1,70 @@
+<% featured_id = hotel.featured_photo_attachment_id.to_i %>
+
+<%= render PanelsUI::AttachmentGroup.new(
+      layout: :grid,
+      size: :lg,
+      data: { photo_reorder_target: ("grid" if reorderable) }.compact,
+      aria: { label: "Published hotel photos" }) do %>
+  <% photos.each do |photo| %>
+    <% featured = photo.id == featured_id %>
+    <% draggable = reorderable && !featured %>
+    <%# The featured tile is the pin the others sort behind: no drag handle, and
+        it stays a drop target so the controller can refuse a move in front of
+        it and say why. %>
+    <%= render PanelsUI::Attachment.new(
+          title: photo.filename.to_s,
+          description: featured ? "Featured photo" : "Published photo",
+          state: :uploaded,
+          orientation: :vertical,
+          role: "listitem",
+          draggable: ("true" if draggable),
+          class: ("cursor-grab data-dragging:opacity-50" if draggable),
+          data: {
+            photo_id: (photo.id if reorderable),
+            photo_reorder_target: ("pinned" if reorderable && featured),
+            action: ("dragstart->photo-reorder#dragStart " \
+                     "dragend->photo-reorder#dragEnd " \
+                     "dragover->photo-reorder#dragOver " \
+                     "drop->photo-reorder#drop" if reorderable)
+          }.compact) do |attachment| %>
+      <% attachment.with_media(variant: :image) do %>
+        <%= image_tag photo, alt: "Hotel photo #{photo.filename}" %>
+      <% end %>
+      <% attachment.with_actions do %>
+        <% if featured %>
+          <%= render PanelsUI::Badge.new(label: "Featured", variant: :primary, size: :sm) %>
+        <% end %>
+        <%= render PanelsUI::DropdownMenu.new(
+              id: "hotel-photo-#{photo.id}-actions",
+              placement: :bottom_end,
+              class: "w-44") do |menu| %>
+          <% menu.with_trigger(
+               variant: :ghost,
+               size: :icon_sm,
+               aria_label: "Actions for #{photo.filename}") do %>
+            <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
+          <% end %>
+          <% unless featured %>
+            <% menu.with_item(
+                 href: hotel_profile_photo_feature_path(hotel, photo.id, return_to: return_to),
+                 method: :patch) do %>
+              <%= app_icon "star", class: "size-4", aria: { hidden: "true" } %>
+              <span>Set as featured</span>
+            <% end %>
+          <% end %>
+          <% menu.with_item(
+               href: hotel_profile_photo_path(hotel, photo.id, return_to: return_to),
+               method: :delete,
+               variant: :danger,
+               data: {
+                 turbo_confirm: "Remove this hotel photo?",
+                 turbo_confirm_tone: "destructive"
+               }) do %>
+            <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
+            <span>Remove photo</span>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

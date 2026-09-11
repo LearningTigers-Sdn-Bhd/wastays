@@ -19,6 +19,9 @@ module HotelPortal
           attachments = @room_type.photos.attachments.where(id: @photo_ids)
 
           if attachments.any?
+            # Hand the featured slot on before the photos go, so a category with
+            # photos left never ends up without a cover for the room row.
+            @room_type.promote_featured_photo_before_removing(attachments.pluck(:id))
             attachments.each(&:purge)
             OpenStruct.new(success?: true, message: "Selected photos deleted successfully.")
           else

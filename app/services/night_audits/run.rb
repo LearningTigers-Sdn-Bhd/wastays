@@ -41,7 +41,7 @@ module NightAudits
       end
 
       pre_evaluation = evaluate(:pre_close)
-      if blocked?(pre_evaluation) && !@force_roll
+      if blocked?(pre_evaluation) && !@force_roll && !scheduled?
         persist_preparation!(night_audit, pre_evaluation)
         return Result.new(success?: false, error: "Night audit requires staff resolution.", night_audit: night_audit)
       end
@@ -69,7 +69,7 @@ module NightAudits
       # claim. Once claimed, operational changes are guarded; if something
       # landed just before the claim, release the date without posting.
       claimed_evaluation = evaluate(:pre_close)
-      if blocked?(claimed_evaluation) && !@force_roll
+      if blocked?(claimed_evaluation) && !@force_roll && !scheduled?
         NightAudits::Execution::ReleaseBusinessDate.call!(hotel: @hotel, business_date: @business_date)
         persist_preparation!(night_audit, claimed_evaluation)
         return Result.new(success?: false, error: "Night audit readiness changed before processing.", night_audit: night_audit)
@@ -81,8 +81,11 @@ module NightAudits
 
       Folios::Charges::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
+      detection_failures = scheduled? ? run_scheduled_detections(night_audit) : []
+
       # Use the evaluation service to get blockers and exceptions
       evaluation = evaluate(:post_close)
+      evaluation[:blocked_details]["detection_failures"] = detection_failures if detection_failures.any?
 
       log_blockers(night_audit, evaluation[:blocked_details])
       log_exceptions(night_audit, evaluation[:exceptions])
@@ -188,6 +191,16 @@ module NightAudits
 
     def blocked?(evaluation)
       evaluation[:blocked_details].values.flatten.any?
+    end
+
+    def scheduled?
+      @trigger_mode == "scheduled"
+    end
+
+    def run_scheduled_detections(night_audit)
+      due_outs = NightAudits::DetectDueOuts.call(night_audit:, user: @performed_by_user)
+      missed_arrivals = NightAudits::DetectMissedArrivals.call(night_audit:, user: @performed_by_user)
+      Array(due_outs.failed) + Array(missed_arrivals.failed)
     end
 
     def evaluate(phase)

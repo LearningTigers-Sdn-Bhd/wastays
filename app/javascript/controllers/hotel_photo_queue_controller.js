@@ -33,12 +33,12 @@ export default class extends Controller {
   async queueSelectedFiles(event) {
     if (event.target !== this.inputTarget) return
 
-    this.hideNotices()
-
     // The Panels UI dropzone validates and normalizes this FileList before the
-    // change event bubbles to the hotel queue controller.
+    // change event reaches the hotel queue controller.
     const files = Array.from(this.inputTarget.files || [])
     if (files.length === 0) return
+
+    this.hideNotices()
 
     // Clear the transient dropzone previews. The attachment queue below is the
     // authoritative representation once staging begins.

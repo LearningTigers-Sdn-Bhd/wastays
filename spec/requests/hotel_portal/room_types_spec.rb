@@ -412,5 +412,104 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("No photos selected.")
     end
+
+    it "hands the featured slot to a remaining photo" do
+      first, second = room_type.photos.attachments.order(:id).to_a
+      room_type.update!(featured_photo_attachment_id: first.id)
+
+      delete bulk_destroy_photos_hotel_room_type_path(hotel, room_type), params: { photo_ids: [ first.id ] }, as: :turbo_stream
+
+      expect(room_type.reload.featured_photo_attachment_id).to eq(second.id)
+    end
+  end
+
+  describe "PATCH #set_featured_photo" do
+    before do
+      room_type.photos.attach(fixture_file_upload(Rails.root.join("spec/fixtures/files/sample_image.jpg"), "image/jpeg"))
+    end
+
+    it "features the chosen photo and replaces only the photo grid" do
+      chosen = room_type.photos.attachments.order(:id).last
+
+      patch photo_feature_hotel_room_type_path(hotel, room_type), params: { photo_id: chosen.id }, as: :turbo_stream
+
+      expect(response).to have_http_status(:ok)
+      expect(room_type.reload.featured_photo_attachment_id).to eq(chosen.id)
+      expect(response.body).to include('target="room-type-photos-manager"')
+      expect(response.body).to include("Featured photo updated successfully.")
+      # The surrounding form must not be re-rendered, or unsaved edits are lost.
+      expect(response.body).not_to include("room-category-basics-heading")
+    end
+
+    it "reports back into the sheet when the photo is gone" do
+      patch photo_feature_hotel_room_type_path(hotel, room_type), params: { photo_id: 999_999 }, as: :turbo_stream
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.body).to include("Photo not found.")
+    end
+
+    it "refuses a photo that belongs to another category" do
+      other = create(:room_type, hotel: hotel)
+      other.photos.attach(fixture_file_upload(Rails.root.join("spec/fixtures/files/sample_image.jpg"), "image/jpeg"))
+
+      patch photo_feature_hotel_room_type_path(hotel, room_type), params: { photo_id: other.photos.attachments.first.id }, as: :turbo_stream
+
+      expect(response).to have_http_status(:not_found)
+      expect(room_type.reload.featured_photo_attachment_id).to be_nil
+    end
+  end
+
+  describe "PATCH #reorder_photos" do
+    before do
+      2.times do
+        room_type.photos.attach(fixture_file_upload(Rails.root.join("spec/fixtures/files/sample_image.jpg"), "image/jpeg"))
+      end
+      room_type.photos.reload
+    end
+
+    it "saves the order and replaces only the photo grid" do
+      first, second, third = room_type.photos.attachments.order(:id).to_a
+      room_type.update!(featured_photo_attachment_id: first.id)
+
+      patch reorder_photos_hotel_room_type_path(hotel, room_type),
+            params: { ordered_ids: [ first.id, third.id, second.id ].join(",") },
+            as: :turbo_stream
+
+      expect(response).to have_http_status(:ok)
+      expect(room_type.reload.photo_order).to eq([ third.id, second.id ])
+      expect(response.body).to include('target="room-type-photos-manager"')
+      expect(response.body).to include("Photo order saved successfully.")
+      # The surrounding form must not be re-rendered, or unsaved edits are lost.
+      expect(response.body).not_to include("room-category-basics-heading")
+    end
+
+    it "renders the tiles in the saved order with the featured photo pinned first" do
+      first, second, third = room_type.photos.attachments.order(:id).to_a
+      room_type.update!(featured_photo_attachment_id: first.id)
+      room_type.reorder_photos!([ third.id, second.id ])
+
+      get edit_hotel_room_type_path(hotel, room_type)
+
+      tiles = response.parsed_body.css("#room-type-photos-manager .panel-attachment[data-photo-id]")
+      expect(tiles.map { |tile| tile[:"data-photo-id"].to_i }).to eq([ first.id, third.id, second.id ])
+
+      # The featured tile is the pin: no drag handle, and it is the drop target
+      # the controller refuses a move in front of.
+      expect(tiles.first[:draggable]).to be_nil
+      expect(tiles.first[:"data-photo-reorder-target"]).to eq("pinned")
+      expect(tiles.last[:draggable]).to eq("true")
+    end
+
+    it "starts the grid with Save Order disabled and Cancel hidden" do
+      get edit_hotel_room_type_path(hotel, room_type)
+
+      document = response.parsed_body
+      expect(document.at_css("#room-type-photos-manager button[data-photo-reorder-target='submit']")[:disabled]).to be_present
+      expect(document.at_css("#room-type-photos-manager button[data-photo-reorder-target='cancel']")[:hidden]).to be_present
+      # The field and the buttons reach the reorder form by id, because a form
+      # inside the category form would end it early.
+      expect(document.at_css("#room-type-photos-manager input[name='ordered_ids']")[:form]).to eq("reorder-photos-form")
+      expect(document.at_css("form#reorder-photos-form")).to be_present
+    end
   end
 end
