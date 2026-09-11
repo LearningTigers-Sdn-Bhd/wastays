@@ -20,7 +20,7 @@ module NightAudits
       recipients.find_each { |access| publish_for(access.user) }
       true
     rescue StandardError => error
-      Rails.logger.error("Failed to publish staff notifications for Night Audit #{@night_audit.id}: #{error.message}")
+      log_failure(error)
       false
     end
 
@@ -34,10 +34,26 @@ module NightAudits
         .distinct
     end
 
-    def publish_for(user)
-      notification = StaffNotification.find_or_initialize_by(deduplication_key: deduplication_key(user))
-      notification.read_at = nil if notification.persisted? && notification.notification_type != notification_type
-      notification.assign_attributes(
+    def publish_for(user, retried: false)
+      key = deduplication_key(user)
+      notification = StaffNotification.find_or_initialize_by(deduplication_key: key)
+      notification.assign_attributes(attributes_for(user))
+      # Staff already read the old message. A changed message is a new problem,
+      # so the bell has to light up again.
+      notification.read_at = nil if notification.persisted? && notification.changed?
+      notification.save!
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => error
+      # Two runs can reach the same key together. The loser reloads the row the
+      # winner wrote and updates it. One retry only.
+      return log_failure(error, user:) if retried || !StaffNotification.exists?(deduplication_key: key)
+
+      publish_for(user, retried: true)
+    rescue StandardError => error
+      log_failure(error, user:)
+    end
+
+    def attributes_for(user)
+      {
         hotel: @hotel,
         recipient: user,
         subject: @night_audit,
@@ -51,8 +67,14 @@ module NightAudits
           "blocker_count" => blocker_count
         },
         resolved_at: nil
+      }
+    end
+
+    def log_failure(error, user: nil)
+      recipient = user ? " recipient #{user.id}" : ""
+      Rails.logger.error(
+        "Failed to publish staff notification for Night Audit #{@night_audit.id}#{recipient}: #{error.message}"
       )
-      notification.save!
     end
 
     def resolve_notifications

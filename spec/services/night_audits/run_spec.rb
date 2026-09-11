@@ -241,7 +241,7 @@ RSpec.describe NightAudits::Run do
     expect(result.night_audit.performed_by_user).to be_nil
   end
 
-  it "posts safe nightly charges and blocks the date during a scheduled run with preliminary blockers" do
+  it "posts every in-house nightly charge and blocks the date during a scheduled run with preliminary blockers" do
     safe_booking = create(
       :booking,
       hotel: hotel,
@@ -276,7 +276,7 @@ RSpec.describe NightAudits::Run do
     expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
     expect(safe_folio.folio_transactions.where("metadata->>'posting_source' = ?", "night_audit")).to exist
     expect(result.night_audit.summary.dig("run_results", "skipped_items", "items")).to include(
-      include("booking_id" => blocked_booking.id, "reason" => "Booking has an unresolved Night Audit blocker")
+      include("booking_id" => blocked_booking.id, "reason" => "Booking has no folio")
     )
     expect(Financials::CreateJournalBatch).not_to have_received(:call)
   end

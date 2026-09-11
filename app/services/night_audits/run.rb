@@ -79,12 +79,7 @@ module NightAudits
       record_night_audit_event!(night_audit, business_date, "night_audit_started", "Night audit started")
       record_night_audit_event!(night_audit, business_date, "business_date_audit_started", "Business date moved to audit_running")
 
-      blocked_booking_ids = booking_ids_from(claimed_evaluation[:blocked_details])
-      Folios::Charges::PostNightlyCharges.call(
-        night_audit: night_audit,
-        user: @performed_by_user,
-        skip_booking_ids: (blocked_booking_ids if scheduled?)
-      )
+      Folios::Charges::PostNightlyCharges.call(night_audit: night_audit, user: @performed_by_user)
 
       detection_failures = scheduled? ? run_scheduled_detections(night_audit) : []
 
@@ -200,10 +195,6 @@ module NightAudits
 
     def scheduled?
       @trigger_mode == "scheduled"
-    end
-
-    def booking_ids_from(blocked_details)
-      blocked_details.values.flatten.filter_map { |item| item.to_h["booking_id"] }.map(&:to_i).uniq
     end
 
     def run_scheduled_detections(night_audit)
