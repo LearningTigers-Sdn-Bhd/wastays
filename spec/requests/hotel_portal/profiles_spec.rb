@@ -191,4 +191,65 @@ RSpec.describe 'HotelPortal::Profiles', type: :request do
       expect(invalid_fields.map { |field| field.text.squish }).to include(a_string_including("Hotel Name"))
     end
   end
+
+  describe 'PATCH /hotel/:hotel_id/settings/property/hotel-details/photos/reorder' do
+    def attach_photo(filename)
+      hotel.photos.attach(io: StringIO.new("photo-#{filename}"), filename: filename, content_type: 'image/jpeg')
+      hotel.photos.attachments.order(:id).last
+    end
+
+    let!(:first_photo) { attach_photo('a.jpg') }
+    let!(:second_photo) { attach_photo('b.jpg') }
+    let!(:third_photo) { attach_photo('c.jpg') }
+
+    before { hotel.update!(featured_photo_attachment_id: first_photo.id) }
+
+    it 'saves the order and replaces the album grid' do
+      patch hotel_reorder_profile_photos_path(hotel),
+            params: { ordered_ids: [ first_photo.id, third_photo.id, second_photo.id ].join(',') },
+            headers: { 'Accept' => 'text/vnd.turbo-stream.html' }
+
+      expect(response).to have_http_status(:ok)
+      expect(hotel.reload.photo_order).to eq([ third_photo.id, second_photo.id ])
+      expect(response.body).to include('hotel-published-photos')
+      expect(response.body).to include('Photo order saved successfully.')
+    end
+
+    it 'renders the tiles in the saved order with the featured photo pinned first' do
+      patch hotel_reorder_profile_photos_path(hotel),
+            params: { ordered_ids: [ third_photo.id, second_photo.id ].join(',') }
+
+      get hotel_album_path(hotel)
+
+      tiles = response.parsed_body.css('#hotel-published-photos .panel-attachment[data-photo-id]')
+      expect(tiles.map { |tile| tile[:"data-photo-id"].to_i })
+        .to eq([ first_photo.id, third_photo.id, second_photo.id ])
+
+      # The featured tile is the pin: no drag handle, and it is the drop target
+      # the controller refuses a move in front of.
+      expect(tiles.first[:draggable]).to be_nil
+      expect(tiles.first[:"data-hotel-photo-reorder-target"]).to eq('pinned')
+      expect(tiles.last[:draggable]).to eq('true')
+    end
+
+    it 'starts the album with Save disabled and Cancel hidden' do
+      get hotel_album_path(hotel)
+
+      document = response.parsed_body
+      expect(document.at_css("#hotel-published-photos button[data-form-dirty-target='submit']")[:disabled]).to be_present
+      expect(document.at_css("#hotel-published-photos button[data-form-dirty-target='cancel']")[:hidden]).to be_present
+      expect(document.at_css("#hotel-published-photos input[name='ordered_ids']")[:value])
+        .to eq([ first_photo.id, second_photo.id, third_photo.id ].join(','))
+    end
+
+    it 'refuses a reorder from a user without profile rights' do
+      other_role = create(:role, account: account, slug: 'front_desk')
+      UserHotelAccess.find_by(user: user, hotel: hotel).update!(role: other_role)
+
+      patch hotel_reorder_profile_photos_path(hotel),
+            params: { ordered_ids: [ third_photo.id ].join(',') }
+
+      expect(hotel.reload.photo_order).to eq([])
+    end
+  end
 end

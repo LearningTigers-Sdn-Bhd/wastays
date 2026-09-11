@@ -4,6 +4,7 @@ class Booking < ApplicationRecord
   include Bookings::StatusLifecycle
 
   TOURISM_TAX_KEYS = %w[tourism_tax ttx].freeze
+  IN_HOUSE_STATUSES = %w[checked_in due_out_detected checkout_required].freeze
   FUND_COLLECTORS = %w[unknown wastays hotel].freeze
 
   belongs_to :booking_quote, optional: true
@@ -382,6 +383,7 @@ class Booking < ApplicationRecord
   }
   scope :confirmed, -> { where(status: "confirmed") }
   scope :checked_in, -> { where(status: "checked_in") }
+  scope :in_house, -> { where(status: IN_HOUSE_STATUSES) }
   scope :completed, -> { where(status: "completed") }
   scope :no_show, -> { where(status: "no_show") }
   scope :active, -> { where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required" ]) }

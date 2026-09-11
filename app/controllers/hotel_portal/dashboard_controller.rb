@@ -38,6 +38,13 @@ class HotelPortal::DashboardController < HotelPortal::BaseController
 
     @recent_bookings = @current_hotel.bookings.order(created_at: :desc).limit(5).includes(booking_guests: :guest)
 
+    @night_audit_alert = @current_hotel.night_audits.find_by(
+      business_date: @current_hotel.current_business_date,
+      status: %w[preparing blocked failed]
+    )
+    @night_audit_alert = nil if @night_audit_alert&.preparing? &&
+      @night_audit_alert.blocked_details.to_h.values.flatten.empty?
+
     @dashboard_presenter = HotelPortal::DashboardPresenter.new(@current_hotel, stats, @recent_bookings)
   end
 end

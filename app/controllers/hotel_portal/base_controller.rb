@@ -11,6 +11,7 @@ module HotelPortal
     before_action :ensure_hotel_access!
     before_action :enforce_onboarding_lock!
     before_action :protect_training_writes!
+    before_action :load_staff_notifications
 
     # Controllers a property that is not live yet can always reach. Onboarding itself is
     # the point of the lock; the rest are the things someone needs regardless of whether
@@ -86,6 +87,14 @@ module HotelPortal
     helper_method :rate_override_allowed?
 
     private
+
+    def load_staff_notifications
+      return unless current_hotel && current_user
+
+      scope = current_user.staff_notifications.where(hotel: current_hotel).active
+      @staff_notifications = scope.recent.limit(10)
+      @staff_notifications_unread_count = scope.unread.count
+    end
 
     # Pricing a stay by hand is its own privilege, separate from taking the
     # booking. Both the creation sheet and the on-demand room row render the

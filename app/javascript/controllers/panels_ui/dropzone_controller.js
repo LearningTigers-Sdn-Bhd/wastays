@@ -30,8 +30,10 @@ export default class extends Controller {
   }
 
   select(event) {
-    if (this.disabled) return
+    if (this.disabled || this.notifying) return
 
+    // The native change event already tells outside controllers that files
+    // arrived, so this path must not announce the selection again.
     const incoming = Array.from(event.currentTarget.files || [])
     this.acceptFiles(incoming, { replace: !this.multipleValue })
   }
@@ -76,7 +78,9 @@ export default class extends Controller {
     if (this.disabled) return
     this.dragDepth = 0
     this.restoreSurfaceState()
-    this.acceptFiles(Array.from(event.dataTransfer.files || []), { replace: !this.multipleValue })
+    // Dropped files never fire a native change event, so announce them here to
+    // keep drag and drop identical to the Browse button.
+    this.acceptFiles(Array.from(event.dataTransfer.files || []), { replace: !this.multipleValue, notify: true })
   }
 
   remove(event) {
@@ -127,7 +131,7 @@ export default class extends Controller {
     })
   }
 
-  acceptFiles(files, { replace }) {
+  acceptFiles(files, { replace, notify = false }) {
     this.clearError()
 
     const errors = []
@@ -161,7 +165,7 @@ export default class extends Controller {
 
     this.selectedFiles = this.multipleValue ? [...base, ...valid] : valid.slice(0, 1)
     if (this.selectedFiles.length > 0) this.setRemovalPending(false, { notify: false })
-    this.syncInput()
+    this.syncInput({ notify: notify && this.selectedFiles.length > 0 })
     this.render()
     if (errors.length > 0) this.showError(errors.join(" "))
   }
@@ -244,10 +248,22 @@ export default class extends Controller {
     if (notify) this.removeInputTarget.dispatchEvent(new Event("input", { bubbles: true }))
   }
 
-  syncInput() {
+  syncInput({ notify = false } = {}) {
     const transfer = new DataTransfer()
     this.selectedFiles.forEach((file) => transfer.items.add(file))
     this.inputTarget.files = transfer.files
+    if (notify) this.notifyChange()
+  }
+
+  notifyChange() {
+    // Assigning input.files does not fire a change event. Without this, outside
+    // controllers see the Browse button but miss every dropped file.
+    this.notifying = true
+    try {
+      this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
+    } finally {
+      this.notifying = false
+    }
   }
 
   matchesAccept(file) {

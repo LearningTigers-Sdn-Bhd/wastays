@@ -7,8 +7,14 @@
            icon: "megaphone",
            label: "Announcements",
            empty_message: "There are no announcements right now." %>
-<%= render "shared/navigation/navbar_layer_button",
-           id: "notifications",
-           icon: "bell",
-           label: "Notifications",
-           empty_message: "You have no notifications right now." %>
+<% if controller_path.start_with?("hotel_portal/") && current_hotel %>
+  <%= render "shared/navigation/navbar_notification_button",
+             notifications: @staff_notifications || [],
+             unread_count: @staff_notifications_unread_count.to_i %>
+<% else %>
+  <%= render "shared/navigation/navbar_layer_button",
+             id: "notifications",
+             icon: "bell",
+             label: "Notifications",
+             empty_message: "You have no notifications right now." %>
+<% end %>

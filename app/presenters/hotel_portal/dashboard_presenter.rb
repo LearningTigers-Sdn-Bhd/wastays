@@ -64,6 +64,22 @@ module HotelPortal
       "#{ActionController::Base.helpers.pluralize(count, 'guest')} pending review."
     end
 
+    def night_audit_alert(night_audit)
+      return unless night_audit
+
+      failed = night_audit.failed?
+      date = night_audit.business_date.strftime("%d %b %Y")
+      blocker_count = night_audit.blocked_details.to_h.values.sum { |items| Array(items).size }
+      blocker_message = "#{ActionController::Base.helpers.pluralize(blocker_count, 'item')} #{blocker_count == 1 ? 'needs' : 'need'} attention"
+      {
+        tone: :destructive,
+        title: failed ? "Night Audit did not finish" : "Night Audit needs attention",
+        message: failed ?
+          "A processing error stopped Night Audit for #{date}. The business date did not change." :
+          "Night Audit found #{blocker_message} for #{date}. The business date did not change."
+      }
+    end
+
     private
 
     def occupancy_percent_text_class(percent)

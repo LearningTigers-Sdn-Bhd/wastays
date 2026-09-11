@@ -1,0 +1,46 @@
+<%= render PanelsUI::Tooltip.new(text: "Notifications", placement: :bottom) do %>
+  <%= render PanelsUI::Popover.new(id: "notifications", placement: :bottom_end, offset: 8, class: "w-80") do |popover| %>
+    <% popover.with_trigger(
+         unstyled: true,
+         aria_label: unread_count.positive? ? "Notifications, #{unread_count} unread" : "Notifications",
+         class: "panel-navbar__action panel-navbar__action--icon"
+       ) do %>
+      <span class="relative inline-flex">
+        <%= cached_icon "bell", class: "size-4" %>
+        <% if unread_count.positive? %>
+          <span class="absolute -right-2 -top-2 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-xs font-semibold leading-4 text-destructive-foreground" aria-hidden="true">
+            <%= unread_count > 99 ? "99+" : unread_count %>
+          </span>
+        <% end %>
+      </span>
+    <% end %>
+
+    <div class="text-left">
+      <p class="text-sm font-semibold text-foreground">Notifications</p>
+      <% if notifications.any? %>
+        <div class="mt-2 divide-y divide-border">
+          <% notifications.each do |notification| %>
+            <%= link_to hotel_staff_notification_path(current_hotel, notification),
+                  data: { turbo_method: :patch },
+                  class: "block py-3 first:pt-1 last:pb-1" do %>
+              <span class="flex items-start gap-2">
+                <span class="mt-1.5 size-2 shrink-0 rounded-full <%= notification.read? ? 'bg-muted' : 'bg-primary' %>" aria-hidden="true"></span>
+                <%= cached_icon(
+                      notification.severity == "critical" ? "circle-alert" : "triangle-alert",
+                      class: "mt-0.5 size-4 shrink-0 #{notification.severity == 'critical' ? 'text-destructive' : 'text-warning'}",
+                      aria: { hidden: true }) %>
+                <span class="min-w-0">
+                  <span class="block text-sm font-medium text-foreground"><%= notification.title %></span>
+                  <span class="mt-0.5 block text-xs text-muted-foreground"><%= notification.message %></span>
+                  <span class="mt-1 block text-xs text-muted-foreground"><%= time_ago_in_words(notification.created_at) %> ago</span>
+                </span>
+              </span>
+            <% end %>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="mt-2 text-xs text-muted-foreground">You have no notifications right now.</p>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
