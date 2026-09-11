@@ -162,6 +162,38 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     expect(hotel.reload.photos.count).to eq(1)
   end
 
+  it 'queues a dropped hotel album photo the same way as the Browse button' do
+    visit hotel_album_path(hotel)
+
+    arm_transition_wait("#hotel-photo-upload-sheet", property: "translate")
+    click_button 'Upload Photos'
+    expect(page).to have_css("dialog#hotel-photo-upload-sheet[open][data-panels-open]")
+    wait_for_transition_end("#hotel-photo-upload-sheet")
+
+    encoded = Base64.strict_encode64(Rails.root.join('spec/fixtures/files/sample_image.jpg').binread)
+
+    # Files assigned by drag and drop never fire a native change event, so the
+    # drop must announce them itself or the queue stays empty.
+    page.execute_script(<<~JS, encoded)
+      const bytes = Uint8Array.from(atob(arguments[0]), (character) => character.charCodeAt(0))
+      const transfer = new DataTransfer()
+      transfer.items.add(new File([bytes], "dropped_photo.jpg", { type: "image/jpeg" }))
+
+      const event = new Event("drop", { bubbles: true, cancelable: true })
+      Object.defineProperty(event, "dataTransfer", { value: transfer })
+      document.querySelector("dialog#hotel-photo-upload-sheet .panel-dropzone").dispatchEvent(event)
+    JS
+
+    expect(page).to have_css("[data-hotel-photo-queue-target='queueList'] [data-signed-id]", text: 'dropped_photo.jpg')
+    expect(page).to have_css("[data-hotel-photo-queue-target='counterText']", text: '1 queued')
+    expect(page).to have_no_css('.panel-dropzone .panel-attachment[data-file-key]')
+
+    click_in_overlay 'Confirm Upload'
+
+    expect(page).to have_css("[aria-label='Published hotel photos'] .panel-attachment", text: 'dropped_photo.jpg')
+    expect(hotel.reload.photos.count).to eq(1)
+  end
+
   it 'uses a destructive alert dialog and removes a published photo live' do
     hotel.photos.attach(
       io: StringIO.new('published-photo'),

@@ -47,4 +47,40 @@ RSpec.describe 'Room Setup', type: :system do
     expect(page).to have_current_path(hotel_dashboard_path(hotel))
     expect(page).to have_content('Rates & Inventory')
   end
+
+  it 'attaches a room category photo from drag and drop, same as the Browse button' do
+    room_type = create(:room_type, hotel: hotel, name: 'Twin Room')
+
+    visit hotel_room_types_path(hotel)
+    find("button[aria-label='Actions for Twin Room']").click
+    click_link 'Edit details'
+
+    expect(page).to have_css('dialog#edit-room-category-sheet[open]')
+    expect(page).to have_css('#room-category-photos-heading')
+
+    # Drag and drop assigns input.files directly, so this guards the staged file
+    # against any change in how the dropzone announces a selection.
+    encoded = Base64.strict_encode64(Rails.root.join('spec/fixtures/files/sample_image.jpg').binread)
+    page.execute_script(<<~JS, encoded)
+      const bytes = Uint8Array.from(atob(arguments[0]), (character) => character.charCodeAt(0))
+      const transfer = new DataTransfer()
+      transfer.items.add(new File([bytes], "dropped_room.jpg", { type: "image/jpeg" }))
+
+      const event = new Event("drop", { bubbles: true, cancelable: true })
+      Object.defineProperty(event, "dataTransfer", { value: transfer })
+      document.querySelector("dialog#edit-room-category-sheet .panel-dropzone").dispatchEvent(event)
+    JS
+
+    expect(page).to have_css('.panel-attachment[data-file-key]', text: 'dropped_room.jpg', count: 1)
+
+    # The Browse button adds to the same selection instead of replacing it.
+    attach_file 'room_type_photos', Rails.root.join('public/icon.png'), make_visible: true
+    expect(page).to have_css('.panel-attachment[data-file-key]', count: 2)
+
+    click_button 'Save Changes'
+
+    expect(page).to have_content('Room category updated successfully.')
+    expect(room_type.reload.photos.map { |photo| photo.filename.to_s })
+      .to match_array(%w[dropped_room.jpg icon.png])
+  end
 end
