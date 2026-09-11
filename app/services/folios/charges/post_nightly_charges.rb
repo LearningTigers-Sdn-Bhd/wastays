@@ -6,23 +6,29 @@ module Folios
       include NightlyChargeCalculation
       Result = Struct.new(:posted, :skipped, :failed, keyword_init: true)
 
-      def self.call(night_audit:, user:, options: {})
-        new(night_audit: night_audit, user: user, options: options).call
+      def self.call(night_audit:, user:, options: {}, skip_booking_ids: nil)
+        new(night_audit: night_audit, user: user, options: options, skip_booking_ids: skip_booking_ids).call
       end
 
-      def initialize(night_audit:, user:, options: {})
+      def initialize(night_audit:, user:, options: {}, skip_booking_ids: nil)
         @night_audit = night_audit
         @hotel = night_audit.hotel
         @business_date = night_audit.business_date.to_date
         @user = user
         @options = options
+        @skip_booking_ids = Array(skip_booking_ids).map(&:to_i).to_set
         @posted = []
         @skipped = []
         @failed = []
       end
 
       def call
-        bookings_to_post.each do |booking|
+        nightly_candidates.each do |booking|
+          if @skip_booking_ids.include?(booking.id)
+            record_skipped(item_for(booking, "booking:#{booking.id}", reason: "Booking has an unresolved Night Audit blocker"))
+            next
+          end
+
           unless booking.booking_folio
             record_skipped(item_for(booking, "booking:#{booking.id}", reason: "Booking has no folio"))
             next
@@ -44,8 +50,8 @@ module Folios
 
       private
 
-      def bookings_to_post
-        @bookings_to_post ||= @hotel.bookings
+      def nightly_candidates
+        @nightly_candidates ||= @hotel.bookings
           .includes(:booking_rooms, :booking_folio)
           .in_house
           .occupying_night_on(@business_date, @hotel.hotel_time_zone)

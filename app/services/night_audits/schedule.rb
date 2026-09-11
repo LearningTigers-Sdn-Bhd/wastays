@@ -37,7 +37,10 @@ module NightAudits
       end
 
       audit, evaluation, should_enqueue = schedule_under_lock
-      return Result.new(night_audit: audit, evaluation: evaluation, enqueued: false, error: nil) unless should_enqueue
+      unless should_enqueue
+        NightAudits::PublishStaffNotification.call(night_audit: audit) if evaluation && blocked?(evaluation)
+        return Result.new(night_audit: audit, evaluation: evaluation, enqueued: false, error: nil)
+      end
 
       NightAudits::RunJob.perform_later(
         audit.id,
@@ -68,9 +71,9 @@ module NightAudits
         return [ audit, nil, false ] if audit&.running? || audit&.pending? || audit&.completed?
         return [ audit, nil, false ] if scheduled_takeover_of_manual_review?(audit)
 
-        phase = audit&.blocked? ? :post_close : :pre_close
+        phase = audit&.status.in?(%w[blocked failed]) ? :post_close : :pre_close
         evaluation = NightAudits::Evaluate.new(hotel: @hotel, business_date: @business_date, phase: phase).call
-        if blocked?(evaluation) && !@force_roll
+        if pause_for_blockers?(audit, evaluation)
           audit = persist_not_ready(audit, evaluation)
           return [ audit, evaluation, false ]
         end
@@ -131,6 +134,13 @@ module NightAudits
 
     def blocked?(evaluation)
       evaluation[:blocked_details].values.flatten.any?
+    end
+
+    def pause_for_blockers?(audit, evaluation)
+      return false unless blocked?(evaluation) && !@force_roll
+      return true unless @trigger_mode == "scheduled"
+
+      audit&.blocked? || audit&.failed?
     end
 
     def scheduled_takeover_of_manual_review?(audit)

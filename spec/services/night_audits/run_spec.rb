@@ -241,6 +241,107 @@ RSpec.describe NightAudits::Run do
     expect(result.night_audit.performed_by_user).to be_nil
   end
 
+  it "posts safe nightly charges and blocks the date during a scheduled run with preliminary blockers" do
+    safe_booking = create(
+      :booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 2.days,
+      checked_in_at: business_date.beginning_of_day
+    )
+    create(:booking_room, booking: safe_booking, subtotal: 120.0)
+    safe_folio = create(:booking_folio, hotel: hotel, booking: safe_booking)
+
+    blocked_booking = create(
+      :booking,
+      hotel: hotel,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 2.days,
+      checked_in_at: business_date.beginning_of_day
+    )
+    create(:booking_room, booking: blocked_booking, subtotal: 90.0)
+
+    result = described_class.new(
+      hotel: hotel,
+      business_date: business_date,
+      performed_by_user: nil,
+      trigger_mode: "scheduled"
+    ).call
+
+    expect(result.success?).to be(false)
+    expect(result.night_audit).to be_blocked
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date)).to be_audit_blocked
+    expect(hotel.hotel_business_dates.find_by(business_date: business_date + 1.day)).to be_nil
+    expect(safe_folio.folio_transactions.where("metadata->>'posting_source' = ?", "night_audit")).to exist
+    expect(result.night_audit.summary.dig("run_results", "skipped_items", "items")).to include(
+      include("booking_id" => blocked_booking.id, "reason" => "Booking has an unresolved Night Audit blocker")
+    )
+    expect(Financials::CreateJournalBatch).not_to have_received(:call)
+  end
+
+  it "retries the same scheduled audit after resolution without duplicating safe nightly charges" do
+    allow(user).to receive(:has_permission?).with("manage_night_audit", hotel:).and_return(true)
+
+    safe_booking = create(
+      :booking,
+      hotel:,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 2.days,
+      checked_in_at: business_date.beginning_of_day
+    )
+    create(:booking_room, booking: safe_booking, subtotal: 120.0)
+    safe_folio = create(:booking_folio, hotel:, booking: safe_booking)
+
+    blocked_booking = create(
+      :booking,
+      hotel:,
+      status: "checked_in",
+      check_in: business_date,
+      check_out: business_date + 2.days,
+      checked_in_at: business_date.beginning_of_day
+    )
+    create(:booking_room, booking: blocked_booking, subtotal: 90.0)
+
+    first_result = described_class.new(
+      hotel:,
+      business_date:,
+      performed_by_user: nil,
+      trigger_mode: "scheduled"
+    ).call
+    safe_charge_count = safe_folio.folio_transactions.where("metadata->>'posting_source' = ?", "night_audit").count
+
+    folio_resolution = NightAudits::ResolveMissingFolio.call(
+      night_audit: first_result.night_audit,
+      booking: blocked_booking,
+      actor: user,
+      reason: "Restore the missing folio."
+    )
+    charge_resolution = NightAudits::ResolveMissingNightlyCharges.call(
+      night_audit: first_result.night_audit,
+      booking: blocked_booking,
+      actor: user,
+      reason: "Post the missing nightly charge."
+    )
+
+    retry_result = described_class.new(
+      hotel:,
+      business_date:,
+      performed_by_user: nil,
+      trigger_mode: "scheduled"
+    ).call
+
+    expect(folio_resolution).to be_success
+    expect(charge_resolution).to be_success
+    expect(retry_result).to be_success
+    expect(retry_result.night_audit.id).to eq(first_result.night_audit.id)
+    expect(retry_result.night_audit).to be_completed
+    expect(safe_folio.folio_transactions.where("metadata->>'posting_source' = ?", "night_audit").count).to eq(safe_charge_count)
+    expect(hotel.hotel_business_dates.find_by!(business_date: business_date + 1.day)).to be_open
+  end
+
   it "rejects rerun when the audit is already completed" do
     create(:night_audit, hotel: hotel, business_date: business_date, status: "completed")
 

@@ -115,6 +115,7 @@ class Hotel < ApplicationRecord
   has_many :room_blocks, dependent: :destroy
   has_many :notification_configs, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  has_many :staff_notifications, dependent: :destroy
   has_many :channel_derived_settings, dependent: :destroy
   has_many :channel_availability_rules, dependent: :destroy
 

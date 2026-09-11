@@ -640,6 +640,7 @@ Rails.application.routes.draw do
       post :force_close
     end
     resources :night_audits, only: [ :index, :show ]
+    resources :staff_notifications, only: [ :update ]
     resources :inventory_dashboards, only: [ :index ], path: "inventory" do
       collection do
         get :occupancy_details

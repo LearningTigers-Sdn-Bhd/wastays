@@ -69,6 +69,8 @@ module NightAudits
           safe_record_event("business_date_audit_blocked", "Business date moved to audit_blocked", blockers: blocked_details)
         end
 
+        NightAudits::PublishStaffNotification.call(night_audit: @night_audit)
+
         Result.new(business_date: @business_date, next_business_date: next_business_date)
       end
 
