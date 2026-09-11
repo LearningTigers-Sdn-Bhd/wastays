@@ -42,7 +42,7 @@ module HotelPortal
       authorize @hotel, :update?
 
       photo = @hotel.photos.attachments.find(params[:photo_id])
-      clear_featured_photo_if_needed(photo.id)
+      @hotel.promote_featured_photo_before_removing(photo.id)
       photo.purge
 
       respond_to do |format|
@@ -84,7 +84,7 @@ module HotelPortal
         return
       end
 
-      clear_featured_photo_if_needed(photos.pluck(:id))
+      @hotel.promote_featured_photo_before_removing(photos.pluck(:id))
       photos.each(&:purge)
 
       redirect_to hotel_album_path(@hotel), notice: "Selected hotel photos removed successfully."
@@ -220,21 +220,6 @@ module HotelPortal
       else
         hotel_album_path(@hotel)
       end
-    end
-
-    # Removing the featured photo does not leave the property without one. The
-    # remaining photos promote their own replacement, so "has photos" and "has a
-    # featured photo" never come apart — which is what lets the photos setup step
-    # ask only for a photo. Callers purge after this runs, so the promoted
-    # attachment is chosen from what will still be there.
-    def clear_featured_photo_if_needed(photo_ids)
-      return unless @hotel.featured_photo_attachment_id.present?
-
-      removed_ids = Array(photo_ids).map(&:to_i)
-      return unless removed_ids.include?(@hotel.featured_photo_attachment_id.to_i)
-
-      successor = @hotel.photos.attachments.where.not(id: removed_ids).order(:id).first
-      @hotel.update_column(:featured_photo_attachment_id, successor&.id)
     end
   end
 end

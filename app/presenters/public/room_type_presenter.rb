@@ -182,7 +182,7 @@ module Public
         description: description,
         max_adults: max_adults,
         max_children: max_children,
-        photos: photos.map { |p| @view_context.url_for(p) },
+        photos: ordered_photo_attachments.map { |p| @view_context.url_for(p) },
         room_amenities: amenities.map { |id|
           amenity = Hotel::ROOM_AMENITIES_MAP[id]
           next nil unless amenity
@@ -196,8 +196,10 @@ module Public
       }.to_json
     end
 
+    # The cover the category chose, not the photo that happened to upload first.
     def photo_url
-      photos.attached? ? @view_context.url_for(photos.first) : nil
+      cover = ordered_photo_attachments.first
+      cover.present? ? @view_context.url_for(cover) : nil
     end
 
     private

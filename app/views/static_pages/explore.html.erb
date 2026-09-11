@@ -93,8 +93,8 @@
                   <%= image_tag hotel.featured_photo_attachment, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" %>
                 <% elsif hotel.photos.attached? %>
                   <%= image_tag hotel.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" %>
-                <% elsif hotel.room_types.first&.photos&.attached? %>
-                  <%= image_tag hotel.room_types.first.photos.first, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" %>
+                <% elsif (room_cover = hotel.room_types.first&.ordered_photo_attachments&.first).present? %>
+                  <%= image_tag room_cover, class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" %>
                 <% else %>
                   <div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
                     <svg class="w-12 h-12 text-primary/20" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"/></svg>

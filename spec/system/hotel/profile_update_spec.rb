@@ -300,7 +300,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
   # pointer lands on, which is what decides the insert side.
   def drag_album_photo(photo_id, onto:, before:)
     page.execute_script(<<~JS, photo_id.to_s, onto.to_s, before)
-      const grid = document.querySelector("[data-hotel-photo-reorder-target='grid']")
+      const grid = document.querySelector("[data-photo-reorder-target='grid']")
       const dragged = grid.querySelector(`[data-photo-id="${arguments[0]}"]`)
       const target = grid.querySelector(`[data-photo-id="${arguments[1]}"]`)
       const rect = target.getBoundingClientRect()
@@ -321,7 +321,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
   end
 
   def album_photo_ids
-    page.all("[data-hotel-photo-reorder-target='grid'] [data-photo-id]", visible: :all)
+    page.all("[data-photo-reorder-target='grid'] [data-photo-id]", visible: :all)
         .map { |tile| tile['data-photo-id'].to_i }
   end
 end
