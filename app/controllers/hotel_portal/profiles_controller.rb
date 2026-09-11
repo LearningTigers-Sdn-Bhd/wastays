@@ -127,6 +127,28 @@ module HotelPortal
       end
     end
 
+    # The album grid stages its new order in the browser and saves it in one
+    # request, so a drag never writes to the database on its own.
+    def reorder_photos
+      authorize @hotel, :update?
+
+      @hotel.reorder_photos!(params[:ordered_ids].to_s.split(","))
+
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: [
+            turbo_stream.replace(
+              "hotel-published-photos",
+              partial: "hotel_portal/profiles/published_photos",
+              locals: { hotel: @hotel, return_to: params[:return_to] }
+            ),
+            toast_stream("Photo order saved successfully.", type: :success)
+          ]
+        end
+        format.html { redirect_to photo_return_path, notice: "Photo order saved successfully." }
+      end
+    end
+
     def enqueue_photo
       authorize @hotel, :update?
 

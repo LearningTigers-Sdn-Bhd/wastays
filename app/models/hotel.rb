@@ -598,12 +598,34 @@ class Hotel < ApplicationRecord
     photos.attachments.find_by(id: featured_photo_attachment_id)
   end
 
+  # The album order the property chose. The featured photo is pinned to the
+  # front and never appears in photo_order, so changing the featured photo
+  # cannot disturb the saved sequence. Photos uploaded after the last save have
+  # no saved position, so they follow the ordered ones by upload order.
   def ordered_photo_attachments
     attachments = photos.attachments.to_a
     featured = featured_photo_attachment
-    return attachments if featured.blank?
+    rest = attachments.reject { |attachment| attachment.id == featured&.id }
 
-    [ featured ] + attachments.reject { |attachment| attachment.id == featured.id }
+    positions = photo_order.each_with_index.to_h
+    rest = rest.sort_by { |attachment| [ positions[attachment.id] || Float::INFINITY, attachment.id ] }
+
+    featured.present? ? [ featured ] + rest : rest
+  end
+
+  # Stores the sequence of the photos behind the featured one. Unknown ids and
+  # the featured id are dropped, so a stale form cannot write a broken order.
+  def reorder_photos!(attachment_ids)
+    known_ids = photos.attachments.pluck(:id)
+    ordered = Array(attachment_ids).map(&:to_i)
+                                   .uniq
+                                   .select { |id| known_ids.include?(id) }
+                                   .reject { |id| id == featured_photo_attachment_id.to_i }
+
+    # Written straight to the column, the way the featured photo is. The album
+    # order is not something the property fills in, so an unrelated stale field
+    # must not be able to block it.
+    update_column(:photo_order, ordered)
   end
 
   def attach_photos_with_limit(photo_files)

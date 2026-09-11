@@ -244,4 +244,84 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     expect(page).to have_current_path(hotel_album_path(hotel))
     expect(hotel.reload.featured_photo_attachment_id).to eq(second_photo.id)
   end
+
+  it 'reorders the album by drag, arms Save and Cancel, and pins the featured photo' do
+    %w[first.jpg second.jpg third.jpg].each do |filename|
+      hotel.photos.attach(io: StringIO.new("published-#{filename}"), filename: filename, content_type: 'image/jpeg')
+    end
+    first_photo, second_photo, third_photo = hotel.photos.attachments.order(:id).to_a
+    hotel.update!(featured_photo_attachment_id: first_photo.id)
+
+    visit hotel_album_path(hotel)
+
+    expect(page).to have_button('Save Order', disabled: true)
+    expect(page).to have_no_button('Cancel')
+
+    drag_album_photo(third_photo.id, onto: second_photo.id, before: true)
+
+    expect(album_photo_ids).to eq([ first_photo.id, third_photo.id, second_photo.id ])
+    expect(page).to have_button('Save Order', disabled: false)
+    expect(page).to have_button('Cancel')
+
+    # Cancel puts the tiles back where they were and disarms the footer again.
+    click_button 'Cancel'
+    expect(album_photo_ids).to eq([ first_photo.id, second_photo.id, third_photo.id ])
+    expect(page).to have_button('Save Order', disabled: true)
+    expect(page).to have_no_button('Cancel')
+    expect(hotel.reload.photo_order).to eq([])
+
+    drag_album_photo(third_photo.id, onto: second_photo.id, before: true)
+    click_button 'Save Order'
+
+    expect(page).to have_css('.toast', text: 'Photo order saved successfully.')
+    expect(hotel.reload.photo_order).to eq([ third_photo.id, second_photo.id ])
+    expect(album_photo_ids).to eq([ first_photo.id, third_photo.id, second_photo.id ])
+    expect(page).to have_button('Save Order', disabled: true)
+  end
+
+  it 'refuses a move in front of the featured photo and says why' do
+    %w[first.jpg second.jpg].each do |filename|
+      hotel.photos.attach(io: StringIO.new("published-#{filename}"), filename: filename, content_type: 'image/jpeg')
+    end
+    first_photo, second_photo = hotel.photos.attachments.order(:id).to_a
+    hotel.update!(featured_photo_attachment_id: first_photo.id)
+
+    visit hotel_album_path(hotel)
+
+    drag_album_photo(second_photo.id, onto: first_photo.id, before: true)
+
+    expect(page).to have_css('.toast', text: 'The featured photo always stays first.')
+    expect(album_photo_ids).to eq([ first_photo.id, second_photo.id ])
+    expect(page).to have_button('Save Order', disabled: true)
+  end
+
+  # HTML5 drag events carry no coordinates a driver can synthesise, so the drag
+  # is played out event by event. `before` picks the half of the target tile the
+  # pointer lands on, which is what decides the insert side.
+  def drag_album_photo(photo_id, onto:, before:)
+    page.execute_script(<<~JS, photo_id.to_s, onto.to_s, before)
+      const grid = document.querySelector("[data-hotel-photo-reorder-target='grid']")
+      const dragged = grid.querySelector(`[data-photo-id="${arguments[0]}"]`)
+      const target = grid.querySelector(`[data-photo-id="${arguments[1]}"]`)
+      const rect = target.getBoundingClientRect()
+      const clientX = arguments[2] ? rect.left + rect.width * 0.25 : rect.left + rect.width * 0.75
+
+      const transfer = new DataTransfer()
+      const fire = (name, element, extra = {}) => {
+        const event = new Event(name, { bubbles: true, cancelable: true })
+        Object.defineProperty(event, "dataTransfer", { value: transfer })
+        Object.entries(extra).forEach(([key, value]) => Object.defineProperty(event, key, { value }))
+        element.dispatchEvent(event)
+      }
+
+      fire("dragstart", dragged)
+      fire("dragover", target, { clientX, clientY: rect.top + rect.height / 2 })
+      fire("drop", target)
+    JS
+  end
+
+  def album_photo_ids
+    page.all("[data-hotel-photo-reorder-target='grid'] [data-photo-id]", visible: :all)
+        .map { |tile| tile['data-photo-id'].to_i }
+  end
 end

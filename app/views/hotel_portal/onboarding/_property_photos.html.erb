@@ -2,7 +2,7 @@
   <section aria-labelledby="property-photos-summary-heading" class="space-y-4">
     <h2 id="property-photos-summary-heading" class="text-base font-semibold">Property photos</h2>
     <p class="text-sm text-muted-foreground"><%= pluralize(current_hotel.photos.count, "photo") %> uploaded.</p>
-    <%= render "hotel_portal/profiles/published_photos", hotel: current_hotel, return_to: "onboarding" %>
+    <%= render "hotel_portal/profiles/published_photos", hotel: current_hotel, return_to: "onboarding", reorderable: false %>
   </section>
 <% else %>
   <%# The shell owns the step heading, so this opens straight into the upload
@@ -26,7 +26,7 @@
         <% end %>
       </div>
     <% end %>
-    <%= render "hotel_portal/profiles/published_photos", hotel: current_hotel, return_to: "onboarding" %>
+    <%= render "hotel_portal/profiles/published_photos", hotel: current_hotel, return_to: "onboarding", reorderable: false %>
     <%= render "hotel_portal/profiles/photo_upload_sheet", hotel: current_hotel, queued_photo_items: @profile_presenter.queued_photo_items %>
   </section>
 <% end %>

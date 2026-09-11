@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_090001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1904,6 +1904,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_090000) do
     t.string "name"
     t.date "onboarding_end_date"
     t.date "onboarding_start_date"
+    t.bigint "photo_order", default: [], null: false, array: true
     t.bigint "plan_id"
     t.string "pre_suspension_status"
     t.string "preferred_channel_manager"

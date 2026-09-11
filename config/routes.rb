@@ -697,6 +697,7 @@ Rails.application.routes.draw do
         delete "hotel-details/photos/:photo_id", to: "profiles#destroy_photo", as: :profile_photo
         delete "hotel-details/photos", to: "profiles#destroy_photos", as: :profile_photos
         patch "hotel-details/photos/:photo_id/feature", to: "profiles#set_featured_photo", as: :profile_photo_feature
+        patch "hotel-details/photos/reorder", to: "profiles#reorder_photos", as: :reorder_profile_photos
         post "hotel-details/photo-queue", to: "profiles#enqueue_photo", as: :profile_photo_queue
         delete "hotel-details/photo-queue", to: "profiles#clear_photo_queue", as: :clear_profile_photo_queue
         delete "hotel-details/photo-queue/:signed_id", to: "profiles#remove_photo_from_queue", as: :profile_photo_queue_item
