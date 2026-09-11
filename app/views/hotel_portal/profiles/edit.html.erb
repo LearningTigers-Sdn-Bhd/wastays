@@ -1,8 +1,5 @@
 <%
   profile_presenter = @presenter
-  amenity_choices = Hotel::CATEGORIZED_HOTEL_AMENITIES.to_h do |category|
-    [category[:category], category[:items].map { |amenity| [amenity[:name], amenity[:id]] }]
-  end
 %>
 
 <div class="w-full space-y-6">
@@ -78,21 +75,30 @@
                  rows: 4,
                  placeholder: "Describe the property’s atmosphere, highlights, and guest experience.") %>
           <% end %>
-
-          <%= render PanelsUI::FormField.new(
-                form: form,
-                attribute: :amenities,
-                label: "Property Amenities",
-                hint: "Search and select the amenities available at this property.") do |field| %>
-            <% field.with_multi_select(
-                 amenity_choices,
-                 selected: @hotel.amenities,
-                 prompt: "Search amenities",
-                 empty_text: "No amenities found",
-                 all_selected_text: "All amenities selected") %>
-          <% end %>
         </div>
       <% end %>
+
+      <%# Amenities moved to Guest Content, where the selection sits beside the
+          guest details it drives. This is a link, not a field, so it gets its
+          own section: inside Hotel Information it read as something Save
+          writes. %>
+      <section id="property-amenities" class="lg:w-4/5" aria-labelledby="property-amenities-heading">
+        <%= render "section_header",
+                   section: "property-amenities",
+                   title: "Property Amenities",
+                   description: "The amenities this property provides. Manage them with their guest details in Guest Content." %>
+
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-muted-foreground">
+            <%= pluralize(@hotel.amenities.size, "amenity", plural: "amenities") %> selected
+          </p>
+          <%= render PanelsUI::Button.new(
+                label: "Manage amenities",
+                href: hotel_guest_amenities_path(@hotel),
+                variant: :secondary,
+                size: :sm) %>
+        </div>
+      </section>
 
       <%# Read-only: what WAStays charges this property, not something the
           property sets. It has no Save of its own because there is nothing here

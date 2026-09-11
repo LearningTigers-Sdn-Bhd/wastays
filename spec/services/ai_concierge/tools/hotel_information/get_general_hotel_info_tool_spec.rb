@@ -29,4 +29,27 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetGeneralHotelInfoTool do
     expect(result["summary_text"]).to include("5-star hotel")
     expect(result["summary_text"]).to include("10 Beach Road, Langkawi, Malaysia")
   end
+
+  it "uses selected amenity details in a specific answer" do
+    hotel = create(:hotel)
+    amenity = Amenity.hotel.find_by!(slug: "swimming_pool")
+    hotel.update!(amenities: [ amenity.slug ])
+    create(:hotel_amenity_detail, hotel: hotel, amenity: amenity, location: "Roof", opening_hours: "8 AM to 8 PM", fee_information: "Free")
+
+    result = described_class.new(hotel: hotel, query: "Where is the swimming pool?").call
+
+    answer = result.fetch("facts").first.fetch("text")
+    expect(answer).to include("Swimming Pool", "Location: Roof", "Hours: 8 AM to 8 PM", "Fees: Free")
+  end
+
+  it "reveals only Wi-Fi availability to anonymous chat" do
+    hotel = create(:hotel)
+    create(:hotel_wifi_network, hotel: hotel, ssid: "SecretSSID", password: "secret-password", connection_instructions: "Scan the lobby card")
+
+    result = described_class.new(hotel: hotel, query: "What is the Wi-Fi password?").call
+
+    answer = result.fetch("facts").first.fetch("text")
+    expect(answer).to include("Guest Wi-Fi is available", "after check-in")
+    expect(result.to_s).not_to include("SecretSSID", "secret-password", "Scan the lobby card")
+  end
 end

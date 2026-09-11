@@ -4,6 +4,7 @@ module HotelPortal
   class ArPaymentsController < FinancialsBaseController
     before_action :authorize_view_reports!
     before_action :authorize_manage_ar_payments!, only: %i[new create eligible_invoices]
+    before_action :append_page_breadcrumb, only: :new
 
     def index
       @presenter = HotelPortal::AccountsReceivable::PaymentRecordPresenter.new(hotel: current_hotel, params: params, request: request)
@@ -66,6 +67,12 @@ module HotelPortal
     end
 
     private
+
+    # The sidebar link matches the controller, so every action here would
+    # otherwise share the "Payment Record" crumb and title.
+    def append_page_breadcrumb
+      append_breadcrumb "Record Corporate Payment"
+    end
 
     def find_pending_submission
       current_hotel.ar_payment_submissions.pending.includes(ar_payment_submission_allocations: { ar_invoice: [ :hotel, :invoice, { booking_folio: :booking } ] }).find_by(id: params[:ar_payment_submission_id])

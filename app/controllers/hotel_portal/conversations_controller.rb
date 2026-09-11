@@ -19,6 +19,7 @@ module HotelPortal
     before_action :authorize_manage_concierge!
     before_action :set_conversations, only: %i[index show]
     before_action :set_conversation, only: [ :show, *WRITES ]
+    before_action :append_page_breadcrumb, only: :show
 
     rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
 
@@ -69,6 +70,13 @@ module HotelPortal
     end
 
     private
+
+    # The inbox and an open thread share one sidebar link, so the thread has to
+    # say whose it is. The presenter already answers that for the header above
+    # the messages, and this asks it the same question.
+    def append_page_breadcrumb
+      append_breadcrumb HotelPortal::ConversationPresenter.new(@conversation, view: view_context).display_name
+    end
 
     # One shape for every write: the card tells the reader what it can do next,
     # and the same words reach a browser that asked for HTML as a flash.

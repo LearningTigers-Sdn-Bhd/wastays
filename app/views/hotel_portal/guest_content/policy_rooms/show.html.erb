@@ -1,0 +1,85 @@
+<section id="room-limits" class="lg:w-[85%]" aria-labelledby="room-limits-heading">
+  <div>
+    <h2 id="room-limits-heading" class="text-base font-semibold text-foreground">Room Limits</h2>
+    <p class="mt-2 text-sm text-muted-foreground">Occupancy, smoking, and pets belong to the room type, and the booking engine enforces them. They are shown here so you can check them before you write the terms below.</p>
+  </div>
+
+  <% if @room_policies.any? %>
+    <div class="mt-5 hidden md:block">
+      <%= render PanelsUI::Table.new(
+            caption: "Room limits by room type",
+            density: :compact,
+            header_style: :sentence,
+            wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Room type</th>
+            <th scope="col">Adults</th>
+            <th scope="col">Children</th>
+            <th scope="col">Smoking</th>
+            <th scope="col">Pets</th>
+          </tr>
+        <% end %>
+
+        <% table.with_body do %>
+          <% @room_policies.rows.each do |row| %>
+            <tr>
+              <td class="font-medium text-foreground"><%= row.name %></td>
+              <td><%= row.max_adults || blank_value("Not set") %></td>
+              <td><%= row.max_children || blank_value("Not set") %></td>
+              <td><%= render PanelsUI::Badge.new(label: row.smoking_allowed ? "Allowed" : "Not allowed", variant: row.smoking_allowed ? :success : :neutral) %></td>
+              <td><%= render PanelsUI::Badge.new(label: row.pets_allowed ? "Allowed" : "Not allowed", variant: row.pets_allowed ? :success : :neutral) %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="mt-5 divide-y divide-border rounded-md border border-border bg-card md:hidden">
+      <% @room_policies.rows.each do |row| %>
+        <div class="px-4 py-3">
+          <p class="text-sm font-medium text-foreground"><%= row.name %></p>
+          <p class="mt-1 text-sm text-muted-foreground">
+            <%= row.max_adults || "?" %> adults, <%= row.max_children || "?" %> children
+          </p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <%= render PanelsUI::Badge.new(label: row.smoking_allowed ? "Smoking allowed" : "No smoking", variant: row.smoking_allowed ? :success : :neutral) %>
+            <%= render PanelsUI::Badge.new(label: row.pets_allowed ? "Pets allowed" : "No pets", variant: row.pets_allowed ? :success : :neutral) %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="mt-5">
+      <%= render PanelsUI::EmptyState.new(
+            title: "No room types yet",
+            description: "Add a room type before you write room terms.") do |empty| %>
+        <% empty.with_action do %>
+          <%= render PanelsUI::Button.new(label: "Room Inventory", as: :a, href: hotel_room_types_path(@hotel), variant: :primary, size: :sm) %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @room_policies.any? %>
+    <footer class="mt-5 flex justify-end">
+      <%= render PanelsUI::Button.new(label: "Room Inventory", as: :a, href: hotel_room_types_path(@hotel), variant: :secondary, size: :md) %>
+    </footer>
+  <% end %>
+</section>
+
+<%= render "hotel_portal/guest_content/policies/document_form",
+      document: policy_document,
+      url: hotel_policy_rooms_path(@hotel),
+      section: "room-terms",
+      title: "Room Terms",
+      description: "Write the room terms the table above cannot hold.",
+      hint: "Do not restate a limit from the table. Explain only what a number cannot say.",
+      placeholder: "For example, a child is a guest under 12 years old. A cot is free for one child under 3, on request.",
+      covers: [
+        "The age that counts as a child.",
+        "Cot and extra bed availability, and any charge.",
+        "Child meals, supervision, and identification.",
+        "Designated smoking areas, and the cleaning charge for smoking in a room.",
+        "Pet size and quantity limits, pet deposits, and restricted areas."
+      ] %>

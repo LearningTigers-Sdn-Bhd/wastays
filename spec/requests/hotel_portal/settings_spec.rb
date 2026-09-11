@@ -73,7 +73,6 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
     it "uses the shared heading for General settings pages" do
       {
         hotel_general_settings_path(hotel) => "General Settings",
-        hotel_ai_concierge_settings_path(hotel) => "AI Concierge",
         hotel_notification_settings_path(hotel) => "General Settings",
         hotel_banking_details_settings_path(hotel) => "Banking Details"
       }.each do |path, expected_heading|
@@ -82,6 +81,14 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
         expect(response).to have_http_status(:ok)
         expect(response.parsed_body.css("h1").map { |heading| heading.text.squish }).to eq([ expected_heading ])
       end
+    end
+
+    it "names the page and the property in the browser tab" do
+      get hotel_general_settings_path(hotel)
+
+      # The tab title reads the breadcrumb trail, so a page that the sidebar
+      # knows about needs nothing of its own to be named correctly.
+      expect(response.parsed_body.css("title").text).to eq("General | #{hotel.name}")
     end
 
     it "shows concierge QR entry when AI concierge page is enabled" do
@@ -164,28 +171,6 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(form.at_css("section button[type='submit']").text.squish).to eq("Save Banking Details")
     end
 
-    it "renders AI Concierge as a left-column field stack with Panels UI controls" do
-      get hotel_ai_concierge_settings_path(hotel)
-
-      document = response.parsed_body
-      form = document.at_css("form[action='#{hotel_ai_concierge_settings_path(hotel)}']")
-      section = form.at_css("section")
-
-      expect(form["class"]).to include("gap-y-10", "lg:grid-cols-2")
-      expect(form.css("section h2").map { |heading| heading.text.squish }).to eq([ "AI Concierge Configuration" ])
-      expect(section["class"].to_s).not_to include("lg:col-span-2")
-      expect(section.at_css(".space-y-4")).to be_present
-      expect(form.css("section.rounded-2xl, section.bg-card, section.shadow-sm")).to be_empty
-      switches = section.css(".panel-switch")
-      expect(switches.map { |node| node["data-variant"] }).to eq([ "card", "card" ])
-      expect(switches[0].at_css("input[name='hotel[guest_chat_enabled]']")).to be_present
-      expect(switches[1].at_css("input[name='hotel[ai_provider_enabled]']")).to be_present
-      expect(section.css(".panel-form-field").size).to eq(3)
-      expect(section.css(".panel-select-menu").size).to eq(2)
-      expect(section.at_css(".panel-input[name='hotel[ai_provider_key]']")).to be_present
-      expect(section.at_css("button[type='submit']").text.squish).to eq("Save AI Concierge Configuration")
-    end
-
     it "normalizes legacy 12-hour operation times for the Panels UI time pickers" do
       create(:property_policy, hotel: hotel, check_in_time: "2:00 PM", check_out_time: "11:00 AM")
 
@@ -237,7 +222,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(sidebar["data-sidebar-mode"]).to be_nil
       items = sidebar.css(".panel-sidebar__section-items > .panel-sidebar__item")
       expect(items.map { |item| item.at_css("[data-sidebar-presentation='expanded'] .panel-sidebar__label").text.squish }).to eq(
-        [ "General", "Property", "Commercial", "Finance", "Guest Content", "Team" ]
+        [ "General", "Property", "Guest Content", "Commercial", "Finance", "Team" ]
       )
       expect(sidebar.text).not_to include("Back to previous page")
 
@@ -758,46 +743,6 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       follow_redirect!
       expect(response.body).to include('Payment gateway credentials are managed by superadmin.')
       expect(hotel.payment_settings.find_by(gateway: 'razorpay')).to be_nil
-    end
-
-    it 'updates ai concierge tone and provider configuration' do
-      patch hotel_ai_concierge_settings_path(hotel), params: {
-        form_id: 'ai_configuration',
-        hotel: {
-          ai_provider_enabled: '1',
-          ai_concierge_tone: 'cheerful',
-          ai_provider_name: 'openai',
-          ai_provider_key: 'test-api-key'
-        }
-      }
-
-      expect(response).to redirect_to(hotel_ai_concierge_settings_path(hotel))
-      follow_redirect!
-      expect(response.body).to include('Settings updated successfully.')
-
-      hotel.reload
-      expect(hotel.ai_provider_enabled).to be(true)
-      expect(hotel.ai_concierge_tone).to eq('cheerful')
-      expect(hotel.ai_provider_name).to eq('openai')
-    end
-
-    it 'closes the guest chat without touching the ai provider' do
-      hotel.update!(ai_provider_enabled: true, ai_provider_name: 'openai', ai_provider_key: 'test-api-key')
-
-      patch hotel_ai_concierge_settings_path(hotel), params: {
-        form_id: 'ai_configuration',
-        hotel: {
-          guest_chat_enabled: '0',
-          ai_provider_enabled: '1',
-          ai_concierge_tone: 'basic',
-          ai_provider_name: 'openai',
-          ai_provider_key: 'test-api-key'
-        }
-      }
-
-      hotel.reload
-      expect(hotel.guest_chat_enabled).to be(false)
-      expect(hotel.ai_provider_enabled).to be(true)
     end
   end
 end

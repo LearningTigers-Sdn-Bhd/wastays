@@ -46,6 +46,9 @@ module HotelPortal
         )
         .find(params[:id])
       @presenter = HotelPortal::AccountsReceivable::ShowPresenter.new(invoice: @ar_invoice, hotel: current_hotel)
+      # The sidebar names the list. Only the invoice number tells one open
+      # invoice from another, in the crumb bar and in the browser tab.
+      append_breadcrumb @presenter.invoice_label
     end
 
     def pdf

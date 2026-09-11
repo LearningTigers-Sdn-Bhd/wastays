@@ -115,4 +115,39 @@ RSpec.describe HotelKnowledgeDocument, type: :model do
       expect(doc).not_to have_received(:broadcast_refresh_to)
     end
   end
+
+  # Indexed form fields arrive as a Hash keyed by position. A view that walked
+  # that Hash got [key, value] arrays and raised on pair["question"].
+  describe "#qa_pairs" do
+    let(:hotel) { create(:hotel) }
+
+    it "flattens a Hash keyed by position into a list" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "faq")
+      document.update_columns(metadata: {
+        "qa_pairs" => { "0" => { "question" => "Check-in?", "answer" => "3 PM." } }
+      })
+
+      expect(document.reload.qa_pairs).to eq([ { "question" => "Check-in?", "answer" => "3 PM." } ])
+    end
+
+    it "returns a list unchanged" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "faq")
+      document.update_columns(metadata: { "qa_pairs" => [ { "question" => "Wi-Fi?", "answer" => "Free." } ] })
+
+      expect(document.reload.qa_pairs).to eq([ { "question" => "Wi-Fi?", "answer" => "Free." } ])
+    end
+
+    it "returns nothing when the record holds no pairs" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "policy")
+
+      expect(document.qa_pairs).to eq([])
+    end
+
+    it "drops an entry that is not a pair" do
+      document = create(:hotel_knowledge_document, hotel: hotel, category: "faq")
+      document.update_columns(metadata: { "qa_pairs" => [ "junk", { "question" => "Q", "answer" => "A" } ] })
+
+      expect(document.reload.qa_pairs).to eq([ { "question" => "Q", "answer" => "A" } ])
+    end
+  end
 end

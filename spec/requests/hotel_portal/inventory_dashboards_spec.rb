@@ -274,6 +274,15 @@ RSpec.describe "HotelPortal::InventoryDashboards", type: :request do
       expect(page).to have_css("turbo-frame#inventory_selection_sheet", visible: :all)
     end
 
+    it "names the open tab in the browser tab and leaves the hidden subtab out" do
+      get hotel_inventory_index_path(hotel)
+
+      # The subtab crumb carries a value on every tab and only shows on two of
+      # them. The title has to follow what the reader can see, not the trail.
+      expect(response.parsed_body.css("title").text)
+        .to eq("Rates & Inventory · Rates & Availability | #{hotel.name}")
+    end
+
     it "renders validated tabs and nested breadcrumb labels" do
       get hotel_inventory_index_path(hotel), params: { tab: "advanced", subtab: "overrides" }
 

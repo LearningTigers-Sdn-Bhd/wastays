@@ -3,7 +3,10 @@ require "rails_helper"
 RSpec.describe "Hotel settings tabs", type: :system, js: true do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: "admin") }
-  let(:hotel) { create(:hotel, account: account, status: "setup") }
+  let(:plan) { create(:plan) }
+  let(:feature_group) { create(:feature_group) }
+  let(:ai_concierge_page_feature) { create(:feature, feature_group: feature_group, slug: "ai_concierge_page") }
+  let(:hotel) { create(:hotel, account: account, status: "setup", plan: plan) }
   let(:role) { create(:role, account: account, slug: "hotel_owner", name: "Hotel Owner") }
   let!(:manage_account_permission) do
     Permission.find_or_create_by!(slug: "manage_account") { |permission| permission.name = "Manage Account" }
@@ -19,6 +22,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     RolePermission.find_or_create_by!(role: role, permission: manage_profile_permission)
     UserRole.create!(user: user, role: role)
     UserHotelAccess.create!(user: user, hotel: hotel, role: role)
+    create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
 
     sign_in_through_ui(user)
   end
@@ -28,7 +32,7 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
 
     expect(page).to have_current_path(hotel_notification_settings_path(hotel))
     expect(page).to have_css("h2", text: "Communication & Notifications")
-    expect(page).to have_no_css("h2", text: "AI Concierge Configuration")
+    expect(page).to have_no_css("h2", text: "AI Concierge Settings")
     expect(page).to have_css("#hotel-breadcrumb", text: "Notifications")
 
     within(".breadcrumb-dropdown[data-controller~='panels-ui--dropdown-menu']") do
@@ -44,7 +48,10 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     visit hotel_ai_concierge_settings_path(hotel)
 
     expect(page).to have_current_path(hotel_ai_concierge_settings_path(hotel))
-    expect(page).to have_css("h2", text: "AI Concierge Configuration")
+    expect(page).to have_css("h2", text: "AI Concierge Settings")
+    within("[data-testid='guest-content-subtabs']") do
+      expect(page).to have_css("a[aria-current='page']", text: "Configuration")
+    end
     expect(page).to have_no_css("h2", text: "Communication & Notifications")
     expect(page).to have_css("#hotel-breadcrumb", text: "AI Concierge")
     expect(page).to have_css("#hotel-breadcrumb", text: "Guest Content")

@@ -2,30 +2,25 @@
 
 module HotelPortal
   module Reports
-    class CashierActivityExportTable
-      def initialize(report:, visible_columns:)
-        @report = report
-        @columns = CashierActivityColumns.selected(visible_columns)
+    # The export table of the cashier activity report.
+    module CashierActivityExportTable
+      module_function
+
+      def new(report:, visible_columns:)
+        rows = transactions(report).map { |transaction| row_for(report, transaction) }
+        ColumnExportTable.new(
+          records: rows,
+          columns: CashierActivityColumns,
+          visible_columns:,
+          values: method(:cell_values)
+        )
       end
 
-      attr_reader :columns
-
-      def headers = columns.flat_map(&:export_labels)
-      def pdf_headers = columns.map(&:pdf_label)
-      def excel_widths = columns.flat_map { |column| Array.new(column.export_labels.size, column.excel_width) }
-      def pdf_widths = columns.map(&:pdf_width)
-      def rows = transactions.map { |transaction| row_values(row_for(transaction), pdf: false) }
-      def pdf_rows = transactions.map { |transaction| row_values(row_for(transaction), pdf: true) }
-
-      def money_indexes
-        headers.each_index.select { |index| headers[index] == "Amount" }
+      def transactions(report)
+        report.transactions || Array(report.cash_transactions) + Array(report.non_cash_transactions)
       end
 
-      private
-
-      attr_reader :report
-
-      def row_for(transaction)
+      def row_for(report, transaction)
         DailyReportTransactionRow.new(
           transaction,
           settlement_mode: report.mode_by_transaction_id.fetch(transaction.id),
@@ -36,35 +31,34 @@ module HotelPortal
         )
       end
 
-      def transactions
-        report.transactions || Array(report.cash_transactions) + Array(report.non_cash_transactions)
-      end
-
-      def row_values(row, pdf:)
-        columns.flat_map do |column|
-          case column.key
-          when "date_time" then [ date_time(row, pdf:) ]
-          when "date" then [ row.posting_date.strftime("%d %b %Y") ]
-          when "time" then [ row.posted_at&.strftime("%H:%M") ]
-          when "reservation"
-            pdf ? [ [ "Booking #{row.booking_number}", "Confirmation #{row.confirmation_code}" ].join("\n") ] : [ row.booking_number, row.confirmation_code ]
-          when "booking_number" then [ row.booking_number ]
-          when "confirmation_code" then [ row.confirmation_code ]
-          when "guest_details" then pdf ? [ [ row.guest_name, "Room #{row.room_number}" ].join("\n") ] : [ row.guest_name, row.room_number ]
-          when "folio" then [ row.folio_number ]
-          when "invoice" then [ row.invoice_number ]
-          when "handling" then [ row.handling ]
-          when "payment_mode" then [ row.settlement_mode ]
-          when "stage" then [ row.section ]
-          when "received_by" then [ row.received_by ]
-          when "remarks" then [ row.description ]
-          when "currency" then [ row.currency ]
-          when "amount" then [ row.signed_amount ]
+      def cell_values(row, key, pdf)
+        case key
+        when "date_time" then date_time(row, pdf)
+        when "date" then row.posting_date.strftime("%d %b %Y")
+        when "time" then row.posted_at&.strftime("%H:%M")
+        when "reservation"
+          if pdf
+            [ "Booking #{row.booking_number}", "Confirmation #{row.confirmation_code}" ].join("\n")
+          else
+            [ row.booking_number, row.confirmation_code ]
           end
+        when "booking_number" then row.booking_number
+        when "confirmation_code" then row.confirmation_code
+        when "guest_details"
+          pdf ? [ row.guest_name, "Room #{row.room_number}" ].join("\n") : [ row.guest_name, row.room_number ]
+        when "folio" then row.folio_number
+        when "invoice" then row.invoice_number
+        when "handling" then row.handling
+        when "payment_mode" then row.settlement_mode
+        when "stage" then row.section
+        when "received_by" then row.received_by
+        when "remarks" then row.description
+        when "currency" then row.currency
+        when "amount" then row.signed_amount
         end
       end
 
-      def date_time(row, pdf:)
+      def date_time(row, pdf)
         return row.posting_date.strftime("%d %b %Y") unless row.posted_at
         return "#{row.posting_date.strftime('%d %b %Y')}\n#{row.posted_at.strftime('%H:%M')}" if pdf
 

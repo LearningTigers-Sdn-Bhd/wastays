@@ -7,9 +7,9 @@ module HotelPortal
     SETTINGS_GROUPS = {
       general: { label: "General", icon: "settings", permission: "manage_hotel_profile" },
       property: { label: "Property", icon: "building-2", permission: "manage_hotel_profile" },
+      guest_content: { label: "Guest Content", icon: "message-square", permission: "manage_hotel_profile" },
       commercial: { label: "Commercial", icon: "badge-dollar-sign", permission: "manage_hotel_profile", sidebar_menu: true },
       finance: { label: "Finance", icon: "landmark", permission: [ "manage_account", "manage_hotel_profile" ] },
-      guest_content: { label: "Guest Content", icon: "message-square", permission: "manage_hotel_profile" },
       team: { label: "Team", icon: "users", permission: "manage_users" }
     }.freeze
 
@@ -52,6 +52,79 @@ module HotelPortal
       hotel_settings_visible_sidebar_sections.first&.items&.first&.path
     end
 
+    GUEST_CONTENT_NAMESPACE = "hotel_portal/guest_content"
+
+    # Tabs key off the controller path, not the controller name. The path stays
+    # the same on index, show, new, edit, and on a validation error re-render.
+    def guest_content_page?(page)
+      controller_path == "#{GUEST_CONTENT_NAMESPACE}/#{page}"
+    end
+
+    def ai_concierge_page?
+      guest_content_page?("ai_concierge") || guest_content_page?("ai_healthchecks")
+    end
+
+    def hotel_information_page?
+      guest_content_page?("knowledge_general_infos") || guest_content_page?("arrival_departures") ||
+        guest_content_page?("transport_details")
+    end
+
+    def policies_page?
+      guest_content_page?("policy_reservations") || guest_content_page?("policy_rooms") ||
+        guest_content_page?("policy_payments") || guest_content_page?("policy_house_rules") ||
+        guest_content_page?("knowledge_policies")
+    end
+
+    def guest_content_subtab_section
+      if hotel_information_page?
+        {
+          title: "Hotel Information",
+          description: "Manage the property summary, stay instructions, travel details, and additional information shared with guests.",
+          aria_label: "Hotel information sections"
+        }
+      elsif policies_page?
+        {
+          title: "Policies",
+          description: "Keep hotel policies and house rules clear for staff and guests. A policy explains a rule. It never restates a number set elsewhere.",
+          aria_label: "Policy sections"
+        }
+      elsif ai_concierge_page?
+        {
+          title: "AI Concierge Settings",
+          description: "Set up how the concierge answers guests, and review the questions it could not answer.",
+          aria_label: "AI Concierge sections"
+        }
+      end
+    end
+
+    def guest_content_subtabs
+      if hotel_information_page?
+        return [
+          { key: "property-summary", label: "Property Summary", icon: "building-2", path: hotel_knowledge_general_infos_path(current_hotel), active: guest_content_page?("knowledge_general_infos") && action_name == "index" },
+          { key: "arrival-departure", label: "Arrival & Departure", icon: "arrow-right-left", path: hotel_guest_arrival_departure_path(current_hotel), active: guest_content_page?("arrival_departures") },
+          { key: "getting-around", label: "Getting Around", icon: "car-front", path: hotel_guest_transport_details_path(current_hotel), active: guest_content_page?("transport_details") },
+          { key: "additional-information", label: "Additional Information", icon: "file-text", path: hotel_knowledge_additional_information_path(current_hotel), active: guest_content_page?("knowledge_general_infos") && action_name != "index" }
+        ]
+      end
+
+      if policies_page?
+        return [
+          { key: "reservation", label: "Reservation", icon: "calendar-x", path: hotel_policy_reservations_path(current_hotel), active: guest_content_page?("policy_reservations") },
+          { key: "room", label: "Room", icon: "bed-double", path: hotel_policy_rooms_path(current_hotel), active: guest_content_page?("policy_rooms") },
+          { key: "payment", label: "Payment & Deposits", icon: "credit-card", path: hotel_policy_payments_path(current_hotel), active: guest_content_page?("policy_payments") },
+          { key: "house-rules", label: "House Rules", icon: "scroll-text", path: hotel_policy_house_rules_path(current_hotel), active: guest_content_page?("policy_house_rules") },
+          { key: "other", label: "Other Policies", icon: "files", path: hotel_knowledge_policies_path(current_hotel), active: guest_content_page?("knowledge_policies") }
+        ]
+      end
+
+      return [] unless ai_concierge_page?
+
+      [
+        { key: "configuration", label: "Configuration", icon: "sliders-horizontal", path: hotel_ai_concierge_settings_path(current_hotel), active: guest_content_page?("ai_concierge") },
+        { key: "healthcheck", label: "Healthcheck", icon: "activity", path: hotel_ai_healthchecks_path(current_hotel), active: guest_content_page?("ai_healthchecks") }
+      ]
+    end
+
     def settings_tabs_for_group(group)
       settings_navigation_groups.dig(group, :tabs) || []
     end
@@ -89,7 +162,8 @@ module HotelPortal
     private
 
     def settings_active_page
-      @presenter&.active_page || params[:settings_page].presence || "general"
+      presenter_page = @presenter.active_page if @presenter.respond_to?(:active_page)
+      presenter_page.presence || params[:settings_page].presence || "general"
     end
 
     def active_settings_group
@@ -151,12 +225,15 @@ module HotelPortal
         ].compact
       when :guest_content
         [
-          { key: "ai-concierge", label: "AI Concierge", path: hotel_ai_concierge_settings_path(current_hotel), icon: "sparkles", active: controller_name == "settings" && settings_active_page == "ai" },
-          { key: "policies", label: "Policies", path: hotel_knowledge_policies_path(current_hotel), icon: "file-text", active: controller_name == "knowledge_policies" },
-          { key: "faqs", label: "FAQs", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: controller_name == "knowledge_faqs" },
-          { key: "general-info", label: "General Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: controller_name == "knowledge_general_infos" },
-          { key: "knowledge-diagnostics", label: "Knowledge Diagnostics", path: hotel_knowledge_diagnostics_path(current_hotel), icon: "activity", active: controller_name == "knowledge_diagnostics" }
-        ]
+          { key: "overview", label: "Overview", path: hotel_guest_content_path(current_hotel), icon: "layout-dashboard", active: guest_content_page?("overview") },
+          { key: "hotel-info", label: "Hotel Info", path: hotel_knowledge_general_infos_path(current_hotel), icon: "info", active: hotel_information_page? },
+          { key: "policies", label: "Policies", path: hotel_policy_reservations_path(current_hotel), icon: "file-text", active: policies_page? },
+          { key: "faqs", label: "FAQs", path: hotel_knowledge_faqs_path(current_hotel), icon: "circle-question-mark", active: guest_content_page?("knowledge_faqs") },
+          { key: "amenities", label: "Amenities", path: hotel_guest_amenities_path(current_hotel), icon: "sparkles", active: guest_content_page?("amenities") },
+          { key: "wifi", label: "Wi-Fi", path: hotel_wifi_networks_path(current_hotel), icon: "wifi", active: guest_content_page?("wifi_networks") },
+          { key: "contact", label: "Contact & Escalation", path: hotel_guest_contact_path(current_hotel), icon: "phone", active: guest_content_page?("contacts") },
+          feature_enabled_for_hotel?("ai_concierge_page", current_hotel) ? { key: "ai-concierge", label: "AI Concierge", path: hotel_ai_concierge_settings_path(current_hotel), icon: "bot", active: ai_concierge_page? } : nil
+        ].compact
       when :team
         [
           { key: "staff-management", label: "Staff Management", path: hotel_users_path(current_hotel), icon: "users", active: controller_name.in?(%w[users staff_invitations]) },

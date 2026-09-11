@@ -71,6 +71,39 @@ RSpec.describe Concierge::RequestHumanAgent do
     expect(conversation.reload).not_to be_human_requested
   end
 
+  # The guest-facing line has to match who is actually on the desk.
+  describe "the line the guest reads" do
+    let(:hotel) { create(:hotel, time_zone: "Kuala Lumpur") }
+
+    def handover_body_at(clock)
+      travel_to Time.find_zone("Kuala Lumpur").parse(clock) do
+        described_class.new(conversation: conversation).call
+      end
+
+      conversation.messages.where(sender_role: "system").last.body
+    end
+
+    it "promises a person while the desk is open" do
+      create(:hotel_guest_contact, :with_hours, hotel: hotel)
+
+      expect(handover_body_at("2026-09-08 10:00")).to include("Someone will join shortly")
+    end
+
+    it "names the duty manager and the opening time after hours" do
+      create(:hotel_guest_contact, :with_hours, hotel: hotel, duty_manager_phone: "+60 12 987 6543")
+
+      body = handover_body_at("2026-09-08 03:00")
+
+      expect(body).to include("The front desk is closed.")
+      expect(body).to include("+60 12 987 6543")
+      expect(body).to include("7:00 AM")
+    end
+
+    it "keeps the standard line for a hotel that never filled the page" do
+      expect(handover_body_at("2026-09-08 03:00")).to include("Someone will join shortly")
+    end
+  end
+
   it "shrugs at a visitor with no thread at all" do
     expect { described_class.new(conversation: nil).call }.not_to raise_error
   end

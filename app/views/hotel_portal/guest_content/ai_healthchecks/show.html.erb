@@ -1,0 +1,96 @@
+<%= render layout: "hotel_portal/settings/action_sheet",
+           locals: {
+             id: "healthcheck-detail-sheet",
+             title: "Question detail",
+             description: "What the guest asked, what the concierge answered, and the knowledge it matched.",
+             form_id: "healthcheck-status-form",
+             submit_label: "Save status",
+             size: :xl
+           } do %>
+  <div class="space-y-6">
+    <% if @error.present? %>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "The status was not saved", role: :alert) do |alert| %>
+        <% alert.with_description { @error } %>
+      <% end %>
+    <% end %>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <%= healthcheck_status_badge(@diagnostic.diagnostic_status) %>
+      <%= healthcheck_answer_mode_badge(@diagnostic.answer_mode) %>
+      <%= healthcheck_category_badge(@diagnostic.suggested_category) %>
+      <span class="text-xs text-muted-foreground">
+        Logged <%= @diagnostic.created_at.strftime("%d %b %Y, %H:%M") %>
+      </span>
+    </div>
+
+    <%# The turn itself, drawn by the inbox renderer so it reads the same here
+        as it does in the conversation the guest actually had. %>
+    <section class="rounded-lg border border-border bg-card" aria-labelledby="healthcheck-turn-heading">
+      <div class="flex items-center gap-2 border-b border-border px-4 py-3">
+        <%= app_icon "messages-square", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+        <div>
+          <h3 id="healthcheck-turn-heading" class="text-sm font-semibold text-foreground">Conversation</h3>
+          <p class="text-xs text-muted-foreground">
+            <%= [ @diagnostic.intent, @diagnostic.topic ].compact_blank.join(" / ").presence || "No intent recorded" %>
+          </p>
+        </div>
+      </div>
+
+      <ol class="space-y-3 p-4" aria-label="Guest question and concierge answer">
+        <% healthcheck_transcript(@diagnostic).each_with_index do |message, index| %>
+          <%= render HotelPortal::Inbox::Message.new(message: message, id: "healthcheck-turn-#{index}") %>
+        <% end %>
+      </ol>
+    </section>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section>
+        <h3 class="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Knowledge matches</h3>
+        <% matches = Array(@diagnostic.knowledge_matches) %>
+        <% if matches.any? %>
+          <ul class="mt-2 space-y-3">
+            <% matches.first(3).each do |match| %>
+              <li class="rounded-md border border-border bg-muted/40 p-3">
+                <p class="text-xs font-bold text-foreground">
+                  <%= match["document_title"].presence || "Untitled" %> ·
+                  <%= match["category"].presence || "knowledge" %>
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">Distance: <%= match["distance"] || "Not recorded" %></p>
+                <p class="mt-2 line-clamp-4 text-sm text-foreground"><%= match["content"] %></p>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="mt-2 text-sm text-muted-foreground">No knowledge matches were captured.</p>
+        <% end %>
+      </section>
+
+      <div class="space-y-6">
+        <section>
+          <h3 class="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Search path</h3>
+          <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dt class="text-muted-foreground">Routed</dt>
+            <dd class="text-foreground"><%= @diagnostic.routed_categories.presence&.join(", ") || "None" %></dd>
+            <dt class="text-muted-foreground">Fallback</dt>
+            <dd class="text-foreground"><%= @diagnostic.fallback_categories.presence&.join(", ") || "None" %></dd>
+            <dt class="text-muted-foreground">Best distance</dt>
+            <dd class="text-foreground"><%= @diagnostic.best_distance || "Not recorded" %></dd>
+          </dl>
+        </section>
+
+        <%= form_with model: @diagnostic,
+                      url: hotel_ai_healthcheck_path(@hotel, @diagnostic),
+                      method: :patch,
+                      id: "healthcheck-status-form" do |form| %>
+          <%= render PanelsUI::RadioGroup.new(
+                form: form,
+                attribute: :diagnostic_status,
+                label: "Review status",
+                description: "Set where this question stands after you check the knowledge base.",
+                selected: @diagnostic.diagnostic_status,
+                options: HotelKnowledgeDiagnostic::STATUSES.map { |status| { label: status.humanize, value: status } }) %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

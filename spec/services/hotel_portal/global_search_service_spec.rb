@@ -99,8 +99,18 @@ RSpec.describe HotelPortal::GlobalSearchService do
 
     results = described_class.new(hotel, "").perform
 
-    expect(results).not_to include(hash_including(title: "Policies"))
-    expect(results).not_to include(hash_including(title: "FAQs"))
-    expect(results).not_to include(hash_including(title: "General Info"))
+    expect(results).not_to include(hash_including(title: "AI Concierge"))
+    expect(results).not_to include(hash_including(title: "AI Healthcheck"))
+  end
+
+  it "keeps the Guest Content pages that do not depend on the AI concierge" do
+    plan.plan_features.find_by!(feature: ai_concierge_page_feature).update!(enabled: false)
+
+    { "policies" => "Policies", "faqs" => "FAQs", "general info" => "Hotel Info",
+      "amenities" => "Amenities", "wifi" => "Wi-Fi" }.each do |query, title|
+      results = described_class.new(hotel, query).perform
+
+      expect(results).to include(hash_including(title: title)), "#{query} did not find #{title}"
+    end
   end
 end

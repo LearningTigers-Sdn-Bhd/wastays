@@ -1,0 +1,27 @@
+<%# Distance and travel time pair off, one row for each place a guest arrives
+    from. The written directions run the full width under them. %>
+<% [
+     [ :airport, "Airport" ],
+     [ :station, "Train station" ],
+     [ :city_centre, "City centre" ]
+   ].each do |prefix, label| %>
+  <fieldset class="grid gap-4 sm:grid-cols-2">
+    <legend class="mb-2 text-sm font-medium text-foreground"><%= label %></legend>
+
+    <%= render PanelsUI::FormField.new(form: form, attribute: :"#{prefix}_travel_minutes", label: "Travel time (minutes)") do |field| %>
+      <% field.with_input(type: :number, min: 0, step: 1, placeholder: "45") %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form: form, attribute: :"#{prefix}_distance_km", label: "Distance (km)") do |field| %>
+      <% field.with_input(type: :number, min: 0, step: 1, placeholder: "32") %>
+    <% end %>
+  </fieldset>
+<% end %>
+
+<%= render PanelsUI::FormField.new(
+      form: form,
+      attribute: :directions,
+      label: "Written directions",
+      hint: "Name the exit, the turn, and the entrance. A guest reads this while driving.") do |field| %>
+  <% field.with_text_area(rows: 5, placeholder: "For example, take exit 14 from the coastal highway. Turn left at the second traffic light. The entrance is on the right, after the petrol station.") %>
+<% end %>

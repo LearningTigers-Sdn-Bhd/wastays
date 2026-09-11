@@ -1,0 +1,115 @@
+<% content_for :title, "AI Concierge Healthcheck" %>
+
+<%= turbo_frame_tag "healthcheck_results", class: "block space-y-4" do %>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <%= render PanelsUI::MetricCard.new(
+          label: "Open", value: @summary_counts[:open].to_s,
+          icon: "circle-alert", tone: @summary_counts[:open].positive? ? :warning : :neutral,
+          detail: "Waiting for review") %>
+    <%= render PanelsUI::MetricCard.new(
+          label: "Unavailable or weak", value: @summary_counts[:weak].to_s,
+          icon: "search-x", tone: @summary_counts[:weak].positive? ? :destructive : :neutral,
+          detail: "The guest got a poor answer") %>
+    <%= render PanelsUI::MetricCard.new(
+          label: "Reviewed", value: @summary_counts[:reviewed].to_s,
+          icon: "eye", detail: "Read, not yet fixed") %>
+    <%= render PanelsUI::MetricCard.new(
+          label: "Resolved", value: @summary_counts[:resolved].to_s,
+          icon: "circle-check", tone: :success, detail: "Knowledge was added or corrected") %>
+  </div>
+
+  <section class="rounded-lg border border-border bg-card p-3" aria-label="Healthcheck time period">
+    <%= render "hotel_portal/reports/preset_report_actions",
+          form_url: hotel_ai_healthchecks_path(@hotel),
+          date_preset: @date_preset,
+          start_date: @start_date,
+          end_date: @end_date,
+          export_menu_id: "ai-healthcheck-export",
+          export_items: [],
+          show_export: false,
+          hidden_params: {
+            status: @status,
+            answer_mode: @answer_mode,
+            suggested_category: @suggested_category
+          }.compact_blank,
+          class_name: "flex w-full flex-col gap-2 sm:flex-row sm:items-end lg:w-auto" %>
+  </section>
+
+  <%= form_with url: hotel_ai_healthchecks_path(@hotel), method: :get,
+        data: { controller: "auto-submit", action: "change->auto-submit#submitNow" } do %>
+    <%= hidden_field_tag :date_preset, @date_preset %>
+    <%= hidden_field_tag :start_date, @start_date&.iso8601 %>
+    <%= hidden_field_tag :end_date, @end_date&.iso8601 %>
+
+    <%= render PanelsUI::Table.new(
+          caption: "AI Concierge questions that need attention, newest first",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          sticky_header: true,
+          wrapper_class: "max-h-[70dvh] overflow-auto rounded-lg border border-border bg-card") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Question</th>
+          <th scope="col">
+            <%= render "shared/column_filter",
+                  param_name: "answer_mode", title: "Answer mode",
+                  options: healthcheck_answer_mode_options, selected: @answer_mode %>
+          </th>
+          <th scope="col">
+            <%= render "shared/column_filter",
+                  param_name: "suggested_category", title: "Category",
+                  options: healthcheck_category_options, selected: @suggested_category %>
+          </th>
+          <th scope="col">Best match</th>
+          <th scope="col">
+            <%= render "shared/column_filter",
+                  param_name: "status", title: "Status",
+                  options: healthcheck_status_options, selected: @status %>
+          </th>
+          <th scope="col" class="text-end">Logged</th>
+        </tr>
+      <% end %>
+
+      <% table.with_body do %>
+        <% if @diagnostics.empty? %>
+          <tr>
+            <td colspan="6" class="py-10 text-center">
+              <%= render PanelsUI::EmptyState.new(
+                    icon: "activity",
+                    title: "No diagnostics found",
+                    description: "Weak or unanswered guest questions appear here. Widen the time period to see more.") %>
+            </td>
+          </tr>
+        <% else %>
+          <% @diagnostics.each do |diagnostic| %>
+            <% best_match = Array(diagnostic.knowledge_matches).first || {} %>
+            <tr>
+              <th scope="row" class="max-w-sm font-normal">
+                <%= link_to hotel_ai_healthcheck_path(@hotel, diagnostic),
+                      class: "block text-start hover:underline",
+                      data: { turbo_frame: "settings_action_sheet" } do %>
+                  <span class="line-clamp-2 text-sm font-semibold text-foreground"><%= diagnostic.question %></span>
+                  <span class="mt-1 block text-xs text-muted-foreground">
+                    <%= [ diagnostic.intent, diagnostic.topic ].compact_blank.join(" / ").presence || "No intent recorded" %>
+                  </span>
+                <% end %>
+              </th>
+              <td><%= healthcheck_answer_mode_badge(diagnostic.answer_mode) %></td>
+              <td><%= healthcheck_category_badge(diagnostic.suggested_category) %></td>
+              <td class="max-w-xs">
+                <span class="line-clamp-2 text-sm text-muted-foreground">
+                  <%= best_match["document_title"].presence || "No strong match" %>
+                </span>
+              </td>
+              <td><%= healthcheck_status_badge(diagnostic.diagnostic_status) %></td>
+              <td class="whitespace-nowrap text-end text-sm text-muted-foreground">
+                <%= diagnostic.created_at.strftime("%d %b %Y") %>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

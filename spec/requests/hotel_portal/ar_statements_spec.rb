@@ -66,6 +66,12 @@ RSpec.describe "HotelPortal::ArStatements", type: :request do
     expect(response.body).to include("query=Statement")
   end
 
+  it "names the account in the browser tab, not just the statement list" do
+    get hotel_ar_statement_path(hotel, relationship)
+
+    expect(response.parsed_body.css("title").text).to eq("Atlas Travel | #{hotel.name}")
+  end
+
   it "renders the default month-to-business-date statement and custom currency period" do
     create(:user, :corporate, account: relationship.corporate_account, email: "billing@atlas.test")
     create_invoice(relationship: relationship, amount: 250, issued_on: Date.new(2026, 6, 5), currency: "MYR")

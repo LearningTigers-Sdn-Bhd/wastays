@@ -1,0 +1,69 @@
+<%# Availability leads, because it decides whether the rest of the sheet means
+    anything. The numbers a guest asks for by number follow it. %>
+<%= render PanelsUI::FormField.new(
+      form: form,
+      attribute: :parking_availability,
+      label: "Parking availability",
+      required: true) do |field| %>
+  <% field.with_select_menu(
+       HotelTransportDetail::PARKING_AVAILABILITY_OPTIONS.map { |option|
+         { label: option[:label], value: option[:value], description: option[:description] }
+       }) %>
+<% end %>
+
+<div class="grid gap-4 sm:grid-cols-2">
+  <%= render PanelsUI::FormField.new(form: form, attribute: :parking_type, label: "Parking type") do |field| %>
+    <% field.with_select_menu(
+         [ { label: "Not set", value: "" } ] +
+           HotelTransportDetail::PARKING_TYPES.map { |option| { label: option[:label], value: option[:value] } }) %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :parking_spaces, label: "Spaces for guests") do |field| %>
+    <% field.with_input(type: :number, min: 0, step: 1, placeholder: "40") %>
+  <% end %>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-2">
+  <%= render PanelsUI::FormField.new(
+        form: form,
+        attribute: :parking_price,
+        label: "Price (#{@hotel.default_currency})") do |field| %>
+    <% field.with_input(type: :number, min: 0, step: "0.01", placeholder: "25.00") %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :parking_price_unit, label: "Charged per") do |field| %>
+    <% field.with_select_menu(
+         [ { label: "Not set", value: "" } ] +
+           HotelTransportDetail::PRICE_UNITS.map { |option| { label: option[:label], value: option[:value] } }) %>
+  <% end %>
+</div>
+
+<%= render PanelsUI::FormField.new(
+      form: form,
+      attribute: :parking_height_limit_m,
+      label: "Height limit (metres)",
+      hint: "A guest in a van reads this before arrival.") do |field| %>
+  <% field.with_input(type: :number, min: 0, step: "0.01", placeholder: "2.10") %>
+<% end %>
+
+<%= render PanelsUI::Switch.new(
+      form: form,
+      attribute: :parking_ev_charging,
+      variant: :card,
+      label: "EV charging is available",
+      description: "Turn this on when a guest can charge an electric car.") %>
+
+<%= render PanelsUI::Switch.new(
+      form: form,
+      attribute: :parking_booking_required,
+      variant: :card,
+      label: "Guests must book a space",
+      description: "Turn this on when parking is not first come, first served.") %>
+
+<%= render PanelsUI::FormField.new(
+      form: form,
+      attribute: :parking_notes,
+      label: "Guest notes",
+      hint: "The entrance, the level, and the barrier. Do not restate the price.") do |field| %>
+  <% field.with_text_area(rows: 4, placeholder: "For example, enter from Jalan Ampang. Guest parking is on level B2. Scan your key card at the barrier.") %>
+<% end %>

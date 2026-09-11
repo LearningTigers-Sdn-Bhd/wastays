@@ -1,0 +1,20 @@
+<tr data-table-group-row data-report-table-group-row data-slot="<%= group_slot %>" data-record-group="<%= group.key %>" data-group-count="<%= group.count %>">
+  <td class="w-10 text-center">
+    <%= render PanelsUI::Checkbox.new(
+          name: "select_booking_group_#{group.key}", id: "select-booking-group-#{group.key.parameterize}",
+          label: "Select all #{pluralize(group.count, 'booking')} in #{group.label}",
+          label_hidden: true, include_hidden: false,
+          checked: selection.group_fully_selected?(group.rows),
+          indeterminate: selection.group_partially_selected?(group.rows),
+          data: { group_selection: group.key }) %>
+  </td>
+  <th scope="rowgroup" colspan="<%= colspan %>" class="text-start text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <span><%= group.label %></span>
+    <span class="ms-2 font-normal normal-case tracking-normal"><%= pluralize(group.count, "booking") %></span>
+    <span class="float-end flex flex-wrap justify-end gap-x-3 font-normal normal-case tracking-normal">
+      <% group.currency_totals.each do |totals| %>
+        <span><%= totals.fetch(:currency) %> · Gross <%= format_number(totals.fetch(:gross), precision: 2) %> · Taxes <%= format_number(totals.fetch(:taxes), precision: 2) %> · Commission <%= format_number(totals.fetch(:commission), precision: 2) %> · Net <%= format_number(totals.fetch(:net), precision: 2) %></span>
+      <% end %>
+    </span>
+  </th>
+</tr>
