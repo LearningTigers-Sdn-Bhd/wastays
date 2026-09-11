@@ -9,6 +9,7 @@ module Concierge
 
     attr_accessor :booking, :guest_name, :guest_email, :guest_phone, :guest_country,
                   :guest_city, :guest_state_code, :guest_postal_code, :guest_address_country,
+                  :guest_tin,
                   :guest_document_type, :guest_government_id, :guest_passport_number,
                   :guest_date_of_birth, :guest_home_address, :signature
     attr_writer :id_front, :id_back
@@ -84,7 +85,7 @@ module Concierge
     def registration_keys
       %w[
         guest_name guest_email guest_phone guest_country guest_city guest_state_code
-        guest_postal_code guest_address_country guest_document_type guest_government_id guest_passport_number
+        guest_postal_code guest_address_country guest_tin guest_document_type guest_government_id guest_passport_number
         guest_date_of_birth guest_home_address
       ]
     end
@@ -99,6 +100,7 @@ module Concierge
         guest_state_code: resolved_state_code,
         guest_postal_code: guest_postal_code,
         guest_address_country: guest_address_country,
+        guest_tin: guest_tin,
         guest_document_type: guest_document_type,
         guest_government_id: guest_government_id,
         guest_passport_number: guest_passport_number,
@@ -132,6 +134,7 @@ module Concierge
         postal_code: booking.guest_postal_code,
         address_country: booking.guest_address_country,
         home_address: booking.guest_home_address,
+        tin: booking.guest_tin,
         country: booking.guest_country,
         document_type: booking.guest_document_type,
         date_of_birth: booking.guest_date_of_birth,

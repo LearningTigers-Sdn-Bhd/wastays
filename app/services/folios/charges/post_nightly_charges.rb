@@ -47,7 +47,7 @@ module Folios
       def bookings_to_post
         @bookings_to_post ||= @hotel.bookings
           .includes(:booking_rooms, :booking_folio)
-          .checked_in
+          .in_house
           .occupying_night_on(@business_date, @hotel.hotel_time_zone)
       end
 

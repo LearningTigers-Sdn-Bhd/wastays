@@ -11,6 +11,7 @@ class User < ApplicationRecord
   has_many :hotels, through: :active_user_hotel_accesses
   has_many :hotel_roles, through: :active_user_hotel_accesses, source: :role
   has_many :performed_night_audits, class_name: "NightAudit", foreign_key: :performed_by_user_id, dependent: :nullify
+  has_many :staff_notifications, foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient
   has_many :sent_staff_invitations, class_name: "StaffInvitation", foreign_key: :invited_by_user_id, dependent: :restrict_with_error
   has_many :sent_corporate_invitations, class_name: "CorporateInvitation", foreign_key: :invited_by_user_id, dependent: :restrict_with_error
   has_many :channel_settlement_receipts, foreign_key: :recorded_by_id, dependent: :restrict_with_error

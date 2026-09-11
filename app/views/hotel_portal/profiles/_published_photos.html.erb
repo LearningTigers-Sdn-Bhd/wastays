@@ -1,55 +1,69 @@
+<%
+  photos = hotel.ordered_photo_attachments
+  return_to = local_assigns[:return_to]
+  # Onboarding shows the same grid while the property is still filling it in.
+  # Ordering belongs to the album page, and one photo has no order to change.
+  reorderable = local_assigns.fetch(:reorderable, true) && photos.many?
+%>
+
 <div id="hotel-published-photos" class="min-h-40">
-  <% if hotel.photos.attached? %>
-    <%= render PanelsUI::AttachmentGroup.new(
-          layout: :grid,
-          size: :lg,
-          aria: { label: "Published hotel photos" }) do %>
-      <% hotel.photos.attachments.includes(:blob).each do |photo| %>
-        <% featured = hotel.featured_photo_attachment_id.to_i == photo.id %>
-        <%= render PanelsUI::Attachment.new(
-              title: photo.filename.to_s,
-              description: featured ? "Featured photo" : "Published photo",
-              state: :uploaded,
-              orientation: :vertical,
-              role: "listitem") do |attachment| %>
-          <% attachment.with_media(variant: :image) do %>
-            <%= image_tag photo, alt: "Hotel photo #{photo.filename}" %>
-          <% end %>
-          <% attachment.with_actions do %>
-            <% if featured %>
-              <%= render PanelsUI::Badge.new(label: "Featured", variant: :primary, size: :sm) %>
+  <% if photos.any? %>
+    <%# Dragging stages the order in the hidden field below. Save writes it and
+        Cancel puts the tiles back, so the album matches every other block on
+        property settings: nothing changes until somebody says so.
+
+        The grid deliberately sits outside the form. Each photo's Remove action
+        is a button_to, and a form inside a form ends the outer one early —
+        which left Save and Cancel orphaned from the controller driving them. %>
+    <%= tag.div(data: { controller: ("hotel-photo-reorder" if reorderable) }.compact) do %>
+      <% if reorderable %>
+        <p class="mb-3 text-xs text-muted-foreground">
+          Drag a photo to reorder the album. The featured photo always stays first.
+        </p>
+      <% end %>
+
+      <%= render "hotel_portal/profiles/photo_grid",
+                 hotel: hotel,
+                 photos: photos,
+                 return_to: return_to,
+                 reorderable: reorderable %>
+
+      <% if reorderable %>
+        <%= form_with url: hotel_reorder_profile_photos_path(hotel),
+                      method: :patch,
+                      data: {
+                        controller: "form-dirty",
+                        action: "input->form-dirty#refresh change->form-dirty#refresh " \
+                                "reset->form-dirty#restore"
+                      } do %>
+          <%= hidden_field_tag :return_to, return_to %>
+          <%# Carries every tile, the featured one included, so the field and the
+              grid always read the same. The model drops the featured id. %>
+          <%= hidden_field_tag :ordered_ids,
+                               photos.map(&:id).join(","),
+                               data: { hotel_photo_reorder_target: "input" } %>
+
+          <footer class="mt-5 flex justify-end gap-3">
+            <%# Cancel only exists while there is something to discard, and Save
+                starts disabled, the same way each property settings section does. %>
+            <%= render PanelsUI::Button.new(
+                  as: :button,
+                  type: :reset,
+                  variant: :secondary,
+                  size: :sm,
+                  hidden: true,
+                  data: { form_dirty_target: "cancel" }) do %>
+              Cancel
             <% end %>
-            <%= render PanelsUI::DropdownMenu.new(
-                  id: "hotel-photo-#{photo.id}-actions",
-                  placement: :bottom_end,
-                  class: "w-44") do |menu| %>
-              <% menu.with_trigger(
-                   variant: :ghost,
-                   size: :icon_sm,
-                   aria_label: "Actions for #{photo.filename}") do %>
-                <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: "true" } %>
-              <% end %>
-              <% unless featured %>
-                <% menu.with_item(
-                     href: hotel_profile_photo_feature_path(hotel, photo.id, return_to: local_assigns[:return_to]),
-                     method: :patch) do %>
-                  <%= app_icon "star", class: "size-4", aria: { hidden: "true" } %>
-                  <span>Set as featured</span>
-                <% end %>
-              <% end %>
-              <% menu.with_item(
-                   href: hotel_profile_photo_path(hotel, photo.id, return_to: local_assigns[:return_to]),
-                   method: :delete,
-                   variant: :danger,
-                   data: {
-                     turbo_confirm: "Remove this hotel photo?",
-                     turbo_confirm_tone: "destructive"
-                   }) do %>
-                <%= app_icon "trash-2", class: "size-4", aria: { hidden: "true" } %>
-                <span>Remove photo</span>
-              <% end %>
+            <%= render PanelsUI::Button.new(
+                  as: :button,
+                  type: :submit,
+                  size: :sm,
+                  disabled: true,
+                  data: { form_dirty_target: "submit" }) do %>
+              Save Order
             <% end %>
-          <% end %>
+          </footer>
         <% end %>
       <% end %>
     <% end %>

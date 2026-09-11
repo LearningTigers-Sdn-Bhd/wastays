@@ -221,7 +221,8 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
           guest_city: "Kuala Lumpur",
           guest_state_code: "14",
           guest_postal_code: "50450",
-          guest_address_country: "Malaysia"
+          guest_address_country: "Malaysia",
+          guest_tin: "IG1234567890"
         }
       }
 
@@ -237,7 +238,8 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         guest_city: "Kuala Lumpur",
         guest_state_code: "14",
         guest_postal_code: "50450",
-        guest_address_country: "Malaysia"
+        guest_address_country: "Malaysia",
+        guest_tin: "IG1234567890"
       )
       expect(BookingAuditLog.where(auditable: booking, action_type: "guest_updated", source: "guest").count).to eq(1)
     end
