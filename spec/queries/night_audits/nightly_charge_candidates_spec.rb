@@ -18,6 +18,16 @@ RSpec.describe NightAudits::NightlyChargeCandidates do
     expect(result).to contain_exactly(candidate)
   end
 
+  it "returns in-house bookings whose status moved past checked_in" do
+    # Regression for GEH-26100157. A rejected late checkout moves a booking to
+    # checkout_required. It still occupies the audited night and still owes for
+    # it, so the audit must still check its nightly charges.
+    checkout_required = create_booking(status: "checkout_required", check_in: business_date, check_out: business_date + 1.day)
+    due_out = create_booking(status: "due_out_detected", check_in: business_date - 1.day, check_out: business_date + 1.day)
+
+    expect(described_class.call(hotel:, business_date:)).to contain_exactly(checkout_required, due_out)
+  end
+
   it "eager loads rooms, folios, and folio transactions" do
     booking = create_booking(status: "checked_in", check_in: business_date, check_out: business_date + 1.day)
     folio = create(:booking_folio, booking:)

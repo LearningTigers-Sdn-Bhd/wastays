@@ -423,4 +423,48 @@ RSpec.describe Folios::Charges::PostNightlyCharges do
     expect(folio.folio_transactions.where(transaction_code: [ room_code, tax_code ]).sum(:amount)).to eq(125.to_d)
     expect(folio.folio_forecasted_charges.actualized.count).to eq(4)
   end
+  describe "a booking that is in-house but no longer flagged checked_in" do
+    # Regression for GEH-26100157. Staff rejected a late checkout, so the booking
+    # moved to checkout_required before night audit ran for the night it occupied.
+    # The nightly charge and its tax were never posted, the audit still passed,
+    # and checkout stayed blocked the next day by the unposted forecast lines.
+    let(:booking) do
+      create(:booking,
+        hotel: hotel,
+        status: "checkout_required",
+        check_in: business_date,
+        check_out: business_date + 1.day,
+        tax_lines: [ { "name" => "SST", "amount" => "10.24", "type" => "sst" } ])
+    end
+    let(:folio) { create(:booking_folio, hotel: hotel, booking: booking) }
+
+    before do
+      create(:booking_room, booking: booking, subtotal: 128.0)
+      Folios::Forecasts::SyncForecastedCharges.call(booking_folio: folio)
+    end
+
+    it "posts the accommodation and tax charge for the night it occupied" do
+      result = described_class.call(night_audit: night_audit, user: user)
+
+      charges = folio.folio_transactions.charge
+      expect(charges.find_by(category: "accommodation")&.amount).to eq(128.0)
+      expect(charges.find_by(category: "tax")&.amount).to eq(10.24)
+      expect(result.posted.count).to eq(2)
+      expect(result.failed).to be_empty
+    end
+
+    it "leaves no forecast line behind" do
+      described_class.call(night_audit: night_audit, user: user)
+
+      expect(folio.folio_forecasted_charges.forecast).to be_empty
+      expect(folio.folio_forecasted_charges.actualized.count).to eq(2)
+    end
+
+    it "does not block the checkout on the next day" do
+      described_class.call(night_audit: night_audit, user: user)
+
+      report = Folios::Checkout::BookingCheckoutReadiness.call(booking: booking.reload)
+      expect(report.blockers).not_to include(a_string_matching(/upcoming charge/))
+    end
+  end
 end
