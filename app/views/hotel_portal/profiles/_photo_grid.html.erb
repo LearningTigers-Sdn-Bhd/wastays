@@ -3,7 +3,7 @@
 <%= render PanelsUI::AttachmentGroup.new(
       layout: :grid,
       size: :lg,
-      data: { hotel_photo_reorder_target: ("grid" if reorderable) }.compact,
+      data: { photo_reorder_target: ("grid" if reorderable) }.compact,
       aria: { label: "Published hotel photos" }) do %>
   <% photos.each do |photo| %>
     <% featured = photo.id == featured_id %>
@@ -21,11 +21,11 @@
           class: ("cursor-grab data-dragging:opacity-50" if draggable),
           data: {
             photo_id: (photo.id if reorderable),
-            hotel_photo_reorder_target: ("pinned" if reorderable && featured),
-            action: ("dragstart->hotel-photo-reorder#dragStart " \
-                     "dragend->hotel-photo-reorder#dragEnd " \
-                     "dragover->hotel-photo-reorder#dragOver " \
-                     "drop->hotel-photo-reorder#drop" if reorderable)
+            photo_reorder_target: ("pinned" if reorderable && featured),
+            action: ("dragstart->photo-reorder#dragStart " \
+                     "dragend->photo-reorder#dragEnd " \
+                     "dragover->photo-reorder#dragOver " \
+                     "drop->photo-reorder#drop" if reorderable)
           }.compact) do |attachment| %>
       <% attachment.with_media(variant: :image) do %>
         <%= image_tag photo, alt: "Hotel photo #{photo.filename}" %>

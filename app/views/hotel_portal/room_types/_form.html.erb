@@ -237,7 +237,15 @@
   </div>
 <% end %>
 
+<%# Both photo forms sit outside the category form. A form inside a form ends
+    the outer one early, so the grid's controls reach these by id instead. %>
 <% if show_photos && room_type.persisted? %>
   <%= form_with url: bulk_destroy_photos_hotel_room_type_path(@hotel, room_type), method: :delete, id: "bulk-delete-photos-form", class: "hidden" do |form| %>
+  <% end %>
+  <%= form_with url: reorder_photos_hotel_room_type_path(@hotel, room_type), method: :patch, id: "reorder-photos-form", class: "hidden" do |form| %>
+  <% end %>
+  <%# The photo is named by the submit button, so one form serves every tile and
+      the grid can be replaced without leaving a stale form behind. %>
+  <%= form_with url: photo_feature_hotel_room_type_path(@hotel, room_type), method: :patch, id: "feature-photo-form", class: "hidden" do |form| %>
   <% end %>
 <% end %>
