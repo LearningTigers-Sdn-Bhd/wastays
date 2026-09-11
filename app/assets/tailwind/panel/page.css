@@ -1,4 +1,26 @@
 @layer components {
+  /* The outermost box of a role portal, sized to exactly one screenful.
+     `body` is `overflow: hidden`, so nothing here can ever be scrolled back
+     into view: whatever this box puts below the fold is simply unreachable.
+
+     Hence dvh, not vh. On a phone `100vh` is the *large* viewport — the height
+     the page would have if the browser hid its address bar. This portal never
+     scrolls the document, so the address bar never hides, and a `100vh` box is
+     a screenful plus the browser chrome: everything anchored to its bottom
+     edge (a workspace's action footer, say) sits under the chrome with no way
+     to scroll to it.
+
+     Both declarations stay. A browser that does not know `dvh` keeps the `vh`
+     line and behaves as it did before; one that does discards it. Do not write
+     this pair as `h-screen h-dvh` utilities — Tailwind emits `vh` after `dvh`
+     whatever order the class attribute lists them in, so `vh` would win. */
+  .panel-shell {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
   /* Shared role-portal content viewport. Width is intentionally uncapped for PMS
      dashboards, tables, and operational workspaces. Pages own their internal layout,
      while this wrapper owns standard-page padding and mobile-nav clearance.

@@ -17,7 +17,7 @@
   </head>
 
   <body class="h-full overflow-hidden" data-theme="panel-light">
-    <div class="flex h-screen h-dvh min-h-screen min-h-dvh flex-col bg-background text-foreground">
+    <div class="panel-shell flex flex-col bg-background text-foreground">
       <%= render PanelsUI::Navbar.new(key: "onboarding", navigation: false) do |navbar| %>
         <% navbar.with_brand do %>
           <div class="flex min-w-0 items-center gap-3">

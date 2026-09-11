@@ -18,7 +18,7 @@
   </head>
 
   <body class="h-full overflow-hidden" data-theme="panel-light" data-controller="<%= yield :body_controllers %>" <%= yield :body_attributes %>>
-    <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
+    <div class="panel-shell flex flex-col bg-background">
       <%= render PanelsUI::Navbar.new(key: "corporate") do |navbar| %>
         <% navbar.with_actions do %>
           <%= render "shared/navigation/navbar_alerts" %>
