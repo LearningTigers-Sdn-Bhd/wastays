@@ -2,7 +2,7 @@
 <html class="h-full">
   <head>
     <title><%= hotel_page_title(breadcrumb_parts) %></title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
@@ -18,7 +18,7 @@
   </head>
 
   <body class="h-full overflow-hidden" data-theme="panel-light" data-controller="<%= content_for(:body_controllers) %>" <%= content_for(:body_attributes) %>>
-    <div class="flex flex-col h-screen h-dvh min-h-screen min-h-dvh bg-background">
+    <div class="panel-shell flex flex-col bg-background">
       <%= render PanelsUI::Navbar.new(key: navigation_key, sidebar_state_key: navigation_state_key, navigation: !locked_hotel_portal_shell?) do |navbar| %>
         <% navbar.with_brand do %>
           <% if current_hotel %>
