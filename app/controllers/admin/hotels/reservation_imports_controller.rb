@@ -19,25 +19,32 @@ module Admin
       def new
       end
 
+      # A draft has not been approved yet, so it shows the review; anything past
+      # that shows progress. Both are GETs on the same record, which is also
+      # what lets Turbo accept the upload -- a form response has to redirect.
       def show
-      end
-
-      def create
-        file = params[:file]
-        return redirect_back_with("Choose a file to import.") if file.blank?
-
-        @import = @hotel.reservation_imports.create!(user: current_user, status: "draft")
-        @import.file.attach(io: file.tempfile, filename: file.original_filename)
+        return render :progress unless @import.status == "draft"
 
         @parsed = parse(@import)
         unless @parsed.success?
+          error = @parsed.error
           @import.destroy
-          return redirect_back_with(@parsed.error)
+          return redirect_back_with(error)
         end
 
         @plan = Ezee::ImportPlan.call(hotel: @hotel, rows: @parsed.rows)
         @import.update!(total_rows: @plan.importable.size)
         render :preview
+      end
+
+      def create
+        file = params[:file]
+        return redirect_back_with("Choose a file to import.") if file.blank? || !file.respond_to?(:tempfile)
+
+        import = @hotel.reservation_imports.create!(user: current_user, status: "draft")
+        import.file.attach(io: file.tempfile, filename: file.original_filename)
+
+        redirect_to admin_hotel_reservation_import_path(@hotel, import)
       end
 
       def commit

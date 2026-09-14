@@ -41,6 +41,7 @@ RSpec.describe "Admin reservation imports", type: :request do
   it "previews the file without creating anything" do
     expect {
       post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+      follow_redirect!
     }.not_to change(Booking, :count)
 
     expect(response.body).to include("Review this import")
@@ -55,9 +56,18 @@ RSpec.describe "Admin reservation imports", type: :request do
     )
 
     post admin_hotel_reservation_imports_path(hotel), params: { file: not_a_report }
+    follow_redirect!
 
     expect(response).to redirect_to(new_admin_hotel_reservation_import_path(hotel))
     expect(flash[:alert]).to be_present
+    expect(ReservationImport.count).to be_zero
+  end
+
+  it "redirects the upload rather than rendering it, so Turbo accepts the form" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+
+    expect(response).to have_http_status(:redirect)
+    expect(response).to redirect_to(admin_hotel_reservation_import_path(hotel, latest_import))
   end
 
   it "runs the import in the background and tracks its progress" do
@@ -95,6 +105,7 @@ RSpec.describe "Admin reservation imports", type: :request do
     expect(imported).to be_positive
 
     post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    follow_redirect!
     expect(response.body).to include("Already imported")
 
     post commit_admin_hotel_reservation_import_path(hotel, latest_import)
