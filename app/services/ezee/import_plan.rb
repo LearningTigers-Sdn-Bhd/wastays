@@ -1,0 +1,194 @@
+# frozen_string_literal: true
+
+module Ezee
+  # Resolves parsed eZee rows against a hotel and reports what would happen,
+  # without writing anything.
+  #
+  # This runs before every commit, not only when an operator asks to preview.
+  # Bookings are created through Bookings::CreateManualBooking, which validates
+  # availability -- so a row can fail on inventory the property has not set up,
+  # and finding that out 900 bookings into a commit is useless.
+  class ImportPlan
+    # One row's verdict. `status` drives everything the preview shows:
+    #   importable  -- will be created
+    #   imported    -- already present, matched on external_reference
+    #   past        -- arrival is before the business date (production rule)
+    #   blocked     -- something is missing; `errors` says what
+    Entry = Struct.new(
+      :row, :status, :errors, :warnings, :room_type, :room, :group_key,
+      :agency_name, :existing_booking_id, keyword_init: true
+    ) do
+      def importable? = status == :importable
+    end
+
+    Result = Struct.new(
+      :entries, :business_date, :groups, :agencies, :warnings, keyword_init: true
+    ) do
+      def importable = entries.select(&:importable?)
+      def counts = entries.group_by(&:status).transform_values(&:size)
+
+      def total_amount = importable.sum { |entry| entry.row.total_amount }
+      def new_agencies = agencies.reject { |_name, account| account }.keys
+      def matched_agencies = agencies.select { |_name, account| account }
+    end
+
+    # The sources whose "guest name" is an agency rather than a person. Every
+    # other source either names a real guest or leaves the field blank.
+    AGENCY_SOURCES = [ "Travel Agent", "Corporate" ].freeze
+
+    # eZee prints the source in place of an empty guest name, so these are not
+    # names -- they are the absence of one. See docs section 2.1.
+    BLANK_NAME = /\A-\s*/
+
+    def self.call(...) = new(...).call
+
+    def initialize(hotel:, rows:)
+      @hotel = hotel
+      @rows = rows
+    end
+
+    def call
+      business_date = @hotel.current_business_date || @hotel.business_date_for
+      group_keys = group_keys_for(@rows)
+      entries = @rows.map { |row| resolve(row, business_date, group_keys) }
+
+      Result.new(
+        entries: entries,
+        business_date: business_date,
+        groups: group_summary(entries),
+        agencies: agency_summary(entries),
+        warnings: plan_warnings(entries)
+      )
+    end
+
+    # Normalises an agency name for matching. The client's file shows why each
+    # step is needed: a double space, a trailing "SDN.BHD.", a name typed twice,
+    # and staff marking state by prefixing "POSTPONE" onto the name itself --
+    # which, unstripped, creates a second account for one agency and detaches
+    # its postponed bookings from the first one's ledger.
+    def self.normalize_agency(name)
+      value = name.to_s.upcase
+                  .sub(/\A\s*POSTPONED?\s*[-:\s]\s*/, "")
+                  .gsub(/\bSDN\.?\s*BHD\.?/, "SDN BHD")
+                  .gsub(/[[:punct:]]/, " ")
+                  .squish
+      halves = value.split(" ")
+      if halves.size.even? && halves.size > 2
+        first = halves.first(halves.size / 2)
+        value = first.join(" ") if first == halves.last(halves.size / 2)
+      end
+      value
+    end
+
+    private
+
+    def resolve(row, business_date, group_keys)
+      entry = Entry.new(row: row, errors: [], warnings: [], status: :importable)
+
+      existing = @hotel.bookings.find_by(external_reference: row.reservation_number)
+      if existing
+        entry.existing_booking_id = existing.id
+        entry.status = :imported
+        return entry
+      end
+
+      entry.agency_name = agency_name_for(row)
+      entry.group_key = group_keys[group_signature(row)]
+
+      if row.arrival.blank? || row.departure.blank?
+        entry.errors << "Arrival or departure date could not be read."
+      elsif row.departure <= row.arrival
+        entry.errors << "Departure #{row.departure} is not after arrival #{row.arrival}."
+      elsif row.arrival < business_date
+        entry.status = :past
+        return entry
+      end
+
+      resolve_inventory(row, entry)
+
+      entry.warnings << "Guest name is blank in the export; the source was printed instead." if blank_name?(row)
+      entry.warnings << "No amount on this reservation." if row.total_amount.zero?
+
+      entry.status = :blocked if entry.errors.any?
+      entry
+    end
+
+    def resolve_inventory(row, entry)
+      entry.room_type = room_types_by_name[row.room_type.to_s.upcase]
+      if entry.room_type.nil?
+        entry.errors << "Room category #{row.room_type.inspect} does not exist at this property."
+        return
+      end
+
+      entry.room = rooms_by_number[row.room_number.to_s.upcase]
+      if entry.room.nil?
+        entry.warnings << "Room #{row.room_number} is not set up here; the booking will be left unassigned."
+      elsif entry.room.room_type_id != entry.room_type.id
+        entry.warnings << "Room #{row.room_number} belongs to #{entry.room.room_type.name}, " \
+                          "not #{row.room_type}; the booking will be left unassigned."
+        entry.room = nil
+      end
+    end
+
+    def room_types_by_name
+      @room_types_by_name ||= @hotel.room_types.index_by { |type| type.name.to_s.upcase }
+    end
+
+    def rooms_by_number
+      @rooms_by_number ||= @hotel.rooms.where(archived_at: nil)
+                                .includes(:room_type).index_by { |room| room.number.to_s.upcase }
+    end
+
+    # A stay is one block when the same booker holds the same dates. Reservation
+    # numbers are deliberately not used: the client's file has blocks whose
+    # numbers skip, because the missing ones were cancelled, so contiguity would
+    # split stays that belong together.
+    def group_signature(row)
+      [ row.guest_name.to_s.upcase, row.arrival, row.departure ]
+    end
+
+    def group_keys_for(rows)
+      counts = rows.group_by { |row| group_signature(row) }
+      counts.filter_map { |signature, members| [ signature, signature ] if members.size > 1 }.to_h
+    end
+
+    def group_summary(entries)
+      entries.select { |entry| entry.group_key && entry.importable? }
+             .group_by(&:group_key)
+             .map { |key, members| { name: key.first, arrival: key.second, rooms: members.size } }
+             .sort_by { |group| [ group[:arrival], group[:name] ] }
+    end
+
+    def agency_name_for(row)
+      return nil unless AGENCY_SOURCES.include?(row.source)
+      return nil if blank_name?(row)
+
+      row.guest_name.presence
+    end
+
+    # Matches on the normalised name so two spellings of one agency resolve to
+    # the same account. Unmatched names are reported, not created here -- this
+    # service writes nothing.
+    def agency_summary(entries)
+      names = entries.filter_map(&:agency_name).uniq
+      existing = @hotel.hotel_corporate_accounts.includes(:corporate_account).index_by do |account|
+        self.class.normalize_agency(account.corporate_account&.name)
+      end
+      names.index_with { |name| existing[self.class.normalize_agency(name)] }
+    end
+
+    def blank_name?(row) = row.guest_name.to_s.match?(BLANK_NAME) || row.guest_name.blank?
+
+    def plan_warnings(entries)
+      warnings = []
+      collisions = entries.select(&:importable?).group_by { |entry| self.class.normalize_agency(entry.agency_name) }
+                          .except(nil, "")
+                          .select { |_key, members| members.map { |m| m.agency_name }.uniq.size > 1 }
+      collisions.each do |_key, members|
+        spellings = members.map(&:agency_name).uniq
+        warnings << "These spellings resolve to one agency: #{spellings.join(' / ')}."
+      end
+      warnings
+    end
+  end
+end

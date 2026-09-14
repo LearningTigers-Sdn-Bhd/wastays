@@ -216,6 +216,12 @@ Rails.application.routes.draw do
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
         post :repair_channex_mapping, to: "hotels/channel_managers#repair_mapping"
       end
+      # Migrating a property's unarrived reservations off its old PMS. Run once
+      # per hotel by whoever onboards it, which is why it sits here and not in
+      # the hotel portal.
+      resources :reservation_imports, module: :hotels, only: [ :new, :create, :show ] do
+        post :commit, on: :member
+      end
       resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do
           post :complete

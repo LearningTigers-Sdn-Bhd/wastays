@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2738,6 +2738,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
     t.index ["user_id"], name: "index_report_view_preferences_on_user_id"
   end
 
+  create_table "reservation_imports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "created_count", default: 0, null: false
+    t.text "error_message"
+    t.integer "failed_count", default: 0, null: false
+    t.jsonb "failures", default: [], null: false
+    t.datetime "finished_at"
+    t.integer "group_count", default: 0, null: false
+    t.bigint "hotel_id", null: false
+    t.integer "processed_rows", default: 0, null: false
+    t.integer "skipped_count", default: 0, null: false
+    t.datetime "started_at"
+    t.string "status", default: "draft", null: false
+    t.string "step"
+    t.integer "total_rows", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["hotel_id"], name: "index_reservation_imports_on_hotel_id"
+    t.index ["user_id"], name: "index_reservation_imports_on_user_id"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'queued'::character varying, 'running'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "reservation_imports_status_allowed"
+  end
+
   create_table "role_permissions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "permission_id", null: false
@@ -3345,6 +3367,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
   add_foreign_key "refund_requests", "bookings"
   add_foreign_key "report_view_preferences", "hotels"
   add_foreign_key "report_view_preferences", "users"
+  add_foreign_key "reservation_imports", "hotels"
+  add_foreign_key "reservation_imports", "users"
   add_foreign_key "role_permissions", "permissions"
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "roles", "accounts"
