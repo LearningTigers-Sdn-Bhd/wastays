@@ -39,8 +39,20 @@ module VendorDirectory
         longitude: attributes[:longitude],
         offers: build_offers(attributes),
         photo_url: attributes[:photo_url].presence || placeholder_photo_url(attributes[:id]),
-        dietary_tags: Array(attributes[:dietary_tags])
+        dietary_tags: Array(attributes[:dietary_tags]),
+        reviews: build_reviews(attributes)
       )
+    end
+
+    def build_reviews(vendor_attributes)
+      Array(vendor_attributes[:reviews]).map do |attributes|
+        Review.new(
+          guest_name: attributes[:guest_name],
+          rating: attributes[:rating],
+          comment: attributes[:comment],
+          posted_at: attributes[:posted_at]
+        )
+      end
     end
 
     # Temporary: real vendor photography comes from Dinerzflow once that side

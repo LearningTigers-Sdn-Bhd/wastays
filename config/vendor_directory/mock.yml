@@ -122,6 +122,19 @@ vendors:
         per_guest_limit: 1
         remaining: 30
 
+    reviews:
+      - guest_name: "Amira R."
+        rating: 5
+        comment: "Queued 15 minutes but worth it. The laksa tasted exactly like what my Sabahan colleague described."
+        posted_at: 2026-08-28
+      - guest_name: "Daniel Tan"
+        rating: 4
+        comment: "Great beef noodles, very local vibe. Seating is tight during breakfast rush."
+        posted_at: 2026-08-14
+      - guest_name: "Priya S."
+        rating: 5
+        comment: "Used the free kaya toast voucher, staff scanned it without fuss. Coffee is strong, just how I like it."
+        posted_at: 2026-07-30
   - id: welcome-seafood
     category: food-drink
     name: Welcome Seafood Restaurant
@@ -201,6 +214,15 @@ vendors:
         per_guest_limit: 1
         remaining: 55
 
+    reviews:
+      - guest_name: "Mark O."
+        rating: 5
+        comment: "Butter prawns and steamed fish were both excellent. A bit pricier than expected but portions are generous."
+        posted_at: 2026-08-31
+      - guest_name: "Siti N."
+        rating: 4
+        comment: "Good seafood, service was slow on a Friday night. Would still come back for the crab."
+        posted_at: 2026-08-06
   - id: el-centro
     category: food-drink
     name: El Centro
@@ -267,6 +289,19 @@ vendors:
         per_guest_limit: 1
         remaining: 65
 
+    reviews:
+      - guest_name: "Jonathan Lee"
+        rating: 5
+        comment: "Finally a proper vegetarian burrito bowl in KK. Portions are big enough to share."
+        posted_at: 2026-09-02
+      - guest_name: "Hana K."
+        rating: 4
+        comment: "Nice casual spot near the waterfront. Nachos were a bit salty but the guac made up for it."
+        posted_at: 2026-08-19
+      - guest_name: "Ryan Chua"
+        rating: 3
+        comment: "Decent but not authentic Mexican. Fine for a quick lunch between meetings."
+        posted_at: 2026-07-25
   - id: chilli-vanilla
     category: food-drink
     name: Chilli Vanilla
@@ -335,6 +370,15 @@ vendors:
         remaining: 35
 
   # ------------------------------------------------------------------------ Bars
+    reviews:
+      - guest_name: "Farah A."
+        rating: 5
+        comment: "Pork-free menu made it easy to bring the whole family. The chilli pan mee is fantastic."
+        posted_at: 2026-08-22
+      - guest_name: "Wei Ming"
+        rating: 4
+        comment: "Fusion menu is fun, some dishes hit better than others. Vanilla milkshake is a must-try."
+        posted_at: 2026-08-01
   - id: nook-rooftop
     category: bars
     name: Nook Rooftop Bar
@@ -392,6 +436,19 @@ vendors:
         per_guest_limit: 1
         remaining: 22
 
+    reviews:
+      - guest_name: "Sophie B."
+        rating: 5
+        comment: "Sunset views over the harbour are unreal. Got there early on a Friday and it filled up fast."
+        posted_at: 2026-09-05
+      - guest_name: "Aiman Y."
+        rating: 4
+        comment: "House pours are generous with the 1-for-1. Music gets loud after 9pm if you want conversation."
+        posted_at: 2026-08-11
+      - guest_name: "Grace L."
+        rating: 5
+        comment: "Best rooftop bar we found in KK. Staff were happy to recommend cocktails."
+        posted_at: 2026-07-28
   - id: shamrock
     category: bars
     name: The Shamrock
@@ -437,6 +494,15 @@ vendors:
         remaining: 75
 
   # -------------------------------------------------------------------- Wellness
+    reviews:
+      - guest_name: "Connor M."
+        rating: 4
+        comment: "Proper pub food and a good range of beers on tap. Gets busy for the football screenings."
+        posted_at: 2026-08-24
+      - guest_name: "Nadia I."
+        rating: 4
+        comment: "Solid spot for a casual night out. Fish and chips were better than expected."
+        posted_at: 2026-08-03
   - id: borneo-spa
     category: wellness
     name: Borneo Heritage Spa
@@ -479,6 +545,19 @@ vendors:
         per_guest_limit: 1
         remaining: 48
 
+    reviews:
+      - guest_name: "Clara W."
+        rating: 5
+        comment: "The traditional Malay massage was exactly the reset I needed after a long flight. Booked again for the last day."
+        posted_at: 2026-09-01
+      - guest_name: "Tunku R."
+        rating: 5
+        comment: "Calm, professional, and the therapists actually listen to what you ask for. Highly recommend the hot stone add-on."
+        posted_at: 2026-08-17
+      - guest_name: "Lisa Ho"
+        rating: 4
+        comment: "Lovely facilities, just wish the booking window was a little more flexible."
+        posted_at: 2026-07-22
   - id: kenzo-reflexology
     category: wellness
     name: Kenzo Reflexology
@@ -523,6 +602,15 @@ vendors:
         remaining: 15
 
   # ------------------------------------------------------------ Health & Pharmacy
+    reviews:
+      - guest_name: "Benjamin K."
+        rating: 4
+        comment: "Firm pressure, exactly what tired feet need after walking Gaya Street all day."
+        posted_at: 2026-08-27
+      - guest_name: "Michelle T."
+        rating: 5
+        comment: "Best reflexology I've had outside of Taiwan. Clean, quiet, and reasonably priced."
+        posted_at: 2026-08-09
   - id: guardian-suria
     category: health
     name: Guardian, Suria Sabah
@@ -567,6 +655,15 @@ vendors:
         per_guest_limit: 1
         remaining: 60
 
+    reviews:
+      - guest_name: "Alex P."
+        rating: 5
+        comment: "Had everything I needed for a travel-sickness fix. Pharmacist was helpful and spoke great English."
+        posted_at: 2026-08-30
+      - guest_name: "Yusof B."
+        rating: 4
+        comment: "Well-stocked branch inside the mall, easy to find."
+        posted_at: 2026-08-05
   - id: klinik-kota
     category: health
     name: Klinik Kota
@@ -613,6 +710,15 @@ vendors:
         remaining: 25
 
   # -------------------------------------------------------------------- Shopping
+    reviews:
+      - guest_name: "Rachel N."
+        rating: 5
+        comment: "Saw a doctor within 20 minutes for a minor fever. Consultation was thorough and not rushed."
+        posted_at: 2026-08-20
+      - guest_name: "Faizal M."
+        rating: 4
+        comment: "Straightforward walk-in clinic, English-speaking staff. Good to know it's nearby."
+        posted_at: 2026-07-31
   - id: handicraft-market
     category: shopping
     name: Filipino Handicraft Market
@@ -668,6 +774,15 @@ vendors:
         per_guest_limit: 1
         remaining: 50
 
+    reviews:
+      - guest_name: "Emma S."
+        rating: 4
+        comment: "Great for souvenirs, prices are negotiable if you're polite about it. Lots of handmade textiles."
+        posted_at: 2026-08-23
+      - guest_name: "Kevin D."
+        rating: 3
+        comment: "Fun to browse but can feel a bit touristy. Still found a nice batik shirt."
+        posted_at: 2026-07-29
   - id: imago-mall
     category: shopping
     name: Imago Shopping Mall
@@ -688,3 +803,12 @@ vendors:
     latitude: 5.9678
     longitude: 116.0713
     offers: []
+    reviews:
+      - guest_name: "Vanessa C."
+        rating: 4
+        comment: "Good aircon break from the heat, decent food court. Standard mall but well maintained."
+        posted_at: 2026-08-15
+      - guest_name: "Haziq A."
+        rating: 4
+        comment: "Convenient for last-minute shopping, has most of the brands you'd expect."
+        posted_at: 2026-07-20

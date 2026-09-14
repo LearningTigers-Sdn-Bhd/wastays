@@ -135,7 +135,7 @@
   <section class="mt-5">
     <div class="mb-2.5 flex items-center gap-1.5">
       <%= cached_icon "ticket", class: "h-3.5 w-3.5 text-primary" %>
-      <h3 class="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Guest offers</h3>
+      <h3 class="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Available Vouchers</h3>
     </div>
 
     <% if @vendor.offers? %>
@@ -153,4 +153,6 @@
       </div>
     <% end %>
   </section>
+
+  <%= render "public/concierge/recommendations/reviews", vendor: @vendor, reviews: @reviews, review_form: @review_form %>
 <% end %>

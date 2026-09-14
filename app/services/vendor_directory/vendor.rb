@@ -20,13 +20,24 @@ module VendorDirectory
     :longitude,
     :offers,
     :photo_url,
-    :dietary_tags
+    :dietary_tags,
+    :reviews
   ) do
     def to_param = id
 
     def offers? = offers.any?
 
     def dietary_tags? = dietary_tags.any?
+
+    def reviews? = reviews.any?
+
+    def review_count = reviews.size
+
+    def average_rating
+      return if reviews.empty?
+
+      (reviews.sum(&:rating_i).to_f / reviews.size).round(1)
+    end
 
     def offer(id) = offers.find { |offer| offer.id == id }
 

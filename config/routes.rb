@@ -125,6 +125,7 @@ Rails.application.routes.draw do
     post "recommendations/unlock",                to: "recommendations#lookup", as: :recommendations_lookup
     get  "recommendations/wallet",                to: "recommendations#wallet", as: :recommendations_wallet
     get  "recommendations/:vendor_id",            to: "recommendations#vendor", as: :recommendation_vendor
+    post "recommendations/:vendor_id/reviews",    to: "recommendations#create_review", as: :recommendation_vendor_reviews
     get  "recommendations/:vendor_id/:offer_id",  to: "recommendations#offer",  as: :recommendation_offer
     post "recommendations/:vendor_id/:offer_id/claim", to: "recommendations#claim", as: :claim_recommendation_offer
   end

@@ -5,13 +5,13 @@ require "rails_helper"
 RSpec.describe VendorDirectory::Vendor do
   let(:zone) { ActiveSupport::TimeZone["Asia/Kuala_Lumpur"] }
 
-  def build_vendor(hours)
+  def build_vendor(hours, reviews: [])
     described_class.new(
       id: "test", category_slug: "food-drink", name: "Test Vendor", tagline: "",
       accent: "amber", price_range: "$", tags: [], summary: "", address: "",
       phone: nil, distance_km: nil, walking_minutes: nil, hours: hours,
       google_maps_url: "", latitude: nil, longitude: nil, offers: [],
-      photo_url: "", dietary_tags: []
+      photo_url: "", dietary_tags: [], reviews: reviews
     )
   end
 
@@ -71,6 +71,23 @@ RSpec.describe VendorDirectory::Vendor do
 
     it "respects a custom window" do
       expect(vendor.closing_soon?(time: zone.parse("2026-09-10 21:30"), within: 2.hours)).to be true
+    end
+  end
+
+  describe "#average_rating" do
+    it "is nil with no reviews" do
+      expect(build_vendor([]).average_rating).to be_nil
+    end
+
+    it "averages and rounds to one decimal place" do
+      vendor = build_vendor([], reviews: [
+        VendorDirectory::Review.new(guest_name: "A", rating: 5, comment: "", posted_at: Date.current),
+        VendorDirectory::Review.new(guest_name: "B", rating: 4, comment: "", posted_at: Date.current),
+        VendorDirectory::Review.new(guest_name: "C", rating: 4, comment: "", posted_at: Date.current)
+      ])
+
+      expect(vendor.average_rating).to eq(4.3)
+      expect(vendor.review_count).to eq(3)
     end
   end
 end

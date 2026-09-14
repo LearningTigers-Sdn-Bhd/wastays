@@ -1,17 +1,14 @@
 <% vendor = offer.vendor_id == local_assigns[:vendor]&.id ? local_assigns[:vendor] : VendorDirectory.vendor(offer.vendor_id) %>
 <%# A jeweller's placard, not a coupon: a clean white ground against the
-    page's cream, a soft primary hairline border, and the value set in serif
-    italic gold rather than a loud pill. No icon, no urgency tag: at four to a
-    row on a phone the card has no room to spare, and the value plus the title
-    already say everything a glance needs. Fills its grid cell rather than
-    carrying a fixed width, since it sits in a still grid instead of a
-    scrolling rail. %>
+    page's cream, a soft primary hairline border, and the voucher name itself
+    doing the work no value/discount line did before. No icon, no urgency tag:
+    at four to a row on a phone the card has no room to spare. Fills its grid
+    cell rather than carrying a fixed width, since it sits in a still grid
+    instead of a scrolling rail. %>
 <%= link_to concierge_recommendation_offer_path(@hotel, vendor, offer),
       data: { turbo_frame: "_top" },
       class: "group flex min-w-0 flex-col rounded-xl border-2 bg-white p-2.5 shadow-sm transition-all hover:shadow-md active:scale-[0.97] #{vendor_accent(vendor, :border)} #{local_assigns[:wrapper_class]}" do %>
-  <p class="truncate font-serif text-base italic leading-none text-accent-foreground"><%= offer.value_label %></p>
-
-  <p class="mt-1.5 line-clamp-2 text-[11px] font-black leading-tight text-foreground"><%= offer.title %></p>
+  <p class="line-clamp-2 text-[12px] font-black leading-tight text-foreground"><%= offer.title %></p>
 
   <p class="mt-1.5 truncate text-[9px] font-bold uppercase tracking-wider text-muted-foreground"><%= vendor.name %></p>
 

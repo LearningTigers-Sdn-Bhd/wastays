@@ -80,6 +80,47 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
 
       expect(response).to redirect_to(path)
     end
+
+    it "shows the vendor's seeded reviews and an average rating" do
+      get path("/nook-rooftop")
+
+      expect(response.body).to include("Guest Reviews")
+      expect(response.body).to include("Sophie B.")
+      expect(response.body).to include("(3 reviews)")
+    end
+  end
+
+  describe "POST create_review" do
+    let(:reviews_path) { path("/nook-rooftop/reviews") }
+
+    it "is open to any guest, with no booking required" do
+      post reviews_path, params: { concierge_vendor_review_form: { guest_name: "Alex", rating: 5, comment: "Loved it" } }
+
+      expect(response).to redirect_to(path("/nook-rooftop#reviews"))
+    end
+
+    it "adds the review to the vendor's list for this session" do
+      post reviews_path, params: { concierge_vendor_review_form: { guest_name: "Alex", rating: 5, comment: "Loved it" } }
+      get path("/nook-rooftop")
+
+      expect(response.body).to include("Alex")
+      expect(response.body).to include("Loved it")
+      expect(response.body).to include("(4 reviews)")
+    end
+
+    it "rejects a blank name and re-renders the vendor page with the error" do
+      post reviews_path, params: { concierge_vendor_review_form: { guest_name: "", rating: 5 } }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("can&#39;t be blank")
+    end
+
+    it "rejects an out-of-range rating" do
+      post reviews_path, params: { concierge_vendor_review_form: { guest_name: "Alex", rating: 9 } }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("must be between 1 and 5 stars")
+    end
   end
 
   describe "GET offer" do

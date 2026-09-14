@@ -123,6 +123,22 @@ module Public::ConciergeRecommendationsHelper
     nil
   end
 
+  # "3 days ago" reads faster than a calendar date for something as casual as
+  # a review, but a review from months back is more useful as an actual date
+  # than as "4 months ago" -- so only recent ones get the relative form.
+  def review_posted_label(review)
+    posted_at = review.posted_at.to_date
+    days_ago = (Time.current.in_time_zone(VendorDirectory::ZONE).to_date - posted_at).to_i
+
+    case days_ago
+    when ..0 then "Today"
+    when 1 then "Yesterday"
+    when 2..13 then "#{days_ago} days ago"
+    when 14..27 then "#{days_ago / 7} weeks ago"
+    else l(posted_at, format: :long)
+    end
+  end
+
   # Encodes the URL a vendor's staff will land on when they scan, not the bare
   # code -- any phone camera then works and no vendor app is needed.
   def voucher_qr_data_url(entry)

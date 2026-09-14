@@ -14,7 +14,7 @@ module Public
 
       before_action :load_categories
       before_action :load_category, only: :index
-      before_action :load_vendor, only: [ :vendor, :offer, :claim ]
+      before_action :load_vendor, only: [ :vendor, :offer, :claim, :create_review ]
       before_action :load_offer, only: [ :offer, :claim ]
       before_action :require_booking!, only: [ :wallet, :claim ]
       before_action :load_return_to, only: [ :new, :lookup ]
@@ -26,6 +26,25 @@ module Public
       end
 
       def vendor
+        @reviews = review_book.for(@vendor)
+        @review_form = ::Concierge::VendorReviewForm.new
+      end
+
+      # Reviewing is open to any guest reading the page, not gated on a live
+      # stay the way claiming a voucher is -- there is nothing of value
+      # changing hands here, just an opinion.
+      def create_review
+        @review_form = ::Concierge::VendorReviewForm.new(review_form_params)
+
+        if @review_form.valid?
+          review_book.add!(vendor_id: @vendor.id, guest_name: @review_form.guest_name,
+                            rating: @review_form.rating, comment: @review_form.comment)
+          redirect_to concierge_recommendation_vendor_path(@hotel, @vendor, anchor: "reviews"),
+                      notice: "Thanks for the review!"
+        else
+          @reviews = review_book.for(@vendor)
+          render :vendor, status: :unprocessable_content
+        end
       end
 
       def offer
@@ -144,6 +163,12 @@ module Public
         )
       end
       helper_method :voucher_wallet
+
+      def review_book = @review_book ||= ::Concierge::ReviewBook.new(session: session)
+
+      def review_form_params
+        params.fetch(:concierge_vendor_review_form, {}).permit(:guest_name, :rating, :comment)
+      end
 
       def require_booking!
         return if current_concierge_booking.present?
