@@ -1,0 +1,144 @@
+<% counts = @plan.counts %>
+<% importable = counts[:importable].to_i %>
+<div class="w-full space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Review this import",
+        description: "#{@hotel.name} — nothing has been created yet.") %>
+
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <% [ [ "Will be imported", importable, "text-emerald-700" ],
+         [ "Already imported", counts[:imported].to_i, "text-muted-foreground" ],
+         [ "Arrival in the past", counts[:past].to_i, "text-muted-foreground" ],
+         [ "Blocked", counts[:blocked].to_i, counts[:blocked].to_i.positive? ? "text-red-700" : "text-muted-foreground" ] ].each do |label, value, tone| %>
+      <div class="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <p class="text-xs font-bold uppercase tracking-wide text-muted-foreground"><%= label %></p>
+        <p class="mt-1 text-3xl font-bold <%= tone %>"><%= value %></p>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <dl class="grid grid-cols-2 gap-4 text-sm lg:grid-cols-4">
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Business date</dt>
+        <dd class="mt-1 font-bold text-foreground"><%= @plan.business_date %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Value imported</dt>
+        <dd class="mt-1 font-bold text-foreground"><%= number_to_currency(@plan.total_amount, unit: "RM ") %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Multi-room groups</dt>
+        <dd class="mt-1 font-bold text-foreground"><%= @plan.groups.size %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Agencies</dt>
+        <dd class="mt-1 font-bold text-foreground">
+          <%= @plan.matched_agencies.size %> matched, <%= @plan.new_agencies.size %> new
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <% if @parsed.warnings.any? || @plan.warnings.any? %>
+    <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+      <p class="font-bold">Worth checking before you import</p>
+      <ul class="mt-2 list-disc space-y-1 pl-4">
+        <% (@parsed.warnings + @plan.warnings).each do |warning| %>
+          <li><%= warning %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% blocked = @plan.entries.select { |entry| entry.status == :blocked } %>
+  <% if blocked.any? %>
+    <section class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">
+      <p class="font-bold"><%= blocked.size %> rows cannot be imported</p>
+      <ul class="mt-2 space-y-1">
+        <% blocked.first(20).each do |entry| %>
+          <li><span class="font-mono font-bold"><%= entry.row.reservation_number %></span> — <%= entry.errors.to_sentence %></li>
+        <% end %>
+      </ul>
+      <% if blocked.size > 20 %>
+        <p class="mt-2 text-xs">…and <%= blocked.size - 20 %> more.</p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if @plan.new_agencies.any? %>
+    <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <h2 class="text-sm font-bold text-foreground">Agencies that will be created</h2>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Created without credit terms or direct billing — set those deliberately afterwards.
+      </p>
+      <ul class="mt-3 grid gap-1 text-sm text-foreground lg:grid-cols-2">
+        <% @plan.new_agencies.sort.each do |name| %>
+          <li class="truncate"><%= name %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-6 py-4">
+      <h2 class="text-sm font-bold text-foreground">Reservations</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-muted/40 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <tr>
+            <th class="px-6 py-3">Rsrv. no</th>
+            <th class="px-6 py-3">Booked by</th>
+            <th class="px-6 py-3">Stay</th>
+            <th class="px-6 py-3">Room</th>
+            <th class="px-6 py-3 text-right">Amount</th>
+            <th class="px-6 py-3">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          <% @plan.entries.first(200).each do |entry| %>
+            <tr>
+              <td class="px-6 py-3 font-mono text-xs font-bold text-foreground"><%= entry.row.reservation_number %></td>
+              <td class="max-w-xs truncate px-6 py-3 text-foreground">
+                <%= entry.row.guest_name %>
+                <% if entry.group_key %>
+                  <span class="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">group</span>
+                <% end %>
+              </td>
+              <td class="whitespace-nowrap px-6 py-3 text-muted-foreground">
+                <%= entry.row.arrival&.to_fs(:short) %> → <%= entry.row.departure&.to_fs(:short) %>
+              </td>
+              <td class="px-6 py-3 text-muted-foreground"><%= entry.row.room_number %> · <%= entry.row.room_type %></td>
+              <td class="px-6 py-3 text-right font-bold text-foreground"><%= number_with_precision(entry.row.total_amount, precision: 2) %></td>
+              <td class="px-6 py-3">
+                <% tone = { importable: "bg-emerald-50 text-emerald-700", imported: "bg-muted text-muted-foreground",
+                            past: "bg-muted text-muted-foreground", blocked: "bg-red-50 text-red-700" }[entry.status] %>
+                <span class="rounded-full px-2.5 py-1 text-xs font-bold <%= tone %>"><%= entry.status.to_s.humanize %></span>
+                <% if entry.warnings.any? %>
+                  <p class="mt-1 text-xs text-amber-700"><%= entry.warnings.to_sentence %></p>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <% if @plan.entries.size > 200 %>
+      <p class="border-t border-border px-6 py-3 text-xs text-muted-foreground">
+        Showing the first 200 of <%= @plan.entries.size %> rows.
+      </p>
+    <% end %>
+  </section>
+
+  <div class="flex items-center gap-3">
+    <%= form_with url: commit_admin_hotel_reservation_import_path(@hotel, @import), method: :post do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary,
+                                      disabled: importable.zero?) do %>
+        Import <%= pluralize(importable, "reservation") %>
+      <% end %>
+    <% end %>
+    <%= link_to "Choose a different file", new_admin_hotel_reservation_import_path(@hotel),
+                class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
+  </div>
+</div>

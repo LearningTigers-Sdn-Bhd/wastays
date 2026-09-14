@@ -1,0 +1,134 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe "Admin reservation imports", type: :request do
+  include ActiveJob::TestHelper
+
+  let(:account) { create(:account, name: "eZee Import") }
+  let(:superadmin) { create(:user, :superadmin, account: account) }
+  let(:hotel) { create(:hotel, account: account, status: "live") }
+
+  let(:fixture) { Rails.root.join("spec/fixtures/files/ezee_reservation_list_sample.xls") }
+
+  # The preview creates the ReservationImport row; committing enqueues the job
+  # that fills it in.
+  def latest_import = ReservationImport.recent_first.first
+  let(:upload) do
+    Rack::Test::UploadedFile.new(fixture, "application/vnd.ms-excel", original_filename: "Reservation List.xls")
+  end
+
+  # The fixture carries the property's real inventory, and the importer refuses a
+  # row whose room category does not exist. Only the two categories the
+  # assertions below touch are set up, so the rest land as blocked -- which is
+  # itself worth asserting.
+  before do
+    sign_in_as(superadmin)
+    Rooms::SaveSeedRoomType.call!(
+      hotel: hotel,
+      attributes: { name: "DLX", room_number_mode: "custom", quantity: 4, base_price: 305.0,
+                    max_adults: 3, max_children: 2, room_numbers: %w[A1 A2 A3 A4] }
+    )
+  end
+
+  it "renders the upload form" do
+    get new_admin_hotel_reservation_import_path(hotel)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Reservation list export")
+  end
+
+  it "previews the file without creating anything" do
+    expect {
+      post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    }.not_to change(Booking, :count)
+
+    expect(response.body).to include("Review this import")
+    # Every category the fixture uses beyond DLX is missing here, so those rows
+    # have to be reported rather than quietly dropped.
+    expect(response.body).to include("does not exist at this property")
+  end
+
+  it "refuses a file that is not a reservation list" do
+    not_a_report = Rack::Test::UploadedFile.new(
+      Rails.root.join("spec/fixtures/files/sample_image.jpg"), "image/jpeg"
+    )
+
+    post admin_hotel_reservation_imports_path(hotel), params: { file: not_a_report }
+
+    expect(response).to redirect_to(new_admin_hotel_reservation_import_path(hotel))
+    expect(flash[:alert]).to be_present
+  end
+
+  it "runs the import in the background and tracks its progress" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    import = latest_import
+
+    expect {
+      post commit_admin_hotel_reservation_import_path(hotel, import)
+    }.to have_enqueued_job(Ezee::RunReservationImportJob).with(import.id)
+
+    expect(response).to redirect_to(admin_hotel_reservation_import_path(hotel, import))
+    expect(import.reload.status).to eq("queued")
+
+    perform_enqueued_jobs
+
+    import.reload
+    expect(import.status).to eq("completed")
+    expect(import.created_count).to be_positive
+    expect(import.percent_complete).to eq(100)
+    expect(import.processed_rows).to eq(import.total_rows)
+
+    booking = hotel.bookings.where.not(external_reference: nil).first
+    expect(booking.external_reference).to be_present
+    # Tourism tax applies only to foreigners and the export carries no
+    # nationality, so guest_country stays blank and the tax stays off.
+    expect(booking.guest_country).to be_blank
+    expect(booking.tourism_tax_amount).to be_zero
+  end
+
+  it "matches rows it has already imported instead of duplicating them" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    post commit_admin_hotel_reservation_import_path(hotel, latest_import)
+    perform_enqueued_jobs
+    imported = hotel.bookings.count
+    expect(imported).to be_positive
+
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    expect(response.body).to include("Already imported")
+
+    post commit_admin_hotel_reservation_import_path(hotel, latest_import)
+    expect { perform_enqueued_jobs }.not_to change(Booking, :count)
+    expect(hotel.bookings.count).to eq(imported)
+  end
+
+  it "shows the progress page while the import is still running" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    import = latest_import
+    post commit_admin_hotel_reservation_import_path(hotel, import)
+
+    get admin_hotel_reservation_import_path(hotel, import)
+
+    expect(response).to have_http_status(:ok)
+    # The marker the polling fallback watches: without it a page whose socket
+    # never connected would sit at zero forever.
+    expect(response.body).to include(%(data-import-running="true"))
+    expect(response.body).to include("Waiting to start")
+  end
+
+  it "reports a failure on the progress page rather than losing it" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    import = latest_import
+    allow(Ezee::ImportPlan).to receive(:call).and_raise(StandardError, "boom")
+
+    post commit_admin_hotel_reservation_import_path(hotel, import)
+    perform_enqueued_jobs
+
+    import.reload
+    expect(import.status).to eq("failed")
+    expect(import.error_message).to eq("boom")
+
+    get admin_hotel_reservation_import_path(hotel, import)
+    expect(response.body).to include("The import stopped")
+  end
+end

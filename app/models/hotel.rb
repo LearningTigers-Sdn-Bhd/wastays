@@ -76,6 +76,7 @@ class Hotel < ApplicationRecord
   has_many :ota_financial_component_mappings, dependent: :restrict_with_error
   has_one :ota_rate_variance_policy, dependent: :restrict_with_error
   has_many :guest_registration_cards, dependent: :restrict_with_error
+  has_many :reservation_imports, dependent: :destroy
   has_many :guest_registration_note_templates, dependent: :destroy
   has_many :group_bookings, dependent: :restrict_with_error
   has_many :booking_folios, dependent: :restrict_with_error
