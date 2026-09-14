@@ -21,8 +21,20 @@ module Ezee
       def importable? = status == :importable
     end
 
+    # Several spellings in the export that resolve to one agency account.
+    AgencyCollision = Struct.new(:spellings, keyword_init: true) do
+      # Two spellings differing only in whitespace render identically in HTML,
+      # because the browser collapses runs of spaces. Saying so is the whole
+      # point of the warning -- without it the operator reads the same name
+      # twice and concludes the report is broken.
+      def whitespace_only?(spelling)
+        spellings.count { |other| other.squish == spelling.squish } > 1
+      end
+    end
+
     Result = Struct.new(
-      :entries, :business_date, :groups, :agencies, :warnings, keyword_init: true
+      :entries, :business_date, :groups, :agencies, :agency_collisions, :warnings,
+      keyword_init: true
     ) do
       def importable = entries.select(&:importable?)
       def counts = entries.group_by(&:status).transform_values(&:size)
@@ -57,7 +69,8 @@ module Ezee
         business_date: business_date,
         groups: group_summary(entries),
         agencies: agency_summary(entries),
-        warnings: plan_warnings(entries)
+        agency_collisions: agency_collisions(entries),
+        warnings: []
       )
     end
 
@@ -179,16 +192,14 @@ module Ezee
 
     def blank_name?(row) = row.guest_name.to_s.match?(BLANK_NAME) || row.guest_name.blank?
 
-    def plan_warnings(entries)
-      warnings = []
-      collisions = entries.select(&:importable?).group_by { |entry| self.class.normalize_agency(entry.agency_name) }
-                          .except(nil, "")
-                          .select { |_key, members| members.map { |m| m.agency_name }.uniq.size > 1 }
-      collisions.each do |_key, members|
-        spellings = members.map(&:agency_name).uniq
-        warnings << "These spellings resolve to one agency: #{spellings.join(' / ')}."
+    def agency_collisions(entries)
+      entries.select(&:importable?)
+             .group_by { |entry| self.class.normalize_agency(entry.agency_name) }
+             .except(nil, "")
+             .filter_map do |_key, members|
+        spellings = members.filter_map(&:agency_name).uniq
+        AgencyCollision.new(spellings: spellings.sort) if spellings.size > 1
       end
-      warnings
     end
   end
 end
