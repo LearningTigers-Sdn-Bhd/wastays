@@ -175,6 +175,18 @@ Rails.application.routes.draw do
     resources :guest_registration_cards, only: [ :show, :update ], param: :token, path: "guest-registration-card" do
       get :pdf, on: :member
     end
+
+    # The tablet's own pages. `show` is the idle screen it parks on; `next`
+    # hands it whichever card is due, or sends it back to idle when the stay is
+    # done. Token-addressed like the card above, and for the same reason: the
+    # device holds no session.
+    resources :signing_devices, only: [ :show ], param: :token, path: "signing-device" do
+      get :next, on: :member
+      # The idle screen beats here while its stream is up, so the desk's tablet
+      # picker can tell a listening tablet from one that merely loaded the page
+      # once and went to sleep.
+      post :heartbeat, on: :member
+    end
     post "payments/checkout_session", to: "payments#checkout_session", as: :checkout_payment_session
     get "payments/verify", to: "payments#verify"
     post "payments/verify", to: "payments#verify", as: :verify_payment
@@ -375,6 +387,10 @@ Rails.application.routes.draw do
     end
 
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
+
+    # Enrolling a tablet. Staff reach this signed in, on the tablet itself, and
+    # leave it holding a device token instead of their session.
+    resource :signing_device, only: [ :new, :create ], controller: "signing_devices"
     get "onboarding", to: "onboarding#index", as: :onboarding
     get "onboarding/:section_key", to: "onboarding#show", as: :onboarding_section
     patch "onboarding/:section_key", to: "onboarding#update"
@@ -454,6 +470,7 @@ Rails.application.routes.draw do
       end
 
       resources :refund_requests, only: [ :new, :create ]
+      resource :signing_handoff, only: [ :create ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
       resource :guest_registration_card_pdf, only: [ :show ], module: :bookings
       resource :guest_registration_card_email, only: [ :create ], module: :bookings

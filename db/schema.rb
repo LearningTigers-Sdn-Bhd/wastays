@@ -3045,6 +3045,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
     t.index ["status"], name: "index_setup_fee_rules_on_active_global_default", unique: true, where: "(((status)::text = 'active'::text) AND (settable_type IS NULL) AND (settable_id IS NULL))"
   end
 
+  create_table "signing_devices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "current_booking_id"
+    t.bigint "hotel_id", null: false
+    t.string "label", null: false
+    t.datetime "last_seen_at"
+    t.string "public_token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["current_booking_id"], name: "index_signing_devices_on_current_booking_id"
+    t.index ["hotel_id"], name: "index_signing_devices_on_hotel_id"
+    t.index ["public_token"], name: "index_signing_devices_on_public_token", unique: true
+  end
+
   create_table "staff_notifications", force: :cascade do |t|
     t.string "action_path"
     t.datetime "created_at", null: false
@@ -3480,6 +3493,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
   add_foreign_key "rooms", "hotels"
   add_foreign_key "rooms", "room_groups"
   add_foreign_key "rooms", "room_types"
+  add_foreign_key "signing_devices", "bookings", column: "current_booking_id", on_delete: :nullify
+  add_foreign_key "signing_devices", "hotels"
   add_foreign_key "staff_notifications", "hotels"
   add_foreign_key "staff_notifications", "users", column: "recipient_id"
   add_foreign_key "transaction_code_taxes", "hotel_taxes"

@@ -1,0 +1,49 @@
+<% content_for :title, "Use this tablet for signing" %>
+
+<div class="mx-auto max-w-xl space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Use this tablet for signing",
+        description: "Turn the device you are holding into a signature pad for guest registration cards.") %>
+
+  <div class="card space-y-5 p-6">
+    <%# Said plainly because it is the whole security model, and because it is
+        surprising: staff expect to stay signed in on a device they just set up. %>
+    <%= render PanelsUI::Alert.new(tone: :info, title: "You will be signed out of this device") do |alert| %>
+      <% alert.with_description do %>
+        The tablet keeps a signing link and nothing else, so a guest cannot reach
+        bookings or guest records from it. Set this up on the tablet itself, not
+        on your own computer.
+      <% end %>
+    <% end %>
+
+    <%= form_with model: @device, url: hotel_signing_device_path(current_hotel), method: :post, class: "space-y-5" do |form| %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :label, label: "Name this tablet",
+            hint: "Shown to staff when they choose where to send a card.") do |field| %>
+        <% field.with_input(value: @device.label, placeholder: "Front desk tablet", autocomplete: "off") %>
+      <% end %>
+
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :md) do %>
+        Use this tablet and sign me out
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @existing_devices.any? %>
+    <div class="card p-6">
+      <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Already set up</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Enrolling again adds another tablet rather than replacing one of these.
+      </p>
+      <ul class="mt-4 space-y-2 text-sm">
+        <% @existing_devices.each do |device| %>
+          <li class="flex items-center justify-between gap-3 border-t border-border pt-2">
+            <span class="font-semibold text-foreground"><%= device.label %></span>
+            <span class="text-xs text-muted-foreground">
+              <%= device.last_seen_at ? "Last seen #{time_ago_in_words(device.last_seen_at)} ago" : "Never connected" %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+</div>
