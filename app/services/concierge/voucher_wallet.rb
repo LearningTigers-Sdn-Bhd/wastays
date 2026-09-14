@@ -37,7 +37,7 @@ module Concierge
     # Newest first: a guest opening the wallet is nearly always looking for the
     # thing they just claimed.
     def entries
-      store.filter_map { |key, value| build_entry(key, value) }
+      store.filter_map { |key, value| build_entry(key, value) if mine?(key) }
            .sort_by(&:claimed_at)
            .reverse
     end
@@ -58,10 +58,19 @@ module Concierge
 
     def key_for(offer) = "#{booking.id}:#{offer.vendor_id}:#{offer.id}"
 
+    # The session outlives a stay, so it can hold vouchers claimed against an
+    # earlier booking in the same browser. Those belong to that booking's
+    # wallet, not this one.
+    def mine?(key) = key.start_with?("#{booking.id}:")
+
     def build_entry(key, value)
       return if value.blank?
 
       _booking_id, vendor_id, offer_id = key.split(":")
+      # Resolve now rather than leaving it to Entry#vendor in a view: the
+      # rescue below is what drops an orphan, and it cannot fire on a lookup
+      # that has not happened yet.
+      VendorDirectory.offer(vendor_id, offer_id)
       Entry.new(
         vendor_id: vendor_id,
         offer_id: offer_id,
