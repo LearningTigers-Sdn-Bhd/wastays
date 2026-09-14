@@ -51,6 +51,34 @@
     </section>
   <% end %>
 
+  <% if @plan.agency_collisions.any? %>
+    <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+      <p class="font-bold">Spellings that will share one agency account</p>
+      <p class="mt-1 text-xs">
+        The export writes these differently; the import treats them as the same agency.
+      </p>
+      <ul class="mt-3 space-y-3">
+        <% @plan.agency_collisions.each do |collision| %>
+          <li>
+            <ul class="space-y-1">
+              <% collision.spellings.each do |spelling| %>
+                <%# Whitespace is preserved here on purpose: one of these pairs
+                    differs only by a double space, which HTML would otherwise
+                    collapse into an apparent duplicate. %>
+                <li class="flex flex-wrap items-baseline gap-2">
+                  <code class="whitespace-pre-wrap rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs"><%= spelling %></code>
+                  <% if collision.whitespace_only?(spelling) %>
+                    <span class="text-xs italic">differs only in spacing</span>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
   <% blocked = @plan.entries.select { |entry| entry.status == :blocked } %>
   <% if blocked.any? %>
     <section class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">
