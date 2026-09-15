@@ -256,7 +256,10 @@ Rails.application.routes.draw do
       # per hotel by whoever onboards it, which is why it sits here and not in
       # the hotel portal.
       resources :reservation_imports, module: :hotels, only: [ :new, :create, :show ] do
-        post :commit, on: :member
+        member do
+          get :rows
+          post :commit
+        end
       end
       resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do

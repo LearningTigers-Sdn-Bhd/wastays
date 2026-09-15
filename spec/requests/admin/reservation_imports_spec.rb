@@ -47,7 +47,7 @@ RSpec.describe "Admin reservation imports", type: :request do
     expect(response.body).to include("Review this import")
     # Every category the fixture uses beyond DLX is missing here, so those rows
     # have to be reported rather than quietly dropped.
-    expect(response.body).to include("does not exist at this property")
+    expect(response.body).to include("No room category named")
   end
 
   it "refuses a file that is not a reservation list" do
@@ -55,8 +55,9 @@ RSpec.describe "Admin reservation imports", type: :request do
       Rails.root.join("spec/fixtures/files/sample_image.jpg"), "image/jpeg"
     )
 
+    # The file is read at upload now, so an unreadable one is refused by the
+    # POST itself rather than by the page it would have redirected to.
     post admin_hotel_reservation_imports_path(hotel), params: { file: not_a_report }
-    follow_redirect!
 
     expect(response).to redirect_to(new_admin_hotel_reservation_import_path(hotel))
     expect(flash[:alert]).to be_present
@@ -113,6 +114,60 @@ RSpec.describe "Admin reservation imports", type: :request do
     expect(hotel.bookings.count).to eq(imported)
   end
 
+  it "resolves the file once, at upload, instead of on every page view" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    import = latest_import
+
+    expect(import.rows.count).to be_positive
+    # Viewing the preview must not re-read the spreadsheet.
+    expect(Ezee::ReservationListParser).not_to receive(:call)
+    get admin_hotel_reservation_import_path(hotel, import)
+    expect(response).to have_http_status(:ok)
+  end
+
+  it "asks the database once for every reservation already imported" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    import = latest_import
+    expect(import.rows.count).to be > 20
+
+    # The lookup used to run per row, which was 1193 queries on the client's
+    # real export. It has to stay a single query however long the file is.
+    queries = 0
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+      queries += 1 if payload[:sql].to_s.include?("external_reference")
+    end
+    Ezee::BuildImportRows.call(import: import)
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+
+    expect(queries).to eq(1)
+  end
+
+  it "defaults the preview to the rows that need attention" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    import = latest_import
+    expect(import.rows.needing_attention.count).to be_positive
+
+    get admin_hotel_reservation_import_path(hotel, import)
+
+    expect(response.body).to include("Needs attention")
+    # A blocked row rings the cell that is actually at fault rather than only
+    # printing a sentence under the row.
+    expect(response.body).to include("ring-red-400")
+  end
+
+  it "pages the table lazily instead of rendering every row at once" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    import = latest_import
+
+    get admin_hotel_reservation_import_path(hotel, import, filter: "all")
+    body = response.body
+    expect(body.scan(/import_rows_page_\d+/).size).to eq(1)
+
+    get rows_admin_hotel_reservation_import_path(hotel, import, filter: "all", page: 2)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("reservation")
+  end
+
   it "shows the progress page while the import is still running" do
     post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
     import = latest_import
@@ -130,7 +185,7 @@ RSpec.describe "Admin reservation imports", type: :request do
   it "reports a failure on the progress page rather than losing it" do
     post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
     import = latest_import
-    allow(Ezee::ImportPlan).to receive(:call).and_raise(StandardError, "boom")
+    allow(Ezee::ImportReservations).to receive(:call).and_raise(StandardError, "boom")
 
     post commit_admin_hotel_reservation_import_path(hotel, import)
     perform_enqueued_jobs

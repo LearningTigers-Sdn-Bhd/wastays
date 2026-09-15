@@ -7,6 +7,9 @@ module Ezee
   # building a financial snapshot and a folio, so this cannot be a request. The
   # ReservationImport row carries the progress, and every step writes to it, so
   # the operator's page stays truthful even if their browser loses the socket.
+  #
+  # The file is not re-read here. It was resolved into ReservationImportRow at
+  # upload, and those rows are what the operator approved on the preview.
   class RunReservationImportJob < ApplicationJob
     queue_as :default
 
@@ -14,29 +17,18 @@ module Ezee
       import = ReservationImport.find_by(id: reservation_import_id)
       return if import.nil? || import.finished?
 
-      import.update!(status: "running", started_at: Time.current, step: "Reading the file")
-      import.broadcast_progress
-
-      parsed = parse(import)
-      raise parsed.error if parsed.error.present?
-
-      import.update!(total_rows: parsed.rows.size, step: "Checking against the property")
-      import.broadcast_progress
-
-      plan = ImportPlan.call(hotel: import.hotel, rows: parsed.rows)
       import.update!(
-        total_rows: plan.importable.size,
-        skipped_count: plan.entries.count { |entry| entry.status == :imported }
+        status: "running", started_at: Time.current, step: "Starting",
+        total_rows: import.rows.importable.count,
+        skipped_count: import.rows.where(status: "imported").count
       )
+      import.broadcast_progress
 
-      result = ImportReservations.call(
-        hotel: import.hotel, plan: plan, user: import.user,
-        progress: progress_for(import)
-      )
+      result = ImportReservations.call(import: import, progress: progress_for(import))
 
       import.update!(
         status: "completed", step: "Done",
-        processed_rows: plan.importable.size,
+        processed_rows: import.total_rows,
         created_count: result.created.size,
         group_count: result.groups.compact.size,
         finished_at: Time.current
@@ -52,19 +44,8 @@ module Ezee
 
     def progress_for(import)
       lambda do |step: nil, processed: nil, created: nil, groups: nil, failure: nil|
-        import.record_failure!(failure.row.reservation_number, failure.error) if failure
+        import.record_failure!(failure.reservation_number, failure.errors_for_display.last&.dig("message")) if failure
         import.advance!(step: step, processed: processed, created: created, groups: groups)
-      end
-    end
-
-    # Roo needs a path with a meaningful extension, and the attachment is only a
-    # key in storage, so it is written out under its original name.
-    def parse(import)
-      blob = import.file.blob
-      Tempfile.create([ "ezee", File.extname(blob.filename.to_s) ], binmode: true) do |tempfile|
-        tempfile.write(blob.download)
-        tempfile.flush
-        ReservationListParser.call(path: tempfile.path, filename: blob.filename.to_s)
       end
     end
   end

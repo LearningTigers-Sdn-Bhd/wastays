@@ -1,0 +1,51 @@
+<%# One page of rows, followed by a lazy frame that pulls the next page when it
+    scrolls into view. Chaining frames this way keeps a thousand-row file off
+    the first response with no pagination JavaScript -- and the grid layout
+    (rather than a <table>) is what lets a frame sit between rows at all. %>
+<% rows.each do |row| %>
+  <div class="grid grid-cols-[6rem_minmax(11rem,1fr)_9.5rem_6rem_7.5rem_7rem_10rem] items-start border-t border-border text-sm
+              <%= "bg-red-50/50" if row.status.in?(%w[blocked failed]) %>">
+    <div class="px-3 py-3 font-mono text-xs font-bold text-foreground"><%= row.reservation_number %></div>
+    <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :guest_name,
+               value: row.guest_name, align: "text-foreground" %>
+    <div class="whitespace-nowrap px-3 py-3 text-muted-foreground">
+      <%= row.arrival&.strftime("%d %b") %> → <%= row.departure&.strftime("%d %b") %>
+      <span class="block text-xs"><%= pluralize(row.nights, "night") %></span>
+    </div>
+    <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :room_number,
+               value: row.room_number, align: "text-muted-foreground" %>
+    <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :room_type_name,
+               value: row.room_type_name, align: "text-muted-foreground" %>
+    <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :total_amount,
+               value: number_with_precision(row.total_amount, precision: 2),
+               align: "text-right font-bold text-foreground" %>
+    <div class="px-3 py-3">
+      <% tone = { "importable" => "bg-muted text-foreground", "created" => "bg-emerald-50 text-emerald-700",
+                  "imported" => "bg-muted text-muted-foreground", "past" => "bg-muted text-muted-foreground",
+                  "blocked" => "bg-red-50 text-red-700", "failed" => "bg-red-50 text-red-700" }[row.status] %>
+      <span class="inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold <%= tone %>">
+        <%= row.status == "importable" ? "Will import" : row.status.humanize %>
+      </span>
+      <% if row.group_key.present? %>
+        <span class="mt-1 inline-block whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">group</span>
+      <% end %>
+      <%# A creation failure belongs to no single column, so it prints with the row. %>
+      <% row.errors_for_display.select { |issue| issue["field"].blank? }.each do |issue| %>
+        <p class="mt-1 text-xs text-red-700"><%= issue["message"] %></p>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<% if rows.empty? && page == 1 %>
+  <p class="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground">
+    Nothing in this view.
+  </p>
+<% end %>
+
+<% if more %>
+  <%= turbo_frame_tag "import_rows_page_#{page + 1}", loading: :lazy,
+        src: rows_admin_hotel_reservation_import_path(hotel, import, filter: filter, page: page + 1) do %>
+    <p class="border-t border-border px-4 py-3 text-xs text-muted-foreground">Loading more…</p>
+  <% end %>
+<% end %>
