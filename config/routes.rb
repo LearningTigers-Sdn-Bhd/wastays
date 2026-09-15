@@ -322,6 +322,8 @@ Rails.application.routes.draw do
   # nothing user-facing quotes them.
   get "/hotel/:hotel_id/settings/property/hotel-album", to: "hotel_portal/profiles#album", as: :hotel_album
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
+    get "operational-dates", to: "operational_dates#show", as: :operational_dates
+
     resource :training_decision, only: [] do
       post :keep
       post :reset

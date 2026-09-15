@@ -1,5 +1,6 @@
 <%
   head_markup = header if header?
+  footer_details_markup = footer_details if footer_details?
 
   search_box = lambda do |input_id|
     capture do
@@ -33,7 +34,7 @@
     <% if searchable? %><%= search_box.call(desktop_search_id) %><% end %>
     <%= render_sidebar_partial(:navigation, surface: :desktop) %>
   </div>
-  <%= render_sidebar_partial(:footer, surface: :desktop) %>
+  <%= render_sidebar_partial(:footer, surface: :desktop, footer_details: footer_details_markup) %>
 </aside>
 
 <%= render PanelsUI::Sheet.new(
@@ -69,7 +70,7 @@
         <% if searchable? %><%= search_box.call(mobile_search_id) %><% end %>
         <%= render_sidebar_partial(:navigation, surface: :mobile) %>
       </div>
-      <%= render_sidebar_partial(:footer, surface: :mobile) %>
+      <%= render_sidebar_partial(:footer, surface: :mobile, footer_details: footer_details_markup) %>
     </div>
   <% end %>
 <% end %>

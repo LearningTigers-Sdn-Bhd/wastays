@@ -21,6 +21,7 @@ module PanelsUI
   # Sidebar only composes them according to the expanded/collapsed presentation.
   class Sidebar < PanelsUI::BaseComponent
     renders_one :header
+    renders_one :footer_details
 
     def initialize(key:, home_path:, sections: [],
                    collapsible: true, searchable: false, permanent: false,

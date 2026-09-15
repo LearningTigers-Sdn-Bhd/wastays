@@ -18,4 +18,24 @@
   <% sidebar.with_header do %>
     <%= render "shared/navigation/portal_label", label: "Hotel Portal", icon: "hotel", href: hotel_dashboard_path(current_hotel) %>
   <% end %>
+  <% sidebar.with_footer_details do %>
+    <dl class="panel-sidebar__details-list" aria-label="Hotel operational dates">
+      <div class="panel-sidebar__details-row">
+        <dt>Working Date</dt>
+        <dd>
+          <time
+            data-hotel-portal--operational-dates-target="workingDate"
+            <%= tag.attributes(datetime: operational_dates.working_date_value) if operational_dates.working_date_value.present? %>><%= operational_dates.working_date_label %></time>
+        </dd>
+      </div>
+      <div class="panel-sidebar__details-row">
+        <dt>System Date</dt>
+        <dd>
+          <time
+            data-hotel-portal--operational-dates-target="systemDate"
+            datetime="<%= operational_dates.system_date_value %>"><%= operational_dates.system_date_label %></time>
+        </dd>
+      </div>
+    </dl>
+  <% end %>
 <% end %>
