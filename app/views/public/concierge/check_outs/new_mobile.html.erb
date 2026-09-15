@@ -3,7 +3,7 @@
 <div data-mobile-view class="min-h-screen bg-background flex flex-col font-sans">
 
   <%= render "public/concierge/shared/back_button",
-             back_path: concierge_home_path(@hotel),
+             back_path: concierge_home_path(@hotel.unique_id, @hotel.public_id),
              back_label: "Back to Concierge",
              wrapper_class: "px-6 pt-8 pb-6 flex" %>
 
@@ -64,7 +64,7 @@
       </div>
     <% end %>
 
-    <%= form_with url: concierge_create_check_out_path(@hotel), method: :post, class: "space-y-6" do %>
+    <%= form_with url: concierge_create_check_out_path(@hotel.unique_id, @hotel.public_id), method: :post, class: "space-y-6" do %>
       <% if @booking.present? %>
         <%= hidden_field_tag :confirmation_token, @booking.confirmation_token %>
         <%= hidden_field_tag :stage, "submit" %>

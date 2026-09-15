@@ -14,7 +14,7 @@ RSpec.describe "Concierge chat keyboard", type: :system do
     create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
   end
 
-  def open_chat = visit(concierge_chat_path(hotel))
+  def open_chat = visit(concierge_chat_path(hotel.unique_id, hotel.public_id))
 
   def send_message(text)
     find(".public-chat__input").set(text)

@@ -9,7 +9,11 @@ class Public::HotelsController < ApplicationController
   end
 
   def show
-    @hotel = Hotel.locate!(params[:id], scope: Hotel.includes(room_types: { photos_attachments: :blob }))
+    @hotel = Hotel.locate_public!(
+      code: params[:hotel_code],
+      public_id: params[:public_id],
+      scope: Hotel.includes(room_types: { photos_attachments: :blob })
+    )
     # Ensure only active hotels are viewable
     unless @hotel.publicly_bookable?
       redirect_to hotels_path, alert: "Hotel not found"
@@ -63,7 +67,7 @@ class Public::HotelsController < ApplicationController
   end
 
   def rate_calendar
-    @hotel = Hotel.locate!(params[:id])
+    @hotel = Hotel.locate_public!(code: params[:hotel_code], public_id: params[:public_id])
     return head :not_found unless @hotel.publicly_bookable?
 
     start_date = parse_date(params[:start_date]) || Date.current
@@ -116,7 +120,7 @@ class Public::HotelsController < ApplicationController
   def set_agent_account
     return unless params[:agent_code].present?
 
-    @hotel = Hotel.locate!(params[:id])
+    @hotel = Hotel.locate_public!(code: params[:hotel_code], public_id: params[:public_id])
     agent = @hotel.hotel_corporate_accounts.active.find_by(agent_code: params[:agent_code].upcase)
 
     if agent

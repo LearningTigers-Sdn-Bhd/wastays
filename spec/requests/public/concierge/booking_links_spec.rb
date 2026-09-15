@@ -10,7 +10,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
 
   before do
     create(:plan_feature, plan: plan, feature: feature, enabled: true)
-    post concierge_chat_messages_path(hotel), params: { message: "Hello" }
+    post concierge_chat_messages_path(hotel.unique_id, hotel.public_id), params: { message: "Hello" }
     @conversation = Conversation.last
     @state = create(:prospect_conversation_state, prospect: @conversation.prospect)
   end
@@ -19,7 +19,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
     manager = AiConcierge::State::ConversationTaskManager.new(slots_payload: @state.slots_payload)
     @state.update!(slots_payload: manager.request_existing_booking_code)
 
-    get concierge_chat_path(hotel)
+    get concierge_chat_path(hotel.unique_id, hotel.public_id)
 
     expect(response.body).to include("Booking confirmation code")
     expect(response.body).not_to include("Type your message")
@@ -30,7 +30,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
     request_confirmation_code
 
     expect {
-      post concierge_chat_booking_path(hotel),
+      post concierge_chat_booking_path(hotel.unique_id, hotel.public_id),
         params: { confirmation_token: booking.confirmation_token },
         headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
     }.to have_enqueued_mail(GuestMailer, :magic_link)
@@ -52,7 +52,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
     guest_message = "Please ask the hotel team to help with my booking."
 
     perform_enqueued_jobs do
-      post concierge_chat_messages_path(hotel),
+      post concierge_chat_messages_path(hotel.unique_id, hotel.public_id),
         params: { message: guest_message },
         headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
     end
@@ -66,7 +66,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
   it "keeps an invalid code out of history and keeps the secure field active" do
     request_confirmation_code
 
-    post concierge_chat_booking_path(hotel),
+    post concierge_chat_booking_path(hotel.unique_id, hotel.public_id),
       params: { confirmation_token: "wrong" },
       headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
 
@@ -79,7 +79,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
     request_confirmation_code
     other_browser = open_session
 
-    other_browser.post concierge_chat_booking_path(hotel), params: { confirmation_token: "anything" }
+    other_browser.post concierge_chat_booking_path(hotel.unique_id, hotel.public_id), params: { confirmation_token: "anything" }
 
     expect(other_browser.response).to have_http_status(:not_found)
   end
@@ -89,8 +89,8 @@ RSpec.describe "Public Concierge booking links", type: :request do
     @state.update!(slots_payload: manager.request_existing_booking_code(conversation_id: @conversation.id))
     Concierge::ClearConversation.new(conversation: @conversation).call
 
-    post concierge_chat_messages_path(hotel), params: { message: "Hello again" }
-    get concierge_chat_path(hotel)
+    post concierge_chat_messages_path(hotel.unique_id, hotel.public_id), params: { message: "Hello again" }
+    get concierge_chat_path(hotel.unique_id, hotel.public_id)
 
     expect(response.body).to include("Type your message")
     expect(response.body).not_to include("Booking confirmation code")

@@ -3,7 +3,7 @@
 <div data-mobile-view class="min-h-screen bg-background flex flex-col font-sans">
 
   <%= render "public/concierge/shared/back_button",
-             back_path: concierge_home_path(@hotel),
+             back_path: concierge_home_path(@hotel.unique_id, @hotel.public_id),
              back_label: "Back to Concierge",
              wrapper_class: "px-6 pt-8 pb-10 flex" %>
 
@@ -18,7 +18,7 @@
 
     <%= render "public/concierge/shared/error_alert", message: @error %>
 
-    <%= form_with url: concierge_check_in_lookup_path(@hotel), method: :post, class: "space-y-6" do %>
+    <%= form_with url: concierge_check_in_lookup_path(@hotel.unique_id, @hotel.public_id), method: :post, class: "space-y-6" do %>
       <div class="space-y-2">
         <%= label_tag :confirmation_token, "Confirmation Code", class: "ml-1 block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground" %>
         <%= text_field_tag :confirmation_token, params[:confirmation_token],

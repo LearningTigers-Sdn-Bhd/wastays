@@ -4,7 +4,7 @@
 <div data-mobile-view class="min-h-screen bg-background flex flex-col font-sans">
 
   <%= render "public/concierge/shared/back_button",
-             back_path: concierge_check_in_path(@hotel),
+             back_path: concierge_check_in_path(@hotel.unique_id, @hotel.public_id),
              back_label: "Back to Check In",
              wrapper_class: "px-6 pt-8 pb-6 flex" %>
 
@@ -70,7 +70,7 @@
       </div>
     </div>
 
-    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel), method: :post, multipart: true, class: "space-y-6", data: @presenter.form_data(self, is_mobile: true) do |f| %>
+    <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.unique_id, @hotel.public_id), method: :post, multipart: true, class: "space-y-6", data: @presenter.form_data(self, is_mobile: true) do |f| %>
       <%= hidden_field_tag :latitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "latitude" } : {} %>
       <%= hidden_field_tag :longitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "longitude" } : {} %>
       <% if @presenter.registration_required? %>

@@ -1,5 +1,5 @@
 <header class="sticky top-0 z-50 w-full bg-white border-b border-border shadow-sm overflow-visible">
-  <%= form_with url: hotel_path(hotel), method: :get, local: true do |f| %>
+  <%= form_with url: hotel_path(hotel.unique_id, hotel.public_id), method: :get, local: true do |f| %>
 
     <div class="max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-x-4">
 
@@ -10,7 +10,7 @@
 
       <%# Search pill — date range + guests %>
       <div data-controller="rate-calendar"
-           data-rate-calendar-url-value="<%= rate_calendar_hotel_path(hotel) %>"
+           data-rate-calendar-url-value="<%= rate_calendar_hotel_path(hotel.unique_id, hotel.public_id) %>"
            data-rate-calendar-currency-value="<%= hotel.property_policy&.currency || 'MYR' %>"
            data-rate-calendar-room-count-value="1"
            class="flex-1 flex items-center gap-x-0 rounded-full border border-border bg-white shadow-sm hover:shadow-md transition-shadow min-w-0 sm:max-w-2xl sm:mx-auto">

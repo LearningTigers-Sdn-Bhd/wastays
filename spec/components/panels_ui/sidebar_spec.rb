@@ -142,6 +142,25 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
     expect(page).to have_no_css("#{footer} a.panel-sidebar__mark")
   end
 
+  it "renders optional footer details in the expanded desktop and mobile presentations" do
+    render_inline(described_class.new(key: "hotel", home_path: "/", sections: sections)) do |sidebar|
+      sidebar.with_footer_details { "<dl data-testid='operational-dates'><dt>Working Date</dt><dd>14 Sep 2026</dd></dl>".html_safe }
+    end
+
+    expect(page).to have_css(
+      ".panel-sidebar__footer .panel-sidebar__details.panel-sidebar__presentation--expanded [data-testid='operational-dates']",
+      text: "Working Date14 Sep 2026",
+      count: 2,
+      visible: :all
+    )
+  end
+
+  it "omits footer details when the slot is not supplied" do
+    render_sidebar
+
+    expect(page).to have_no_css(".panel-sidebar__details", visible: :all)
+  end
+
   it "adds the search controller and turbo-permanent flag when requested" do
     render_sidebar(searchable: true, permanent: true)
 

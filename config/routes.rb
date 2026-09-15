@@ -1,6 +1,9 @@
 require_relative "../app/constraints/superadmin_constraint"
 
 Rails.application.routes.draw do
+  hotel_code_constraint = /\d+/
+  public_uuid_v4_constraint = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/
+
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
     get "room_blocks/create"
@@ -93,7 +96,8 @@ Rails.application.routes.draw do
   end
 
   # Public Concierge (front-desk QR)
-  scope "/concierge/:hotel_slug", module: "public/concierge", as: :concierge do
+  scope "/concierge/:hotel_code/:public_id", module: "public/concierge", as: :concierge,
+        constraints: { hotel_code: hotel_code_constraint, public_id: public_uuid_v4_constraint } do
     get  "/",                      to: "home#show",            as: :home
     get  "check-in",               to: "check_ins#new",        as: :check_in
     post "check-in/lookup",        to: "check_ins#lookup",     as: :check_in_lookup
@@ -115,11 +119,37 @@ Rails.application.routes.draw do
     post   "chat/agent",           to: "chats#request_agent",  as: :chat_agent
   end
 
+  scope "/concierge/:legacy_hotel_identifier", as: :legacy_concierge do
+    get  "/",                      to: "public/legacy_hotel_urls#concierge"
+    get  "check-in",               to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in" }
+    post "check-in/lookup",        to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/lookup" }
+    get  "check-in/now",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/now" }
+    post "check-in/now",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/now" }
+    get  "check-in/success",       to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/success" }
+    get  "check-out",              to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out" }
+    post "check-out",              to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out" }
+    get  "check-out/success",      to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out/success" }
+    get  "book",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "book" }
+    get  "requests/new",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests/new" }
+    post "requests",               to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests" }
+    get  "requests/success",       to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests/success" }
+    get  "contact",                to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "contact" }
+    get  "chat",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
+    post "chat",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
+    post "chat/booking",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat/booking" }
+    delete "chat",                 to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
+    post "chat/agent",             to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat/agent" }
+  end
+
   # Public Booking Engine
   scope module: :public do
-    resources :hotels, only: [ :index, :show ] do
-      get :rate_calendar, on: :member
-    end
+    get "hotels", to: "hotels#index", as: :hotels
+    get "hotels/:hotel_code/:public_id/rate_calendar", to: "hotels#rate_calendar", as: :rate_calendar_hotel,
+        constraints: { hotel_code: hotel_code_constraint, public_id: public_uuid_v4_constraint }
+    get "hotels/:hotel_code/:public_id", to: "hotels#show", as: :hotel,
+        constraints: { hotel_code: hotel_code_constraint, public_id: public_uuid_v4_constraint }
+    get "hotels/:legacy_hotel_identifier/rate_calendar", to: "legacy_hotel_urls#rate_calendar"
+    get "hotels/:legacy_hotel_identifier", to: "legacy_hotel_urls#hotel"
     resources :quotes, only: [ :create, :show ] do
       member do
         get :guest_lookup
@@ -322,6 +352,8 @@ Rails.application.routes.draw do
   # nothing user-facing quotes them.
   get "/hotel/:hotel_id/settings/property/hotel-album", to: "hotel_portal/profiles#album", as: :hotel_album
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
+    get "operational-dates", to: "operational_dates#show", as: :operational_dates
+
     resource :training_decision, only: [] do
       post :keep
       post :reset

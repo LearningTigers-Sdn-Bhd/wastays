@@ -4,6 +4,8 @@ class Hotel < ApplicationRecord
   extend FriendlyId
   friendly_id :name, use: :slugged
 
+  PUBLIC_ID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
+
   encrypts :ai_provider_key
 
   enum :ai_provider_name, {
@@ -125,6 +127,9 @@ class Hotel < ApplicationRecord
   validates :unique_id, presence: true, uniqueness: { case_sensitive: false }
   validate :unique_id_is_immutable, on: :update, if: :will_save_change_to_unique_id?
   before_validation :assign_unique_id, on: :create
+  validates :public_id, presence: true, uniqueness: true, format: { with: PUBLIC_ID_FORMAT }
+  validate :public_id_is_immutable, on: :update, if: :will_save_change_to_public_id?
+  before_validation :assign_public_id, on: :create
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
                            length: { in: 3..6 },
                            format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
@@ -258,6 +263,19 @@ class Hotel < ApplicationRecord
 
   def self.locate!(key, scope: all)
     locate(key, scope: scope) || raise(ActiveRecord::RecordNotFound, "Couldn't find Hotel with identifier #{key.inspect}")
+  end
+
+  def self.locate_public(code:, public_id:, scope: all)
+    code = code.to_s.strip
+    public_id = public_id.to_s.strip
+    return nil unless code.match?(/\A\d+\z/) && public_id.match?(PUBLIC_ID_FORMAT)
+
+    scope.find_by(unique_id: code, public_id: public_id)
+  end
+
+  def self.locate_public!(code:, public_id:, scope: all)
+    locate_public(code:, public_id:, scope:) ||
+      raise(ActiveRecord::RecordNotFound, "Couldn't find Hotel with the supplied public identity")
   end
 
   # Codes are issued in order, so the next one is the highest already issued plus one.
@@ -728,8 +746,16 @@ class Hotel < ApplicationRecord
     self.unique_id = self.class.next_unique_id
   end
 
+  def assign_public_id
+    self.public_id ||= SecureRandom.uuid
+  end
+
   def unique_id_is_immutable
     errors.add(:unique_id, "cannot be changed after the hotel is created")
+  end
+
+  def public_id_is_immutable
+    errors.add(:public_id, "cannot be changed after the hotel is created")
   end
 
   def hotel_prefix_has_not_been_used_by_another_hotel
