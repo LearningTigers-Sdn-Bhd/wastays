@@ -42,7 +42,10 @@
   <% if @agency_collisions.any? %>
     <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
       <p class="font-bold">Spellings that will share one agency account</p>
-      <p class="mt-1 text-xs">The export writes these differently; the import treats them as the same agency.</p>
+      <p class="mt-1 text-xs">
+        The export writes these differently; the import treats them as the same agency
+        and names the account after the marked spelling.
+      </p>
       <ul class="mt-3 space-y-3">
         <% @agency_collisions.each do |collision| %>
           <li>
@@ -51,13 +54,17 @@
                 <%# Whitespace is preserved on purpose: one pair differs only by
                     a double space, which HTML would collapse into an apparent
                     duplicate. %>
+                <% chosen = spelling == collision.canonical %>
                 <li class="flex flex-wrap items-baseline gap-2">
-                  <code class="whitespace-pre-wrap rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs"><%= spelling %></code>
+                  <code class="whitespace-pre-wrap rounded px-1.5 py-0.5 font-mono text-xs <%= chosen ? "bg-amber-200 font-bold" : "bg-amber-100" %>"><%= spelling %></code>
+                  <% if chosen %>
+                    <span class="rounded-full bg-amber-900 px-2 py-0.5 text-xs font-bold text-amber-50">account name</span>
+                  <% end %>
                   <% if collision.whitespace_only?(spelling) %>
                     <span class="text-xs italic">differs only in spacing</span>
                   <% end %>
-                <% end %>
-              </li>
+                </li>
+              <% end %>
             </ul>
           </li>
         <% end %>
