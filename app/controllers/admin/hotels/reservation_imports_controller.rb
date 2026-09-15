@@ -86,17 +86,29 @@ module Admin
         load_rows
       end
 
+      # Agencies are grouped by their normalised name, so several spellings of
+      # one agency count once. The name an account is created with is the
+      # canonical spelling, not whichever row the database returned first.
       def load_agencies
-        names = @import.rows.importable.where.not(agency_name: nil).distinct.pluck(:agency_name)
+        by_agency = @import.rows.importable.where.not(agency_name: nil)
+                           .group(:agency_name).count
+                           .group_by { |name, _count| Ezee::ImportPlan.normalize_agency(name) }
+                           .transform_values(&:to_h)
         existing = @hotel.hotel_corporate_accounts.includes(:corporate_account).index_by do |link|
           Ezee::ImportPlan.normalize_agency(link.corporate_account&.name)
         end
-        @new_agencies, @matched_agencies = names.partition do |name|
-          existing[Ezee::ImportPlan.normalize_agency(name)].nil?
+
+        matched, unmatched = by_agency.partition { |key, _counts| existing.key?(key) }
+        @matched_agencies = matched.map { |_key, counts| Ezee::ImportPlan.canonical_agency_name(counts) }
+        @new_agencies = unmatched.map { |_key, counts| Ezee::ImportPlan.canonical_agency_name(counts) }
+
+        @agency_collisions = by_agency.filter_map do |_key, counts|
+          next if counts.size < 2
+
+          Ezee::ImportPlan::AgencyCollision.new(
+            spellings: counts.keys.sort, canonical: Ezee::ImportPlan.canonical_agency_name(counts)
+          )
         end
-        @agency_collisions = names.group_by { |name| Ezee::ImportPlan.normalize_agency(name) }
-                                  .values.select { |spellings| spellings.size > 1 }
-                                  .map { |spellings| Ezee::ImportPlan::AgencyCollision.new(spellings: spellings.sort) }
       end
 
       def load_rows

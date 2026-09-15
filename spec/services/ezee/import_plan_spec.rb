@@ -33,9 +33,46 @@ RSpec.describe Ezee::ImportPlan do
     end
   end
 
+  describe ".canonical_agency_name" do
+    it "names the account after the spelling the property writes most often" do
+      counts = {
+        "AMAZING BORNEO TOURS & EVENTS  SDN BHD" => 2,
+        "AMAZING BORNEO TOURS & EVENTS SDN BHD" => 3
+      }
+
+      expect(described_class.canonical_agency_name(counts)).to eq("AMAZING BORNEO TOURS & EVENTS SDN BHD")
+    end
+
+    # Staff prefix the name to mark a reservation's state. That is never what
+    # the agency is called, however many rows carry it.
+    it "never chooses a spelling carrying a status prefix" do
+      counts = {
+        "POSTPONE AMAZING BORNEO TOURS & EVENTS SDN BHD" => 9,
+        "AMAZING BORNEO TOURS & EVENTS SDN BHD" => 1
+      }
+
+      expect(described_class.canonical_agency_name(counts)).to eq("AMAZING BORNEO TOURS & EVENTS SDN BHD")
+    end
+
+    it "falls back to a prefixed spelling when the export never writes a clean one" do
+      counts = { "POSTPONED-BORNEO HOLIDAY SDN BHD" => 1 }
+
+      expect(described_class.canonical_agency_name(counts)).to eq("POSTPONED-BORNEO HOLIDAY SDN BHD")
+    end
+
+    # The answer must not move between imports of the same file.
+    it "breaks a tie on the shortest spelling, then alphabetically" do
+      counts = { "BORNEO TRAILS TOURS SDN BHD" => 2, "BORNEO TRAILS SDN BHD" => 2 }
+
+      expect(described_class.canonical_agency_name(counts)).to eq("BORNEO TRAILS SDN BHD")
+      expect(described_class.canonical_agency_name(counts.to_a.reverse.to_h))
+        .to eq("BORNEO TRAILS SDN BHD")
+    end
+  end
+
   describe Ezee::ImportPlan::AgencyCollision do
     it "flags the spellings that differ only in whitespace" do
-      collision = described_class.new(spellings: [
+      collision = described_class.new(canonical: "AMAZING BORNEO TOURS & EVENTS SDN BHD", spellings: [
         "AMAZING BORNEO TOURS & EVENTS  SDN BHD",
         "AMAZING BORNEO TOURS & EVENTS SDN BHD",
         "POSTPONE AMAZING BORNEO TOURS & EVENTS SDN BHD"

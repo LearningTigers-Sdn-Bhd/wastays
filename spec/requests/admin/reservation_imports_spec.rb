@@ -160,12 +160,16 @@ RSpec.describe "Admin reservation imports", type: :request do
     import = latest_import
 
     get admin_hotel_reservation_import_path(hotel, import, filter: "all")
-    body = response.body
-    expect(body.scan(/import_rows_page_\d+/).size).to eq(1)
+    # Page one, plus the lazy frame that will fetch page two.
+    expect(response.body).to include(%(id="import_rows_page_1"))
+    expect(response.body).to include(%(id="import_rows_page_2"))
 
     get rows_admin_hotel_reservation_import_path(hotel, import, filter: "all", page: 2)
+
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("reservation")
+    # Turbo matches a lazy frame's response by id. Without the wrapper it
+    # renders "Content missing" at the bottom of the table instead of rows.
+    expect(response.body).to include(%(id="import_rows_page_2"))
   end
 
   it "shows the progress page while the import is still running" do

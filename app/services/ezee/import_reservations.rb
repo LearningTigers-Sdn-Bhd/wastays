@@ -183,17 +183,29 @@ module Ezee
         existing = @hotel.hotel_corporate_accounts.includes(:corporate_account).index_by do |link|
           ImportPlan.normalize_agency(link.corporate_account&.name)
         end
-        @import.rows.importable.where.not(agency_name: nil).distinct.pluck(:agency_name).each do |name|
-          key = ImportPlan.normalize_agency(name)
-          existing[key] ||= create_corporate_account(name, key)
+        spellings_by_agency.each do |key, counts|
+          existing[key] ||= create_corporate_account(ImportPlan.canonical_agency_name(counts), key)
         end
         existing
       end
     end
 
+    # Every spelling of one agency, with how many reservations use it, so the
+    # account can be named after the one the property actually writes rather
+    # than whichever row came back first.
+    def spellings_by_agency
+      @import.rows.importable.where.not(agency_name: nil)
+             .group(:agency_name).count
+             .group_by { |name, _count| ImportPlan.normalize_agency(name) }
+             .transform_values(&:to_h)
+    end
+
     def create_corporate_account(name, key)
       account = Account.find_or_initialize_by(slug: key.parameterize)
-      account.name = name
+      # An account that already exists keeps the name it was given. A later
+      # import must not rename a property's agency because this file spells it
+      # differently.
+      account.name = name if account.new_record?
       account.account_kind = "corporate"
       account.status = "active"
       account.save!

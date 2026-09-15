@@ -31,7 +31,7 @@ module Ezee
     end
 
     # Several spellings in the export that resolve to one agency account.
-    AgencyCollision = Struct.new(:spellings, keyword_init: true) do
+    AgencyCollision = Struct.new(:spellings, :canonical, keyword_init: true) do
       # Two spellings differing only in whitespace render identically in HTML,
       # because the browser collapses runs of spaces. Saying so is the whole
       # point of the warning -- without it the operator reads the same name
@@ -60,6 +60,11 @@ module Ezee
     # eZee prints the source in place of an empty guest name, so these are not
     # names -- they are the absence of one. See docs section 2.1.
     BLANK_NAME = /\A-\s*/
+
+    # Staff mark a reservation's state by editing the agency name itself. The
+    # prefix is not part of the name and is never the spelling an account is
+    # named after.
+    STATUS_PREFIX = /\A\s*POSTPONED?\s*[-:\s]\s*/
 
     def self.call(...) = new(...).call
 
@@ -90,7 +95,7 @@ module Ezee
     # its postponed bookings from the first one's ledger.
     def self.normalize_agency(name)
       value = name.to_s.upcase
-                  .sub(/\A\s*POSTPONED?\s*[-:\s]\s*/, "")
+                  .sub(STATUS_PREFIX, "")
                   .gsub(/\bSDN\.?\s*BHD\.?/, "SDN BHD")
                   .gsub(/[[:punct:]]/, " ")
                   .squish
@@ -100,6 +105,21 @@ module Ezee
         value = first.join(" ") if first == halves.last(halves.size / 2)
       end
       value
+    end
+
+    # Which spelling becomes the account's name.
+    #
+    # One agency is written several ways, the account has to be called
+    # something, and it must not be whichever row the database happened to
+    # return first -- that answer moves between runs. A status prefix is not
+    # part of a name, so those spellings are never chosen. Otherwise the
+    # spelling the property uses most often wins, with ties broken on the
+    # shortest and then alphabetically, so the choice is stable.
+    def self.canonical_agency_name(counts_by_spelling)
+      candidates = counts_by_spelling.reject { |spelling, _| spelling.to_s.match?(STATUS_PREFIX) }
+      candidates = counts_by_spelling if candidates.empty?
+
+      candidates.min_by { |spelling, count| [ -count, spelling.to_s.length, spelling.to_s ] }&.first
     end
 
     private
