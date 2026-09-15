@@ -244,9 +244,12 @@ Handle the three cases by source (see §1):
 - **Agency name** (885 rows) — import as `guest_name`, and attach the corporate
   account. There is **no missing data here**: an agent has blocked rooms and the
   guest genuinely is not known yet. The rooming list arrives closer to arrival.
-- **Blank** (168 rows, printed as `- AGODA` etc.) — do **not** store the
-  `- SOURCE` placeholder as a name. These rows have a real name in eZee that
-  this report does not print.
+- **Blank** (168 rows, printed as `- AGODA` etc.) — stored verbatim, including
+  the `- SOURCE` placeholder. The import does not rewrite the property's own
+  records, and the row carries a warning saying the name is missing, so putting
+  a phrase in the guest field that the file does not contain would add nothing
+  the preview has not already said. These rows do have a real name in eZee;
+  this report simply does not print it.
 
 That last case is the only genuinely incomplete one, and it is 168 rows rather
 than the whole file. Flagging it is cheap and worth doing; a heavyweight
@@ -255,8 +258,18 @@ than the whole file. Flagging it is cheap and worth doing; a heavyweight
 `bookings.guest_phone` is `null: false` with a presence validation
 (`app/models/booking.rb:360`) and no row in this file has a phone. Relaxing that
 validation would weaken every other creation path, so the importer writes a
-sentinel the portal renders as "not captured" rather than a fake number a staff
-member might dial.
+sentinel rather than a fake number a staff member might dial.
+
+**The sentinel must differ per reservation.** `CreateManualBooking` matches a
+guest on email, phone and document number
+(`app/services/bookings/create_manual_booking.rb:329`), and phone is the only
+one an imported booking has. A sentinel shared across rows makes every
+reservation look like the same person: the first import collapsed 70 bookings
+onto a single guest record named after the first row, and on the real file that
+would be 1193. The sentinel therefore carries the reservation number.
+
+These guests are unknown and unrelated to each other, and nothing should merge
+them. The real identity is captured at check-in through the registration card.
 
 **The agency name is permanent, not a placeholder awaiting a rooming list.**
 This is established by the file itself, and it is the single most important

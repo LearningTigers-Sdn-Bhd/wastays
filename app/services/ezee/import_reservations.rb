@@ -31,7 +31,15 @@ module Ezee
     # No row in the export carries a phone, and bookings.guest_phone is NOT NULL.
     # A sentinel is deliberate: a plausible-looking fake number is worse, because
     # someone would eventually dial it.
+    #
+    # It carries the reservation number because CreateManualBooking matches a
+    # guest on email, phone and document number. A sentinel shared by every row
+    # makes every imported reservation look like the same person -- 1193
+    # bookings collapsing onto one guest record. These guests are unknown and
+    # unrelated, so their sentinels have to differ.
     GUEST_PHONE_SENTINEL = "NOT CAPTURED"
+
+    def self.phone_sentinel_for(reference) = "#{GUEST_PHONE_SENTINEL} #{reference}"
 
     def self.call(...) = new(...).call
 
@@ -106,7 +114,7 @@ module Ezee
     def booking_params(row)
       {
         guest_name: guest_name_for(row),
-        guest_phone: GUEST_PHONE_SENTINEL,
+        guest_phone: self.class.phone_sentinel_for(row.reservation_number),
         check_in: row.arrival,
         check_out: row.departure,
         adults: [ row.adults, 1 ].max,
@@ -153,12 +161,13 @@ module Ezee
       snapshot.room_total
     end
 
-    # A blank name is stored as an explicit statement that the export did not
-    # carry one, never as the "- AGODA" placeholder eZee prints in its place.
+    # The name is stored exactly as the export writes it, including the
+    # "- AGODA" that eZee prints when the field is empty. The import does not
+    # rewrite a property's own records, and the row's warning already says the
+    # name is missing, so inventing a phrase here would only put a string in the
+    # guest field that the source file does not contain.
     def guest_name_for(row)
-      return row.guest_name if row.guest_name.present? && !row.guest_name.start_with?("-")
-
-      "Name not in export (#{row.source})"
+      row.guest_name.presence || row.source.presence || "Unknown"
     end
 
     def notes_for(row)
