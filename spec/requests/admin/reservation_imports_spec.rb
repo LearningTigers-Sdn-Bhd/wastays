@@ -172,6 +172,35 @@ RSpec.describe "Admin reservation imports", type: :request do
     expect(response.body).to include(%(id="import_rows_page_2"))
   end
 
+  it "gives every imported reservation its own guest" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    post commit_admin_hotel_reservation_import_path(hotel, latest_import)
+    perform_enqueued_jobs
+
+    bookings = hotel.bookings.where.not(external_reference: nil)
+    guest_ids = BookingGuest.where(booking_id: bookings.select(:id)).distinct.pluck(:guest_id)
+
+    # CreateManualBooking matches a guest on phone, and no row in the export has
+    # one. A sentinel shared across rows made every reservation resolve to the
+    # same guest -- 70 bookings on one guest record.
+    expect(guest_ids.size).to eq(bookings.count)
+    expect(bookings.pluck(:guest_phone).uniq.size).to eq(bookings.count)
+  end
+
+  it "stores the guest name exactly as the export writes it" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    post commit_admin_hotel_reservation_import_path(hotel, latest_import)
+    perform_enqueued_jobs
+
+    names = hotel.bookings.where.not(external_reference: nil).pluck(:guest_name)
+
+    # eZee prints "- SOURCE" where the guest name is empty. That is what the
+    # file says, so that is what is stored -- the import does not invent a
+    # phrase the source does not contain.
+    expect(names).to include(a_string_starting_with("-"))
+    expect(names).not_to include(a_string_matching(/Name not in export/))
+  end
+
   it "shows the progress page while the import is still running" do
     post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
     import = latest_import
