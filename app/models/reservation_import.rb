@@ -16,6 +16,7 @@ class ReservationImport < ApplicationRecord
 
   belongs_to :hotel
   belongs_to :user, optional: true
+  has_many :rows, class_name: "ReservationImportRow", dependent: :delete_all
   has_one_attached :file
 
   validates :status, inclusion: { in: STATUSES }

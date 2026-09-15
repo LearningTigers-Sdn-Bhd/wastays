@@ -9,12 +9,14 @@ module Admin
     # fail on inventory the property has not set up, and finding that out 900
     # bookings into a commit is useless.
     #
-    # The commit then runs in the background, because a thousand reservations,
-    # each building a financial snapshot and a folio, is not a request. The
-    # operator watches a ReservationImport row rather than a spinner.
+    # The file is read once, at upload, into ReservationImportRow. The preview
+    # then pages over those rows and the commit reads them, so a thousand-row
+    # file costs one parse rather than one per page view.
     class ReservationImportsController < Admin::BaseController
+      PER_PAGE = 50
+
       before_action :set_hotel
-      before_action :set_import, only: %i[show commit]
+      before_action :set_import, only: %i[show rows commit]
 
       def new
       end
@@ -25,16 +27,17 @@ module Admin
       def show
         return render :progress unless @import.status == "draft"
 
-        @parsed = parse(@import)
-        unless @parsed.success?
-          error = @parsed.error
-          @import.destroy
-          return redirect_back_with(error)
-        end
-
-        @plan = Ezee::ImportPlan.call(hotel: @hotel, rows: @parsed.rows)
-        @import.update!(total_rows: @plan.importable.size)
+        load_preview
         render :preview
+      end
+
+      # One page of the review table, fetched by the lazy frame at the bottom of
+      # the page before it. Keeps a thousand-row file off the first response.
+      def rows
+        load_rows
+        render partial: "admin/hotels/reservation_imports/rows_page",
+               locals: { hotel: @hotel, import: @import, rows: @rows,
+                         filter: @filter, page: @page, more: @more }
       end
 
       def create
@@ -43,6 +46,12 @@ module Admin
 
         import = @hotel.reservation_imports.create!(user: current_user, status: "draft")
         import.file.attach(io: file.tempfile, filename: file.original_filename)
+
+        result = Ezee::BuildImportRows.call(import: import)
+        unless result.success?
+          import.destroy
+          return redirect_back_with(result.error)
+        end
 
         redirect_to admin_hotel_reservation_import_path(@hotel, import)
       end
@@ -65,19 +74,56 @@ module Admin
         @import = @hotel.reservation_imports.find(params[:id])
       end
 
-      def redirect_to_progress
-        redirect_to admin_hotel_reservation_import_path(@hotel, @import)
+      # Counts come from the database rather than from a re-resolved file, so
+      # the summary costs a handful of grouped queries whatever the file size.
+      def load_preview
+        @counts = @import.rows.group(:status).count
+        @attention_count = @import.rows.needing_attention.count
+        @group_count = @import.rows.importable.where.not(group_key: nil).distinct.count(:group_key)
+        @total_value = @import.rows.importable.sum(:total_amount)
+        @business_date = @hotel.current_business_date || @hotel.business_date_for
+        load_agencies
+        load_rows
       end
 
-      # Roo needs a path with a meaningful extension, and the attachment is only
-      # a key in storage, so it is written out under its original name.
-      def parse(import)
-        blob = import.file.blob
-        Tempfile.create([ "ezee", File.extname(blob.filename.to_s) ], binmode: true) do |tempfile|
-          tempfile.write(blob.download)
-          tempfile.flush
-          Ezee::ReservationListParser.call(path: tempfile.path, filename: blob.filename.to_s)
+      def load_agencies
+        names = @import.rows.importable.where.not(agency_name: nil).distinct.pluck(:agency_name)
+        existing = @hotel.hotel_corporate_accounts.includes(:corporate_account).index_by do |link|
+          Ezee::ImportPlan.normalize_agency(link.corporate_account&.name)
         end
+        @new_agencies, @matched_agencies = names.partition do |name|
+          existing[Ezee::ImportPlan.normalize_agency(name)].nil?
+        end
+        @agency_collisions = names.group_by { |name| Ezee::ImportPlan.normalize_agency(name) }
+                                  .values.select { |spellings| spellings.size > 1 }
+                                  .map { |spellings| Ezee::ImportPlan::AgencyCollision.new(spellings: spellings.sort) }
+      end
+
+      def load_rows
+        @filter = params[:filter].presence_in(%w[all attention importable imported past]) || default_filter
+        @page = [ params[:page].to_i, 1 ].max
+        scope = filtered_rows(@filter).in_sheet_order
+        @rows = scope.limit(PER_PAGE + 1).offset((@page - 1) * PER_PAGE).to_a
+        @more = @rows.size > PER_PAGE
+        @rows = @rows.first(PER_PAGE)
+      end
+
+      # Land on the problems when there are any: the operator's job here is to
+      # decide whether to commit, and that decision turns on what went wrong.
+      def default_filter
+        @import.rows.needing_attention.exists? ? "attention" : "all"
+      end
+
+      def filtered_rows(filter)
+        case filter
+        when "attention" then @import.rows.needing_attention
+        when "all" then @import.rows
+        else @import.rows.where(status: filter)
+        end
+      end
+
+      def redirect_to_progress
+        redirect_to admin_hotel_reservation_import_path(@hotel, @import)
       end
 
       def redirect_back_with(message)

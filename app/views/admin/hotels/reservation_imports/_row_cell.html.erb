@@ -1,0 +1,18 @@
+<%# One cell that knows whether it is the thing that went wrong. An error rings
+    it red, a warning amber, and the reason sits beneath -- so the reader sees
+    which value is at fault, not merely that the row is. %>
+<% issue = row.issue_for(field) %>
+<% ring = case issue && issue["level"]
+          when "error" then "ring-1 ring-inset ring-red-400 bg-red-50"
+          when "warning" then "ring-1 ring-inset ring-amber-400 bg-amber-50"
+          end %>
+<div class="px-3 py-3 <%= align %>">
+  <span class="inline-block max-w-full truncate rounded-md px-1.5 py-0.5 <%= ring %>" title="<%= value %>">
+    <%= value.presence || "—" %>
+  </span>
+  <% if issue %>
+    <p class="mt-1 text-xs <%= issue["level"] == "error" ? "text-red-700" : "text-amber-700" %>">
+      <%= issue["message"] %>
+    </p>
+  <% end %>
+</div>
