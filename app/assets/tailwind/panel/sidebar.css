@@ -36,6 +36,27 @@
     border-color: var(--sidebar-border);
   }
 
+  .panel-sidebar__details {
+    @apply w-full pb-1.5 text-xs;
+  }
+
+  .panel-sidebar__details-list {
+    @apply space-y-1;
+  }
+
+  .panel-sidebar__details-row {
+    @apply flex items-baseline justify-between gap-2;
+  }
+
+  .panel-sidebar__details-row dt {
+    color: var(--sidebar-muted-foreground);
+  }
+
+  .panel-sidebar__details-row dd {
+    @apply shrink-0 font-medium tabular-nums;
+    color: var(--sidebar-foreground);
+  }
+
   .panel-sidebar__mark {
     @apply flex items-center justify-center rounded-md p-1;
   }

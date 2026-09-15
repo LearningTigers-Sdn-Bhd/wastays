@@ -19,7 +19,7 @@
             description: "Manage the property’s public identity and amenities.",
             action: render(PanelsUI::Button.new(
               label: "See Hotel",
-              href: hotel_path(@hotel),
+              href: hotel_path(@hotel.unique_id, @hotel.public_id),
               variant: :secondary,
               size: :sm,
               target: "_blank",

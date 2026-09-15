@@ -14,7 +14,7 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
   describe "GET /concierge/:hotel_slug/contact" do
     it "returns http success and shows contact links" do
-      get "/concierge/#{hotel.slug}/contact"
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("wa.me/60123456789")
@@ -22,7 +22,7 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
     end
 
     it "shows no front desk badge for a hotel that never filled the page" do
-      get "/concierge/#{hotel.slug}/contact"
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
 
       expect(response.body).not_to include("Front desk is")
     end
@@ -43,7 +43,7 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
     it "says the desk is open and hides the duty manager during the day" do
       travel_to Time.find_zone("Kuala Lumpur").parse("2026-09-08 10:00") do
-        get "/concierge/#{hotel.slug}/contact"
+        get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
       end
 
       expect(response.body).to include("Front desk is open until 11:00 PM")
@@ -52,7 +52,7 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
     it "says the desk is closed and offers the duty manager at night" do
       travel_to Time.find_zone("Kuala Lumpur").parse("2026-09-08 03:00") do
-        get "/concierge/#{hotel.slug}/contact"
+        get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
       end
 
       expect(response.body).to include("Front desk is closed")
@@ -62,7 +62,7 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
     it "shows the emergency card at any hour" do
       travel_to Time.find_zone("Kuala Lumpur").parse("2026-09-08 10:00") do
-        get "/concierge/#{hotel.slug}/contact"
+        get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
       end
 
       expect(response.body).to include("Police, fire, ambulance")

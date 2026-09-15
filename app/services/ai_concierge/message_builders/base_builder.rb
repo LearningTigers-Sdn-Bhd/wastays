@@ -101,7 +101,11 @@ module AiConcierge
       end
 
       def public_hotel_url(search_params)
-        hotel_url(search_params.compact.merge(id: hotel, host: default_host))
+        hotel_url(search_params.compact.merge(
+          hotel_code: hotel.unique_id,
+          public_id: hotel.public_id,
+          host: default_host
+        ))
       end
 
       def default_host

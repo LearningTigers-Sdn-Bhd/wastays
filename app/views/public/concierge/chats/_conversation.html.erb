@@ -22,7 +22,7 @@
   <%= render PublicUI::Chat::Panel.new(doodle: concierge_chat_doodle_style) do |panel| %>
     <% panel.with_bar(title: hotel.name,
                       status: concierge_chat_status(conversation, hotel),
-                      back_path: concierge_home_path(hotel),
+                      back_path: concierge_home_path(hotel.unique_id, hotel.public_id),
                       back_label: "Back to concierge",
                       avatar: conversation&.human? ? :staff : :bot) do |bar| %>
       <% bar.with_menu do %>
@@ -30,7 +30,7 @@
           <%# Nobody can be sent for before the guest has said anything: there
               would be no thread for them to arrive in. %>
           <% if conversation && !conversation.human? && !conversation.human_requested? %>
-            <% menu.with_item(href: concierge_chat_agent_path(hotel), method: :post) do %>
+            <% menu.with_item(href: concierge_chat_agent_path(hotel.unique_id, hotel.public_id), method: :post) do %>
               Ask for a person
             <% end %>
           <% end %>
@@ -44,7 +44,7 @@
             <% end %>
           <% end %>
 
-          <% menu.with_item(href: concierge_clear_chat_path(hotel),
+          <% menu.with_item(href: concierge_clear_chat_path(hotel.unique_id, hotel.public_id),
                             method: :delete,
                             danger: true,
                             confirm: "Start a new conversation? This one is put away -- the hotel keeps what was said.") do %>
@@ -63,7 +63,7 @@
     <% when :confirmation_code %>
       <% panel.with_secure_input do %>
         <%= render PublicUI::Chat::SecureInput.new(
-              url: concierge_chat_booking_path(hotel),
+              url: concierge_chat_booking_path(hotel.unique_id, hotel.public_id),
               kind: :confirmation_code,
               error: chat_input.error) %>
       <% end %>
@@ -71,9 +71,9 @@
       <% if chat_input.suggestions.any? %>
         <% panel.with_quick_replies(
              suggestions: chat_input.suggestions,
-             message_url: concierge_chat_messages_path(hotel)) %>
+             message_url: concierge_chat_messages_path(hotel.unique_id, hotel.public_id)) %>
       <% end %>
-      <% panel.with_composer(url: concierge_chat_messages_path(hotel)) %>
+      <% panel.with_composer(url: concierge_chat_messages_path(hotel.unique_id, hotel.public_id)) %>
     <% end %>
   <% end %>
 <% end %>

@@ -2,15 +2,15 @@
   <% case input.kind %>
   <% when :confirmation_code %>
     <%= render PublicUI::Chat::SecureInput.new(
-          url: concierge_chat_booking_path(hotel),
+          url: concierge_chat_booking_path(hotel.unique_id, hotel.public_id),
           kind: :confirmation_code,
           error: input.error) %>
   <% else %>
     <% if input.suggestions.any? %>
       <%= render PublicUI::Chat::QuickReplies.new(
             suggestions: input.suggestions,
-            message_url: concierge_chat_messages_path(hotel)) %>
+            message_url: concierge_chat_messages_path(hotel.unique_id, hotel.public_id)) %>
     <% end %>
-    <%= render PublicUI::Chat::Composer.new(url: concierge_chat_messages_path(hotel)) %>
+    <%= render PublicUI::Chat::Composer.new(url: concierge_chat_messages_path(hotel.unique_id, hotel.public_id)) %>
   <% end %>
 <% end %>

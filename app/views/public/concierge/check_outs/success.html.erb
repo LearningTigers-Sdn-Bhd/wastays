@@ -62,7 +62,7 @@
   </div>
 
   <div class="p-6 pb-12" data-animate style="transition-delay: 0.4s">
-    <%= link_to concierge_home_path(@hotel),
+    <%= link_to concierge_home_path(@hotel.unique_id, @hotel.public_id),
           class: "mx-auto block w-full max-w-sm rounded-xl bg-white py-4.5 text-center text-sm font-black uppercase tracking-[0.2em] text-primary shadow-2xl transition-all hover:shadow-xl active:scale-[0.98]" do %>
       Done
     <% end %>

@@ -14,7 +14,7 @@ module Public
           return render_checkout_lookup_error(booking) unless booking.checked_in?
 
           set_concierge_booking_cookie(booking)
-          return redirect_to concierge_check_out_path(@hotel, stage: "submit")
+          return redirect_to concierge_check_out_path(@hotel.unique_id, @hotel.public_id, stage: "submit")
         end
 
         result = ::Concierge::SubmitCheckOutRequest.new(
@@ -24,7 +24,7 @@ module Public
 
         if result.success?
           set_concierge_booking_cookie(booking)
-          redirect_to concierge_check_out_success_path(@hotel)
+          redirect_to concierge_check_out_success_path(@hotel.unique_id, @hotel.public_id)
         else
           @error = result.message
           @booking = booking
@@ -34,7 +34,7 @@ module Public
 
       def success
         @booking = current_concierge_booking
-        redirect_to concierge_home_path(@hotel) unless @booking
+        redirect_to concierge_home_path(@hotel.unique_id, @hotel.public_id) unless @booking
       end
 
       private

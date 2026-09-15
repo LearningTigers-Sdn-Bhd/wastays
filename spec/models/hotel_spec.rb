@@ -407,6 +407,41 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
+  describe 'public_id' do
+    it 'assigns a UUIDv4 on create' do
+      hotel = create(:hotel)
+
+      expect(hotel.public_id).to match(Hotel::PUBLIC_ID_FORMAT)
+    end
+
+    it 'assigns a different public ID to each hotel' do
+      expect(create(:hotel).public_id).not_to eq(create(:hotel).public_id)
+    end
+
+    it 'cannot be changed once the hotel exists' do
+      hotel = create(:hotel)
+      hotel.public_id = SecureRandom.uuid
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:public_id]).to include('cannot be changed after the hotel is created')
+    end
+
+    it 'rejects a public ID already taken by another hotel' do
+      taken = create(:hotel).public_id
+
+      expect(build(:hotel, public_id: taken)).not_to be_valid
+    end
+
+    it 'has database null and uniqueness constraints' do
+      column = Hotel.columns_hash.fetch('public_id')
+      index = Hotel.connection.indexes(:hotels).find { |candidate| candidate.columns == [ 'public_id' ] }
+
+      expect(column.null).to be false
+      expect(column.default_function).to eq('gen_random_uuid()')
+      expect(index.unique).to be true
+    end
+  end
+
   describe 'slug' do
     it 'survives a rename so links issued before it keep resolving' do
       hotel = create(:hotel)
@@ -450,6 +485,38 @@ RSpec.describe Hotel, type: :model do
 
     it 'raises from locate! when nothing matches' do
       expect { Hotel.locate!('90909') }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+  end
+
+  describe '.locate_public' do
+    let!(:hotel) { create(:hotel) }
+
+    it 'finds a hotel when its code and public ID match' do
+      expect(Hotel.locate_public(code: hotel.unique_id, public_id: hotel.public_id)).to eq(hotel)
+    end
+
+    it 'does not find a hotel when the code belongs to another hotel' do
+      other = create(:hotel)
+
+      expect(Hotel.locate_public(code: other.unique_id, public_id: hotel.public_id)).to be_nil
+    end
+
+    it 'does not find invalid or unknown public identities' do
+      expect(Hotel.locate_public(code: hotel.unique_id, public_id: 'not-a-uuid')).to be_nil
+      expect(Hotel.locate_public(code: hotel.unique_id, public_id: SecureRandom.uuid)).to be_nil
+      expect(Hotel.locate_public(code: 'not-a-code', public_id: hotel.public_id)).to be_nil
+    end
+
+    it 'honours the given scope' do
+      expect(
+        Hotel.locate_public(code: hotel.unique_id, public_id: hotel.public_id, scope: Hotel.none)
+      ).to be_nil
+    end
+
+    it 'raises when the public identity does not match' do
+      expect {
+        Hotel.locate_public!(code: hotel.unique_id, public_id: SecureRandom.uuid)
+      }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
 
