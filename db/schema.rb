@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_131500) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1908,6 +1908,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_131500) do
     t.bigint "plan_id"
     t.string "pre_suspension_status"
     t.string "preferred_channel_manager"
+    t.uuid "public_id", default: -> { "gen_random_uuid()" }, null: false
     t.bigint "salesperson_id"
     t.string "sell_mode", null: false
     t.boolean "setup_lock_enabled", default: false, null: false
@@ -1935,6 +1936,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_131500) do
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
     t.index ["plan_id"], name: "index_hotels_on_plan_id"
+    t.index ["public_id"], name: "index_hotels_on_public_id", unique: true
     t.index ["salesperson_id"], name: "index_hotels_on_salesperson_id"
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
     t.index ["training_completed_by_id"], name: "index_hotels_on_training_completed_by_id"

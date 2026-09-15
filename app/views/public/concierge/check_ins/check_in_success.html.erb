@@ -38,7 +38,7 @@
   </div>
 
   <%= render "public/concierge/shared/back_button",
-             back_path: concierge_home_path(@hotel),
+             back_path: concierge_home_path(@hotel.unique_id, @hotel.public_id),
              back_label: "Back to Concierge",
              wrapper_class: "flex" %>
 <% end %>

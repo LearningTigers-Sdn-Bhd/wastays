@@ -22,7 +22,7 @@ module Public
       def ensure_guest_chat_available
         return if @hotel&.concierge_chat_available?
 
-        redirect_to concierge_home_path(@hotel)
+        redirect_to concierge_home_path(@hotel.unique_id, @hotel.public_id)
       end
 
       def load_conversation
@@ -46,7 +46,7 @@ module Public
           end
           format.html do
             flash[:alert] = error if error.present?
-            redirect_to concierge_chat_path(@hotel)
+            redirect_to concierge_chat_path(@hotel.unique_id, @hotel.public_id)
           end
         end
       end

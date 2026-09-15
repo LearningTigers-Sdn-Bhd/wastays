@@ -23,7 +23,7 @@ module Public
       end
 
       def set_hotel
-        @hotel = Hotel.locate!(params[:hotel_slug])
+        @hotel = Hotel.locate_public!(code: params[:hotel_code], public_id: params[:public_id])
       rescue ActiveRecord::RecordNotFound
         render file: Rails.public_path.join("404.html"), status: :not_found, layout: false
       end
@@ -32,7 +32,7 @@ module Public
         return if @hotel&.concierge_page_available?
 
         if @hotel&.concierge_available?
-          redirect_to hotel_path(@hotel), alert: "AI concierge is not available for this hotel."
+          redirect_to hotel_path(@hotel.unique_id, @hotel.public_id), alert: "AI concierge is not available for this hotel."
           return
         end
 
