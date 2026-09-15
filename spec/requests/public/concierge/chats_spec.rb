@@ -12,7 +12,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
   end
 
-  def chat_path = "/concierge/#{hotel.slug}/chat"
+  def chat_path = "/concierge/#{hotel.unique_id}/#{hotel.public_id}/chat"
 
   describe "GET chat" do
     it "opens for a visitor who has never written before" do
@@ -31,7 +31,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
 
       get chat_path
 
-      expect(response).to redirect_to(concierge_home_path(hotel))
+      expect(response).to redirect_to(concierge_home_path(hotel.unique_id, hotel.public_id))
     end
 
     it "refuses to record a message posted to a chat that is switched off" do
@@ -41,7 +41,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
         post chat_path, params: { message: "Do you have parking?" }
       }.not_to change(Conversation, :count)
 
-      expect(response).to redirect_to(concierge_home_path(hotel))
+      expect(response).to redirect_to(concierge_home_path(hotel.unique_id, hotel.public_id))
     end
   end
 
@@ -267,12 +267,12 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
 
       # Redirects address the hotel by its canonical unique_id, not the slug the
       # QR code happens to carry.
-      expect(response).to redirect_to(concierge_chat_path(hotel))
+      expect(response).to redirect_to(concierge_chat_path(hotel.unique_id, hotel.public_id))
     end
   end
 
   describe "DELETE chat" do
-    def clear_path = "/concierge/#{hotel.slug}/chat"
+    def clear_path = "/concierge/#{hotel.unique_id}/#{hotel.public_id}/chat"
 
     it "puts the guest's thread away and gives them an empty chat" do
       post chat_path, params: { message: "Do you have parking?" }
@@ -322,7 +322,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "is harmless for a visitor who has never written" do
       delete clear_path
 
-      expect(response).to redirect_to(concierge_chat_path(hotel))
+      expect(response).to redirect_to(concierge_chat_path(hotel.unique_id, hotel.public_id))
     end
 
     # The menu is the only way to reach it, so it has to be on the page.
@@ -335,7 +335,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
   end
 
   describe "asking for a person" do
-    def agent_path = "/concierge/#{hotel.slug}/chat/agent"
+    def agent_path = "/concierge/#{hotel.unique_id}/#{hotel.public_id}/chat/agent"
 
     before { hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "k") }
 

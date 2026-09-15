@@ -24,7 +24,7 @@ RSpec.describe "Public::Hotels", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("See Options")
-      expect(response.body).to include(%(href="/hotels/#{hotel.to_param}?))
+      expect(response.body).to include(%(href="/hotels/#{hotel.unique_id}/#{hotel.public_id}?))
       today = Time.use_zone(User::DEFAULT_TIME_ZONE) { Date.current }
       expect(response.body).to include("check_in=#{today}")
       expect(response.body).to include("check_out=#{today + 1.day}")
@@ -52,12 +52,12 @@ RSpec.describe "Public::Hotels", type: :request do
 
   describe "GET /show" do
     it "returns http success" do
-      get "/hotels/#{hotel.to_param}"
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}"
       expect(response).to have_http_status(:success)
     end
 
     it "shows the search bar header with date pill" do
-      get "/hotels/#{hotel.to_param}", params: {
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}", params: {
         check_in: Date.current.to_s,
         check_out: Date.tomorrow.to_s,
         adults: 2,
@@ -68,6 +68,26 @@ RSpec.describe "Public::Hotels", type: :request do
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Check-In / Out")
       expect(response.body).to include("rate-calendar")
+    end
+
+    it "returns 404 when the public ID belongs to a different hotel code" do
+      other = create(:hotel, status: "live")
+
+      get hotel_path(other.unique_id, hotel.public_id)
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 404 for an unknown public ID" do
+      get hotel_path(hotel.unique_id, SecureRandom.uuid)
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 404 for an invalid public ID" do
+      get "/hotels/#{hotel.unique_id}/not-a-uuid"
+
+      expect(response).to have_http_status(:not_found)
     end
 
     it "sorts restricted rooms to the bottom of the list when dates are provided" do
@@ -86,7 +106,7 @@ RSpec.describe "Public::Hotels", type: :request do
 
       RoomRate.where(room_type: restricted_rt, date: check_in).update_all(min_stay: 3)
 
-      get "/hotels/#{hotel.to_param}", params: {
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}", params: {
         check_in: check_in.to_s,
         check_out: check_out.to_s,
         adults: 2,
@@ -107,7 +127,7 @@ RSpec.describe "Public::Hotels", type: :request do
     it "redirects when hotel is on easy plan" do
       hotel.update!(plan: easy_plan)
 
-      get "/hotels/#{hotel.to_param}"
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}"
 
       expect(response).to redirect_to(hotels_path)
       expect(flash[:alert]).to eq("Hotel not found")
