@@ -25,19 +25,25 @@ module CorporatePortal
     # A stay in one of these states is holding a room over its dates.
     OCCUPYING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required].freeze
 
-    Option = Struct.new(:room_type, :rate_plan, :available_count, :total_amount,
-                        :currency, keyword_init: true) do
-      def available? = available_count.positive?
+    Option = Struct.new(:room_type, :rate_plan, :available_count, :per_room_amount,
+                        :rooms, :currency, keyword_init: true) do
+      # Enough rooms free to satisfy the whole request, not merely one.
+      def available? = available_count >= rooms
+
+      # Each room is priced for the occupancy of a single room, so the booking
+      # is that figure once per room. On a per-pax property this is why
+      # occupancy is asked per room rather than for the party as a whole.
+      def total_amount = per_room_amount && per_room_amount * rooms
     end
 
-    Result = Struct.new(:options, :nights, :error, keyword_init: true) do
+    Result = Struct.new(:options, :nights, :rooms, :error, keyword_init: true) do
       def success? = error.blank?
       def available = options.select(&:available?)
     end
 
     def self.call(...) = new(...).call
 
-    def initialize(hotel:, check_in:, check_out:, adults: 2, children: 0)
+    def initialize(hotel:, check_in:, check_out:, adults: 2, children: 0, rooms: 1)
       @hotel = hotel
       # Both callers reach here: the search form sends strings, the confirm step
       # re-checks with whatever it was given.
@@ -45,6 +51,10 @@ module CorporatePortal
       @check_out = to_date(check_out)
       @adults = adults.to_i
       @children = children.to_i
+      # Rooms are sold with one occupancy between them, so a party split unevenly
+      # is booked as separate searches. That keeps per-pax pricing honest: the
+      # price of a room follows who is in that room.
+      @rooms = [ rooms.to_i, 1 ].max
     end
 
     def call
@@ -52,7 +62,8 @@ module CorporatePortal
       return failure("Departure must be after arrival.") if @check_out <= @check_in
       return failure("Arrival cannot be in the past.") if @check_in < business_date
 
-      Result.new(options: options_for_room_types, nights: (@check_out - @check_in).to_i)
+      Result.new(options: options_for_room_types, rooms: @rooms,
+                 nights: (@check_out - @check_in).to_i)
     end
 
     private
@@ -78,7 +89,8 @@ module CorporatePortal
           room_type: room_type,
           rate_plan: rate_plan,
           available_count: remaining_capacity(room_type),
-          total_amount: total_for(room_type, rate_plan),
+          per_room_amount: total_for(room_type, rate_plan),
+          rooms: @rooms,
           currency: @hotel.default_currency.presence || "MYR"
         )
       end
@@ -116,6 +128,6 @@ module CorporatePortal
       nil
     end
 
-    def failure(message) = Result.new(options: [], nights: 0, error: message)
+    def failure(message) = Result.new(options: [], nights: 0, rooms: @rooms, error: message)
   end
 end

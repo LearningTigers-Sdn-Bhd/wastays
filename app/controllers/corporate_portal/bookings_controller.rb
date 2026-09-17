@@ -21,13 +21,14 @@ module CorporatePortal
       @check_out = parse_date(params[:check_out])
       @adults = (params[:adults].presence || 2).to_i
       @children = params[:children].to_i
+      @rooms = [ (params[:rooms].presence || 1).to_i, 1 ].max
       @room_type_id = params[:room_type_id]
 
       return if @relationship.blank? || @check_in.blank? || @check_out.blank?
 
       @search = AgentStaySearch.call(
         hotel: @relationship.hotel, check_in: @check_in, check_out: @check_out,
-        adults: @adults, children: @children
+        adults: @adults, children: @children, rooms: @rooms
       )
       @selected = @search.options.find { |option| option.room_type.id.to_s == @room_type_id.to_s }
     end
@@ -38,7 +39,8 @@ module CorporatePortal
       )
 
       if result.success?
-        redirect_to corporate_booking_path(result.booking), notice: "Booking confirmed."
+        redirect_to corporate_booking_path(result.booking),
+                    notice: "#{ActionController::Base.helpers.pluralize(result.bookings.size, 'booking')} confirmed."
       else
         flash.now[:alert] = result.errors.to_sentence
         redirect_back_to_search
@@ -47,6 +49,13 @@ module CorporatePortal
 
     def show
       @booking = corporate_bookings.find(params[:id])
+      # A multi-room stay is several bookings under one group; the confirmation
+      # should show the stay, not one room of it.
+      @bookings = if @booking.group_booking_id.present?
+        corporate_bookings.where(group_booking_id: @booking.group_booking_id).order(:group_position, :id)
+      else
+        [ @booking ]
+      end
     end
 
     private
@@ -71,13 +80,13 @@ module CorporatePortal
       Booking.where(hotel_corporate_account_id: corporate_relationships.select(:id))
     end
 
-    # Guest blocks arrive keyed by position, so they are permitted as a hash and
-    # read back in order by the service.
+    # Rooms, and the guest blocks inside them, arrive keyed by position. They
+    # are permitted as a nested hash and read back in order by the service,
+    # which takes only the guest keys it knows.
     def booking_params
       params.require(:booking).permit(
-        :room_type_id, :check_in, :check_out, :adults, :children,
-        :guest_name, :guest_email, :guest_phone, :special_requests,
-        guests: {}
+        :room_type_id, :check_in, :check_out, :adults, :children, :rooms,
+        :special_requests, rooms_detail: {}
       )
     end
 
@@ -86,7 +95,7 @@ module CorporatePortal
         hotel_relationship_id: @relationship.id,
         check_in: booking_params[:check_in], check_out: booking_params[:check_out],
         adults: booking_params[:adults], children: booking_params[:children],
-        room_type_id: booking_params[:room_type_id]
+        rooms: booking_params[:rooms], room_type_id: booking_params[:room_type_id]
       ), alert: flash.now[:alert]
     end
 

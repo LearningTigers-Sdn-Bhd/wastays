@@ -23,6 +23,12 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     sign_in_as(user)
   end
 
+  def room_detail(*guests)
+    { rooms_detail: guests.each_with_index.to_h { |people, index|
+      [ index.to_s, { guests: people.each_with_index.to_h { |attrs, i| [ i.to_s, attrs ] } } ]
+    } }
+  end
+
   def search_params(overrides = {})
     { hotel_relationship_id: relationship.id, check_in: check_in.to_s,
       check_out: check_out.to_s, adults: 2 }.merge(overrides)
@@ -48,9 +54,8 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
         hotel_relationship_id: relationship.id,
         booking: {
           room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
-          adults: 2, children: 0, guest_name: "Aisha Rahman", guest_phone: "+60123456789",
-          guest_email: "aisha@example.com"
-        }
+          adults: 2, children: 0, rooms: 1
+        }.merge(room_detail([ { name: "Aisha Rahman", phone: "+60123456789", email: "aisha@example.com" } ]))
       }
     }.to change(Booking, :count).by(1)
 
@@ -70,7 +75,8 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
       post corporate_bookings_path, params: {
         hotel_relationship_id: other.id,
         booking: { room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
-                   adults: 2, guest_name: "Someone", guest_phone: "+60100000000" }
+                   adults: 2, rooms: 1 }
+                 .merge(room_detail([ { name: "Someone", phone: "+60100000000" } ]))
       }
     }.not_to change(Booking, :count)
 
@@ -92,12 +98,11 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
       hotel_relationship_id: relationship.id,
       booking: {
         room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
-        adults: 2, children: 0,
-        guests: {
-          "0" => { name: "Aisha Rahman", phone: "+60123456789", email: "aisha@example.com" },
-          "1" => { name: "Iman Rahman", phone: "+60129876543" }
-        }
-      }
+        adults: 2, children: 0, rooms: 1
+      }.merge(room_detail([
+        { name: "Aisha Rahman", phone: "+60123456789", email: "aisha@example.com" },
+        { name: "Iman Rahman", phone: "+60129876543" }
+      ]))
     }
 
     booking = Booking.order(:id).last
@@ -114,17 +119,60 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
       hotel_relationship_id: relationship.id,
       booking: {
         room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
-        adults: 2, children: 0,
-        guests: {
-          "0" => { name: "Aisha Rahman", phone: "+60123456789" },
-          "1" => { name: "", phone: "", email: "" }
-        }
-      }
+        adults: 2, children: 0, rooms: 1
+      }.merge(room_detail([
+        { name: "Aisha Rahman", phone: "+60123456789" },
+        { name: "", phone: "", email: "" }
+      ]))
     }
 
     booking = Booking.order(:id).last
     expect(booking.guest_name).to eq("Aisha Rahman")
     expect(booking.booking_guests.count).to eq(1)
+  end
+
+  it "books several rooms as one grouped stay, each with its own guests" do
+    expect {
+      post corporate_bookings_path, params: {
+        hotel_relationship_id: relationship.id,
+        booking: {
+          room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
+          adults: 2, children: 0, rooms: 2
+        }.merge(room_detail(
+          [ { name: "Aisha Rahman", phone: "+60123456789" }, { name: "Iman Rahman" } ],
+          [ { name: "Lee Wei", phone: "+60127654321" }, { name: "Lee Mei" } ]
+        ))
+      }
+    }.to change(Booking, :count).by(2)
+
+    bookings = Booking.order(:id).last(2)
+    # One booking is one room -- booking_rooms is unique on booking_id -- so a
+    # two-room stay is two bookings under one group.
+    expect(bookings.map(&:group_booking_id).uniq.compact.size).to eq(1)
+    expect(bookings.map(&:guest_name)).to contain_exactly("Aisha Rahman", "Lee Wei")
+    expect(bookings.map { |booking| booking.booking_guests.count }).to eq([ 2, 2 ])
+    expect(bookings.map(&:hotel_corporate_account_id).uniq).to eq([ relationship.id ])
+  end
+
+  it "refuses the whole party rather than booking half of it" do
+    # Four rooms in the category, three already sold: two cannot both be had.
+    3.times do
+      create(:booking, hotel: hotel, check_in: check_in, check_out: check_out, status: "confirmed").tap do |booking|
+        create(:booking_room, booking: booking, room_type: room_type, room_number: nil)
+      end
+    end
+
+    expect {
+      post corporate_bookings_path, params: {
+        hotel_relationship_id: relationship.id,
+        booking: {
+          room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
+          adults: 2, rooms: 2
+        }.merge(room_detail([ { name: "A", phone: "+60111" } ], [ { name: "B", phone: "+60222" } ]))
+      }
+    }.not_to change(Booking, :count)
+
+    expect(flash[:alert]).to include("no longer has")
   end
 
   # The search is not the only gate: a stale page, or two agents confirming the
@@ -140,11 +188,12 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
       post corporate_bookings_path, params: {
         hotel_relationship_id: relationship.id,
         booking: { room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
-                   adults: 2, guest_name: "Late Booker", guest_phone: "+60111111111" }
+                   adults: 2, rooms: 1 }
+                 .merge(room_detail([ { name: "Late Booker", phone: "+60111111111" } ]))
       }
     }.not_to change(Booking, :count)
 
-    expect(flash[:alert]).to include("no longer available")
+    expect(flash[:alert]).to include("no longer has")
   end
 
   it "will not sell a room that is already taken" do
@@ -157,6 +206,6 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
 
     get new_corporate_booking_path(search_params)
 
-    expect(response.body).to include("Nothing is available")
+    expect(response.body).to include("free for these dates")
   end
 end

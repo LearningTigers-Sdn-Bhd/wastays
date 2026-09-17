@@ -2,7 +2,9 @@
   <section class="rounded-2xl border border-emerald-200 bg-card p-8 shadow-sm">
     <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Confirmed</p>
     <h1 class="mt-2 text-2xl font-bold text-foreground"><%= @booking.guest_name %></h1>
-    <p class="mt-1 text-sm text-muted-foreground"><%= @booking.hotel.name %></p>
+    <p class="mt-1 text-sm text-muted-foreground">
+      <%= @booking.hotel.name %><%= " · #{pluralize(@bookings.size, 'room')}" if @bookings.size > 1 %>
+    </p>
 
     <dl class="mt-6 grid grid-cols-2 gap-4 text-sm">
       <div>
@@ -27,10 +29,37 @@
       </div>
       <div>
         <dt class="text-muted-foreground">Total</dt>
-        <dd class="font-bold"><%= @booking.currency %> <%= number_with_precision(@booking.total_amount, precision: 2) %></dd>
+        <dd class="font-bold">
+          <%= @booking.currency %>
+          <%= number_with_precision(@bookings.sum { |booking| booking.total_amount.to_d }, precision: 2) %>
+        </dd>
       </div>
     </dl>
   </section>
+
+  <% if @bookings.size > 1 %>
+    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="border-b border-border px-6 py-4">
+        <h2 class="text-sm font-bold text-foreground">Rooms in this stay</h2>
+      </div>
+      <ul class="divide-y divide-border">
+        <% @bookings.each_with_index do |booking, index| %>
+          <li class="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm">
+            <div>
+              <p class="font-bold text-foreground">Room <%= index + 1 %> · <%= booking.guest_name %></p>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                <%= booking.formatted_reservation_number %> ·
+                <%= booking.guests.map(&:name).to_sentence %>
+              </p>
+            </div>
+            <span class="font-bold tabular-nums text-foreground">
+              <%= booking.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 
   <div class="flex flex-wrap gap-3">
     <%= link_to "Book another stay", new_corporate_booking_path,
