@@ -100,19 +100,26 @@
             </div>
           </section>
 
-          <%= render "hotel_portal/corporate_accounts/billing_terms_fields",
-            form: form,
-            relationship_type: @relationship.relationship_type,
-            credit_currency: @relationship.credit_currency,
-            credit_limit: @relationship.credit_limit,
-            payment_terms_days: @relationship.payment_terms_days,
-            hint: "These terms govern invoicing and credit exposure for this account at this hotel." %>
+          <div data-controller="corporate-billing-terms"
+               data-action="change->corporate-billing-terms#refresh">
+            <%= render "hotel_portal/corporate_accounts/billing_terms_fields",
+              form: form,
+              relationship_type: @relationship.relationship_type,
+              credit_currency: @relationship.credit_currency,
+              credit_limit: @relationship.credit_limit,
+              payment_terms_days: @relationship.payment_terms_days,
+              hint: "These terms govern invoicing and credit exposure for this account at this hotel." %>
 
-          <%= render PanelsUI::Switch.new(
-            form: form,
-            attribute: :auto_allocate_payments,
-            label: "Auto-allocate payments",
-            description: "Applies unallocated payments to this account's oldest outstanding invoices first (FIFO) instead of leaving them for manual allocation.") %>
+            <%# Allocation applies payments against outstanding invoices, and a
+                standard account is never invoiced. %>
+            <div data-corporate-billing-terms-target="terms" class="pt-5">
+              <%= render PanelsUI::Switch.new(
+                form: form,
+                attribute: :auto_allocate_payments,
+                label: "Auto-allocate payments",
+                description: "Applies unallocated payments to this account's oldest outstanding invoices first (FIFO) instead of leaving them for manual allocation.") %>
+            </div>
+          </div>
         </div>
 
         <div class="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-muted/50 px-4 py-3">

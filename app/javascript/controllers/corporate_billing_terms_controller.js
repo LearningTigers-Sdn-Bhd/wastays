@@ -1,0 +1,45 @@
+import { Controller } from "@hotwired/stimulus"
+
+// Everything that describes how an account is invoiced -- credit currency,
+// credit limit, payment terms, payment auto-allocation -- only means something
+// on a direct-bill relationship. A standard account settles at checkout, so it
+// is never invoiced and has no credit exposure to cap. Asking an operator to
+// answer those questions on a standard account invites answers that are then
+// stored and never read.
+//
+// Several blocks can carry the target, because the fields do not all live in
+// one partial.
+//
+// The hidden fields are disabled so they do not submit. Credit currency is
+// required, but nothing is lost: a new invitation defaults it to the hotel's
+// currency, and an update leaves an unsubmitted attribute untouched.
+export default class extends Controller {
+  static targets = ["terms"]
+  static values = { billedRelationship: { type: String, default: "direct_bill" } }
+
+  connect() {
+    this.refresh()
+  }
+
+  refresh() {
+    const billed = this.relationshipControl?.value === this.billedRelationshipValue
+
+    this.termsTargets.forEach((block) => {
+      block.hidden = !billed
+      block.classList.toggle("hidden", !billed)
+      // Only the named controls. The trigger button of an enhanced select
+      // manages its own disabled state, and re-enabling it here would override
+      // that.
+      block
+        .querySelectorAll("input[name], select[name], textarea[name]")
+        .forEach((control) => { control.disabled = !billed })
+    })
+  }
+
+  // The select menu is a progressive enhancement over a real <select>, which
+  // carries the value and emits a bubbling change when the styled menu syncs
+  // back to it.
+  get relationshipControl() {
+    return this.element.querySelector('select[name$="[relationship_type]"]')
+  }
+}

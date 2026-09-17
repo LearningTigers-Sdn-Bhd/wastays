@@ -15,6 +15,63 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     sign_in_as(user)
   end
 
+  # Credit currency, credit limit and payment terms only apply to a direct-bill
+  # relationship. A standard account settles at checkout, so it is never
+  # invoiced and has no credit exposure to cap.
+  describe "billing terms visibility" do
+    it "wires the invitation form so the terms follow the relationship" do
+      get new_hotel_corporate_account_path(hotel)
+      document = Nokogiri::HTML(response.body)
+      section = document.at_css("[data-controller='corporate-billing-terms']")
+
+      expect(section).to be_present
+      expect(section["data-action"]).to include("change->corporate-billing-terms#refresh")
+
+      terms = section.at_css("[data-corporate-billing-terms-target='terms']")
+      expect(terms).to be_present
+      # The controller finds the relationship select by name, and disables the
+      # named controls inside the terms block. Both have to be where it looks.
+      expect(section.at_css('select[name$="[relationship_type]"]')).to be_present
+      expect(terms.css("input[name], select[name]").map { |node| node["name"] })
+        .to include(a_string_including("credit_currency"),
+                    a_string_including("credit_limit"),
+                    a_string_including("payment_terms_days"))
+      # The relationship select must sit outside the block it controls.
+      expect(terms.at_css('select[name$="[relationship_type]"]')).to be_nil
+    end
+
+    it "drops the terms tail and the credit figure from a standard account" do
+      create(:hotel_corporate_account, hotel: hotel, relationship_type: "standard")
+
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).to include("Standard")
+      # "Standard · No terms" answers a question nobody asked: a standard
+      # account is never invoiced, so it has no terms and no limit.
+      expect(response.body).not_to include("Standard · No terms")
+      expect(response.body).not_to include("No limit set")
+    end
+
+    it "keeps the terms and the limit on a direct-bill account" do
+      create(:hotel_corporate_account, hotel: hotel, relationship_type: "direct_bill",
+                                       payment_terms_days: 30)
+
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).to include("Direct bill · 30 days")
+    end
+
+    it "wires the edit form the same way" do
+      relationship = create(:hotel_corporate_account, hotel: hotel)
+
+      get edit_hotel_corporate_account_path(hotel, relationship)
+      section = Nokogiri::HTML(response.body).at_css("[data-controller='corporate-billing-terms']")
+
+      expect(section).to be_present
+      expect(section.at_css("[data-corporate-billing-terms-target='terms']")).to be_present
+    end
+  end
+
   it "lists only relationships belonging to the current hotel" do
     visible = create(:hotel_corporate_account, hotel: hotel)
     hidden = create(:hotel_corporate_account)

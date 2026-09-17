@@ -24,7 +24,10 @@
             <td class="text-muted-foreground"><%= row.account_type_label %></td>
             <td class="text-muted-foreground"><%= row.terms_label %></td>
             <td class="text-muted-foreground">
-              <% if row.proposed_credit_limit.present? %>
+              <%# An invitation proposing a standard relationship proposes no limit. %>
+              <% if !row.direct_bill? %>
+                —
+              <% elsif row.proposed_credit_limit.present? %>
                 <div class="text-sm tabular-nums"><%= row.proposed_credit_currency %> <%= format_amount(row.proposed_credit_limit) %></div>
                 <div class="mt-0.5 text-xs">Proposed limit</div>
               <% else %>
@@ -52,7 +55,8 @@
             <td class="font-mono text-xs font-semibold text-foreground"><%= row.agent_code.presence || "—" %></td>
             <td class="text-muted-foreground"><%= row.account_type_label %></td>
             <td class="text-muted-foreground"><%= row.terms_label %></td>
-            <td><%= render "hotel_portal/corporate_accounts/credit_cell", exposure: row.credit_exposure %></td>
+            <td><%= render "hotel_portal/corporate_accounts/credit_cell",
+                            exposure: row.credit_exposure, direct_bill: row.direct_bill? %></td>
             <td><%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %></td>
             <td class="text-muted-foreground"><%= row.created_on_label %></td>
             <td class="text-right">
